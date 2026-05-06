@@ -1,0 +1,14 @@
+.agents/
+.claude/
+.mcp.json
+.playwright-mcp/
+projectswill-adam-drink/
+skills-lock.json
+
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+
+supabase/.temp/

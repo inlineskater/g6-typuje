@@ -3,439 +3,453 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AdamMarket — Czy Adam Wypije?</title>
+  <title>getsix typuje</title>
+  <meta name="description" content="Firmowy rynek predykcji z wirtualnymi coinami.">
+  <meta name="theme-color" content="#f8fafc">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0d0e11;
-      --card: #161b22;
-      --border: #222a35;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --yes: #16c784;
-      --no: #ea3943;
-      --accent: #3861fb;
-      --yes-dim: rgba(22, 199, 132, 0.12);
-      --no-dim:  rgba(234, 57, 67, 0.12);
-      --radius: 12px;
+      --bg:        #f8fafc;
+      --surface:   #f1f5f9;
+      --card:      #ffffff;
+      --border:    #e2e8f0;
+      --border-hi: #cbd5e1;
+      --text:      #0f172a;
+      --muted:     #64748b;
+      --dim:       #94a3b8;
+      --yes:       #16a34a;
+      --no:        #dc2626;
+      --accent:    #6366f1;
+      --yes-dim:   rgba(22,163,74,.08);
+      --no-dim:    rgba(220,38,38,.08);
+      --acc-dim:   rgba(99,102,241,.08);
+      --yes-line:  rgba(22,163,74,.22);
+      --no-line:   rgba(220,38,38,.22);
+      --radius:    10px;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      font-size: 14px;
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
     }
 
     .hidden { display: none !important; }
 
     /* ── LOGIN ── */
     .login-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 24px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.06) 0%, transparent 70%);
     }
 
     .login-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 40px;
-      max-width: 400px;
-      width: 100%;
-      text-align: center;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 44px 40px;
+      max-width: 400px; width: 100%; text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,.06);
     }
 
-    .logo-big { font-size: 52px; margin-bottom: 10px; }
-    .login-title { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
-    .login-sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; line-height: 1.5; }
-    .field-label { text-align: left; font-size: 12px; color: var(--muted); margin-bottom: 6px; letter-spacing: .05em; text-transform: uppercase; }
+    .logo-big    { font-size: 48px; margin-bottom: 12px; }
+    .login-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; letter-spacing: 0; }
+    .login-sub   { color: var(--muted); font-size: 14px; margin-bottom: 32px; line-height: 1.5; }
 
-    input[type="text"] {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 15px;
-      padding: 12px 14px;
-      outline: none;
+    .field-label {
+      text-align: left; font-size: 11px; color: var(--muted); margin-bottom: 6px;
+      letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit;
+      padding: 11px 13px; outline: none;
+      transition: border-color .15s; margin-bottom: 12px;
+    }
+    input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); }
+
+    .nick-select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit;
+      padding: 11px 36px 11px 13px; outline: none; margin-bottom: 12px;
+      appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M6 7L0 0h12z' fill='%2364748b'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 13px center;
       transition: border-color .15s;
-      margin-bottom: 14px;
     }
-
-    input[type="text"]:focus { border-color: var(--accent); }
+    .nick-select:focus { border-color: var(--accent); }
 
     .btn-primary {
-      width: 100%;
-      background: var(--accent);
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: 600;
-      padding: 13px;
-      transition: opacity .15s;
+      width: 100%; background: var(--accent); border: none; border-radius: 8px;
+      color: #fff; cursor: pointer; font-size: 15px; font-weight: 700; font-family: inherit;
+      padding: 12px; transition: opacity .15s; margin-bottom: 4px; letter-spacing: 0;
     }
+    .btn-primary:hover { opacity: .86; }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
 
-    .btn-primary:hover { opacity: .85; }
-    .btn-primary:disabled { opacity: .38; cursor: not-allowed; }
-
-    .login-hint { color: var(--muted); font-size: 12px; margin-top: 20px; line-height: 1.6; }
+    .login-hint { color: var(--muted); font-size: 12px; margin-top: 18px; line-height: 1.7; }
+    .login-hint a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .login-hint a:hover { text-decoration: underline; }
+    .login-error { color: var(--no); font-size: 13px; margin-top: 10px; min-height: 18px; }
 
     /* ── HEADER ── */
     header {
-      background: var(--card);
+      background: rgba(255,255,255,.90);
+      backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px);
       border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      padding: 0 24px; height: 58px; display: flex;
+      align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 20;
     }
 
-    .logo { font-size: 18px; font-weight: 700; }
+    .logo { font-size: 17px; font-weight: 800; letter-spacing: 0; }
     .logo span { color: var(--accent); }
-    .user-info { display: flex; align-items: center; gap: 12px; }
-    .header-nick { font-size: 13px; color: var(--muted); }
+    .user-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .header-nick { font-size: 13px; color: var(--muted); font-weight: 500; }
 
     .coins-badge {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      background: rgba(56, 97, 251, 0.1);
-      border: 1px solid rgba(56, 97, 251, 0.25);
-      border-radius: 20px;
-      padding: 5px 14px;
-      font-size: 14px;
-      font-weight: 600;
+      display: flex; align-items: center; gap: 5px;
+      background: var(--acc-dim); border: 1px solid rgba(99,102,241,.18);
+      border-radius: 20px; padding: 4px 13px; font-size: 13px; font-weight: 700;
+      color: var(--accent);
     }
 
     .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 13px;
-      padding: 6px 13px;
-      transition: all .15s;
+      background: transparent; border: 1px solid var(--border); border-radius: 7px;
+      color: var(--muted); cursor: pointer; font-size: 12px; font-family: inherit;
+      font-weight: 500; padding: 5px 12px; transition: all .15s;
+    }
+    .btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
+
+    /* ── NAV TABS ── */
+    .nav-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--surface); padding: 0 24px;
     }
 
-    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+    .nav-tab {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600;
+      font-family: inherit; padding: 11px 16px; transition: all .15s; margin-bottom: -1px;
+      letter-spacing: 0;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active { border-bottom-color: var(--accent); color: var(--text); }
 
     /* ── MAIN ── */
-    main { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
-    .page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-    .page-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+    main { max-width: 1340px; margin: 0 auto; padding: 28px 24px; }
 
+    .markets-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+    .markets-toolbar h2 { font-size: 20px; font-weight: 800; letter-spacing: 0; }
+    .markets-toolbar p  { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+    .btn-new-market {
+      background: var(--accent); border: none; border-radius: 8px;
+      color: #fff; cursor: pointer; font-size: 13px; font-weight: 700; font-family: inherit;
+      padding: 9px 18px; transition: opacity .15s; letter-spacing: 0;
+    }
+    .btn-new-market:hover { opacity: .86; }
+
+    /* ── MARKET GRID ── */
     .markets-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 560px) {
+      .markets-grid { grid-template-columns: 1fr; }
     }
 
     /* ── MARKET CARD ── */
     .market-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      transition: border-color .2s;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+      transition: border-color .2s, box-shadow .2s;
+      display: flex; flex-direction: column; gap: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
     }
+    .market-card:hover { border-color: var(--border-hi); box-shadow: 0 4px 16px rgba(0,0,0,.07); }
 
-    .market-card:hover { border-color: rgba(56, 97, 251, 0.35); }
-
-    .card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 16px;
+    .card-header {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
     }
-
-    .card-icon-title { display: flex; align-items: flex-start; gap: 10px; }
-    .card-icon { font-size: 22px; line-height: 1.1; flex-shrink: 0; }
-    .card-title { font-size: 14px; font-weight: 600; line-height: 1.45; }
+    .card-title-row { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
+    .card-icon  { font-size: 20px; line-height: 1.2; flex-shrink: 0; }
+    .card-title { font-size: 14px; font-weight: 600; line-height: 1.45; letter-spacing: 0; }
+    .card-meta  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
     .deadline-badge {
-      background: rgba(139, 148, 158, 0.08);
-      border: 1px solid rgba(139, 148, 158, 0.18);
-      border-radius: 20px;
-      color: var(--muted);
-      flex-shrink: 0;
-      font-size: 10px;
-      padding: 3px 9px;
-      white-space: nowrap;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--muted);
+      font-size: 10px; font-weight: 500; padding: 2px 9px; white-space: nowrap;
     }
 
-    .prob-section { margin-bottom: 14px; }
+    .btn-resolve-sm {
+      background: transparent; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--muted); cursor: pointer; font-size: 11px; font-family: inherit;
+      font-weight: 500; padding: 3px 9px; transition: all .15s; white-space: nowrap;
+    }
+    .btn-resolve-sm:hover { color: var(--no); border-color: var(--no-line); }
 
-    .prob-labels { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
-    .prob-yes-label { color: var(--yes); font-weight: 700; }
-    .prob-no-label  { color: var(--no);  font-weight: 700; }
+    /* ── PROBABILITY ── */
+    .prob-row {
+      display: flex; justify-content: space-between; align-items: flex-end; gap: 8px;
+    }
+    .prob-side { display: flex; flex-direction: column; }
+    .prob-side-no { text-align: right; }
+    .prob-lbl { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+    .prob-num { font-size: 30px; font-weight: 800; letter-spacing: 0; line-height: 1; }
+    .prob-num-yes { color: var(--yes); }
+    .prob-num-no  { color: var(--no);  }
 
     .prob-bar {
-      display: flex;
-      border-radius: 4px;
-      height: 5px;
-      overflow: hidden;
-      background: var(--border);
+      display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--border);
     }
+    .prob-bar-yes { background: var(--yes); transition: width .4s ease; }
+    .prob-bar-no  { background: var(--no);  transition: width .4s ease; }
 
-    .prob-bar-yes { background: var(--yes); transition: width .35s; }
-    .prob-bar-no  { background: var(--no);  transition: width .35s; }
+    /* ── INLINE CHART ── */
+    .card-chart { width: 100%; height: 110px; border-radius: 6px; overflow: hidden; }
+    .card-chart svg { width: 100%; height: 100%; display: block; }
 
-    .bet-buttons { display: flex; gap: 8px; }
+    /* ── BET BUTTONS ── */
+    .bet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     .btn-yes, .btn-no {
-      border-radius: 8px;
-      cursor: pointer;
-      flex: 1;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 9px 4px;
-      transition: opacity .15s;
+      border-radius: 8px; cursor: pointer; flex: 1;
+      font-size: 13px; font-weight: 700; font-family: inherit;
+      padding: 10px 4px; transition: all .15s; border: 1px solid;
     }
+    .btn-yes { background: var(--yes-dim); border-color: var(--yes-line); color: var(--yes); }
+    .btn-no  { background: var(--no-dim);  border-color: var(--no-line);  color: var(--no);  }
+    .btn-yes:not(:disabled):hover { background: rgba(22,163,74,.16); }
+    .btn-no:not(:disabled):hover  { background: rgba(220,38,38,.16);  }
+    .btn-yes:disabled, .btn-no:disabled { opacity: .3; cursor: not-allowed; }
 
-    .btn-yes { background: var(--yes-dim); border: 1px solid rgba(22,199,132,.25); color: var(--yes); }
-    .btn-no  { background: var(--no-dim);  border: 1px solid rgba(234,57,67,.25);  color: var(--no);  }
-    .btn-yes:not(:disabled):hover { background: rgba(22,199,132,.22); }
-    .btn-no:not(:disabled):hover  { background: rgba(234,57,67,.22);  }
-    .btn-yes:disabled, .btn-no:disabled { opacity: .32; cursor: not-allowed; }
+    .resolved-banner {
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; font-weight: 700; text-align: center; letter-spacing: 0;
+    }
+    .resolved-yes { background: var(--yes-dim); color: var(--yes); border: 1px solid var(--yes-line); }
+    .resolved-no  { background: var(--no-dim);  color: var(--no);  border: 1px solid var(--no-line); }
 
     .position-badge {
-      margin-top: 12px;
-      background: rgba(56, 97, 251, 0.07);
-      border: 1px solid rgba(56, 97, 251, 0.18);
-      border-radius: 8px;
-      padding: 9px 12px;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.6;
+      background: var(--acc-dim); border: 1px solid rgba(99,102,241,.16);
+      border-radius: 8px; padding: 8px 12px;
+      font-size: 11px; color: var(--muted); line-height: 1.6;
     }
+    .position-badge strong { color: var(--text); font-weight: 600; }
 
-    .no-coins-note { margin-top: 10px; font-size: 12px; color: var(--no); text-align: center; }
+    .no-coins-note { font-size: 11px; color: var(--no); text-align: center; padding-top: 2px; }
+
+    /* ── LEADERBOARD ── */
+    .page-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; letter-spacing: 0; }
+    .page-sub   { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+
+    .lb-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .lb-table { width: 100%; border-collapse: collapse; }
+    .lb-table th {
+      text-align: left; font-size: 10px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .08em; font-weight: 600;
+      padding: 11px 16px; border-bottom: 1px solid var(--border);
+    }
+    .lb-table td { padding: 13px 16px; border-bottom: 1px solid rgba(226,232,240,.8); font-size: 14px; }
+    .lb-table tr:last-child td { border-bottom: none; }
+    .lb-rank { color: var(--muted); font-size: 13px; width: 40px; font-weight: 600; }
+    .lb-rank.gold { color: #f59e0b; font-size: 16px; }
+    .lb-nick { font-weight: 600; }
+    .lb-nick.me { color: var(--accent); }
+    .lb-coins { color: var(--muted); font-size: 13px; }
+    .lb-net { font-weight: 700; color: var(--yes); }
 
     /* ── MODAL ── */
     .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.72);
-      backdrop-filter: blur(5px);
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      z-index: 100;
-      padding: 0;
+      position: fixed; inset: 0; background: rgba(0,0,0,.38);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+      justify-content: center; z-index: 100;
     }
-
     @media (min-width: 640px) {
       .modal-overlay { align-items: center; padding: 20px; }
     }
 
     .modal {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-top-left-radius: var(--radius);
-      border-top-right-radius: var(--radius);
-      max-width: 440px;
-      width: 100%;
-      padding: 24px;
+      background: var(--card); border: 1px solid var(--border);
+      border-top-left-radius: var(--radius); border-top-right-radius: var(--radius);
+      max-width: 420px; width: 100%; padding: 24px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.12);
     }
+    @media (min-width: 640px) { .modal { border-radius: var(--radius); } }
 
-    @media (min-width: 640px) {
-      .modal { border-radius: var(--radius); }
-    }
-
-    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .modal-title  { font-size: 16px; font-weight: 800; letter-spacing: 0; }
 
     .btn-close {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 18px;
-      line-height: 1;
-      padding: 4px 8px;
-      border-radius: 6px;
-      transition: color .15s;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; font-size: 15px; line-height: 1; padding: 5px 9px;
+      border-radius: 7px; transition: all .15s; font-family: inherit;
     }
+    .btn-close:hover { color: var(--text); border-color: var(--border-hi); }
 
-    .btn-close:hover { color: var(--text); }
-
-    .modal-market-name { color: var(--muted); font-size: 13px; margin-bottom: 22px; line-height: 1.4; }
+    .modal-market-name { color: var(--muted); font-size: 12px; margin-bottom: 20px; line-height: 1.5; }
 
     .side-toggle {
-      display: flex;
-      background: var(--bg);
-      border-radius: 8px;
-      padding: 4px;
-      margin-bottom: 22px;
-      gap: 4px;
+      display: flex; background: var(--bg); border-radius: 8px;
+      padding: 4px; margin-bottom: 20px; gap: 4px;
     }
-
     .side-btn {
-      flex: 1;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 6px;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      padding: 9px;
-      transition: all .15s;
+      flex: 1; background: transparent; border: 1px solid transparent;
+      border-radius: 6px; color: var(--muted); cursor: pointer;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      padding: 9px; transition: all .15s;
     }
+    .side-btn.active-yes { background: var(--yes-dim); border-color: var(--yes-line); color: var(--yes); }
+    .side-btn.active-no  { background: var(--no-dim);  border-color: var(--no-line);  color: var(--no);  }
+    .side-btn:disabled   { opacity: .35; cursor: not-allowed; }
 
-    .side-btn.active-yes { background: var(--yes-dim); border-color: rgba(22,199,132,.28); color: var(--yes); }
-    .side-btn.active-no  { background: var(--no-dim);  border-color: rgba(234,57,67,.28);  color: var(--no);  }
-    .side-btn:disabled   { opacity: .32; cursor: not-allowed; }
-
-    .slider-section { margin-bottom: 20px; }
-
-    .slider-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-    .slider-label-text { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-    .slider-value { font-size: 20px; font-weight: 700; }
-    .slider-value small { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+    .slider-section { margin-bottom: 18px; }
+    .slider-label   { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+    .slider-label-text { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+    .slider-value { font-size: 22px; font-weight: 800; letter-spacing: 0; }
+    .slider-value small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 4px; }
 
     input[type="range"] {
-      width: 100%;
-      -webkit-appearance: none;
-      appearance: none;
-      height: 5px;
-      background: var(--border);
-      border-radius: 3px;
-      outline: none;
-      cursor: pointer;
+      width: 100%; -webkit-appearance: none; appearance: none;
+      height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
     }
-
     input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      background: var(--accent);
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 0 0 3px rgba(56,97,251,.25);
+      -webkit-appearance: none; width: 18px; height: 18px;
+      background: var(--accent); border-radius: 50%; cursor: pointer;
     }
-
     input[type="range"]::-moz-range-thumb {
-      width: 20px;
-      height: 20px;
-      background: var(--accent);
-      border-radius: 50%;
-      border: none;
-      cursor: pointer;
-    }
-
-    input[type="range"]::-moz-range-track {
-      height: 5px;
-      background: var(--border);
-      border-radius: 3px;
+      width: 18px; height: 18px; background: var(--accent);
+      border-radius: 50%; border: none; cursor: pointer;
     }
 
     .preview-box {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-bottom: 18px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;
     }
-
     .preview-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      padding: 5px 0;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; padding: 4px 0;
     }
-
-    .preview-row + .preview-row { border-top: 1px solid var(--border); margin-top: 5px; padding-top: 10px; }
-
+    .preview-row + .preview-row { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; }
     .prev-label { color: var(--muted); }
-    .prev-val { font-weight: 600; display: flex; align-items: center; gap: 4px; }
-    .arrow { color: var(--muted); font-size: 11px; }
+    .prev-val   { font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .arrow { color: var(--dim); font-size: 10px; }
     .clr-yes { color: var(--yes); }
     .clr-no  { color: var(--no);  }
 
     .btn-place {
-      width: 100%;
-      border: none;
-      border-radius: 9px;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: 700;
-      padding: 14px;
-      transition: opacity .15s;
+      width: 100%; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 15px; font-weight: 800; font-family: inherit;
+      padding: 13px; transition: opacity .15s; letter-spacing: 0;
     }
-
-    .btn-place-yes { background: var(--yes); color: #000; }
+    .btn-place-yes { background: var(--yes); color: #fff; }
     .btn-place-no  { background: var(--no);  color: #fff; }
-    .btn-place:hover { opacity: .85; }
-    .btn-place:disabled { opacity: .38; cursor: not-allowed; }
+    .btn-place:hover { opacity: .86; }
+    .btn-place:disabled { opacity: .35; cursor: not-allowed; }
+
+    /* ── NEW MARKET MODAL ── */
+    .nm-field { margin-bottom: 16px; }
+    .nm-field .field-label { display: block; margin-bottom: 6px; }
+    .nm-icons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .nm-icon-btn {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      cursor: pointer; font-size: 20px; padding: 5px 9px; transition: all .15s;
+    }
+    .nm-icon-btn.selected { border-color: var(--accent); background: var(--acc-dim); }
 
     /* ── TOAST ── */
     .toast {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
+      position: fixed; bottom: 24px; left: 50%;
       transform: translateX(-50%) translateY(80px);
-      background: #1e2530;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 14px;
-      padding: 11px 20px;
-      pointer-events: none;
+      background: #1e293b; border: none;
+      border-radius: 8px; color: #f8fafc; font-size: 14px; font-weight: 500;
+      padding: 10px 20px; pointer-events: none;
       transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
-      z-index: 300;
-      white-space: nowrap;
-      opacity: 0;
+      z-index: 300; white-space: nowrap; opacity: 0;
     }
-
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ── LOADING ── */
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-center { display: flex; justify-content: center; padding: 60px 0; }
+
+    /* ── INFO BANNER ── */
+    .info-banner {
+      background: var(--acc-dim); border: 1px solid rgba(99,102,241,.16);
+      border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
+      font-size: 12px; color: var(--muted); line-height: 1.8;
+    }
+    .info-banner strong { color: var(--text); }
+    .info-rules { display: flex; flex-wrap: wrap; gap: 6px 24px; margin-top: 6px; }
+    .info-rule { display: flex; align-items: flex-start; gap: 6px; }
+    .info-rule-icon { flex-shrink: 0; }
 
     /* ── FOOTER ── */
     footer {
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 11px;
-      margin-top: 48px;
-      padding: 20px 24px;
-      text-align: center;
-      line-height: 1.7;
+      border-top: 1px solid var(--border); color: var(--muted);
+      font-size: 11px; margin-top: 48px; padding: 18px 24px;
+      text-align: center; line-height: 1.9;
     }
   </style>
 </head>
 <body>
 
 <!-- ── LOGIN ── -->
-<div id="screen-login" class="login-wrap">
+<div id="screen-login" class="login-wrap hidden">
   <div class="login-card">
-    <div class="logo-big">🍺</div>
-    <h1 class="login-title">AdamMarket</h1>
-    <p class="login-sub">Prognozuj rynki.<br>Postaw na to, czy Adam w końcu się napije!</p>
-    <p class="field-label">Twój nick</p>
-    <input type="text" id="nick-input" placeholder="np. Kasia, Marek, Bartek…" maxlength="30" autocomplete="off" spellcheck="false">
-    <button class="btn-primary" id="login-btn">Wejdź na rynek →</button>
-    <p class="login-hint">Nowi gracze dostają <strong>10 coinów 🪙</strong> na start.<br>Wracasz? Twoje coiny i zakłady czekają.</p>
+    <div class="logo-big">🎲</div>
+    <h1 class="login-title">getsix typuje</h1>
+    <p class="login-sub" id="login-sub">Wybierz swój nick i podaj PIN.</p>
+
+    <div id="mode-login">
+      <p class="field-label">Twój nick</p>
+      <select id="nick-select" class="nick-select">
+        <option value="">Ładowanie…</option>
+      </select>
+      <p class="field-label">PIN</p>
+      <input type="password" id="pin-input" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="off">
+      <button class="btn-primary" id="login-btn">Zaloguj →</button>
+      <p class="login-hint">Nowy gracz? <a href="#" id="go-register">Zarejestruj się →</a></p>
+    </div>
+
+    <div id="mode-register" class="hidden">
+      <p class="field-label">Twój nick</p>
+      <input type="text" id="reg-nick" placeholder="np. Kasia, Marek…" maxlength="30" autocomplete="off" spellcheck="false">
+      <p class="field-label">Ustaw 4-cyfrowy PIN</p>
+      <input type="password" id="reg-pin" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="off">
+      <button class="btn-primary" id="register-btn">Zarejestruj →</button>
+      <p class="login-hint">Dostaniesz <strong>1000 coinów 🪙</strong> na start.<br>
+        Masz konto? <a href="#" id="go-login">Wróć do logowania →</a></p>
+    </div>
+
+    <p class="login-error" id="login-error"></p>
   </div>
 </div>
 
-<!-- ── MARKETS ── -->
-<div id="screen-markets" class="hidden">
+<!-- ── APP ── -->
+<div id="screen-app" class="hidden">
   <header>
-    <div class="logo">Adam<span>Market</span></div>
+    <div class="logo">getsix <span>typuje</span></div>
     <div class="user-info">
       <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
       <span class="header-nick" id="header-nick"></span>
@@ -443,25 +457,61 @@
     </div>
   </header>
 
-  <main>
-    <h2 class="page-title">Rynki: Czy Adam wypije? 🍻</h2>
-    <p class="page-sub">Prawdziwy CPMM · Fałszywe coiny · Stuprocentowy fun</p>
-    <div class="markets-grid" id="markets-grid"></div>
-  </main>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="markets">Rynki</button>
+    <button class="nav-tab" data-tab="leaderboard">Ranking</button>
+  </nav>
+
+  <div id="tab-markets">
+    <main>
+      <div class="markets-toolbar">
+        <div>
+          <h2>Rynki predykcji</h2>
+          <p>Każdy dostaje 1000 coinów na start — typuj mądrze i zostań liderem rankingu!</p>
+        </div>
+        <button class="btn-new-market" id="btn-new-market">+ Nowy rynek</button>
+      </div>
+
+      <div class="info-banner">
+        <strong>Jak to działa?</strong>
+        <div class="info-rules">
+          <span class="info-rule"><span class="info-rule-icon">🪙</span> Każdy gracz startuje z <strong>1000 coinami</strong>. Coinów nie można doładować — typuj z głową.</span>
+          <span class="info-rule"><span class="info-rule-icon">📈</span> Postaw coiny na <strong>TAK</strong> lub <strong>NIE</strong>. Im mniej osób typuje tak jak Ty — tym więcej zarobisz.</span>
+          <span class="info-rule"><span class="info-rule-icon">⚠️</span> Na tym samym rynku możesz <strong>dokładać kolejne</strong> coiny — ale tylko do wybranej strony. Nie można grać jednocześnie na TAK i NIE.</span>
+          <span class="info-rule"><span class="info-rule-icon">➕</span> <strong>Każdy może dodać nowy rynek</strong> — kliknij „+ Nowy rynek" i wpisz pytanie oraz termin.</span>
+          <span class="info-rule"><span class="info-rule-icon">🔒</span> Rynek może zamknąć <strong>tylko jego twórca</strong> (lub admin). Kliknij „Zamknij rynek" i wybierz wynik.</span>
+          <span class="info-rule"><span class="info-rule-icon">🏆</span> Po rozstrzygnięciu każdy wygrywający dostaje <strong>1 coin za każdy posiadany udział</strong>.</span>
+        </div>
+      </div>
+
+      <div class="markets-grid" id="markets-grid">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-leaderboard" class="hidden">
+    <main>
+      <h2 class="page-title">Ranking graczy 🏆</h2>
+      <p class="page-sub">Suma gotówki i wartości aktywnych zakładów — wygrywa ten, kto typuje najtrafniej.</p>
+      <div id="leaderboard-wrap" class="lb-wrap">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
 
   <footer>
-    AdamMarket używa <strong>CPMM</strong> (jak Polymarket) do wyliczania prawdopodobieństw.<br>
-    Każdy odwiedzający ma <strong>własny stan rynku</strong> w swojej przeglądarce — brak serwera.<br>
-    Wiele nicków na tej samej przeglądarce/urządzeniu dzieli wspólne pule rynkowe. · v1 · Brak rozliczeń.
+    Masz pytania? Zgłoś się do twórcy rynku lub admina.<br>
+    Pamiętaj: coiny są wirtualne i służą tylko do zabawy — nie można ich wymienić na nic realnego. 🎲
   </footer>
 </div>
 
 <!-- ── BET MODAL ── -->
-<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Postaw zakład">
+<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title">Postaw zakład</span>
-      <button class="btn-close" id="modal-close" aria-label="Zamknij">✕</button>
+      <button class="btn-close" id="modal-close">✕</button>
     </div>
     <p class="modal-market-name" id="modal-market-name"></p>
 
@@ -473,9 +523,9 @@
     <div class="slider-section">
       <div class="slider-label">
         <span class="slider-label-text">Kwota zakładu</span>
-        <span class="slider-value"><span id="slider-display">1</span><small>coinów 🪙</small></span>
+        <span class="slider-value"><span id="slider-display">1</span><small>coinów</small></span>
       </div>
-      <input type="range" id="bet-slider" min="1" max="10" value="1">
+      <input type="range" id="bet-slider" min="1" max="1000" value="1">
     </div>
 
     <div class="preview-box">
@@ -488,7 +538,7 @@
         </span>
       </div>
       <div class="preview-row">
-        <span class="prev-label">Otrzymasz udziałów</span>
+        <span class="prev-label">Udziałów</span>
         <span class="prev-val" id="prev-shares">—</span>
       </div>
       <div class="preview-row">
@@ -501,360 +551,871 @@
   </div>
 </div>
 
-<!-- ── TOAST ── -->
+<!-- ── NEW MARKET MODAL ── -->
+<div id="nm-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Nowy rynek</span>
+      <button class="btn-close" id="nm-close">✕</button>
+    </div>
+
+    <div class="nm-field">
+      <label class="field-label">Ikona</label>
+      <div class="nm-icons" id="nm-icons"></div>
+    </div>
+    <div class="nm-field">
+      <label class="field-label" for="nm-title">Pytanie</label>
+      <input type="text" id="nm-title" placeholder="Czy …?" maxlength="120" autocomplete="off">
+    </div>
+    <div class="nm-field">
+      <label class="field-label" for="nm-deadline">Termin</label>
+      <input type="text" id="nm-deadline" placeholder='np. "31 maja 2026"' maxlength="60" autocomplete="off">
+    </div>
+    <button class="btn-primary" id="nm-submit">Utwórz rynek</button>
+  </div>
+</div>
+
+<!-- ── RESOLVE MODAL ── -->
+<div id="rm-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Zamknij rynek</span>
+      <button class="btn-close" id="rm-close">✕</button>
+    </div>
+    <p class="modal-market-name" id="rm-market-name"></p>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:18px;line-height:1.6">
+      Wygrywający dostają 1 coin za każdy udział. Operacja nieodwracalna.
+    </p>
+    <div class="side-toggle">
+      <button class="side-btn" id="rm-yes">TAK wygrało</button>
+      <button class="side-btn" id="rm-no">NIE wygrało</button>
+    </div>
+    <button class="btn-place btn-place-yes" id="rm-confirm" disabled>Zatwierdź</button>
+  </div>
+</div>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-  'use strict';
+'use strict';
 
-  // ── Constants ──────────────────────────────────────────────────────────
+// ── CONFIG ────────────────────────────────────────────────────────────────
+const SUPABASE_URL      = 'https://rjovhmepanwbdgdkvylr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqb3ZobWVwYW53YmRnZGt2eWxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTI1NDgsImV4cCI6MjA5MzY2ODU0OH0.dKsttBmdKhCeXY6eQG_s3N252B_gbKngUKbc7FE4YH0';
 
-  const STORAGE_KEY = 'adam_bets_v1';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const DB_ERROR_MESSAGE = 'Nie można połączyć z bazą danych. Odśwież stronę albo spróbuj później.';
 
-  const SEED_MARKETS = [
-    { id: 'm1', icon: '🍻', title: 'Czy Adam napije się do końca maja?',            deadline: '31 maja 2026',       yesShares: 400, noShares: 600 },
-    { id: 'm2', icon: '🥃', title: 'Czy Adam wypije wódkę do końca czerwca?',        deadline: '30 czerwca 2026',    yesShares: 700, noShares: 300 },
-    { id: 'm3', icon: '🚱', title: 'Czy Adam dotrwa trzeźwy przez cały lipiec?',     deadline: '31 lipca 2026',      yesShares: 600, noShares: 400 },
-    { id: 'm4', icon: '🎉', title: 'Czy Adam zamówi szota na najbliższej imprezie?', deadline: 'Najbliższa impreza', yesShares: 300, noShares: 700 },
-    { id: 'm5', icon: '🍺', title: 'Czy Adam wytrzyma bez piwa przez cały tydzień?', deadline: 'Rolling 7 dni',      yesShares: 800, noShares: 200 },
-  ];
+// ── State ─────────────────────────────────────────────────────────────────
+let me = null;
+let markets = [];
+let tradesByMarket = {};
+let myPositionsByMarket = {};
+let marketRenderSeq = 0;
+let activeSide = 'YES';
+let activeMarket = null;
+let pickedResolution = null;
+let realtimeChannels = [];
 
-  // ── State ──────────────────────────────────────────────────────────────
+// ── CPMM math ─────────────────────────────────────────────────────────────
+function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
 
-  function makeDefaultState() {
-    return {
-      version: 1,
-      currentUser: null,
-      users: {},
-      markets: SEED_MARKETS.map(m => ({ ...m })),
-    };
+function computeBet(m, side, X) {
+  const Y = +m.yes_shares, N = +m.no_shares;
+  if (side === 'YES') {
+    const dY = (Y * X) / (N + X);
+    const sharesOut = X + dY;
+    const Y2 = Y - dY, N2 = N + X;
+    return { sharesOut, pYesAfter: N2 / (Y2 + N2), Y2, N2 };
+  } else {
+    const dN = (N * X) / (Y + X);
+    const sharesOut = X + dN;
+    const Y2 = Y + X, N2 = N - dN;
+    return { sharesOut, pYesAfter: N2 / (Y2 + N2), Y2, N2 };
   }
+}
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s && s.version === 1) return s;
-      }
-    } catch (_) {}
-    return makeDefaultState();
-  }
+function fmtPct(p) { return (p * 100).toFixed(1) + '%'; }
+function fmtNum(n) { return (+n).toFixed(2); }
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
+function relTime(ts) {
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'przed chwilą';
+  if (m < 60) return m + ' min temu';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + ' h temu';
+  return Math.floor(h / 24) + ' dni temu';
+}
 
-  let state = loadState();
-
-  // ── CPMM math ──────────────────────────────────────────────────────────
-  // Price of YES = N / (Y + N) — scarcer token is more expensive, same as Polymarket.
-  // Buying YES with X: mint X YES + X NO, swap the NO back into the pool preserving Y*N = k.
-
-  function pYes(m) {
-    return m.noShares / (m.yesShares + m.noShares);
-  }
-
-  function computeBet(m, side, X) {
-    const Y = m.yesShares, N = m.noShares;
-    if (side === 'YES') {
-      const dY       = (Y * X) / (N + X);   // YES gained from the swap leg
-      const sharesOut = X + dY;             // total YES shares received
-      const Y2 = Y - dY, N2 = N + X;
-      return { sharesOut, pYesAfter: N2 / (Y2 + N2), Y2, N2 };
-    } else {
-      const dN       = (N * X) / (Y + X);   // NO gained from the swap leg
-      const sharesOut = X + dN;
-      const Y2 = Y + X, N2 = N - dN;
-      return { sharesOut, pYesAfter: N2 / (Y2 + N2), Y2, N2 };
-    }
-  }
-
-  function fmtPct(p) { return (p * 100).toFixed(1) + '%'; }
-  function fmtNum(n) { return n.toFixed(2); }
-
-  // ── DOM helpers ────────────────────────────────────────────────────────
-
-  function setText(el, text)   { el.textContent = text; }
-  function setClass(el, cls)   { el.className = cls; }
-  function show(el)            { el.classList.remove('hidden'); }
-  function hide(el)            { el.classList.add('hidden'); }
-
-  // Build a DOM element from a descriptor. Children must be DOM nodes or strings.
-  function el(tag, attrs, ...children) {
-    const node = document.createElement(tag);
-    if (attrs) {
-      Object.entries(attrs).forEach(([k, v]) => {
-        if (k === 'className') node.className = v;
-        else if (k === 'style') Object.assign(node.style, v);
-        else if (k.startsWith('data-')) node.dataset[k.slice(5)] = v;
-        else if (k in node) node[k] = v;
-        else node.setAttribute(k, v);
-      });
-    }
-    children.forEach(c => {
-      if (c == null) return;
-      node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+// ── DOM helpers ───────────────────────────────────────────────────────────
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (k === 'className') node.className = v;
+      else if (k === 'style') Object.assign(node.style, v);
+      else if (k.startsWith('data-')) node.setAttribute(k, v);
+      else if (k in node) node[k] = v;
+      else node.setAttribute(k, v);
     });
-    return node;
   }
+  children.forEach(c => {
+    if (c == null) return;
+    node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return node;
+}
 
-  // ── DOM refs ───────────────────────────────────────────────────────────
+function svgEl(tag, attrs) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  if (attrs) Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, String(v)));
+  return node;
+}
 
-  const screenLogin    = document.getElementById('screen-login');
-  const screenMarkets  = document.getElementById('screen-markets');
-  const nickInput      = document.getElementById('nick-input');
-  const loginBtn       = document.getElementById('login-btn');
-  const logoutBtn      = document.getElementById('logout-btn');
-  const headerCoins    = document.getElementById('header-coins');
-  const headerNick     = document.getElementById('header-nick');
-  const marketsGrid    = document.getElementById('markets-grid');
-  const modalOverlay   = document.getElementById('modal-overlay');
-  const modalMarketName = document.getElementById('modal-market-name');
-  const sideYesBtn     = document.getElementById('side-yes-btn');
-  const sideNoBtn      = document.getElementById('side-no-btn');
-  const betSlider      = document.getElementById('bet-slider');
-  const sliderDisplay  = document.getElementById('slider-display');
-  const prevBefore     = document.getElementById('prev-before');
-  const prevAfter      = document.getElementById('prev-after');
-  const prevShares     = document.getElementById('prev-shares');
-  const prevWin        = document.getElementById('prev-win');
-  const btnPlace       = document.getElementById('btn-place');
+function setText(node, v) { node.textContent = v; }
+function show(node) { node.classList.remove('hidden'); }
+function hide(node) { node.classList.add('hidden'); }
+function makeSpinner() {
+  return el('div', { className: 'loading-center' }, el('div', { className: 'spinner' }));
+}
 
-  // ── Auth ───────────────────────────────────────────────────────────────
+// ── DOM refs ──────────────────────────────────────────────────────────────
+const screenLogin     = document.getElementById('screen-login');
+const screenApp       = document.getElementById('screen-app');
+const loginError      = document.getElementById('login-error');
+const pinInput        = document.getElementById('pin-input');
+const logoutBtn       = document.getElementById('logout-btn');
+const headerCoins     = document.getElementById('header-coins');
+const headerNick      = document.getElementById('header-nick');
+const marketsGrid     = document.getElementById('markets-grid');
+const modalOverlay    = document.getElementById('modal-overlay');
+const modalMarketName = document.getElementById('modal-market-name');
+const sideYesBtn      = document.getElementById('side-yes-btn');
+const sideNoBtn       = document.getElementById('side-no-btn');
+const betSlider       = document.getElementById('bet-slider');
+const sliderDisplay   = document.getElementById('slider-display');
+const prevBefore      = document.getElementById('prev-before');
+const prevAfter       = document.getElementById('prev-after');
+const prevShares      = document.getElementById('prev-shares');
+const prevWin         = document.getElementById('prev-win');
+const btnPlace        = document.getElementById('btn-place');
+const nmOverlay       = document.getElementById('nm-overlay');
+const rmOverlay       = document.getElementById('rm-overlay');
 
-  function login() {
-    const nick = nickInput.value.trim();
-    if (!nick) return;
-    if (!state.users[nick]) {
-      state.users[nick] = { coins: 10, bets: {} };
+// ── Auth helpers ──────────────────────────────────────────────────────────
+function isResolver(m) {
+  return me && (m.created_by === me.id || me.nick === 'admin');
+}
+
+function getLockedSide(marketId) {
+  const pos = myPositionsByMarket[marketId];
+  return pos && (pos.side === 'YES' || pos.side === 'NO') ? pos.side : null;
+}
+
+function buildPositionMap(rows) {
+  const map = {};
+  (rows || []).forEach(row => {
+    const prev = map[row.market_id];
+    if (!prev) {
+      map[row.market_id] = { ...row, sides: [row] };
+      return;
     }
-    state.currentUser = nick;
-    saveState();
-    showMarkets();
-  }
+    prev.side = prev.side === row.side ? prev.side : 'MIXED';
+    prev.total_spent = (+prev.total_spent || 0) + (+row.total_spent || 0);
+    prev.total_shares = (+prev.total_shares || 0) + (+row.total_shares || 0);
+    prev.sides.push(row);
+  });
+  return map;
+}
 
-  function logout() {
-    state.currentUser = null;
-    saveState();
-    showLogin();
+async function loadNickList() {
+  const { data, error } = await sb.from('profiles').select('id, nick').order('nick');
+  if (error) {
+    loginError.textContent = DB_ERROR_MESSAGE;
+    return;
   }
+  const select = document.getElementById('nick-select');
+  if (!select) return;
+  while (select.firstChild) select.removeChild(select.firstChild);
+  if (!data || data.length === 0) {
+    switchLoginMode('register');
+    const gl = document.getElementById('go-login');
+    if (gl) gl.style.display = 'none';
+    return;
+  }
+  const gl = document.getElementById('go-login');
+  if (gl) gl.style.display = '';
+  data.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.nick; opt.textContent = p.nick;
+    select.appendChild(opt);
+  });
+}
 
-  function showLogin() {
-    hide(screenMarkets);
+function switchLoginMode(mode) {
+  const mL = document.getElementById('mode-login');
+  const mR = document.getElementById('mode-register');
+  const sub = document.getElementById('login-sub');
+  loginError.textContent = '';
+  if (mode === 'login') {
+    show(mL); hide(mR);
+    if (sub) sub.textContent = 'Wybierz swój nick i podaj PIN.';
+  } else {
+    hide(mL); show(mR);
+    if (sub) sub.textContent = 'Stwórz nowe konto i zacznij typować!';
+  }
+}
+
+// ── Login / Register ──────────────────────────────────────────────────────
+async function doLogin() {
+  const select = document.getElementById('nick-select');
+  const nick   = select ? select.value : '';
+  const pin    = pinInput.value.trim();
+  loginError.textContent = '';
+  if (!nick)                 { loginError.textContent = 'Wybierz nick.'; return; }
+  if (!/^\d{4}$/.test(pin)) { loginError.textContent = 'PIN musi mieć 4 cyfry.'; return; }
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Łączę…';
+
+  const email    = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: 'pin-' + pin });
+
+  btn.disabled = false; btn.textContent = 'Zaloguj →';
+  if (error) { loginError.textContent = 'Zły nick lub PIN.'; pinInput.value = ''; return; }
+  await initSession(data.user);
+}
+
+async function doRegister() {
+  const rn = document.getElementById('reg-nick');
+  const rp = document.getElementById('reg-pin');
+  const nick = rn ? rn.value.trim() : '';
+  const pin  = rp ? rp.value.trim() : '';
+  loginError.textContent = '';
+  if (!nick)                 { loginError.textContent = 'Podaj nick.'; return; }
+  if (!/^\d{4}$/.test(pin)) { loginError.textContent = 'PIN musi mieć 4 cyfry.'; return; }
+
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true; btn.textContent = 'Rejestruję…';
+
+  const email = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
+  const { data, error } = await sb.auth.signUp({ email, password: 'pin-' + pin, options: { data: { nick } } });
+
+  btn.disabled = false; btn.textContent = 'Zarejestruj →';
+  if (error) {
+    loginError.textContent = error.message.includes('already') ? 'Ten nick jest zajęty.' : error.message;
+    return;
+  }
+  await initSession(data.user);
+}
+
+async function initSession(user) {
+  const { data: profile, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if (error || !profile) {
+    await sb.auth.signOut();
+    me = null;
+    hide(screenApp);
     show(screenLogin);
-    nickInput.value = '';
+    loginError.textContent = 'Nie udało się wczytać profilu. Spróbuj zalogować się ponownie.';
+    await loadNickList();
+    return;
+  }
+  me = profile;
+  showApp();
+}
+
+async function doLogout() {
+  teardownRealtime();
+  await sb.auth.signOut();
+  me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
+  hide(screenApp);
+  pinInput.value = '';
+  const rp = document.getElementById('reg-pin'); if (rp) rp.value = '';
+  const rn = document.getElementById('reg-nick'); if (rn) rn.value = '';
+  loginError.textContent = '';
+  switchLoginMode('login');
+  await loadNickList();
+  show(screenLogin);
+}
+
+// ── Login event listeners ─────────────────────────────────────────────────
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('register-btn').addEventListener('click', doRegister);
+document.getElementById('go-register').addEventListener('click', e => { e.preventDefault(); switchLoginMode('register'); });
+document.getElementById('go-login').addEventListener('click', e => { e.preventDefault(); switchLoginMode('login'); });
+pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+const regPinEl  = document.getElementById('reg-pin');
+const regNickEl = document.getElementById('reg-nick');
+if (regPinEl)  regPinEl.addEventListener('keydown',  e => { if (e.key === 'Enter') doRegister(); });
+if (regNickEl) regNickEl.addEventListener('keydown', e => { if (e.key === 'Enter' && regPinEl) regPinEl.focus(); });
+logoutBtn.addEventListener('click', doLogout);
+
+// ── App shell ─────────────────────────────────────────────────────────────
+function showApp() {
+  hide(screenLogin); show(screenApp);
+  setText(headerNick, me.nick);
+  setText(headerCoins, me.coins);
+  switchTab('markets');
+  setupRealtime();
+}
+
+document.querySelectorAll('.nav-tab').forEach(btn =>
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+);
+
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const tM = document.getElementById('tab-markets');
+  const tL = document.getElementById('tab-leaderboard');
+  if (tab === 'markets') {
+    show(tM); hide(tL);
+    if (markets.length === 0) loadMarkets();
+  } else {
+    hide(tM); show(tL);
+    loadLeaderboard();
+  }
+}
+
+// ── Markets ───────────────────────────────────────────────────────────────
+async function loadMarkets() {
+  marketRenderSeq += 1;
+  marketsGrid.replaceChildren(makeSpinner());
+
+  const [marketsRes, tradesRes] = await Promise.all([
+    sb.from('markets').select('*').order('created_at'),
+    sb.from('trades').select('p_yes_after, created_at, market_id').order('created_at', { ascending: true }),
+  ]);
+
+  if (marketsRes.error || tradesRes.error) {
+    marketsGrid.replaceChildren(
+      el('p', { style: { color: 'var(--no)', fontSize: '14px' } }, DB_ERROR_MESSAGE)
+    );
+    return;
   }
 
-  function showMarkets() {
-    hide(screenLogin);
-    show(screenMarkets);
-    renderHeader();
-    renderMarkets();
-  }
-
-  loginBtn.addEventListener('click', login);
-  nickInput.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-  logoutBtn.addEventListener('click', logout);
-
-  // ── Render ─────────────────────────────────────────────────────────────
-
-  function renderHeader() {
-    const user = state.users[state.currentUser];
-    setText(headerCoins, user.coins);
-    setText(headerNick,  state.currentUser);
-  }
-
-  function renderMarkets() {
-    const user = state.users[state.currentUser];
-    marketsGrid.replaceChildren();   // clear without innerHTML
-
-    for (const m of state.markets) {
-      const p       = pYes(m);
-      const pos     = user.bets[m.id];
-      const noCoins = user.coins < 1;
-      const lockYes = pos && pos.side === 'NO';
-      const lockNo  = pos && pos.side === 'YES';
-
-      const yesBtn = el('button', {
-        className: 'btn-yes',
-        disabled: (noCoins || lockYes),
-        'data-market': m.id,
-        'data-side': 'YES',
-      }, 'TAK ', fmtPct(p));
-
-      const noBtn = el('button', {
-        className: 'btn-no',
-        disabled: (noCoins || lockNo),
-        'data-market': m.id,
-        'data-side': 'NO',
-      }, 'NIE ', fmtPct(1 - p));
-
-      [yesBtn, noBtn].forEach(btn => {
-        btn.addEventListener('click', () => openModal(btn.dataset.market, btn.dataset.side));
-      });
-
-      // Probability bar
-      const barYes = el('div', { className: 'prob-bar-yes', style: { width: (p * 100).toFixed(3) + '%' } });
-      const barNo  = el('div', { className: 'prob-bar-no',  style: { width: ((1 - p) * 100).toFixed(3) + '%' } });
-
-      const posNode = pos
-        ? el('div', { className: 'position-badge' },
-            'Twoja pozycja: ',
-            el('strong', {}, pos.spent + ' coinów na ' + (pos.side === 'YES' ? 'TAK' : 'NIE')),
-            ' · udziałów: ',
-            el('strong', {}, '~' + fmtNum(pos.shares)),
-            ' · potenc. wygrana: ',
-            el('strong', {}, '~' + fmtNum(pos.shares) + ' coinów')
-          )
-        : null;
-
-      const noCoinNode = (noCoins && !pos)
-        ? el('p', { className: 'no-coins-note' }, 'Brak coinów — nie możesz obstawiać')
-        : null;
-
-      const card = el('div', { className: 'market-card' },
-        el('div', { className: 'card-top' },
-          el('div', { className: 'card-icon-title' },
-            el('span', { className: 'card-icon' }, m.icon),
-            el('span', { className: 'card-title' }, m.title)
-          ),
-          el('span', { className: 'deadline-badge' }, m.deadline)
-        ),
-        el('div', { className: 'prob-section' },
-          el('div', { className: 'prob-labels' },
-            el('span', { className: 'prob-yes-label' }, 'TAK ' + fmtPct(p)),
-            el('span', { className: 'prob-no-label'  }, 'NIE ' + fmtPct(1 - p))
-          ),
-          el('div', { className: 'prob-bar' }, barYes, barNo)
-        ),
-        el('div', { className: 'bet-buttons' }, yesBtn, noBtn),
-        posNode,
-        noCoinNode
-      );
-
-      marketsGrid.appendChild(card);
-    }
-  }
-
-  // ── Modal ──────────────────────────────────────────────────────────────
-
-  let activeMarketId = null;
-  let activeSide     = 'YES';   // 'YES' | 'NO'
-
-  function openModal(marketId, side) {
-    const user = state.users[state.currentUser];
-    if (user.coins < 1) return;
-
-    activeMarketId = marketId;
-    const m   = state.markets.find(x => x.id === marketId);
-    const pos = user.bets[marketId];
-
-    setText(modalMarketName, m.title);
-
-    const lockYes = pos && pos.side === 'NO';
-    const lockNo  = pos && pos.side === 'YES';
-    sideYesBtn.disabled = lockYes;
-    sideNoBtn.disabled  = lockNo;
-
-    activeSide = (side === 'NO' && !lockNo) ? 'NO'
-               : (side === 'YES' && !lockYes) ? 'YES'
-               : lockYes ? 'NO' : 'YES';
-
-    betSlider.max   = user.coins;
-    betSlider.value = 1;
-
-    refreshModal();
-    show(modalOverlay);
-    document.body.style.overflow = 'hidden';
-  }
-
-  sideYesBtn.addEventListener('click', () => { activeSide = 'YES'; refreshModal(); });
-  sideNoBtn.addEventListener('click',  () => { activeSide = 'NO';  refreshModal(); });
-
-  function refreshModal() {
-    const m     = state.markets.find(x => x.id === activeMarketId);
-    const X     = parseInt(betSlider.value, 10) || 1;
-    const isYes = activeSide === 'YES';
-    const res   = computeBet(m, activeSide, X);
-
-    setClass(sideYesBtn, 'side-btn' + (isYes  ? ' active-yes' : ''));
-    setClass(sideNoBtn,  'side-btn' + (!isYes ? ' active-no'  : ''));
-
-    setText(sliderDisplay, X);
-
-    const before = fmtPct(pYes(m));
-    const after  = fmtPct(res.pYesAfter);
-    setText(prevBefore, before);
-    setClass(prevBefore, 'clr-yes');
-    setText(prevAfter, after);
-    setClass(prevAfter, res.pYesAfter > pYes(m) ? 'clr-yes' : 'clr-no');
-
-    setText(prevShares, '~' + fmtNum(res.sharesOut) + ' udz. ' + (isYes ? 'TAK' : 'NIE'));
-    setText(prevWin, '~' + fmtNum(res.sharesOut) + ' coinów 🪙');
-
-    setClass(btnPlace, 'btn-place ' + (isYes ? 'btn-place-yes' : 'btn-place-no'));
-    setText(btnPlace, 'Postaw ' + X + ' coinów na ' + (isYes ? 'TAK' : 'NIE'));
-    btnPlace.disabled = X < 1;
-  }
-
-  betSlider.addEventListener('input', refreshModal);
-
-  document.getElementById('modal-close').addEventListener('click', closeModal);
-  modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-  function closeModal() {
-    hide(modalOverlay);
-    document.body.style.overflow = '';
-  }
-
-  btnPlace.addEventListener('click', () => {
-    const user = state.users[state.currentUser];
-    const m    = state.markets.find(x => x.id === activeMarketId);
-    const X    = parseInt(betSlider.value, 10);
-    if (!X || X > user.coins) return;
-
-    const res = computeBet(m, activeSide, X);
-
-    user.coins  -= X;
-    m.yesShares  = res.Y2;
-    m.noShares   = res.N2;
-
-    const pos = user.bets[m.id];
-    if (pos) {
-      pos.spent  += X;
-      pos.shares += res.sharesOut;
-    } else {
-      user.bets[m.id] = { side: activeSide, spent: X, shares: res.sharesOut };
-    }
-
-    saveState();
-    closeModal();
-    renderHeader();
-    renderMarkets();
-    showToast('✅ Postawiono ' + X + ' coinów na ' + (activeSide === 'YES' ? 'TAK' : 'NIE') + '!');
+  markets = marketsRes.data || [];
+  tradesByMarket = {};
+  (tradesRes.data || []).forEach(t => {
+    if (!tradesByMarket[t.market_id]) tradesByMarket[t.market_id] = [];
+    tradesByMarket[t.market_id].push(t);
   });
 
-  // ── Toast ──────────────────────────────────────────────────────────────
+  await renderMarkets();
+}
 
-  let toastTimer;
+async function renderMarkets() {
+  const renderSeq = ++marketRenderSeq;
+  const marketsSnapshot = markets.slice();
 
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    setText(t, msg);
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  if (marketsSnapshot.length === 0) {
+    myPositionsByMarket = {};
+    marketsGrid.replaceChildren(
+      el('p', { style: { color: 'var(--muted)', fontSize: '14px' } }, 'Brak rynków. Utwórz pierwszy!')
+    );
+    return;
   }
 
-  // ── Boot ───────────────────────────────────────────────────────────────
+  let posMap = {};
+  if (me?.id) {
+    const { data: myPos, error } = await sb.from('positions').select('*').eq('user_id', me.id);
+    if (renderSeq !== marketRenderSeq) return;
+    if (error) {
+      showToast('❌ Nie udało się wczytać Twoich pozycji.');
+    }
+    posMap = buildPositionMap(myPos);
+  }
+  if (renderSeq !== marketRenderSeq) return;
+  myPositionsByMarket = posMap;
 
-  if (state.currentUser && state.users[state.currentUser]) {
-    showMarkets();
+  marketsGrid.replaceChildren(
+    ...marketsSnapshot.map(m => buildMarketCard(m, posMap[m.id] || null))
+  );
+}
+
+function buildMarketCard(m, pos) {
+  const p = pYes(m);
+
+  // ── Header ──
+  const titleRow = el('div', { className: 'card-title-row' },
+    el('span', { className: 'card-icon' }, m.icon),
+    el('span', { className: 'card-title' }, m.title)
+  );
+  const metaItems = [el('span', { className: 'deadline-badge' }, m.deadline)];
+  if (!m.resolved && isResolver(m)) {
+    const rb = el('button', { className: 'btn-resolve-sm' }, 'Zamknij');
+    rb.addEventListener('click', () => openResolveModal(m.id));
+    metaItems.push(rb);
+  }
+  const header = el('div', { className: 'card-header' }, titleRow, el('div', { className: 'card-meta' }, ...metaItems));
+
+  // ── Probability ──
+  const probRow = el('div', { className: 'prob-row' },
+    el('div', { className: 'prob-side' },
+      el('div', { className: 'prob-lbl' }, 'TAK'),
+      el('div', { className: 'prob-num prob-num-yes' }, (p * 100).toFixed(1) + '%')
+    ),
+    el('div', { className: 'prob-side prob-side-no' },
+      el('div', { className: 'prob-lbl' }, 'NIE'),
+      el('div', { className: 'prob-num prob-num-no' }, ((1 - p) * 100).toFixed(1) + '%')
+    )
+  );
+
+  const barYes = el('div', { className: 'prob-bar-yes', style: { width: (p * 100).toFixed(2) + '%' } });
+  const barNo  = el('div', { className: 'prob-bar-no',  style: { width: ((1 - p) * 100).toFixed(2) + '%' } });
+  const bar    = el('div', { className: 'prob-bar' }, barYes, barNo);
+
+  // ── Inline chart ──
+  const chartDiv = el('div', { className: 'card-chart' });
+  const trades   = tradesByMarket[m.id] || [];
+  const pts      = [{ p: 0.5 }, ...trades.map(t => ({ p: +t.p_yes_after }))];
+  renderChart(chartDiv, pts);
+
+  // ── Bet section / resolved banner ──
+  let betSection;
+  if (m.resolved) {
+    const isYes = m.resolution === 'YES';
+    betSection = el('div', { className: 'resolved-banner ' + (isYes ? 'resolved-yes' : 'resolved-no') },
+      isYes ? 'Rozstrzygnięty: TAK ✅' : 'Rozstrzygnięty: NIE ❌');
   } else {
-    showLogin();
+    const noCoins = me.coins < 1;
+    const lockYes = pos && (pos.side === 'NO' || pos.side === 'MIXED');
+    const lockNo  = pos && (pos.side === 'YES' || pos.side === 'MIXED');
+
+    const yesBtn = el('button', { className: 'btn-yes', disabled: noCoins || lockYes,
+      'data-market': m.id, 'data-side': 'YES' }, 'TAK  ' + fmtPct(p));
+    const noBtn  = el('button', { className: 'btn-no', disabled: noCoins || lockNo,
+      'data-market': m.id, 'data-side': 'NO'  }, 'NIE  ' + fmtPct(1 - p));
+    [yesBtn, noBtn].forEach(b =>
+      b.addEventListener('click', () => openBetModal(b.dataset.market, b.dataset.side))
+    );
+    betSection = el('div', { className: 'bet-row' }, yesBtn, noBtn);
   }
+
+  const posNode = pos && pos.side === 'MIXED'
+    ? el('div', { className: 'position-badge' },
+        el('strong', {}, 'Twoja pozycja jest po obu stronach.'),
+        ' Nie można dokładać kolejnych coinów na tym rynku.'
+      )
+    : pos
+    ? el('div', { className: 'position-badge' },
+        'Twoja pozycja: ',
+        el('strong', {}, pos.total_spent + ' coinów na ' + (pos.side === 'YES' ? 'TAK' : 'NIE')),
+        ' · udziały: ~' + fmtNum(pos.total_shares) + ' · max wygrana: ~' + fmtNum(pos.total_shares) + ' 🪙'
+      )
+    : null;
+
+  const noCoinNode = (!m.resolved && me.coins < 1 && !pos)
+    ? el('p', { className: 'no-coins-note' }, 'Brak coinów')
+    : null;
+
+  return el('div', { className: 'market-card', 'data-market-id': m.id },
+    header, probRow, bar, chartDiv, betSection, posNode, noCoinNode
+  );
+}
+
+// ── Inline probability chart ──────────────────────────────────────────────
+function renderChart(container, points) {
+  container.replaceChildren();
+
+  const W = 400, H = 110;
+  const pT = 8, pB = 4, pL = 28, pR = 6;
+  const iW = W - pL - pR, iH = H - pT - pB;
+  const n  = points.length;
+
+  const svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none' });
+  const yFn = prob => pT + (1 - prob) * iH;
+
+  // Horizontal grid lines + y-axis labels at 0 / 25 / 50 / 75 / 100%
+  [0, 0.25, 0.5, 0.75, 1].forEach(p => {
+    const y = yFn(p).toFixed(1);
+    svg.appendChild(svgEl('line', {
+      x1: pL, y1: y, x2: W - pR, y2: y,
+      stroke: p === 0.5 ? '#d1d5db' : '#e5e7eb',
+      'stroke-width': p === 0.5 ? '1' : '0.7',
+      ...(p !== 0.5 && { 'stroke-dasharray': '3 3' }),
+    }));
+    const lbl = svgEl('text', {
+      x: pL - 4, y, 'text-anchor': 'end', 'dominant-baseline': 'middle',
+      fill: '#9ca3af', 'font-size': '8', 'font-family': 'Inter, sans-serif', 'font-weight': '500',
+    });
+    lbl.textContent = Math.round(p * 100) + '%';
+    svg.appendChild(lbl);
+  });
+
+  // Coords — single point becomes a flat line spanning full width
+  let coords;
+  if (n < 2) {
+    const y = yFn(points[0]?.p ?? 0.5);
+    coords = [[pL, y], [W - pR, y]];
+  } else {
+    coords = points.map((pt, i) => [pL + (i / (n - 1)) * iW, yFn(pt.p)]);
+  }
+
+  const botY  = yFn(0);
+  const firstX = coords[0][0];
+  const lastX  = coords[coords.length - 1][0];
+
+  // Area fill
+  const areaPts = coords.map(([cx, cy]) => (+cx).toFixed(1) + ',' + (+cy).toFixed(1)).join(' ')
+    + ' ' + (+lastX).toFixed(1) + ',' + botY.toFixed(1)
+    + ' ' + (+firstX).toFixed(1) + ',' + botY.toFixed(1);
+  svg.appendChild(svgEl('polygon', { points: areaPts, fill: 'rgba(99,102,241,0.07)', stroke: 'none' }));
+
+  // Probability line
+  const linePts = coords.map(([cx, cy]) => (+cx).toFixed(1) + ',' + (+cy).toFixed(1)).join(' ');
+  const lineAttrs = {
+    points: linePts, fill: 'none', stroke: '#6366f1', 'stroke-width': '1.8',
+    'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+  };
+  if (n < 2) lineAttrs['stroke-dasharray'] = '6 4';
+  svg.appendChild(svgEl('polyline', lineAttrs));
+
+  // Endpoint dot + current-value label (real trades only)
+  if (n >= 2) {
+    const [lx, ly] = coords[coords.length - 1];
+    svg.appendChild(svgEl('circle', {
+      cx: (+lx).toFixed(1), cy: (+ly).toFixed(1), r: '3.5',
+      fill: '#6366f1', stroke: '#fff', 'stroke-width': '1.5',
+    }));
+    // Place label left of dot when near the right edge
+    const nearRight = +lx > W - pR - 30;
+    const lblX = nearRight ? +lx - 6 : +lx + 6;
+    const anchor = nearRight ? 'end' : 'start';
+    const valLbl = svgEl('text', {
+      x: lblX.toFixed(1), y: (+ly - 5).toFixed(1),
+      'text-anchor': anchor,
+      fill: '#6366f1', 'font-size': '9', 'font-family': 'Inter, sans-serif', 'font-weight': '700',
+    });
+    valLbl.textContent = Math.round(points[n - 1].p * 100) + '%';
+    svg.appendChild(valLbl);
+  }
+
+  container.appendChild(svg);
+}
+
+function updateCardChart(marketId) {
+  const card = document.querySelector('[data-market-id="' + CSS.escape(marketId) + '"]');
+  if (!card) return;
+  const chartDiv = card.querySelector('.card-chart');
+  if (!chartDiv) return;
+  const trades = tradesByMarket[marketId] || [];
+  renderChart(chartDiv, [{ p: 0.5 }, ...trades.map(t => ({ p: +t.p_yes_after }))]);
+}
+
+// ── Realtime ──────────────────────────────────────────────────────────────
+function setupRealtime() {
+  teardownRealtime();
+
+  const ch = sb.channel('db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'markets' }, async payload => {
+      if (payload.eventType === 'INSERT') {
+        if (!markets.find(m => m.id === payload.new.id)) {
+          markets.push(payload.new);
+          await renderMarkets();
+        }
+      } else if (payload.eventType === 'UPDATE') {
+        const idx = markets.findIndex(m => m.id === payload.new.id);
+        if (idx !== -1) markets[idx] = { ...markets[idx], ...payload.new };
+        if (payload.new.resolved) { renderMarkets(); return; }
+        updateCardProb(payload.new);
+      }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades' }, payload => {
+      const t = payload.new;
+      if (!tradesByMarket[t.market_id]) tradesByMarket[t.market_id] = [];
+      tradesByMarket[t.market_id].push({ p_yes_after: t.p_yes_after, created_at: t.created_at });
+      updateCardChart(t.market_id);
+    })
+    .subscribe();
+
+  realtimeChannels.push(ch);
+}
+
+function updateCardProb(m) {
+  const card = document.querySelector('[data-market-id="' + CSS.escape(m.id) + '"]');
+  if (!card) return;
+  const p = pYes(m);
+  const q = s => card.querySelector(s);
+  const yn = q('.prob-num-yes'); if (yn) yn.textContent = (p * 100).toFixed(1) + '%';
+  const nn = q('.prob-num-no');  if (nn) nn.textContent = ((1-p)*100).toFixed(1) + '%';
+  const by = q('.prob-bar-yes'); if (by) by.style.width = (p*100).toFixed(2) + '%';
+  const bn = q('.prob-bar-no');  if (bn) bn.style.width = ((1-p)*100).toFixed(2) + '%';
+  const yb = q('.btn-yes');      if (yb) yb.textContent = 'TAK  ' + fmtPct(p);
+  const nb = q('.btn-no');       if (nb) nb.textContent = 'NIE  ' + fmtPct(1-p);
+}
+
+function teardownRealtime() {
+  realtimeChannels.forEach(ch => sb.removeChannel(ch));
+  realtimeChannels = [];
+}
+
+// ── Bet modal ─────────────────────────────────────────────────────────────
+function openBetModal(marketId, side) {
+  if (me.coins < 1) return;
+  activeMarket = markets.find(m => m.id === marketId);
+  if (!activeMarket) return;
+  const pos = myPositionsByMarket[marketId];
+  if (pos?.side === 'MIXED') {
+    showToast('❌ Ten rynek ma już pozycję po obu stronach. Nie można dokładać.');
+    return;
+  }
+  const lockedSide = getLockedSide(marketId);
+  if (lockedSide && lockedSide !== side) {
+    showToast('❌ Na tym rynku możesz dokładać tylko do strony ' + (lockedSide === 'YES' ? 'TAK' : 'NIE') + '.');
+  }
+  setText(modalMarketName, activeMarket.title);
+  activeSide      = lockedSide || side;
+  betSlider.max   = me.coins;
+  betSlider.value = Math.min(10, me.coins);
+  refreshBetModal();
+  show(modalOverlay);
+  document.body.style.overflow = 'hidden';
+}
+
+function refreshBetModal() {
+  const lockedSide = activeMarket ? getLockedSide(activeMarket.id) : null;
+  if (lockedSide && activeSide !== lockedSide) activeSide = lockedSide;
+  const isYes = activeSide === 'YES';
+  const X     = parseInt(betSlider.value, 10) || 1;
+  const res   = computeBet(activeMarket, activeSide, X);
+
+  sideYesBtn.className = 'side-btn' + (isYes  ? ' active-yes' : '');
+  sideNoBtn.className  = 'side-btn' + (!isYes ? ' active-no'  : '');
+  sideYesBtn.disabled = lockedSide === 'NO';
+  sideNoBtn.disabled  = lockedSide === 'YES';
+  setText(sliderDisplay, X);
+  prevBefore.textContent = fmtPct(pYes(activeMarket));
+  prevBefore.className   = 'clr-yes';
+  prevAfter.textContent  = fmtPct(res.pYesAfter);
+  prevAfter.className    = res.pYesAfter > pYes(activeMarket) ? 'clr-yes' : 'clr-no';
+  setText(prevShares, '~' + fmtNum(res.sharesOut) + ' udz. ' + (isYes ? 'TAK' : 'NIE'));
+  setText(prevWin,    '~' + fmtNum(res.sharesOut) + ' 🪙');
+  btnPlace.className = 'btn-place ' + (isYes ? 'btn-place-yes' : 'btn-place-no');
+  setText(btnPlace, 'Postaw ' + X + ' coinów na ' + (isYes ? 'TAK' : 'NIE'));
+  btnPlace.disabled = X < 1;
+}
+
+sideYesBtn.addEventListener('click', () => {
+  const lockedSide = activeMarket ? getLockedSide(activeMarket.id) : null;
+  if (lockedSide && lockedSide !== 'YES') {
+    showToast('❌ Na tym rynku możesz dokładać tylko do strony NIE.');
+    return;
+  }
+  activeSide = 'YES'; refreshBetModal();
+});
+sideNoBtn.addEventListener('click',  () => {
+  const lockedSide = activeMarket ? getLockedSide(activeMarket.id) : null;
+  if (lockedSide && lockedSide !== 'NO') {
+    showToast('❌ Na tym rynku możesz dokładać tylko do strony TAK.');
+    return;
+  }
+  activeSide = 'NO'; refreshBetModal();
+});
+betSlider.addEventListener('input', refreshBetModal);
+document.getElementById('modal-close').addEventListener('click', closeBetModal);
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeBetModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeBetModal(); closeNmModal(); closeResolveModal(); }
+});
+
+function closeBetModal() { hide(modalOverlay); document.body.style.overflow = ''; }
+
+btnPlace.addEventListener('click', async () => {
+  const X = parseInt(betSlider.value, 10);
+  if (!X || X > me.coins) return;
+  const pos = activeMarket ? myPositionsByMarket[activeMarket.id] : null;
+  if (pos?.side === 'MIXED' || (pos && pos.side !== activeSide)) {
+    showToast('❌ Nie można grać po obu stronach tego samego rynku.');
+    return;
+  }
+  btnPlace.disabled = true;
+  setText(btnPlace, 'Wysyłam…');
+
+  const { data, error } = await sb.rpc('place_bet', {
+    p_market: activeMarket.id, p_side: activeSide, p_amount: X,
+  });
+
+  btnPlace.disabled = false;
+
+  if (error) {
+    const msg = error.message.includes('insufficient') ? 'Za mało coinów!'
+              : error.message.includes('not_auth')     ? 'Nie jesteś zalogowany.'
+              : error.message.includes('side_locked')  ? 'Na tym rynku możesz dokładać tylko do wybranej wcześniej strony.'
+              : 'Błąd: ' + error.message;
+    showToast('❌ ' + msg); refreshBetModal(); return;
+  }
+
+  me.coins = data.coins_left;
+  setText(headerCoins, me.coins);
+
+  const idx = markets.findIndex(m => m.id === activeMarket.id);
+  if (idx !== -1) {
+    const res = computeBet(activeMarket, activeSide, X);
+    markets[idx] = { ...markets[idx], yes_shares: res.Y2, no_shares: res.N2 };
+    activeMarket = markets[idx];
+    updateCardProb(markets[idx]);
+  }
+
+  closeBetModal();
+  await renderMarkets();
+  showToast('✅ Postawiono ' + X + ' coinów na ' + (activeSide === 'YES' ? 'TAK' : 'NIE') + '!');
+});
+
+// ── New market modal ──────────────────────────────────────────────────────
+const NM_ICONS = ['🎲','🍺','🥃','🍾','🚱','🎉','🏋️','💸','🤔','😂','🔥','❓'];
+let nmIcon = '🎲';
+
+(function buildNmIcons() {
+  const wrap = document.getElementById('nm-icons');
+  NM_ICONS.forEach(ic => {
+    const btn = el('button', { className: 'nm-icon-btn' + (ic === '🎲' ? ' selected' : '') }, ic);
+    btn.addEventListener('click', () => {
+      nmIcon = ic;
+      wrap.querySelectorAll('.nm-icon-btn').forEach(b => b.classList.toggle('selected', b.textContent === ic));
+    });
+    wrap.appendChild(btn);
+  });
+})();
+
+document.getElementById('btn-new-market').addEventListener('click', () => {
+  document.getElementById('nm-title').value    = '';
+  document.getElementById('nm-deadline').value = '';
+  show(nmOverlay); document.body.style.overflow = 'hidden';
+});
+document.getElementById('nm-close').addEventListener('click', closeNmModal);
+nmOverlay.addEventListener('click', e => { if (e.target === nmOverlay) closeNmModal(); });
+
+function closeNmModal() { hide(nmOverlay); document.body.style.overflow = ''; }
+
+document.getElementById('nm-submit').addEventListener('click', async () => {
+  const title    = document.getElementById('nm-title').value.trim();
+  const deadline = document.getElementById('nm-deadline').value.trim();
+  if (!title)    { showToast('❌ Podaj pytanie rynku.'); return; }
+  if (!deadline) { showToast('❌ Podaj termin.'); return; }
+
+  const btn = document.getElementById('nm-submit');
+  btn.disabled = true; btn.textContent = 'Tworzę…';
+
+  const { error } = await sb.rpc('create_market', { p_icon: nmIcon, p_title: title, p_deadline: deadline });
+  btn.disabled = false; btn.textContent = 'Utwórz rynek';
+
+  if (error) { showToast('❌ ' + error.message); return; }
+  closeNmModal(); showToast('✅ Rynek utworzony!');
+  await loadMarkets();
+});
+
+// ── Resolve modal ─────────────────────────────────────────────────────────
+function openResolveModal(marketId) {
+  activeMarket = markets.find(m => m.id === marketId);
+  if (!activeMarket) return;
+  pickedResolution = null;
+  setText(document.getElementById('rm-market-name'), activeMarket.title);
+  document.getElementById('rm-yes').className = 'side-btn';
+  document.getElementById('rm-no').className  = 'side-btn';
+  const c = document.getElementById('rm-confirm');
+  c.disabled = true; c.className = 'btn-place btn-place-yes'; c.textContent = 'Zatwierdź';
+  show(rmOverlay); document.body.style.overflow = 'hidden';
+}
+
+function closeResolveModal() { hide(rmOverlay); document.body.style.overflow = ''; }
+
+document.getElementById('rm-close').addEventListener('click', closeResolveModal);
+rmOverlay.addEventListener('click', e => { if (e.target === rmOverlay) closeResolveModal(); });
+
+document.getElementById('rm-yes').addEventListener('click', () => {
+  pickedResolution = 'YES';
+  document.getElementById('rm-yes').className = 'side-btn active-yes';
+  document.getElementById('rm-no').className  = 'side-btn';
+  const c = document.getElementById('rm-confirm');
+  c.disabled = false; c.className = 'btn-place btn-place-yes'; c.textContent = 'Zatwierdź: TAK wygrało';
+});
+
+document.getElementById('rm-no').addEventListener('click', () => {
+  pickedResolution = 'NO';
+  document.getElementById('rm-no').className  = 'side-btn active-no';
+  document.getElementById('rm-yes').className = 'side-btn';
+  const c = document.getElementById('rm-confirm');
+  c.disabled = false; c.className = 'btn-place btn-place-no'; c.textContent = 'Zatwierdź: NIE wygrało';
+});
+
+document.getElementById('rm-confirm').addEventListener('click', async () => {
+  if (!pickedResolution || !activeMarket) return;
+  const c = document.getElementById('rm-confirm');
+  c.disabled = true; c.textContent = 'Zamykam…';
+
+  const { error } = await sb.rpc('resolve_market', { p_market: activeMarket.id, p_resolution: pickedResolution });
+  c.disabled = false;
+
+  if (error) {
+    const msg = error.message.includes('not_authorized')   ? 'Brak uprawnień.'
+              : error.message.includes('already_resolved') ? 'Rynek już zamknięty.'
+              : 'Błąd: ' + error.message;
+    showToast('❌ ' + msg); closeResolveModal(); return;
+  }
+
+  const { data: profile } = await sb.from('profiles').select('coins').eq('id', me.id).single();
+  if (profile) { me.coins = profile.coins; setText(headerCoins, me.coins); }
+
+  closeResolveModal(); showToast('✅ Rynek zamknięty!');
+  await loadMarkets();
+});
+
+// ── Leaderboard ───────────────────────────────────────────────────────────
+async function loadLeaderboard() {
+  const wrap = document.getElementById('leaderboard-wrap');
+  wrap.replaceChildren(makeSpinner());
+
+  const { data, error } = await sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20);
+
+  if (error) {
+    wrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '14px', padding: '24px' } }, DB_ERROR_MESSAGE));
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, 'Brak graczy.'));
+    return;
+  }
+
+  const rows = data.map((row, i) => el('tr', {},
+    el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+    el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') },
+      row.nick + (row.id === me.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-coins' }, row.coins + ' 🪙'),
+    el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
+  ));
+
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Nick'),
+        el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth')
+      )),
+      el('tbody', {}, ...rows)
+    )
+  );
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await initSession(session.user);
+  } else {
+    await loadNickList();
+    show(screenLogin);
+  }
+})();
 </script>
 </body>
 </html>
