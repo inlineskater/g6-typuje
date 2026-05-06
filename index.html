@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdamMarket — Czy Adam Wypije?</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0e11;
+      --card: #161b22;
+      --border: #222a35;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --yes: #16c784;
+      --no: #ea3943;
+      --accent: #3861fb;
+      --yes-dim: rgba(22, 199, 132, 0.12);
+      --no-dim:  rgba(234, 57, 67, 0.12);
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── LOGIN ── */
+    .login-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo-big { font-size: 52px; margin-bottom: 10px; }
+    .login-title { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .login-sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; line-height: 1.5; }
+    .field-label { text-align: left; font-size: 12px; color: var(--muted); margin-bottom: 6px; letter-spacing: .05em; text-transform: uppercase; }
+
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 15px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color .15s;
+      margin-bottom: 14px;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 13px;
+      transition: opacity .15s;
+    }
+
+    .btn-primary:hover { opacity: .85; }
+    .btn-primary:disabled { opacity: .38; cursor: not-allowed; }
+
+    .login-hint { color: var(--muted); font-size: 12px; margin-top: 20px; line-height: 1.6; }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo { font-size: 18px; font-weight: 700; }
+    .logo span { color: var(--accent); }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .header-nick { font-size: 13px; color: var(--muted); }
+
+    .coins-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(56, 97, 251, 0.1);
+      border: 1px solid rgba(56, 97, 251, 0.25);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 6px 13px;
+      transition: all .15s;
+    }
+
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+    /* ── MAIN ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
+    .page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .page-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+    .markets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── MARKET CARD ── */
+    .market-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color .2s;
+    }
+
+    .market-card:hover { border-color: rgba(56, 97, 251, 0.35); }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .card-icon-title { display: flex; align-items: flex-start; gap: 10px; }
+    .card-icon { font-size: 22px; line-height: 1.1; flex-shrink: 0; }
+    .card-title { font-size: 14px; font-weight: 600; line-height: 1.45; }
+
+    .deadline-badge {
+      background: rgba(139, 148, 158, 0.08);
+      border: 1px solid rgba(139, 148, 158, 0.18);
+      border-radius: 20px;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-size: 10px;
+      padding: 3px 9px;
+      white-space: nowrap;
+    }
+
+    .prob-section { margin-bottom: 14px; }
+
+    .prob-labels { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+    .prob-yes-label { color: var(--yes); font-weight: 700; }
+    .prob-no-label  { color: var(--no);  font-weight: 700; }
+
+    .prob-bar {
+      display: flex;
+      border-radius: 4px;
+      height: 5px;
+      overflow: hidden;
+      background: var(--border);
+    }
+
+    .prob-bar-yes { background: var(--yes); transition: width .35s; }
+    .prob-bar-no  { background: var(--no);  transition: width .35s; }
+
+    .bet-buttons { display: flex; gap: 8px; }
+
+    .btn-yes, .btn-no {
+      border-radius: 8px;
+      cursor: pointer;
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 4px;
+      transition: opacity .15s;
+    }
+
+    .btn-yes { background: var(--yes-dim); border: 1px solid rgba(22,199,132,.25); color: var(--yes); }
+    .btn-no  { background: var(--no-dim);  border: 1px solid rgba(234,57,67,.25);  color: var(--no);  }
+    .btn-yes:not(:disabled):hover { background: rgba(22,199,132,.22); }
+    .btn-no:not(:disabled):hover  { background: rgba(234,57,67,.22);  }
+    .btn-yes:disabled, .btn-no:disabled { opacity: .32; cursor: not-allowed; }
+
+    .position-badge {
+      margin-top: 12px;
+      background: rgba(56, 97, 251, 0.07);
+      border: 1px solid rgba(56, 97, 251, 0.18);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .no-coins-note { margin-top: 10px; font-size: 12px; color: var(--no); text-align: center; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 100;
+      padding: 0;
+    }
+
+    @media (min-width: 640px) {
+      .modal-overlay { align-items: center; padding: 20px; }
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+      max-width: 440px;
+      width: 100%;
+      padding: 24px;
+    }
+
+    @media (min-width: 640px) {
+      .modal { border-radius: var(--radius); }
+    }
+
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .modal-title { font-size: 17px; font-weight: 700; }
+
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color .15s;
+    }
+
+    .btn-close:hover { color: var(--text); }
+
+    .modal-market-name { color: var(--muted); font-size: 13px; margin-bottom: 22px; line-height: 1.4; }
+
+    .side-toggle {
+      display: flex;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 22px;
+      gap: 4px;
+    }
+
+    .side-btn {
+      flex: 1;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 9px;
+      transition: all .15s;
+    }
+
+    .side-btn.active-yes { background: var(--yes-dim); border-color: rgba(22,199,132,.28); color: var(--yes); }
+    .side-btn.active-no  { background: var(--no-dim);  border-color: rgba(234,57,67,.28);  color: var(--no);  }
+    .side-btn:disabled   { opacity: .32; cursor: not-allowed; }
+
+    .slider-section { margin-bottom: 20px; }
+
+    .slider-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+    .slider-label-text { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .slider-value { font-size: 20px; font-weight: 700; }
+    .slider-value small { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+
+    input[type="range"] {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(56,97,251,.25);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .preview-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      padding: 5px 0;
+    }
+
+    .preview-row + .preview-row { border-top: 1px solid var(--border); margin-top: 5px; padding-top: 10px; }
+
+    .prev-label { color: var(--muted); }
+    .prev-val { font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .arrow { color: var(--muted); font-size: 11px; }
+    .clr-yes { color: var(--yes); }
+    .clr-no  { color: var(--no);  }
+
+    .btn-place {
+      width: 100%;
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px;
+      transition: opacity .15s;
+    }
+
+    .btn-place-yes { background: var(--yes); color: #000; }
+    .btn-place-no  { background: var(--no);  color: #fff; }
+    .btn-place:hover { opacity: .85; }
+    .btn-place:disabled { opacity: .38; cursor: not-allowed; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1e2530;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 11px 20px;
+      pointer-events: none;
+      transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
+      z-index: 300;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 48px;
+      padding: 20px 24px;
+      text-align: center;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="screen-login" class="login-wrap">
+  <div class="login-card">
+    <div class="logo-big">🍺</div>
+    <h1 class="login-title">AdamMarket</h1>
+    <p class="login-sub">Prognozuj rynki.<br>Postaw na to, czy Adam w końcu się napije!</p>
+    <p class="field-label">Twój nick</p>
+    <input type="text" id="nick-input" placeholder="np. Kasia, Marek, Bartek…" maxlength="30" autocomplete="off" spellcheck="false">
+    <button class="btn-primary" id="login-btn">Wejdź na rynek →</button>
+    <p class="login-hint">Nowi gracze dostają <strong>10 coinów 🪙</strong> na start.<br>Wracasz? Twoje coiny i zakłady czekają.</p>
+  </div>
+</div>
+
+<!-- ── MARKETS ── -->
+<div id="screen-markets" class="hidden">
+  <header>
+    <div class="logo">Adam<span>Market</span></div>
+    <div class="user-info">
+      <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
+      <span class="header-nick" id="header-nick"></span>
+      <button class="btn-ghost" id="logout-btn">Wyloguj</button>
+    </div>
+  </header>
+
+  <main>
+    <h2 class="page-title">Rynki: Czy Adam wypije? 🍻</h2>
+    <p class="page-sub">Prawdziwy CPMM · Fałszywe coiny · Stuprocentowy fun</p>
+    <div class="markets-grid" id="markets-grid"></div>
+  </main>
+
+  <footer>
+    AdamMarket używa <strong>CPMM</strong> (jak Polymarket) do wyliczania prawdopodobieństw.<br>
+    Każdy odwiedzający ma <strong>własny stan rynku</strong> w swojej przeglądarce — brak serwera.<br>
+    Wiele nicków na tej samej przeglądarce/urządzeniu dzieli wspólne pule rynkowe. · v1 · Brak rozliczeń.
+  </footer>
+</div>
+
+<!-- ── BET MODAL ── -->
+<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Postaw zakład">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Postaw zakład</span>
+      <button class="btn-close" id="modal-close" aria-label="Zamknij">✕</button>
+    </div>
+    <p class="modal-market-name" id="modal-market-name"></p>
+
+    <div class="side-toggle">
+      <button class="side-btn" id="side-yes-btn">TAK</button>
+      <button class="side-btn" id="side-no-btn">NIE</button>
+    </div>
+
+    <div class="slider-section">
+      <div class="slider-label">
+        <span class="slider-label-text">Kwota zakładu</span>
+        <span class="slider-value"><span id="slider-display">1</span><small>coinów 🪙</small></span>
+      </div>
+      <input type="range" id="bet-slider" min="1" max="10" value="1">
+    </div>
+
+    <div class="preview-box">
+      <div class="preview-row">
+        <span class="prev-label">Prawdop. TAK</span>
+        <span class="prev-val">
+          <span id="prev-before">—</span>
+          <span class="arrow">▶</span>
+          <span id="prev-after">—</span>
+        </span>
+      </div>
+      <div class="preview-row">
+        <span class="prev-label">Otrzymasz udziałów</span>
+        <span class="prev-val" id="prev-shares">—</span>
+      </div>
+      <div class="preview-row">
+        <span class="prev-label">Potencjalna wygrana</span>
+        <span class="prev-val" id="prev-win">—</span>
+      </div>
+    </div>
+
+    <button class="btn-place btn-place-yes" id="btn-place">Postaw</button>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+  'use strict';
+
+  // ── Constants ──────────────────────────────────────────────────────────
+
+  const STORAGE_KEY = 'adam_bets_v1';
+
+  const SEED_MARKETS = [
+    { id: 'm1', icon: '🍻', title: 'Czy Adam napije się do końca maja?',            deadline: '31 maja 2026',       yesShares: 400, noShares: 600 },
+    { id: 'm2', icon: '🥃', title: 'Czy Adam wypije wódkę do końca czerwca?',        deadline: '30 czerwca 2026',    yesShares: 700, noShares: 300 },
+    { id: 'm3', icon: '🚱', title: 'Czy Adam dotrwa trzeźwy przez cały lipiec?',     deadline: '31 lipca 2026',      yesShares: 600, noShares: 400 },
+    { id: 'm4', icon: '🎉', title: 'Czy Adam zamówi szota na najbliższej imprezie?', deadline: 'Najbliższa impreza', yesShares: 300, noShares: 700 },
+    { id: 'm5', icon: '🍺', title: 'Czy Adam wytrzyma bez piwa przez cały tydzień?', deadline: 'Rolling 7 dni',      yesShares: 800, noShares: 200 },
+  ];
+
+  // ── State ──────────────────────────────────────────────────────────────
+
+  function makeDefaultState() {
+    return {
+      version: 1,
+      currentUser: null,
+      users: {},
+      markets: SEED_MARKETS.map(m => ({ ...m })),
+    };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && s.version === 1) return s;
+      }
+    } catch (_) {}
+    return makeDefaultState();
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  let state = loadState();
+
+  // ── CPMM math ──────────────────────────────────────────────────────────
+  // Price of YES = N / (Y + N) — scarcer token is more expensive, same as Polymarket.
+  // Buying YES with X: mint X YES + X NO, swap the NO back into the pool preserving Y*N = k.
+
+  function pYes(m) {
+    return m.noShares / (m.yesShares + m.noShares);
+  }
+
+  function computeBet(m, side, X) {
+    const Y = m.yesShares, N = m.noShares;
+    if (side === 'YES') {
+      const dY       = (Y * X) / (N + X);   // YES gained from the swap leg
+      const sharesOut = X + dY;             // total YES shares received
+      const Y2 = Y - dY, N2 = N + X;
+      return { sharesOut, pYesAfter: N2 / (Y2 + N2), Y2, N2 };
+    } else {
+      const dN       = (N * X) / (Y + X);   // NO gained from the swap leg
+      const sharesOut = X + dN;
+      const Y2 = Y + X, N2 = N - dN;
+      return { sharesOut, pYesAfter: N2 / (Y2 + N2), Y2, N2 };
+    }
+  }
+
+  function fmtPct(p) { return (p * 100).toFixed(1) + '%'; }
+  function fmtNum(n) { return n.toFixed(2); }
+
+  // ── DOM helpers ────────────────────────────────────────────────────────
+
+  function setText(el, text)   { el.textContent = text; }
+  function setClass(el, cls)   { el.className = cls; }
+  function show(el)            { el.classList.remove('hidden'); }
+  function hide(el)            { el.classList.add('hidden'); }
+
+  // Build a DOM element from a descriptor. Children must be DOM nodes or strings.
+  function el(tag, attrs, ...children) {
+    const node = document.createElement(tag);
+    if (attrs) {
+      Object.entries(attrs).forEach(([k, v]) => {
+        if (k === 'className') node.className = v;
+        else if (k === 'style') Object.assign(node.style, v);
+        else if (k.startsWith('data-')) node.dataset[k.slice(5)] = v;
+        else if (k in node) node[k] = v;
+        else node.setAttribute(k, v);
+      });
+    }
+    children.forEach(c => {
+      if (c == null) return;
+      node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return node;
+  }
+
+  // ── DOM refs ───────────────────────────────────────────────────────────
+
+  const screenLogin    = document.getElementById('screen-login');
+  const screenMarkets  = document.getElementById('screen-markets');
+  const nickInput      = document.getElementById('nick-input');
+  const loginBtn       = document.getElementById('login-btn');
+  const logoutBtn      = document.getElementById('logout-btn');
+  const headerCoins    = document.getElementById('header-coins');
+  const headerNick     = document.getElementById('header-nick');
+  const marketsGrid    = document.getElementById('markets-grid');
+  const modalOverlay   = document.getElementById('modal-overlay');
+  const modalMarketName = document.getElementById('modal-market-name');
+  const sideYesBtn     = document.getElementById('side-yes-btn');
+  const sideNoBtn      = document.getElementById('side-no-btn');
+  const betSlider      = document.getElementById('bet-slider');
+  const sliderDisplay  = document.getElementById('slider-display');
+  const prevBefore     = document.getElementById('prev-before');
+  const prevAfter      = document.getElementById('prev-after');
+  const prevShares     = document.getElementById('prev-shares');
+  const prevWin        = document.getElementById('prev-win');
+  const btnPlace       = document.getElementById('btn-place');
+
+  // ── Auth ───────────────────────────────────────────────────────────────
+
+  function login() {
+    const nick = nickInput.value.trim();
+    if (!nick) return;
+    if (!state.users[nick]) {
+      state.users[nick] = { coins: 10, bets: {} };
+    }
+    state.currentUser = nick;
+    saveState();
+    showMarkets();
+  }
+
+  function logout() {
+    state.currentUser = null;
+    saveState();
+    showLogin();
+  }
+
+  function showLogin() {
+    hide(screenMarkets);
+    show(screenLogin);
+    nickInput.value = '';
+  }
+
+  function showMarkets() {
+    hide(screenLogin);
+    show(screenMarkets);
+    renderHeader();
+    renderMarkets();
+  }
+
+  loginBtn.addEventListener('click', login);
+  nickInput.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  logoutBtn.addEventListener('click', logout);
+
+  // ── Render ─────────────────────────────────────────────────────────────
+
+  function renderHeader() {
+    const user = state.users[state.currentUser];
+    setText(headerCoins, user.coins);
+    setText(headerNick,  state.currentUser);
+  }
+
+  function renderMarkets() {
+    const user = state.users[state.currentUser];
+    marketsGrid.replaceChildren();   // clear without innerHTML
+
+    for (const m of state.markets) {
+      const p       = pYes(m);
+      const pos     = user.bets[m.id];
+      const noCoins = user.coins < 1;
+      const lockYes = pos && pos.side === 'NO';
+      const lockNo  = pos && pos.side === 'YES';
+
+      const yesBtn = el('button', {
+        className: 'btn-yes',
+        disabled: (noCoins || lockYes),
+        'data-market': m.id,
+        'data-side': 'YES',
+      }, 'TAK ', fmtPct(p));
+
+      const noBtn = el('button', {
+        className: 'btn-no',
+        disabled: (noCoins || lockNo),
+        'data-market': m.id,
+        'data-side': 'NO',
+      }, 'NIE ', fmtPct(1 - p));
+
+      [yesBtn, noBtn].forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.dataset.market, btn.dataset.side));
+      });
+
+      // Probability bar
+      const barYes = el('div', { className: 'prob-bar-yes', style: { width: (p * 100).toFixed(3) + '%' } });
+      const barNo  = el('div', { className: 'prob-bar-no',  style: { width: ((1 - p) * 100).toFixed(3) + '%' } });
+
+      const posNode = pos
+        ? el('div', { className: 'position-badge' },
+            'Twoja pozycja: ',
+            el('strong', {}, pos.spent + ' coinów na ' + (pos.side === 'YES' ? 'TAK' : 'NIE')),
+            ' · udziałów: ',
+            el('strong', {}, '~' + fmtNum(pos.shares)),
+            ' · potenc. wygrana: ',
+            el('strong', {}, '~' + fmtNum(pos.shares) + ' coinów')
+          )
+        : null;
+
+      const noCoinNode = (noCoins && !pos)
+        ? el('p', { className: 'no-coins-note' }, 'Brak coinów — nie możesz obstawiać')
+        : null;
+
+      const card = el('div', { className: 'market-card' },
+        el('div', { className: 'card-top' },
+          el('div', { className: 'card-icon-title' },
+            el('span', { className: 'card-icon' }, m.icon),
+            el('span', { className: 'card-title' }, m.title)
+          ),
+          el('span', { className: 'deadline-badge' }, m.deadline)
+        ),
+        el('div', { className: 'prob-section' },
+          el('div', { className: 'prob-labels' },
+            el('span', { className: 'prob-yes-label' }, 'TAK ' + fmtPct(p)),
+            el('span', { className: 'prob-no-label'  }, 'NIE ' + fmtPct(1 - p))
+          ),
+          el('div', { className: 'prob-bar' }, barYes, barNo)
+        ),
+        el('div', { className: 'bet-buttons' }, yesBtn, noBtn),
+        posNode,
+        noCoinNode
+      );
+
+      marketsGrid.appendChild(card);
+    }
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────────
+
+  let activeMarketId = null;
+  let activeSide     = 'YES';   // 'YES' | 'NO'
+
+  function openModal(marketId, side) {
+    const user = state.users[state.currentUser];
+    if (user.coins < 1) return;
+
+    activeMarketId = marketId;
+    const m   = state.markets.find(x => x.id === marketId);
+    const pos = user.bets[marketId];
+
+    setText(modalMarketName, m.title);
+
+    const lockYes = pos && pos.side === 'NO';
+    const lockNo  = pos && pos.side === 'YES';
+    sideYesBtn.disabled = lockYes;
+    sideNoBtn.disabled  = lockNo;
+
+    activeSide = (side === 'NO' && !lockNo) ? 'NO'
+               : (side === 'YES' && !lockYes) ? 'YES'
+               : lockYes ? 'NO' : 'YES';
+
+    betSlider.max   = user.coins;
+    betSlider.value = 1;
+
+    refreshModal();
+    show(modalOverlay);
+    document.body.style.overflow = 'hidden';
+  }
+
+  sideYesBtn.addEventListener('click', () => { activeSide = 'YES'; refreshModal(); });
+  sideNoBtn.addEventListener('click',  () => { activeSide = 'NO';  refreshModal(); });
+
+  function refreshModal() {
+    const m     = state.markets.find(x => x.id === activeMarketId);
+    const X     = parseInt(betSlider.value, 10) || 1;
+    const isYes = activeSide === 'YES';
+    const res   = computeBet(m, activeSide, X);
+
+    setClass(sideYesBtn, 'side-btn' + (isYes  ? ' active-yes' : ''));
+    setClass(sideNoBtn,  'side-btn' + (!isYes ? ' active-no'  : ''));
+
+    setText(sliderDisplay, X);
+
+    const before = fmtPct(pYes(m));
+    const after  = fmtPct(res.pYesAfter);
+    setText(prevBefore, before);
+    setClass(prevBefore, 'clr-yes');
+    setText(prevAfter, after);
+    setClass(prevAfter, res.pYesAfter > pYes(m) ? 'clr-yes' : 'clr-no');
+
+    setText(prevShares, '~' + fmtNum(res.sharesOut) + ' udz. ' + (isYes ? 'TAK' : 'NIE'));
+    setText(prevWin, '~' + fmtNum(res.sharesOut) + ' coinów 🪙');
+
+    setClass(btnPlace, 'btn-place ' + (isYes ? 'btn-place-yes' : 'btn-place-no'));
+    setText(btnPlace, 'Postaw ' + X + ' coinów na ' + (isYes ? 'TAK' : 'NIE'));
+    btnPlace.disabled = X < 1;
+  }
+
+  betSlider.addEventListener('input', refreshModal);
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  function closeModal() {
+    hide(modalOverlay);
+    document.body.style.overflow = '';
+  }
+
+  btnPlace.addEventListener('click', () => {
+    const user = state.users[state.currentUser];
+    const m    = state.markets.find(x => x.id === activeMarketId);
+    const X    = parseInt(betSlider.value, 10);
+    if (!X || X > user.coins) return;
+
+    const res = computeBet(m, activeSide, X);
+
+    user.coins  -= X;
+    m.yesShares  = res.Y2;
+    m.noShares   = res.N2;
+
+    const pos = user.bets[m.id];
+    if (pos) {
+      pos.spent  += X;
+      pos.shares += res.sharesOut;
+    } else {
+      user.bets[m.id] = { side: activeSide, spent: X, shares: res.sharesOut };
+    }
+
+    saveState();
+    closeModal();
+    renderHeader();
+    renderMarkets();
+    showToast('✅ Postawiono ' + X + ' coinów na ' + (activeSide === 'YES' ? 'TAK' : 'NIE') + '!');
+  });
+
+  // ── Toast ──────────────────────────────────────────────────────────────
+
+  let toastTimer;
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    setText(t, msg);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── Boot ───────────────────────────────────────────────────────────────
+
+  if (state.currentUser && state.users[state.currentUser]) {
+    showMarkets();
+  } else {
+    showLogin();
+  }
+</script>
+</body>
+</html>
