@@ -30,6 +30,7 @@
       --yes-line:  rgba(22,163,74,.22);
       --no-line:   rgba(220,38,38,.22);
       --radius:    10px;
+      --page-pad:  24px;
     }
 
     body {
@@ -40,6 +41,7 @@
       font-size: 14px;
       letter-spacing: 0;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
     .hidden { display: none !important; }
@@ -48,7 +50,7 @@
     .login-wrap {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      min-height: 100vh; padding: 24px;
+      min-height: 100vh; min-height: 100dvh; padding: 24px;
       background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.06) 0%, transparent 70%);
     }
 
@@ -71,7 +73,7 @@
     input[type="text"], input[type="password"] {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
       border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit;
-      padding: 11px 13px; outline: none;
+      min-height: 44px; padding: 11px 13px; outline: none;
       transition: border-color .15s; margin-bottom: 12px;
     }
     input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); }
@@ -79,7 +81,7 @@
     .nick-select {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
       border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit;
-      padding: 11px 36px 11px 13px; outline: none; margin-bottom: 12px;
+      min-height: 44px; padding: 11px 36px 11px 13px; outline: none; margin-bottom: 12px;
       appearance: none; cursor: pointer;
       background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M6 7L0 0h12z' fill='%2364748b'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 13px center;
@@ -90,7 +92,7 @@
     .btn-primary {
       width: 100%; background: var(--accent); border: none; border-radius: 8px;
       color: #fff; cursor: pointer; font-size: 15px; font-weight: 700; font-family: inherit;
-      padding: 12px; transition: opacity .15s; margin-bottom: 4px; letter-spacing: 0;
+      min-height: 44px; padding: 12px; transition: opacity .15s; margin-bottom: 4px; letter-spacing: 0;
     }
     .btn-primary:hover { opacity: .86; }
     .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
@@ -115,15 +117,18 @@
       background: rgba(255,255,255,.90);
       backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px);
       border-bottom: 1px solid var(--border);
-      padding: 0 24px; height: 58px; display: flex;
+      padding: 0 var(--page-pad); min-height: 58px; display: flex;
       align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 20;
+      gap: 12px; position: sticky; top: 0; z-index: 20;
     }
 
-    .logo { font-size: 17px; font-weight: 800; letter-spacing: 0; }
+    .logo { font-size: 17px; font-weight: 800; letter-spacing: 0; min-width: 0; }
     .logo span { color: var(--accent); }
     .user-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .header-nick { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .header-nick {
+      font-size: 13px; color: var(--muted); font-weight: 500;
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
 
     .coins-badge {
       display: flex; align-items: center; gap: 5px;
@@ -135,27 +140,29 @@
     .btn-ghost {
       background: transparent; border: 1px solid var(--border); border-radius: 7px;
       color: var(--muted); cursor: pointer; font-size: 12px; font-family: inherit;
-      font-weight: 500; padding: 5px 12px; transition: all .15s;
+      font-weight: 500; min-height: 34px; padding: 5px 12px; transition: all .15s;
     }
     .btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
 
     /* ── NAV TABS ── */
     .nav-tabs {
       display: flex; border-bottom: 1px solid var(--border);
-      background: var(--surface); padding: 0 24px;
+      background: var(--surface); padding: 0 var(--page-pad);
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
     }
 
     .nav-tab {
       background: none; border: none; border-bottom: 2px solid transparent;
       color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600;
-      font-family: inherit; padding: 11px 16px; transition: all .15s; margin-bottom: -1px;
+      font-family: inherit; min-height: 44px; padding: 11px 16px; transition: all .15s; margin-bottom: -1px;
       letter-spacing: 0;
+      white-space: nowrap;
     }
     .nav-tab:hover { color: var(--text); }
     .nav-tab.active { border-bottom-color: var(--accent); color: var(--text); }
 
     /* ── MAIN ── */
-    main { max-width: 1340px; margin: 0 auto; padding: 28px 24px; }
+    main { max-width: 1340px; margin: 0 auto; padding: 28px var(--page-pad); }
 
     .markets-toolbar {
       display: flex; align-items: center; justify-content: space-between;
@@ -167,16 +174,18 @@
     .btn-new-market {
       background: var(--accent); border: none; border-radius: 8px;
       color: #fff; cursor: pointer; font-size: 13px; font-weight: 700; font-family: inherit;
-      padding: 9px 18px; transition: opacity .15s; letter-spacing: 0;
+      min-height: 40px; padding: 9px 18px; transition: opacity .15s; letter-spacing: 0;
     }
     .btn-new-market:hover { opacity: .86; }
 
     /* ── MARKET GRID ── */
     .markets-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
       gap: 14px;
     }
+    .markets-grid > .loading-center,
+    .markets-grid > p { grid-column: 1 / -1; }
     .markets-section-divider {
       grid-column: 1 / -1;
       display: flex; align-items: center; gap: 12px;
@@ -200,6 +209,7 @@
       transition: border-color .2s, box-shadow .2s;
       display: flex; flex-direction: column; gap: 14px;
       box-shadow: 0 1px 3px rgba(0,0,0,.04);
+      min-width: 0; overflow: hidden;
     }
     .market-card:hover { border-color: var(--border-hi); box-shadow: 0 4px 16px rgba(0,0,0,.07); }
 
@@ -208,20 +218,21 @@
     }
     .card-title-row { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
     .card-icon  { font-size: 20px; line-height: 1.2; flex-shrink: 0; }
-    .card-title { font-size: 14px; font-weight: 600; line-height: 1.45; letter-spacing: 0; }
-    .card-meta  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .card-title { font-size: 14px; font-weight: 600; line-height: 1.45; letter-spacing: 0; overflow-wrap: anywhere; }
+    .card-meta  { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; flex-shrink: 0; min-width: 0; }
 
     .deadline-badge, .creator-badge {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 20px; color: var(--muted);
       font-size: 10px; font-weight: 500; padding: 2px 9px; white-space: nowrap;
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis;
     }
     .creator-badge { color: var(--text); }
 
     .btn-resolve-sm {
       background: transparent; border: 1px solid var(--border); border-radius: 6px;
       color: var(--muted); cursor: pointer; font-size: 11px; font-family: inherit;
-      font-weight: 500; padding: 3px 9px; transition: all .15s; white-space: nowrap;
+      font-weight: 500; min-height: 26px; padding: 3px 9px; transition: all .15s; white-space: nowrap;
     }
     .btn-resolve-sm:hover { color: var(--no); border-color: var(--no-line); }
 
@@ -252,7 +263,7 @@
     .btn-yes, .btn-no {
       border-radius: 8px; cursor: pointer; flex: 1;
       font-size: 13px; font-weight: 700; font-family: inherit;
-      padding: 10px 4px; transition: all .15s; border: 1px solid;
+      min-height: 40px; padding: 10px 4px; transition: all .15s; border: 1px solid;
     }
     .btn-yes { background: var(--yes-dim); border-color: var(--yes-line); color: var(--yes); }
     .btn-no  { background: var(--no-dim);  border-color: var(--no-line);  color: var(--no);  }
@@ -301,15 +312,13 @@
     .votes-empty { color: var(--dim); font-size: 11px; line-height: 1.35; }
     .votes-total {
       display: flex; justify-content: space-between; align-items: center;
+      gap: 8px;
       border-top: 1px solid var(--border); margin-top: 6px; padding-top: 5px;
       font-size: 10px; font-weight: 700; color: var(--muted);
     }
+    .votes-total span:last-child { text-align: right; overflow-wrap: anywhere; }
     .votes-total-yes { color: var(--yes); }
     .votes-total-no  { color: var(--no);  }
-    @media (max-width: 560px) {
-      .votes-board { grid-template-columns: 1fr; }
-    }
-
     .position-badge {
       background: var(--acc-dim); border: 1px solid rgba(99,102,241,.16);
       border-radius: 8px; padding: 8px 12px;
@@ -326,8 +335,11 @@
     .page-sub   { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
     .ranking-info { margin-bottom: 20px; }
 
-    .lb-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-    .lb-table { width: 100%; border-collapse: collapse; }
+    .lb-wrap {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .lb-table { width: 100%; min-width: 520px; border-collapse: collapse; }
     .lb-table th {
       text-align: left; font-size: 10px; color: var(--muted); text-transform: uppercase;
       letter-spacing: .08em; font-weight: 600;
@@ -385,6 +397,7 @@
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       display: flex; align-items: flex-end;
       justify-content: center; z-index: 100;
+      padding: 16px 0 0;
     }
     @media (min-width: 640px) {
       .modal-overlay { align-items: center; padding: 20px; }
@@ -395,6 +408,7 @@
       border-top-left-radius: var(--radius); border-top-right-radius: var(--radius);
       max-width: 420px; width: 100%; padding: 24px;
       box-shadow: 0 8px 40px rgba(0,0,0,.12);
+      max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain;
     }
     @media (min-width: 640px) { .modal { border-radius: var(--radius); } }
 
@@ -459,11 +473,11 @@
     }
     .preview-row {
       display: flex; justify-content: space-between; align-items: center;
-      font-size: 12px; padding: 4px 0;
+      gap: 12px; font-size: 12px; padding: 4px 0;
     }
     .preview-row + .preview-row { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; }
     .prev-label { color: var(--muted); }
-    .prev-val   { font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .prev-val   { font-weight: 700; display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; text-align: right; }
     .arrow { color: var(--dim); font-size: 10px; }
     .clr-yes { color: var(--yes); }
     .clr-no  { color: var(--no);  }
@@ -471,7 +485,7 @@
     .btn-place {
       width: 100%; border: none; border-radius: 8px; cursor: pointer;
       font-size: 15px; font-weight: 800; font-family: inherit;
-      padding: 13px; transition: opacity .15s; letter-spacing: 0;
+      min-height: 44px; padding: 13px; transition: opacity .15s; letter-spacing: 0;
     }
     .btn-place-yes { background: var(--yes); color: #fff; }
     .btn-place-no  { background: var(--no);  color: #fff; }
@@ -484,7 +498,7 @@
     .nm-icons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
     .nm-icon-btn {
       background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
-      cursor: pointer; font-size: 20px; padding: 5px 9px; transition: all .15s;
+      cursor: pointer; font-size: 20px; min-width: 38px; min-height: 38px; padding: 5px 9px; transition: all .15s;
     }
     .nm-icon-btn.selected { border-color: var(--accent); background: var(--acc-dim); }
 
@@ -496,7 +510,7 @@
       border-radius: 8px; color: #f8fafc; font-size: 14px; font-weight: 500;
       padding: 10px 20px; pointer-events: none;
       transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
-      z-index: 300; white-space: nowrap; opacity: 0;
+      z-index: 300; max-width: calc(100vw - 32px); text-align: center; opacity: 0;
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
@@ -516,15 +530,100 @@
       font-size: 12px; color: var(--muted); line-height: 1.8;
     }
     .info-banner strong { color: var(--text); }
-    .info-rules { display: flex; flex-wrap: wrap; gap: 6px 24px; margin-top: 6px; }
-    .info-rule { display: flex; align-items: flex-start; gap: 6px; }
+    .info-rules {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+      gap: 8px 20px; margin-top: 8px;
+    }
+    .info-rule {
+      display: grid; grid-template-columns: 18px minmax(0, 1fr);
+      align-items: flex-start; gap: 7px; min-width: 0;
+    }
     .info-rule-icon { flex-shrink: 0; }
+    .info-rule-text { min-width: 0; }
 
     /* ── FOOTER ── */
     footer {
       border-top: 1px solid var(--border); color: var(--muted);
-      font-size: 11px; margin-top: 48px; padding: 18px 24px;
+      font-size: 11px; margin-top: 48px; padding: 18px var(--page-pad);
       text-align: center; line-height: 1.9;
+    }
+
+    @media (max-width: 760px) {
+      :root { --page-pad: 16px; }
+
+      header {
+        align-items: flex-start; flex-wrap: wrap;
+        padding-top: 10px; padding-bottom: 10px;
+      }
+      .logo { flex: 1 1 100%; font-size: 16px; }
+      .user-info { width: 100%; justify-content: space-between; gap: 8px; }
+      .header-nick { flex: 1 1 auto; text-align: right; }
+      .coins-badge, .btn-ghost { flex: 0 0 auto; }
+
+      .nav-tab { flex: 1 0 auto; text-align: center; }
+
+      main { padding-top: 20px; padding-bottom: 20px; }
+      .markets-toolbar { align-items: stretch; flex-direction: column; }
+      .markets-toolbar h2, .page-title { font-size: 19px; }
+      .btn-new-market { width: 100%; min-height: 44px; }
+
+      .info-banner { padding: 13px 14px; }
+      .info-rules { grid-template-columns: 1fr; gap: 9px; }
+
+      .markets-section-divider { margin-top: 48px; }
+      .market-card { padding: 16px 14px; gap: 12px; }
+      .card-header { flex-direction: column; }
+      .card-title-row { width: 100%; }
+      .card-meta { width: 100%; justify-content: flex-start; }
+      .prob-num { font-size: 26px; }
+      .card-chart { height: 96px; }
+
+      .lb-table th { padding: 10px 12px; }
+      .lb-table td { padding: 12px; }
+
+      .history-filter-input, .history-filter-select { min-height: 42px; font-size: 16px; }
+      .history-clear { min-height: 42px; }
+
+      .modal { padding: 22px 16px max(22px, env(safe-area-inset-bottom)); }
+      .slider-label { align-items: flex-start; gap: 10px; }
+      .amount-input-wrap { margin-left: auto; }
+      .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
+
+      footer { margin-top: 32px; }
+    }
+
+    @media (max-width: 480px) {
+      :root { --page-pad: 14px; }
+
+      .login-wrap { align-items: stretch; justify-content: flex-start; padding: 16px 14px; }
+      .login-card { padding: 28px 18px; max-width: none; }
+      .logo-big { font-size: 42px; }
+      .login-title { font-size: 22px; }
+      .login-sub { margin-bottom: 24px; }
+      input[type="text"], input[type="password"], .nick-select { font-size: 16px; }
+
+      .coins-badge { padding: 5px 10px; }
+      .btn-ghost { padding-left: 10px; padding-right: 10px; }
+      .nav-tabs { padding: 0; }
+
+      .prob-row { align-items: center; }
+      .prob-num { font-size: 24px; }
+      .btn-yes, .btn-no { min-height: 44px; }
+      .votes-board { gap: 12px; }
+
+      .slider-label { flex-direction: column; align-items: stretch; }
+      .amount-input-wrap { justify-content: flex-end; margin-left: 0; }
+      .amount-input { width: 100%; max-width: 150px; }
+      .preview-row { align-items: flex-start; }
+      .prev-val { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 360px) {
+      .card-meta { align-items: stretch; flex-direction: column; }
+      .deadline-badge, .creator-badge, .btn-resolve-sm {
+        display: inline-flex; align-items: center; justify-content: center;
+      }
     }
   </style>
 </head>
@@ -607,12 +706,12 @@
       <div class="info-banner">
         <strong>Jak to działa?</strong>
         <div class="info-rules">
-          <span class="info-rule"><span class="info-rule-icon">🪙</span> Każdy gracz startuje z <strong>1000 coinami</strong>. Coinów nie można doładować — typuj z głową.</span>
-          <span class="info-rule"><span class="info-rule-icon">📈</span> Postaw coiny na <strong>TAK</strong> lub <strong>NIE</strong>. Im mniej osób typuje tak jak Ty — tym więcej zarobisz.</span>
-          <span class="info-rule"><span class="info-rule-icon">⚠️</span> Na tym samym rynku możesz <strong>dokładać kolejne</strong> coiny — ale tylko do wybranej strony. Nie można grać jednocześnie na TAK i NIE.</span>
-          <span class="info-rule"><span class="info-rule-icon">➕</span> <strong>Każdy może dodać nowy rynek</strong> — kliknij „+ Nowy rynek" i wpisz pytanie oraz termin.</span>
-          <span class="info-rule"><span class="info-rule-icon">🔒</span> Rynek może zamknąć <strong>tylko jego twórca</strong> (lub admin). Kliknij „Zamknij rynek" i wybierz wynik.</span>
-          <span class="info-rule"><span class="info-rule-icon">🏆</span> Po rozstrzygnięciu wygrywający odzyskują stawki, a coiny przegranej strony dzielą <strong>proporcjonalnie do udziałów</strong>.</span>
+          <span class="info-rule"><span class="info-rule-icon">🪙</span><span class="info-rule-text">Każdy gracz startuje z <strong>1000 coinami</strong>. Coinów nie można doładować — typuj z głową.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">📈</span><span class="info-rule-text">Postaw coiny na <strong>TAK</strong> lub <strong>NIE</strong>. Im mniej osób typuje tak jak Ty — tym więcej zarobisz.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">⚠️</span><span class="info-rule-text">Na tym samym rynku możesz <strong>dokładać kolejne</strong> coiny, ale tylko do wybranej strony. Nie można grać jednocześnie na TAK i NIE.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">➕</span><span class="info-rule-text"><strong>Każdy może dodać nowy rynek</strong> — kliknij „+ Nowy rynek" i wpisz pytanie oraz termin.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">🔒</span><span class="info-rule-text">Rynek może zamknąć <strong>tylko jego twórca</strong> lub admin. Kliknij „Zamknij rynek" i wybierz wynik.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">🏆</span><span class="info-rule-text">Po rozstrzygnięciu wygrywający odzyskują stawki, a coiny przegranej strony dzielą się <strong>proporcjonalnie do udziałów</strong>.</span></span>
         </div>
       </div>
 
