@@ -205,6 +205,7 @@ DECLARE
   v_creator              uuid;
   v_already              boolean;
   v_total_pot            bigint := 0;
+  v_losing_pot           bigint := 0;
   v_total_winning_shares numeric := 0;
   v_payout               bigint := 0;
 BEGIN
@@ -223,16 +224,20 @@ BEGIN
   FROM   public.trades
   WHERE  market_id = p_market;
 
+  SELECT COALESCE(SUM(amount), 0)::bigint INTO v_losing_pot
+  FROM   public.trades
+  WHERE  market_id = p_market AND side <> p_resolution;
+
   SELECT COALESCE(SUM(shares), 0) INTO v_total_winning_shares
   FROM   public.trades
   WHERE  market_id = p_market AND side = p_resolution;
 
-  -- Split the real pot proportionally by winning shares.
+  -- Winners get their stake back; losing-side coins are split by winning shares.
   -- Remainder coins go to the largest fractional payouts for deterministic integer totals.
   IF v_total_pot > 0 AND v_total_winning_shares > 0 THEN
     WITH raw_payouts AS (
       SELECT user_id,
-             v_total_pot::numeric * SUM(shares) / v_total_winning_shares AS exact_payout
+             SUM(amount)::numeric + v_losing_pot::numeric * SUM(shares) / v_total_winning_shares AS exact_payout
       FROM   public.trades
       WHERE  market_id = p_market AND side = p_resolution
       GROUP  BY user_id
@@ -271,6 +276,7 @@ BEGIN
 
   RETURN json_build_object(
     'total_pot',    v_total_pot,
+    'losing_pot',   v_losing_pot,
     'total_payout', v_payout,
     'resolution',   p_resolution
   );

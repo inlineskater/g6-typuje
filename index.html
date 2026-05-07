@@ -489,7 +489,7 @@
       </div>
       <div class="faq-item">
         <h3>Jak działa wygrana?</h3>
-        <p>Po zamknięciu rynku pula postawionych coinów trafia do osób po dobrej stronie, proporcjonalnie do ich udziałów.</p>
+        <p>Po zamknięciu rynku zwycięzcy odzyskują stawki, a coiny przegranej strony dzielą proporcjonalnie do udziałów.</p>
       </div>
       <div class="faq-item">
         <h3>Czy to prawdziwe pieniądze?</h3>
@@ -533,7 +533,7 @@
           <span class="info-rule"><span class="info-rule-icon">⚠️</span> Na tym samym rynku możesz <strong>dokładać kolejne</strong> coiny — ale tylko do wybranej strony. Nie można grać jednocześnie na TAK i NIE.</span>
           <span class="info-rule"><span class="info-rule-icon">➕</span> <strong>Każdy może dodać nowy rynek</strong> — kliknij „+ Nowy rynek" i wpisz pytanie oraz termin.</span>
           <span class="info-rule"><span class="info-rule-icon">🔒</span> Rynek może zamknąć <strong>tylko jego twórca</strong> (lub admin). Kliknij „Zamknij rynek" i wybierz wynik.</span>
-          <span class="info-rule"><span class="info-rule-icon">🏆</span> Po rozstrzygnięciu pula rynku trafia do wygrywających <strong>proporcjonalnie do udziałów</strong>.</span>
+          <span class="info-rule"><span class="info-rule-icon">🏆</span> Po rozstrzygnięciu wygrywający odzyskują stawki, a coiny przegranej strony dzielą <strong>proporcjonalnie do udziałów</strong>.</span>
         </div>
       </div>
 
@@ -637,7 +637,7 @@
     </div>
     <p class="modal-market-name" id="rm-market-name"></p>
     <p style="color:var(--muted);font-size:12px;margin-bottom:18px;line-height:1.6">
-      Pula postawionych coinów zostanie podzielona między wygrywających proporcjonalnie do udziałów. Operacja nieodwracalna.
+      Wygrywający odzyskają swoje stawki, a coiny przegranej strony zostaną podzielone proporcjonalnie do udziałów. Operacja nieodwracalna.
     </p>
     <div class="side-toggle">
       <button class="side-btn" id="rm-yes">Zamknij: TAK</button>
@@ -717,22 +717,25 @@ function getUserSharesForSide(marketId, side) {
     .reduce((sum, row) => sum + (+row.total_shares || 0), 0);
 }
 
-function estimatePayout(marketId, side, userShares, extraTrade = null) {
+function estimatePayout(marketId, side, userAmount, userShares, extraTrade = null) {
   const stats = getMarketStats(marketId, extraTrade);
+  const losingSide = side === 'YES' ? 'NO' : 'YES';
   const winningShares = stats[side]?.shares || 0;
-  if (winningShares <= 0) return 0;
-  return stats.totalPot * ((+userShares || 0) / winningShares);
+  if (winningShares <= 0) return +userAmount || 0;
+  return (+userAmount || 0) + (stats[losingSide]?.amount || 0) * ((+userShares || 0) / winningShares);
 }
 
 function estimatePositionPayout(marketId, pos) {
   if (!pos || (pos.side !== 'YES' && pos.side !== 'NO')) return null;
-  return estimatePayout(marketId, pos.side, +pos.total_shares || 0);
+  return estimatePayout(marketId, pos.side, +pos.total_spent || 0, +pos.total_shares || 0);
 }
 
 function estimatePositionPayoutAfterBet(m, side, amount, sharesOut) {
+  const previousAmount = +(myPositionsByMarket[m.id]?.total_spent || 0);
   const previousShares = getUserSharesForSide(m.id, side);
+  const totalUserAmount = previousAmount + (+amount || 0);
   const totalUserShares = previousShares + (+sharesOut || 0);
-  return estimatePayout(m.id, side, totalUserShares, { side, amount, shares: sharesOut });
+  return estimatePayout(m.id, side, totalUserAmount, totalUserShares, { side, amount, shares: sharesOut });
 }
 
 function getVotesBySide(marketId) {
