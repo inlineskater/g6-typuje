@@ -199,11 +199,12 @@
     .card-title { font-size: 14px; font-weight: 600; line-height: 1.45; letter-spacing: 0; }
     .card-meta  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-    .deadline-badge {
+    .deadline-badge, .creator-badge {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 20px; color: var(--muted);
       font-size: 10px; font-weight: 500; padding: 2px 9px; white-space: nowrap;
     }
+    .creator-badge { color: var(--text); }
 
     .btn-resolve-sm {
       background: transparent; border: 1px solid var(--border); border-radius: 6px;
@@ -1048,19 +1049,25 @@ async function loadMarkets() {
   marketRenderSeq += 1;
   marketsGrid.replaceChildren(makeSpinner());
 
-  const [marketsRes, tradesRes] = await Promise.all([
+  const [marketsRes, tradesRes, profilesRes] = await Promise.all([
     sb.from('markets').select('*').order('created_at'),
     sb.from('trades').select('id, p_yes_after, created_at, market_id, user_id, nick_snapshot, side, amount, shares').order('created_at', { ascending: true }),
+    sb.from('profiles').select('id, nick'),
   ]);
 
-  if (marketsRes.error || tradesRes.error) {
+  if (marketsRes.error || tradesRes.error || profilesRes.error) {
     marketsGrid.replaceChildren(
       el('p', { style: { color: 'var(--no)', fontSize: '14px' } }, DB_ERROR_MESSAGE)
     );
     return;
   }
 
-  markets = marketsRes.data || [];
+  const profilesById = {};
+  (profilesRes.data || []).forEach(p => { profilesById[p.id] = p.nick; });
+  markets = (marketsRes.data || []).map(m => ({
+    ...m,
+    creator_nick: profilesById[m.created_by] || 'Nieznany',
+  }));
   tradesByMarket = {};
   (tradesRes.data || []).forEach(t => {
     if (!tradesByMarket[t.market_id]) tradesByMarket[t.market_id] = [];
@@ -1107,7 +1114,10 @@ function buildMarketCard(m, pos) {
     el('span', { className: 'card-icon' }, m.icon),
     el('span', { className: 'card-title' }, m.title)
   );
-  const metaItems = [el('span', { className: 'deadline-badge' }, m.deadline)];
+  const metaItems = [
+    el('span', { className: 'creator-badge' }, 'Autor: ' + (m.creator_nick || 'Nieznany')),
+    el('span', { className: 'deadline-badge' }, m.deadline),
+  ];
   if (!m.resolved && isResolver(m)) {
     const rb = el('button', { className: 'btn-resolve-sm' }, 'Zamknij');
     rb.addEventListener('click', () => openResolveModal(m.id));
