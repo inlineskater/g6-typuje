@@ -341,6 +341,39 @@
     .lb-nick.me { color: var(--accent); }
     .lb-coins { color: var(--muted); font-size: 13px; }
     .lb-net { font-weight: 700; color: var(--yes); }
+    .history-section { margin-top: 28px; }
+    .section-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0; }
+    .section-sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+    .history-filters {
+      display: grid; grid-template-columns: minmax(220px, 1fr) minmax(130px, 170px) minmax(150px, 180px) auto;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .history-filter-input, .history-filter-select {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      border-radius: 7px; color: var(--text); font: inherit; font-size: 12px;
+      padding: 8px 10px; outline: none;
+    }
+    .history-filter-input:focus, .history-filter-select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--acc-dim);
+    }
+    .history-clear { height: 34px; align-self: stretch; }
+    @media (max-width: 760px) {
+      .history-filters { grid-template-columns: 1fr; }
+      .history-clear { width: 100%; }
+    }
+    .history-wrap { overflow-x: auto; }
+    .history-wrap .lb-table { min-width: 780px; }
+    .tx-time, .tx-amount, .tx-prob { color: var(--muted); white-space: nowrap; font-size: 13px; }
+    .tx-market { min-width: 260px; max-width: 520px; }
+    .tx-market-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .tx-status { display: block; color: var(--dim); font-size: 10px; margin-top: 3px; }
+    .tx-side {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 999px; border: 1px solid; min-width: 44px;
+      padding: 3px 8px; font-size: 11px; font-weight: 800;
+    }
+    .tx-side-yes { background: var(--yes-dim); border-color: var(--yes-line); color: var(--yes); }
+    .tx-side-no  { background: var(--no-dim);  border-color: var(--no-line);  color: var(--no);  }
 
     /* ── MODAL ── */
     .modal-overlay {
@@ -595,6 +628,27 @@
       <div id="leaderboard-wrap" class="lb-wrap">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
+      <section class="history-section">
+        <h3 class="section-title">Historia transakcji</h3>
+        <p class="section-sub">Ostatnie 100 zakładów graczy na wszystkich rynkach.</p>
+        <div class="history-filters">
+          <input class="history-filter-input" id="tx-filter-search" type="search" placeholder="Gracz lub rynek">
+          <select class="history-filter-select" id="tx-filter-side">
+            <option value="">Typ: wszystkie</option>
+            <option value="YES">TAK</option>
+            <option value="NO">NIE</option>
+          </select>
+          <select class="history-filter-select" id="tx-filter-status">
+            <option value="">Status: wszystkie</option>
+            <option value="open">Aktywne</option>
+            <option value="closed">Zamknięte</option>
+          </select>
+          <button class="btn-ghost history-clear" id="tx-filter-clear" type="button">Wyczyść</button>
+        </div>
+        <div id="transaction-history-wrap" class="lb-wrap history-wrap">
+          <div class="loading-center"><div class="spinner"></div></div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -715,6 +769,7 @@ let marketRenderSeq = 0;
 let activeSide = 'YES';
 let activeMarket = null;
 let realtimeChannels = [];
+let transactionHistoryRows = [];
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
 function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
@@ -838,6 +893,12 @@ function relTime(ts) {
   const h = Math.floor(m / 60);
   if (h < 24) return h + ' h temu';
   return Math.floor(h / 24) + ' dni temu';
+}
+
+function fmtDateTime(ts) {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 // ── DOM helpers ───────────────────────────────────────────────────────────
@@ -1051,6 +1112,20 @@ const regNickEl = document.getElementById('reg-nick');
 if (regPinEl)  regPinEl.addEventListener('keydown',  e => { if (e.key === 'Enter') doRegister(); });
 if (regNickEl) regNickEl.addEventListener('keydown', e => { if (e.key === 'Enter' && regPinEl) regPinEl.focus(); });
 logoutBtn.addEventListener('click', doLogout);
+
+const txFilterSearch = document.getElementById('tx-filter-search');
+const txFilterSide = document.getElementById('tx-filter-side');
+const txFilterStatus = document.getElementById('tx-filter-status');
+const txFilterClear = document.getElementById('tx-filter-clear');
+txFilterSearch.addEventListener('input', applyTransactionFilters);
+txFilterSide.addEventListener('change', applyTransactionFilters);
+txFilterStatus.addEventListener('change', applyTransactionFilters);
+txFilterClear.addEventListener('click', () => {
+  txFilterSearch.value = '';
+  txFilterSide.value = '';
+  txFilterStatus.value = '';
+  applyTransactionFilters();
+});
 
 // ── App shell ─────────────────────────────────────────────────────────────
 function showApp() {
@@ -1669,15 +1744,31 @@ async function resolveActiveMarket(resolution) {
 // ── Leaderboard ───────────────────────────────────────────────────────────
 async function loadLeaderboard() {
   const wrap = document.getElementById('leaderboard-wrap');
+  const historyWrap = document.getElementById('transaction-history-wrap');
   wrap.replaceChildren(makeSpinner());
+  historyWrap.replaceChildren(makeSpinner());
 
-  const { data, error } = await sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20);
+  const [leaderboardRes, tradesRes, marketsRes] = await Promise.all([
+    sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20),
+    sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, p_yes_after').order('created_at', { ascending: false }).limit(100),
+    sb.from('markets').select('id, icon, title, resolved, resolution'),
+  ]);
 
-  if (error) {
+  if (leaderboardRes.error) {
     wrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '14px', padding: '24px' } }, DB_ERROR_MESSAGE));
-    return;
+  } else {
+    renderLeaderboardTable(wrap, leaderboardRes.data || []);
   }
 
+  if (tradesRes.error || marketsRes.error) {
+    historyWrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '14px', padding: '24px' } }, DB_ERROR_MESSAGE));
+    return;
+  }
+  transactionHistoryRows = buildTransactionHistoryRows(tradesRes.data || [], marketsRes.data || []);
+  renderTransactionHistory(historyWrap, getFilteredTransactionRows());
+}
+
+function renderLeaderboardTable(wrap, data) {
   if (!data || data.length === 0) {
     wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, 'Brak graczy.'));
     return;
@@ -1696,6 +1787,83 @@ async function loadLeaderboard() {
       el('thead', {}, el('tr', {},
         el('th', {}, '#'), el('th', {}, 'Nick'),
         el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth')
+      )),
+      el('tbody', {}, ...rows)
+    )
+  );
+}
+
+function buildTransactionHistoryRows(trades, marketsData) {
+  const marketsById = {};
+  marketsData.forEach(m => { marketsById[m.id] = m; });
+
+  return trades
+    .filter(row => row.nick_snapshot !== 'admin')
+    .map(row => {
+      const market = marketsById[row.market_id];
+      const sideYes = row.side === 'YES';
+      const sideLabel = sideYes ? 'TAK' : 'NIE';
+      const title = market ? market.title : 'Usunięty rynek';
+      const resolvedText = market?.resolved
+        ? 'zamknięty: ' + (market.resolution === 'YES' ? 'TAK' : 'NIE')
+        : 'aktywny';
+
+      return {
+        ...row,
+        title,
+        icon: market?.icon || '🎲',
+        sideYes,
+        sideLabel,
+        status: market?.resolved ? 'closed' : 'open',
+        resolvedText,
+        searchText: ((row.nick_snapshot || '') + ' ' + title).toLowerCase(),
+      };
+    });
+}
+
+function getFilteredTransactionRows() {
+  const q = txFilterSearch.value.trim().toLowerCase();
+  const side = txFilterSide.value;
+  const status = txFilterStatus.value;
+  return transactionHistoryRows.filter(row => {
+    if (q && !row.searchText.includes(q)) return false;
+    if (side && row.side !== side) return false;
+    if (status && row.status !== status) return false;
+    return true;
+  });
+}
+
+function applyTransactionFilters() {
+  const historyWrap = document.getElementById('transaction-history-wrap');
+  if (!historyWrap) return;
+  renderTransactionHistory(historyWrap, getFilteredTransactionRows());
+}
+
+function renderTransactionHistory(wrap, rowsData) {
+  if (!rowsData || rowsData.length === 0) {
+    const msg = transactionHistoryRows.length === 0 ? 'Brak transakcji.' : 'Brak transakcji dla wybranych filtrów.';
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, msg));
+    return;
+  }
+
+  const rows = rowsData.map(row => el('tr', {},
+    el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
+    el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
+    el('td', { className: 'tx-market' },
+      el('span', { className: 'tx-market-title', title: row.title }, row.icon + ' ' + row.title),
+      el('span', { className: 'tx-status' }, row.resolvedText)
+    ),
+    el('td', {}, el('span', { className: 'tx-side ' + (row.sideYes ? 'tx-side-yes' : 'tx-side-no') }, row.sideLabel)),
+    el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
+    el('td', { className: 'tx-prob' }, 'TAK ' + fmtPct(+row.p_yes_after || 0))
+  ));
+
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
+        el('th', {}, 'Rynek'), el('th', {}, 'Typ'),
+        el('th', {}, 'Kwota'), el('th', {}, 'Po transakcji')
       )),
       el('tbody', {}, ...rows)
     )
