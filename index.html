@@ -362,8 +362,12 @@
       .history-clear { width: 100%; }
     }
     .history-wrap { overflow-x: auto; }
-    .history-wrap .lb-table { min-width: 780px; }
+    .history-wrap .lb-table { min-width: 900px; }
     .tx-time, .tx-amount, .tx-prob { color: var(--muted); white-space: nowrap; font-size: 13px; }
+    .tx-pl { white-space: nowrap; font-size: 13px; font-weight: 800; }
+    .tx-pl-profit { color: var(--yes); }
+    .tx-pl-loss { color: var(--no); }
+    .tx-pl-flat { color: var(--muted); }
     .tx-market { min-width: 260px; max-width: 520px; }
     .tx-market-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
     .tx-status { display: block; color: var(--dim); font-size: 10px; margin-top: 3px; }
@@ -792,6 +796,13 @@ function computeBet(m, side, X) {
 function fmtPct(p) { return (p * 100).toFixed(1) + '%'; }
 function fmtNum(n) { return (+n).toFixed(2); }
 function fmtCoins(n) { return String(Math.round(+n || 0)); }
+
+function fmtSignedCoins(n, approx = false) {
+  const v = +n || 0;
+  const abs = Math.abs(v);
+  const sign = v > 0.005 ? '+' : v < -0.005 ? '-' : '';
+  return (approx ? '~' : '') + sign + fmtNum(abs) + ' 🪙';
+}
 
 function getMarketStats(marketId, extraTrade = null) {
   const stats = {
@@ -1748,10 +1759,11 @@ async function loadLeaderboard() {
   wrap.replaceChildren(makeSpinner());
   historyWrap.replaceChildren(makeSpinner());
 
-  const [leaderboardRes, tradesRes, marketsRes] = await Promise.all([
+  const [leaderboardRes, tradesRes, marketsRes, allTradesRes] = await Promise.all([
     sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20),
-    sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, p_yes_after').order('created_at', { ascending: false }).limit(100),
-    sb.from('markets').select('id, icon, title, resolved, resolution'),
+    sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, shares, p_yes_after').order('created_at', { ascending: false }).limit(100),
+    sb.from('markets').select('id, icon, title, resolved, resolution, yes_shares, no_shares'),
+    sb.from('trades').select('market_id, side, amount, shares').limit(5000),
   ]);
 
   if (leaderboardRes.error) {
@@ -1760,11 +1772,11 @@ async function loadLeaderboard() {
     renderLeaderboardTable(wrap, leaderboardRes.data || []);
   }
 
-  if (tradesRes.error || marketsRes.error) {
+  if (tradesRes.error || marketsRes.error || allTradesRes.error) {
     historyWrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '14px', padding: '24px' } }, DB_ERROR_MESSAGE));
     return;
   }
-  transactionHistoryRows = buildTransactionHistoryRows(tradesRes.data || [], marketsRes.data || []);
+  transactionHistoryRows = buildTransactionHistoryRows(tradesRes.data || [], marketsRes.data || [], allTradesRes.data || []);
   renderTransactionHistory(historyWrap, getFilteredTransactionRows());
 }
 
@@ -1793,9 +1805,59 @@ function renderLeaderboardTable(wrap, data) {
   );
 }
 
-function buildTransactionHistoryRows(trades, marketsData) {
+function buildTradeStatsByMarket(trades) {
+  const stats = {};
+  trades.forEach(t => {
+    if (!t?.market_id || (t.side !== 'YES' && t.side !== 'NO')) return;
+    if (!stats[t.market_id]) {
+      stats[t.market_id] = {
+        YES: { amount: 0, shares: 0 },
+        NO:  { amount: 0, shares: 0 },
+      };
+    }
+    const amount = +t.amount || 0;
+    const shares = +t.shares || 0;
+    stats[t.market_id][t.side].amount += amount;
+    stats[t.market_id][t.side].shares += shares;
+  });
+  return stats;
+}
+
+function getTransactionProfit(row, market, marketStats) {
+  const amount = +row.amount || 0;
+  const shares = +row.shares || 0;
+  if (!market) {
+    return { profit: 0, approx: true, title: 'Brak danych rynku.' };
+  }
+
+  if (market.resolved) {
+    if (row.side !== market.resolution) {
+      return { profit: -amount, approx: false, title: 'Rynek zamknięty: przegrana strona.' };
+    }
+    const losingSide = row.side === 'YES' ? 'NO' : 'YES';
+    const totalWinningShares = marketStats?.[row.side]?.shares || 0;
+    const losingPot = marketStats?.[losingSide]?.amount || 0;
+    const payout = totalWinningShares > 0
+      ? amount + losingPot * (shares / totalWinningShares)
+      : amount;
+    return { profit: payout - amount, approx: false, title: 'Rynek zamknięty: szacowany zysk po podziale puli.' };
+  }
+
+  const p = pYes(market);
+  const currentValue = shares * (row.side === 'YES' ? p : (1 - p));
+  return { profit: currentValue - amount, approx: true, title: 'Rynek aktywny: szacowana wartość pozycji minus stawka.' };
+}
+
+function profitClassName(profit) {
+  if (profit > 0.005) return 'tx-pl-profit';
+  if (profit < -0.005) return 'tx-pl-loss';
+  return 'tx-pl-flat';
+}
+
+function buildTransactionHistoryRows(trades, marketsData, allTrades) {
   const marketsById = {};
   marketsData.forEach(m => { marketsById[m.id] = m; });
+  const tradeStatsByMarket = buildTradeStatsByMarket(allTrades);
 
   return trades
     .filter(row => row.nick_snapshot !== 'admin')
@@ -1807,6 +1869,7 @@ function buildTransactionHistoryRows(trades, marketsData) {
       const resolvedText = market?.resolved
         ? 'zamknięty: ' + (market.resolution === 'YES' ? 'TAK' : 'NIE')
         : 'aktywny';
+      const profitInfo = getTransactionProfit(row, market, tradeStatsByMarket[row.market_id]);
 
       return {
         ...row,
@@ -1816,6 +1879,9 @@ function buildTransactionHistoryRows(trades, marketsData) {
         sideLabel,
         status: market?.resolved ? 'closed' : 'open',
         resolvedText,
+        profit: profitInfo.profit,
+        profitApprox: profitInfo.approx,
+        profitTitle: profitInfo.title,
         searchText: ((row.nick_snapshot || '') + ' ' + title).toLowerCase(),
       };
     });
@@ -1855,6 +1921,7 @@ function renderTransactionHistory(wrap, rowsData) {
     ),
     el('td', {}, el('span', { className: 'tx-side ' + (row.sideYes ? 'tx-side-yes' : 'tx-side-no') }, row.sideLabel)),
     el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
+    el('td', { className: 'tx-pl ' + profitClassName(row.profit), title: row.profitTitle }, fmtSignedCoins(row.profit, row.profitApprox)),
     el('td', { className: 'tx-prob' }, 'TAK ' + fmtPct(+row.p_yes_after || 0))
   ));
 
@@ -1863,7 +1930,8 @@ function renderTransactionHistory(wrap, rowsData) {
       el('thead', {}, el('tr', {},
         el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
         el('th', {}, 'Rynek'), el('th', {}, 'Typ'),
-        el('th', {}, 'Kwota'), el('th', {}, 'Po transakcji')
+        el('th', {}, 'Kwota'), el('th', {}, 'Zysk/strata'),
+        el('th', {}, 'Po transakcji')
       )),
       el('tbody', {}, ...rows)
     )
