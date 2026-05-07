@@ -270,14 +270,30 @@
     .votes-head-yes { color: var(--yes); }
     .votes-head-no  { color: var(--no);  }
     .votes-count { color: var(--muted); font-weight: 700; letter-spacing: 0; text-transform: none; }
-    .votes-list { display: flex; flex-direction: column; gap: 5px; max-height: 126px; overflow: auto; padding-right: 3px; }
+    .votes-list { display: flex; flex-direction: column; gap: 3px; max-height: 150px; overflow: auto; padding-right: 3px; }
     .vote-row {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
       font-size: 11px; line-height: 1.35; min-width: 0;
+      position: relative; overflow: hidden;
+      border-radius: 4px; padding: 2px 4px;
     }
-    .vote-nick { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .vote-meta { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+    .vote-bar {
+      position: absolute; left: 0; top: 0; height: 100%;
+      border-radius: 4px; pointer-events: none;
+    }
+    .vote-bar-yes { background: var(--yes); opacity: .13; }
+    .vote-bar-no  { background: var(--no);  opacity: .13; }
+    .vote-nick { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: relative; }
+    .vote-meta { color: var(--muted); font-size: 10px; flex-shrink: 0; position: relative; }
+    .votes-subhead { color: var(--dim); font-size: 9px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 4px; }
     .votes-empty { color: var(--dim); font-size: 11px; line-height: 1.35; }
+    .votes-total {
+      display: flex; justify-content: space-between; align-items: center;
+      border-top: 1px solid var(--border); margin-top: 6px; padding-top: 5px;
+      font-size: 10px; font-weight: 700; color: var(--muted);
+    }
+    .votes-total-yes { color: var(--yes); }
+    .votes-total-no  { color: var(--no);  }
     @media (max-width: 560px) {
       .votes-board { grid-template-columns: 1fr; }
     }
@@ -288,6 +304,8 @@
       font-size: 11px; color: var(--muted); line-height: 1.6;
     }
     .position-badge strong { color: var(--text); font-weight: 600; }
+    .badge-profit { color: var(--yes); font-weight: 600; }
+    .badge-loss   { color: var(--no);  font-weight: 600; }
 
     .no-coins-note { font-size: 11px; color: var(--no); text-align: center; padding-top: 2px; }
 
@@ -1175,11 +1193,19 @@ function buildMarketCard(m, pos) {
         ' Nie można dokładać kolejnych coinów na tym rynku.'
       )
     : pos
-    ? el('div', { className: 'position-badge' },
-        'Twoja pozycja: ',
-        el('strong', {}, pos.total_spent + ' coinów na ' + (pos.side === 'YES' ? 'TAK' : 'NIE')),
-        ' · udziały: ~' + fmtNum(pos.total_shares) + ' · szac. wypłata: ~' + fmtNum(estimatePositionPayout(m.id, pos)) + ' 🪙'
-      )
+    ? el('div', { className: 'position-badge' }, (() => {
+        const payout = estimatePositionPayout(m.id, pos);
+        const profit = payout - pos.total_spent;
+        const profitStr = (profit >= 0 ? '+' : '') + fmtNum(profit);
+        const side = pos.side === 'YES' ? 'TAK' : 'NIE';
+        return [
+          'Postawiłeś ',
+          el('strong', {}, pos.total_spent + ' 🪙 na ' + side),
+          '. Jeśli ' + side + ' wygra → ',
+          el('strong', {}, '~' + fmtNum(payout) + ' 🪙'),
+          el('span', { className: profit >= 0 ? 'badge-profit' : 'badge-loss' }, ' (' + profitStr + ' 🪙)'),
+        ];
+      })())
     : null;
 
   const noCoinNode = (!m.resolved && me.coins < 1 && !pos)
@@ -1282,28 +1308,59 @@ function updateCardChart(marketId) {
 
 function buildVotesBoard(marketId) {
   const votes = getVotesBySide(marketId);
+  const stats = getMarketStats(marketId);
   return el('div', { className: 'votes-board' },
-    buildVotesColumn('YES', votes.YES),
-    buildVotesColumn('NO', votes.NO)
+    buildVotesColumn('YES', votes.YES, stats),
+    buildVotesColumn('NO', votes.NO, stats)
   );
 }
 
-function buildVotesColumn(side, voters) {
+function buildVotesColumn(side, voters, stats) {
   const isYes = side === 'YES';
   const label = isYes ? 'TAK' : 'NIE';
+  const losingSide = isYes ? 'NO' : 'YES';
+  const losingPot = stats[losingSide]?.amount || 0;
+  const totalWinningShares = stats[side]?.shares || 0;
+  const totalOnSide = voters.reduce((s, v) => s + v.amount, 0);
+  const maxAmount = voters.reduce((m, v) => Math.max(m, v.amount), 0);
+
   const rows = voters.length
-    ? voters.map(v => el('div', { className: 'vote-row' },
-        el('span', { className: 'vote-nick', title: v.nick }, v.nick),
-        el('span', { className: 'vote-meta' }, fmtCoins(v.amount) + ' 🪙')
-      ))
+    ? voters.map(v => {
+        const payout = totalWinningShares > 0
+          ? v.amount + losingPot * (v.shares / totalWinningShares)
+          : v.amount;
+        const barPct = maxAmount > 0 ? (v.amount / maxAmount) * 100 : 0;
+        return el('div', { className: 'vote-row' },
+          el('div', { className: 'vote-bar vote-bar-' + side.toLowerCase(), style: { width: barPct.toFixed(1) + '%' } }),
+          el('span', { className: 'vote-nick', title: v.nick }, v.nick),
+          el('span', { className: 'vote-meta' },
+            fmtCoins(v.amount) + ' → ~' + fmtCoins(payout) + ' 🪙'
+          )
+        );
+      })
     : [el('p', { className: 'votes-empty' }, 'Brak głosów')];
+
+  const totalPayout = totalWinningShares > 0
+    ? totalOnSide + losingPot
+    : totalOnSide;
 
   return el('div', { className: 'votes-col' },
     el('div', { className: 'votes-head ' + (isYes ? 'votes-head-yes' : 'votes-head-no') },
       el('span', {}, label),
       el('span', { className: 'votes-count' }, voters.length + ' os.')
     ),
-    el('div', { className: 'votes-list' }, ...rows)
+    voters.length
+      ? el('div', { className: 'votes-subhead' }, 'stawka → wygrana jeśli ' + label)
+      : null,
+    el('div', { className: 'votes-list' }, ...rows),
+    voters.length
+      ? el('div', { className: 'votes-total' },
+          el('span', {}, 'Razem:'),
+          el('span', { className: isYes ? 'votes-total-yes' : 'votes-total-no' },
+            totalOnSide + ' 🪙 → ~' + totalPayout + ' 🪙'
+          )
+        )
+      : null
   );
 }
 
