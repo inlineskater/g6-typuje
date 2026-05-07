@@ -1,4 +1,4 @@
--- getsix typuje — full schema
+-- Rynek Proroctw G6 — full schema
 -- Run once in Supabase SQL Editor (Dashboard → SQL Editor → New query → paste → Run)
 
 -- ── Tables ─────────────────────────────────────────────────────────────────
@@ -189,20 +189,24 @@ ALTER TABLE public.markets
   ADD COLUMN IF NOT EXISTS resolved_at  timestamptz,
   ADD COLUMN IF NOT EXISTS resolved_by  uuid REFERENCES public.profiles(id);
 
+CREATE INDEX IF NOT EXISTS markets_resolved_by_idx ON public.markets(resolved_by);
+
 -- Returns true if the calling user has the admin nick
 CREATE OR REPLACE FUNCTION public.is_admin(p_user uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_user AND nick = 'admin');
 $$;
 
--- Resolve a market: creator or admin picks YES/NO; winning shares pay 1 coin each
+-- Resolve a market: creator or admin picks YES/NO; winners split the coin pot by shares
 CREATE OR REPLACE FUNCTION public.resolve_market(p_market uuid, p_resolution text)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_user    uuid := auth.uid();
-  v_creator uuid;
-  v_already boolean;
-  v_payout  bigint;
+  v_user                 uuid := auth.uid();
+  v_creator              uuid;
+  v_already              boolean;
+  v_total_pot            bigint := 0;
+  v_total_winning_shares numeric := 0;
+  v_payout               bigint := 0;
 BEGIN
   IF v_user IS NULL                   THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_resolution NOT IN ('YES','NO') THEN RAISE EXCEPTION 'bad_resolution';   END IF;
@@ -215,21 +219,48 @@ BEGIN
   IF v_creator IS DISTINCT FROM v_user AND NOT public.is_admin(v_user)
                  THEN RAISE EXCEPTION 'not_authorized';   END IF;
 
-  -- Pay 1 coin per share to each winner
-  WITH winners AS (
-    SELECT user_id, FLOOR(SUM(shares))::integer AS payout
-    FROM   public.trades
-    WHERE  market_id = p_market AND side = p_resolution
-    GROUP  BY user_id
-  )
-  UPDATE public.profiles p
-     SET coins = p.coins + w.payout
-    FROM winners w
-   WHERE p.id = w.user_id;
+  SELECT COALESCE(SUM(amount), 0)::bigint INTO v_total_pot
+  FROM   public.trades
+  WHERE  market_id = p_market;
 
-  SELECT COALESCE(SUM(FLOOR(shares))::bigint, 0) INTO v_payout
+  SELECT COALESCE(SUM(shares), 0) INTO v_total_winning_shares
   FROM   public.trades
   WHERE  market_id = p_market AND side = p_resolution;
+
+  -- Split the real pot proportionally by winning shares.
+  -- Remainder coins go to the largest fractional payouts for deterministic integer totals.
+  IF v_total_pot > 0 AND v_total_winning_shares > 0 THEN
+    WITH raw_payouts AS (
+      SELECT user_id,
+             v_total_pot::numeric * SUM(shares) / v_total_winning_shares AS exact_payout
+      FROM   public.trades
+      WHERE  market_id = p_market AND side = p_resolution
+      GROUP  BY user_id
+    ), base_payouts AS (
+      SELECT user_id,
+             FLOOR(exact_payout)::integer AS base_payout,
+             exact_payout - FLOOR(exact_payout) AS fractional_payout
+      FROM   raw_payouts
+    ), ranked_payouts AS (
+      SELECT user_id,
+             base_payout,
+             ROW_NUMBER() OVER (ORDER BY fractional_payout DESC, user_id) AS fractional_rank,
+             (v_total_pot - SUM(base_payout) OVER ())::integer AS remainder_coins
+      FROM   base_payouts
+    ), payouts AS (
+      SELECT user_id,
+             base_payout + CASE WHEN fractional_rank <= remainder_coins THEN 1 ELSE 0 END AS payout
+      FROM   ranked_payouts
+    ), credited AS (
+      UPDATE public.profiles p
+         SET coins = p.coins + payouts.payout
+        FROM payouts
+       WHERE p.id = payouts.user_id
+      RETURNING payouts.payout
+    )
+    SELECT COALESCE(SUM(payout), 0)::bigint INTO v_payout
+    FROM   credited;
+  END IF;
 
   UPDATE public.markets
      SET resolved    = true,
@@ -238,7 +269,11 @@ BEGIN
          resolved_by = v_user
    WHERE id = p_market;
 
-  RETURN json_build_object('total_payout', v_payout, 'resolution', p_resolution);
+  RETURN json_build_object(
+    'total_pot',    v_total_pot,
+    'total_payout', v_payout,
+    'resolution',   p_resolution
+  );
 END;
 $$;
 

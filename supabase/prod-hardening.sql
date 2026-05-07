@@ -1,4 +1,4 @@
--- Production hardening for an existing getsix typuje database.
+-- Production hardening for an existing Rynek Proroctw G6 database.
 -- Safe to re-run after the base schema exists.
 
 BEGIN;
@@ -14,6 +14,8 @@ CREATE INDEX IF NOT EXISTS markets_created_by_idx
   ON public.markets(created_by);
 CREATE INDEX IF NOT EXISTS markets_resolved_created_at_idx
   ON public.markets(resolved, created_at DESC);
+CREATE INDEX IF NOT EXISTS markets_resolved_by_idx
+  ON public.markets(resolved_by);
 
 GRANT SELECT ON public.profiles, public.markets, public.trades, public.positions, public.leaderboard
   TO anon, authenticated;

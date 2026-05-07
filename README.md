@@ -1,4 +1,4 @@
-# g6 typuje
+# Rynek Proroctw G6
 
 Company prediction market with virtual coins.
 

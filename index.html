@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>getsix typuje</title>
+  <title>Rynek Proroctw G6</title>
   <meta name="description" content="Firmowy rynek predykcji z wirtualnymi coinami.">
   <meta name="theme-color" content="#f8fafc">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -99,6 +99,16 @@
     .login-hint a { color: var(--accent); text-decoration: none; font-weight: 500; }
     .login-hint a:hover { text-decoration: underline; }
     .login-error { color: var(--no); font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .login-faq {
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
+      display: grid; gap: 12px; text-align: left;
+    }
+    .login-faq h2 {
+      font-size: 12px; font-weight: 800; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .faq-item h3 { font-size: 13px; font-weight: 700; margin-bottom: 3px; color: var(--text); }
+    .faq-item p { color: var(--muted); font-size: 12px; line-height: 1.55; }
 
     /* ── HEADER ── */
     header {
@@ -243,6 +253,33 @@
     }
     .resolved-yes { background: var(--yes-dim); color: var(--yes); border: 1px solid var(--yes-line); }
     .resolved-no  { background: var(--no-dim);  color: var(--no);  border: 1px solid var(--no-line); }
+
+    .votes-board {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      border-top: 1px solid var(--border); padding-top: 12px;
+    }
+    .votes-col {
+      min-width: 0;
+    }
+    .votes-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .votes-head-yes { color: var(--yes); }
+    .votes-head-no  { color: var(--no);  }
+    .votes-count { color: var(--muted); font-weight: 700; letter-spacing: 0; text-transform: none; }
+    .votes-list { display: flex; flex-direction: column; gap: 5px; max-height: 126px; overflow: auto; padding-right: 3px; }
+    .vote-row {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      font-size: 11px; line-height: 1.35; min-width: 0;
+    }
+    .vote-nick { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vote-meta { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+    .votes-empty { color: var(--dim); font-size: 11px; line-height: 1.35; }
+    @media (max-width: 560px) {
+      .votes-board { grid-template-columns: 1fr; }
+    }
 
     .position-badge {
       background: var(--acc-dim); border: 1px solid rgba(99,102,241,.16);
@@ -418,7 +455,7 @@
 <div id="screen-login" class="login-wrap hidden">
   <div class="login-card">
     <div class="logo-big">🎲</div>
-    <h1 class="login-title">getsix typuje</h1>
+    <h1 class="login-title">Rynek Proroctw G6</h1>
     <p class="login-sub" id="login-sub">Wybierz swój nick i podaj PIN.</p>
 
     <div id="mode-login">
@@ -443,13 +480,29 @@
     </div>
 
     <p class="login-error" id="login-error"></p>
+
+    <section class="login-faq" aria-label="FAQ">
+      <h2>FAQ</h2>
+      <div class="faq-item">
+        <h3>Co to jest?</h3>
+        <p>Firmowa zabawa w typowanie wyników. Każdy tworzy lub obstawia rynki TAK/NIE za wirtualne coiny.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Jak działa wygrana?</h3>
+        <p>Po zamknięciu rynku pula postawionych coinów trafia do osób po dobrej stronie, proporcjonalnie do ich udziałów.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Czy to prawdziwe pieniądze?</h3>
+        <p>Nie. Coiny są tylko do gry, rankingu i wewnętrznej rywalizacji.</p>
+      </div>
+    </section>
   </div>
 </div>
 
 <!-- ── APP ── -->
 <div id="screen-app" class="hidden">
   <header>
-    <div class="logo">getsix <span>typuje</span></div>
+    <div class="logo">Rynek Proroctw <span>G6</span></div>
     <div class="user-info">
       <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
       <span class="header-nick" id="header-nick"></span>
@@ -480,7 +533,7 @@
           <span class="info-rule"><span class="info-rule-icon">⚠️</span> Na tym samym rynku możesz <strong>dokładać kolejne</strong> coiny — ale tylko do wybranej strony. Nie można grać jednocześnie na TAK i NIE.</span>
           <span class="info-rule"><span class="info-rule-icon">➕</span> <strong>Każdy może dodać nowy rynek</strong> — kliknij „+ Nowy rynek" i wpisz pytanie oraz termin.</span>
           <span class="info-rule"><span class="info-rule-icon">🔒</span> Rynek może zamknąć <strong>tylko jego twórca</strong> (lub admin). Kliknij „Zamknij rynek" i wybierz wynik.</span>
-          <span class="info-rule"><span class="info-rule-icon">🏆</span> Po rozstrzygnięciu każdy wygrywający dostaje <strong>1 coin za każdy posiadany udział</strong>.</span>
+          <span class="info-rule"><span class="info-rule-icon">🏆</span> Po rozstrzygnięciu pula rynku trafia do wygrywających <strong>proporcjonalnie do udziałów</strong>.</span>
         </div>
       </div>
 
@@ -542,7 +595,7 @@
         <span class="prev-val" id="prev-shares">—</span>
       </div>
       <div class="preview-row">
-        <span class="prev-label">Potencjalna wygrana</span>
+        <span class="prev-label">Szacowana wypłata</span>
         <span class="prev-val" id="prev-win">—</span>
       </div>
     </div>
@@ -584,13 +637,12 @@
     </div>
     <p class="modal-market-name" id="rm-market-name"></p>
     <p style="color:var(--muted);font-size:12px;margin-bottom:18px;line-height:1.6">
-      Wygrywający dostają 1 coin za każdy udział. Operacja nieodwracalna.
+      Pula postawionych coinów zostanie podzielona między wygrywających proporcjonalnie do udziałów. Operacja nieodwracalna.
     </p>
     <div class="side-toggle">
-      <button class="side-btn" id="rm-yes">TAK wygrało</button>
-      <button class="side-btn" id="rm-no">NIE wygrało</button>
+      <button class="side-btn" id="rm-yes">Zamknij: TAK</button>
+      <button class="side-btn" id="rm-no">Zamknij: NIE</button>
     </div>
-    <button class="btn-place btn-place-yes" id="rm-confirm" disabled>Zatwierdź</button>
   </div>
 </div>
 
@@ -614,7 +666,6 @@ let myPositionsByMarket = {};
 let marketRenderSeq = 0;
 let activeSide = 'YES';
 let activeMarket = null;
-let pickedResolution = null;
 let realtimeChannels = [];
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
@@ -637,6 +688,76 @@ function computeBet(m, side, X) {
 
 function fmtPct(p) { return (p * 100).toFixed(1) + '%'; }
 function fmtNum(n) { return (+n).toFixed(2); }
+function fmtCoins(n) { return String(Math.round(+n || 0)); }
+
+function getMarketStats(marketId, extraTrade = null) {
+  const stats = {
+    totalPot: 0,
+    YES: { amount: 0, shares: 0 },
+    NO:  { amount: 0, shares: 0 },
+  };
+  const rows = tradesByMarket[marketId] || [];
+  [...rows, extraTrade].forEach(t => {
+    if (!t || (t.side !== 'YES' && t.side !== 'NO')) return;
+    const amount = +t.amount || 0;
+    const shares = +t.shares || 0;
+    stats.totalPot += amount;
+    stats[t.side].amount += amount;
+    stats[t.side].shares += shares;
+  });
+  return stats;
+}
+
+function getUserSharesForSide(marketId, side) {
+  const pos = myPositionsByMarket[marketId];
+  if (!pos) return 0;
+  if (pos.side === side) return +pos.total_shares || 0;
+  return (pos.sides || [])
+    .filter(row => row.side === side)
+    .reduce((sum, row) => sum + (+row.total_shares || 0), 0);
+}
+
+function estimatePayout(marketId, side, userShares, extraTrade = null) {
+  const stats = getMarketStats(marketId, extraTrade);
+  const winningShares = stats[side]?.shares || 0;
+  if (winningShares <= 0) return 0;
+  return stats.totalPot * ((+userShares || 0) / winningShares);
+}
+
+function estimatePositionPayout(marketId, pos) {
+  if (!pos || (pos.side !== 'YES' && pos.side !== 'NO')) return null;
+  return estimatePayout(marketId, pos.side, +pos.total_shares || 0);
+}
+
+function estimatePositionPayoutAfterBet(m, side, amount, sharesOut) {
+  const previousShares = getUserSharesForSide(m.id, side);
+  const totalUserShares = previousShares + (+sharesOut || 0);
+  return estimatePayout(m.id, side, totalUserShares, { side, amount, shares: sharesOut });
+}
+
+function getVotesBySide(marketId) {
+  const grouped = { YES: new Map(), NO: new Map() };
+  (tradesByMarket[marketId] || []).forEach(t => {
+    if (t.side !== 'YES' && t.side !== 'NO') return;
+    const key = t.user_id || t.nick_snapshot || t.id;
+    const prev = grouped[t.side].get(key) || {
+      nick: t.nick_snapshot || 'Gracz',
+      amount: 0,
+      shares: 0,
+    };
+    prev.amount += +t.amount || 0;
+    prev.shares += +t.shares || 0;
+    grouped[t.side].set(key, prev);
+  });
+  return {
+    YES: Array.from(grouped.YES.values()).sort(sortVoters),
+    NO: Array.from(grouped.NO.values()).sort(sortVoters),
+  };
+}
+
+function sortVoters(a, b) {
+  return b.amount - a.amount || a.nick.localeCompare(b.nick, 'pl');
+}
 
 function relTime(ts) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -825,6 +946,15 @@ async function initSession(user) {
   showApp();
 }
 
+async function refreshMeCoins() {
+  if (!me?.id) return;
+  const { data: profile, error } = await sb.from('profiles').select('coins').eq('id', me.id).single();
+  if (!error && profile) {
+    me.coins = profile.coins;
+    setText(headerCoins, me.coins);
+  }
+}
+
 async function doLogout() {
   teardownRealtime();
   await sb.auth.signOut();
@@ -884,7 +1014,7 @@ async function loadMarkets() {
 
   const [marketsRes, tradesRes] = await Promise.all([
     sb.from('markets').select('*').order('created_at'),
-    sb.from('trades').select('p_yes_after, created_at, market_id').order('created_at', { ascending: true }),
+    sb.from('trades').select('id, p_yes_after, created_at, market_id, user_id, nick_snapshot, side, amount, shares').order('created_at', { ascending: true }),
   ]);
 
   if (marketsRes.error || tradesRes.error) {
@@ -970,6 +1100,7 @@ function buildMarketCard(m, pos) {
   const trades   = tradesByMarket[m.id] || [];
   const pts      = [{ p: 0.5 }, ...trades.map(t => ({ p: +t.p_yes_after }))];
   renderChart(chartDiv, pts);
+  const votesBoard = buildVotesBoard(m.id);
 
   // ── Bet section / resolved banner ──
   let betSection;
@@ -1001,7 +1132,7 @@ function buildMarketCard(m, pos) {
     ? el('div', { className: 'position-badge' },
         'Twoja pozycja: ',
         el('strong', {}, pos.total_spent + ' coinów na ' + (pos.side === 'YES' ? 'TAK' : 'NIE')),
-        ' · udziały: ~' + fmtNum(pos.total_shares) + ' · max wygrana: ~' + fmtNum(pos.total_shares) + ' 🪙'
+        ' · udziały: ~' + fmtNum(pos.total_shares) + ' · szac. wypłata: ~' + fmtNum(estimatePositionPayout(m.id, pos)) + ' 🪙'
       )
     : null;
 
@@ -1010,7 +1141,7 @@ function buildMarketCard(m, pos) {
     : null;
 
   return el('div', { className: 'market-card', 'data-market-id': m.id },
-    header, probRow, bar, chartDiv, betSection, posNode, noCoinNode
+    header, probRow, bar, chartDiv, votesBoard, betSection, posNode, noCoinNode
   );
 }
 
@@ -1103,6 +1234,33 @@ function updateCardChart(marketId) {
   renderChart(chartDiv, [{ p: 0.5 }, ...trades.map(t => ({ p: +t.p_yes_after }))]);
 }
 
+function buildVotesBoard(marketId) {
+  const votes = getVotesBySide(marketId);
+  return el('div', { className: 'votes-board' },
+    buildVotesColumn('YES', votes.YES),
+    buildVotesColumn('NO', votes.NO)
+  );
+}
+
+function buildVotesColumn(side, voters) {
+  const isYes = side === 'YES';
+  const label = isYes ? 'TAK' : 'NIE';
+  const rows = voters.length
+    ? voters.map(v => el('div', { className: 'vote-row' },
+        el('span', { className: 'vote-nick', title: v.nick }, v.nick),
+        el('span', { className: 'vote-meta' }, fmtCoins(v.amount) + ' 🪙')
+      ))
+    : [el('p', { className: 'votes-empty' }, 'Brak głosów')];
+
+  return el('div', { className: 'votes-col' },
+    el('div', { className: 'votes-head ' + (isYes ? 'votes-head-yes' : 'votes-head-no') },
+      el('span', {}, label),
+      el('span', { className: 'votes-count' }, voters.length + ' os.')
+    ),
+    el('div', { className: 'votes-list' }, ...rows)
+  );
+}
+
 // ── Realtime ──────────────────────────────────────────────────────────────
 function setupRealtime() {
   teardownRealtime();
@@ -1117,15 +1275,30 @@ function setupRealtime() {
       } else if (payload.eventType === 'UPDATE') {
         const idx = markets.findIndex(m => m.id === payload.new.id);
         if (idx !== -1) markets[idx] = { ...markets[idx], ...payload.new };
-        if (payload.new.resolved) { renderMarkets(); return; }
+        if (payload.new.resolved) {
+          await refreshMeCoins();
+          await renderMarkets();
+          return;
+        }
         updateCardProb(payload.new);
       }
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades' }, payload => {
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades' }, async payload => {
       const t = payload.new;
       if (!tradesByMarket[t.market_id]) tradesByMarket[t.market_id] = [];
-      tradesByMarket[t.market_id].push({ p_yes_after: t.p_yes_after, created_at: t.created_at });
+      if (t.id && tradesByMarket[t.market_id].some(existing => existing.id === t.id)) return;
+      tradesByMarket[t.market_id].push({
+        id: t.id,
+        p_yes_after: t.p_yes_after,
+        created_at: t.created_at,
+        user_id: t.user_id,
+        nick_snapshot: t.nick_snapshot,
+        side: t.side,
+        amount: t.amount,
+        shares: t.shares,
+      });
       updateCardChart(t.market_id);
+      await renderMarkets();
     })
     .subscribe();
 
@@ -1190,7 +1363,7 @@ function refreshBetModal() {
   prevAfter.textContent  = fmtPct(res.pYesAfter);
   prevAfter.className    = res.pYesAfter > pYes(activeMarket) ? 'clr-yes' : 'clr-no';
   setText(prevShares, '~' + fmtNum(res.sharesOut) + ' udz. ' + (isYes ? 'TAK' : 'NIE'));
-  setText(prevWin,    '~' + fmtNum(res.sharesOut) + ' 🪙');
+  setText(prevWin,    '~' + fmtNum(estimatePositionPayoutAfterBet(activeMarket, activeSide, X, res.sharesOut)) + ' 🪙');
   btnPlace.className = 'btn-place ' + (isYes ? 'btn-place-yes' : 'btn-place-no');
   setText(btnPlace, 'Postaw ' + X + ' coinów na ' + (isYes ? 'TAK' : 'NIE'));
   btnPlace.disabled = X < 1;
@@ -1258,7 +1431,7 @@ btnPlace.addEventListener('click', async () => {
   }
 
   closeBetModal();
-  await renderMarkets();
+  await loadMarkets();
   showToast('✅ Postawiono ' + X + ' coinów na ' + (activeSide === 'YES' ? 'TAK' : 'NIE') + '!');
 });
 
@@ -1309,12 +1482,11 @@ document.getElementById('nm-submit').addEventListener('click', async () => {
 function openResolveModal(marketId) {
   activeMarket = markets.find(m => m.id === marketId);
   if (!activeMarket) return;
-  pickedResolution = null;
   setText(document.getElementById('rm-market-name'), activeMarket.title);
   document.getElementById('rm-yes').className = 'side-btn';
   document.getElementById('rm-no').className  = 'side-btn';
-  const c = document.getElementById('rm-confirm');
-  c.disabled = true; c.className = 'btn-place btn-place-yes'; c.textContent = 'Zatwierdź';
+  document.getElementById('rm-yes').disabled = false;
+  document.getElementById('rm-no').disabled = false;
   show(rmOverlay); document.body.style.overflow = 'hidden';
 }
 
@@ -1323,29 +1495,28 @@ function closeResolveModal() { hide(rmOverlay); document.body.style.overflow = '
 document.getElementById('rm-close').addEventListener('click', closeResolveModal);
 rmOverlay.addEventListener('click', e => { if (e.target === rmOverlay) closeResolveModal(); });
 
-document.getElementById('rm-yes').addEventListener('click', () => {
-  pickedResolution = 'YES';
-  document.getElementById('rm-yes').className = 'side-btn active-yes';
-  document.getElementById('rm-no').className  = 'side-btn';
-  const c = document.getElementById('rm-confirm');
-  c.disabled = false; c.className = 'btn-place btn-place-yes'; c.textContent = 'Zatwierdź: TAK wygrało';
-});
+document.getElementById('rm-yes').addEventListener('click', () => resolveActiveMarket('YES'));
+document.getElementById('rm-no').addEventListener('click', () => resolveActiveMarket('NO'));
 
-document.getElementById('rm-no').addEventListener('click', () => {
-  pickedResolution = 'NO';
-  document.getElementById('rm-no').className  = 'side-btn active-no';
-  document.getElementById('rm-yes').className = 'side-btn';
-  const c = document.getElementById('rm-confirm');
-  c.disabled = false; c.className = 'btn-place btn-place-no'; c.textContent = 'Zatwierdź: NIE wygrało';
-});
+async function resolveActiveMarket(resolution) {
+  if (!activeMarket) return;
+  const yesBtn = document.getElementById('rm-yes');
+  const noBtn = document.getElementById('rm-no');
+  yesBtn.disabled = true;
+  noBtn.disabled = true;
+  if (resolution === 'YES') {
+    yesBtn.className = 'side-btn active-yes';
+    yesBtn.textContent = 'Zamykam…';
+  } else {
+    noBtn.className = 'side-btn active-no';
+    noBtn.textContent = 'Zamykam…';
+  }
 
-document.getElementById('rm-confirm').addEventListener('click', async () => {
-  if (!pickedResolution || !activeMarket) return;
-  const c = document.getElementById('rm-confirm');
-  c.disabled = true; c.textContent = 'Zamykam…';
-
-  const { error } = await sb.rpc('resolve_market', { p_market: activeMarket.id, p_resolution: pickedResolution });
-  c.disabled = false;
+  const { error } = await sb.rpc('resolve_market', { p_market: activeMarket.id, p_resolution: resolution });
+  yesBtn.disabled = false;
+  noBtn.disabled = false;
+  yesBtn.textContent = 'Zamknij: TAK';
+  noBtn.textContent = 'Zamknij: NIE';
 
   if (error) {
     const msg = error.message.includes('not_authorized')   ? 'Brak uprawnień.'
@@ -1354,12 +1525,11 @@ document.getElementById('rm-confirm').addEventListener('click', async () => {
     showToast('❌ ' + msg); closeResolveModal(); return;
   }
 
-  const { data: profile } = await sb.from('profiles').select('coins').eq('id', me.id).single();
-  if (profile) { me.coins = profile.coins; setText(headerCoins, me.coins); }
+  await refreshMeCoins();
 
   closeResolveModal(); showToast('✅ Rynek zamknięty!');
   await loadMarkets();
-});
+}
 
 // ── Leaderboard ───────────────────────────────────────────────────────────
 async function loadLeaderboard() {
