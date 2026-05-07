@@ -177,6 +177,18 @@
       grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
       gap: 14px;
     }
+    .markets-section-divider {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 12px;
+      margin: 120px 0 6px;
+      color: var(--muted);
+      font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .markets-section-divider::after {
+      content: "";
+      height: 1px; flex: 1;
+      background: var(--border);
+    }
     @media (max-width: 560px) {
       .markets-grid { grid-template-columns: 1fr; }
     }
@@ -311,7 +323,8 @@
 
     /* ── LEADERBOARD ── */
     .page-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; letter-spacing: 0; }
-    .page-sub   { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+    .page-sub   { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+    .ranking-info { margin-bottom: 20px; }
 
     .lb-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     .lb-table { width: 100%; border-collapse: collapse; }
@@ -576,6 +589,9 @@
     <main>
       <h2 class="page-title">Ranking graczy 🏆</h2>
       <p class="page-sub">Suma gotówki i wartości aktywnych zakładów — wygrywa ten, kto typuje najtrafniej.</p>
+      <div class="info-banner ranking-info">
+        <strong>Net Worth</strong> = gotówka + szacowana wartość aktywnych zakładów. Zamknięte rynki nie są liczone jako pozycje, bo ich wynik jest już uwzględniony w gotówce.
+      </div>
       <div id="leaderboard-wrap" class="lb-wrap">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
@@ -1119,9 +1135,17 @@ async function renderMarkets() {
   if (renderSeq !== marketRenderSeq) return;
   myPositionsByMarket = posMap;
 
-  marketsGrid.replaceChildren(
-    ...marketsSnapshot.map(m => buildMarketCard(m, posMap[m.id] || null))
-  );
+  const openMarkets = marketsSnapshot.filter(m => !m.resolved);
+  const closedMarkets = marketsSnapshot.filter(m => m.resolved);
+  const nodes = [
+    ...openMarkets.map(m => buildMarketCard(m, posMap[m.id] || null)),
+  ];
+  if (closedMarkets.length > 0) {
+    nodes.push(el('div', { className: 'markets-section-divider' }, 'Zamknięte rynki'));
+    nodes.push(...closedMarkets.map(m => buildMarketCard(m, posMap[m.id] || null)));
+  }
+
+  marketsGrid.replaceChildren(...nodes);
 }
 
 function buildMarketCard(m, pos) {
@@ -1187,12 +1211,12 @@ function buildMarketCard(m, pos) {
     betSection = el('div', { className: 'bet-row' }, yesBtn, noBtn);
   }
 
-  const posNode = pos && pos.side === 'MIXED'
+  const posNode = !m.resolved && pos && pos.side === 'MIXED'
     ? el('div', { className: 'position-badge' },
         el('strong', {}, 'Twoja pozycja jest po obu stronach.'),
         ' Nie można dokładać kolejnych coinów na tym rynku.'
       )
-    : pos
+    : !m.resolved && pos
     ? (() => {
         const payout = estimatePositionPayout(m.id, pos);
         const profit = payout - pos.total_spent;
