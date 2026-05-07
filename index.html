@@ -360,6 +360,16 @@
     .slider-label-text { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
     .slider-value { font-size: 22px; font-weight: 800; letter-spacing: 0; }
     .slider-value small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+    .amount-input-wrap {
+      display: flex; align-items: baseline; gap: 4px;
+    }
+    .amount-input {
+      width: 86px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 22px; font-weight: 800;
+      font-family: inherit; line-height: 1; padding: 5px 8px; text-align: right;
+      outline: none;
+    }
+    .amount-input:focus { border-color: var(--accent); }
 
     input[type="range"] {
       width: 100%; -webkit-appearance: none; appearance: none;
@@ -576,7 +586,10 @@
     <div class="slider-section">
       <div class="slider-label">
         <span class="slider-label-text">Kwota zakładu</span>
-        <span class="slider-value"><span id="slider-display">1</span><small>coinów</small></span>
+        <span class="slider-value amount-input-wrap">
+          <input class="amount-input" type="number" id="bet-amount" min="1" max="1000" step="1" value="1" inputmode="numeric" aria-label="Kwota zakładu">
+          <small>coinów</small>
+        </span>
       </div>
       <input type="range" id="bet-slider" min="1" max="1000" value="1">
     </div>
@@ -738,6 +751,26 @@ function estimatePositionPayoutAfterBet(m, side, amount, sharesOut) {
   return estimatePayout(m.id, side, totalUserAmount, totalUserShares, { side, amount, shares: sharesOut });
 }
 
+function maxBetAmount() {
+  return Math.max(1, Math.floor(+me?.coins || 1));
+}
+
+function clampBetAmount(value) {
+  const parsed = Math.floor(Number(value));
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(Math.max(parsed, 1), maxBetAmount());
+}
+
+function setBetAmount(value) {
+  const max = maxBetAmount();
+  const amount = clampBetAmount(value);
+  betSlider.max = max;
+  betAmountInput.max = max;
+  betSlider.value = amount;
+  betAmountInput.value = amount;
+  return amount;
+}
+
 function getVotesBySide(marketId) {
   const grouped = { YES: new Map(), NO: new Map() };
   (tradesByMarket[marketId] || []).forEach(t => {
@@ -818,7 +851,7 @@ const modalMarketName = document.getElementById('modal-market-name');
 const sideYesBtn      = document.getElementById('side-yes-btn');
 const sideNoBtn       = document.getElementById('side-no-btn');
 const betSlider       = document.getElementById('bet-slider');
-const sliderDisplay   = document.getElementById('slider-display');
+const betAmountInput  = document.getElementById('bet-amount');
 const prevBefore      = document.getElementById('prev-before');
 const prevAfter       = document.getElementById('prev-after');
 const prevShares      = document.getElementById('prev-shares');
@@ -1342,8 +1375,7 @@ function openBetModal(marketId, side) {
   }
   setText(modalMarketName, activeMarket.title);
   activeSide      = lockedSide || side;
-  betSlider.max   = me.coins;
-  betSlider.value = Math.min(10, me.coins);
+  setBetAmount(Math.min(10, me.coins));
   refreshBetModal();
   show(modalOverlay);
   document.body.style.overflow = 'hidden';
@@ -1353,14 +1385,13 @@ function refreshBetModal() {
   const lockedSide = activeMarket ? getLockedSide(activeMarket.id) : null;
   if (lockedSide && activeSide !== lockedSide) activeSide = lockedSide;
   const isYes = activeSide === 'YES';
-  const X     = parseInt(betSlider.value, 10) || 1;
+  const X     = setBetAmount(betAmountInput.value || betSlider.value);
   const res   = computeBet(activeMarket, activeSide, X);
 
   sideYesBtn.className = 'side-btn' + (isYes  ? ' active-yes' : '');
   sideNoBtn.className  = 'side-btn' + (!isYes ? ' active-no'  : '');
   sideYesBtn.disabled = lockedSide === 'NO';
   sideNoBtn.disabled  = lockedSide === 'YES';
-  setText(sliderDisplay, X);
   prevBefore.textContent = fmtPct(pYes(activeMarket));
   prevBefore.className   = 'clr-yes';
   prevAfter.textContent  = fmtPct(res.pYesAfter);
@@ -1388,7 +1419,15 @@ sideNoBtn.addEventListener('click',  () => {
   }
   activeSide = 'NO'; refreshBetModal();
 });
-betSlider.addEventListener('input', refreshBetModal);
+betSlider.addEventListener('input', () => {
+  setBetAmount(betSlider.value);
+  refreshBetModal();
+});
+betAmountInput.addEventListener('input', () => {
+  setBetAmount(betAmountInput.value);
+  refreshBetModal();
+});
+betAmountInput.addEventListener('blur', () => setBetAmount(betAmountInput.value));
 document.getElementById('modal-close').addEventListener('click', closeBetModal);
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeBetModal(); });
 document.addEventListener('keydown', e => {
@@ -1398,7 +1437,7 @@ document.addEventListener('keydown', e => {
 function closeBetModal() { hide(modalOverlay); document.body.style.overflow = ''; }
 
 btnPlace.addEventListener('click', async () => {
-  const X = parseInt(betSlider.value, 10);
+  const X = setBetAmount(betAmountInput.value || betSlider.value);
   if (!X || X > me.coins) return;
   const pos = activeMarket ? myPositionsByMarket[activeMarket.id] : null;
   if (pos?.side === 'MIXED' || (pos && pos.side !== activeSide)) {
