@@ -1,4 +1,4 @@
-# getsix typuje
+# g6 typuje
 
 Company prediction market with virtual coins.
 
