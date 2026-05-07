@@ -1193,19 +1193,21 @@ function buildMarketCard(m, pos) {
         ' Nie można dokładać kolejnych coinów na tym rynku.'
       )
     : pos
-    ? el('div', { className: 'position-badge' }, (() => {
+    ? (() => {
         const payout = estimatePositionPayout(m.id, pos);
         const profit = payout - pos.total_spent;
-        const profitStr = (profit >= 0 ? '+' : '') + fmtNum(profit);
         const side = pos.side === 'YES' ? 'TAK' : 'NIE';
-        return [
+        const div = el('div', { className: 'position-badge' });
+        div.append(
           'Postawiłeś ',
           el('strong', {}, pos.total_spent + ' 🪙 na ' + side),
           '. Jeśli ' + side + ' wygra → ',
           el('strong', {}, '~' + fmtNum(payout) + ' 🪙'),
-          el('span', { className: profit >= 0 ? 'badge-profit' : 'badge-loss' }, ' (' + profitStr + ' 🪙)'),
-        ];
-      })())
+          el('span', { className: profit >= 0 ? 'badge-profit' : 'badge-loss' },
+            ' (' + (profit >= 0 ? '+' : '') + fmtNum(profit) + ' 🪙)')
+        );
+        return div;
+      })()
     : null;
 
   const noCoinNode = (!m.resolved && me.coins < 1 && !pos)
