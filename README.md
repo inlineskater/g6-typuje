@@ -5,7 +5,7 @@ Company prediction market with virtual coins.
 Production URL after GitHub Pages deploy:
 
 ```text
-https://inlineskater.github.io/g6-typuje/
+https://inlineskater.github.io/rynek-proroctw-g6/
 ```
 
 ## Deployment
