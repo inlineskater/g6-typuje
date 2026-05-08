@@ -1,6 +1,6 @@
 # Rynek Proroctw G6
 
-Company prediction market with virtual coins.
+Company prediction market and shared Texas Hold'em table with virtual coins.
 
 Production URL after GitHub Pages deploy:
 
@@ -22,10 +22,17 @@ Fresh database setup:
 
 1. Create a Supabase project.
 2. In SQL Editor, run `supabase/schema.sql`.
-3. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
-4. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
+3. In SQL Editor, run `supabase/poker.sql`.
+4. Deploy the Edge Function in `supabase/functions/poker-action`.
+5. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
+6. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
 
 Existing database hardening: paste and run `supabase/prod-hardening.sql` in Supabase SQL Editor.
+
+Existing project poker rollout:
+
+1. Paste and run `supabase/poker.sql` in Supabase SQL Editor.
+2. Deploy `supabase/functions/poker-action` with Supabase CLI or from the Supabase dashboard.
 
 ## How It Works
 
@@ -34,6 +41,7 @@ Existing database hardening: paste and run `supabase/prod-hardening.sql` in Supa
 - Markets: authenticated users can create prediction markets.
 - Betting: CPMM pricing; users can only add to one side per market.
 - Resolution: market creator or `admin` nick can resolve a market.
+- Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
 - Leaderboard: cash plus open position value.
 
 ## Security Note

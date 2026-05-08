@@ -391,6 +391,155 @@
     .tx-side-yes { background: var(--yes-dim); border-color: var(--yes-line); color: var(--yes); }
     .tx-side-no  { background: var(--no-dim);  border-color: var(--no-line);  color: var(--no);  }
 
+    /* ── POKER ── */
+    .poker-page-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; margin-bottom: 14px;
+    }
+    .poker-table-meta {
+      display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+      gap: 8px; color: var(--muted); font-size: 12px; font-weight: 600;
+    }
+    .poker-table-meta span {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 999px; padding: 6px 10px; white-space: nowrap;
+    }
+    .poker-table-meta strong { color: var(--text); }
+    .poker-info { margin-bottom: 14px; }
+    .poker-wrap { display: grid; gap: 14px; }
+    .poker-shell {
+      display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+      gap: 14px; align-items: start;
+    }
+    .poker-table-panel, .poker-side-panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+    }
+    .poker-table-panel { display: grid; gap: 14px; }
+    .poker-status-line {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .poker-status-main { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .poker-status-main strong { color: var(--text); font-weight: 800; }
+    .poker-pot {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 34px; padding: 6px 12px; border-radius: 999px;
+      background: #ecfdf5; border: 1px solid rgba(22,163,74,.20);
+      color: var(--yes); font-size: 13px; font-weight: 800;
+    }
+    .poker-board {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; min-height: 92px; background: #0f6b4f;
+      border: 1px solid rgba(15,107,79,.22); border-radius: 10px;
+      padding: 14px; box-shadow: inset 0 0 0 4px rgba(255,255,255,.07);
+    }
+    .playing-card {
+      width: 52px; height: 72px; border-radius: 7px;
+      background: #fff; border: 1px solid rgba(15,23,42,.14);
+      display: grid; place-items: center; color: #0f172a;
+      font-size: 19px; font-weight: 800; line-height: 1;
+      box-shadow: 0 2px 6px rgba(15,23,42,.14);
+    }
+    .playing-card.red { color: #dc2626; }
+    .playing-card.empty {
+      background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.24);
+      box-shadow: none; color: rgba(255,255,255,.45);
+    }
+    .playing-card.back {
+      background: repeating-linear-gradient(45deg, #312e81 0 6px, #4338ca 6px 12px);
+      color: transparent;
+    }
+    .poker-seats-grid {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .poker-seat {
+      min-height: 118px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--surface); padding: 10px;
+      display: grid; grid-template-rows: auto 1fr auto; gap: 8px;
+    }
+    .poker-seat.current { border-color: var(--accent); box-shadow: 0 0 0 3px var(--acc-dim); }
+    .poker-seat.me { background: #eef2ff; border-color: rgba(99,102,241,.24); }
+    .poker-seat.empty { color: var(--dim); align-items: center; justify-items: center; }
+    .poker-seat-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; min-width: 0;
+    }
+    .poker-nick {
+      font-size: 13px; font-weight: 800; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+    }
+    .dealer-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #f8fafc; border: 1px solid var(--border-hi);
+      color: var(--text); font-size: 11px; font-weight: 900; flex: 0 0 auto;
+    }
+    .poker-seat-cards { display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .poker-seat-cards .playing-card { width: 34px; height: 48px; font-size: 13px; border-radius: 5px; }
+    .poker-seat-meta {
+      display: grid; grid-template-columns: 1fr auto; gap: 5px 8px;
+      color: var(--muted); font-size: 11px; align-items: center;
+    }
+    .poker-seat-meta strong { color: var(--text); font-weight: 800; }
+    .poker-action-pill {
+      justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      border-radius: 999px; padding: 2px 7px; background: var(--card);
+      border: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 700;
+    }
+    .poker-action-pill.folded { color: var(--no); background: var(--no-dim); border-color: var(--no-line); }
+    .poker-action-pill.allin { color: var(--yes); background: var(--yes-dim); border-color: var(--yes-line); }
+    .poker-side-panel { display: grid; gap: 14px; }
+    .poker-panel-title {
+      font-size: 14px; font-weight: 800; letter-spacing: 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .poker-stack-summary {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .poker-stat {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; min-width: 0;
+    }
+    .poker-stat-label {
+      color: var(--muted); font-size: 10px; text-transform: uppercase;
+      letter-spacing: .08em; font-weight: 700; margin-bottom: 4px;
+    }
+    .poker-stat-value { font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
+    .poker-hole-cards { display: flex; gap: 8px; min-height: 76px; align-items: center; }
+    .poker-actions { display: grid; gap: 8px; }
+    .poker-actions-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .poker-action-btn {
+      border: 1px solid var(--border); border-radius: 8px; background: var(--card);
+      color: var(--text); cursor: pointer; font: inherit; font-size: 13px; font-weight: 800;
+      min-height: 40px; padding: 8px 10px; transition: all .15s;
+    }
+    .poker-action-btn:hover { border-color: var(--border-hi); }
+    .poker-action-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .poker-action-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .poker-action-btn.danger { background: var(--no); border-color: var(--no); color: #fff; }
+    .poker-action-btn.good { background: var(--yes); border-color: var(--yes); color: #fff; }
+    .poker-raise-box {
+      display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 8px; align-items: center;
+    }
+    .poker-raise-input {
+      width: 100%; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--bg); color: var(--text); font: inherit; font-weight: 800;
+      padding: 8px 10px; min-height: 40px; text-align: right;
+    }
+    .poker-raise-box .poker-action-btn { width: 100%; margin-top: 8px; }
+    .poker-note { color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .poker-events {
+      display: grid; gap: 7px; max-height: 260px; overflow-y: auto;
+      padding-right: 2px;
+    }
+    .poker-event {
+      color: var(--muted); font-size: 12px; line-height: 1.45;
+      border-bottom: 1px solid var(--border); padding-bottom: 7px;
+    }
+    .poker-event:last-child { border-bottom: none; padding-bottom: 0; }
+
     /* ── MODAL ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,.38);
@@ -585,6 +734,13 @@
       .history-filter-input, .history-filter-select { min-height: 42px; font-size: 16px; }
       .history-clear { min-height: 42px; }
 
+      .poker-page-head { flex-direction: column; align-items: stretch; }
+      .poker-table-meta { justify-content: flex-start; }
+      .poker-shell { grid-template-columns: 1fr; }
+      .poker-seats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .poker-board { min-height: 84px; gap: 6px; padding: 10px; }
+      .playing-card { width: 45px; height: 63px; font-size: 16px; }
+
       .modal { padding: 22px 16px max(22px, env(safe-area-inset-bottom)); }
       .slider-label { align-items: flex-start; gap: 10px; }
       .amount-input-wrap { margin-left: auto; }
@@ -617,6 +773,12 @@
       .amount-input { width: 100%; max-width: 150px; }
       .preview-row { align-items: flex-start; }
       .prev-val { flex-wrap: wrap; }
+      .poker-table-panel, .poker-side-panel { padding: 12px; }
+      .poker-seats-grid { grid-template-columns: 1fr; }
+      .poker-seat { min-height: 108px; }
+      .poker-stack-summary { grid-template-columns: 1fr; }
+      .poker-actions-row { grid-template-columns: 1fr; }
+      .poker-raise-box { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 360px) {
@@ -691,6 +853,7 @@
   <nav class="nav-tabs">
     <button class="nav-tab active" data-tab="markets">Rynki</button>
     <button class="nav-tab" data-tab="leaderboard">Ranking</button>
+    <button class="nav-tab" data-tab="poker">Poker</button>
   </nav>
 
   <div id="tab-markets">
@@ -752,6 +915,31 @@
           <div class="loading-center"><div class="spinner"></div></div>
         </div>
       </section>
+    </main>
+  </div>
+
+  <div id="tab-poker" class="hidden">
+    <main>
+      <div class="poker-page-head">
+        <div>
+          <h2 class="page-title">Texas Hold'em</h2>
+          <p class="page-sub">Jedno wspólne rozdanie dla zalogowanych graczy. Buy-in trafia do stacka pokerowego i wraca do gotówki po odejściu od stołu.</p>
+        </div>
+        <div class="poker-table-meta">
+          <span>Buy-in <strong id="poker-buy-in">100</strong> 🪙</span>
+          <span>Blindy <strong id="poker-blinds">1/2</strong></span>
+          <span id="poker-clock">--</span>
+        </div>
+      </div>
+
+      <div class="info-banner poker-info">
+        <strong>Poker używa tych samych coinów co rynki.</strong>
+        Siadasz za stały buy-in 100 coinów. Możesz odejść tylko pomiędzy rozdaniami, a pozostały stack wróci do Twojej gotówki.
+      </div>
+
+      <div id="poker-wrap" class="poker-wrap">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
     </main>
   </div>
 
@@ -873,6 +1061,11 @@ let activeSide = 'YES';
 let activeMarket = null;
 let realtimeChannels = [];
 let transactionHistoryRows = [];
+let activeTab = 'markets';
+let pokerState = null;
+let pokerRealtimeReady = false;
+let pokerClockTimer = null;
+let pokerTimeoutClaiming = false;
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
 function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
@@ -1052,6 +1245,10 @@ const logoutBtn       = document.getElementById('logout-btn');
 const headerCoins     = document.getElementById('header-coins');
 const headerNick      = document.getElementById('header-nick');
 const marketsGrid     = document.getElementById('markets-grid');
+const pokerWrap       = document.getElementById('poker-wrap');
+const pokerBuyIn      = document.getElementById('poker-buy-in');
+const pokerBlinds     = document.getElementById('poker-blinds');
+const pokerClock      = document.getElementById('poker-clock');
 const modalOverlay    = document.getElementById('modal-overlay');
 const modalMarketName = document.getElementById('modal-market-name');
 const sideYesBtn      = document.getElementById('side-yes-btn');
@@ -1201,6 +1398,7 @@ async function doLogout() {
   teardownRealtime();
   await sb.auth.signOut();
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
+  pokerState = null; pokerRealtimeReady = false; stopPokerClock();
   hide(screenApp);
   pinInput.value = '';
   const rp = document.getElementById('reg-pin'); if (rp) rp.value = '';
@@ -1251,15 +1449,378 @@ document.querySelectorAll('.nav-tab').forEach(btn =>
 );
 
 function switchTab(tab) {
+  activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   const tM = document.getElementById('tab-markets');
   const tL = document.getElementById('tab-leaderboard');
+  const tP = document.getElementById('tab-poker');
   if (tab === 'markets') {
-    show(tM); hide(tL);
+    show(tM); hide(tL); hide(tP);
     if (markets.length === 0) loadMarkets();
-  } else {
-    hide(tM); show(tL);
+  } else if (tab === 'leaderboard') {
+    hide(tM); show(tL); hide(tP);
     loadLeaderboard();
+  } else if (tab === 'poker') {
+    hide(tM); hide(tL); show(tP);
+    setupPokerRealtime();
+    loadPokerState();
+  }
+}
+
+// ── Poker ─────────────────────────────────────────────────────────────────
+function setupPokerRealtime() {
+  if (pokerRealtimeReady) return;
+  pokerRealtimeReady = true;
+  const reload = () => { if (activeTab === 'poker') loadPokerState(false); };
+  const ch = sb.channel('poker-db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'poker_tables' }, reload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'poker_seats' }, reload)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'poker_events' }, reload)
+    .subscribe();
+  realtimeChannels.push(ch);
+}
+
+async function invokePoker(payload) {
+  const { data, error } = await sb.functions.invoke('poker-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z funkcją pokerową.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Nie udało się wykonać akcji pokerowej.');
+  return data;
+}
+
+async function loadPokerState(showSpinner = true) {
+  if (showSpinner && !pokerState) pokerWrap.replaceChildren(makeSpinner());
+  try {
+    const data = await invokePoker({ action: 'state' });
+    applyPokerState(data);
+  } catch (err) {
+    stopPokerClock();
+    pokerWrap.replaceChildren(buildPokerError(err.message));
+  }
+}
+
+async function pokerAction(payload, opts = {}) {
+  try {
+    const data = await invokePoker(payload);
+    applyPokerState(data);
+  } catch (err) {
+    if (!opts.silent) showToast('❌ ' + err.message);
+  }
+}
+
+function applyPokerState(data) {
+  pokerState = data;
+  if (data.profile) {
+    me.coins = data.profile.coins;
+    setText(headerCoins, me.coins);
+  }
+  if (data.table) {
+    setText(pokerBuyIn, data.table.buyIn);
+    setText(pokerBlinds, data.table.smallBlind + '/' + data.table.bigBlind);
+  }
+  renderPoker();
+  startPokerClock();
+}
+
+function buildPokerError(message) {
+  return el('div', { className: 'poker-table-panel' },
+    el('div', { className: 'poker-status-main' },
+      el('strong', {}, 'Poker nie jest jeszcze aktywny.'),
+      el('div', {}, message || 'Nie udało się wczytać stołu.'),
+      el('div', {}, 'Wdróż SQL z supabase/poker.sql i funkcję supabase/functions/poker-action, a potem odśwież stronę.')
+    )
+  );
+}
+
+function phaseLabel(phase) {
+  const labels = {
+    waiting: 'oczekiwanie',
+    preflop: 'preflop',
+    flop: 'flop',
+    turn: 'turn',
+    river: 'river',
+    showdown: 'showdown',
+  };
+  return labels[phase] || phase;
+}
+
+function actionLabel(action) {
+  if (!action) return '';
+  return String(action)
+    .replace('timeout fold', 'czas: fold')
+    .replace('timeout check', 'czas: check')
+    .replace('fold', 'fold')
+    .replace('check', 'check')
+    .replace('call', 'call')
+    .replace('raise', 'raise')
+    .replace('all-in', 'all-in');
+}
+
+function cardText(code) {
+  if (!code) return '';
+  const rank = code[0] === 'T' ? '10' : code[0];
+  const suit = { s: '♠', h: '♥', d: '♦', c: '♣' }[code[1]] || '';
+  return rank + suit;
+}
+
+function isRedCard(code) {
+  return code && (code[1] === 'h' || code[1] === 'd');
+}
+
+function buildPlayingCard(code, opts = {}) {
+  if (opts.back) return el('div', { className: 'playing-card back', title: 'Karta zakryta' }, '');
+  if (!code) return el('div', { className: 'playing-card empty', title: 'Puste miejsce' }, '');
+  return el('div', {
+    className: 'playing-card' + (isRedCard(code) ? ' red' : ''),
+    title: code,
+  }, cardText(code));
+}
+
+function renderPoker() {
+  if (!pokerState) {
+    pokerWrap.replaceChildren(makeSpinner());
+    return;
+  }
+  pokerWrap.replaceChildren(
+    el('div', { className: 'poker-shell' },
+      buildPokerTablePanel(pokerState),
+      buildPokerSidePanel(pokerState)
+    )
+  );
+}
+
+function buildPokerTablePanel(state) {
+  const current = state.seats.find(s => s.seatNo === state.table.currentSeat);
+  const status = state.table.phase === 'waiting'
+    ? 'Stół czeka na kolejne rozdanie.'
+    : 'Akcja: ' + (current ? current.nick : '—');
+
+  const boardCards = [];
+  for (let i = 0; i < 5; i += 1) boardCards.push(buildPlayingCard(state.table.board[i]));
+
+  return el('section', { className: 'poker-table-panel' },
+    el('div', { className: 'poker-status-line' },
+      el('div', { className: 'poker-status-main' },
+        el('strong', {}, 'Rozdanie #' + state.table.handNo + ' · ' + phaseLabel(state.table.phase)),
+        el('div', {}, status)
+      ),
+      el('div', { className: 'poker-pot' }, 'Pula ' + state.table.pot + ' 🪙')
+    ),
+    el('div', { className: 'poker-board' }, ...boardCards),
+    el('div', { className: 'poker-seats-grid' }, ...buildSeatNodes(state))
+  );
+}
+
+function buildSeatNodes(state) {
+  const nodes = [];
+  for (let seatNo = 0; seatNo < state.table.maxSeats; seatNo += 1) {
+    const seat = state.seats.find(s => s.seatNo === seatNo);
+    nodes.push(seat ? buildPokerSeat(state, seat) : buildEmptyPokerSeat(seatNo));
+  }
+  return nodes;
+}
+
+function buildEmptyPokerSeat(seatNo) {
+  return el('div', { className: 'poker-seat empty' },
+    el('div', { className: 'poker-nick' }, 'Miejsce ' + (seatNo + 1)),
+    el('div', { className: 'poker-note' }, 'wolne')
+  );
+}
+
+function buildPokerSeat(state, seat) {
+  const classes = ['poker-seat'];
+  if (seat.isMe) classes.push('me');
+  if (state.table.currentSeat === seat.seatNo) classes.push('current');
+  const actionClass = seat.folded ? ' folded' : seat.allIn ? ' allin' : '';
+  const cards = seat.cards
+    ? seat.cards.map(c => buildPlayingCard(c))
+    : seat.inHand && !seat.folded
+      ? [buildPlayingCard(null, { back: true }), buildPlayingCard(null, { back: true })]
+      : [];
+
+  return el('div', { className: classes.join(' ') },
+    el('div', { className: 'poker-seat-top' },
+      el('span', { className: 'poker-nick', title: seat.nick }, seat.nick + (seat.isMe ? ' (Ty)' : '')),
+      state.table.dealerSeat === seat.seatNo ? el('span', { className: 'dealer-chip', title: 'Dealer' }, 'D') : null
+    ),
+    el('div', { className: 'poker-seat-cards' }, ...cards),
+    el('div', { className: 'poker-seat-meta' },
+      el('span', {}, 'Stack'), el('strong', {}, seat.stack + ' 🪙'),
+      el('span', {}, 'Zakład'), el('strong', {}, seat.roundBet + ' 🪙'),
+      el('span', {}, 'Status'), el('span', { className: 'poker-action-pill' + actionClass }, seat.folded ? 'fold' : seat.allIn ? 'all-in' : actionLabel(seat.lastAction) || (seat.inHand ? 'w grze' : 'czeka'))
+    )
+  );
+}
+
+function buildPokerSidePanel(state) {
+  const mySeat = state.seats.find(s => s.isMe);
+  const legal = state.me.legalActions || { canAct: false };
+  const holeCards = mySeat?.cards
+    ? mySeat.cards.map(c => buildPlayingCard(c))
+    : mySeat?.inHand
+      ? [buildPlayingCard(null, { back: true }), buildPlayingCard(null, { back: true })]
+      : [el('span', { className: 'poker-note' }, mySeat ? 'Czekasz na rozdanie.' : 'Usiądź przy stole, żeby grać.')];
+
+  return el('aside', { className: 'poker-side-panel' },
+    el('div', { className: 'poker-panel-title' }, 'Twój stół'),
+    el('div', { className: 'poker-stack-summary' },
+      el('div', { className: 'poker-stat' },
+        el('div', { className: 'poker-stat-label' }, 'Gotówka'),
+        el('div', { className: 'poker-stat-value' }, state.profile.coins + ' 🪙')
+      ),
+      el('div', { className: 'poker-stat' },
+        el('div', { className: 'poker-stat-label' }, 'Stack'),
+        el('div', { className: 'poker-stat-value' }, state.me.stack + ' 🪙')
+      )
+    ),
+    el('div', { className: 'poker-hole-cards' }, ...holeCards),
+    buildPokerControls(state, legal),
+    buildPokerResult(state.lastResult),
+    buildPokerEvents(state.events)
+  );
+}
+
+function buildPokerControls(state, legal) {
+  const controls = el('div', { className: 'poker-actions' });
+
+  if (state.me.canSit) {
+    const sitBtn = el('button', { className: 'poker-action-btn primary', type: 'button' }, 'Siądź za ' + state.table.buyIn + ' 🪙');
+    sitBtn.addEventListener('click', () => pokerAction({ action: 'sit' }));
+    controls.appendChild(sitBtn);
+  }
+
+  if (state.me.canStart) {
+    const startBtn = el('button', { className: 'poker-action-btn good', type: 'button' }, 'Rozdaj karty');
+    startBtn.addEventListener('click', () => pokerAction({ action: 'start_hand' }));
+    controls.appendChild(startBtn);
+  }
+
+  if (state.me.canStand) {
+    const standBtn = el('button', { className: 'poker-action-btn', type: 'button' }, 'Odejdź od stołu');
+    standBtn.addEventListener('click', () => pokerAction({ action: 'stand' }));
+    controls.appendChild(standBtn);
+  }
+
+  if (legal.canAct) {
+    const foldBtn = el('button', { className: 'poker-action-btn danger', type: 'button' }, 'Fold');
+    foldBtn.addEventListener('click', () => pokerAction({ action: 'act', move: 'fold' }));
+
+    const checkCallBtn = el('button', { className: 'poker-action-btn good', type: 'button' },
+      legal.canCheck ? 'Check' : 'Call ' + legal.callAmount + ' 🪙');
+    checkCallBtn.addEventListener('click', () => pokerAction({
+      action: 'act',
+      move: legal.canCheck ? 'check' : 'call',
+    }));
+
+    const allInBtn = el('button', { className: 'poker-action-btn', type: 'button' }, 'All-in');
+    allInBtn.addEventListener('click', () => pokerAction({ action: 'act', move: 'all_in' }));
+
+    controls.appendChild(el('div', { className: 'poker-actions-row' }, foldBtn, checkCallBtn, allInBtn));
+    controls.appendChild(buildRaiseControls(legal));
+  } else if (!state.me.canSit && state.table.phase !== 'waiting') {
+    controls.appendChild(el('p', { className: 'poker-note' }, 'Czekasz na akcję innych graczy.'));
+  }
+
+  if (!state.me.canSit && !state.me.canStand && state.table.phase === 'waiting' && !state.me.canStart) {
+    controls.appendChild(el('p', { className: 'poker-note' }, 'Do startu potrzeba co najmniej dwóch graczy przy stole.'));
+  }
+
+  return controls;
+}
+
+function buildRaiseControls(legal) {
+  const min = legal.canRaise ? legal.minRaiseTo : 0;
+  const max = legal.canRaise ? legal.maxRaiseTo : 0;
+  const value = legal.canRaise ? min : 0;
+  const input = el('input', {
+    className: 'poker-raise-input',
+    type: 'number',
+    min,
+    max,
+    step: 1,
+    value,
+    inputMode: 'numeric',
+    disabled: !legal.canRaise,
+    ariaLabel: 'Kwota przebicia',
+  });
+  const slider = el('input', {
+    type: 'range',
+    min,
+    max: Math.max(max, min),
+    step: 1,
+    value,
+    disabled: !legal.canRaise,
+  });
+  slider.addEventListener('input', () => { input.value = slider.value; });
+  input.addEventListener('input', () => { slider.value = input.value; });
+  const raiseBtn = el('button', {
+    className: 'poker-action-btn primary',
+    type: 'button',
+    disabled: !legal.canRaise,
+  }, 'Raise');
+  raiseBtn.addEventListener('click', () => pokerAction({
+    action: 'act',
+    move: 'raise',
+    raiseTo: Math.round(Number(input.value) || 0),
+  }));
+
+  return el('div', { className: 'poker-raise-box' },
+    el('div', {}, slider),
+    el('div', {}, input, raiseBtn)
+  );
+}
+
+function buildPokerResult(result) {
+  if (!result?.winners?.length) return null;
+  const text = result.winners
+    .map(w => w.nick + ' +' + w.amount + ' 🪙' + (w.description ? ' · ' + w.description : ''))
+    .join(' | ');
+  return el('div', { className: 'info-banner poker-info' },
+    el('strong', {}, result.type === 'showdown' ? 'Ostatni showdown' : 'Ostatnie rozdanie'),
+    el('div', {}, text)
+  );
+}
+
+function buildPokerEvents(events) {
+  if (!events || events.length === 0) {
+    return el('div', { className: 'poker-events' }, el('p', { className: 'poker-note' }, 'Brak historii stołu.'));
+  }
+  return el('div', { className: 'poker-events' },
+    ...events.map(evt => el('div', { className: 'poker-event' },
+      evt.message + ' · ' + relTime(evt.created_at)
+    ))
+  );
+}
+
+function startPokerClock() {
+  stopPokerClock(false);
+  updatePokerClock();
+  pokerClockTimer = setInterval(updatePokerClock, 1000);
+}
+
+function stopPokerClock(clearText = true) {
+  if (pokerClockTimer) clearInterval(pokerClockTimer);
+  pokerClockTimer = null;
+  if (clearText && pokerClock) pokerClock.textContent = '--';
+}
+
+function updatePokerClock() {
+  if (!pokerState?.table) {
+    if (pokerClock) pokerClock.textContent = '--';
+    return;
+  }
+  const deadline = pokerState.table.actionDeadline;
+  if (!deadline || pokerState.table.phase === 'waiting') {
+    pokerClock.textContent = phaseLabel(pokerState.table.phase);
+    return;
+  }
+  const ms = new Date(deadline).getTime() - Date.now();
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  pokerClock.textContent = seconds > 0 ? 'czas ' + seconds + 's' : 'czas minął';
+  if (ms <= 0 && activeTab === 'poker' && !pokerTimeoutClaiming) {
+    pokerTimeoutClaiming = true;
+    pokerAction({ action: 'claim_timeout' }, { silent: true }).finally(() => {
+      pokerTimeoutClaiming = false;
+    });
   }
 }
 

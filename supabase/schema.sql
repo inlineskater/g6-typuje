@@ -1,5 +1,6 @@
--- Rynek Proroctw G6 — full schema
+-- Rynek Proroctw G6 — core prediction-market schema
 -- Run once in Supabase SQL Editor (Dashboard → SQL Editor → New query → paste → Run)
+-- Then run supabase/poker.sql to enable the Texas Hold'em tab.
 
 -- ── Tables ─────────────────────────────────────────────────────────────────
 

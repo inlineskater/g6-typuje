@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-**Rynek Proroctw G6** — a company prediction market web app with virtual coins. Polish UI. Single static file (`index.html`) backed by a hosted Supabase project.
+**Rynek Proroctw G6** — a company prediction market web app with virtual coins plus a shared Texas Hold'em table. Polish UI. Single static file (`index.html`) backed by a hosted Supabase project and one Supabase Edge Function for poker actions.
 
 Live URL: `https://inlineskater.github.io/rynek-proroctw-g6/`
 
@@ -14,9 +14,11 @@ There is no build step. Push to `main` → GitHub Actions copies `index.html` to
 
 To apply database changes: paste the relevant SQL into the Supabase SQL Editor (Dashboard → SQL Editor → Run). There is no migration runner.
 
-- `supabase/schema.sql` — full schema, run once on a fresh project
+- `supabase/schema.sql` — core prediction-market schema, run once on a fresh project
+- `supabase/poker.sql` — poker tables, RLS, realtime publication, and leaderboard stack accounting
+- `supabase/functions/poker-action` — authenticated Edge Function that owns poker state transitions, hidden cards, and chip accounting
 - `supabase/prod-hardening.sql` — idempotent; adds indexes and tightens permissions; safe to re-run
-- `supabase/reset-data.sql` — wipes all markets and trades, resets every profile to 1000 coins
+- `supabase/reset-data.sql` — wipes all markets, trades, and poker state, resets every profile to 1000 coins
 
 ## Architecture
 
@@ -32,6 +34,7 @@ Everything lives in `index.html`: HTML structure, all CSS (CSS variables for the
 | `markets[]` | All market rows from DB |
 | `tradesByMarket{}` | All individual trade rows, keyed by `market_id` |
 | `myPositionsByMarket{}` | Current user's aggregated positions (from `positions` view) |
+| `pokerState` | Sanitized shared poker table state returned by the Edge Function |
 
 ### Data flow
 
@@ -74,3 +77,9 @@ All mutations require authentication and go through Supabase RPCs:
 - `resolve_market(market_uuid, resolution)` — only market creator or nick `admin` can call this
 
 Users can only add to one side per market (side-locked after first bet). `admin` nick can resolve any market.
+
+### Poker
+
+Poker is one shared authenticated Texas Hold'em table. Browser clients call `sb.functions.invoke('poker-action', ...)`; they do not write poker tables directly. The Edge Function verifies the user JWT, uses `SUPABASE_DB_URL` for a Postgres transaction, and stores hidden cards/deck in service-only tables. Public realtime updates on `poker_tables`, `poker_seats`, and `poker_events` only trigger a sanitized state reload.
+
+Table defaults are 100 coin buy-in, 1/2 blinds, 6 seats, and a 30 second action timer. Sitting deducts the buy-in from `profiles.coins`; standing is allowed only between hands and returns the remaining stack. The leaderboard view includes active poker stacks so seated players keep their net worth while playing.
