@@ -490,6 +490,16 @@
     }
     .poker-action-pill.folded { color: var(--no); background: var(--no-dim); border-color: var(--no-line); }
     .poker-action-pill.allin { color: var(--yes); background: var(--yes-dim); border-color: var(--yes-line); }
+    .poker-seat.bot { background: #f5f3ff; border-color: rgba(139,92,246,.18); }
+    .poker-bot-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
+    .poker-bot-btns { display: flex; gap: 5px; }
+    .poker-bot-btn {
+      border: 1px solid var(--border); border-radius: 8px; background: var(--card);
+      color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; font-weight: 800;
+      width: 36px; height: 36px; padding: 0; transition: all .15s;
+    }
+    .poker-bot-btn:hover { border-color: var(--border-hi); color: var(--text); }
+    .poker-bot-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .poker-side-panel { display: grid; gap: 14px; }
     .poker-panel-title {
       font-size: 14px; font-weight: 800; letter-spacing: 0;
@@ -1494,7 +1504,13 @@ async function loadPokerState(showSpinner = true) {
     applyPokerState(data);
   } catch (err) {
     stopPokerClock();
-    pokerWrap.replaceChildren(buildPokerError(err.message));
+    // Transient backend error — show toast and auto-retry once instead of breaking the panel.
+    if (err.message === 'Nie udało się wykonać akcji pokerowej.') {
+      showToast('⚠️ Chwilowy błąd połączenia — ponawiam...');
+      setTimeout(() => loadPokerState(false), 2000);
+    } else {
+      pokerWrap.replaceChildren(buildPokerError(err.message));
+    }
   }
 }
 
@@ -1522,11 +1538,12 @@ function applyPokerState(data) {
 }
 
 function buildPokerError(message) {
+  const isInfraError = !message || message.includes('nie jest skonfigurowany') || message.includes('not configured') || message.includes('unavailable');
   return el('div', { className: 'poker-table-panel' },
     el('div', { className: 'poker-status-main' },
-      el('strong', {}, 'Poker nie jest jeszcze aktywny.'),
+      el('strong', {}, isInfraError ? 'Poker nie jest jeszcze aktywny.' : 'Błąd połączenia z pokerem.'),
       el('div', {}, message || 'Nie udało się wczytać stołu.'),
-      el('div', {}, 'Wdróż SQL z supabase/poker.sql i funkcję supabase/functions/poker-action, a potem odśwież stronę.')
+      isInfraError ? el('div', {}, 'Wdróż SQL z supabase/poker.sql i funkcję supabase/functions/poker-action, a potem odśwież stronę.') : el('div', {}, 'Odśwież stronę, żeby spróbować ponownie.')
     )
   );
 }
@@ -1629,6 +1646,7 @@ function buildEmptyPokerSeat(seatNo) {
 function buildPokerSeat(state, seat) {
   const classes = ['poker-seat'];
   if (seat.isMe) classes.push('me');
+  if (seat.isBot) classes.push('bot');
   if (state.table.currentSeat === seat.seatNo) classes.push('current');
   const actionClass = seat.folded ? ' folded' : seat.allIn ? ' allin' : '';
   const cards = seat.cards
@@ -1636,10 +1654,11 @@ function buildPokerSeat(state, seat) {
     : seat.inHand && !seat.folded
       ? [buildPlayingCard(null, { back: true }), buildPlayingCard(null, { back: true })]
       : [];
+  const displayNick = (seat.isBot ? '🤖 ' : '') + seat.nick + (seat.isMe ? ' (Ty)' : '');
 
   return el('div', { className: classes.join(' ') },
     el('div', { className: 'poker-seat-top' },
-      el('span', { className: 'poker-nick', title: seat.nick }, seat.nick + (seat.isMe ? ' (Ty)' : '')),
+      el('span', { className: 'poker-nick', title: seat.nick }, displayNick),
       state.table.dealerSeat === seat.seatNo ? el('span', { className: 'dealer-chip', title: 'Dealer' }, 'D') : null
     ),
     el('div', { className: 'poker-seat-cards' }, ...cards),
@@ -1651,6 +1670,30 @@ function buildPokerSeat(state, seat) {
   );
 }
 
+function buildPokerBotSelector(state) {
+  const currentBotCount = state.seats.filter(s => s.isBot).length;
+  const inWaiting = state.table.phase === 'waiting';
+  const canControl = inWaiting && (state.me.canSit || state.me.canStand || state.me.canStart);
+  if (!canControl) return null;
+
+  const row = el('div', { className: 'poker-bot-row' },
+    el('span', { className: 'poker-stat-label' }, 'Boty')
+  );
+  const btns = el('div', { className: 'poker-bot-btns' });
+  for (let n = 0; n <= 4; n++) {
+    const btn = el('button', {
+      className: 'poker-bot-btn' + (currentBotCount === n ? ' active' : ''),
+      type: 'button',
+      title: n === 0 ? 'Bez botów' : `${n} bot${n > 1 ? 'y' : ''}`,
+    }, String(n));
+    const count = n;
+    btn.addEventListener('click', () => pokerAction({ action: 'set_bots', count }));
+    btns.appendChild(btn);
+  }
+  row.appendChild(btns);
+  return row;
+}
+
 function buildPokerSidePanel(state) {
   const mySeat = state.seats.find(s => s.isMe);
   const legal = state.me.legalActions || { canAct: false };
@@ -1660,7 +1703,8 @@ function buildPokerSidePanel(state) {
       ? [buildPlayingCard(null, { back: true }), buildPlayingCard(null, { back: true })]
       : [el('span', { className: 'poker-note' }, mySeat ? 'Czekasz na rozdanie.' : 'Usiądź przy stole, żeby grać.')];
 
-  return el('aside', { className: 'poker-side-panel' },
+  const botSelector = buildPokerBotSelector(state);
+  const panel = el('aside', { className: 'poker-side-panel' },
     el('div', { className: 'poker-panel-title' }, 'Twój stół'),
     el('div', { className: 'poker-stack-summary' },
       el('div', { className: 'poker-stat' },
@@ -1677,6 +1721,8 @@ function buildPokerSidePanel(state) {
     buildPokerResult(state.lastResult),
     buildPokerEvents(state.events)
   );
+  if (botSelector) panel.insertBefore(botSelector, panel.querySelector('.poker-actions') || panel.lastChild);
+  return panel;
 }
 
 function buildPokerControls(state, legal) {

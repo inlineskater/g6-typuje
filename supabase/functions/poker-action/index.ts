@@ -14,8 +14,10 @@ const corsHeaders = {
 
 const databaseUrl = Deno.env.get("SUPABASE_DB_URL");
 const db = databaseUrl
-  ? postgres(databaseUrl, { prepare: false, max: 4, idle_timeout: 20 })
+  ? postgres(databaseUrl, { prepare: false, max: 8, idle_timeout: 20 })
   : null;
+
+const BOT_NICKS = ["Bot 1", "Bot 2", "Bot 3", "Bot 4"];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -128,11 +130,13 @@ function legalActionsFor(table, seat) {
 }
 
 function publicSeat(seat, userId, visibleCards) {
+  const isBot = !!seat.is_bot;
   return {
     id: seat.id,
     seatNo: seat.seat_no,
     userId: seat.user_id,
-    nick: seat.nick_snapshot,
+    nick: isBot ? (seat.bot_nick ?? "Bot") : seat.nick_snapshot,
+    isBot,
     stack: asInt(seat.stack),
     inHand: !!seat.in_hand,
     folded: !!seat.folded,
@@ -141,7 +145,7 @@ function publicSeat(seat, userId, visibleCards) {
     handBet: asInt(seat.hand_bet),
     acted: !!seat.acted,
     lastAction: seat.last_action,
-    isMe: seat.user_id === userId,
+    isMe: !isBot && seat.user_id === userId,
     cards: visibleCards[seat.seat_no] ?? null,
   };
 }
@@ -218,6 +222,8 @@ async function persistSeats(tx, seats) {
              hand_bet = ${asInt(seat.hand_bet)},
              acted = ${!!seat.acted},
              last_action = ${seat.last_action},
+             is_bot = ${!!seat.is_bot},
+             bot_nick = ${seat.bot_nick ?? null},
              updated_at = now()
        where id = ${seat.id}
     `;
@@ -324,14 +330,14 @@ async function settleByFold(tx, table, seats, hand) {
     board: table.board ?? [],
     winners: [{
       seatNo: winner.seat_no,
-      nick: winner.nick_snapshot,
+      nick: winner.is_bot ? (winner.bot_nick ?? "Bot") : winner.nick_snapshot,
       amount: pot,
       hand: "Fold",
       description: "Wszyscy pozostali spasowali",
     }],
   };
 
-  await finishHand(tx, table, seats, hand, result, `${winner.nick_snapshot} wygrywa ${pot} coinów po foldzie.`);
+  await finishHand(tx, table, seats, hand, result, `${result.winners[0].nick} wygrywa ${pot} coinów po foldzie.`);
 }
 
 async function settleShowdown(tx, table, seats, hand) {
@@ -374,8 +380,14 @@ async function settleShowdown(tx, table, seats, hand) {
     if (pot.eligible.length === 1) {
       winnerSeatNos = [pot.eligible[0].seat_no];
     } else {
-      const solvedHands = pot.eligible.map((seat) => solvedBySeat.get(seat.seat_no)).filter(Boolean);
-      winnerSeatNos = Hand.winners(solvedHands).map((handResult) => handResult.seatNo);
+      // Wrap pokersolver in try-catch; split pot among eligibles on failure.
+      try {
+        const solvedHands = pot.eligible.map((seat) => solvedBySeat.get(seat.seat_no)).filter(Boolean);
+        winnerSeatNos = Hand.winners(solvedHands).map((handResult) => handResult.seatNo);
+      } catch {
+        await logEvent(tx, table.id, hand.id, "Błąd oceny rąk — pot podzielony równo.");
+        winnerSeatNos = pot.eligible.map((s) => s.seat_no);
+      }
     }
 
     winnerSeatNos.sort((a, b) => a - b);
@@ -401,7 +413,7 @@ async function settleShowdown(tx, table, seats, hand) {
       const solved = solvedBySeat.get(seatNo);
       return {
         seatNo,
-        nick: seat?.nick_snapshot ?? "Gracz",
+        nick: seat?.is_bot ? (seat.bot_nick ?? "Bot") : (seat?.nick_snapshot ?? "Gracz"),
         amount,
         hand: solved?.name ?? "Hand",
         description: solved?.descr ?? "",
@@ -449,6 +461,31 @@ async function finishHand(tx, table, seats, hand, result, message) {
   await logEvent(tx, table.id, hand.id, message);
 }
 
+// Applies a simple bot move in-memory (no DB writes — caller handles persistence).
+function applyBotMove(table, seats, botSeat) {
+  const toCall = Math.max(0, table.current_bet - botSeat.round_bet);
+  if (toCall === 0) {
+    botSeat.acted = true;
+    botSeat.last_action = "check";
+    return;
+  }
+  const r = Math.random();
+  if (r < 0.30) {
+    botSeat.folded = true;
+    botSeat.acted = true;
+    botSeat.last_action = "fold";
+  } else if (r < 0.90) {
+    applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
+  } else {
+    const minRaiseTo = table.current_bet + Math.max(table.min_raise, table.big_blind);
+    if (botSeat.round_bet + botSeat.stack >= minRaiseTo) {
+      applyPlayerMove(table, seats, botSeat, { move: "raise", raiseTo: minRaiseTo }, false);
+    } else {
+      applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
+    }
+  }
+}
+
 async function advanceGame(tx, table, seats, hand, afterSeatNo) {
   table.pot = tablePot(seats);
 
@@ -458,14 +495,43 @@ async function advanceGame(tx, table, seats, hand, afterSeatNo) {
     return;
   }
 
-  const nextActor = nextSeatObject(afterSeatNo, seats, (seat) => needsAction(table, seat));
+  let nextActor = nextSeatObject(afterSeatNo, seats, (seat) => needsAction(table, seat));
   if (nextActor) {
     table.current_seat = nextActor.seat_no;
     setDeadline(table);
-    await persistSeats(tx, seats);
-    await persistTable(tx, table);
-    await persistHand(tx, hand);
-    return;
+
+    // If the next actor is a bot, auto-play until a human needs to act (or hand ends).
+    let botLoops = 0;
+    while (nextActor.is_bot && botLoops++ < 20) {
+      applyBotMove(table, seats, nextActor);
+      table.pot = tablePot(seats);
+
+      const liveAfterBot = seats.filter(isLive);
+      if (liveAfterBot.length <= 1) {
+        await settleByFold(tx, table, seats, hand);
+        return;
+      }
+
+      const followingActor = nextSeatObject(nextActor.seat_no, seats, (seat) => needsAction(table, seat));
+      if (!followingActor) {
+        // No one needs to act — fall through to street/showdown handling below.
+        nextActor = null;
+        break;
+      }
+      nextActor = followingActor;
+      table.current_seat = nextActor.seat_no;
+      setDeadline(table);
+    }
+
+    if (nextActor) {
+      // A human is next to act — persist and wait for their request.
+      await persistSeats(tx, seats);
+      await persistTable(tx, table);
+      await persistHand(tx, hand);
+      return;
+    }
+    // nextActor became null inside bot loop — fall through to settlement/new-street logic.
+    table.pot = tablePot(seats);
   }
 
   const actorsLeft = seats.filter(canAct);
@@ -544,7 +610,8 @@ async function stateResponse(tx, userId) {
     if (row.user_id === userId || row.revealed) visibleCards[row.seat_no] = row.cards;
   }
 
-  const mySeat = seats.find((seat) => seat.user_id === userId) ?? null;
+  const mySeat = seats.find((seat) => !seat.is_bot && seat.user_id === userId) ?? null;
+  const humanSeats = seats.filter((seat) => !seat.is_bot);
   const playableSeats = seats.filter((seat) => seat.stack > 0);
 
   return {
@@ -573,7 +640,8 @@ async function stateResponse(tx, userId) {
     me: {
       seatNo: mySeat?.seat_no ?? null,
       stack: mySeat ? asInt(mySeat.stack) : 0,
-      canSit: !mySeat && seats.length < asInt(table.max_seats, 6) && asInt(profile.coins) >= asInt(table.buy_in),
+      // canSit counts only human seats against the limit — bot seats don't block humans.
+      canSit: !mySeat && humanSeats.length < asInt(table.max_seats, 6) && asInt(profile.coins) >= asInt(table.buy_in),
       canStand: !!mySeat && table.phase === "waiting",
       canStart: !!mySeat && table.phase === "waiting" && playableSeats.length >= 2,
       legalActions: legalActionsFor(table, mySeat),
@@ -590,8 +658,9 @@ async function getState(userId) {
 async function sit(userId) {
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
-    if (seats.some((seat) => seat.user_id === userId)) throw gameError("Już siedzisz przy stole.");
-    if (seats.length >= asInt(table.max_seats, 6)) throw gameError("Brak wolnych miejsc.");
+    if (seats.some((seat) => !seat.is_bot && seat.user_id === userId)) throw gameError("Już siedzisz przy stole.");
+    const humanSeats = seats.filter((seat) => !seat.is_bot);
+    if (humanSeats.length >= asInt(table.max_seats, 6)) throw gameError("Brak wolnych miejsc.");
 
     const profileRows = await tx`
       select id, nick, coins
@@ -625,7 +694,7 @@ async function stand(userId) {
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
     if (table.phase !== "waiting") throw gameError("Możesz odejść dopiero po zakończeniu rozdania.");
-    const seat = seats.find((row) => row.user_id === userId);
+    const seat = seats.find((row) => !row.is_bot && row.user_id === userId);
     if (!seat) throw gameError("Nie siedzisz przy stole.");
 
     await tx`
@@ -643,7 +712,7 @@ async function startHand(userId) {
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
     if (table.phase !== "waiting") throw gameError("Rozdanie już trwa.");
-    if (!seats.some((seat) => seat.user_id === userId)) throw gameError("Najpierw usiądź przy stole.");
+    if (!seats.some((seat) => !seat.is_bot && seat.user_id === userId)) throw gameError("Najpierw usiądź przy stole.");
 
     const active = sortSeats(seats.filter((seat) => seat.stack > 0));
     if (active.length < 2) throw gameError("Do rozdania potrzeba co najmniej dwóch graczy.");
@@ -787,7 +856,7 @@ async function act(userId, body) {
   return await db.begin(async (tx) => {
     const { table, seats, hand } = await loadLockedGame(tx);
     if (!hand || table.phase === "waiting") throw gameError("Nie ma aktywnego rozdania.");
-    const actor = seats.find((seat) => seat.user_id === userId);
+    const actor = seats.find((seat) => !seat.is_bot && seat.user_id === userId);
     if (!actor || actor.seat_no !== table.current_seat) throw gameError("Teraz nie jest Twoja kolej.");
     if (!needsAction(table, actor)) throw gameError("Nie masz teraz akcji.");
 
@@ -808,8 +877,43 @@ async function claimTimeout(userId) {
     const actor = seats.find((seat) => seat.seat_no === table.current_seat);
     if (!actor || !needsAction(table, actor)) return stateResponse(tx, userId);
 
+    // Bots should not time out via the client claim — they play inline.
+    if (actor.is_bot) return stateResponse(tx, userId);
+
     applyPlayerMove(table, seats, actor, {}, true);
     await advanceGame(tx, table, seats, hand, actor.seat_no);
+    return stateResponse(tx, userId);
+  });
+}
+
+async function setBots(userId, count) {
+  return await db.begin(async (tx) => {
+    const { table, seats } = await loadLockedGame(tx);
+    if (table.phase !== "waiting") throw gameError("Boty można zmienić tylko między rozdaniami.");
+
+    const n = Math.max(0, Math.min(4, asInt(count)));
+
+    // Remove all existing bot seats.
+    await tx`delete from public.poker_seats where table_id = ${table.id} and is_bot = true`;
+
+    const humanSeats = seats.filter((s) => !s.is_bot);
+    const slotsAvailable = asInt(table.max_seats, 6) - humanSeats.length;
+    const botsToAdd = Math.min(n, slotsAvailable);
+    const occupiedNos = humanSeats.map((s) => s.seat_no);
+
+    for (let i = 0; i < botsToAdd; i += 1) {
+      let seatNo = 0;
+      while (occupiedNos.includes(seatNo)) seatNo += 1;
+      occupiedNos.push(seatNo);
+      const nick = BOT_NICKS[i];
+      await tx`
+        insert into public.poker_seats (table_id, seat_no, user_id, nick_snapshot, stack, is_bot, bot_nick)
+        values (${table.id}, ${seatNo}, null, ${nick}, ${asInt(table.buy_in)}, true, ${nick})
+      `;
+    }
+
+    const msg = botsToAdd > 0 ? `Dodano ${botsToAdd} botów.` : "Usunięto boty.";
+    await logEvent(tx, table.id, null, msg);
     return stateResponse(tx, userId);
   });
 }
@@ -831,6 +935,7 @@ Deno.serve(async (req) => {
     else if (action === "start_hand") state = await startHand(user.id);
     else if (action === "act") state = await act(user.id, body);
     else if (action === "claim_timeout") state = await claimTimeout(user.id);
+    else if (action === "set_bots") state = await setBots(user.id, body.count);
     else throw gameError("Nieznana akcja.");
 
     return json({ ok: true, ...state });
