@@ -161,6 +161,25 @@
     .nav-tab:hover { color: var(--text); }
     .nav-tab.active { border-bottom-color: var(--accent); color: var(--text); }
 
+    .nav-live-btn {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600;
+      font-family: inherit; min-height: 44px; padding: 11px 14px;
+      transition: color .15s; margin-left: auto; margin-bottom: -1px;
+      white-space: nowrap; flex-shrink: 0;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .nav-live-btn:hover { color: var(--text); }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--yes); flex-shrink: 0;
+      animation: livepulse 2s ease-in-out infinite;
+    }
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .3; }
+    }
+
     /* ── MAIN ── */
     main { max-width: 1340px; margin: 0 auto; padding: 28px var(--page-pad); }
 
@@ -961,6 +980,7 @@
     <button class="nav-tab" data-tab="leaderboard">Ranking</button>
     <button class="nav-tab" data-tab="poker">Poker</button>
     <button class="nav-tab" data-tab="shop">Sklep</button>
+    <button class="nav-live-btn" id="btn-activity"><span class="live-dot"></span>Na żywo</button>
   </nav>
 
   <div id="tab-markets">
@@ -970,10 +990,7 @@
           <h2>Rynki predykcji</h2>
           <p>Każdy dostaje 1000 coinów na start — typuj mądrze i zostań liderem rankingu!</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-ghost" id="btn-activity">📋 Aktywność</button>
-          <button class="btn-new-market" id="btn-new-market">+ Nowy rynek</button>
-        </div>
+        <button class="btn-new-market" id="btn-new-market">+ Nowy rynek</button>
       </div>
 
       <div class="info-banner">
