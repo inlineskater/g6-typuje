@@ -829,6 +829,36 @@
         display: inline-flex; align-items: center; justify-content: center;
       }
     }
+    /* ── Shop ── */
+    input[type="number"], textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit;
+      min-height: 44px; padding: 11px 13px; outline: none;
+      transition: border-color .15s; margin-bottom: 12px; box-sizing: border-box;
+    }
+    input[type="number"]:focus, textarea:focus { border-color: var(--accent); }
+    textarea { min-height: 80px; resize: vertical; }
+
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+      gap: 16px;
+      padding: 20px 0;
+    }
+    .shop-grid > .loading-center { grid-column: 1 / -1; }
+    .shop-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .shop-card-icon  { font-size: 42px; line-height: 1; }
+    .shop-card-title { font-size: 18px; font-weight: 800; letter-spacing: 0; }
+    .shop-card-desc  { font-size: 13px; color: var(--muted); line-height: 1.65; flex: 1; }
+    .shop-card-price { font-size: 24px; font-weight: 800; color: var(--accent); }
+    .shop-card-slots { font-size: 12px; color: var(--muted); margin-top: -4px; }
+    .shop-card-bought { font-size: 13px; color: var(--yes); font-weight: 600; margin-top: 4px; }
+    .shop-card-btn { margin-top: 6px; }
+    .shop-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 48px 0; grid-column: 1 / -1; }
   </style>
 </head>
 <body>
@@ -896,6 +926,7 @@
     <button class="nav-tab active" data-tab="markets">Rynki</button>
     <button class="nav-tab" data-tab="leaderboard">Ranking</button>
     <button class="nav-tab" data-tab="poker">Poker</button>
+    <button class="nav-tab" data-tab="shop">Sklep</button>
   </nav>
 
   <div id="tab-markets">
@@ -1055,9 +1086,24 @@
     </main>
   </div>
 
+  <div id="tab-shop" class="hidden">
+    <main>
+      <div class="markets-toolbar">
+        <div>
+          <h2>Sklep 🛒</h2>
+          <p>Wydaj coiny na realne nagrody. Monety przepadają — nie trafiają do nikogo, po prostu znikają z obiegu.</p>
+        </div>
+        <button class="btn-primary" id="btn-new-item" style="display:none;width:auto;padding:10px 18px">+ Dodaj nagrodę</button>
+      </div>
+      <div class="shop-grid" id="shop-grid">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
   <footer>
     Masz pytania? Zgłoś się do twórcy rynku lub admina.<br>
-    Pamiętaj: coiny są wirtualne i służą tylko do zabawy — nie można ich wymienić na nic realnego. 🎲
+    Pamiętaj: coiny są wirtualne i służą tylko do zabawy. 🎲
   </footer>
 </div>
 
@@ -1148,6 +1194,35 @@
       <button class="side-btn" id="rm-yes">Zamknij: TAK</button>
       <button class="side-btn" id="rm-no">Zamknij: NIE</button>
     </div>
+  </div>
+</div>
+
+<!-- ── SHOP: CREATE ITEM MODAL ── -->
+<div id="si-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Nowa nagroda</span>
+      <button class="btn-close" id="si-close">✕</button>
+    </div>
+    <div class="nm-field">
+      <label class="field-label" for="si-title">Tytuł</label>
+      <input type="text" id="si-title" placeholder="np. Pizza Friday 🍕" maxlength="80" autocomplete="off">
+    </div>
+    <div class="nm-field">
+      <label class="field-label" for="si-desc">Opis (po polsku)</label>
+      <textarea id="si-desc" placeholder="Co dostaje kupujący?"></textarea>
+    </div>
+    <div class="nm-field" style="display:flex;gap:12px">
+      <div style="flex:1">
+        <label class="field-label" for="si-price">Cena (monet)</label>
+        <input type="number" id="si-price" min="1" value="1500">
+      </div>
+      <div style="flex:1">
+        <label class="field-label" for="si-slots">Sloty</label>
+        <input type="number" id="si-slots" min="1" value="1">
+      </div>
+    </div>
+    <button class="btn-primary" id="si-submit">Dodaj nagrodę</button>
   </div>
 </div>
 
@@ -1567,16 +1642,20 @@ function switchTab(tab) {
   const tM = document.getElementById('tab-markets');
   const tL = document.getElementById('tab-leaderboard');
   const tP = document.getElementById('tab-poker');
+  const tS = document.getElementById('tab-shop');
   if (tab === 'markets') {
-    show(tM); hide(tL); hide(tP);
+    show(tM); hide(tL); hide(tP); hide(tS);
     if (markets.length === 0) loadMarkets();
   } else if (tab === 'leaderboard') {
-    hide(tM); show(tL); hide(tP);
+    hide(tM); show(tL); hide(tP); hide(tS);
     loadLeaderboard();
   } else if (tab === 'poker') {
-    hide(tM); hide(tL); show(tP);
+    hide(tM); hide(tL); show(tP); hide(tS);
     setupPokerRealtime();
     loadPokerState();
+  } else if (tab === 'shop') {
+    hide(tM); hide(tL); hide(tP); show(tS);
+    loadShop();
   }
 }
 
@@ -2333,6 +2412,7 @@ function setupRealtime() {
     .subscribe();
 
   realtimeChannels.push(ch);
+  setupShopRealtime();
 }
 
 function updateCardProb(m) {
@@ -2752,6 +2832,126 @@ function renderTransactionHistory(wrap, rowsData) {
     )
   );
 }
+
+// ── Shop ──────────────────────────────────────────────────────────────────
+async function loadShop() {
+  const grid = document.getElementById('shop-grid');
+  grid.replaceChildren(makeSpinner());
+
+  const btnNew = document.getElementById('btn-new-item');
+  btnNew.style.display = me?.nick === 'admin' ? '' : 'none';
+
+  const { data: items, error } = await sb
+    .from('store_items')
+    .select('*, store_purchases(id, buyer_id, purchased_at, profiles!buyer_id(nick))')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  if (error) { grid.replaceChildren(); grid.append(document.createTextNode('Błąd ładowania sklepu.')); return; }
+
+  grid.replaceChildren();
+  if (!items || items.length === 0) {
+    grid.append(el('p', { className: 'shop-empty' }, 'Sklep jest pusty. Admin wkrótce doda nagrody! 🎁'));
+    return;
+  }
+  items.forEach(item => grid.appendChild(buildShopCard(item)));
+}
+
+function buildShopCard(item) {
+  const purchases = item.store_purchases || [];
+  const slotsLeft = item.max_slots - item.slots_used;
+  const soldOut   = slotsLeft <= 0;
+  const iMine     = purchases.some(p => p.buyer_id === me?.id);
+  const canAfford = me && me.coins >= item.price;
+
+  const emojiMatch = item.title.match(/^\p{Emoji_Presentation}/u);
+  const icon  = el('div', { className: 'shop-card-icon'  }, emojiMatch ? emojiMatch[0] : '🎁');
+  const title = el('div', { className: 'shop-card-title' }, emojiMatch ? item.title.slice(emojiMatch[0].length).trim() : item.title);
+  const desc  = el('div', { className: 'shop-card-desc'  }, item.description);
+  const price = el('div', { className: 'shop-card-price' }, item.price.toLocaleString('pl-PL') + ' 🪙');
+  const slots = el('div', { className: 'shop-card-slots' },
+    soldOut ? 'Wyprzedane 🔒' : `Dostępne: ${slotsLeft} z ${item.max_slots}`
+  );
+
+  const card = el('div', { className: 'shop-card' }, icon, title, desc, price, slots);
+
+  if (iMine) {
+    card.appendChild(el('div', { className: 'shop-card-bought' }, '✅ Kupiono — Yuriy zapłaci za Ciebie w najbliższy Pizza Friday!'));
+  } else if (soldOut) {
+    const who = purchases[0]?.profiles?.nick || '?';
+    card.appendChild(el('div', { className: 'shop-card-slots' }, `Kupił: ${who}`));
+  } else {
+    const btn = el('button', {
+      className: 'btn-primary shop-card-btn',
+      disabled: !canAfford,
+      title: canAfford ? '' : 'Za mało coinów',
+    }, canAfford ? `Kup za ${item.price.toLocaleString('pl-PL')} 🪙` : `Potrzebujesz ${item.price.toLocaleString('pl-PL')} 🪙`);
+    btn.addEventListener('click', () => purchaseItem(item.id, item.price, btn));
+    card.appendChild(btn);
+  }
+
+  return card;
+}
+
+async function purchaseItem(itemId, price, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Kupuję…';
+  const { data, error } = await sb.rpc('purchase_store_item', { p_item_id: itemId });
+  if (error) {
+    const msg = error.message.includes('insufficient') ? 'Za mało coinów!'
+              : error.message.includes('sold_out')     ? 'Wyprzedane!'
+              : error.message;
+    showToast('❌ ' + msg);
+    btn.disabled = false;
+    btn.textContent = `Kup za ${price.toLocaleString('pl-PL')} 🪙`;
+    return;
+  }
+  me.coins = data.coins_left;
+  setText(headerCoins, me.coins);
+  showToast('✅ Kupiono! Yuriy zapłaci za Ciebie w najbliższy Pizza Friday 🍕');
+  loadShop();
+}
+
+// Shop realtime
+function setupShopRealtime() {
+  const reload = () => { if (activeTab === 'shop') loadShop(); };
+  const ch = sb.channel('shop-db-changes')
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'store_items'     }, reload)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'store_purchases' }, reload)
+    .subscribe();
+  realtimeChannels.push(ch);
+}
+
+// Shop create-item modal
+const siOverlay = document.getElementById('si-overlay');
+document.getElementById('btn-new-item').addEventListener('click', () => {
+  document.getElementById('si-title').value = '';
+  document.getElementById('si-desc').value  = '';
+  document.getElementById('si-price').value = '1500';
+  document.getElementById('si-slots').value = '1';
+  show(siOverlay);
+});
+document.getElementById('si-close').addEventListener('click', () => hide(siOverlay));
+siOverlay.addEventListener('click', e => { if (e.target === siOverlay) hide(siOverlay); });
+
+document.getElementById('si-submit').addEventListener('click', async () => {
+  const title = document.getElementById('si-title').value.trim();
+  const desc  = document.getElementById('si-desc').value.trim();
+  const price = parseInt(document.getElementById('si-price').value, 10);
+  const slots = parseInt(document.getElementById('si-slots').value, 10);
+  if (!title || !desc || !price || !slots) { showToast('❌ Wypełnij wszystkie pola.'); return; }
+
+  const btn = document.getElementById('si-submit');
+  btn.disabled = true; btn.textContent = 'Dodaję…';
+  const { error } = await sb.rpc('create_store_item', {
+    p_title: title, p_description: desc, p_price: price, p_slots: slots,
+  });
+  btn.disabled = false; btn.textContent = 'Dodaj nagrodę';
+  if (error) { showToast('❌ ' + error.message); return; }
+  hide(siOverlay);
+  showToast('✅ Nagroda dodana!');
+  loadShop();
+});
 
 // ── Toast ─────────────────────────────────────────────────────────────────
 let toastTimer;
