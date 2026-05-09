@@ -406,7 +406,14 @@
     }
     .poker-table-meta strong { color: var(--text); }
     .poker-info { margin-bottom: 14px; }
-    .poker-wrap { display: grid; gap: 14px; }
+    .poker-outer {
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr);
+      grid-template-areas: "rules game";
+      gap: 14px; align-items: start;
+    }
+    .poker-rules-panel { grid-area: rules; }
+    .poker-wrap { grid-area: game; display: grid; gap: 14px; }
     .poker-shell {
       display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
       gap: 14px; align-items: start;
@@ -540,29 +547,22 @@
     }
     .poker-raise-box .poker-action-btn { width: 100%; margin-top: 8px; }
     .poker-note { color: var(--muted); font-size: 12px; line-height: 1.55; }
-    .poker-rules {
+    .poker-rules-panel {
       border: 1px solid var(--border); border-radius: 12px;
-      background: var(--card); padding: 0 16px; margin-top: 4px;
+      background: var(--card); padding: 14px 14px 10px;
     }
-    .poker-rules summary {
-      cursor: pointer; padding: 13px 0; font-weight: 800; font-size: 14px;
-      user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between;
-    }
-    .poker-rules summary::-webkit-details-marker { display: none; }
-    .poker-rules[open] summary .pr-arrow { transform: rotate(180deg); }
-    .pr-arrow { transition: transform .2s; display: inline-block; font-style: normal; }
-    .poker-rules-body { padding-bottom: 16px; display: grid; gap: 6px; }
+    .pr-title { font-weight: 800; font-size: 13px; margin-bottom: 10px; }
+    .poker-rules-body { display: grid; gap: 0; }
     .pr-intro { color: var(--muted); font-size: 12px; line-height: 1.6; margin-bottom: 4px; }
     .pr-row {
-      display: grid; grid-template-columns: 1fr auto; gap: 10px;
-      align-items: center; padding: 7px 0;
-      border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr; gap: 4px;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
     }
     .pr-row:last-child { border-bottom: none; }
+    .pr-cards { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 3px; }
     .pr-rank { font-size: 11px; font-weight: 800; color: var(--muted); margin-right: 4px; }
     .pr-name { font-weight: 800; font-size: 13px; }
     .pr-desc { color: var(--muted); font-size: 11px; margin-top: 1px; }
-    .pr-cards { display: flex; gap: 3px; flex-shrink: 0; }
     .ph-card {
       display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
       width: 24px; height: 34px; border-radius: 4px;
@@ -777,6 +777,7 @@
 
       .poker-page-head { flex-direction: column; align-items: stretch; }
       .poker-table-meta { justify-content: flex-start; }
+      .poker-outer { grid-template-columns: 1fr; grid-template-areas: "game" "rules"; }
       .poker-shell { grid-template-columns: 1fr; }
       .poker-seats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .poker-board { min-height: 84px; gap: 6px; padding: 10px; }
@@ -978,119 +979,78 @@
         Siadasz za stały buy-in 100 coinów. Możesz odejść tylko pomiędzy rozdaniami, a pozostały stack wróci do Twojej gotówki.
       </div>
 
-      <div id="poker-wrap" class="poker-wrap">
-        <div class="loading-center"><div class="spinner"></div></div>
-      </div>
+      <div class="poker-outer">
+        <div class="poker-rules-panel">
+          <div class="pr-title">Zasady i układy</div>
+          <div class="poker-rules-body">
+            <p class="pr-intro">Każdy gracz dostaje <strong>2 karty</strong>. Na stole pojawia się <strong>5 wspólnych</strong> (flop 3, turn 1, river 1). Wygrywa najlepsza kombinacja z dowolnych 5 spośród 7 kart.</p>
 
-      <details class="poker-rules">
-        <summary>Zasady i układy kart <span class="pr-arrow">▾</span></summary>
-        <div class="poker-rules-body">
-          <p class="pr-intro">
-            Texas Hold'em: każdy gracz dostaje <strong>2 karty</strong> zakryte. Na stole odkrywane są <strong>3+1+1 kart wspólnych</strong> (flop, turn, river).
-            Najlepsza kombinacja z 5 kart (dowolna kombinacja 2 własnych + 5 wspólnych) wygrywa.
-          </p>
-
-          <div class="pr-row">
-            <div>
+            <div class="pr-row">
               <div><span class="pr-rank">1.</span><span class="pr-name">Royal Flush</span></div>
-              <div class="pr-desc">As, Król, Dama, Walet, 10 — w jednym kolorze</div>
+              <div class="pr-desc">A K Q J 10 w jednym kolorze</div>
+              <div class="pr-cards"><div class="ph-card red">A<br>♥</div><div class="ph-card red">K<br>♥</div><div class="ph-card red">Q<br>♥</div><div class="ph-card red">J<br>♥</div><div class="ph-card red">10<br>♥</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card red">A<br>♥</div><div class="ph-card red">K<br>♥</div><div class="ph-card red">Q<br>♥</div><div class="ph-card red">J<br>♥</div><div class="ph-card red">10<br>♥</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">2.</span><span class="pr-name">Poker (Straight Flush)</span></div>
+            <div class="pr-row">
+              <div><span class="pr-rank">2.</span><span class="pr-name">Poker</span></div>
               <div class="pr-desc">5 kart po kolei w jednym kolorze</div>
+              <div class="pr-cards"><div class="ph-card">9<br>♠</div><div class="ph-card">8<br>♠</div><div class="ph-card">7<br>♠</div><div class="ph-card">6<br>♠</div><div class="ph-card">5<br>♠</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">9<br>♠</div><div class="ph-card">8<br>♠</div><div class="ph-card">7<br>♠</div><div class="ph-card">6<br>♠</div><div class="ph-card">5<br>♠</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">3.</span><span class="pr-name">Kareta (Four of a Kind)</span></div>
+            <div class="pr-row">
+              <div><span class="pr-rank">3.</span><span class="pr-name">Kareta</span></div>
               <div class="pr-desc">4 karty tej samej wartości</div>
+              <div class="pr-cards"><div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div><div class="ph-card red">A<br>♦</div><div class="ph-card">A<br>♣</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div><div class="ph-card red">A<br>♦</div><div class="ph-card">A<br>♣</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">4.</span><span class="pr-name">Ful (Full House)</span></div>
+            <div class="pr-row">
+              <div><span class="pr-rank">4.</span><span class="pr-name">Ful</span></div>
               <div class="pr-desc">Trójka + para</div>
+              <div class="pr-cards"><div class="ph-card">K<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card">K<br>♣</div><div class="ph-card red">Q<br>♦</div><div class="ph-card red">Q<br>♥</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">K<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card">K<br>♣</div><div class="ph-card red">Q<br>♦</div><div class="ph-card red">Q<br>♥</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">5.</span><span class="pr-name">Kolor (Flush)</span></div>
-              <div class="pr-desc">5 kart w jednym kolorze (niekoniecznie po kolei)</div>
+            <div class="pr-row">
+              <div><span class="pr-rank">5.</span><span class="pr-name">Kolor</span></div>
+              <div class="pr-desc">5 kart w jednym kolorze</div>
+              <div class="pr-cards"><div class="ph-card">A<br>♣</div><div class="ph-card">J<br>♣</div><div class="ph-card">8<br>♣</div><div class="ph-card">5<br>♣</div><div class="ph-card">2<br>♣</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">A<br>♣</div><div class="ph-card">J<br>♣</div><div class="ph-card">8<br>♣</div><div class="ph-card">5<br>♣</div><div class="ph-card">2<br>♣</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">6.</span><span class="pr-name">Sekwencja (Straight)</span></div>
-              <div class="pr-desc">5 kart po kolei w różnych kolorach</div>
+            <div class="pr-row">
+              <div><span class="pr-rank">6.</span><span class="pr-name">Sekwencja</span></div>
+              <div class="pr-desc">5 kart po kolei, różne kolory</div>
+              <div class="pr-cards"><div class="ph-card">9<br>♠</div><div class="ph-card red">8<br>♥</div><div class="ph-card red">7<br>♦</div><div class="ph-card">6<br>♣</div><div class="ph-card">5<br>♠</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">9<br>♠</div><div class="ph-card red">8<br>♥</div><div class="ph-card red">7<br>♦</div><div class="ph-card">6<br>♣</div><div class="ph-card">5<br>♠</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">7.</span><span class="pr-name">Trójka (Three of a Kind)</span></div>
+            <div class="pr-row">
+              <div><span class="pr-rank">7.</span><span class="pr-name">Trójka</span></div>
               <div class="pr-desc">3 karty tej samej wartości</div>
+              <div class="pr-cards"><div class="ph-card">7<br>♠</div><div class="ph-card red">7<br>♥</div><div class="ph-card red">7<br>♦</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">7<br>♠</div><div class="ph-card red">7<br>♥</div><div class="ph-card red">7<br>♦</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">8.</span><span class="pr-name">Dwie pary (Two Pair)</span></div>
+            <div class="pr-row">
+              <div><span class="pr-rank">8.</span><span class="pr-name">Dwie pary</span></div>
               <div class="pr-desc">Dwie różne pary</div>
+              <div class="pr-cards"><div class="ph-card">J<br>♠</div><div class="ph-card red">J<br>♥</div><div class="ph-card red">4<br>♦</div><div class="ph-card">4<br>♣</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">J<br>♠</div><div class="ph-card red">J<br>♥</div><div class="ph-card red">4<br>♦</div><div class="ph-card">4<br>♣</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">9.</span><span class="pr-name">Para (One Pair)</span></div>
-              <div class="pr-desc">Dwie karty tej samej wartości</div>
+            <div class="pr-row">
+              <div><span class="pr-rank">9.</span><span class="pr-name">Para</span></div>
+              <div class="pr-desc">2 karty tej samej wartości</div>
+              <div class="pr-cards"><div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div></div>
             </div>
-            <div class="pr-cards">
-              <div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div>
-            </div>
-          </div>
 
-          <div class="pr-row">
-            <div>
-              <div><span class="pr-rank">10.</span><span class="pr-name">Wysoka karta (High Card)</span></div>
-              <div class="pr-desc">Żaden układ — wygrywa najwyższa karta</div>
-            </div>
-            <div class="pr-cards">
-              <div class="ph-card">A<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card red">Q<br>♦</div><div class="ph-card">J<br>♣</div><div class="ph-card">9<br>♠</div>
+            <div class="pr-row">
+              <div><span class="pr-rank">10.</span><span class="pr-name">Wysoka karta</span></div>
+              <div class="pr-desc">Żaden układ — liczy się najwyższa karta</div>
+              <div class="pr-cards"><div class="ph-card">A<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card red">Q<br>♦</div><div class="ph-card">J<br>♣</div><div class="ph-card">9<br>♠</div></div>
             </div>
           </div>
         </div>
-      </details>
+
+        <div id="poker-wrap" class="poker-wrap">
+          <div class="loading-center"><div class="spinner"></div></div>
+        </div>
+      </div>
 
     </main>
   </div>
