@@ -441,15 +441,14 @@
     /* ── POKER ── */
     .poker-page-head {
       display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 16px; margin-bottom: 14px;
+      gap: 16px; margin-bottom: 10px;
     }
     .poker-table-meta {
       display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
       gap: 8px; color: var(--muted); font-size: 12px; font-weight: 600;
     }
     .poker-table-meta span {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 999px; padding: 6px 10px; white-space: nowrap;
+      white-space: nowrap;
     }
     .poker-table-meta strong { color: var(--text); }
     .poker-info { margin-bottom: 14px; }
@@ -463,13 +462,14 @@
     .poker-wrap { grid-area: game; display: grid; gap: 14px; }
     .poker-shell {
       display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
-      gap: 14px; align-items: start;
+      gap: 0; align-items: start;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius);
     }
     .poker-table-panel, .poker-side-panel {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 16px;
+      background: transparent; border: none; padding: 20px;
     }
-    .poker-table-panel { display: grid; gap: 14px; }
+    .poker-table-panel { display: grid; gap: 10px; }
     .poker-status-line {
       display: flex; align-items: center; justify-content: space-between;
       gap: 12px; flex-wrap: wrap;
@@ -477,23 +477,24 @@
     .poker-status-main { font-size: 13px; color: var(--muted); line-height: 1.5; }
     .poker-status-main strong { color: var(--text); font-weight: 800; }
     .poker-pot {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-height: 34px; padding: 6px 12px; border-radius: 999px;
-      background: #ecfdf5; border: 1px solid rgba(22,163,74,.20);
-      color: var(--yes); font-size: 13px; font-weight: 800;
+      color: var(--yes); font-size: 15px; font-weight: 800;
+      letter-spacing: -.01em;
     }
     .poker-board {
       display: flex; align-items: center; justify-content: center;
-      gap: 8px; min-height: 92px; background: #0f6b4f;
-      border: 1px solid rgba(15,107,79,.22); border-radius: 10px;
-      padding: 14px; box-shadow: inset 0 0 0 4px rgba(255,255,255,.07);
+      gap: 8px; min-height: 84px;
+      background: radial-gradient(ellipse at center, #0e7a5c 0%, #0a5c42 100%);
+      border: 3px solid #0a4a35; border-radius: 16px;
+      padding: 14px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.12);
     }
     .playing-card {
       width: 52px; height: 72px; border-radius: 7px;
       background: #fff; border: 1px solid rgba(15,23,42,.14);
       display: grid; place-items: center; color: #0f172a;
       font-size: 19px; font-weight: 800; line-height: 1;
-      box-shadow: 0 2px 6px rgba(15,23,42,.14);
+      box-shadow: 0 2px 8px rgba(15,23,42,.18);
+      transition: box-shadow .15s, border-color .15s;
     }
     .playing-card.red { color: #dc2626; }
     .playing-card.empty {
@@ -509,13 +510,14 @@
       gap: 10px;
     }
     .poker-seat {
-      min-height: 118px; border: 1px solid var(--border);
-      border-radius: 8px; background: var(--surface); padding: 10px;
+      min-height: 100px; border-radius: 8px;
+      background: var(--surface); padding: 10px;
       display: grid; grid-template-rows: auto 1fr auto; gap: 8px;
     }
-    .poker-seat.current { border-color: var(--accent); box-shadow: 0 0 0 3px var(--acc-dim); }
-    .poker-seat.me { background: #eef2ff; border-color: rgba(99,102,241,.24); }
-    .poker-seat.empty { color: var(--dim); align-items: center; justify-items: center; }
+    .poker-seat.current { background: #eef2ff; }
+    .poker-seat.me { background: #eef2ff; }
+    .poker-seat.acting { background: #f0fdf4; animation: turnpulse 1.6s ease-in-out infinite; }
+    .poker-seat.empty { color: var(--dim); align-items: center; justify-items: center; background: transparent; }
     .poker-seat-top {
       display: flex; align-items: center; justify-content: space-between;
       gap: 8px; min-width: 0;
@@ -527,8 +529,8 @@
     .dealer-chip {
       display: inline-flex; align-items: center; justify-content: center;
       width: 22px; height: 22px; border-radius: 50%;
-      background: #f8fafc; border: 1px solid var(--border-hi);
-      color: var(--text); font-size: 11px; font-weight: 900; flex: 0 0 auto;
+      background: var(--surface); color: var(--text);
+      font-size: 11px; font-weight: 900; flex: 0 0 auto;
     }
     .poker-seat-cards { display: flex; align-items: center; justify-content: center; gap: 5px; }
     .poker-seat-cards .playing-card { width: 34px; height: 48px; font-size: 13px; border-radius: 5px; }
@@ -539,22 +541,22 @@
     .poker-seat-meta strong { color: var(--text); font-weight: 800; }
     .poker-action-pill {
       justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      border-radius: 999px; padding: 2px 7px; background: var(--card);
-      border: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 700;
+      border-radius: 4px; padding: 1px 6px; background: var(--surface);
+      color: var(--muted); font-size: 10px; font-weight: 700;
     }
-    .poker-action-pill.folded { color: var(--no); background: var(--no-dim); border-color: var(--no-line); }
-    .poker-action-pill.allin { color: var(--yes); background: var(--yes-dim); border-color: var(--yes-line); }
-    .poker-seat.bot { background: #f5f3ff; border-color: rgba(139,92,246,.18); }
+    .poker-action-pill.folded { color: var(--no); background: var(--no-dim); }
+    .poker-action-pill.allin { color: var(--yes); background: var(--yes-dim); }
+    .poker-seat.bot { background: #f5f3ff; }
     .poker-bot-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
     .poker-bot-btns { display: flex; gap: 5px; }
     .poker-bot-btn {
-      border: 1px solid var(--border); border-radius: 8px; background: var(--card);
+      border: none; border-radius: 6px; background: var(--surface);
       color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; font-weight: 800;
       width: 36px; height: 36px; padding: 0; transition: all .15s;
     }
-    .poker-bot-btn:hover { border-color: var(--border-hi); color: var(--text); }
-    .poker-bot-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .poker-side-panel { display: grid; gap: 14px; }
+    .poker-bot-btn:hover { background: var(--border); color: var(--text); }
+    .poker-bot-btn.active { background: var(--accent); color: #fff; }
+    .poker-side-panel { display: grid; gap: 10px; border-left: 1px solid var(--border); }
     .poker-panel-title {
       font-size: 14px; font-weight: 800; letter-spacing: 0;
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -563,70 +565,125 @@
       display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
     }
     .poker-stat {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-      padding: 10px; min-width: 0;
+      padding: 4px 0; min-width: 0;
     }
     .poker-stat-label {
       color: var(--muted); font-size: 10px; text-transform: uppercase;
       letter-spacing: .08em; font-weight: 700; margin-bottom: 4px;
     }
     .poker-stat-value { font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
-    .poker-hole-cards { display: flex; gap: 8px; min-height: 76px; align-items: center; }
+    .poker-hole-cards { display: flex; gap: 8px; min-height: 60px; align-items: center; }
     .poker-actions { display: grid; gap: 8px; }
     .poker-actions-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .poker-action-btn {
-      border: 1px solid var(--border); border-radius: 8px; background: var(--card);
+      border: none; border-radius: 8px; background: var(--surface);
       color: var(--text); cursor: pointer; font: inherit; font-size: 13px; font-weight: 800;
-      min-height: 40px; padding: 8px 10px; transition: all .15s;
+      min-height: 40px; padding: 8px 10px; transition: background .15s;
     }
-    .poker-action-btn:hover { border-color: var(--border-hi); }
+    .poker-action-btn:hover { background: var(--border); }
     .poker-action-btn:disabled { opacity: .4; cursor: not-allowed; }
-    .poker-action-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .poker-action-btn.danger { background: var(--no); border-color: var(--no); color: #fff; }
-    .poker-action-btn.good { background: var(--yes); border-color: var(--yes); color: #fff; }
+    .poker-action-btn.primary { background: var(--accent); color: #fff; }
+    .poker-action-btn.primary:hover { background: #4f46e5; }
+    .poker-action-btn.danger { background: var(--no); color: #fff; }
+    .poker-action-btn.good { background: var(--yes); color: #fff; }
     .poker-raise-box {
       display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 8px; align-items: center;
     }
     .poker-raise-input {
-      width: 100%; border: 1px solid var(--border); border-radius: 8px;
-      background: var(--bg); color: var(--text); font: inherit; font-weight: 800;
-      padding: 8px 10px; min-height: 40px; text-align: right;
+      width: 100%; border: none; border-bottom: 1px solid var(--border); border-radius: 0;
+      background: transparent; color: var(--text); font: inherit; font-weight: 800;
+      padding: 6px 2px; min-height: 40px; text-align: right; outline: none;
     }
+    .poker-raise-input:focus { border-bottom-color: var(--accent); }
     .poker-raise-box .poker-action-btn { width: 100%; margin-top: 8px; }
     .poker-note { color: var(--muted); font-size: 12px; line-height: 1.55; }
     .poker-rules-panel {
       border: 1px solid var(--border); border-radius: 12px;
       background: var(--card); padding: 14px 14px 10px;
     }
-    .pr-title { font-weight: 800; font-size: 13px; margin-bottom: 10px; }
+    .pr-title { font-weight: 800; font-size: 12px; margin-bottom: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
     .poker-rules-body { display: grid; gap: 0; }
-    .pr-intro { color: var(--muted); font-size: 12px; line-height: 1.6; margin-bottom: 4px; }
+    .pr-intro { display: none; }
     .pr-row {
-      display: grid; grid-template-columns: 1fr; gap: 4px;
-      padding: 7px 0; border-bottom: 1px solid var(--border);
+      display: grid; gap: 2px;
+      padding: 5px 0; border-bottom: 1px solid var(--border);
     }
     .pr-row:last-child { border-bottom: none; }
-    .pr-cards { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 3px; }
-    .pr-rank { font-size: 11px; font-weight: 800; color: var(--muted); margin-right: 4px; }
-    .pr-name { font-weight: 800; font-size: 13px; }
-    .pr-desc { color: var(--muted); font-size: 11px; margin-top: 1px; }
+    .pr-row-head { display: flex; align-items: baseline; gap: 3px; }
+    .pr-row > div:first-child { display: flex; align-items: baseline; gap: 3px; }
+    .pr-cards { display: flex; gap: 2px; flex-wrap: wrap; }
+    .pr-rank { font-size: 9px; font-weight: 700; color: var(--dim); flex-shrink: 0; }
+    .pr-name { font-weight: 700; font-size: 11px; }
+    .pr-desc { display: none; }
     .ph-card {
       display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
-      width: 24px; height: 34px; border-radius: 4px;
-      border: 1px solid var(--border); background: #fff;
-      font-size: 9px; font-weight: 900; line-height: 1.1; color: #1a202c;
+      width: 15px; height: 21px; border-radius: 2px;
+      border: 1px solid rgba(0,0,0,.12); background: #fff;
+      font-size: 6px; font-weight: 900; line-height: 1.1; color: #1a202c;
     }
-    .ph-card.red { color: #e53e3e; }
+    .ph-card.red { color: #dc2626; }
     .ph-card.back { background: var(--accent); border-color: var(--accent); }
-    .poker-events {
-      display: grid; gap: 7px; max-height: 260px; overflow-y: auto;
-      padding-right: 2px;
+    .poker-events { display: grid; gap: 0; }
+    .poker-event-inline {
+      color: var(--muted); font-size: 11px; line-height: 1.45;
+      padding: 5px 0; border-bottom: 1px solid var(--border);
     }
-    .poker-event {
-      color: var(--muted); font-size: 12px; line-height: 1.45;
-      border-bottom: 1px solid var(--border); padding-bottom: 7px;
+    .poker-event-inline:last-child { border-bottom: none; }
+    .poker-event-time { color: var(--dim); font-size: 10px; }
+
+    /* ── Guide banner ── */
+    .poker-guide {
+      border-radius: 6px; padding: 9px 14px;
+      background: var(--surface); display: grid; gap: 2px;
     }
-    .poker-event:last-child { border-bottom: none; padding-bottom: 0; }
+    .poker-guide.my-turn {
+      background: #f0fdf4;
+      animation: turnpulse 1.6s ease-in-out infinite;
+    }
+    .poker-guide-head {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 800; color: var(--text);
+    }
+    .poker-guide.my-turn .poker-guide-head { color: #15803d; }
+    .poker-guide-body { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    @keyframes turnpulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,.3); }
+      50%       { box-shadow: 0 0 0 6px rgba(22,163,74,0); }
+    }
+
+    /* ── Phase progress bar ── */
+    .poker-phase-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); }
+    .poker-phase-step {
+      flex: 1; text-align: center; padding: 5px 2px 7px;
+      font-size: 10px; font-weight: 700;
+      background: transparent; color: var(--dim);
+      border-bottom: 2px solid transparent; margin-bottom: -2px;
+    }
+    .poker-phase-step.done { color: var(--muted); }
+    .poker-phase-step.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Action button sub-labels ── */
+    .poker-action-btn { min-height: 50px; }
+    .poker-btn-label  { display: block; font-size: 13px; font-weight: 800; line-height: 1.2; }
+    .poker-btn-sub    { display: block; font-size: 10px; font-weight: 500; opacity: .75; margin-top: 2px; }
+
+    /* ── Hole cards section ── */
+    .poker-hole-section { display: grid; gap: 5px; }
+    .poker-hole-label {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .poker-hole-cards { display: flex; gap: 8px; align-items: center; min-height: 56px; }
+    .poker-hole-cards.glow .playing-card {
+      box-shadow: 0 0 0 2px var(--yes), 0 4px 12px rgba(22,163,74,.2);
+      border-color: rgba(22,163,74,.5);
+    }
+
+    /* ── Last action in status ── */
+    .poker-last-action {
+      font-size: 11px; color: var(--dim);
+      margin-left: 8px;
+    }
 
     /* ── MODAL ── */
     .modal-overlay {
@@ -826,6 +883,7 @@
       .poker-table-meta { justify-content: flex-start; }
       .poker-outer { grid-template-columns: 1fr; grid-template-areas: "game" "rules"; }
       .poker-shell { grid-template-columns: 1fr; }
+      .poker-side-panel { border-left: none; border-top: 1px solid var(--border); }
       .poker-seats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .poker-board { min-height: 84px; gap: 6px; padding: 10px; }
       .playing-card { width: 45px; height: 63px; font-size: 16px; }
@@ -1102,7 +1160,7 @@
 
       <div class="poker-outer">
         <div class="poker-rules-panel">
-          <div class="pr-title">Zasady i układy</div>
+          <div class="pr-title">Układy kart</div>
           <div class="poker-rules-body">
             <p class="pr-intro">Każdy gracz dostaje <strong>2 karty</strong>. Na stole pojawia się <strong>5 wspólnych</strong> (flop 3, turn 1, river 1). Wygrywa najlepsza kombinacja z dowolnych 5 spośród 7 kart.</p>
 
@@ -1113,55 +1171,55 @@
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">2.</span><span class="pr-name">Poker</span></div>
+              <div><span class="pr-rank">2.</span><span class="pr-name">Straight Flush</span></div>
               <div class="pr-desc">5 kart po kolei w jednym kolorze</div>
               <div class="pr-cards"><div class="ph-card">9<br>♠</div><div class="ph-card">8<br>♠</div><div class="ph-card">7<br>♠</div><div class="ph-card">6<br>♠</div><div class="ph-card">5<br>♠</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">3.</span><span class="pr-name">Kareta</span></div>
+              <div><span class="pr-rank">3.</span><span class="pr-name">Four of a Kind</span></div>
               <div class="pr-desc">4 karty tej samej wartości</div>
               <div class="pr-cards"><div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div><div class="ph-card red">A<br>♦</div><div class="ph-card">A<br>♣</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">4.</span><span class="pr-name">Ful</span></div>
+              <div><span class="pr-rank">4.</span><span class="pr-name">Full House</span></div>
               <div class="pr-desc">Trójka + para</div>
               <div class="pr-cards"><div class="ph-card">K<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card">K<br>♣</div><div class="ph-card red">Q<br>♦</div><div class="ph-card red">Q<br>♥</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">5.</span><span class="pr-name">Kolor</span></div>
+              <div><span class="pr-rank">5.</span><span class="pr-name">Flush</span></div>
               <div class="pr-desc">5 kart w jednym kolorze</div>
               <div class="pr-cards"><div class="ph-card">A<br>♣</div><div class="ph-card">J<br>♣</div><div class="ph-card">8<br>♣</div><div class="ph-card">5<br>♣</div><div class="ph-card">2<br>♣</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">6.</span><span class="pr-name">Sekwencja</span></div>
+              <div><span class="pr-rank">6.</span><span class="pr-name">Straight</span></div>
               <div class="pr-desc">5 kart po kolei, różne kolory</div>
               <div class="pr-cards"><div class="ph-card">9<br>♠</div><div class="ph-card red">8<br>♥</div><div class="ph-card red">7<br>♦</div><div class="ph-card">6<br>♣</div><div class="ph-card">5<br>♠</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">7.</span><span class="pr-name">Trójka</span></div>
+              <div><span class="pr-rank">7.</span><span class="pr-name">Three of a Kind</span></div>
               <div class="pr-desc">3 karty tej samej wartości</div>
               <div class="pr-cards"><div class="ph-card">7<br>♠</div><div class="ph-card red">7<br>♥</div><div class="ph-card red">7<br>♦</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">8.</span><span class="pr-name">Dwie pary</span></div>
+              <div><span class="pr-rank">8.</span><span class="pr-name">Two Pair</span></div>
               <div class="pr-desc">Dwie różne pary</div>
               <div class="pr-cards"><div class="ph-card">J<br>♠</div><div class="ph-card red">J<br>♥</div><div class="ph-card red">4<br>♦</div><div class="ph-card">4<br>♣</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">9.</span><span class="pr-name">Para</span></div>
+              <div><span class="pr-rank">9.</span><span class="pr-name">One Pair</span></div>
               <div class="pr-desc">2 karty tej samej wartości</div>
               <div class="pr-cards"><div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div></div>
             </div>
 
             <div class="pr-row">
-              <div><span class="pr-rank">10.</span><span class="pr-name">Wysoka karta</span></div>
+              <div><span class="pr-rank">10.</span><span class="pr-name">High Card</span></div>
               <div class="pr-desc">Żaden układ — liczy się najwyższa karta</div>
               <div class="pr-cards"><div class="ph-card">A<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card red">Q<br>♦</div><div class="ph-card">J<br>♣</div><div class="ph-card">9<br>♠</div></div>
             </div>
@@ -1885,12 +1943,69 @@ function buildPlayingCard(code, opts = {}) {
   }, cardText(code));
 }
 
+function buildPokerGuide(state, legal) {
+  const phase = state.table.phase;
+  const mySeat = state.seats.find(s => s.isMe);
+  const currentSeat = state.seats.find(s => s.seatNo === state.table.currentSeat);
+
+  const PHASE_DESC = {
+    waiting:  'Poczekaj — rozdanie zacznie się gdy przy stole siedzą ≥2 graczy.',
+    preflop:  'Każdy dostał 2 zakryte karty. Pierwsza runda zakładów.',
+    flop:     '3 wspólne karty na stole. Połącz je ze swoją ręką.',
+    turn:     '4. wspólna karta. Oceń siłę swojego układu.',
+    river:    '5. i ostatnia wspólna karta. Ostatnia runda zakładów.',
+    showdown: 'Gracze odkrywają karty. Wygrywa najlepszy układ z 5 kart.',
+  };
+
+  const PHASE_NAMES = {
+    waiting: 'Oczekiwanie', preflop: 'Preflop', flop: 'Flop',
+    turn: 'Turn', river: 'River', showdown: 'Showdown',
+  };
+
+  let head, body, myTurn = false;
+
+  if (legal.canAct) {
+    myTurn = true;
+    head = '⚡ Twoja kolej!';
+    body = legal.canCheck
+      ? 'Możesz sprawdzić za darmo (Check) albo podbić (Raise).'
+      : 'Wyrównaj ' + legal.callAmount + ' 🪙 (Call), podbij (Raise) lub spasuj (Fold).';
+  } else if (mySeat?.folded) {
+    head = 'Spasowałeś';
+    body = 'Poczekaj na kolejne rozdanie.';
+  } else if (phase !== 'waiting' && currentSeat) {
+    head = (PHASE_NAMES[phase] || phase) + ' · Ruch: ' + currentSeat.nick;
+    body = PHASE_DESC[phase] || '';
+  } else {
+    head = PHASE_NAMES[phase] || phase;
+    body = PHASE_DESC[phase] || '';
+  }
+
+  return el('div', { className: 'poker-guide' + (myTurn ? ' my-turn' : '') },
+    el('div', { className: 'poker-guide-head' }, head),
+    body ? el('div', { className: 'poker-guide-body' }, body) : null
+  );
+}
+
+function buildPhaseBar(phase) {
+  const phases = ['preflop', 'flop', 'turn', 'river', 'showdown'];
+  if (phase === 'waiting') return null;
+  const cur = phases.indexOf(phase);
+  return el('div', { className: 'poker-phase-bar' },
+    ...phases.map((p, i) => el('div', {
+      className: 'poker-phase-step' + (p === phase ? ' active' : i < cur ? ' done' : ''),
+    }, p.charAt(0).toUpperCase() + p.slice(1)))
+  );
+}
+
 function renderPoker() {
   if (!pokerState) {
     pokerWrap.replaceChildren(makeSpinner());
     return;
   }
+  const legal = pokerState.me.legalActions || { canAct: false };
   pokerWrap.replaceChildren(
+    buildPokerGuide(pokerState, legal),
     el('div', { className: 'poker-shell' },
       buildPokerTablePanel(pokerState),
       buildPokerSidePanel(pokerState)
@@ -1899,25 +2014,28 @@ function renderPoker() {
 }
 
 function buildPokerTablePanel(state) {
-  const current = state.seats.find(s => s.seatNo === state.table.currentSeat);
-  const status = state.table.phase === 'waiting'
-    ? 'Stół czeka na kolejne rozdanie.'
-    : 'Akcja: ' + (current ? current.nick : '—');
+  const lastMsg = state.events && state.events.length > 0 ? state.events[0].message : null;
+  const phaseBar = buildPhaseBar(state.table.phase);
 
   const boardCards = [];
   for (let i = 0; i < 5; i += 1) boardCards.push(buildPlayingCard(state.table.board[i]));
 
-  return el('section', { className: 'poker-table-panel' },
+  const parts = [
     el('div', { className: 'poker-status-line' },
       el('div', { className: 'poker-status-main' },
-        el('strong', {}, 'Rozdanie #' + state.table.handNo + ' · ' + phaseLabel(state.table.phase)),
-        el('div', {}, status)
+        el('strong', {}, 'Rozdanie #' + state.table.handNo),
+        lastMsg ? el('div', {}, el('span', { className: 'poker-last-action' }, lastMsg)) : null
       ),
-      el('div', { className: 'poker-pot' }, 'Pula ' + state.table.pot + ' 🪙')
+      state.table.pot > 0 ? el('div', { className: 'poker-pot' }, 'Pula ' + state.table.pot + ' 🪙') : null
     ),
+  ];
+  if (phaseBar) parts.push(phaseBar);
+  parts.push(
     el('div', { className: 'poker-board' }, ...boardCards),
     el('div', { className: 'poker-seats-grid' }, ...buildSeatNodes(state))
   );
+
+  return el('section', { className: 'poker-table-panel' }, ...parts);
 }
 
 function buildSeatNodes(state) {
@@ -1937,10 +2055,13 @@ function buildEmptyPokerSeat(seatNo) {
 }
 
 function buildPokerSeat(state, seat) {
+  const legal = state.me.legalActions || {};
   const classes = ['poker-seat'];
   if (seat.isMe) classes.push('me');
   if (seat.isBot) classes.push('bot');
-  if (state.table.currentSeat === seat.seatNo) classes.push('current');
+  if (state.table.currentSeat === seat.seatNo) {
+    classes.push(seat.isMe && legal.canAct ? 'acting' : 'current');
+  }
   const actionClass = seat.folded ? ' folded' : seat.allIn ? ' allin' : '';
   const cards = seat.cards
     ? seat.cards.map(c => buildPlayingCard(c))
@@ -1949,6 +2070,7 @@ function buildPokerSeat(state, seat) {
       : [];
   const displayNick = (seat.isBot ? '🤖 ' : '') + seat.nick + (seat.isMe ? ' (Ty)' : '');
 
+  const statusLabel = seat.folded ? 'fold' : seat.allIn ? 'all-in' : actionLabel(seat.lastAction) || (seat.inHand ? 'w grze' : 'czeka');
   return el('div', { className: classes.join(' ') },
     el('div', { className: 'poker-seat-top' },
       el('span', { className: 'poker-nick', title: seat.nick }, displayNick),
@@ -1957,8 +2079,9 @@ function buildPokerSeat(state, seat) {
     el('div', { className: 'poker-seat-cards' }, ...cards),
     el('div', { className: 'poker-seat-meta' },
       el('span', {}, 'Stack'), el('strong', {}, seat.stack + ' 🪙'),
-      el('span', {}, 'Zakład'), el('strong', {}, seat.roundBet + ' 🪙'),
-      el('span', {}, 'Status'), el('span', { className: 'poker-action-pill' + actionClass }, seat.folded ? 'fold' : seat.allIn ? 'all-in' : actionLabel(seat.lastAction) || (seat.inHand ? 'w grze' : 'czeka'))
+      seat.roundBet > 0 ? el('span', {}, 'Zakład') : null,
+      seat.roundBet > 0 ? el('strong', {}, seat.roundBet + ' 🪙') : null,
+      el('span', {}), el('span', { className: 'poker-action-pill' + actionClass }, statusLabel)
     )
   );
 }
@@ -1990,11 +2113,19 @@ function buildPokerBotSelector(state) {
 function buildPokerSidePanel(state) {
   const mySeat = state.seats.find(s => s.isMe);
   const legal = state.me.legalActions || { canAct: false };
-  const holeCards = mySeat?.cards
+
+  const holeCardNodes = mySeat?.cards
     ? mySeat.cards.map(c => buildPlayingCard(c))
     : mySeat?.inHand
       ? [buildPlayingCard(null, { back: true }), buildPlayingCard(null, { back: true })]
-      : [el('span', { className: 'poker-note' }, mySeat ? 'Czekasz na rozdanie.' : 'Usiądź przy stole, żeby grać.')];
+      : null;
+
+  const holeSection = el('div', { className: 'poker-hole-section' },
+    el('div', { className: 'poker-hole-label' }, 'Twoje karty'),
+    holeCardNodes
+      ? el('div', { className: 'poker-hole-cards' + (legal.canAct && mySeat?.cards ? ' glow' : '') }, ...holeCardNodes)
+      : el('span', { className: 'poker-note' }, mySeat ? 'Czekasz na rozdanie.' : 'Usiądź przy stole, żeby grać.')
+  );
 
   const botSelector = buildPokerBotSelector(state);
   const panel = el('aside', { className: 'poker-side-panel' },
@@ -2009,7 +2140,7 @@ function buildPokerSidePanel(state) {
         el('div', { className: 'poker-stat-value' }, state.me.stack + ' 🪙')
       )
     ),
-    el('div', { className: 'poker-hole-cards' }, ...holeCards),
+    holeSection,
     buildPokerControls(state, legal),
     buildPokerResult(state.lastResult),
     buildPokerEvents(state.events)
@@ -2040,17 +2171,27 @@ function buildPokerControls(state, legal) {
   }
 
   if (legal.canAct) {
-    const foldBtn = el('button', { className: 'poker-action-btn danger', type: 'button' }, 'Fold');
+    const foldBtn = el('button', { className: 'poker-action-btn danger', type: 'button' },
+      el('span', { className: 'poker-btn-label' }, 'Fold'),
+      el('span', { className: 'poker-btn-sub' }, 'Porzuć rękę')
+    );
     foldBtn.addEventListener('click', () => pokerAction({ action: 'act', move: 'fold' }));
 
+    const checkCallLabel = legal.canCheck ? 'Check' : 'Call ' + legal.callAmount + ' 🪙';
+    const checkCallSub   = legal.canCheck ? 'Sprawdź bez kosztów' : 'Wyrównaj stawkę';
     const checkCallBtn = el('button', { className: 'poker-action-btn good', type: 'button' },
-      legal.canCheck ? 'Check' : 'Call ' + legal.callAmount + ' 🪙');
+      el('span', { className: 'poker-btn-label' }, checkCallLabel),
+      el('span', { className: 'poker-btn-sub' }, checkCallSub)
+    );
     checkCallBtn.addEventListener('click', () => pokerAction({
       action: 'act',
       move: legal.canCheck ? 'check' : 'call',
     }));
 
-    const allInBtn = el('button', { className: 'poker-action-btn', type: 'button' }, 'All-in');
+    const allInBtn = el('button', { className: 'poker-action-btn', type: 'button' },
+      el('span', { className: 'poker-btn-label' }, 'All-in'),
+      el('span', { className: 'poker-btn-sub' }, 'Postaw wszystko')
+    );
     allInBtn.addEventListener('click', () => pokerAction({ action: 'act', move: 'all_in' }));
 
     controls.appendChild(el('div', { className: 'poker-actions-row' }, foldBtn, checkCallBtn, allInBtn));
@@ -2095,7 +2236,10 @@ function buildRaiseControls(legal) {
     className: 'poker-action-btn primary',
     type: 'button',
     disabled: !legal.canRaise,
-  }, 'Raise');
+  },
+    el('span', { className: 'poker-btn-label' }, 'Raise'),
+    el('span', { className: 'poker-btn-sub' }, 'Podbij stawkę')
+  );
   raiseBtn.addEventListener('click', () => pokerAction({
     action: 'act',
     move: 'raise',
@@ -2123,10 +2267,15 @@ function buildPokerEvents(events) {
   if (!events || events.length === 0) {
     return el('div', { className: 'poker-events' }, el('p', { className: 'poker-note' }, 'Brak historii stołu.'));
   }
+  const recent = events.slice(0, 4);
   return el('div', { className: 'poker-events' },
-    ...events.map(evt => el('div', { className: 'poker-event' },
-      evt.message + ' · ' + relTime(evt.created_at)
-    ))
+    ...recent.map(evt =>
+      el('div', { className: 'poker-event-inline' },
+        evt.message,
+        ' ',
+        el('span', { className: 'poker-event-time' }, '· ' + relTime(evt.created_at))
+      )
+    )
   );
 }
 
