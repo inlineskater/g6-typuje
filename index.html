@@ -161,33 +161,51 @@
     .nav-tab:hover { color: var(--text); }
     .nav-tab.active { border-bottom-color: var(--accent); color: var(--text); }
 
-    /* ── ACTIVITY BAR ── */
-    .activity-bar {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 9px 14px; margin-bottom: 16px;
-      cursor: pointer; transition: border-color .15s, box-shadow .15s;
-      text-decoration: none; user-select: none;
+    /* ── ACTIVITY STRIP ── */
+    .activity-strip { margin-bottom: 20px; }
+    .activity-strip-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
     }
-    .activity-bar:hover { border-color: var(--border-hi); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-    .activity-bar-label {
-      font-size: 10px; font-weight: 800; letter-spacing: .08em;
-      text-transform: uppercase; color: var(--muted); flex-shrink: 0;
-      display: flex; align-items: center; gap: 5px;
+    .activity-strip-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 700; letter-spacing: .09em;
+      text-transform: uppercase; color: var(--dim);
     }
-    .activity-bar-dot {
-      width: 6px; height: 6px; border-radius: 50%; background: var(--yes);
-      animation: abpulse 2s ease-in-out infinite; flex-shrink: 0;
+    .activity-strip-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--yes); flex-shrink: 0;
+      animation: abpulse 2s ease-in-out infinite;
     }
-    @keyframes abpulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
-    .activity-bar-sep { color: var(--border-hi); flex-shrink: 0; }
-    .activity-bar-content {
-      flex: 1; min-width: 0; font-size: 12px; color: var(--text);
+    @keyframes abpulse { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+    .activity-strip-all {
+      font-size: 11px; font-weight: 600; color: var(--accent);
+      background: none; border: none; font-family: inherit; cursor: pointer; padding: 0;
+    }
+    .activity-strip-all:hover { text-decoration: underline; }
+    .activity-strip-rows { display: flex; flex-direction: column; }
+    .activity-strip-row {
+      display: grid; grid-template-columns: 72px auto 1fr auto;
+      gap: 0 10px; align-items: center;
+      padding: 5px 8px; border-radius: 7px;
+      cursor: pointer; transition: background .1s; min-width: 0;
+    }
+    .activity-strip-row:hover { background: var(--surface); }
+    .asr-nick {
+      font-size: 12px; font-weight: 700; color: var(--text);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .activity-bar-more {
-      font-size: 11px; font-weight: 700; color: var(--accent); flex-shrink: 0;
+    .asr-market {
+      font-size: 12px; color: var(--muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
     }
+    .asr-time { font-size: 10px; color: var(--dim); white-space: nowrap; padding-left: 2px; }
+    .asr-side {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 999px; border: 1px solid; min-width: 38px;
+      padding: 2px 6px; font-size: 10px; font-weight: 800;
+    }
+    .asr-side-yes { background: var(--yes-dim); border-color: var(--yes-line); color: var(--yes); }
+    .asr-side-no  { background: var(--no-dim);  border-color: var(--no-line);  color: var(--no);  }
 
     /* ── MAIN ── */
     main { max-width: 1340px; margin: 0 auto; padding: 28px var(--page-pad); }
@@ -1001,13 +1019,6 @@
         <button class="btn-new-market" id="btn-new-market">+ Nowy rynek</button>
       </div>
 
-      <div id="activity-bar" class="activity-bar" role="button" tabindex="0">
-        <span class="activity-bar-label"><span class="activity-bar-dot"></span>Ostatnie ruchy</span>
-        <span class="activity-bar-sep">|</span>
-        <span id="activity-bar-content" class="activity-bar-content">Ładowanie…</span>
-        <span class="activity-bar-more">Pokaż wszystkie →</span>
-      </div>
-
       <div class="info-banner">
         <strong>Jak to działa?</strong>
         <div class="info-rules">
@@ -1018,6 +1029,14 @@
           <span class="info-rule"><span class="info-rule-icon">🔒</span><span class="info-rule-text">Rynek może zamknąć <strong>tylko jego twórca</strong> lub admin. Kliknij „Zamknij rynek" i wybierz wynik.</span></span>
           <span class="info-rule"><span class="info-rule-icon">🏆</span><span class="info-rule-text">Po rozstrzygnięciu wygrywający odzyskują stawki, a coiny przegranej strony dzielą się <strong>proporcjonalnie do udziałów</strong>.</span></span>
         </div>
+      </div>
+
+      <div id="activity-strip" class="activity-strip">
+        <div class="activity-strip-head">
+          <span class="activity-strip-label"><span class="activity-strip-dot"></span>Ostatnie zakłady</span>
+          <button class="activity-strip-all" id="btn-activity-all">Pokaż wszystkie →</button>
+        </div>
+        <div id="activity-strip-rows" class="activity-strip-rows"></div>
       </div>
 
       <div class="markets-grid" id="markets-grid">
@@ -2210,7 +2229,7 @@ async function renderMarkets() {
   }
 
   marketsGrid.replaceChildren(...nodes);
-  updateActivityBar();
+  updateActivityStrip();
 }
 
 function buildMarketCard(m, pos) {
@@ -2715,15 +2734,14 @@ function openActivityModal() {
 }
 function closeActivityModal() { hide(afOverlay); document.body.style.overflow = ''; }
 
-const activityBar = document.getElementById('activity-bar');
-activityBar.addEventListener('click', openActivityModal);
-activityBar.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openActivityModal(); });
+document.getElementById('btn-activity-all').addEventListener('click', openActivityModal);
 document.getElementById('af-close').addEventListener('click', closeActivityModal);
 afOverlay.addEventListener('click', e => { if (e.target === afOverlay) closeActivityModal(); });
 
-function updateActivityBar() {
-  const contentEl = document.getElementById('activity-bar-content');
-  if (!contentEl) return;
+function updateActivityStrip() {
+  const container = document.getElementById('activity-strip-rows');
+  if (!container) return;
+
   const allTrades = [];
   Object.entries(tradesByMarket).forEach(([marketId, trades]) => {
     const market = markets.find(m => m.id === marketId);
@@ -2731,13 +2749,30 @@ function updateActivityBar() {
     trades.forEach(t => allTrades.push({ ...t, marketTitle: market.title, marketIcon: market.icon }));
   });
   allTrades.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const t = allTrades[0];
-  if (!t) { contentEl.textContent = 'Brak aktywności — postaw pierwszy zakład!'; return; }
-  const side = t.side === 'YES' ? 'TAK' : 'NIE';
-  contentEl.textContent =
-    (t.nick_snapshot || 'Gracz') + ' postawił ' + t.amount + ' 🪙 na ' + side +
-    ' · ' + (t.marketIcon || '🎲') + ' ' + (t.marketTitle || '') +
-    ' · ' + relTime(t.created_at);
+  const recent = allTrades.slice(0, 3);
+
+  if (recent.length === 0) {
+    container.replaceChildren(
+      el('div', { style: { padding: '6px 8px', fontSize: '12px', color: 'var(--dim)' } },
+        'Brak aktywności — postaw pierwszy zakład!')
+    );
+    return;
+  }
+
+  const rows = recent.map(t => {
+    const isYes = t.side === 'YES';
+    const row = el('div', { className: 'activity-strip-row' },
+      el('span', { className: 'asr-nick' }, t.nick_snapshot || 'Gracz'),
+      el('span', { className: 'asr-side ' + (isYes ? 'asr-side-yes' : 'asr-side-no') }, isYes ? 'TAK' : 'NIE'),
+      el('span', { className: 'asr-market' },
+        (t.marketIcon || '🎲') + ' ' + (t.marketTitle || '') + ' · ' + t.amount + ' 🪙'),
+      el('span', { className: 'asr-time' }, relTime(t.created_at))
+    );
+    row.addEventListener('click', openActivityModal);
+    return row;
+  });
+
+  container.replaceChildren(...rows);
 }
 
 document.getElementById('btn-new-market').addEventListener('click', () => {
