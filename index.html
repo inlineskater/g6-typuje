@@ -540,6 +540,37 @@
     }
     .poker-raise-box .poker-action-btn { width: 100%; margin-top: 8px; }
     .poker-note { color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .poker-rules {
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--card); padding: 0 16px; margin-top: 4px;
+    }
+    .poker-rules summary {
+      cursor: pointer; padding: 13px 0; font-weight: 800; font-size: 14px;
+      user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between;
+    }
+    .poker-rules summary::-webkit-details-marker { display: none; }
+    .poker-rules[open] summary .pr-arrow { transform: rotate(180deg); }
+    .pr-arrow { transition: transform .2s; display: inline-block; font-style: normal; }
+    .poker-rules-body { padding-bottom: 16px; display: grid; gap: 6px; }
+    .pr-intro { color: var(--muted); font-size: 12px; line-height: 1.6; margin-bottom: 4px; }
+    .pr-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px;
+      align-items: center; padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .pr-row:last-child { border-bottom: none; }
+    .pr-rank { font-size: 11px; font-weight: 800; color: var(--muted); margin-right: 4px; }
+    .pr-name { font-weight: 800; font-size: 13px; }
+    .pr-desc { color: var(--muted); font-size: 11px; margin-top: 1px; }
+    .pr-cards { display: flex; gap: 3px; flex-shrink: 0; }
+    .ph-card {
+      display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 24px; height: 34px; border-radius: 4px;
+      border: 1px solid var(--border); background: #fff;
+      font-size: 9px; font-weight: 900; line-height: 1.1; color: #1a202c;
+    }
+    .ph-card.red { color: #e53e3e; }
+    .ph-card.back { background: var(--accent); border-color: var(--accent); }
     .poker-events {
       display: grid; gap: 7px; max-height: 260px; overflow-y: auto;
       padding-right: 2px;
@@ -950,6 +981,117 @@
       <div id="poker-wrap" class="poker-wrap">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
+
+      <details class="poker-rules">
+        <summary>Zasady i układy kart <span class="pr-arrow">▾</span></summary>
+        <div class="poker-rules-body">
+          <p class="pr-intro">
+            Texas Hold'em: każdy gracz dostaje <strong>2 karty</strong> zakryte. Na stole odkrywane są <strong>3+1+1 kart wspólnych</strong> (flop, turn, river).
+            Najlepsza kombinacja z 5 kart (dowolna kombinacja 2 własnych + 5 wspólnych) wygrywa.
+          </p>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">1.</span><span class="pr-name">Royal Flush</span></div>
+              <div class="pr-desc">As, Król, Dama, Walet, 10 — w jednym kolorze</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card red">A<br>♥</div><div class="ph-card red">K<br>♥</div><div class="ph-card red">Q<br>♥</div><div class="ph-card red">J<br>♥</div><div class="ph-card red">10<br>♥</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">2.</span><span class="pr-name">Poker (Straight Flush)</span></div>
+              <div class="pr-desc">5 kart po kolei w jednym kolorze</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">9<br>♠</div><div class="ph-card">8<br>♠</div><div class="ph-card">7<br>♠</div><div class="ph-card">6<br>♠</div><div class="ph-card">5<br>♠</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">3.</span><span class="pr-name">Kareta (Four of a Kind)</span></div>
+              <div class="pr-desc">4 karty tej samej wartości</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div><div class="ph-card red">A<br>♦</div><div class="ph-card">A<br>♣</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">4.</span><span class="pr-name">Ful (Full House)</span></div>
+              <div class="pr-desc">Trójka + para</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">K<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card">K<br>♣</div><div class="ph-card red">Q<br>♦</div><div class="ph-card red">Q<br>♥</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">5.</span><span class="pr-name">Kolor (Flush)</span></div>
+              <div class="pr-desc">5 kart w jednym kolorze (niekoniecznie po kolei)</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">A<br>♣</div><div class="ph-card">J<br>♣</div><div class="ph-card">8<br>♣</div><div class="ph-card">5<br>♣</div><div class="ph-card">2<br>♣</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">6.</span><span class="pr-name">Sekwencja (Straight)</span></div>
+              <div class="pr-desc">5 kart po kolei w różnych kolorach</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">9<br>♠</div><div class="ph-card red">8<br>♥</div><div class="ph-card red">7<br>♦</div><div class="ph-card">6<br>♣</div><div class="ph-card">5<br>♠</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">7.</span><span class="pr-name">Trójka (Three of a Kind)</span></div>
+              <div class="pr-desc">3 karty tej samej wartości</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">7<br>♠</div><div class="ph-card red">7<br>♥</div><div class="ph-card red">7<br>♦</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">8.</span><span class="pr-name">Dwie pary (Two Pair)</span></div>
+              <div class="pr-desc">Dwie różne pary</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">J<br>♠</div><div class="ph-card red">J<br>♥</div><div class="ph-card red">4<br>♦</div><div class="ph-card">4<br>♣</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">9.</span><span class="pr-name">Para (One Pair)</span></div>
+              <div class="pr-desc">Dwie karty tej samej wartości</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">A<br>♠</div><div class="ph-card red">A<br>♥</div>
+            </div>
+          </div>
+
+          <div class="pr-row">
+            <div>
+              <div><span class="pr-rank">10.</span><span class="pr-name">Wysoka karta (High Card)</span></div>
+              <div class="pr-desc">Żaden układ — wygrywa najwyższa karta</div>
+            </div>
+            <div class="pr-cards">
+              <div class="ph-card">A<br>♠</div><div class="ph-card red">K<br>♥</div><div class="ph-card red">Q<br>♦</div><div class="ph-card">J<br>♣</div><div class="ph-card">9<br>♠</div>
+            </div>
+          </div>
+        </div>
+      </details>
+
     </main>
   </div>
 
@@ -1076,6 +1218,7 @@ let pokerState = null;
 let pokerRealtimeReady = false;
 let pokerClockTimer = null;
 let pokerTimeoutClaiming = false;
+let lastPokerStateMs = 0;
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
 function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
@@ -1481,7 +1624,12 @@ function switchTab(tab) {
 function setupPokerRealtime() {
   if (pokerRealtimeReady) return;
   pokerRealtimeReady = true;
-  const reload = () => { if (activeTab === 'poker') loadPokerState(false); };
+  const reload = () => {
+    if (activeTab !== 'poker') return;
+    // Skip if we just got fresh state from an action response (avoids double fetch).
+    if (Date.now() - lastPokerStateMs < 1500) return;
+    loadPokerState(false);
+  };
   const ch = sb.channel('poker-db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'poker_tables' }, reload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'poker_seats' }, reload)
@@ -1524,6 +1672,7 @@ async function pokerAction(payload, opts = {}) {
 }
 
 function applyPokerState(data) {
+  lastPokerStateMs = Date.now();
   pokerState = data;
   if (data.profile) {
     me.coins = data.profile.coins;
