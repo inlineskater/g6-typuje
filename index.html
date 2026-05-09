@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -300,8 +301,8 @@
     .prob-bar-no  { background: var(--no);  transition: width .4s ease; }
 
     /* ── INLINE CHART ── */
-    .card-chart { width: 100%; height: 110px; border-radius: 6px; overflow: hidden; }
-    .card-chart svg { width: 100%; height: 100%; display: block; }
+    .card-chart { width: 100%; height: 130px; overflow: hidden; cursor: crosshair; }
+    .card-chart a[href*="tradingview"] { display: none !important; }
 
     /* ── BET BUTTONS ── */
     .bet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -813,7 +814,7 @@
       .card-title-row { width: 100%; }
       .card-meta { width: 100%; justify-content: flex-start; }
       .prob-num { font-size: 26px; }
-      .card-chart { height: 96px; }
+      .card-chart { height: 110px; }
 
       .lb-table th { padding: 10px 12px; }
       .lb-table td { padding: 12px; }
@@ -1357,6 +1358,7 @@ let pokerRealtimeReady = false;
 let pokerClockTimer = null;
 let pokerTimeoutClaiming = false;
 let lastPokerStateMs = 0;
+const lwCharts = new Map();
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
 function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
@@ -2272,8 +2274,12 @@ function buildMarketCard(m, pos) {
 
   const chartDiv = el('div', { className: 'card-chart' });
   const trades   = tradesByMarket[m.id] || [];
-  const pts      = [{ p: 0.5 }, ...trades.map(t => ({ p: +t.p_yes_after }))];
-  renderChart(chartDiv, pts);
+  const startT   = Math.floor(new Date(m.created_at).getTime() / 1000) || 0;
+  const pts      = [
+    { p: 0.5, t: startT },
+    ...trades.map(t => ({ p: +t.p_yes_after, t: Math.floor(new Date(t.created_at).getTime() / 1000) || 0 })),
+  ];
+  renderChart(chartDiv, pts, m.id);
   const votesBoard = buildVotesBoard(m.id);
 
   // ── Bet section / resolved banner ──
@@ -2382,83 +2388,88 @@ function buildActivityFeed() {
 }
 
 // ── Inline probability chart ──────────────────────────────────────────────
-function renderChart(container, points) {
+function renderChart(container, points, marketId) {
+  if (marketId && lwCharts.has(marketId)) {
+    const prev = lwCharts.get(marketId);
+    prev.ro?.disconnect();
+    prev.chart.remove();
+    lwCharts.delete(marketId);
+  }
   container.replaceChildren();
 
-  const W = 400, H = 110;
-  const pT = 8, pB = 4, pL = 28, pR = 6;
-  const iW = W - pL - pR, iH = H - pT - pB;
-  const n  = points.length;
+  const lineColor = '#6366f1';
+  const areaTop   = 'rgba(99,102,241,0.15)';
+  const areaBot   = 'rgba(99,102,241,0)';
 
-  const svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none' });
-  const yFn = prob => pT + (1 - prob) * iH;
-
-  // Horizontal grid lines + y-axis labels at 0 / 25 / 50 / 75 / 100%
-  [0, 0.25, 0.5, 0.75, 1].forEach(p => {
-    const y = yFn(p).toFixed(1);
-    svg.appendChild(svgEl('line', {
-      x1: pL, y1: y, x2: W - pR, y2: y,
-      stroke: p === 0.5 ? '#d1d5db' : '#e5e7eb',
-      'stroke-width': p === 0.5 ? '1' : '0.7',
-      ...(p !== 0.5 && { 'stroke-dasharray': '3 3' }),
-    }));
-    const lbl = svgEl('text', {
-      x: pL - 4, y, 'text-anchor': 'end', 'dominant-baseline': 'middle',
-      fill: '#9ca3af', 'font-size': '8', 'font-family': 'Inter, sans-serif', 'font-weight': '500',
-    });
-    lbl.textContent = Math.round(p * 100) + '%';
-    svg.appendChild(lbl);
+  const chart = LightweightCharts.createChart(container, {
+    width:  0,
+    height: 130,
+    layout: { background: { color: 'transparent' }, textColor: '#94a3b8', fontFamily: 'Inter, sans-serif', fontSize: 11 },
+    grid: {
+      vertLines: { visible: false },
+      horzLines: { color: 'rgba(148,163,184,0.12)', style: LightweightCharts.LineStyle.Dotted },
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Magnet,
+      vertLine: { color: 'rgba(99,102,241,0.5)', width: 1, style: LightweightCharts.LineStyle.Dashed, labelVisible: true },
+      horzLine: { color: 'rgba(99,102,241,0.5)', width: 1, style: LightweightCharts.LineStyle.Dashed, labelVisible: true },
+    },
+    rightPriceScale: {
+      visible: true,
+      borderVisible: false,
+      scaleMargins: { top: 0.08, bottom: 0.08 },
+    },
+    leftPriceScale: { visible: false },
+    timeScale: {
+      visible: false,
+      borderVisible: false,
+      fixLeftEdge: true,
+      fixRightEdge: true,
+    },
+    handleScroll: false,
+    handleScale: false,
   });
 
-  // Coords — single point becomes a flat line spanning full width
-  let coords;
-  if (n < 2) {
-    const y = yFn(points[0]?.p ?? 0.5);
-    coords = [[pL, y], [W - pR, y]];
-  } else {
-    coords = points.map((pt, i) => [pL + (i / (n - 1)) * iW, yFn(pt.p)]);
-  }
+  const series = chart.addAreaSeries({
+    lineColor,
+    topColor: areaTop,
+    bottomColor: areaBot,
+    lineWidth: 2,
+    crosshairMarkerVisible: true,
+    crosshairMarkerRadius: 4,
+    crosshairMarkerBorderColor: '#6366f1',
+    crosshairMarkerBackgroundColor: '#ffffff',
+    priceFormat: { type: 'custom', formatter: p => Math.round(p) + '%' },
+    lastValueVisible: true,
+    priceLineVisible: false,
+    autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
+  });
 
-  const botY  = yFn(0);
-  const firstX = coords[0][0];
-  const lastX  = coords[coords.length - 1][0];
+  // Build strictly-increasing time series (deduplicate same-second timestamps)
+  const seen = new Set();
+  const data = [];
+  points.forEach((pt, i) => {
+    let t = pt.t ?? i;
+    if (!Number.isFinite(t) || t <= 0) t = i;
+    while (seen.has(t)) t++;
+    seen.add(t);
+    data.push({ time: t, value: Math.round(pt.p * 100) });
+  });
+  series.setData(data);
+  chart.timeScale().fitContent();
 
-  // Area fill
-  const areaPts = coords.map(([cx, cy]) => (+cx).toFixed(1) + ',' + (+cy).toFixed(1)).join(' ')
-    + ' ' + (+lastX).toFixed(1) + ',' + botY.toFixed(1)
-    + ' ' + (+firstX).toFixed(1) + ',' + botY.toFixed(1);
-  svg.appendChild(svgEl('polygon', { points: areaPts, fill: 'rgba(99,102,241,0.07)', stroke: 'none' }));
+  // Resize to true container width once the card is in the DOM
+  const ro = new ResizeObserver(() => {
+    const w = container.offsetWidth;
+    if (w > 0) {
+      chart.applyOptions({ width: w });
+      chart.timeScale().fitContent();
+      ro.disconnect();
+    }
+  });
+  ro.observe(container);
 
-  // Probability line
-  const linePts = coords.map(([cx, cy]) => (+cx).toFixed(1) + ',' + (+cy).toFixed(1)).join(' ');
-  const lineAttrs = {
-    points: linePts, fill: 'none', stroke: '#6366f1', 'stroke-width': '1.8',
-    'stroke-linejoin': 'round', 'stroke-linecap': 'round',
-  };
-  if (n < 2) lineAttrs['stroke-dasharray'] = '6 4';
-  svg.appendChild(svgEl('polyline', lineAttrs));
-
-  // Endpoint dot + current-value label (real trades only)
-  if (n >= 2) {
-    const [lx, ly] = coords[coords.length - 1];
-    svg.appendChild(svgEl('circle', {
-      cx: (+lx).toFixed(1), cy: (+ly).toFixed(1), r: '3.5',
-      fill: '#6366f1', stroke: '#fff', 'stroke-width': '1.5',
-    }));
-    // Place label left of dot when near the right edge
-    const nearRight = +lx > W - pR - 30;
-    const lblX = nearRight ? +lx - 6 : +lx + 6;
-    const anchor = nearRight ? 'end' : 'start';
-    const valLbl = svgEl('text', {
-      x: lblX.toFixed(1), y: (+ly - 5).toFixed(1),
-      'text-anchor': anchor,
-      fill: '#6366f1', 'font-size': '9', 'font-family': 'Inter, sans-serif', 'font-weight': '700',
-    });
-    valLbl.textContent = Math.round(points[n - 1].p * 100) + '%';
-    svg.appendChild(valLbl);
-  }
-
-  container.appendChild(svg);
+  if (marketId) lwCharts.set(marketId, { chart, series, ro });
 }
 
 function updateCardChart(marketId) {
@@ -2467,7 +2478,14 @@ function updateCardChart(marketId) {
   const chartDiv = card.querySelector('.card-chart');
   if (!chartDiv) return;
   const trades = tradesByMarket[marketId] || [];
-  renderChart(chartDiv, [{ p: 0.5 }, ...trades.map(t => ({ p: +t.p_yes_after }))]);
+  const market = markets.find(m => m.id === marketId);
+  if (!market) return;
+  const startT = Math.floor(new Date(market.created_at).getTime() / 1000) || 0;
+  const pts = [
+    { p: 0.5, t: startT },
+    ...trades.map(t => ({ p: +t.p_yes_after, t: Math.floor(new Date(t.created_at).getTime() / 1000) || 0 })),
+  ];
+  renderChart(chartDiv, pts, marketId);
 }
 
 function buildVotesBoard(marketId) {
@@ -3122,7 +3140,7 @@ function buildShopCard(item) {
   const card = el('div', { className: 'shop-card' }, icon, title, desc, price, slots);
 
   if (iMine) {
-    card.appendChild(el('div', { className: 'shop-card-bought' }, '✅ Kupiono — Yuriy zapłaci za Ciebie w najbliższy Pizza Friday!'));
+    card.appendChild(el('div', { className: 'shop-card-bought' }, '✅ Kupiono — Yuriy zapłaci za Ciebie w najbliższy Pizza Friday Ticket!'));
   } else if (soldOut) {
     const who = purchases[0]?.profiles?.nick || '?';
     const when = purchases[0]?.purchased_at
@@ -3157,7 +3175,7 @@ async function purchaseItem(itemId, price, btn) {
   }
   me.coins = data.coins_left;
   setText(headerCoins, me.coins);
-  showToast('✅ Kupiono! Yuriy zapłaci za Ciebie w najbliższy Pizza Friday 🍕');
+  showToast('✅ Kupiono! Yuriy zapłaci za Ciebie w najbliższy Pizza Friday Ticket 🍕');
   loadShop();
 }
 
