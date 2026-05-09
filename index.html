@@ -857,6 +857,7 @@
     .shop-card-price { font-size: 24px; font-weight: 800; color: var(--accent); }
     .shop-card-slots { font-size: 12px; color: var(--muted); margin-top: -4px; }
     .shop-card-bought { font-size: 13px; color: var(--yes); font-weight: 600; margin-top: 4px; }
+    .shop-card-buyer  { font-size: 14px; font-weight: 700; margin-top: 4px; }
     .shop-card-btn { margin-top: 6px; }
     .shop-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 48px 0; grid-column: 1 / -1; }
   </style>
@@ -2879,7 +2880,10 @@ function buildShopCard(item) {
     card.appendChild(el('div', { className: 'shop-card-bought' }, '✅ Kupiono — Yuriy zapłaci za Ciebie w najbliższy Pizza Friday!'));
   } else if (soldOut) {
     const who = purchases[0]?.profiles?.nick || '?';
-    card.appendChild(el('div', { className: 'shop-card-slots' }, `Kupił: ${who}`));
+    const when = purchases[0]?.purchased_at
+      ? new Date(purchases[0].purchased_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' })
+      : '';
+    card.appendChild(el('div', { className: 'shop-card-buyer' }, `🍕 Kupił: ${who}${when ? '  ·  ' + when : ''}`));
   } else {
     const btn = el('button', {
       className: 'btn-primary shop-card-btn',
