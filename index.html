@@ -161,23 +161,32 @@
     .nav-tab:hover { color: var(--text); }
     .nav-tab.active { border-bottom-color: var(--accent); color: var(--text); }
 
-    .nav-live-btn {
-      background: none; border: none; border-bottom: 2px solid transparent;
-      color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600;
-      font-family: inherit; min-height: 44px; padding: 11px 14px;
-      transition: color .15s; margin-left: auto; margin-bottom: -1px;
-      white-space: nowrap; flex-shrink: 0;
-      display: flex; align-items: center; gap: 6px;
+    /* ── ACTIVITY BAR ── */
+    .activity-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 14px; margin-bottom: 16px;
+      cursor: pointer; transition: border-color .15s, box-shadow .15s;
+      text-decoration: none; user-select: none;
     }
-    .nav-live-btn:hover { color: var(--text); }
-    .live-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--yes); flex-shrink: 0;
-      animation: livepulse 2s ease-in-out infinite;
+    .activity-bar:hover { border-color: var(--border-hi); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .activity-bar-label {
+      font-size: 10px; font-weight: 800; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted); flex-shrink: 0;
+      display: flex; align-items: center; gap: 5px;
     }
-    @keyframes livepulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .3; }
+    .activity-bar-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--yes);
+      animation: abpulse 2s ease-in-out infinite; flex-shrink: 0;
+    }
+    @keyframes abpulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+    .activity-bar-sep { color: var(--border-hi); flex-shrink: 0; }
+    .activity-bar-content {
+      flex: 1; min-width: 0; font-size: 12px; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .activity-bar-more {
+      font-size: 11px; font-weight: 700; color: var(--accent); flex-shrink: 0;
     }
 
     /* ── MAIN ── */
@@ -980,7 +989,6 @@
     <button class="nav-tab" data-tab="leaderboard">Ranking</button>
     <button class="nav-tab" data-tab="poker">Poker</button>
     <button class="nav-tab" data-tab="shop">Sklep</button>
-    <button class="nav-live-btn" id="btn-activity"><span class="live-dot"></span>Na żywo</button>
   </nav>
 
   <div id="tab-markets">
@@ -991,6 +999,13 @@
           <p>Każdy dostaje 1000 coinów na start — typuj mądrze i zostań liderem rankingu!</p>
         </div>
         <button class="btn-new-market" id="btn-new-market">+ Nowy rynek</button>
+      </div>
+
+      <div id="activity-bar" class="activity-bar" role="button" tabindex="0">
+        <span class="activity-bar-label"><span class="activity-bar-dot"></span>Ostatnie ruchy</span>
+        <span class="activity-bar-sep">|</span>
+        <span id="activity-bar-content" class="activity-bar-content">Ładowanie…</span>
+        <span class="activity-bar-more">Pokaż wszystkie →</span>
       </div>
 
       <div class="info-banner">
@@ -2195,6 +2210,7 @@ async function renderMarkets() {
   }
 
   marketsGrid.replaceChildren(...nodes);
+  updateActivityBar();
 }
 
 function buildMarketCard(m, pos) {
@@ -2628,7 +2644,7 @@ betAmountInput.addEventListener('blur', () => setBetAmount(betAmountInput.value)
 document.getElementById('modal-close').addEventListener('click', closeBetModal);
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeBetModal(); });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeBetModal(); closeNmModal(); closeResolveModal(); hide(afOverlay); document.body.style.overflow = ''; }
+  if (e.key === 'Escape') { closeBetModal(); closeNmModal(); closeResolveModal(); closeActivityModal(); }
 });
 
 function closeBetModal() { hide(modalOverlay); document.body.style.overflow = ''; }
@@ -2692,13 +2708,37 @@ let nmIcon = '🎲';
 
 const afOverlay = document.getElementById('af-overlay');
 
-document.getElementById('btn-activity').addEventListener('click', () => {
+function openActivityModal() {
   buildActivityFeed();
   show(afOverlay);
   document.body.style.overflow = 'hidden';
-});
-document.getElementById('af-close').addEventListener('click', () => { hide(afOverlay); document.body.style.overflow = ''; });
-afOverlay.addEventListener('click', e => { if (e.target === afOverlay) { hide(afOverlay); document.body.style.overflow = ''; } });
+}
+function closeActivityModal() { hide(afOverlay); document.body.style.overflow = ''; }
+
+const activityBar = document.getElementById('activity-bar');
+activityBar.addEventListener('click', openActivityModal);
+activityBar.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openActivityModal(); });
+document.getElementById('af-close').addEventListener('click', closeActivityModal);
+afOverlay.addEventListener('click', e => { if (e.target === afOverlay) closeActivityModal(); });
+
+function updateActivityBar() {
+  const contentEl = document.getElementById('activity-bar-content');
+  if (!contentEl) return;
+  const allTrades = [];
+  Object.entries(tradesByMarket).forEach(([marketId, trades]) => {
+    const market = markets.find(m => m.id === marketId);
+    if (!market) return;
+    trades.forEach(t => allTrades.push({ ...t, marketTitle: market.title, marketIcon: market.icon }));
+  });
+  allTrades.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const t = allTrades[0];
+  if (!t) { contentEl.textContent = 'Brak aktywności — postaw pierwszy zakład!'; return; }
+  const side = t.side === 'YES' ? 'TAK' : 'NIE';
+  contentEl.textContent =
+    (t.nick_snapshot || 'Gracz') + ' postawił ' + t.amount + ' 🪙 na ' + side +
+    ' · ' + (t.marketIcon || '🎲') + ' ' + (t.marketTitle || '') +
+    ' · ' + relTime(t.created_at);
+}
 
 document.getElementById('btn-new-market').addEventListener('click', () => {
   document.getElementById('nm-title').value    = '';
