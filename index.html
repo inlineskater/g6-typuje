@@ -1546,7 +1546,9 @@ function relTime(ts) {
   if (m < 60) return m + ' min temu';
   const h = Math.floor(m / 60);
   if (h < 24) return h + ' h temu';
-  return Math.floor(h / 24) + ' dni temu';
+  const d = Math.floor(h / 24);
+  if (d === 1) return '1 dzień temu';
+  return d + ' dni temu';
 }
 
 function fmtDateTime(ts) {
@@ -2014,7 +2016,7 @@ function renderPoker() {
 }
 
 function buildPokerTablePanel(state) {
-  const lastMsg = state.events && state.events.length > 0 ? state.events[0].message : null;
+  const lastMsg = state.events && state.events.length > 0 ? state.events[state.events.length - 1].message : null;
   const phaseBar = buildPhaseBar(state.table.phase);
 
   const boardCards = [];
@@ -2267,7 +2269,7 @@ function buildPokerEvents(events) {
   if (!events || events.length === 0) {
     return el('div', { className: 'poker-events' }, el('p', { className: 'poker-note' }, 'Brak historii stołu.'));
   }
-  const recent = events.slice(0, 4);
+  const recent = events.slice(-4).reverse();
   return el('div', { className: 'poker-events' },
     ...recent.map(evt =>
       el('div', { className: 'poker-event-inline' },
@@ -2491,7 +2493,7 @@ function buildCardStats(marketId) {
   const totalPot = trades.reduce((s, t) => s + (+t.amount || 0), 0);
   const uniqueUsers = new Set(trades.map(t => t.user_id || t.nick_snapshot)).size;
   const dot = () => el('span', { className: 'card-stats-dot' }, '·');
-  const pluralGraczy = uniqueUsers === 1 ? 'gracz' : uniqueUsers < 5 ? 'graczy' : 'graczy';
+  const pluralGraczy = uniqueUsers === 1 ? 'gracz' : 'graczy';
   return el('div', { className: 'card-stats' },
     'Pula: ' + totalPot + ' 🪙',
     dot(), uniqueUsers + ' ' + pluralGraczy,
@@ -2769,9 +2771,6 @@ function openBetModal(marketId, side) {
     return;
   }
   const lockedSide = getLockedSide(marketId);
-  if (lockedSide && lockedSide !== side) {
-    showToast('❌ Na tym rynku możesz dokładać tylko do strony ' + (lockedSide === 'YES' ? 'TAK' : 'NIE') + '.');
-  }
   setText(modalMarketName, activeMarket.title);
   activeSide      = lockedSide || side;
   setBetAmount(Math.min(10, me.coins));
