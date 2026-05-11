@@ -1,0 +1,129 @@
+// @ts-nocheck
+import { createClient } from "npm:@supabase/supabase-js@2";
+import postgres from "npm:postgres@3.4.5";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, idle_timeout: 20 });
+
+const SYMBOLS = ["coffee", "calculator", "clipboard", "chart", "briefcase", "office", "g6"];
+const WEIGHTS = [30, 25, 18, 12, 8, 5, 2]; // sum=100
+const MULTIPLIERS = { g6: 50, office: 20, briefcase: 10, chart: 5, clipboard: 3, calculator: 2, coffee: 1 };
+const BET = 10;
+
+const PAYLINES = [
+  [[0,0],[0,1],[0,2]],
+  [[1,0],[1,1],[1,2]],
+  [[2,0],[2,1],[2,2]],
+  [[0,0],[1,1],[2,2]],
+  [[2,0],[1,1],[0,2]],
+];
+
+function randomSymbol() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  let r = buf[0] % 100;
+  for (let i = 0; i < SYMBOLS.length; i++) {
+    r -= WEIGHTS[i];
+    if (r < 0) return SYMBOLS[i];
+  }
+  return SYMBOLS[0];
+}
+
+function generateGrid() {
+  return [[randomSymbol(), randomSymbol(), randomSymbol()],
+          [randomSymbol(), randomSymbol(), randomSymbol()],
+          [randomSymbol(), randomSymbol(), randomSymbol()]];
+}
+
+function checkPaylines(grid) {
+  const winningLines = [];
+  for (let i = 0; i < PAYLINES.length; i++) {
+    const line = PAYLINES[i];
+    const syms = line.map(([r, c]) => grid[r][c]);
+    if (syms[0] === syms[1] && syms[1] === syms[2]) {
+      winningLines.push({ line: i, symbol: syms[0], multiplier: MULTIPLIERS[syms[0]] });
+    } else {
+      const g6Count = syms.filter(s => s === "g6").length;
+      if (g6Count === 2) {
+        winningLines.push({ line: i, symbol: "g6x2", multiplier: 3 });
+      }
+    }
+  }
+  return winningLines;
+}
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function requireUser(req) {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) throw Object.assign(new Error("Musisz być zalogowany."), { isGame: true });
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const authClient = createClient(supabaseUrl!, anonKey!, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data, error } = await authClient.auth.getUser();
+  if (error || !data?.user) throw Object.assign(new Error("Sesja wygasła."), { isGame: true });
+  return data.user;
+}
+
+async function spin(userId) {
+  return await db.begin(async (tx) => {
+    const [profile] = await tx`select coins from public.profiles where id = ${userId} for update`;
+    if (!profile) throw Object.assign(new Error("Profil nie istnieje."), { isGame: true });
+    if (profile.coins < BET) throw Object.assign(new Error("Za mało coinów!"), { isGame: true });
+
+    const grid = generateGrid();
+    const winningLines = checkPaylines(grid);
+    const totalWon = winningLines.reduce((s, w) => s + BET * w.multiplier, 0);
+    const newBalance = profile.coins - BET + totalWon;
+
+    await tx`update public.profiles set coins = ${newBalance} where id = ${userId}`;
+    await tx`insert into public.slots_spins (user_id, grid, winning_lines, total_won)
+             values (${userId}, ${JSON.stringify(grid)}, ${JSON.stringify(winningLines)}, ${totalWon})`;
+
+    return { grid, winningLines, totalWon, balance: newBalance };
+  });
+}
+
+async function history(userId) {
+  const rows = await db`
+    select grid, winning_lines, total_won, created_at
+    from public.slots_spins
+    where user_id = ${userId}
+    order by created_at desc
+    limit 20
+  `;
+  return { spins: rows };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ ok: false, error: "Method not allowed." }, 405);
+
+  try {
+    const user = await requireUser(req);
+    const body = await req.json().catch(() => ({}));
+    const action = String(body.action ?? "history");
+
+    let result;
+    if (action === "spin") result = await spin(user.id);
+    else if (action === "history") result = await history(user.id);
+    else throw Object.assign(new Error("Nieznana akcja."), { isGame: true });
+
+    return json({ ok: true, ...result });
+  } catch (err) {
+    console.error(err);
+    return json({ ok: false, error: err?.isGame ? err.message : "Błąd serwera." });
+  }
+});

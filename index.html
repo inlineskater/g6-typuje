@@ -1107,6 +1107,51 @@
     .roulette-history-dot.red { background: #dc2626; }
     .roulette-history-dot.black { background: #1e293b; }
 
+    /* ── Slots (Jednoreki Bandyta) ── */
+    .slots-machine { text-align: center; }
+    .slots-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+    .slots-grid {
+      display: inline-grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+      background: #1e293b; border: 3px solid #334155; border-radius: 10px;
+      padding: 8px; box-shadow: inset 0 2px 8px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.15);
+      margin-bottom: 14px;
+    }
+    .slots-cell {
+      width: 72px; height: 72px; background: #f8fafc; border: 2px solid #e2e8f0;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 32px; font-weight: 800; transition: all .2s;
+    }
+    .slots-cell.win { border-color: #f59e0b; background: #fef3c7; box-shadow: 0 0 12px rgba(245,158,11,.5); }
+    .slots-cell.spinning { filter: blur(2px); animation: slots-blur .1s infinite; }
+    @keyframes slots-blur { 0% { transform: translateY(-2px); } 100% { transform: translateY(2px); } }
+    .slots-cell .g6-sym { font-size: 18px; font-weight: 900; color: #6366f1; letter-spacing: -1px; }
+    .slots-spin-btn {
+      width: 120px; height: 48px; border-radius: 8px; border: none;
+      background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;
+      font-size: 14px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(99,102,241,.35);
+      transition: all .2s; margin-bottom: 14px;
+    }
+    .slots-spin-btn:hover:not(:disabled) { transform: scale(1.05); }
+    .slots-spin-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .slots-result { min-height: 28px; font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .slots-result.win { color: var(--yes); }
+    .slots-result.lose { color: var(--no); }
+    .slots-paytable {
+      display: inline-grid; grid-template-columns: auto auto; gap: 2px 16px;
+      font-size: 11px; color: var(--muted); text-align: left; margin-bottom: 14px;
+    }
+    .slots-paytable span:nth-child(even) { font-weight: 700; color: var(--text); }
+    .slots-history { display: flex; flex-direction: column; gap: 4px; max-width: 360px; margin: 0 auto; }
+    .slots-history-item {
+      display: flex; align-items: center; gap: 8px; font-size: 12px;
+      padding: 4px 8px; background: var(--surface); border-radius: 6px;
+    }
+    .slots-history-item .won { color: var(--yes); font-weight: 700; }
+    .slots-history-item .lost { color: var(--no); font-weight: 700; }
+    @keyframes slots-fall { 0% { transform: translateY(-50px) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+    @keyframes slots-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
     /* ── Shop ── */
     input[type="number"], textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
@@ -1239,6 +1284,7 @@
     <button class="nav-tab" data-tab="leaderboard">Ranking</button>
     <button class="nav-tab" data-tab="poker">Poker</button>
     <button class="nav-tab" data-tab="roulette">Ruletka</button>
+    <button class="nav-tab" data-tab="slots">Jednoreki bandyta</button>
     <button class="nav-tab" data-tab="shop">Sklep</button>
   </nav>
 
@@ -1457,6 +1503,38 @@
       <div class="roulette-history-section">
         <h3 class="section-title">Ostatnie wyniki</h3>
         <div id="roulette-history" class="roulette-history"></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-slots" class="hidden">
+    <main>
+      <div class="slots-machine">
+        <h2 style="font-size:18px">Jednoreki Bandyta 🎰</h2>
+        <p class="slots-subtitle">Audyt Twojego szczęścia • Stawka: 10 🪙 • 5 linii wygrywających</p>
+
+        <div class="slots-grid" id="slots-grid">
+          <div class="slots-cell">☕</div><div class="slots-cell">🧮</div><div class="slots-cell">📊</div>
+          <div class="slots-cell">📋</div><div class="slots-cell">💼</div><div class="slots-cell">☕</div>
+          <div class="slots-cell">🧮</div><div class="slots-cell">☕</div><div class="slots-cell">📋</div>
+        </div>
+
+        <div><button class="slots-spin-btn" id="slots-spin-btn">ZAKRĘĆ (10 🪙)</button></div>
+        <div id="slots-result" class="slots-result"></div>
+
+        <div class="slots-paytable">
+          <span>3× G6</span><span>×50</span>
+          <span>3× 🏢</span><span>×20</span>
+          <span>3× 💼</span><span>×10</span>
+          <span>3× 📊</span><span>×5</span>
+          <span>3× 📋</span><span>×3</span>
+          <span>3× 🧮</span><span>×2</span>
+          <span>3× ☕</span><span>×1</span>
+          <span>2× G6</span><span>×3</span>
+        </div>
+
+        <h3 class="section-title">Ostatnie wyniki</h3>
+        <div id="slots-history" class="slots-history"></div>
       </div>
     </main>
   </div>
@@ -2035,22 +2113,26 @@ function switchTab(tab) {
   const tL = document.getElementById('tab-leaderboard');
   const tP = document.getElementById('tab-poker');
   const tR = document.getElementById('tab-roulette');
+  const tSl = document.getElementById('tab-slots');
   const tS = document.getElementById('tab-shop');
   if (tab === 'markets') {
-    show(tM); hide(tL); hide(tP); hide(tR); hide(tS);
+    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tS);
     if (markets.length === 0) loadMarkets();
   } else if (tab === 'leaderboard') {
-    hide(tM); show(tL); hide(tP); hide(tR); hide(tS);
+    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tS);
     loadLeaderboard();
   } else if (tab === 'poker') {
-    hide(tM); hide(tL); show(tP); hide(tR); hide(tS);
+    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tS);
     setupPokerRealtime();
     loadPokerState();
   } else if (tab === 'roulette') {
-    hide(tM); hide(tL); hide(tP); show(tR); hide(tS);
+    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tS);
     loadRouletteHistory();
+  } else if (tab === 'slots') {
+    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tS);
+    loadSlotsHistory();
   } else if (tab === 'shop') {
-    hide(tM); hide(tL); hide(tP); hide(tR); show(tS);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tS);
     loadShop();
   }
 }
@@ -3757,6 +3839,121 @@ async function loadRouletteHistory() {
     histEl.replaceChildren();
     for (const spin of (data.spins || [])) {
       histEl.appendChild(el('div', { className: `roulette-history-dot ${spin.result_color}` }, String(spin.result_number)));
+    }
+  } catch (err) { /* silent */ }
+}
+
+// ── Slots (Jednoreki Bandyta) ──────────────────────────────────────────────
+const SLOTS_SYMBOLS = { coffee: '☕', calculator: '🧮', clipboard: '📋', chart: '📊', briefcase: '💼', office: '🏢', g6: 'G6' };
+const SLOTS_ALL = Object.keys(SLOTS_SYMBOLS);
+const SLOTS_WIN_MSGS = ['Bilans się zgadza! 🎉','Audyt pozytywny! ✅','Faktura wystawiona! 💰','Debet = Kredyt! 📊','Księgowa by się ucieszyła! 🧮','Rozliczenie kwartalne: ZYSK! 📈'];
+const SLOTS_LOSE_MSGS = ['Strata podatkowa...','Bilans ujemny 📉','Audyt negatywny','Koszty przewyższyły przychody','Urząd skarbowy się cieszy'];
+
+function slotsSymbolHtml(sym) {
+  if (sym === 'g6') return '<span class="g6-sym">G6</span>';
+  return SLOTS_SYMBOLS[sym] || '?';
+}
+
+async function invokeSlots(payload) {
+  const { data, error } = await sb.functions.invoke('slots-action', { body: payload });
+  if (error) throw new Error(error.message || 'Błąd połączenia z automatem.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd automatu.');
+  return data;
+}
+
+function slotsWinAnimation(totalWon) {
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden';
+  const count = totalWon >= 500 ? 50 : totalWon >= 100 ? 30 : 15;
+  const emojis = ['🧮','📊','📋','💼','🏢','☕','💰'];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    const size = 20 + Math.random() * 24;
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    p.style.cssText = `position:absolute;top:-50px;left:${Math.random()*100}%;font-size:${size}px;animation:slots-fall ${2+Math.random()*1.5}s linear ${Math.random()*0.5}s forwards`;
+    container.appendChild(p);
+  }
+  document.body.appendChild(container);
+  if (totalWon >= 500) document.body.style.animation = 'slots-shake .1s 6';
+  setTimeout(() => { container.remove(); document.body.style.animation = ''; }, 3500);
+}
+
+document.getElementById('slots-spin-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('slots-spin-btn');
+  const cells = document.querySelectorAll('#slots-grid .slots-cell');
+  const resultEl = document.getElementById('slots-result');
+  btn.disabled = true;
+  resultEl.textContent = '';
+  resultEl.className = 'slots-result';
+  cells.forEach(c => { c.classList.remove('win'); c.classList.add('spinning'); });
+
+  // Rapid symbol cycling animation
+  const interval = setInterval(() => {
+    cells.forEach(c => { c.innerHTML = slotsSymbolHtml(SLOTS_ALL[Math.floor(Math.random() * SLOTS_ALL.length)]); });
+  }, 80);
+
+  try {
+    const data = await invokeSlots({ action: 'spin' });
+    me.coins = data.balance;
+    setText(headerCoins, me.coins);
+
+    // Stop cycling after a short delay, reveal column by column
+    setTimeout(() => {
+      clearInterval(interval);
+      const grid = data.grid;
+      for (let c = 0; c < 3; c++) {
+        setTimeout(() => {
+          for (let r = 0; r < 3; r++) {
+            const cell = cells[r * 3 + c];
+            cell.classList.remove('spinning');
+            cell.innerHTML = slotsSymbolHtml(grid[r][c]);
+          }
+          // After last column, show results
+          if (c === 2) {
+            setTimeout(() => {
+              // Highlight winning cells
+              for (const w of data.winningLines) {
+                const PAYLINES = [[[0,0],[0,1],[0,2]],[[1,0],[1,1],[1,2]],[[2,0],[2,1],[2,2]],[[0,0],[1,1],[2,2]],[[2,0],[1,1],[0,2]]];
+                for (const [r2, c2] of PAYLINES[w.line]) cells[r2 * 3 + c2].classList.add('win');
+              }
+              const net = data.totalWon - 10;
+              if (net > 0) {
+                const msg = SLOTS_WIN_MSGS[Math.floor(Math.random() * SLOTS_WIN_MSGS.length)];
+                resultEl.className = 'slots-result win';
+                resultEl.textContent = `+${net} coinów! ${msg}`;
+                slotsWinAnimation(data.totalWon);
+              } else {
+                const msg = SLOTS_LOSE_MSGS[Math.floor(Math.random() * SLOTS_LOSE_MSGS.length)];
+                resultEl.className = 'slots-result lose';
+                resultEl.textContent = `−10 coinów. ${msg}`;
+              }
+              btn.disabled = false;
+            }, 200);
+          }
+        }, c * 400);
+      }
+    }, 1200);
+  } catch (err) {
+    clearInterval(interval);
+    cells.forEach(c => c.classList.remove('spinning'));
+    showToast('❌ ' + err.message);
+    btn.disabled = false;
+  }
+});
+
+async function loadSlotsHistory() {
+  try {
+    const data = await invokeSlots({ action: 'history' });
+    const histEl = document.getElementById('slots-history');
+    histEl.replaceChildren();
+    for (const spin of (data.spins || [])) {
+      const gridStr = spin.grid.flat().map(s => SLOTS_SYMBOLS[s] || s).join('');
+      const cls = spin.total_won > 10 ? 'won' : 'lost';
+      const txt = spin.total_won > 0 ? `+${spin.total_won - 10}` : '−10';
+      histEl.appendChild(el('div', { className: 'slots-history-item' },
+        el('span', {}, gridStr),
+        el('span', { className: cls }, txt + ' 🪙')
+      ));
     }
   } catch (err) { /* silent */ }
 }
