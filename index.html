@@ -1363,17 +1363,14 @@
         </div>
       </section>
       <section class="history-section">
-        <h3 class="section-title">Historia transakcji</h3>
-        <p class="section-sub">Ostatnie ruchy coinów na rynkach i w grach hazardowych.</p>
+        <h3 class="section-title">Historia — Rynki 📈</h3>
+        <p class="section-sub">Ostatnie zakłady na rynkach predykcyjnych.</p>
         <div class="history-filters">
           <input class="history-filter-input" id="tx-filter-search" type="search" placeholder="Gracz lub rynek">
           <select class="history-filter-select" id="tx-filter-side">
             <option value="">Typ: wszystkie</option>
             <option value="YES">TAK</option>
             <option value="NO">NIE</option>
-            <option value="roulette">Ruletka</option>
-            <option value="slots">Sloty</option>
-            <option value="poker">Poker</option>
           </select>
           <select class="history-filter-select" id="tx-filter-status">
             <option value="">Status: wszystkie</option>
@@ -1383,6 +1380,23 @@
           <button class="btn-ghost history-clear" id="tx-filter-clear" type="button">Wyczyść</button>
         </div>
         <div id="transaction-history-wrap" class="lb-wrap history-wrap">
+          <div class="loading-center"><div class="spinner"></div></div>
+        </div>
+      </section>
+      <section class="history-section">
+        <h3 class="section-title">Historia — Hazard 🎰</h3>
+        <p class="section-sub">Ostatnie ruchy coinów w ruletce, slotach i pokerze.</p>
+        <div class="history-filters">
+          <input class="history-filter-input" id="hz-filter-search" type="search" placeholder="Gracz lub gra">
+          <select class="history-filter-select" id="hz-filter-game">
+            <option value="">Gra: wszystkie</option>
+            <option value="roulette">Ruletka</option>
+            <option value="slots">Sloty</option>
+            <option value="poker">Poker</option>
+          </select>
+          <button class="btn-ghost history-clear" id="hz-filter-clear" type="button">Wyczyść</button>
+        </div>
+        <div id="hazard-history-wrap" class="lb-wrap history-wrap">
           <div class="loading-center"><div class="spinner"></div></div>
         </div>
       </section>
@@ -1745,8 +1759,10 @@ let marketRenderSeq = 0;
 let activeSide = 'YES';
 let activeMarket = null;
 let realtimeChannels = [];
-let transactionHistoryRows = [];
+let marketHistoryRows = [];
+let hazardHistoryRows = [];
 let showAllTransactions = false;
+let showAllHazard = false;
 let activeTab = 'markets';
 let pokerState = null;
 let pokerRealtimeReady = false;
@@ -2123,6 +2139,17 @@ txFilterClear.addEventListener('click', () => {
   txFilterSide.value = '';
   txFilterStatus.value = '';
   applyTransactionFilters();
+});
+
+const hzFilterSearch = document.getElementById('hz-filter-search');
+const hzFilterGame = document.getElementById('hz-filter-game');
+const hzFilterClear = document.getElementById('hz-filter-clear');
+hzFilterSearch.addEventListener('input', applyHazardFilters);
+hzFilterGame.addEventListener('change', applyHazardFilters);
+hzFilterClear.addEventListener('click', () => {
+  hzFilterSearch.value = '';
+  hzFilterGame.value = '';
+  applyHazardFilters();
 });
 
 // ── App shell ─────────────────────────────────────────────────────────────
@@ -3373,19 +3400,22 @@ async function resolveActiveMarket(resolution) {
 async function loadLeaderboard() {
   const wrap = document.getElementById('leaderboard-wrap');
   const historyWrap = document.getElementById('transaction-history-wrap');
+  const hazardHistWrap = document.getElementById('hazard-history-wrap');
   const hazardistaWrap = document.getElementById('hazardista-wrap');
   wrap.replaceChildren(makeSpinner());
   historyWrap.replaceChildren(makeSpinner());
+  hazardHistWrap.replaceChildren(makeSpinner());
   hazardistaWrap.replaceChildren(makeSpinner());
   showAllTransactions = false;
+  showAllHazard = false;
 
   const [leaderboardRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes] = await Promise.all([
     sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20),
     sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, shares, p_yes_after').order('created_at', { ascending: false }).limit(500),
     sb.from('markets').select('id, icon, title, resolved, resolution, yes_shares, no_shares'),
     sb.from('trades').select('market_id, user_id, side, amount, shares').limit(5000),
-    sb.from('game_transactions').select('*').order('created_at', { ascending: false }).limit(500),
-    sb.from('hazard_stats').select('*').order('total_pl', { ascending: false }),
+    sb.from('game_transactions').select('*').neq('nick_snapshot', 'admin').order('created_at', { ascending: false }).limit(500),
+    sb.from('hazard_stats').select('*').neq('nick', 'admin').order('total_pl', { ascending: false }),
   ]);
 
   if (leaderboardRes.error) {
@@ -3399,10 +3429,13 @@ async function loadLeaderboard() {
 
   if (tradesRes.error || marketsRes.error || allTradesRes.error) {
     historyWrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '14px', padding: '24px' } }, DB_ERROR_MESSAGE));
-    return;
+  } else {
+    marketHistoryRows = buildMarketHistoryRows(tradesRes.data || [], marketsRes.data || [], allTradesRes.data || []);
+    renderMarketHistory(historyWrap, getFilteredMarketRows());
   }
-  transactionHistoryRows = buildTransactionHistoryRows(tradesRes.data || [], marketsRes.data || [], allTradesRes.data || [], gameRes.data || []);
-  renderTransactionHistory(historyWrap, getFilteredTransactionRows());
+
+  hazardHistoryRows = buildHazardHistoryRows(gameRes.data || []);
+  renderHazardHistory(hazardHistWrap, getFilteredHazardRows());
 }
 
 function buildCalibrationByUser(allTrades, marketsData) {
@@ -3516,12 +3549,12 @@ function profitClassName(profit) {
   return 'tx-pl-flat';
 }
 
-function buildTransactionHistoryRows(trades, marketsData, allTrades, gameTransactions) {
+function buildMarketHistoryRows(trades, marketsData, allTrades) {
   const marketsById = {};
   marketsData.forEach(m => { marketsById[m.id] = m; });
   const tradeStatsByMarket = buildTradeStatsByMarket(allTrades);
 
-  const marketRows = trades
+  return trades
     .filter(row => row.nick_snapshot !== 'admin')
     .map(row => {
       const market = marketsById[row.market_id];
@@ -3539,7 +3572,6 @@ function buildTransactionHistoryRows(trades, marketsData, allTrades, gameTransac
         icon: market?.icon || '🎲',
         sideYes,
         sideLabel,
-        gameType: 'market',
         status: market?.resolved ? 'closed' : 'open',
         resolvedText,
         profit: profitInfo.profit,
@@ -3548,7 +3580,9 @@ function buildTransactionHistoryRows(trades, marketsData, allTrades, gameTransac
         searchText: ((row.nick_snapshot || '') + ' ' + title).toLowerCase(),
       };
     });
+}
 
+function buildHazardHistoryRows(gameTransactions) {
   const GAME_META = {
     roulette: { icon: '🎰', title: 'Ruletka', sideLabel: 'Spin' },
     slots: { icon: '🎰', title: 'Jednoręki bandyta', sideLabel: 'Spin' },
@@ -3556,7 +3590,7 @@ function buildTransactionHistoryRows(trades, marketsData, allTrades, gameTransac
     poker_cashout: { icon: '🃏', title: 'Poker', sideLabel: 'Cashout' },
   };
 
-  const gameRows = (gameTransactions || []).map(row => {
+  return (gameTransactions || []).map(row => {
     const meta = GAME_META[row.game] || { icon: '🎲', title: row.game, sideLabel: row.game };
     const bet = +row.bet || 0;
     const won = +row.won || 0;
@@ -3571,45 +3605,45 @@ function buildTransactionHistoryRows(trades, marketsData, allTrades, gameTransac
       nick_snapshot: row.nick_snapshot,
       title: meta.title,
       icon: meta.icon,
-      sideYes: false,
       sideLabel: meta.sideLabel,
       gameType: baseGame,
-      status: 'closed',
-      resolvedText: meta.sideLabel,
       amount: bet,
       profit,
-      profitApprox: false,
-      profitTitle: meta.title,
-      p_yes_after: null,
       searchText: ((row.nick_snapshot || '') + ' ' + meta.title).toLowerCase(),
     };
   });
-
-  return [...marketRows, ...gameRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
-function getFilteredTransactionRows() {
+function getFilteredMarketRows() {
   const q = txFilterSearch.value.trim().toLowerCase();
   const side = txFilterSide.value;
   const status = txFilterStatus.value;
-  return transactionHistoryRows.filter(row => {
+  return marketHistoryRows.filter(row => {
     if (q && !row.searchText.includes(q)) return false;
-    if (side) {
-      if (side === 'YES' || side === 'NO') {
-        if (row.side !== side) return false;
-      } else {
-        if (row.gameType !== side) return false;
-      }
-    }
+    if (side && row.side !== side) return false;
     if (status && row.status !== status) return false;
+    return true;
+  });
+}
+
+function getFilteredHazardRows() {
+  const q = (document.getElementById('hz-filter-search')?.value || '').trim().toLowerCase();
+  const game = (document.getElementById('hz-filter-game')?.value || '');
+  return hazardHistoryRows.filter(row => {
+    if (q && !row.searchText.includes(q)) return false;
+    if (game && row.gameType !== game) return false;
     return true;
   });
 }
 
 function applyTransactionFilters() {
   const historyWrap = document.getElementById('transaction-history-wrap');
-  if (!historyWrap) return;
-  renderTransactionHistory(historyWrap, getFilteredTransactionRows());
+  if (historyWrap) renderMarketHistory(historyWrap, getFilteredMarketRows());
+}
+
+function applyHazardFilters() {
+  const wrap = document.getElementById('hazard-history-wrap');
+  if (wrap) renderHazardHistory(wrap, getFilteredHazardRows());
 }
 
 function renderHazardista(wrap, data) {
@@ -3639,9 +3673,9 @@ function renderHazardista(wrap, data) {
   wrap.replaceChildren(el('div', { className: 'hazardista-grid' }, left, right));
 }
 
-function renderTransactionHistory(wrap, rowsData) {
+function renderMarketHistory(wrap, rowsData) {
   if (!rowsData || rowsData.length === 0) {
-    const msg = transactionHistoryRows.length === 0 ? 'Brak transakcji.' : 'Brak transakcji dla wybranych filtrów.';
+    const msg = marketHistoryRows.length === 0 ? 'Brak transakcji.' : 'Brak transakcji dla wybranych filtrów.';
     wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, msg));
     return;
   }
@@ -3649,30 +3683,23 @@ function renderTransactionHistory(wrap, rowsData) {
   const limited = !showAllTransactions && rowsData.length > 100;
   const visible = limited ? rowsData.slice(0, 100) : rowsData;
 
-  const rows = visible.map(row => {
-    const isGame = row.gameType && row.gameType !== 'market';
-    const sideClass = isGame ? 'tx-side-game' : (row.sideYes ? 'tx-side-yes' : 'tx-side-no');
-    const lastCol = row.p_yes_after != null
-      ? 'TAK ' + fmtPct(+row.p_yes_after)
-      : '—';
-    return el('tr', {},
-      el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
-      el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
-      el('td', { className: 'tx-market' },
-        el('span', { className: 'tx-market-title', title: row.title }, row.icon + ' ' + row.title),
-        el('span', { className: 'tx-status' }, row.resolvedText)
-      ),
-      el('td', {}, el('span', { className: 'tx-side ' + sideClass }, row.sideLabel)),
-      el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
-      el('td', { className: 'tx-pl ' + profitClassName(row.profit), title: row.profitTitle }, fmtSignedCoins(row.profit, row.profitApprox)),
-      el('td', { className: 'tx-prob' }, lastCol)
-    );
-  });
+  const rows = visible.map(row => el('tr', {},
+    el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
+    el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
+    el('td', { className: 'tx-market' },
+      el('span', { className: 'tx-market-title', title: row.title }, row.icon + ' ' + row.title),
+      el('span', { className: 'tx-status' }, row.resolvedText)
+    ),
+    el('td', {}, el('span', { className: 'tx-side ' + (row.sideYes ? 'tx-side-yes' : 'tx-side-no') }, row.sideLabel)),
+    el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
+    el('td', { className: 'tx-pl ' + profitClassName(row.profit), title: row.profitTitle }, fmtSignedCoins(row.profit, row.profitApprox)),
+    el('td', { className: 'tx-prob' }, 'TAK ' + fmtPct(+row.p_yes_after || 0))
+  ));
 
   const table = el('table', { className: 'lb-table' },
     el('thead', {}, el('tr', {},
       el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
-      el('th', {}, 'Gra / Rynek'), el('th', {}, 'Typ'),
+      el('th', {}, 'Rynek'), el('th', {}, 'Typ'),
       el('th', {}, 'Kwota'), el('th', {}, 'Zysk/strata'),
       el('th', {}, 'Po transakcji')
     )),
@@ -3682,6 +3709,45 @@ function renderTransactionHistory(wrap, rowsData) {
   if (limited) {
     const btn = el('button', { className: 'btn-ghost tx-show-all', type: 'button' }, `Pokaż wszystkie (${rowsData.length})`);
     btn.onclick = () => { showAllTransactions = true; applyTransactionFilters(); };
+    wrap.replaceChildren(table, btn);
+  } else {
+    wrap.replaceChildren(table);
+  }
+}
+
+function renderHazardHistory(wrap, rowsData) {
+  if (!rowsData || rowsData.length === 0) {
+    const msg = hazardHistoryRows.length === 0 ? 'Brak transakcji hazardowych.' : 'Brak transakcji dla wybranych filtrów.';
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, msg));
+    return;
+  }
+
+  const limited = !showAllHazard && rowsData.length > 100;
+  const visible = limited ? rowsData.slice(0, 100) : rowsData;
+
+  const rows = visible.map(row => el('tr', {},
+    el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
+    el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
+    el('td', { className: 'tx-market' },
+      el('span', { className: 'tx-market-title' }, row.icon + ' ' + row.title)
+    ),
+    el('td', {}, el('span', { className: 'tx-side tx-side-game' }, row.sideLabel)),
+    el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
+    el('td', { className: 'tx-pl ' + profitClassName(row.profit) }, fmtSignedCoins(row.profit, false))
+  ));
+
+  const table = el('table', { className: 'lb-table' },
+    el('thead', {}, el('tr', {},
+      el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
+      el('th', {}, 'Gra'), el('th', {}, 'Typ'),
+      el('th', {}, 'Kwota'), el('th', {}, 'Zysk/strata')
+    )),
+    el('tbody', {}, ...rows)
+  );
+
+  if (limited) {
+    const btn = el('button', { className: 'btn-ghost tx-show-all', type: 'button' }, `Pokaż wszystkie (${rowsData.length})`);
+    btn.onclick = () => { showAllHazard = true; applyHazardFilters(); };
     wrap.replaceChildren(table, btn);
   } else {
     wrap.replaceChildren(table);
