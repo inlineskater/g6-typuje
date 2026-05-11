@@ -3670,23 +3670,26 @@ function renderHazardista(wrap, data) {
   const winners = data.filter(r => r.total_pl > 0).slice(0, 5);
   const losers = data.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 5);
 
-  function makeList(items, positive) {
-    if (items.length === 0) return el('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Brak.');
-    const ul = el('ul', { className: 'hazardista-list' });
-    items.forEach((r, i) => {
-      const nickCls = 'hz-nick' + (r.user_id === me.id ? ' me' : '');
-      const plCls = 'hz-pl ' + (positive ? 'hz-pl-pos' : 'hz-pl-neg');
-      ul.append(el('li', {},
-        el('span', { className: nickCls }, (i === 0 && positive ? '🥇 ' : (i + 1) + '. ') + r.nick),
-        el('span', { className: plCls }, (positive ? '+' : '') + r.total_pl + ' 🪙')
-      ));
-    });
-    return ul;
+  function makeTable(items, positive, title) {
+    if (items.length === 0) return el('div', {}, el('div', { className: 'hazardista-col-title' }, title), el('p', { style: { color: 'var(--muted)', fontSize: '13px', padding: '8px' } }, 'Brak.'));
+    const rows = items.map((r, i) => el('tr', {},
+      el('td', { className: 'lb-rank' + (i === 0 && positive ? ' gold' : '') }, i === 0 && positive ? '🥇' : String(i + 1)),
+      el('td', { className: 'lb-nick' + (r.user_id === me.id ? ' me' : '') }, r.nick + (r.user_id === me.id ? ' (Ty)' : '')),
+      el('td', { className: 'tx-pl ' + (positive ? 'tx-pl-profit' : 'tx-pl-loss') }, (positive ? '+' : '') + r.total_pl + ' 🪙')
+    ));
+    return el('div', {},
+      el('div', { className: 'hazardista-col-title' }, title),
+      el('table', { className: 'lb-table' },
+        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Bilans'))),
+        el('tbody', {}, ...rows)
+      )
+    );
   }
 
-  const left = el('div', {}, el('div', { className: 'hazardista-col-title' }, '🏆 Najwięksi wygrani'), makeList(winners, true));
-  const right = el('div', {}, el('div', { className: 'hazardista-col-title' }, '💸 Najwięksi przegrani'), makeList(losers, false));
-  wrap.replaceChildren(el('div', { className: 'hazardista-grid' }, left, right));
+  wrap.replaceChildren(el('div', { className: 'hazardista-grid' },
+    makeTable(winners, true, '🏆 Najwięksi wygrani'),
+    makeTable(losers, false, '💸 Najwięksi przegrani')
+  ));
 }
 
 function renderMarketHistory(wrap, rowsData) {
