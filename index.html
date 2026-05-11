@@ -960,30 +960,55 @@
       position: relative; width: 180px; height: 180px; flex-shrink: 0;
     }
     .roulette-wheel {
+      position: relative;
       width: 100%; height: 100%; border-radius: 50%;
-      border: 8px solid #1e293b; box-shadow: 0 0 0 4px #94a3b8, 0 8px 32px rgba(0,0,0,.25);
+      border: 6px solid #2c1810; box-shadow: 0 0 0 3px #b8860b, 0 0 0 6px #2c1810, 0 8px 32px rgba(0,0,0,.4);
       background: conic-gradient(
-        #16a34a 0deg 9.73deg,
-        #dc2626 9.73deg 19.46deg, #1e293b 19.46deg 29.19deg,
-        #dc2626 29.19deg 38.92deg, #1e293b 38.92deg 48.65deg,
-        #dc2626 48.65deg 58.38deg, #1e293b 58.38deg 68.11deg,
-        #dc2626 68.11deg 77.84deg, #1e293b 77.84deg 87.57deg,
-        #dc2626 87.57deg 97.3deg, #1e293b 97.3deg 107.03deg,
-        #1e293b 107.03deg 116.76deg, #dc2626 116.76deg 126.49deg,
-        #1e293b 126.49deg 136.22deg, #dc2626 136.22deg 145.95deg,
-        #1e293b 145.95deg 155.68deg, #dc2626 155.68deg 165.41deg,
-        #1e293b 165.41deg 175.14deg, #dc2626 175.14deg 184.86deg,
-        #dc2626 184.86deg 194.59deg, #1e293b 194.59deg 204.32deg,
-        #dc2626 204.32deg 214.05deg, #1e293b 214.05deg 223.78deg,
-        #dc2626 223.78deg 233.51deg, #1e293b 233.51deg 243.24deg,
-        #dc2626 243.24deg 252.97deg, #1e293b 252.97deg 262.7deg,
-        #dc2626 262.7deg 272.43deg, #1e293b 272.43deg 282.16deg,
-        #1e293b 282.16deg 291.89deg, #dc2626 291.89deg 301.62deg,
-        #1e293b 301.62deg 311.35deg, #dc2626 311.35deg 321.08deg,
-        #1e293b 321.08deg 330.81deg, #dc2626 330.81deg 340.54deg,
-        #1e293b 340.54deg 350.27deg, #dc2626 350.27deg 360deg
+        #16a34a 0.00deg 9.73deg,
+        #dc2626 9.73deg 19.46deg,
+        #1e293b 19.46deg 29.19deg,
+        #dc2626 29.19deg 38.92deg,
+        #1e293b 38.92deg 48.65deg,
+        #dc2626 48.65deg 58.38deg,
+        #1e293b 58.38deg 68.11deg,
+        #dc2626 68.11deg 77.84deg,
+        #1e293b 77.84deg 87.57deg,
+        #dc2626 87.57deg 97.30deg,
+        #1e293b 97.30deg 107.03deg,
+        #dc2626 107.03deg 116.76deg,
+        #1e293b 116.76deg 126.49deg,
+        #dc2626 126.49deg 136.22deg,
+        #1e293b 136.22deg 145.95deg,
+        #dc2626 145.95deg 155.68deg,
+        #1e293b 155.68deg 165.41deg,
+        #dc2626 165.41deg 175.14deg,
+        #1e293b 175.14deg 184.86deg,
+        #dc2626 184.86deg 194.59deg,
+        #1e293b 194.59deg 204.32deg,
+        #dc2626 204.32deg 214.05deg,
+        #1e293b 214.05deg 223.78deg,
+        #dc2626 223.78deg 233.51deg,
+        #1e293b 233.51deg 243.24deg,
+        #dc2626 243.24deg 252.97deg,
+        #1e293b 252.97deg 262.70deg,
+        #dc2626 262.70deg 272.43deg,
+        #1e293b 272.43deg 282.16deg,
+        #dc2626 282.16deg 291.89deg,
+        #1e293b 291.89deg 301.62deg,
+        #dc2626 301.62deg 311.35deg,
+        #1e293b 311.35deg 321.08deg,
+        #dc2626 321.08deg 330.81deg,
+        #1e293b 330.81deg 340.54deg,
+        #dc2626 340.54deg 350.27deg,
+        #1e293b 350.27deg 360.00deg
       );
       transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+    }
+    .roulette-wheel::after {
+      content: ''; position: absolute; inset: 6px; border-radius: 50%;
+      background: repeating-conic-gradient(
+        rgba(184,134,11,.6) 0deg .4deg, transparent .4deg 9.73deg
+      );
     }
     .roulette-wheel.spinning { transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99); }
     .roulette-wheel-pointer {
@@ -994,8 +1019,8 @@
     .roulette-wheel-center {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: 44px; height: 44px; border-radius: 50%; background: #1e293b;
-      border: 3px solid #94a3b8; display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 800; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      border: 3px solid #b8860b; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); z-index: 3;
     }
     .roulette-wheel-result { font-size: 18px; font-weight: 800; color: #fff; }
 
