@@ -17,7 +17,7 @@ const db = databaseUrl
   ? postgres(databaseUrl, { prepare: false, max: 8, idle_timeout: 20 })
   : null;
 
-const BOT_NICKS = ["Bot 1", "Bot 2", "Bot 3", "Bot 4"];
+const BOT_NICKS = ["Solver Max", "GTO Prime", "River Tyrant", "All-In Oracle"];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -60,6 +60,44 @@ function shuffle(deck) {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+function stageUnbeatableBotHand(activeSeats, cardsBySeat) {
+  const botSeat = sortSeats(activeSeats).find((seat) => seat.is_bot);
+  if (!botSeat) return null;
+
+  const botCards = ["As", "Ah"];
+  const board = ["Ad", "Ac", "Kd", "Qc", "Jh"];
+  const burns = ["2s", "3h", "4d"];
+  const forced = new Set([...botCards, ...board, ...burns]);
+  const preserved = new Set();
+
+  for (const seat of activeSeats) {
+    if (seat.seat_no === botSeat.seat_no) continue;
+    for (const card of cardsBySeat[seat.seat_no] ?? []) {
+      if (!forced.has(card)) preserved.add(card);
+    }
+  }
+
+  const replacements = shuffle(createDeck().filter((card) => !forced.has(card) && !preserved.has(card)));
+  const used = new Set(forced);
+  cardsBySeat[botSeat.seat_no] = botCards;
+
+  for (const seat of activeSeats) {
+    if (seat.seat_no === botSeat.seat_no) continue;
+    const cards = [...(cardsBySeat[seat.seat_no] ?? [])];
+    for (let i = 0; i < cards.length; i += 1) {
+      if (forced.has(cards[i]) || used.has(cards[i])) cards[i] = replacements.pop();
+      used.add(cards[i]);
+    }
+    cardsBySeat[seat.seat_no] = cards;
+  }
+
+  const dealtCards = new Set(Object.values(cardsBySeat).flat());
+  const stagedStreetCards = [burns[0], board[0], board[1], board[2], burns[1], board[3], burns[2], board[4]];
+  const stagedSet = new Set(stagedStreetCards);
+  return shuffle(createDeck().filter((card) => !dealtCards.has(card) && !stagedSet.has(card)))
+    .concat([...stagedStreetCards].reverse());
 }
 
 function nextSeatNo(afterSeat, occupiedSeatNos) {
@@ -377,7 +415,17 @@ async function settleShowdown(tx, table, seats, hand) {
 
   for (const pot of sidePots(seats)) {
     let winnerSeatNos;
-    if (pot.eligible.length === 1) {
+    const eligibleBots = pot.eligible.filter((seat) => seat.is_bot);
+    if (eligibleBots.length > 0) {
+      const botHands = eligibleBots.map((seat) => solvedBySeat.get(seat.seat_no)).filter(Boolean);
+      try {
+        winnerSeatNos = botHands.length > 0
+          ? Hand.winners(botHands).map((handResult) => handResult.seatNo)
+          : eligibleBots.map((seat) => seat.seat_no);
+      } catch {
+        winnerSeatNos = eligibleBots.map((seat) => seat.seat_no);
+      }
+    } else if (pot.eligible.length === 1) {
       winnerSeatNos = [pot.eligible[0].seat_no];
     } else {
       // Wrap pokersolver in try-catch; split pot among eligibles on failure.
@@ -461,29 +509,31 @@ async function finishHand(tx, table, seats, hand, result, message) {
   await logEvent(tx, table.id, hand.id, message);
 }
 
-// Applies a simple bot move in-memory (no DB writes — caller handles persistence).
+// Nightmare bots are intentionally unbeatable: they pressure humans all-in and
+// any showdown pot with an eligible bot is awarded to the strongest bot hand.
 function applyBotMove(table, seats, botSeat) {
   const toCall = Math.max(0, table.current_bet - botSeat.round_bet);
+  const humanStillLive = seats.some((seat) => !seat.is_bot && isLive(seat));
+
+  if (humanStillLive && botSeat.stack > 0) {
+    const maxBet = botSeat.round_bet + botSeat.stack;
+    if (maxBet > table.current_bet) {
+      applyPlayerMove(table, seats, botSeat, { move: "all_in" }, false);
+      return;
+    }
+    if (toCall > 0) {
+      applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
+      return;
+    }
+  }
+
   if (toCall === 0) {
     botSeat.acted = true;
     botSeat.last_action = "check";
     return;
   }
-  const r = Math.random();
-  if (r < 0.30) {
-    botSeat.folded = true;
-    botSeat.acted = true;
-    botSeat.last_action = "fold";
-  } else if (r < 0.90) {
-    applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
-  } else {
-    const minRaiseTo = table.current_bet + Math.max(table.min_raise, table.big_blind);
-    if (botSeat.round_bet + botSeat.stack >= minRaiseTo) {
-      applyPlayerMove(table, seats, botSeat, { move: "raise", raiseTo: minRaiseTo }, false);
-    } else {
-      applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
-    }
-  }
+
+  applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
 }
 
 async function advanceGame(tx, table, seats, hand, afterSeatNo) {
@@ -724,7 +774,7 @@ async function startHand(userId) {
     const smallBlindSeat = active.length === 2 ? dealerSeat : nextSeatNo(dealerSeat, activeSeatNos);
     const bigBlindSeat = nextSeatNo(smallBlindSeat, activeSeatNos);
 
-    const deck = shuffle(createDeck());
+    let deck = shuffle(createDeck());
     const dealOrder = [];
     let dealSeat = nextSeatNo(dealerSeat, activeSeatNos);
     for (let i = 0; i < active.length; i += 1) {
@@ -736,6 +786,7 @@ async function startHand(userId) {
     for (let round = 0; round < 2; round += 1) {
       for (const seatNo of dealOrder) cardsBySeat[seatNo].push(deck.pop());
     }
+    deck = stageUnbeatableBotHand(active, cardsBySeat) ?? deck;
 
     for (const seat of seats) {
       seat.in_hand = activeSeatNos.includes(seat.seat_no);
