@@ -698,6 +698,35 @@ async function stateResponse(tx, userId) {
   const humanSeats = seats.filter((seat) => !seat.is_bot);
   const playableSeats = seats.filter((seat) => seat.stack > 0);
 
+  // Admin win-probability hint via Monte Carlo simulation.
+  let adminHint = null;
+  if (profile.nick === "admin" && mySeat && mySeat.in_hand && !mySeat.folded && visibleCards[mySeat.seat_no]) {
+    const myCards = visibleCards[mySeat.seat_no];
+    const board = table.board ?? [];
+    const opponents = seats.filter((s) => s.seat_no !== mySeat.seat_no && isLive(s)).length;
+    if (opponents > 0) {
+      const used = new Set([...myCards, ...board]);
+      const remaining = createDeck().filter((c) => !used.has(c));
+      const SIMS = 500;
+      let wins = 0;
+      for (let i = 0; i < SIMS; i++) {
+        const shuffled = shuffle(remaining);
+        let idx = 0;
+        const simBoard = [...board];
+        while (simBoard.length < 5) simBoard.push(shuffled[idx++]);
+        const myHand = Hand.solve([...myCards, ...simBoard]);
+        let best = true;
+        for (let o = 0; o < opponents; o++) {
+          const oppCards = [shuffled[idx++], shuffled[idx++]];
+          const oppHand = Hand.solve([...oppCards, ...simBoard]);
+          if (Hand.winners([myHand, oppHand])[0] !== myHand) { best = false; break; }
+        }
+        if (best) wins++;
+      }
+      adminHint = Math.round((wins / SIMS) * 100);
+    }
+  }
+
   return {
     table: {
       id: table.id,
@@ -732,6 +761,7 @@ async function stateResponse(tx, userId) {
     },
     lastResult: lastHand?.result ?? null,
     events: eventsDesc.reverse(),
+    adminHint,
   };
 }
 

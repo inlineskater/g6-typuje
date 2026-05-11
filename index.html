@@ -678,6 +678,11 @@
       box-shadow: 0 0 0 2px var(--yes), 0 4px 12px rgba(22,163,74,.2);
       border-color: rgba(22,163,74,.5);
     }
+    .poker-admin-hint {
+      margin-top: 6px; font-size: 12px; font-weight: 600;
+      color: #f59e0b; background: rgba(245,158,11,.1);
+      padding: 4px 8px; border-radius: 6px; display: inline-block;
+    }
 
     /* ── Last action in status ── */
     .poker-last-action {
@@ -2126,7 +2131,10 @@ function buildPokerSidePanel(state) {
     el('div', { className: 'poker-hole-label' }, 'Twoje karty'),
     holeCardNodes
       ? el('div', { className: 'poker-hole-cards' + (legal.canAct && mySeat?.cards ? ' glow' : '') }, ...holeCardNodes)
-      : el('span', { className: 'poker-note' }, mySeat ? 'Czekasz na rozdanie.' : 'Usiądź przy stole, żeby grać.')
+      : el('span', { className: 'poker-note' }, mySeat ? 'Czekasz na rozdanie.' : 'Usiądź przy stole, żeby grać.'),
+    state.adminHint != null
+      ? el('div', { className: 'poker-admin-hint' }, '🎯 Szansa: ' + state.adminHint + '%')
+      : null
   );
 
   const botSelector = buildPokerBotSelector(state);
