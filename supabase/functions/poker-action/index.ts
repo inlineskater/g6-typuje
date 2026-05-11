@@ -461,27 +461,104 @@ async function finishHand(tx, table, seats, hand, result, message) {
   await logEvent(tx, table.id, hand.id, message);
 }
 
-// Applies a simple bot move in-memory (no DB writes — caller handles persistence).
-function applyBotMove(table, seats, botSeat) {
-  const toCall = Math.max(0, table.current_bet - botSeat.round_bet);
-  if (toCall === 0) {
-    botSeat.acted = true;
-    botSeat.last_action = "check";
-    return;
+// ── Bot intelligence ────────────────────────────────────────────────────────
+
+const RANK_VALUES = { "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, T: 10, J: 11, Q: 12, K: 13, A: 14 };
+
+function ratePreflopHand(cards) {
+  if (!cards || cards.length < 2) return 0.3;
+  const r1 = cards[0][0], r2 = cards[1][0];
+  const s1 = cards[0][1], s2 = cards[1][1];
+  const suited = s1 === s2;
+  const v1 = RANK_VALUES[r1] ?? 0, v2 = RANK_VALUES[r2] ?? 0;
+  const high = Math.max(v1, v2), low = Math.min(v1, v2);
+  const paired = v1 === v2;
+  const gap = high - low;
+
+  if (paired) {
+    if (high >= 12) return 0.95; // QQ+
+    if (high >= 10) return 0.85; // TT-JJ
+    if (high >= 7) return 0.70;  // 77-99
+    return 0.55;                  // 22-66
   }
-  const r = Math.random();
-  if (r < 0.30) {
-    botSeat.folded = true;
-    botSeat.acted = true;
-    botSeat.last_action = "fold";
-  } else if (r < 0.90) {
-    applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
-  } else {
-    const minRaiseTo = table.current_bet + Math.max(table.min_raise, table.big_blind);
-    if (botSeat.round_bet + botSeat.stack >= minRaiseTo) {
-      applyPlayerMove(table, seats, botSeat, { move: "raise", raiseTo: minRaiseTo }, false);
+  if (high === 14 && low === 13) return suited ? 0.90 : 0.85; // AK
+  if (high === 14 && low >= 11) return suited ? 0.75 : 0.70;  // AQ, AJ
+  if (high === 13 && low === 12) return suited ? 0.70 : 0.65;  // KQ
+  if (high === 14) return suited ? 0.60 : 0.40;                // Ax
+  if (suited && gap === 1 && low >= 7) return 0.58;            // suited connectors 87s+
+  if (suited && gap === 1) return 0.45;                         // low suited connectors
+  if (suited && high >= 10) return 0.50;                        // suited broadways
+  if (suited) return 0.35;
+  if (high >= 10 && low >= 10) return 0.55;                    // offsuit broadways
+  if (high >= 10) return 0.35;
+  return 0.22;
+}
+
+function ratePostflopHand(holeCards, board) {
+  try {
+    const solved = Hand.solve([...holeCards, ...board]);
+    const rankMap = { 1: 0.25, 2: 0.45, 3: 0.60, 4: 0.70, 5: 0.80, 6: 0.85, 7: 0.90, 8: 0.95, 9: 0.97, 10: 1.0 };
+    return rankMap[solved.rank] ?? 0.3;
+  } catch { return 0.3; }
+}
+
+function applyBotMove(table, seats, botSeat, botCards, board) {
+  const toCall = Math.max(0, table.current_bet - botSeat.round_bet);
+  const pot = tablePot(seats);
+  const potOdds = toCall > 0 ? toCall / (pot + toCall) : 0;
+  const isPreflop = !board || board.length === 0;
+
+  let strength = isPreflop ? ratePreflopHand(botCards) : ratePostflopHand(botCards, board);
+  // personality variance per seat
+  strength += ((botSeat.seat_no % 4) - 1.5) * 0.03;
+  // randomness
+  strength += (Math.random() - 0.5) * 0.1;
+  strength = Math.max(0, Math.min(1, strength));
+
+  const minRaiseTo = table.current_bet + Math.max(table.min_raise, table.big_blind);
+  const maxRaiseTo = botSeat.round_bet + botSeat.stack;
+  const canRaise = maxRaiseTo >= minRaiseTo;
+
+  function botRaise() {
+    let raiseTo;
+    if (isPreflop) {
+      raiseTo = table.current_bet > table.big_blind
+        ? Math.round(table.current_bet + table.big_blind * 2.5)
+        : table.big_blind * 3;
     } else {
+      const potRaise = table.current_bet + Math.round(pot * (0.6 + Math.random() * 0.2));
+      raiseTo = potRaise;
+    }
+    raiseTo = Math.max(minRaiseTo, Math.min(maxRaiseTo, raiseTo));
+    if (canRaise) {
+      applyPlayerMove(table, seats, botSeat, { move: "raise", raiseTo }, false);
+    } else if (toCall > 0) {
       applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
+    } else {
+      botSeat.acted = true; botSeat.last_action = "check";
+    }
+  }
+
+  const r = Math.random();
+
+  if (toCall === 0) {
+    if (strength > 0.80) { r < 0.65 ? botRaise() : (botSeat.acted = true, botSeat.last_action = "check"); }
+    else if (strength > 0.55) { r < 0.40 ? botRaise() : (botSeat.acted = true, botSeat.last_action = "check"); }
+    else if (strength > 0.35) { r < 0.15 ? botRaise() : (botSeat.acted = true, botSeat.last_action = "check"); }
+    else { r < 0.10 ? botRaise() : (botSeat.acted = true, botSeat.last_action = "check"); }
+  } else {
+    if (strength > 0.80) {
+      r < 0.60 ? botRaise() : applyPlayerMove(table, seats, botSeat, { move: "call" }, false);
+    } else if (strength > 0.55) {
+      if (strength > potOdds + 0.1) { applyPlayerMove(table, seats, botSeat, { move: "call" }, false); }
+      else { r < 0.60 ? (botSeat.folded = true, botSeat.acted = true, botSeat.last_action = "fold") : applyPlayerMove(table, seats, botSeat, { move: "call" }, false); }
+    } else if (strength > 0.35) {
+      if (strength > potOdds + 0.2) { applyPlayerMove(table, seats, botSeat, { move: "call" }, false); }
+      else { r < 0.75 ? (botSeat.folded = true, botSeat.acted = true, botSeat.last_action = "fold") : applyPlayerMove(table, seats, botSeat, { move: "call" }, false); }
+    } else {
+      if (r < 0.88) { botSeat.folded = true; botSeat.acted = true; botSeat.last_action = "fold"; }
+      else if (r < 0.92 && canRaise) { botRaise(); }
+      else { applyPlayerMove(table, seats, botSeat, { move: "call" }, false); }
     }
   }
 }
@@ -500,10 +577,17 @@ async function advanceGame(tx, table, seats, hand, afterSeatNo) {
     table.current_seat = nextActor.seat_no;
     setDeadline(table);
 
+    // Load bot hole cards for strategic decisions.
+    const botSeatNos = seats.filter((s) => s.is_bot && s.in_hand).map((s) => s.seat_no);
+    const botCardRows = botSeatNos.length > 0
+      ? await tx`select seat_no, cards from public.poker_player_cards where hand_id = ${hand.id} and seat_no = any(${botSeatNos}::integer[])`
+      : [];
+    const botCardsBySeat = new Map(botCardRows.map((r) => [r.seat_no, r.cards]));
+
     // If the next actor is a bot, auto-play until a human needs to act (or hand ends).
     let botLoops = 0;
     while (nextActor.is_bot && botLoops++ < 20) {
-      applyBotMove(table, seats, nextActor);
+      applyBotMove(table, seats, nextActor, botCardsBySeat.get(nextActor.seat_no) ?? [], table.board ?? []);
       table.pot = tablePot(seats);
 
       const liveAfterBot = seats.filter(isLive);
