@@ -437,6 +437,25 @@
     }
     .tx-side-yes { background: var(--yes-dim); border-color: var(--yes-line); color: var(--yes); }
     .tx-side-no  { background: var(--no-dim);  border-color: var(--no-line);  color: var(--no);  }
+    .tx-side-game { background: #f0f9ff; border-color: #bae6fd; color: #0284c7; }
+
+    /* ── HAZARDISTA ── */
+    .hazardista-section { margin-top: 28px; }
+    .hazardista-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .hazardista-grid { grid-template-columns: 1fr; } }
+    .hazardista-col-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+    .hazardista-list { list-style: none; padding: 0; margin: 0; }
+    .hazardista-list li {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .hazardista-list li:last-child { border-bottom: none; }
+    .hazardista-list .hz-nick { font-weight: 600; }
+    .hazardista-list .hz-nick.me { color: var(--accent); }
+    .hazardista-list .hz-pl { font-weight: 800; }
+    .hz-pl-pos { color: var(--yes); }
+    .hz-pl-neg { color: var(--no); }
+    .tx-show-all { display: block; margin: 12px auto 0; }
 
     /* ── POKER ── */
     .poker-page-head {
@@ -1107,7 +1126,7 @@
     .roulette-history-dot.red { background: #dc2626; }
     .roulette-history-dot.black { background: #1e293b; }
 
-    /* ── Slots (Jednoreki Bandyta) ── */
+    /* ── Slots (Jednoręki Bandyta) ── */
     .slots-machine { text-align: center; }
     .slots-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
     .slots-grid {
@@ -1138,10 +1157,11 @@
     .slots-result.win { color: var(--yes); }
     .slots-result.lose { color: var(--no); }
     .slots-paytable {
-      display: inline-grid; grid-template-columns: auto auto; gap: 2px 16px;
+      display: inline-grid; grid-template-columns: auto auto auto; gap: 2px 12px;
       font-size: 11px; color: var(--muted); text-align: left; margin-bottom: 14px;
     }
-    .slots-paytable span:nth-child(even) { font-weight: 700; color: var(--text); }
+    .slots-paytable span:nth-child(3n+2) { font-weight: 700; color: var(--text); }
+    .slots-paytable span:nth-child(3n) { color: var(--yes); font-weight: 700; }
     .slots-history { display: flex; flex-direction: column; gap: 4px; max-width: 360px; margin: 0 auto; }
     .slots-history-item {
       display: flex; align-items: center; gap: 8px; font-size: 12px;
@@ -1284,7 +1304,7 @@
     <button class="nav-tab" data-tab="leaderboard">Ranking</button>
     <button class="nav-tab" data-tab="poker">Poker</button>
     <button class="nav-tab" data-tab="roulette">Ruletka</button>
-    <button class="nav-tab" data-tab="slots">Jednoreki bandyta</button>
+    <button class="nav-tab" data-tab="slots">Jednoręki bandyta</button>
     <button class="nav-tab" data-tab="shop">Sklep</button>
   </nav>
 
@@ -1335,15 +1355,25 @@
       <div id="leaderboard-wrap" class="lb-wrap">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
+      <section class="hazardista-section">
+        <h3 class="section-title">Hazardista 🎰</h3>
+        <p class="section-sub">Kto wygrywa, a kto przegrywa najwięcej w grach hazardowych (ruletka, sloty, poker).</p>
+        <div id="hazardista-wrap" class="lb-wrap">
+          <div class="loading-center"><div class="spinner"></div></div>
+        </div>
+      </section>
       <section class="history-section">
         <h3 class="section-title">Historia transakcji</h3>
-        <p class="section-sub">Ostatnie 100 zakładów graczy na wszystkich rynkach.</p>
+        <p class="section-sub">Ostatnie ruchy coinów na rynkach i w grach hazardowych.</p>
         <div class="history-filters">
           <input class="history-filter-input" id="tx-filter-search" type="search" placeholder="Gracz lub rynek">
           <select class="history-filter-select" id="tx-filter-side">
             <option value="">Typ: wszystkie</option>
             <option value="YES">TAK</option>
             <option value="NO">NIE</option>
+            <option value="roulette">Ruletka</option>
+            <option value="slots">Sloty</option>
+            <option value="poker">Poker</option>
           </select>
           <select class="history-filter-select" id="tx-filter-status">
             <option value="">Status: wszystkie</option>
@@ -1510,7 +1540,7 @@
   <div id="tab-slots" class="hidden">
     <main>
       <div class="slots-machine">
-        <h2 style="font-size:18px">Jednoreki Bandyta 🎰</h2>
+        <h2 style="font-size:18px">Jednoręki Bandyta 🎰</h2>
         <p class="slots-subtitle">Audyt Twojego szczęścia • Stawka: 10 🪙 • 5 linii wygrywających</p>
 
         <div class="slots-grid" id="slots-grid">
@@ -1522,15 +1552,16 @@
         <div><button class="slots-spin-btn" id="slots-spin-btn">ZAKRĘĆ (10 🪙)</button></div>
         <div id="slots-result" class="slots-result"></div>
 
+        <h3 class="section-title" style="margin-top:14px">Tabela wypłat (stawka: 10 🪙)</h3>
         <div class="slots-paytable">
-          <span>3× G6</span><span>×50</span>
-          <span>3× 🏢</span><span>×20</span>
-          <span>3× 💼</span><span>×10</span>
-          <span>3× 📊</span><span>×5</span>
-          <span>3× 📋</span><span>×3</span>
-          <span>3× 🧮</span><span>×2</span>
-          <span>3× ☕</span><span>×1</span>
-          <span>2× G6</span><span>×3</span>
+          <span>G6 G6 G6</span><span>×50</span><span>= 500 🪙</span>
+          <span>🏢 🏢 🏢</span><span>×20</span><span>= 200 🪙</span>
+          <span>💼 💼 💼</span><span>×10</span><span>= 100 🪙</span>
+          <span>📊 📊 📊</span><span>×5</span><span>= 50 🪙</span>
+          <span>📋 📋 📋</span><span>×3</span><span>= 30 🪙</span>
+          <span>🧮 🧮 🧮</span><span>×2</span><span>= 20 🪙</span>
+          <span>☕ ☕ ☕</span><span>×1</span><span>= 10 🪙</span>
+          <span>_ G6 G6 (2 na linii)</span><span>×3</span><span>= 30 🪙</span>
         </div>
 
         <h3 class="section-title">Ostatnie wyniki</h3>
@@ -1715,6 +1746,7 @@ let activeSide = 'YES';
 let activeMarket = null;
 let realtimeChannels = [];
 let transactionHistoryRows = [];
+let showAllTransactions = false;
 let activeTab = 'markets';
 let pokerState = null;
 let pokerRealtimeReady = false;
@@ -3341,14 +3373,19 @@ async function resolveActiveMarket(resolution) {
 async function loadLeaderboard() {
   const wrap = document.getElementById('leaderboard-wrap');
   const historyWrap = document.getElementById('transaction-history-wrap');
+  const hazardistaWrap = document.getElementById('hazardista-wrap');
   wrap.replaceChildren(makeSpinner());
   historyWrap.replaceChildren(makeSpinner());
+  hazardistaWrap.replaceChildren(makeSpinner());
+  showAllTransactions = false;
 
-  const [leaderboardRes, tradesRes, marketsRes, allTradesRes] = await Promise.all([
+  const [leaderboardRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes] = await Promise.all([
     sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20),
-    sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, shares, p_yes_after').order('created_at', { ascending: false }).limit(100),
+    sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, shares, p_yes_after').order('created_at', { ascending: false }).limit(500),
     sb.from('markets').select('id, icon, title, resolved, resolution, yes_shares, no_shares'),
     sb.from('trades').select('market_id, user_id, side, amount, shares').limit(5000),
+    sb.from('game_transactions').select('*').order('created_at', { ascending: false }).limit(500),
+    sb.from('hazard_stats').select('*').order('total_pl', { ascending: false }),
   ]);
 
   if (leaderboardRes.error) {
@@ -3358,11 +3395,13 @@ async function loadLeaderboard() {
     renderLeaderboardTable(wrap, leaderboardRes.data || [], calibByUser);
   }
 
+  renderHazardista(hazardistaWrap, hazardRes.data || []);
+
   if (tradesRes.error || marketsRes.error || allTradesRes.error) {
     historyWrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '14px', padding: '24px' } }, DB_ERROR_MESSAGE));
     return;
   }
-  transactionHistoryRows = buildTransactionHistoryRows(tradesRes.data || [], marketsRes.data || [], allTradesRes.data || []);
+  transactionHistoryRows = buildTransactionHistoryRows(tradesRes.data || [], marketsRes.data || [], allTradesRes.data || [], gameRes.data || []);
   renderTransactionHistory(historyWrap, getFilteredTransactionRows());
 }
 
@@ -3477,12 +3516,12 @@ function profitClassName(profit) {
   return 'tx-pl-flat';
 }
 
-function buildTransactionHistoryRows(trades, marketsData, allTrades) {
+function buildTransactionHistoryRows(trades, marketsData, allTrades, gameTransactions) {
   const marketsById = {};
   marketsData.forEach(m => { marketsById[m.id] = m; });
   const tradeStatsByMarket = buildTradeStatsByMarket(allTrades);
 
-  return trades
+  const marketRows = trades
     .filter(row => row.nick_snapshot !== 'admin')
     .map(row => {
       const market = marketsById[row.market_id];
@@ -3500,6 +3539,7 @@ function buildTransactionHistoryRows(trades, marketsData, allTrades) {
         icon: market?.icon || '🎲',
         sideYes,
         sideLabel,
+        gameType: 'market',
         status: market?.resolved ? 'closed' : 'open',
         resolvedText,
         profit: profitInfo.profit,
@@ -3508,6 +3548,44 @@ function buildTransactionHistoryRows(trades, marketsData, allTrades) {
         searchText: ((row.nick_snapshot || '') + ' ' + title).toLowerCase(),
       };
     });
+
+  const GAME_META = {
+    roulette: { icon: '🎰', title: 'Ruletka', sideLabel: 'Spin' },
+    slots: { icon: '🎰', title: 'Jednoręki bandyta', sideLabel: 'Spin' },
+    poker_buy_in: { icon: '🃏', title: 'Poker', sideLabel: 'Buy-in' },
+    poker_cashout: { icon: '🃏', title: 'Poker', sideLabel: 'Cashout' },
+  };
+
+  const gameRows = (gameTransactions || []).map(row => {
+    const meta = GAME_META[row.game] || { icon: '🎲', title: row.game, sideLabel: row.game };
+    const bet = +row.bet || 0;
+    const won = +row.won || 0;
+    const isPokerBuyIn = row.game === 'poker_buy_in';
+    const isPokerCashout = row.game === 'poker_cashout';
+    const profit = isPokerBuyIn ? -bet : isPokerCashout ? +won : won - bet;
+    const baseGame = row.game.startsWith('poker') ? 'poker' : row.game;
+
+    return {
+      id: row.id,
+      created_at: row.created_at,
+      nick_snapshot: row.nick_snapshot,
+      title: meta.title,
+      icon: meta.icon,
+      sideYes: false,
+      sideLabel: meta.sideLabel,
+      gameType: baseGame,
+      status: 'closed',
+      resolvedText: meta.sideLabel,
+      amount: bet,
+      profit,
+      profitApprox: false,
+      profitTitle: meta.title,
+      p_yes_after: null,
+      searchText: ((row.nick_snapshot || '') + ' ' + meta.title).toLowerCase(),
+    };
+  });
+
+  return [...marketRows, ...gameRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
 function getFilteredTransactionRows() {
@@ -3516,7 +3594,13 @@ function getFilteredTransactionRows() {
   const status = txFilterStatus.value;
   return transactionHistoryRows.filter(row => {
     if (q && !row.searchText.includes(q)) return false;
-    if (side && row.side !== side) return false;
+    if (side) {
+      if (side === 'YES' || side === 'NO') {
+        if (row.side !== side) return false;
+      } else {
+        if (row.gameType !== side) return false;
+      }
+    }
     if (status && row.status !== status) return false;
     return true;
   });
@@ -3528,6 +3612,33 @@ function applyTransactionFilters() {
   renderTransactionHistory(historyWrap, getFilteredTransactionRows());
 }
 
+function renderHazardista(wrap, data) {
+  if (!data || data.length === 0) {
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, 'Brak danych hazardowych.'));
+    return;
+  }
+  const winners = data.filter(r => r.total_pl > 0).slice(0, 5);
+  const losers = data.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 5);
+
+  function makeList(items, positive) {
+    if (items.length === 0) return el('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Brak.');
+    const ul = el('ul', { className: 'hazardista-list' });
+    items.forEach((r, i) => {
+      const nickCls = 'hz-nick' + (r.user_id === me.id ? ' me' : '');
+      const plCls = 'hz-pl ' + (positive ? 'hz-pl-pos' : 'hz-pl-neg');
+      ul.append(el('li', {},
+        el('span', { className: nickCls }, (i === 0 && positive ? '🥇 ' : (i + 1) + '. ') + r.nick),
+        el('span', { className: plCls }, (positive ? '+' : '') + r.total_pl + ' 🪙')
+      ));
+    });
+    return ul;
+  }
+
+  const left = el('div', {}, el('div', { className: 'hazardista-col-title' }, '🏆 Najwięksi wygrani'), makeList(winners, true));
+  const right = el('div', {}, el('div', { className: 'hazardista-col-title' }, '💸 Najwięksi przegrani'), makeList(losers, false));
+  wrap.replaceChildren(el('div', { className: 'hazardista-grid' }, left, right));
+}
+
 function renderTransactionHistory(wrap, rowsData) {
   if (!rowsData || rowsData.length === 0) {
     const msg = transactionHistoryRows.length === 0 ? 'Brak transakcji.' : 'Brak transakcji dla wybranych filtrów.';
@@ -3535,30 +3646,46 @@ function renderTransactionHistory(wrap, rowsData) {
     return;
   }
 
-  const rows = rowsData.map(row => el('tr', {},
-    el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
-    el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
-    el('td', { className: 'tx-market' },
-      el('span', { className: 'tx-market-title', title: row.title }, row.icon + ' ' + row.title),
-      el('span', { className: 'tx-status' }, row.resolvedText)
-    ),
-    el('td', {}, el('span', { className: 'tx-side ' + (row.sideYes ? 'tx-side-yes' : 'tx-side-no') }, row.sideLabel)),
-    el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
-    el('td', { className: 'tx-pl ' + profitClassName(row.profit), title: row.profitTitle }, fmtSignedCoins(row.profit, row.profitApprox)),
-    el('td', { className: 'tx-prob' }, 'TAK ' + fmtPct(+row.p_yes_after || 0))
-  ));
+  const limited = !showAllTransactions && rowsData.length > 100;
+  const visible = limited ? rowsData.slice(0, 100) : rowsData;
 
-  wrap.replaceChildren(
-    el('table', { className: 'lb-table' },
-      el('thead', {}, el('tr', {},
-        el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
-        el('th', {}, 'Rynek'), el('th', {}, 'Typ'),
-        el('th', {}, 'Kwota'), el('th', {}, 'Zysk/strata'),
-        el('th', {}, 'Po transakcji')
-      )),
-      el('tbody', {}, ...rows)
-    )
+  const rows = visible.map(row => {
+    const isGame = row.gameType && row.gameType !== 'market';
+    const sideClass = isGame ? 'tx-side-game' : (row.sideYes ? 'tx-side-yes' : 'tx-side-no');
+    const lastCol = row.p_yes_after != null
+      ? 'TAK ' + fmtPct(+row.p_yes_after)
+      : '—';
+    return el('tr', {},
+      el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
+      el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
+      el('td', { className: 'tx-market' },
+        el('span', { className: 'tx-market-title', title: row.title }, row.icon + ' ' + row.title),
+        el('span', { className: 'tx-status' }, row.resolvedText)
+      ),
+      el('td', {}, el('span', { className: 'tx-side ' + sideClass }, row.sideLabel)),
+      el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
+      el('td', { className: 'tx-pl ' + profitClassName(row.profit), title: row.profitTitle }, fmtSignedCoins(row.profit, row.profitApprox)),
+      el('td', { className: 'tx-prob' }, lastCol)
+    );
+  });
+
+  const table = el('table', { className: 'lb-table' },
+    el('thead', {}, el('tr', {},
+      el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
+      el('th', {}, 'Gra / Rynek'), el('th', {}, 'Typ'),
+      el('th', {}, 'Kwota'), el('th', {}, 'Zysk/strata'),
+      el('th', {}, 'Po transakcji')
+    )),
+    el('tbody', {}, ...rows)
   );
+
+  if (limited) {
+    const btn = el('button', { className: 'btn-ghost tx-show-all', type: 'button' }, `Pokaż wszystkie (${rowsData.length})`);
+    btn.onclick = () => { showAllTransactions = true; applyTransactionFilters(); };
+    wrap.replaceChildren(table, btn);
+  } else {
+    wrap.replaceChildren(table);
+  }
 }
 
 // ── Shop ──────────────────────────────────────────────────────────────────
@@ -3843,7 +3970,7 @@ async function loadRouletteHistory() {
   } catch (err) { /* silent */ }
 }
 
-// ── Slots (Jednoreki Bandyta) ──────────────────────────────────────────────
+// ── Slots (Jednoręki Bandyta) ──────────────────────────────────────────────
 const SLOTS_SYMBOLS = { coffee: '☕', calculator: '🧮', clipboard: '📋', chart: '📊', briefcase: '💼', office: '🏢', g6: 'G6' };
 const SLOTS_ALL = Object.keys(SLOTS_SYMBOLS);
 const SLOTS_WIN_MSGS = ['Bilans się zgadza! 🎉','Audyt pozytywny! ✅','Faktura wystawiona! 💰','Debet = Kredyt! 📊','Księgowa by się ucieszyła! 🧮','Rozliczenie kwartalne: ZYSK! 📈'];
@@ -3947,13 +4074,17 @@ async function loadSlotsHistory() {
     const histEl = document.getElementById('slots-history');
     histEl.replaceChildren();
     for (const spin of (data.spins || [])) {
-      const gridStr = spin.grid.flat().map(s => SLOTS_SYMBOLS[s] || s).join('');
+      const grid = typeof spin.grid === 'string' ? JSON.parse(spin.grid) : spin.grid;
+      const gridStr = grid.flat().map(s => SLOTS_SYMBOLS[s] || s).join('');
       const cls = spin.total_won > 10 ? 'won' : 'lost';
       const txt = spin.total_won > 0 ? `+${spin.total_won - 10}` : '−10';
       histEl.appendChild(el('div', { className: 'slots-history-item' },
         el('span', {}, gridStr),
         el('span', { className: cls }, txt + ' 🪙')
       ));
+    }
+    if ((data.spins || []).length === 0) {
+      histEl.appendChild(el('div', { style: { color: 'var(--muted)', fontSize: '12px', textAlign: 'center' } }, 'Brak spinów — zagraj, aby zobaczyć historię.'));
     }
   } catch (err) { /* silent */ }
 }

@@ -799,6 +799,10 @@ async function sit(userId) {
       insert into public.poker_seats (table_id, seat_no, user_id, nick_snapshot, stack)
       values (${table.id}, ${seatNo}, ${userId}, ${profile.nick}, ${asInt(table.buy_in)})
     `;
+    await tx`
+      insert into public.poker_ledger (user_id, nick_snapshot, type, amount)
+      values (${userId}, ${profile.nick}, 'buy_in', ${asInt(table.buy_in)})
+    `;
     await logEvent(tx, table.id, table.hand_id, `${profile.nick} siada do stołu za ${table.buy_in} coinów.`);
     return stateResponse(tx, userId);
   });
@@ -817,6 +821,12 @@ async function stand(userId) {
        where id = ${userId}
     `;
     await tx`delete from public.poker_seats where id = ${seat.id}`;
+    if (asInt(seat.stack) > 0) {
+      await tx`
+        insert into public.poker_ledger (user_id, nick_snapshot, type, amount)
+        values (${userId}, ${seat.nick_snapshot}, 'cashout', ${asInt(seat.stack)})
+      `;
+    }
     await logEvent(tx, table.id, table.hand_id, `${seat.nick_snapshot} odchodzi od stołu z ${seat.stack} coinami.`);
     return stateResponse(tx, userId);
   });
