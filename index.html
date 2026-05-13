@@ -457,6 +457,42 @@
     .hz-pl-neg { color: var(--no); }
     .tx-show-all { display: block; margin: 12px auto 0; }
 
+    /* ── RANKING GRID ── */
+    .ranking-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      height: calc(100dvh - 140px); grid-template-rows: 1fr 1fr;
+    }
+    @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; } }
+    .ranking-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .ranking-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px var(--acc-dim); }
+    .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
+    .ranking-card-body { flex: 1; overflow: hidden; }
+    .lb-table-compact { width: 100%; border-collapse: collapse; min-width: 0; }
+    .lb-table-compact th {
+      text-align: left; font-size: 9px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .06em; font-weight: 600; padding: 5px 8px; border-bottom: 1px solid var(--border);
+    }
+    .lb-table-compact td { padding: 4px 8px; border-bottom: 1px solid rgba(226,232,240,.5); font-size: 12px; }
+    .lb-table-compact tr:last-child td { border-bottom: none; }
+    .ranking-detail-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.38);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 20px;
+    }
+    .ranking-detail-modal {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      max-width: 860px; width: 100%; padding: 24px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.12);
+      max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain;
+    }
+    .ranking-detail-modal .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .ranking-detail-modal .modal-title { font-size: 16px; font-weight: 800; }
+
     /* ── POKER ── */
     .poker-page-head {
       display: flex; align-items: flex-start; justify-content: space-between;
@@ -1718,59 +1754,43 @@
   <div id="tab-leaderboard" class="hidden">
     <main>
       <h2 class="page-title">Ranking graczy 🏆</h2>
-      <p class="page-sub">Suma gotówki i wartości aktywnych zakładów — wygrywa ten, kto typuje najtrafniej.</p>
-      <div class="info-banner ranking-info">
-        <strong>Net Worth</strong> = gotówka + szacowana wartość aktywnych zakładów. Zamknięte rynki nie są liczone jako pozycje, bo ich wynik jest już uwzględniony w gotówce.
+      <p class="page-sub">Kliknij dowolną sekcję, aby zobaczyć szczegóły.</p>
+      <div class="ranking-grid">
+        <div class="ranking-card" data-detail="ranking">
+          <div class="ranking-card-title">🏆 Net Worth</div>
+          <div class="ranking-card-body" id="leaderboard-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card" data-detail="hazardista">
+          <div class="ranking-card-title">🎰 Hazardista</div>
+          <div class="ranking-card-body" id="hazardista-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card" data-detail="market-history">
+          <div class="ranking-card-title">📈 Historia — Rynki</div>
+          <div class="ranking-card-body" id="transaction-history-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card" data-detail="hazard-history">
+          <div class="ranking-card-title">🎰 Historia — Hazard</div>
+          <div class="ranking-card-body" id="hazard-history-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
       </div>
-      <div id="leaderboard-wrap" class="lb-wrap">
-        <div class="loading-center"><div class="spinner"></div></div>
-      </div>
-      <section class="hazardista-section">
-        <h3 class="section-title">Hazardista 🎰</h3>
-        <p class="section-sub">Kto wygrywa, a kto przegrywa najwięcej w grach hazardowych (ruletka, sloty, poker).</p>
-        <div id="hazardista-wrap" class="lb-wrap">
-          <div class="loading-center"><div class="spinner"></div></div>
-        </div>
-      </section>
-      <section class="history-section">
-        <h3 class="section-title">Historia — Rynki 📈</h3>
-        <p class="section-sub">Ostatnie zakłady na rynkach predykcyjnych.</p>
-        <div class="history-filters">
-          <input class="history-filter-input" id="tx-filter-search" type="search" placeholder="Gracz lub rynek">
-          <select class="history-filter-select" id="tx-filter-side">
-            <option value="">Typ: wszystkie</option>
-            <option value="YES">TAK</option>
-            <option value="NO">NIE</option>
-          </select>
-          <select class="history-filter-select" id="tx-filter-status">
-            <option value="">Status: wszystkie</option>
-            <option value="open">Aktywne</option>
-            <option value="closed">Zamknięte</option>
-          </select>
-          <button class="btn-ghost history-clear" id="tx-filter-clear" type="button">Wyczyść</button>
-        </div>
-        <div id="transaction-history-wrap" class="lb-wrap history-wrap">
-          <div class="loading-center"><div class="spinner"></div></div>
-        </div>
-      </section>
-      <section class="history-section">
-        <h3 class="section-title">Historia — Hazard 🎰</h3>
-        <p class="section-sub">Ostatnie ruchy coinów w ruletce, slotach i pokerze.</p>
-        <div class="history-filters">
-          <input class="history-filter-input" id="hz-filter-search" type="search" placeholder="Gracz lub gra">
-          <select class="history-filter-select" id="hz-filter-game">
-            <option value="">Gra: wszystkie</option>
-            <option value="roulette">Ruletka</option>
-            <option value="slots">Sloty</option>
-            <option value="poker">Poker</option>
-          </select>
-          <button class="btn-ghost history-clear" id="hz-filter-clear" type="button">Wyczyść</button>
-        </div>
-        <div id="hazard-history-wrap" class="lb-wrap history-wrap">
-          <div class="loading-center"><div class="spinner"></div></div>
-        </div>
-      </section>
     </main>
+  </div>
+  <div id="ranking-detail-overlay" class="ranking-detail-overlay hidden">
+    <div class="ranking-detail-modal">
+      <div class="modal-header">
+        <span class="modal-title" id="ranking-detail-title"></span>
+        <button class="btn-close" id="ranking-detail-close">✕</button>
+      </div>
+      <div id="ranking-detail-body"></div>
+    </div>
   </div>
 
   <div id="tab-poker" class="hidden">
@@ -2150,6 +2170,7 @@ let marketHistoryRows = [];
 let hazardHistoryRows = [];
 let showAllTransactions = false;
 let showAllHazard = false;
+let _lbData = [], _lbCalib = {}, _hazardistaData = [];
 let activeTab = 'markets';
 let pokerState = null;
 let pokerRealtimeReady = false;
@@ -2515,30 +2536,9 @@ if (regPinEl)  regPinEl.addEventListener('keydown',  e => { if (e.key === 'Enter
 if (regNickEl) regNickEl.addEventListener('keydown', e => { if (e.key === 'Enter' && regPinEl) regPinEl.focus(); });
 logoutBtn.addEventListener('click', doLogout);
 
-const txFilterSearch = document.getElementById('tx-filter-search');
-const txFilterSide = document.getElementById('tx-filter-side');
-const txFilterStatus = document.getElementById('tx-filter-status');
-const txFilterClear = document.getElementById('tx-filter-clear');
-txFilterSearch.addEventListener('input', applyTransactionFilters);
-txFilterSide.addEventListener('change', applyTransactionFilters);
-txFilterStatus.addEventListener('change', applyTransactionFilters);
-txFilterClear.addEventListener('click', () => {
-  txFilterSearch.value = '';
-  txFilterSide.value = '';
-  txFilterStatus.value = '';
-  applyTransactionFilters();
-});
-
-const hzFilterSearch = document.getElementById('hz-filter-search');
-const hzFilterGame = document.getElementById('hz-filter-game');
-const hzFilterClear = document.getElementById('hz-filter-clear');
-hzFilterSearch.addEventListener('input', applyHazardFilters);
-hzFilterGame.addEventListener('change', applyHazardFilters);
-hzFilterClear.addEventListener('click', () => {
-  hzFilterSearch.value = '';
-  hzFilterGame.value = '';
-  applyHazardFilters();
-});
+// Filter elements are now created dynamically inside modals
+let txFilterSearch, txFilterSide, txFilterStatus, txFilterClear;
+let hzFilterSearch, hzFilterGame, hzFilterClear;
 
 // ── App shell ─────────────────────────────────────────────────────────────
 function showApp() {
@@ -3851,42 +3851,19 @@ function buildCalibrationByUser(allTrades, marketsData) {
 }
 
 function renderLeaderboardTable(wrap, data, calibByUser = {}) {
+  _lbData = data; _lbCalib = calibByUser;
   if (!data || data.length === 0) {
-    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, 'Brak graczy.'));
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak graczy.'));
     return;
   }
-
-  const rows = data.map((row, i) => {
-    const calib = calibByUser[row.id];
-    let calibCell;
-    if (!calib || calib.total === 0) {
-      calibCell = el('td', {}, el('span', { className: 'calib-na' }, '—'));
-    } else {
-      const pct = Math.round((calib.correct / calib.total) * 100);
-      const cls = pct >= 60 ? 'calib-good' : pct >= 40 ? 'calib-ok' : 'calib-bad';
-      calibCell = el('td', {},
-        el('span', { className: cls }, pct + '%'),
-        ' ',
-        el('span', { className: 'calib-sub' }, '(' + calib.correct + '/' + calib.total + ')')
-      );
-    }
-    return el('tr', {},
-      el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
-      el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') },
-        row.nick + (row.id === me.id ? ' (Ty)' : '')),
-      el('td', { className: 'lb-coins' }, row.coins + ' 🪙'),
-      el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙'),
-      calibCell
-    );
-  });
-
+  const rows = data.map((row, i) => el('tr', {},
+    el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+    el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
+  ));
   wrap.replaceChildren(
-    el('table', { className: 'lb-table' },
-      el('thead', {}, el('tr', {},
-        el('th', {}, '#'), el('th', {}, 'Nick'),
-        el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth'),
-        el('th', {}, 'Trafność')
-      )),
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Net Worth'))),
       el('tbody', {}, ...rows)
     )
   );
@@ -4007,9 +3984,9 @@ function buildHazardHistoryRows(gameTransactions) {
 }
 
 function getFilteredMarketRows() {
-  const q = txFilterSearch.value.trim().toLowerCase();
-  const side = txFilterSide.value;
-  const status = txFilterStatus.value;
+  const q = (txFilterSearch?.value || '').trim().toLowerCase();
+  const side = txFilterSide?.value || '';
+  const status = txFilterStatus?.value || '';
   return marketHistoryRows.filter(row => {
     if (q && !row.searchText.includes(q)) return false;
     if (side && row.side !== side) return false;
@@ -4039,115 +4016,232 @@ function applyHazardFilters() {
 }
 
 function renderHazardista(wrap, data) {
+  _hazardistaData = data;
   if (!data || data.length === 0) {
-    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, 'Brak danych hazardowych.'));
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak danych.'));
     return;
   }
-  const winners = data.filter(r => r.total_pl > 0).slice(0, 5);
-  const losers = data.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 5);
-
-  function makeTable(items, positive, title) {
-    if (items.length === 0) return el('div', {}, el('div', { className: 'hazardista-col-title' }, title), el('p', { style: { color: 'var(--muted)', fontSize: '13px', padding: '8px' } }, 'Brak.'));
-    const rows = items.map((r, i) => el('tr', {},
-      el('td', { className: 'lb-rank' + (i === 0 && positive ? ' gold' : '') }, i === 0 && positive ? '🥇' : String(i + 1)),
-      el('td', { className: 'lb-nick' + (r.user_id === me.id ? ' me' : '') }, r.nick + (r.user_id === me.id ? ' (Ty)' : '')),
-      el('td', { className: 'tx-pl ' + (positive ? 'tx-pl-profit' : 'tx-pl-loss') }, (positive ? '+' : '') + r.total_pl + ' 🪙')
-    ));
-    return el('div', {},
-      el('div', { className: 'hazardista-col-title' }, title),
-      el('table', { className: 'lb-table' },
-        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Bilans'))),
-        el('tbody', {}, ...rows)
-      )
-    );
-  }
-
-  wrap.replaceChildren(el('div', { className: 'hazardista-grid' },
-    makeTable(winners, true, '🏆 Najwięksi wygrani'),
-    makeTable(losers, false, '💸 Najwięksi przegrani')
+  const winners = data.filter(r => r.total_pl > 0).slice(0, 3);
+  const losers = data.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 3);
+  const items = [...winners.map(r => ({ nick: r.nick, pl: r.total_pl, pos: true, uid: r.user_id })),
+                 ...losers.map(r => ({ nick: r.nick, pl: r.total_pl, pos: false, uid: r.user_id }))];
+  const rows = items.map(r => el('tr', {},
+    el('td', { className: 'lb-nick' + (r.uid === me.id ? ' me' : '') }, r.nick),
+    el('td', { className: 'tx-pl ' + (r.pos ? 'tx-pl-profit' : 'tx-pl-loss') }, (r.pos ? '+' : '') + r.pl + ' 🪙')
   ));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, 'Nick'), el('th', {}, 'Bilans'))),
+      el('tbody', {}, ...rows)
+    )
+  );
 }
 
 function renderMarketHistory(wrap, rowsData) {
   if (!rowsData || rowsData.length === 0) {
-    const msg = marketHistoryRows.length === 0 ? 'Brak transakcji.' : 'Brak transakcji dla wybranych filtrów.';
-    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, msg));
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak transakcji.'));
     return;
   }
-
-  const limited = !showAllTransactions && rowsData.length > 100;
-  const visible = limited ? rowsData.slice(0, 100) : rowsData;
-
+  const visible = rowsData.slice(0, 5);
   const rows = visible.map(row => el('tr', {},
-    el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
-    el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
-    el('td', { className: 'tx-market' },
-      el('span', { className: 'tx-market-title', title: row.title }, row.icon + ' ' + row.title),
-      el('span', { className: 'tx-status' }, row.resolvedText)
-    ),
+    el('td', { className: 'tx-time' }, fmtDateTime(row.created_at)),
+    el('td', { className: 'lb-nick' }, row.nick_snapshot || '?'),
     el('td', {}, el('span', { className: 'tx-side ' + (row.sideYes ? 'tx-side-yes' : 'tx-side-no') }, row.sideLabel)),
-    el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
-    el('td', { className: 'tx-pl ' + profitClassName(row.profit), title: row.profitTitle }, fmtSignedCoins(row.profit, row.profitApprox)),
-    el('td', { className: 'tx-prob' }, 'TAK ' + fmtPct(+row.p_yes_after || 0))
+    el('td', { className: 'tx-pl ' + profitClassName(row.profit) }, fmtSignedCoins(row.profit, row.profitApprox))
   ));
-
-  const table = el('table', { className: 'lb-table' },
-    el('thead', {}, el('tr', {},
-      el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
-      el('th', {}, 'Rynek'), el('th', {}, 'Typ'),
-      el('th', {}, 'Kwota'), el('th', {}, 'Zysk/strata'),
-      el('th', {}, 'Po transakcji')
-    )),
-    el('tbody', {}, ...rows)
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, 'Czas'), el('th', {}, 'Gracz'), el('th', {}, 'Typ'), el('th', {}, 'P/L'))),
+      el('tbody', {}, ...rows)
+    )
   );
-
-  if (limited) {
-    const btn = el('button', { className: 'btn-ghost tx-show-all', type: 'button' }, `Pokaż wszystkie (${rowsData.length})`);
-    btn.onclick = () => { showAllTransactions = true; applyTransactionFilters(); };
-    wrap.replaceChildren(table, btn);
-  } else {
-    wrap.replaceChildren(table);
-  }
 }
 
 function renderHazardHistory(wrap, rowsData) {
   if (!rowsData || rowsData.length === 0) {
-    const msg = hazardHistoryRows.length === 0 ? 'Brak transakcji hazardowych.' : 'Brak transakcji dla wybranych filtrów.';
-    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '14px', padding: '24px' } }, msg));
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak transakcji.'));
     return;
   }
-
-  const limited = !showAllHazard && rowsData.length > 100;
-  const visible = limited ? rowsData.slice(0, 100) : rowsData;
-
+  const visible = rowsData.slice(0, 5);
   const rows = visible.map(row => el('tr', {},
-    el('td', { className: 'tx-time', title: new Date(row.created_at).toLocaleString('pl-PL') }, fmtDateTime(row.created_at)),
-    el('td', { className: 'lb-nick' }, row.nick_snapshot || 'Nieznany'),
-    el('td', { className: 'tx-market' },
-      el('span', { className: 'tx-market-title' }, row.icon + ' ' + row.title)
-    ),
+    el('td', { className: 'tx-time' }, fmtDateTime(row.created_at)),
+    el('td', { className: 'lb-nick' }, row.nick_snapshot || '?'),
     el('td', {}, el('span', { className: 'tx-side tx-side-game' }, row.sideLabel)),
-    el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
     el('td', { className: 'tx-pl ' + profitClassName(row.profit) }, fmtSignedCoins(row.profit, false))
   ));
-
-  const table = el('table', { className: 'lb-table' },
-    el('thead', {}, el('tr', {},
-      el('th', {}, 'Czas'), el('th', {}, 'Gracz'),
-      el('th', {}, 'Gra'), el('th', {}, 'Typ'),
-      el('th', {}, 'Kwota'), el('th', {}, 'Zysk/strata')
-    )),
-    el('tbody', {}, ...rows)
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, 'Czas'), el('th', {}, 'Gracz'), el('th', {}, 'Typ'), el('th', {}, 'P/L'))),
+      el('tbody', {}, ...rows)
+    )
   );
-
-  if (limited) {
-    const btn = el('button', { className: 'btn-ghost tx-show-all', type: 'button' }, `Pokaż wszystkie (${rowsData.length})`);
-    btn.onclick = () => { showAllHazard = true; applyHazardFilters(); };
-    wrap.replaceChildren(table, btn);
-  } else {
-    wrap.replaceChildren(table);
-  }
 }
+
+// ── Ranking Detail Modal ──────────────────────────────────────────────────
+(function initRankingModal() {
+  const overlay = document.getElementById('ranking-detail-overlay');
+  const body = document.getElementById('ranking-detail-body');
+  const title = document.getElementById('ranking-detail-title');
+  const closeBtn = document.getElementById('ranking-detail-close');
+
+  function openModal(detail) {
+    body.replaceChildren();
+    if (detail === 'ranking') {
+      title.textContent = '🏆 Ranking graczy';
+      renderFullLeaderboard(body);
+    } else if (detail === 'hazardista') {
+      title.textContent = '🎰 Hazardista';
+      renderFullHazardista(body);
+    } else if (detail === 'market-history') {
+      title.textContent = '📈 Historia — Rynki';
+      renderFullMarketHistory(body);
+    } else if (detail === 'hazard-history') {
+      title.textContent = '🎰 Historia — Hazard';
+      renderFullHazardHistory(body);
+    }
+    overlay.classList.remove('hidden');
+  }
+
+  function closeModal() { overlay.classList.add('hidden'); body.replaceChildren(); }
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  document.querySelectorAll('.ranking-card[data-detail]').forEach(card => {
+    card.addEventListener('click', () => openModal(card.dataset.detail));
+  });
+
+  function renderFullLeaderboard(container) {
+    const data = _lbData, calibByUser = _lbCalib;
+    if (!data || !data.length) { container.append(el('p', {}, 'Brak graczy.')); return; }
+    const rows = data.map((row, i) => {
+      const calib = calibByUser[row.id];
+      let calibTd;
+      if (!calib || calib.total === 0) {
+        calibTd = el('td', {}, '—');
+      } else {
+        const pct = Math.round((calib.correct / calib.total) * 100);
+        const cls = pct >= 60 ? 'calib-good' : pct >= 40 ? 'calib-ok' : 'calib-bad';
+        calibTd = el('td', {}, el('span', { className: cls }, pct + '%'), ' ', el('span', { className: 'calib-sub' }, '(' + calib.correct + '/' + calib.total + ')'));
+      }
+      return el('tr', {},
+        el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+        el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
+        el('td', { className: 'lb-coins' }, row.coins + ' 🪙'),
+        el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙'),
+        calibTd
+      );
+    });
+    container.append(el('table', { className: 'lb-table' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth'), el('th', {}, 'Trafność'))),
+      el('tbody', {}, ...rows)
+    ));
+  }
+
+  function renderFullHazardista(container) {
+    const data = _hazardistaData;
+    if (!data || !data.length) { container.append(el('p', {}, 'Brak danych.')); return; }
+    const winners = data.filter(r => r.total_pl > 0).slice(0, 10);
+    const losers = data.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 10);
+    function makeT(items, pos, ttl) {
+      if (!items.length) return el('div', {}, el('strong', {}, ttl), el('p', {}, 'Brak.'));
+      const rows = items.map((r, i) => el('tr', {},
+        el('td', { className: 'lb-rank' + (i === 0 && pos ? ' gold' : '') }, i === 0 && pos ? '🥇' : String(i + 1)),
+        el('td', { className: 'lb-nick' + (r.user_id === me.id ? ' me' : '') }, r.nick),
+        el('td', {}, r.roulette_pl + ' 🪙'), el('td', {}, r.slots_pl + ' 🪙'), el('td', {}, r.poker_pl + ' 🪙'),
+        el('td', { className: 'tx-pl ' + (pos ? 'tx-pl-profit' : 'tx-pl-loss') }, (pos ? '+' : '') + r.total_pl + ' 🪙')
+      ));
+      return el('div', { style: { marginBottom: '16px' } },
+        el('div', { className: 'hazardista-col-title' }, ttl),
+        el('table', { className: 'lb-table' },
+          el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Ruletka'), el('th', {}, 'Sloty'), el('th', {}, 'Poker'), el('th', {}, 'Suma'))),
+          el('tbody', {}, ...rows)
+        )
+      );
+    }
+    container.append(makeT(winners, true, '🏆 Najwięksi wygrani'), makeT(losers, false, '💸 Najwięksi przegrani'));
+  }
+
+  function renderFullMarketHistory(container) {
+    // Filters
+    const fSearch = el('input', { className: 'history-filter-input', type: 'search', placeholder: 'Gracz lub rynek' });
+    const fSide = el('select', { className: 'history-filter-select' });
+    fSide.innerHTML = '<option value="">Typ: wszystkie</option><option value="YES">TAK</option><option value="NO">NIE</option>';
+    const fStatus = el('select', { className: 'history-filter-select' });
+    fStatus.innerHTML = '<option value="">Status: wszystkie</option><option value="open">Aktywne</option><option value="closed">Zamknięte</option>';
+    const fClear = el('button', { className: 'btn-ghost history-clear', type: 'button' }, 'Wyczyść');
+    const filters = el('div', { className: 'history-filters' }, fSearch, fSide, fStatus, fClear);
+    const tableWrap = el('div', { className: 'history-wrap' });
+    container.append(filters, tableWrap);
+
+    function render() {
+      const q = fSearch.value.trim().toLowerCase();
+      const side = fSide.value;
+      const status = fStatus.value;
+      const filtered = marketHistoryRows.filter(row => {
+        if (q && !row.searchText.includes(q)) return false;
+        if (side && row.side !== side) return false;
+        if (status && row.status !== status) return false;
+        return true;
+      });
+      if (!filtered.length) { tableWrap.replaceChildren(el('p', { style: { padding: '12px', color: 'var(--muted)' } }, 'Brak transakcji.')); return; }
+      const rows = filtered.slice(0, 200).map(row => el('tr', {},
+        el('td', { className: 'tx-time' }, fmtDateTime(row.created_at)),
+        el('td', { className: 'lb-nick' }, row.nick_snapshot || '?'),
+        el('td', { className: 'tx-market' }, el('span', { className: 'tx-market-title', title: row.title }, row.icon + ' ' + row.title), el('span', { className: 'tx-status' }, row.resolvedText)),
+        el('td', {}, el('span', { className: 'tx-side ' + (row.sideYes ? 'tx-side-yes' : 'tx-side-no') }, row.sideLabel)),
+        el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
+        el('td', { className: 'tx-pl ' + profitClassName(row.profit) }, fmtSignedCoins(row.profit, row.profitApprox)),
+        el('td', { className: 'tx-prob' }, 'TAK ' + fmtPct(+row.p_yes_after || 0))
+      ));
+      tableWrap.replaceChildren(el('table', { className: 'lb-table' },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Czas'), el('th', {}, 'Gracz'), el('th', {}, 'Rynek'), el('th', {}, 'Typ'), el('th', {}, 'Kwota'), el('th', {}, 'P/L'), el('th', {}, 'Po trans.'))),
+        el('tbody', {}, ...rows)
+      ));
+    }
+    fSearch.addEventListener('input', render);
+    fSide.addEventListener('change', render);
+    fStatus.addEventListener('change', render);
+    fClear.addEventListener('click', () => { fSearch.value = ''; fSide.value = ''; fStatus.value = ''; render(); });
+    render();
+  }
+
+  function renderFullHazardHistory(container) {
+    const fSearch = el('input', { className: 'history-filter-input', type: 'search', placeholder: 'Gracz lub gra' });
+    const fGame = el('select', { className: 'history-filter-select' });
+    fGame.innerHTML = '<option value="">Gra: wszystkie</option><option value="roulette">Ruletka</option><option value="slots">Sloty</option><option value="poker">Poker</option>';
+    const fClear = el('button', { className: 'btn-ghost history-clear', type: 'button' }, 'Wyczyść');
+    const filters = el('div', { className: 'history-filters', style: { gridTemplateColumns: '1fr 160px auto' } }, fSearch, fGame, fClear);
+    const tableWrap = el('div', { className: 'history-wrap' });
+    container.append(filters, tableWrap);
+
+    function render() {
+      const q = fSearch.value.trim().toLowerCase();
+      const game = fGame.value;
+      const filtered = hazardHistoryRows.filter(row => {
+        if (q && !row.searchText.includes(q)) return false;
+        if (game && row.gameType !== game) return false;
+        return true;
+      });
+      if (!filtered.length) { tableWrap.replaceChildren(el('p', { style: { padding: '12px', color: 'var(--muted)' } }, 'Brak transakcji.')); return; }
+      const rows = filtered.slice(0, 200).map(row => el('tr', {},
+        el('td', { className: 'tx-time' }, fmtDateTime(row.created_at)),
+        el('td', { className: 'lb-nick' }, row.nick_snapshot || '?'),
+        el('td', { className: 'tx-market' }, el('span', { className: 'tx-market-title' }, row.icon + ' ' + row.title)),
+        el('td', {}, el('span', { className: 'tx-side tx-side-game' }, row.sideLabel)),
+        el('td', { className: 'tx-amount' }, fmtCoins(row.amount) + ' 🪙'),
+        el('td', { className: 'tx-pl ' + profitClassName(row.profit) }, fmtSignedCoins(row.profit, false))
+      ));
+      tableWrap.replaceChildren(el('table', { className: 'lb-table' },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Czas'), el('th', {}, 'Gracz'), el('th', {}, 'Gra'), el('th', {}, 'Typ'), el('th', {}, 'Kwota'), el('th', {}, 'P/L'))),
+        el('tbody', {}, ...rows)
+      ));
+    }
+    fSearch.addEventListener('input', render);
+    fGame.addEventListener('change', render);
+    fClear.addEventListener('click', () => { fSearch.value = ''; fGame.value = ''; render(); });
+    render();
+  }
+})();
 
 // ── Shop ──────────────────────────────────────────────────────────────────
 async function loadShop() {
