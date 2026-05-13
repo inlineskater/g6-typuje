@@ -917,6 +917,12 @@
       .amount-input-wrap { margin-left: auto; }
       .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
 
+      .garden-shelf { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .garden-pot { padding: 4px 4px 16px; }
+      .garden-pot::before { width: 80px; height: 32px; bottom: 50px; }
+      .gp-pot-body { width: 48px; height: 36px; }
+      .gp-plant-area { height: 80px; min-height: auto; }
+
       footer { margin-top: 32px; }
     }
 
@@ -1211,6 +1217,362 @@
     .shop-card-btn { margin-top: 6px; }
     .shop-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 48px 0; grid-column: 1 / -1; }
 
+    /* ── GARDEN (Ogródek) ── */
+    .garden-wrap {
+      max-width: 1200px; margin: 0 auto;
+      display: grid; grid-template-columns: 300px 1fr; gap: 24px;
+      align-items: start;
+    }
+    /* ── Tabliczka — wooden sign on two posts ── */
+    .garden-sign {
+      position: sticky; top: 80px; align-self: start;
+      display: flex; flex-direction: column; align-items: stretch;
+      padding-top: 6px; padding-bottom: 0;
+    }
+    .sign-board {
+      position: relative;
+      background:
+        repeating-linear-gradient(0deg,
+          transparent 0px, transparent 11px,
+          rgba(60,30,10,.10) 11px, rgba(60,30,10,.10) 12px),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.04) 0px, rgba(255,255,255,.04) 60px,
+          rgba(60,30,10,.05) 60px, rgba(60,30,10,.05) 61px),
+        linear-gradient(180deg, #e9c79a 0%, #d8a872 50%, #c89760 100%);
+      border: 4px solid #6d4c2c;
+      border-radius: 10px;
+      padding: 20px 18px 18px;
+      font-size: 12px;
+      color: #3d2810; line-height: 1.55;
+      box-shadow:
+        0 8px 18px rgba(60,30,10,.22),
+        inset 0 1px 0 rgba(255,255,255,.45),
+        inset 0 -3px 6px rgba(60,30,10,.18);
+    }
+    /* 4 nails in corners */
+    .sign-board::before, .sign-board::after,
+    .sign-nails::before, .sign-nails::after {
+      content: '';
+      position: absolute;
+      width: 7px; height: 7px;
+      background: radial-gradient(circle at 35% 35%, #6b4a2a, #1f1108 75%);
+      border-radius: 50%;
+      box-shadow: inset 0 -1px 0 rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.15);
+    }
+    .sign-board::before { top: 6px; left: 6px; }
+    .sign-board::after  { top: 6px; right: 6px; }
+    .sign-nails { position: absolute; left: 0; right: 0; bottom: 6px; height: 0; }
+    .sign-nails::before { bottom: 0; left: 6px; }
+    .sign-nails::after  { bottom: 0; right: 6px; }
+
+    .sign-board h3 {
+      font-size: 14px; margin-bottom: 8px; color: #14532d;
+      display: flex; align-items: center; gap: 6px;
+      text-shadow: 0 1px 0 rgba(255,255,255,.35);
+    }
+    .sign-board ul { padding-left: 18px; margin: 6px 0 0; }
+    .sign-board li { margin-bottom: 5px; }
+    .sign-board b  { color: #14532d; }
+    .sign-board .my-summary {
+      margin-top: 6px; padding: 0;
+      background: none;
+      border: none;
+      border-radius: 0; font-size: 12px; color: #3d2810;
+      box-shadow: none;
+    }
+    .sign-board .my-summary div { margin: 3px 0; }
+    .sign-board .my-summary strong { font-size: 13px; color: #166534; }
+    .my-plant-preview {
+      text-align: center; font-size: 48px; line-height: 1;
+      margin: 8px 0 4px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,.15));
+    }
+    .my-plant-details { text-align: center; margin-bottom: 6px; }
+    .my-plant-name { font-size: 15px; font-weight: 800; color: #14532d; }
+    .my-plant-type { font-size: 11px; color: #6b7280; }
+
+    /* Posts under the board */
+    .sign-posts {
+      display: flex; justify-content: space-between;
+      padding: 0 26px; height: 46px;
+      position: relative; margin-top: -2px;
+    }
+    .sign-post {
+      width: 14px; height: 46px;
+      position: relative;
+      background:
+        linear-gradient(90deg,
+          #4a2f15 0%, #6f4220 20%, #9a6d40 50%, #6f4220 80%, #4a2f15 100%);
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.2);
+    }
+    .sign-post::before {
+      /* Knot in the wood */
+      content: ''; position: absolute;
+      top: 16px; left: 4px;
+      width: 6px; height: 4px;
+      background: radial-gradient(ellipse, #2f1a08 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    /* ── Main garden area ── */
+    .garden-area {
+      padding: 12px 10px 14px;
+      border-radius: 14px;
+      border: 4px solid #6d4c2c;
+      background: linear-gradient(180deg, #d9eadb 0%, #bfd7c2 100%);
+    }
+    .garden-title {
+      text-align: center; font-size: 15px; font-weight: 800; color: #166534;
+      margin-bottom: 8px; letter-spacing: .04em;
+      text-shadow: 0 1px 0 rgba(255,255,255,.5);
+    }
+    .garden-shelf {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    /* ── Zen tile: each pot in its own raked-sand square ── */
+    .garden-pot {
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; padding: 6px 4px 18px;
+      /* Flat raked-sand surface — no card border */
+      background:
+        radial-gradient(ellipse 80% 38% at 50% 78%, rgba(140,100,60,.10) 0%, transparent 65%),
+        repeating-linear-gradient(0deg,
+          #f4e8d2 0px, #f4e8d2 5px,
+          #ecdfc2 5px, #ecdfc2 6px);
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      transition: transform .15s;
+      overflow: visible;
+    }
+    /* Concentric raked-sand rings around the pot */
+    .garden-pot::before {
+      content: '';
+      position: absolute;
+      bottom: 42px; left: 50%; transform: translateX(-50%);
+      width: 80px; height: 30px;
+      background:
+        radial-gradient(ellipse,
+          transparent 32%,
+          rgba(140,100,60,.12) 32%, rgba(140,100,60,.12) 35%,
+          transparent 35%, transparent 50%,
+          rgba(140,100,60,.10) 50%, rgba(140,100,60,.10) 53%,
+          transparent 53%, transparent 70%,
+          rgba(140,100,60,.07) 70%, rgba(140,100,60,.07) 73%,
+          transparent 73%);
+      pointer-events: none; opacity: .85;
+    }
+    .garden-pot.mine {
+      border: none;
+      background:
+        radial-gradient(ellipse 80% 38% at 50% 78%, rgba(34,197,94,.10) 0%, transparent 65%),
+        repeating-linear-gradient(0deg,
+          #ecfdf5 0px, #ecfdf5 5px,
+          #d8f4e3 5px, #d8f4e3 6px);
+      box-shadow: none;
+    }
+    .garden-pot.mine::before {
+      background:
+        radial-gradient(ellipse,
+          transparent 32%,
+          rgba(22,163,74,.18) 32%, rgba(22,163,74,.18) 35%,
+          transparent 35%, transparent 50%,
+          rgba(22,163,74,.14) 50%, rgba(22,163,74,.14) 53%,
+          transparent 53%, transparent 70%,
+          rgba(22,163,74,.10) 70%, rgba(22,163,74,.10) 73%,
+          transparent 73%);
+    }
+    /* Plant area takes top space */
+    .gp-plant-area {
+      height: 100px;
+      display: flex; align-items: flex-end; justify-content: center;
+      padding-bottom: 2px;
+      position: relative; z-index: 1;
+    }
+    .gp-plant {
+      line-height: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,.18));
+      transition: transform .4s, font-size .3s;
+    }
+    .gp-plant.watered { animation: potWiggle .6s ease; }
+    .gp-plant.grew    { animation: plantGrew .9s ease; }
+    @keyframes potWiggle { 0%,100%{transform:scale(1)} 30%{transform:scale(1.18) rotate(-4deg)} 60%{transform:scale(1.12) rotate(3deg)} }
+    @keyframes plantGrew { 0%{transform:scale(.7)} 60%{transform:scale(1.25)} 100%{transform:scale(1)} }
+    @keyframes windSway {
+      0%,100%{ transform: rotate(0deg) translateY(0); }
+      25%{ transform: rotate(2.5deg) translateY(-1px); }
+      50%{ transform: rotate(-1.5deg) translateY(0.5px); }
+      75%{ transform: rotate(1.8deg) translateY(-0.5px); }
+    }
+    .gp-leaf {
+      display: inline-block;
+      transform-origin: bottom center;
+      animation: windSway 3s ease-in-out infinite;
+    }
+    /* Pot — fixed size */
+    .gp-pot-body {
+      width: 44px; height: 34px; position: relative; flex-shrink: 0;
+      background: linear-gradient(180deg, #c2703a 0%, #a0522d 50%, #8b4513 100%);
+      border-radius: 0 0 18px 18px; border-top: 5px solid #d4845a;
+      box-shadow: 0 3px 6px rgba(0,0,0,.22), inset 0 -2px 4px rgba(0,0,0,.15);
+      transition: transform .15s, box-shadow .15s;
+      z-index: 1;
+    }
+    .garden-pot:not(.empty):hover .gp-pot-body { transform: translateY(-2px); }
+    .gp-pot-body::before {
+      content: ''; position: absolute; top: -10px; left: -5px; right: -5px; height: 10px;
+      background: linear-gradient(180deg, #d4845a, #c2703a);
+      border-radius: 3px 3px 0 0;
+    }
+    .gp-soil {
+      position: absolute; top: 0; left: 5px; right: 5px; height: 14px;
+      background: radial-gradient(ellipse at center, #5c3d1e 0%, #3d2810 100%);
+      border-radius: 0 0 10px 10px;
+    }
+    /* Info below pot */
+    .gp-info {
+      text-align: center; margin-top: 4px; width: 100%;
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      position: relative; z-index: 1;
+      padding: 0 2px;
+    }
+    .gp-name {
+      font-size: 10px; font-weight: 700; color: #14532d;
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      line-height: 1.2;
+    }
+    .gp-owner { font-size: 9px; color: #6b7280; font-weight: 400; }
+    .gp-streak {
+      position: absolute; top: 4px; right: 4px;
+      font-size: 9px; color: #a0a0a0; font-weight: 600;
+      background: none; padding: 0; border-radius: 0; border: none;
+    }
+    /* Timeline bar */
+    .gp-timeline {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 18px; background: #e5e7eb;
+      overflow: visible;
+    }
+    .gp-timeline-fill {
+      height: 100%; transition: width .4s;
+      background: linear-gradient(90deg, #22c55e, #86efac);
+    }
+    .gp-timeline-fill.ready { background: linear-gradient(90deg, #3b82f6, #60a5fa); animation: pulseBar 1.6s infinite; }
+    .gp-timeline-fill.full  { background: linear-gradient(90deg, #f59e0b, #fde68a); }
+    @keyframes pulseBar { 0%,100%{opacity:1} 50%{opacity:.55} }
+    .gp-timer {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 18px; line-height: 18px;
+      font-size: 9px; color: #333; font-weight: 600;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none; z-index: 1;
+    }
+    /* Buttons below pot */
+    .gp-water-btn {
+      position: relative; z-index: 2;
+      background: linear-gradient(180deg, #38bdf8, #0ea5e9);
+      border: none; border-radius: 0; color: #fff;
+      padding: 0; width: 100%; height: 100%;
+      font-size: 9px; font-weight: 700; cursor: pointer; font-family: inherit;
+      box-shadow: none;
+      transition: opacity .1s;
+    }
+    .gp-water-btn:hover { opacity: .85; transform: none; box-shadow: none; }
+    .gp-water-btn:active { opacity: .7; transform: none; }
+    .gp-water-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+    /* Watering animation */
+    .gp-watering-can {
+      position: absolute; top: 2px; right: 4px; z-index: 10;
+      font-size: 48px; pointer-events: none;
+      animation: waterCanTilt 2s ease-in-out forwards;
+    }
+    @keyframes waterCanTilt {
+      0% { transform: rotate(0deg) translateY(-15px); opacity: 0; }
+      15% { transform: rotate(0deg) translateY(0); opacity: 1; }
+      35%,75% { transform: rotate(-35deg) translateY(0); opacity: 1; }
+      100% { transform: rotate(-35deg) translateY(-8px); opacity: 0; }
+    }
+    .gp-water-drops {
+      position: absolute; top: 40px; left: 50%; z-index: 9;
+      pointer-events: none;
+    }
+    .gp-water-drops::before, .gp-water-drops::after,
+    .gp-water-drops span::before, .gp-water-drops span::after {
+      content: '💧'; position: absolute; font-size: 12px;
+      animation: dropFall 1.2s ease-in forwards;
+      opacity: 0;
+    }
+    .gp-water-drops::before { left: -8px; animation-delay: .5s; }
+    .gp-water-drops::after { left: 6px; animation-delay: .7s; }
+    .gp-water-drops span::before { left: -2px; animation-delay: .9s; }
+    .gp-water-drops span::after { left: 10px; animation-delay: 1.1s; }
+    @keyframes dropFall {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(60px); opacity: 0; }
+    }
+    /* Empty pot tile */
+    .garden-pot.empty {
+      cursor: pointer;
+      border: none;
+      border-radius: 0;
+      background:
+        repeating-linear-gradient(0deg,
+          #fbf3e1 0px, #fbf3e1 5px,
+          #f4e8d2 5px, #f4e8d2 6px);
+    }
+    .garden-pot.empty:hover { transform: translateY(-2px); }
+    .garden-pot.placeholder { cursor: default; opacity: .5; }
+    .garden-pot.placeholder:hover { transform: none; }
+    .garden-pot.empty .gp-pot-body {
+      opacity: .55;
+      border-top: 5px dashed #d4845a;
+      background: linear-gradient(180deg, #d4845a 0%, #b56b3c 50%, #8b4513 100%);
+    }
+    .garden-pot.empty:hover .gp-pot-body { opacity: 1; transform: translateY(-2px); }
+    .garden-pot.empty .gp-soil { opacity: .6; }
+    .gp-empty-label { font-size: 38px; opacity: .35; transition: opacity .2s; line-height: 1; }
+    .garden-pot.empty:hover .gp-empty-label { opacity: .8; }
+    .gp-empty-text { font-size: 11px; color: #16a34a; font-weight: 700; margin-top: 4px; }
+    /* Inline creation form */
+    .gp-create-form { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; padding-top: 4px; position: relative; z-index: 2; }
+    .gp-form-label { font-size: 10px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .gp-type-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 4px; max-width: 150px; width: 100%;
+    }
+    .gp-type-btn {
+      font-size: 18px; aspect-ratio: 1; border-radius: 6px; border: 2px solid #e5e7eb;
+      background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: transform .1s, border-color .1s;
+    }
+    .gp-type-btn:hover { border-color: #86efac; transform: scale(1.05); }
+    .gp-type-btn.sel { border-color: #16a34a; background: #f0fdf4; }
+    .gp-name-inp {
+      width: 100%; max-width: 130px; border: 1px solid #d1d5db; border-radius: 6px;
+      padding: 5px 8px; font-size: 12px; font-family: inherit; text-align: center; outline: none;
+      background: #fff;
+    }
+    .gp-name-inp:focus { border-color: #16a34a; }
+    .gp-plant-btn {
+      background: linear-gradient(180deg, #22c55e, #16a34a); color: #fff; border: none; border-radius: 6px;
+      padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit;
+      box-shadow: 0 2px 4px rgba(22,163,74,.35);
+    }
+    .gp-plant-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+    .gp-cancel-btn {
+      background: transparent; color: #6b7280; border: none; font-size: 10px; cursor: pointer;
+      font-family: inherit; text-decoration: underline; padding: 2px;
+    }
+    .gp-cancel-btn:hover { color: #ef4444; }
+    @media (max-width: 700px) {
+      .garden-wrap { grid-template-columns: 1fr; gap: 14px; }
+      .garden-sign { position: static; }
+    }
+
     /* ── CARD STATS ── */
     .card-stats {
       display: flex; gap: 8px; align-items: center;
@@ -1313,6 +1675,7 @@
     <button class="nav-tab" data-tab="roulette">Ruletka</button>
     <button class="nav-tab" data-tab="slots">Jednoręki bandyta</button>
     <button class="nav-tab" data-tab="shop">Sklep</button>
+    <button class="nav-tab" data-tab="garden">Ogródek 🌱</button>
   </nav>
 
   <div id="tab-markets">
@@ -1610,6 +1973,14 @@
         <button class="btn-primary" id="btn-new-item" style="display:none;width:auto;padding:10px 18px">+ Dodaj nagrodę</button>
       </div>
       <div class="shop-grid" id="shop-grid">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-garden" class="hidden">
+    <main>
+      <div class="garden-wrap" id="garden-content">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
     </main>
@@ -2121,6 +2492,7 @@ async function doLogout() {
   await sb.auth.signOut();
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
+  resetGardenState();
   hide(screenApp);
   pinInput.value = '';
   const rp = document.getElementById('reg-pin'); if (rp) rp.value = '';
@@ -2190,25 +2562,29 @@ function switchTab(tab) {
   const tR = document.getElementById('tab-roulette');
   const tSl = document.getElementById('tab-slots');
   const tS = document.getElementById('tab-shop');
+  const tG = document.getElementById('tab-garden');
   if (tab === 'markets') {
-    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tS);
+    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tS); hide(tG);
     if (markets.length === 0) loadMarkets();
   } else if (tab === 'leaderboard') {
-    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tS);
+    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tS); hide(tG);
     loadLeaderboard();
   } else if (tab === 'poker') {
-    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tS);
+    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tS); hide(tG);
     setupPokerRealtime();
     loadPokerState();
   } else if (tab === 'roulette') {
-    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tS);
+    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tS); hide(tG);
     loadRouletteHistory();
   } else if (tab === 'slots') {
-    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tS);
+    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tS); hide(tG);
     loadSlotsHistory();
   } else if (tab === 'shop') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tS);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tS); hide(tG);
     loadShop();
+  } else if (tab === 'garden') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tS); show(tG);
+    loadGarden();
   }
 }
 
@@ -4172,6 +4548,389 @@ async function loadSlotsHistory() {
       histEl.appendChild(el('div', { style: { color: 'var(--muted)', fontSize: '12px', textAlign: 'center' } }, 'Brak spinów — zagraj, aby zobaczyć historię.'));
     }
   } catch (err) { /* silent */ }
+}
+
+// ── Garden (Ogródek) ──────────────────────────────────────────────────────
+const PLANT_STAGES = {
+  sunflower: ['🌱','🌿','🌾','🌻','🌻','🌻'],
+  rose:      ['🌱','🌿','🥀','🌹','🌹','🌹'],
+  cactus:    ['🌱','🌿','🌵','🌵','🌵','🌵'],
+  tulip:     ['🌱','🌿','🍀','🌷','🌷','🌷'],
+  palm:      ['🌱','🌿','🌴','🌴','🌴','🌴'],
+  cherry:    ['🌱','🌿','🌸','🌸','🌸','🌸'],
+  herb:      ['🌱','🌿','☘️','🌾','🌾','🌾'],
+  tree:      ['🌱','🌿','🌳','🌳','🌳','🌳']
+};
+const PLANT_SIZES = { 1: 36, 2: 48, 3: 60, 4: 72, 5: 84, 6: 96 };
+const PLANT_LABELS = { sunflower: 'Słonecznik', rose: 'Róża', cactus: 'Kaktus', tulip: 'Tulipan', palm: 'Palma', cherry: 'Wiśnia', herb: 'Zioła', tree: 'Drzewko' };
+const PLANT_PICK_EMOJI = { sunflower: '🌻', rose: '🌹', cactus: '🌵', tulip: '🌷', palm: '🌴', cherry: '🌸', herb: '🌾', tree: '🌳' };
+const GARDEN_ERR_PL = {
+  not_authenticated:    'Musisz być zalogowany.',
+  bad_plant_type:       'Wybierz rodzaj rośliny.',
+  bad_plant_name:       'Podaj imię rośliny.',
+  already_has_garden:   'Masz już swoją roślinę w ogródku.',
+  no_garden:            'Najpierw zasadź roślinę.',
+  cooldown:             'Poczekaj — można podlać raz na 5 godzin.',
+  daily_limit:          'Limit na dziś — maks. 3 podlania.'
+};
+function gardenErr(err) {
+  if (!err) return 'Błąd';
+  const msg = (err.message || String(err)).trim();
+  return GARDEN_ERR_PL[msg] || msg;
+}
+function nextRewardCoins(streak) {
+  // 10 + (streak)*2, capped at 20 — reward AFTER next watering (streak grows by 1 next day)
+  return Math.min(10 + Math.max(0, streak) * 2, 20);
+}
+let myGarden = null;
+let allGardens = [];
+let gardenCooldownTimers = [];
+let gardenRealtimeReady = false;
+let gardenReloadDebounce = null;
+let prevStageByGarden = {}; // garden_id -> last seen stage (to animate growth)
+
+function clearGardenTimers() {
+  gardenCooldownTimers.forEach(id => clearInterval(id));
+  gardenCooldownTimers = [];
+}
+
+function resetGardenState() {
+  clearGardenTimers();
+  if (gardenReloadDebounce) { clearTimeout(gardenReloadDebounce); gardenReloadDebounce = null; }
+  myGarden = null;
+  allGardens = [];
+  gardenRealtimeReady = false;
+  prevStageByGarden = {};
+}
+
+function setupGardenRealtime() {
+  if (gardenRealtimeReady) return;
+  gardenRealtimeReady = true;
+  const ch = sb.channel('garden-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, () => {
+      if (activeTab !== 'garden') return;
+      // Debounce: many users may water around the same time.
+      if (gardenReloadDebounce) clearTimeout(gardenReloadDebounce);
+      gardenReloadDebounce = setTimeout(() => { gardenReloadDebounce = null; loadGarden(); }, 250);
+    })
+    .subscribe();
+  realtimeChannels.push(ch);
+}
+
+function getPlantEmoji(type, stage) {
+  const arr = PLANT_STAGES[type] || PLANT_STAGES.sunflower;
+  return arr[Math.max(0, Math.min(stage - 1, 5))];
+}
+
+function getPlantSize(stage) {
+  return PLANT_SIZES[Math.max(1, Math.min(stage, 6))] || 44;
+}
+
+async function loadGarden() {
+  setupGardenRealtime();
+  const wrap = document.getElementById('garden-content');
+  if (!wrap.children.length || !wrap.querySelector('.garden-shelf')) wrap.replaceChildren(makeSpinner());
+
+  const { data: gardens, error: gErr } = await sb.from('gardens').select('*, profiles(nick)');
+
+  if (gErr) {
+    wrap.replaceChildren(el('div', { style: { color: 'var(--muted)', textAlign: 'center', padding: '32px' } }, DB_ERROR_MESSAGE));
+    return;
+  }
+
+  // Sort: my pot first, then by stage desc, then by streak desc, then by created_at asc
+  allGardens = (gardens || []).slice().sort((a, b) => {
+    if (a.user_id === me.id && b.user_id !== me.id) return -1;
+    if (b.user_id === me.id && a.user_id !== me.id) return  1;
+    if (b.stage !== a.stage) return b.stage - a.stage;
+    if ((b.streak_days || 0) !== (a.streak_days || 0)) return (b.streak_days || 0) - (a.streak_days || 0);
+    return (a.created_at || '').localeCompare(b.created_at || '');
+  });
+  myGarden = allGardens.find(g => g.user_id === me.id) || null;
+
+  // Refresh own coins — keep header in sync with watering rewards across tabs.
+  refreshMeCoins();
+
+  renderZenGarden();
+}
+
+function renderZenGarden() {
+  const wrap = document.getElementById('garden-content');
+  wrap.replaceChildren();
+  clearGardenTimers();
+
+  // ── Tabliczka — wooden sign on two posts ──
+  const sign = el('div', { className: 'garden-sign' });
+  const board = el('div', { className: 'sign-board' });
+
+  board.innerHTML = `<h3>🪧 Zasady</h3>
+<ul>
+<li>💧 <b>Podlewaj</b> co 5h (maks. 3×/dzień)</li>
+<li>🔥 <b>Seria</b> — codziennie = rośnie!</li>
+<li>💰 <b>10–20 coinów</b> za podlanie</li>
+<li>⚠️ Pominiesz dzień = reset serii</li>
+</ul>`;
+
+  if (myGarden) {
+    const today = new Date().toISOString().slice(0, 10);
+    const watersToday = (myGarden.last_water_date === today) ? (myGarden.waters_today || 0) : 0;
+    const streak = myGarden.streak_days || 0;
+    const emoji = getPlantEmoji(myGarden.plant_type, myGarden.stage);
+    board.innerHTML += `<h3 style="margin-top:14px">🌱 Twoja roślinka</h3>
+<div class="my-plant-preview">${emoji}</div>
+<div class="my-plant-details">
+<div class="my-plant-name">${myGarden.plant_name}</div>
+<div class="my-plant-type">${PLANT_LABELS[myGarden.plant_type] || ''}</div>
+</div>
+<div class="my-summary">
+<div>🔥 Seria: <b>${streak} ${streak === 1 ? 'dzień' : 'dni'}</b></div>
+<div>⭐ Etap: <b>${myGarden.stage}/6</b></div>
+<div>💧 Dziś: <b>${watersToday}/3</b></div>
+<div>💰 Nagroda: <b>${nextRewardCoins(streak)} 🪙</b></div>
+</div>`;
+  }
+  // Bottom-corner nails (positioned via .sign-nails inside the board)
+  board.appendChild(el('div', { className: 'sign-nails' }));
+  sign.appendChild(board);
+
+  // Two posts under the board
+  const posts = el('div', { className: 'sign-posts' });
+  posts.appendChild(el('span', { className: 'sign-post' }));
+  posts.appendChild(el('span', { className: 'sign-post' }));
+  sign.appendChild(posts);
+
+  wrap.appendChild(sign);
+
+  // ── Garden area: zen tiles ──
+  const area = el('div', { className: 'garden-area' });
+  area.appendChild(el('div', { className: 'garden-title' }, '🌿 Ogródek Zen 🌿'));
+
+  const shelf = el('div', { className: 'garden-shelf' });
+  const TOTAL_SPOTS = 15;
+  allGardens.forEach(g => {
+    const isMine = g.user_id === me.id;
+    shelf.appendChild(buildPot(g, isMine));
+  });
+  // Fill remaining spots with empty pots (only first one is plantable if user has no garden)
+  const emptyCount = Math.max(0, TOTAL_SPOTS - allGardens.length);
+  for (let i = 0; i < emptyCount; i++) {
+    if (i === 0 && !myGarden) {
+      shelf.appendChild(buildEmptyPot());
+    } else {
+      shelf.appendChild(buildPlaceholderPot());
+    }
+  }
+
+  area.appendChild(shelf);
+  wrap.appendChild(area);
+}
+
+function buildPot(g, isMine) {
+  const pot = el('div', { className: 'garden-pot' + (isMine ? ' mine' : '') });
+
+  // Plant emoji (grows above the pot)
+  const plantArea = el('div', { className: 'gp-plant-area' });
+  const leaf = el('span', { className: 'gp-leaf' }, getPlantEmoji(g.plant_type, g.stage));
+  leaf.style.animationDelay = ((g.id.charCodeAt(0) + g.id.charCodeAt(1)) % 20) / 10 + 's';
+  const plant = el('div', { className: 'gp-plant' });
+  plant.style.fontSize = getPlantSize(g.stage) + 'px';
+  plant.appendChild(leaf);
+  // Animate growth if the plant changed stage since last render.
+  if (prevStageByGarden[g.id] != null && prevStageByGarden[g.id] < g.stage) {
+    plant.classList.add('grew');
+    setTimeout(() => plant.classList.remove('grew'), 950);
+  }
+  prevStageByGarden[g.id] = g.stage;
+  plantArea.appendChild(plant);
+  pot.appendChild(plantArea);
+
+  // Pot body with soil
+  const potBody = el('div', { className: 'gp-pot-body' });
+  potBody.appendChild(el('div', { className: 'gp-soil' }));
+  pot.appendChild(potBody);
+
+  // Info below pot
+  const info = el('div', { className: 'gp-info' });
+  const nameLine = el('div', { className: 'gp-name', title: g.plant_name });
+  nameLine.append(g.plant_name, ' ');
+  nameLine.appendChild(el('span', { className: 'gp-owner' }, g.profiles?.nick || '?'));
+  info.appendChild(nameLine);
+
+  if (g.streak_days > 0) {
+    pot.appendChild(el('div', { className: 'gp-streak' }, `🔥×${g.streak_days}`));
+  }
+
+  // Cooldown / daily-cap state
+  const today = new Date().toISOString().slice(0, 10);
+  const dailyFull = g.waters_today >= 3 && g.last_water_date === today;
+  let pct = 100;
+  let canWater = true;
+  let cooldownEnd = null;
+  if (g.last_watered_at) {
+    cooldownEnd = new Date(g.last_watered_at).getTime() + 5 * 3600000;
+    const elapsed = Date.now() - new Date(g.last_watered_at).getTime();
+    pct = Math.max(0, Math.min(100, (elapsed / (5 * 3600000)) * 100));
+    canWater = elapsed >= 5 * 3600000;
+  }
+  if (dailyFull) { pct = 100; canWater = false; }
+
+  // Timeline bar — only for own pot, at bottom of tile
+  if (isMine) {
+    const timeline = el('div', { className: 'gp-timeline' });
+    const fill = el('div', { className: 'gp-timeline-fill' });
+    if (dailyFull) fill.classList.add('full');
+    else if (canWater) fill.classList.add('ready');
+    fill.style.width = pct + '%';
+    timeline.appendChild(fill);
+
+    // Timer or button inside the bar
+    if (canWater && !dailyFull) {
+      const btn = el('button', { className: 'gp-water-btn' }, '💧 Podlej');
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        btn.disabled = true; btn.textContent = '...';
+        const can = el('div', { className: 'gp-watering-can' }, '🚿');
+        const drops = el('div', { className: 'gp-water-drops' });
+        drops.appendChild(el('span'));
+        pot.appendChild(can);
+        pot.appendChild(drops);
+        const { data, error } = await sb.rpc('water_plant');
+        if (error) {
+          can.remove(); drops.remove();
+          showToast('❌ ' + gardenErr(error));
+          btn.disabled = false; btn.textContent = '💧 Podlej';
+          return;
+        }
+        me.coins += data.coins_earned;
+        setText(headerCoins, me.coins);
+        showToast(`🌧️ +${data.coins_earned} coinów! Seria: ${data.streak_days} ${data.streak_days === 1 ? 'dzień' : 'dni'}`);
+        plant.classList.add('watered');
+        setTimeout(() => { can.remove(); drops.remove(); plant.classList.remove('watered'); loadGarden(); }, 2500);
+      };
+      timeline.appendChild(btn);
+    } else if (!canWater && !dailyFull && cooldownEnd) {
+      const timerDiv = el('div', { className: 'gp-timer' });
+      const updateTimer = () => {
+        const diff = cooldownEnd - Date.now();
+        if (diff <= 0) { loadGarden(); return; }
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        timerDiv.textContent = h > 0 ? `za ${h}h ${m}m` : `za ${m}m ${String(s).padStart(2, '0')}s`;
+        const elapsed = 5 * 3600000 - diff;
+        fill.style.width = Math.max(0, Math.min(100, (elapsed / (5 * 3600000)) * 100)) + '%';
+      };
+      updateTimer();
+      const interval = (cooldownEnd - Date.now()) < 60000 ? 1000 : 20000;
+      gardenCooldownTimers.push(setInterval(updateTimer, interval));
+      timeline.appendChild(timerDiv);
+    } else if (dailyFull) {
+      timeline.appendChild(el('div', { className: 'gp-timer' }, '3/3 — jutro'));
+    }
+    pot.appendChild(timeline);
+  }
+
+  pot.appendChild(info);
+  return pot;
+}
+
+function buildPlaceholderPot() {
+  const pot = el('div', { className: 'garden-pot empty placeholder' });
+  const plantArea = el('div', { className: 'gp-plant-area' });
+  pot.appendChild(plantArea);
+  const potBody = el('div', { className: 'gp-pot-body' });
+  potBody.appendChild(el('div', { className: 'gp-soil' }));
+  pot.appendChild(potBody);
+  return pot;
+}
+
+function buildEmptyPot() {
+  const pot = el('div', { className: 'garden-pot empty' });
+  let creating = false;
+
+  const plantArea = el('div', { className: 'gp-plant-area' });
+  plantArea.appendChild(el('div', { className: 'gp-empty-label' }, '➕'));
+  pot.appendChild(plantArea);
+
+  const potBody = el('div', { className: 'gp-pot-body' });
+  potBody.appendChild(el('div', { className: 'gp-soil' }));
+  pot.appendChild(potBody);
+
+  const info = el('div', { className: 'gp-info' });
+  info.appendChild(el('div', { className: 'gp-empty-text' }, 'Zasadź roślinę!'));
+  info.appendChild(el('div', { className: 'gp-owner' }, 'Bezpłatnie · 1× na konto'));
+  pot.appendChild(info);
+
+  pot.onclick = () => {
+    if (creating) return;
+    creating = true;
+    pot.replaceChildren();
+    pot.classList.remove('empty');
+
+    // Keep visual continuity: small placeholder plant area
+    const ghostArea = el('div', { className: 'gp-plant-area' });
+    const ghost = el('div', { className: 'gp-plant', style: { fontSize: '28px', opacity: '.5' } }, '🌱');
+    ghostArea.appendChild(ghost);
+    pot.appendChild(ghostArea);
+
+    const pBody = el('div', { className: 'gp-pot-body' });
+    pBody.appendChild(el('div', { className: 'gp-soil' }));
+    pot.appendChild(pBody);
+
+    const form = el('div', { className: 'gp-create-form' });
+    form.appendChild(el('div', { className: 'gp-form-label' }, 'Wybierz roślinę'));
+
+    // Type selection
+    const typeRow = el('div', { className: 'gp-type-row' });
+    let selectedType = null;
+    Object.entries(PLANT_PICK_EMOJI).forEach(([type, emoji]) => {
+      const btn = el('button', { className: 'gp-type-btn', title: PLANT_LABELS[type] }, emoji);
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        typeRow.querySelectorAll('.gp-type-btn').forEach(b => b.classList.remove('sel'));
+        btn.classList.add('sel');
+        selectedType = type;
+        ghost.textContent = emoji;
+        ghost.style.opacity = '.85';
+        plantBtn.disabled = !(selectedType && nameInp.value.trim());
+      };
+      typeRow.appendChild(btn);
+    });
+    form.appendChild(typeRow);
+
+    // Name input
+    form.appendChild(el('div', { className: 'gp-form-label' }, 'Nazwa rośliny'));
+    const nameInp = el('input', { className: 'gp-name-inp', placeholder: 'np. Stefan', maxLength: 20 });
+    nameInp.onclick = (e) => e.stopPropagation();
+    nameInp.oninput = () => { plantBtn.disabled = !(selectedType && nameInp.value.trim()); };
+    nameInp.onkeydown = (e) => { if (e.key === 'Enter' && !plantBtn.disabled) plantBtn.click(); };
+    form.appendChild(nameInp);
+
+    // Plant button + cancel
+    const plantBtn = el('button', { className: 'gp-plant-btn', disabled: true }, '🌱 Zasadź');
+    plantBtn.onclick = async (e) => {
+      e.stopPropagation();
+      plantBtn.disabled = true; plantBtn.textContent = '...';
+      const { error } = await sb.rpc('create_garden', { p_plant_type: selectedType, p_plant_name: nameInp.value.trim() });
+      if (error) {
+        showToast('❌ ' + gardenErr(error));
+        plantBtn.disabled = false; plantBtn.textContent = '🌱 Zasadź';
+        return;
+      }
+      showToast('🌱 Zasadzono! Pamiętaj, by podlewać codziennie.');
+      loadGarden();
+    };
+    form.appendChild(plantBtn);
+
+    const cancel = el('button', { className: 'gp-cancel-btn' }, 'Anuluj');
+    cancel.onclick = (e) => { e.stopPropagation(); loadGarden(); };
+    form.appendChild(cancel);
+
+    pot.appendChild(form);
+    setTimeout(() => nameInp.focus(), 30);
+  };
+
+  return pot;
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────
