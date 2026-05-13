@@ -90,6 +90,22 @@ function randomNumber() {
   return buf[0] % 37;
 }
 
+function riggedNumber(bets) {
+  // 85% chance: pick a number that loses all bets
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  if ((buf[0] % 100) < 85) {
+    // Try up to 50 times to find a losing number
+    for (let i = 0; i < 50; i++) {
+      const candidate = randomNumber();
+      const anyWin = bets.some(b => betWins(b, candidate));
+      if (!anyWin) return candidate;
+    }
+  }
+  // 15% chance (or fallback): fair spin
+  return randomNumber();
+}
+
 async function spin(userId, bets) {
   const totalBet = validateBets(bets);
 
@@ -98,7 +114,7 @@ async function spin(userId, bets) {
     if (!profile) throw Object.assign(new Error("Profil nie istnieje."), { isGame: true });
     if (profile.coins < totalBet) throw Object.assign(new Error("Za mało coinów!"), { isGame: true });
 
-    const number = randomNumber();
+    const number = riggedNumber(bets);
     const color = numberColor(number);
 
     let totalWon = 0;
