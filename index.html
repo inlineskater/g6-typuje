@@ -1266,10 +1266,22 @@
     .cosmetic-price { font-size: 11px; color: var(--accent); font-weight: 800; }
     .cosmetic-owned-label { font-size: 10px; color: var(--yes); font-weight: 700; }
     .cosmetic-btn { font-size: 11px; padding: 4px 10px; }
-    .gp-accessory { position: absolute; font-size: 13px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); z-index: 2; pointer-events: none; line-height: 1; }
-    .gp-acc-left { left: 2px; bottom: 46px; }
-    .gp-acc-right { right: 2px; bottom: 46px; }
-    .gp-acc-top { top: 2px; right: 2px; }
+    .gp-accessory { position: absolute; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); z-index: 2; pointer-events: none; line-height: 1; }
+    .gp-acc-left { left: 2px; bottom: 46px; animation: accBob 2.5s ease-in-out infinite; }
+    .gp-acc-right { right: 2px; bottom: 46px; animation: accBob 2.5s ease-in-out infinite .8s; }
+    .gp-acc-top { top: 2px; right: 2px; animation: accFloat 3s ease-in-out infinite; }
+    @keyframes accBob { 0%,100%{ transform: translateY(0) scale(1); } 50%{ transform: translateY(-2px) scale(1.08); } }
+    @keyframes accFloat { 0%,100%{ transform: translate(0,0) rotate(0deg); } 33%{ transform: translate(1px,-2px) rotate(4deg); } 66%{ transform: translate(-1px,-1px) rotate(-3deg); } }
+    @keyframes accBuzz { 0%,100%{ transform: translate(0,0); } 25%{ transform: translate(1px,-1px); } 50%{ transform: translate(-1px,1px); } 75%{ transform: translate(1px,0); } }
+    @keyframes accWave { 0%,100%{ transform: rotate(0deg); } 25%{ transform: rotate(8deg); } 75%{ transform: rotate(-5deg); } }
+    @keyframes accPulse { 0%,100%{ transform: scale(1); opacity: 1; } 50%{ transform: scale(1.15); opacity: .85; } }
+    .gp-acc-bee { animation: accBuzz .6s ease-in-out infinite !important; }
+    .gp-acc-butterfly { animation: accFloat 4s ease-in-out infinite !important; }
+    .gp-acc-flag { animation: accWave 2s ease-in-out infinite !important; transform-origin: bottom center; }
+    .gp-acc-crystal { animation: accPulse 2.5s ease-in-out infinite !important; }
+    .gp-acc-star { animation: accPulse 1.8s ease-in-out infinite !important; }
+    .gp-acc-cat { animation: accBob 3s ease-in-out infinite !important; }
+    .gp-acc-lantern { animation: accPulse 3s ease-in-out infinite !important; }
 
     /* ── GARDEN (Ogródek) ── */
     .garden-wrap {
@@ -4392,18 +4404,18 @@ document.getElementById('si-submit').addEventListener('click', async () => {
 
 // ── Garden Cosmetics ──────────────────────────────────────────────────────
 const GARDEN_COSMETICS = [
-  { id: 'flag_red', emoji: '🚩', name: 'Czerwona flaga', price: 50, pos: 'left' },
+  { id: 'flag_pl', emoji: '🇵🇱', name: 'Flaga polska', price: 50, pos: 'left', anim: 'flag' },
   { id: 'mushroom', emoji: '🍄', name: 'Grzybek', price: 60, pos: 'left' },
   { id: 'ladybug', emoji: '🐞', name: 'Biedronka', price: 80, pos: 'right' },
-  { id: 'bee', emoji: '🐝', name: 'Pszczółka', price: 80, pos: 'top' },
-  { id: 'butterfly', emoji: '🦋', name: 'Motyl', price: 100, pos: 'top' },
+  { id: 'bee', emoji: '🐝', name: 'Pszczółka', price: 80, pos: 'top', anim: 'bee' },
+  { id: 'butterfly', emoji: '🦋', name: 'Motyl', price: 100, pos: 'top', anim: 'butterfly' },
   { id: 'snail', emoji: '🐌', name: 'Ślimak', price: 70, pos: 'left' },
   { id: 'frog', emoji: '🐸', name: 'Żabka', price: 120, pos: 'right' },
   { id: 'gnome', emoji: '🧙', name: 'Krasnal', price: 150, pos: 'right' },
-  { id: 'lantern', emoji: '🏮', name: 'Lampion', price: 90, pos: 'top' },
-  { id: 'crystal', emoji: '🔮', name: 'Kryształ', price: 130, pos: 'left' },
-  { id: 'cat', emoji: '🐱', name: 'Kotek', price: 200, pos: 'right' },
-  { id: 'star', emoji: '⭐', name: 'Gwiazdka', price: 100, pos: 'top' },
+  { id: 'lantern', emoji: '🏮', name: 'Lampion', price: 90, pos: 'top', anim: 'lantern' },
+  { id: 'crystal', emoji: '🔮', name: 'Kryształ', price: 130, pos: 'left', anim: 'crystal' },
+  { id: 'cat', emoji: '🐱', name: 'Kotek', price: 200, pos: 'right', anim: 'cat' },
+  { id: 'star', emoji: '⭐', name: 'Gwiazdka', price: 100, pos: 'top', anim: 'star' },
 ];
 
 function renderCosmeticsGrid() {
@@ -4932,7 +4944,8 @@ function buildPot(g, isMine) {
       const item = GARDEN_COSMETICS.find(c => c.id === accId);
       if (!item) return;
       const posClass = item.pos === 'left' ? 'gp-acc-left' : item.pos === 'right' ? 'gp-acc-right' : 'gp-acc-top';
-      pot.appendChild(el('span', { className: 'gp-accessory ' + posClass }, item.emoji));
+      const animClass = item.anim ? ' gp-acc-' + item.anim : '';
+      pot.appendChild(el('span', { className: 'gp-accessory ' + posClass + animClass }, item.emoji));
     });
   }
 
