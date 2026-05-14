@@ -1253,6 +1253,24 @@
     .shop-card-btn { margin-top: 6px; }
     .shop-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 48px 0; grid-column: 1 / -1; }
 
+    /* ── COSMETICS ── */
+    .cosmetics-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .cosmetics-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+    .cosmetics-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+    .cosmetics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+    .cosmetic-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: border-color .15s; }
+    .cosmetic-card:hover { border-color: var(--accent); }
+    .cosmetic-card.owned { border-color: var(--yes); background: var(--yes-dim); }
+    .cosmetic-icon { font-size: 28px; }
+    .cosmetic-name { font-size: 12px; font-weight: 700; }
+    .cosmetic-price { font-size: 11px; color: var(--accent); font-weight: 800; }
+    .cosmetic-owned-label { font-size: 10px; color: var(--yes); font-weight: 700; }
+    .cosmetic-btn { font-size: 11px; padding: 4px 10px; }
+    .gp-accessory { position: absolute; font-size: 13px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); z-index: 2; pointer-events: none; line-height: 1; }
+    .gp-acc-left { left: 2px; bottom: 46px; }
+    .gp-acc-right { right: 2px; bottom: 46px; }
+    .gp-acc-top { top: 2px; right: 2px; }
+
     /* ── GARDEN (Ogródek) ── */
     .garden-wrap {
       max-width: 1200px; margin: 0 auto;
@@ -1994,6 +2012,11 @@
       </div>
       <div class="shop-grid" id="shop-grid">
         <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+      <div class="cosmetics-section" id="cosmetics-section">
+        <div class="cosmetics-title">🌿 Ozdoby do ogródka</div>
+        <div class="cosmetics-sub">Udekoruj swoją roślinkę — widoczne dla wszystkich w Zen Garden. Musisz mieć roślinę, żeby kupić.</div>
+        <div class="cosmetics-grid" id="cosmetics-grid"></div>
       </div>
     </main>
   </div>
@@ -4265,6 +4288,7 @@ async function loadShop() {
     return;
   }
   items.forEach(item => grid.appendChild(buildShopCard(item)));
+  renderCosmeticsGrid();
 }
 
 function buildShopCard(item) {
@@ -4365,6 +4389,65 @@ document.getElementById('si-submit').addEventListener('click', async () => {
   showToast('✅ Nagroda dodana!');
   loadShop();
 });
+
+// ── Garden Cosmetics ──────────────────────────────────────────────────────
+const GARDEN_COSMETICS = [
+  { id: 'flag_red', emoji: '🚩', name: 'Czerwona flaga', price: 50, pos: 'left' },
+  { id: 'mushroom', emoji: '🍄', name: 'Grzybek', price: 60, pos: 'left' },
+  { id: 'ladybug', emoji: '🐞', name: 'Biedronka', price: 80, pos: 'right' },
+  { id: 'bee', emoji: '🐝', name: 'Pszczółka', price: 80, pos: 'top' },
+  { id: 'butterfly', emoji: '🦋', name: 'Motyl', price: 100, pos: 'top' },
+  { id: 'snail', emoji: '🐌', name: 'Ślimak', price: 70, pos: 'left' },
+  { id: 'frog', emoji: '🐸', name: 'Żabka', price: 120, pos: 'right' },
+  { id: 'gnome', emoji: '🧙', name: 'Krasnal', price: 150, pos: 'right' },
+  { id: 'lantern', emoji: '🏮', name: 'Lampion', price: 90, pos: 'top' },
+  { id: 'crystal', emoji: '🔮', name: 'Kryształ', price: 130, pos: 'left' },
+  { id: 'cat', emoji: '🐱', name: 'Kotek', price: 200, pos: 'right' },
+  { id: 'star', emoji: '⭐', name: 'Gwiazdka', price: 100, pos: 'top' },
+];
+
+function renderCosmeticsGrid() {
+  const grid = document.getElementById('cosmetics-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+  const myAcc = myGarden?.accessories || [];
+  const hasGarden = !!myGarden;
+
+  GARDEN_COSMETICS.forEach(item => {
+    const owned = myAcc.includes(item.id);
+    const card = el('div', { className: 'cosmetic-card' + (owned ? ' owned' : '') });
+    card.appendChild(el('div', { className: 'cosmetic-icon' }, item.emoji));
+    card.appendChild(el('div', { className: 'cosmetic-name' }, item.name));
+    if (owned) {
+      card.appendChild(el('div', { className: 'cosmetic-owned-label' }, '✓ Posiadasz'));
+    } else {
+      card.appendChild(el('div', { className: 'cosmetic-price' }, item.price + ' 🪙'));
+      const btn = el('button', { className: 'btn-primary cosmetic-btn', disabled: !hasGarden }, hasGarden ? 'Kup' : 'Potrzebujesz rośliny');
+      btn.addEventListener('click', () => buyCosmetic(item, btn));
+      card.appendChild(btn);
+    }
+    grid.appendChild(card);
+  });
+}
+
+async function buyCosmetic(item, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  const { data, error } = await sb.rpc('purchase_accessory', { p_accessory_id: item.id, p_price: item.price });
+  if (error) {
+    const msg = error.message.includes('insufficient') ? 'Za mało coinów!'
+              : error.message.includes('already_owned') ? 'Już posiadasz!'
+              : error.message.includes('no_garden') ? 'Najpierw posadź roślinę!'
+              : error.message;
+    showToast('❌ ' + msg);
+    btn.disabled = false; btn.textContent = 'Kup';
+    return;
+  }
+  me.coins -= item.price;
+  setText(headerCoins, me.coins);
+  if (myGarden) myGarden.accessories = [...(myGarden.accessories || []), item.id];
+  showToast('✅ Kupiono ' + item.emoji + ' ' + item.name + '!');
+  renderCosmeticsGrid();
+}
 
 // ── Roulette ──────────────────────────────────────────────────────────────
 const ROULETTE_REDS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
@@ -4842,6 +4925,16 @@ function buildPot(g, isMine) {
   const potBody = el('div', { className: 'gp-pot-body' });
   potBody.appendChild(el('div', { className: 'gp-soil' }));
   pot.appendChild(potBody);
+
+  // Accessories
+  if (g.accessories && g.accessories.length) {
+    g.accessories.forEach(accId => {
+      const item = GARDEN_COSMETICS.find(c => c.id === accId);
+      if (!item) return;
+      const posClass = item.pos === 'left' ? 'gp-acc-left' : item.pos === 'right' ? 'gp-acc-right' : 'gp-acc-top';
+      pot.appendChild(el('span', { className: 'gp-accessory ' + posClass }, item.emoji));
+    });
+  }
 
   // Info below pot
   const info = el('div', { className: 'gp-info' });
