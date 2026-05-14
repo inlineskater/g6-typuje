@@ -5003,6 +5003,7 @@ function renderZenGarden() {
   const shelf = el('div', { className: 'garden-shelf' });
   const TOTAL_SPOTS = 15;
   allGardens.forEach(g => {
+    if (g.profiles?.nick === 'admin' && me.nick !== 'admin') return;
     const isMine = g.user_id === me.id;
     shelf.appendChild(buildPot(g, isMine));
   });
