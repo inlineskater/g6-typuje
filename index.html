@@ -1546,7 +1546,7 @@
     }
     /* Plant area takes top space */
     .gp-plant-area {
-      height: 70px;
+      height: 85px;
       display: flex; align-items: flex-end; justify-content: center;
       padding-bottom: 2px;
       position: relative; z-index: 1;
@@ -5041,7 +5041,10 @@ async function loadGarden() {
   // Refresh own coins — keep header in sync with watering rewards across tabs.
   refreshMeCoins();
 
-  renderZenGarden();
+  try { renderZenGarden(); } catch(e) {
+    console.error('Garden render error:', e);
+    wrap.replaceChildren(el('div', { style: { color:'var(--no)', textAlign:'center', padding:'32px' } }, 'Błąd renderowania: ' + e.message));
+  }
 }
 
 function renderZenGarden() {
