@@ -4881,6 +4881,43 @@ function renderZenGarden() {
 <div>💧 Dziś: <b>${watersToday}/3</b></div>
 <div>💰 Nagroda: <b>${nextRewardCoins(streak)} 🪙</b></div>
 </div>`;
+
+    // Inventory & equip section
+    const myAcc = myGarden.accessories || [];
+    if (myAcc.length > 0) {
+      const equipped = myGarden.equipped || {};
+      const invDiv = el('div', { style: { marginTop: '14px' } });
+      invDiv.appendChild(el('h3', { style: { fontSize: '12px', color: '#14532d', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' } }, '🎒 Ozdoby'));
+
+      const slots = ['left', 'right', 'top'];
+      const slotLabels = { left: '← Lewa', right: 'Prawa →', top: '↑ Góra' };
+      slots.forEach(slot => {
+        const row = el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontSize: '11px' } });
+        row.appendChild(el('span', { style: { width: '52px', fontWeight: '700', color: '#3d2810' } }, slotLabels[slot]));
+        const select = el('select', { style: { flex: '1', fontSize: '11px', padding: '3px 4px', borderRadius: '5px', border: '1px solid #c89760', background: '#f4e8d2', color: '#3d2810' } });
+        select.appendChild(el('option', { value: '' }, '— brak —'));
+        myAcc.forEach(accId => {
+          const item = GARDEN_COSMETICS.find(c => c.id === accId);
+          if (!item) return;
+          const opt = el('option', { value: accId }, item.emoji + ' ' + item.name);
+          if (equipped[slot] === accId) opt.selected = true;
+          select.appendChild(opt);
+        });
+        select.addEventListener('change', async () => {
+          select.disabled = true;
+          const { error } = await sb.rpc('equip_accessory', { p_slot: slot, p_accessory_id: select.value || null });
+          select.disabled = false;
+          if (error) { showToast('❌ ' + error.message); return; }
+          if (!myGarden.equipped) myGarden.equipped = {};
+          if (select.value) myGarden.equipped[slot] = select.value;
+          else delete myGarden.equipped[slot];
+          loadGarden();
+        });
+        row.appendChild(select);
+        invDiv.appendChild(row);
+      });
+      board.appendChild(invDiv);
+    }
   }
   // Bottom-corner nails (positioned via .sign-nails inside the board)
   board.appendChild(el('div', { className: 'sign-nails' }));
@@ -4944,12 +4981,14 @@ function buildPot(g, isMine) {
   potBody.appendChild(el('div', { className: 'gp-soil' }));
   pot.appendChild(potBody);
 
-  // Accessories
-  if (g.accessories && g.accessories.length) {
-    g.accessories.forEach(accId => {
+  // Accessories (equipped)
+  if (g.equipped) {
+    ['left','right','top'].forEach(slot => {
+      const accId = g.equipped[slot];
+      if (!accId) return;
       const item = GARDEN_COSMETICS.find(c => c.id === accId);
       if (!item) return;
-      const posClass = item.pos === 'left' ? 'gp-acc-left' : item.pos === 'right' ? 'gp-acc-right' : 'gp-acc-top';
+      const posClass = slot === 'left' ? 'gp-acc-left' : slot === 'right' ? 'gp-acc-right' : 'gp-acc-top';
       const animClass = item.anim ? ' gp-acc-' + item.anim : '';
       pot.appendChild(el('span', { className: 'gp-accessory ' + posClass + animClass }, item.emoji));
     });
