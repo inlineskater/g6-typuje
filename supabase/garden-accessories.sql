@@ -16,18 +16,38 @@ BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
   v_price := CASE p_accessory_id
-    WHEN 'flag_pl'   THEN 50
-    WHEN 'mushroom'  THEN 60
-    WHEN 'ladybug'   THEN 80
-    WHEN 'bee'       THEN 80
-    WHEN 'butterfly' THEN 100
-    WHEN 'snail'     THEN 70
-    WHEN 'frog'      THEN 120
-    WHEN 'gnome'     THEN 150
-    WHEN 'lantern'   THEN 90
-    WHEN 'crystal'   THEN 130
-    WHEN 'cat'       THEN 200
-    WHEN 'star'      THEN 100
+    WHEN 'flaga_pl'      THEN 10
+    WHEN 'mushroom'      THEN 10
+    WHEN 'ladybug'       THEN 10
+    WHEN 'bee'           THEN 10
+    WHEN 'butterfly'     THEN 10
+    WHEN 'snail'         THEN 10
+    WHEN 'frog'          THEN 10
+    WHEN 'gnome'         THEN 12
+    WHEN 'lantern'       THEN 11
+    WHEN 'crystal'       THEN 12
+    WHEN 'cat'           THEN 15
+    WHEN 'star'          THEN 10
+    WHEN 'zubrowka'      THEN 12
+    WHEN 'piwo'          THEN 10
+    WHEN 'pierogi'       THEN 11
+    WHEN 'kielbasa'      THEN 11
+    WHEN 'pope'          THEN 15
+    WHEN 'disco_polo'    THEN 13
+    WHEN 'schabowy'      THEN 11
+    WHEN 'bigos'         THEN 10
+    WHEN 'vodka'         THEN 12
+    WHEN 'orzel'         THEN 14
+    WHEN 'maluch'        THEN 15
+    WHEN 'rosol'         THEN 10
+    WHEN 'zapiekanka'    THEN 10
+    WHEN 'lody'          THEN 10
+    WHEN 'kebab'         THEN 11
+    WHEN 'track_suit'    THEN 13
+    WHEN 'sandal_socks'  THEN 14
+    WHEN 'grill'         THEN 12
+    WHEN 'taczka'        THEN 11
+    WHEN 'bmw'           THEN 9999
     ELSE NULL
   END;
   IF v_price IS NULL THEN RAISE EXCEPTION 'invalid_accessory'; END IF;
@@ -104,5 +124,14 @@ REVOKE ALL ON FUNCTION public.purchase_accessory(text, integer) FROM PUBLIC, ano
 GRANT EXECUTE ON FUNCTION public.purchase_accessory(text, integer) TO authenticated;
 REVOKE ALL ON FUNCTION public.equip_accessory(text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.equip_accessory(text, text) TO authenticated;
+
+-- Migrate existing flag_pl owners to flaga_pl
+UPDATE public.gardens
+SET accessories = array_replace(accessories, 'flag_pl', 'flaga_pl')
+WHERE 'flag_pl' = ANY(accessories);
+
+UPDATE public.gardens
+SET equipped = replace(equipped::text, '"flag_pl"', '"flaga_pl"')::jsonb
+WHERE equipped::text LIKE '%flag_pl%';
 
 NOTIFY pgrst, 'reload schema';
