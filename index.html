@@ -4940,6 +4940,49 @@ function renderZenGarden() {
       invDiv.appendChild(grid);
       board.appendChild(invDiv);
     }
+
+    // Admin controls
+    if (me.nick === 'admin') {
+      const adminDiv = el('div', { style: { marginTop: '14px', paddingTop: '10px', borderTop: '1px dashed #c89760' } });
+      adminDiv.appendChild(el('h3', { style: { fontSize: '12px', color: '#14532d', marginBottom: '8px' } }, '⚙️ Admin'));
+
+      // Size selector
+      const sizeRow = el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontSize: '11px' } });
+      sizeRow.appendChild(el('span', { style: { fontWeight: '700', color: '#3d2810' } }, 'Etap:'));
+      const sizeSelect = el('select', { style: { fontSize: '11px', padding: '3px 6px', borderRadius: '5px', border: '1px solid #c89760', background: '#f4e8d2' } });
+      for (let s = 1; s <= 6; s++) { const o = el('option', { value: String(s) }, String(s)); if (s === myGarden.stage) o.selected = true; sizeSelect.appendChild(o); }
+      sizeSelect.addEventListener('change', async () => {
+        sizeSelect.disabled = true;
+        await sb.from('gardens').update({ stage: parseInt(sizeSelect.value) }).eq('user_id', me.id);
+        myGarden.stage = parseInt(sizeSelect.value);
+        sizeSelect.disabled = false;
+        loadGarden();
+      });
+      sizeRow.appendChild(sizeSelect);
+      adminDiv.appendChild(sizeRow);
+
+      // Reset streak
+      const resetBtn = el('button', { className: 'btn-ghost', style: { fontSize: '11px', padding: '4px 10px', marginRight: '6px' } }, '🔄 Reset serii');
+      resetBtn.addEventListener('click', async () => {
+        await sb.from('gardens').update({ streak_days: 0, stage: 1 }).eq('user_id', me.id);
+        myGarden.streak_days = 0; myGarden.stage = 1;
+        loadGarden();
+        showToast('🔄 Seria zresetowana');
+      });
+      adminDiv.appendChild(resetBtn);
+
+      // Delete plant
+      const delBtn = el('button', { className: 'btn-ghost', style: { fontSize: '11px', padding: '4px 10px', color: 'var(--no)' } }, '🗑️ Usuń roślinę');
+      delBtn.addEventListener('click', async () => {
+        if (!confirm('Na pewno usunąć roślinę?')) return;
+        await sb.from('gardens').delete().eq('user_id', me.id);
+        myGarden = null;
+        loadGarden();
+        showToast('🗑️ Roślina usunięta');
+      });
+      adminDiv.appendChild(delBtn);
+      board.appendChild(adminDiv);
+    }
   }
   // Bottom-corner nails (positioned via .sign-nails inside the board)
   board.appendChild(el('div', { className: 'sign-nails' }));
