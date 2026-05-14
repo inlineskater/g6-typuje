@@ -1272,7 +1272,7 @@
     .cosmetic-price { font-size: 11px; color: var(--accent); font-weight: 800; }
     .cosmetic-owned-label { font-size: 10px; color: var(--yes); font-weight: 700; }
     .cosmetic-equipped-label { font-size: 10px; color: var(--accent); font-weight: 700; }
-    .cosmetic-btn { font-size: 11px; padding: 4px 10px; }
+    .cosmetic-btn { font-size: 11px; padding: 4px 10px; margin-top: auto; }
     .gp-accessory { position: absolute; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); z-index: 2; pointer-events: none; line-height: 1; }
     .gp-acc-0 { top: 4px; left: 2px; } .gp-acc-1 { top: 4px; left: 50%; transform: translateX(-50%); } .gp-acc-2 { top: 4px; right: 2px; }
     .gp-acc-3 { top: 50%; left: 2px; transform: translateY(-50%); } .gp-acc-4 { top: 50%; left: 50%; transform: translate(-50%,-50%); } .gp-acc-5 { top: 50%; right: 2px; transform: translateY(-50%); }
@@ -1387,10 +1387,6 @@
       position: sticky; top: 80px; align-self: start;
       display: flex; flex-direction: column; align-items: stretch;
       padding-top: 6px; padding-bottom: 0;
-      max-height: calc(100dvh - 96px);
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      scrollbar-gutter: stable;
     }
     .sign-board {
       position: relative;
@@ -1480,7 +1476,7 @@
 
     /* ── Main garden area ── */
     .garden-area {
-      padding: 12px 10px 14px;
+      padding: 10px 8px 12px;
       border-radius: 14px;
       border: 4px solid #6d4c2c;
       background: linear-gradient(180deg, #d9eadb 0%, #bfd7c2 100%);
@@ -1493,12 +1489,12 @@
     .garden-shelf {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
+      gap: 4px;
     }
     /* ── Zen tile: each pot in its own raked-sand square ── */
     .garden-pot {
       display: flex; flex-direction: column; align-items: center;
-      position: relative; padding: 6px 4px 18px;
+      position: relative; padding: 4px 3px 14px;
       /* Flat raked-sand surface — no card border */
       background:
         radial-gradient(ellipse 80% 38% at 50% 78%, rgba(140,100,60,.10) 0%, transparent 65%),
@@ -1550,7 +1546,7 @@
     }
     /* Plant area takes top space */
     .gp-plant-area {
-      height: 100px;
+      height: 70px;
       display: flex; align-items: flex-end; justify-content: center;
       padding-bottom: 2px;
       position: relative; z-index: 1;
@@ -1577,7 +1573,7 @@
     }
     /* Pot — fixed size */
     .gp-pot-body {
-      width: 44px; height: 34px; position: relative; flex-shrink: 0;
+      width: 38px; height: 28px; position: relative; flex-shrink: 0;
       background: linear-gradient(180deg, #c2703a 0%, #a0522d 50%, #8b4513 100%);
       border-radius: 0 0 18px 18px; border-top: 5px solid #d4845a;
       box-shadow: 0 3px 6px rgba(0,0,0,.22), inset 0 -2px 4px rgba(0,0,0,.15);
@@ -1733,7 +1729,7 @@
     .gp-cancel-btn:hover { color: #ef4444; }
     @media (max-width: 700px) {
       .garden-wrap { grid-template-columns: 1fr; gap: 14px; }
-      .garden-sign { position: static; max-height: none; overflow: visible; scrollbar-gutter: auto; }
+      .garden-sign { position: static; }
       .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
       .garden-area { padding: 10px 8px 12px; }
       .garden-pot { min-width: 0; padding: 5px 3px 18px; }
@@ -5055,22 +5051,27 @@ function renderZenGarden() {
 
   // ── Tabliczka — wooden sign on two posts ──
   const sign = el('div', { className: 'garden-sign' });
-  const board = el('div', { className: 'sign-board' });
 
-  board.innerHTML = `<h3>🪧 Zasady</h3>
+  // Board 1: Rules
+  const boardRules = el('div', { className: 'sign-board' });
+  boardRules.innerHTML = `<h3>🪧 Zasady</h3>
 <ul>
 <li>💧 <b>Podlewaj</b> co 5h (maks. 3×/dzień)</li>
 <li>🔥 <b>Seria</b> — codziennie = rośnie!</li>
 <li>💰 <b>10–20 coinów</b> za podlanie</li>
 <li>⚠️ Pominiesz dzień = reset serii</li>
 </ul>`;
+  boardRules.appendChild(el('div', { className: 'sign-nails' }));
+  sign.appendChild(boardRules);
 
+  // Board 2: My plant
   if (myGarden) {
+    const boardPlant = el('div', { className: 'sign-board', style: 'margin-top: 12px;' });
     const today = new Date().toISOString().slice(0, 10);
     const watersToday = (myGarden.last_water_date === today) ? (myGarden.waters_today || 0) : 0;
     const streak = myGarden.streak_days || 0;
     const emoji = getPlantEmoji(myGarden.plant_type, myGarden.stage);
-    board.innerHTML += `<h3 style="margin-top:14px">🌱 Twoja roślinka</h3>
+    boardPlant.innerHTML = `<h3>🌱 Twoja roślinka</h3>
 <div class="my-plant-preview">${emoji}</div>
 <div class="my-plant-details">
 <div class="my-plant-name">${myGarden.plant_name}</div>
@@ -5082,10 +5083,9 @@ function renderZenGarden() {
 <div>💧 Dziś: <b>${watersToday}/3</b></div>
 <div>💰 Nagroda: <b>${nextRewardCoins(streak)} 🪙</b></div>
 </div>`;
+    boardPlant.appendChild(el('div', { className: 'sign-nails' }));
+    sign.appendChild(boardPlant);
   }
-  // Bottom-corner nails (positioned via .sign-nails inside the board)
-  board.appendChild(el('div', { className: 'sign-nails' }));
-  sign.appendChild(board);
 
   // Two posts under the board
   const posts = el('div', { className: 'sign-posts' });
