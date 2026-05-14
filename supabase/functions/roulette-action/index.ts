@@ -114,7 +114,7 @@ async function spin(userId, bets) {
     if (!profile) throw Object.assign(new Error("Profil nie istnieje."), { isGame: true });
     if (profile.coins < totalBet) throw Object.assign(new Error("Za mało coinów!"), { isGame: true });
 
-    const number = riggedNumber(bets);
+    const number = randomNumber();
     const color = numberColor(number);
 
     let totalWon = 0;
