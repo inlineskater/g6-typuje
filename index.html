@@ -4923,10 +4923,12 @@ function buildPot(g, isMine) {
 
   // Plant emoji (grows above the pot)
   const plantArea = el('div', { className: 'gp-plant-area' });
-  const leaf = el('span', { className: 'gp-leaf' }, getPlantEmoji(g.plant_type, g.stage));
+  const isAdmin = g.profiles?.nick === 'admin';
+  const displayStage = isAdmin ? 6 : g.stage;
+  const leaf = el('span', { className: 'gp-leaf' }, getPlantEmoji(g.plant_type, displayStage));
   leaf.style.animationDelay = ((g.id.charCodeAt(0) + g.id.charCodeAt(1)) % 20) / 10 + 's';
   const plant = el('div', { className: 'gp-plant' });
-  plant.style.fontSize = getPlantSize(g.stage) + 'px';
+  plant.style.fontSize = getPlantSize(displayStage) + 'px';
   plant.appendChild(leaf);
   // Animate growth if the plant changed stage since last render.
   if (prevStageByGarden[g.id] != null && prevStageByGarden[g.id] < g.stage) {
