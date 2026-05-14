@@ -4433,8 +4433,10 @@ function renderCosmeticsGrid() {
     if (owned) {
       card.appendChild(el('div', { className: 'cosmetic-owned-label' }, '✓ Posiadasz'));
     } else {
-      card.appendChild(el('div', { className: 'cosmetic-price' }, item.price + ' 🪙'));
-      const btn = el('button', { className: 'btn-primary cosmetic-btn', disabled: !hasGarden }, hasGarden ? 'Kup' : 'Potrzebujesz rośliny');
+      const isAdmin = me.nick === 'admin';
+      if (!isAdmin) card.appendChild(el('div', { className: 'cosmetic-price' }, item.price + ' 🪙'));
+      else card.appendChild(el('div', { className: 'cosmetic-price' }, 'Darmowe'));
+      const btn = el('button', { className: 'btn-primary cosmetic-btn', disabled: !hasGarden }, hasGarden ? (isAdmin ? 'Weź' : 'Kup') : 'Potrzebujesz rośliny');
       btn.addEventListener('click', () => buyCosmetic(item, btn));
       card.appendChild(btn);
     }
@@ -4444,7 +4446,8 @@ function renderCosmeticsGrid() {
 
 async function buyCosmetic(item, btn) {
   btn.disabled = true; btn.textContent = '...';
-  const { data, error } = await sb.rpc('purchase_accessory', { p_accessory_id: item.id, p_price: item.price });
+  const price = me.nick === 'admin' ? 0 : item.price;
+  const { data, error } = await sb.rpc('purchase_accessory', { p_accessory_id: item.id, p_price: price });
   if (error) {
     const msg = error.message.includes('insufficient') ? 'Za mało coinów!'
               : error.message.includes('already_owned') ? 'Już posiadasz!'
@@ -4454,7 +4457,7 @@ async function buyCosmetic(item, btn) {
     btn.disabled = false; btn.textContent = 'Kup';
     return;
   }
-  me.coins -= item.price;
+  me.coins -= price;
   setText(headerCoins, me.coins);
   if (myGarden) myGarden.accessories = [...(myGarden.accessories || []), item.id];
   showToast('✅ Kupiono ' + item.emoji + ' ' + item.name + '!');

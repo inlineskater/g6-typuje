@@ -10,7 +10,7 @@ DECLARE
   v_garden public.gardens%ROWTYPE;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
-  IF p_price < 1 THEN RAISE EXCEPTION 'invalid_price'; END IF;
+  IF p_price < 0 THEN RAISE EXCEPTION 'invalid_price'; END IF;
 
   SELECT * INTO v_garden FROM public.gardens WHERE user_id = v_user FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_garden'; END IF;
