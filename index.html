@@ -5069,7 +5069,7 @@ function renderZenGarden() {
 
   // Board 2: My plant
   if (myGarden) {
-    const boardPlant = el('div', { className: 'sign-board', style: 'margin-top: 12px;' });
+    const boardPlant = el('div', { className: 'sign-board', style: { marginTop: '12px' } });
     const today = new Date().toISOString().slice(0, 10);
     const watersToday = (myGarden.last_water_date === today) ? (myGarden.waters_today || 0) : 0;
     const streak = myGarden.streak_days || 0;
