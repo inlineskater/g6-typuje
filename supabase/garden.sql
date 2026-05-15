@@ -65,6 +65,7 @@ DECLARE
   v_waters      integer;
   v_reward      integer;
   v_stage       integer;
+  v_weekday_gap integer;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
@@ -84,13 +85,27 @@ BEGIN
   END IF;
   IF v_waters >= 3 THEN RAISE EXCEPTION 'daily_limit'; END IF;
 
-  -- Streak calculation
+  -- Streak calculation (weekends don't break streak)
   IF v_garden.last_water_date = v_today THEN
-    v_streak := v_garden.streak_days; -- same day, keep streak
+    v_streak := v_garden.streak_days;           -- same day, keep streak
   ELSIF v_garden.last_water_date = v_today - 1 THEN
-    v_streak := v_garden.streak_days + 1; -- consecutive day
+    v_streak := v_garden.streak_days + 1;       -- consecutive day
+  ELSIF v_garden.last_water_date IS NOT NULL THEN
+    -- Count Mon–Fri days in the gap; if only weekend days were skipped, streak survives
+    SELECT COUNT(*) INTO v_weekday_gap
+    FROM generate_series(
+      v_garden.last_water_date + 1,
+      v_today - 1,
+      '1 day'::interval
+    ) AS d
+    WHERE EXTRACT(DOW FROM d::date) NOT IN (0, 6); -- 0=Sun, 6=Sat
+    IF v_weekday_gap = 0 THEN
+      v_streak := v_garden.streak_days + 1;     -- gap was only weekend days
+    ELSE
+      v_streak := 1;                            -- missed at least one weekday
+    END IF;
   ELSE
-    v_streak := 1; -- streak reset
+    v_streak := 1;                              -- first watering ever
   END IF;
 
   -- Reward: 10 + (streak-1)*2, capped at 20
