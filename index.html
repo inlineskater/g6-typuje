@@ -1289,100 +1289,179 @@
     .gp-acc-star { animation: accPulse 1.8s ease-in-out infinite !important; }
     .gp-acc-cat { animation: accBob 3s ease-in-out infinite !important; }
     .gp-acc-lantern { animation: accPulse 3s ease-in-out infinite !important; }
-    .garden-manager {
+    .garden-panel-title {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      font-size: 13px; font-weight: 800; color: #14532d; margin-bottom: 8px;
+    }
+    /* ── Decorate card on the sign panel ── */
+    .garden-decorate-card {
       margin-top: 14px;
-      background: rgba(255,255,255,.82);
+      background: rgba(255,255,255,.86);
       border: 1px solid rgba(109,76,44,.24);
       border-radius: 10px;
       padding: 12px;
       color: #243b22;
       box-shadow: 0 6px 14px rgba(60,30,10,.10);
+      display: flex; flex-direction: column; gap: 8px;
     }
-    .garden-panel-title {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      font-size: 13px; font-weight: 800; color: #14532d; margin-bottom: 8px;
+    .garden-decorate-card .equipped-count {
+      font-size: 12px; color: #5f6f5a;
     }
-    .garden-manager-empty {
+    .garden-decorate-card .equipped-count b { color: #14532d; }
+    .garden-decorate-card .btn-decorate {
+      width: 100%; font-size: 13px; padding: 9px 12px;
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      cursor: pointer; font-weight: 800; font-family: inherit;
+      transition: filter .15s, transform .15s;
+    }
+    .garden-decorate-card .btn-decorate:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .garden-decorate-card .btn-decorate:active { transform: translateY(0); }
+    .garden-decorate-card .deco-hint {
+      font-size: 11px; color: #5f6f5a; background: rgba(22,163,74,.07);
+      border: 1px dashed rgba(22,163,74,.28); border-radius: 8px; padding: 8px;
+    }
+    .garden-decorate-card .deco-hint .btn-ghost { font-size: 11px; padding: 5px 9px; margin-top: 6px; }
+    /* ── Accessory editor modal ── */
+    .modal.modal-wide { max-width: 960px; }
+    .acc-editor-body {
+      display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px;
+      margin-top: 4px;
+    }
+    .acc-editor-canvas {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 14px;
+      background: linear-gradient(180deg, #d9eadb 0%, #bfd7c2 100%);
+      border-radius: 12px;
+      border: 3px solid #6d4c2c;
+    }
+    .acc-editor-pot {
+      position: relative;
+      width: 320px; height: 320px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 140px; line-height: 1;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,.18));
+    }
+    /* Slot markers reuse .gp-acc-N positioning (same top/left/right/bottom + transforms).
+       The marker is sized 36px and centered on the position; for non-center slots we
+       nudge with translate via the shared classes below. */
+    .acc-slot-marker {
+      position: absolute;
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 800; color: #14532d;
+      border: 2px dashed rgba(22,163,74,.55);
+      border-radius: 50%;
+      background: rgba(255,255,255,.55);
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .15s, box-shadow .15s;
+      z-index: 1; pointer-events: auto;
+    }
+    .acc-slot-marker:hover { background: rgba(255,255,255,.85); border-color: var(--accent); transform: scale(1.08); }
+    .acc-slot-marker.target { border-style: solid; border-color: var(--accent); background: var(--acc-dim); box-shadow: 0 0 0 3px rgba(99,102,241,.18); transform: scale(1.12); }
+    .acc-slot-marker.pulse { animation: accSlotPulse 1.4s ease-in-out infinite; }
+    @keyframes accSlotPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,.45); } 50% { box-shadow: 0 0 0 6px rgba(22,163,74,0); } }
+    /* Position offsets for slot markers — same logic as .gp-acc-N but sized for 40px markers
+       and inside a 320px square. The pot center is the plant; markers ring it. */
+    .acc-slot-0 { top: 8px;    left: 8px; }
+    .acc-slot-1 { top: 8px;    left: 50%; transform: translateX(-50%); }
+    .acc-slot-2 { top: 8px;    right: 8px; }
+    .acc-slot-3 { top: 50%;    left: 8px;  transform: translateY(-50%); }
+    .acc-slot-4 { top: 50%;    left: 50%; transform: translate(-50%,-50%); }
+    .acc-slot-5 { top: 50%;    right: 8px; transform: translateY(-50%); }
+    .acc-slot-6 { bottom: 8px; left: 8px; }
+    .acc-slot-7 { bottom: 8px; left: 50%; transform: translateX(-50%); }
+    .acc-slot-8 { bottom: 8px; right: 8px; }
+    .acc-slot-marker.acc-slot-1:hover, .acc-slot-marker.acc-slot-1.target { transform: translateX(-50%) scale(1.08); }
+    .acc-slot-marker.acc-slot-7:hover, .acc-slot-marker.acc-slot-7.target { transform: translateX(-50%) scale(1.08); }
+    .acc-slot-marker.acc-slot-3:hover, .acc-slot-marker.acc-slot-3.target { transform: translateY(-50%) scale(1.08); }
+    .acc-slot-marker.acc-slot-5:hover, .acc-slot-marker.acc-slot-5.target { transform: translateY(-50%) scale(1.08); }
+    .acc-slot-marker.acc-slot-4:hover, .acc-slot-marker.acc-slot-4.target { transform: translate(-50%,-50%) scale(1.08); }
+    /* Placed accessory in the modal — clickable. */
+    .acc-editor-pot .acc-placed {
+      position: absolute;
+      display: flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: box-shadow .15s, background .15s;
+      pointer-events: auto;
+      z-index: 2;
+    }
+    .acc-editor-pot .acc-placed:hover { background: rgba(255,255,255,.4); }
+    .acc-editor-pot .acc-placed.selected { background: rgba(255,255,255,.6); box-shadow: 0 0 0 3px var(--accent), 0 0 0 6px rgba(99,102,241,.22); }
+    .acc-editor-pot .acc-placed .gp-accessory {
+      position: static; pointer-events: none;
+    }
+    .acc-editor-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .acc-editor-section-label {
+      font-size: 11px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .04em; margin: 0;
+    }
+    .acc-editor-inv {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: 8px;
+      max-height: 280px; overflow-y: auto; overscroll-behavior: contain; padding: 2px;
+    }
+    .acc-inv-item {
+      aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; line-height: 1;
+      background: #fffaf0;
+      border: 1px solid rgba(109,76,44,.18);
+      border-radius: 10px;
+      cursor: pointer; position: relative;
+      font-family: inherit;
+      transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
+    }
+    .acc-inv-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .acc-inv-item.equipped::after {
+      content: '✓'; position: absolute; top: 2px; right: 5px;
+      font-size: 11px; color: #14532d; font-weight: 800;
+    }
+    .acc-inv-item.picking { border-color: var(--accent); background: var(--acc-dim); box-shadow: 0 0 0 2px rgba(99,102,241,.18); }
+    .acc-inv-item.busy { opacity: .55; cursor: wait; pointer-events: none; }
+    .acc-editor-empty {
       font-size: 12px; color: #5f6f5a; line-height: 1.45;
       background: rgba(22,163,74,.07);
       border: 1px dashed rgba(22,163,74,.28);
       border-radius: 8px; padding: 10px;
     }
-    .equip-inv-section { margin-bottom: 4px; }
-    .equip-section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; padding-left: 2px; }
-    .equip-inv {
-      display: grid; grid-template-columns: 1fr; gap: 7px; margin: 4px 0 8px;
-      max-height: 260px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px;
+    .acc-editor-toolbar {
+      position: sticky; bottom: 0;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 -4px 10px rgba(0,0,0,.04);
     }
-    .equip-inv-item {
-      min-height: 44px;
-      display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
-      gap: 7px; padding: 7px 8px;
-      background: #fffaf0;
-      border: 1px solid rgba(109,76,44,.18);
-      border-radius: 8px;
-      color: #1f2937; cursor: pointer; text-align: left;
-      appearance: none;
-      transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
-      font-family: inherit;
+    .acc-editor-hint { font-size: 12px; color: var(--muted); text-align: center; padding: 4px 6px; }
+    .acc-editor-toolbar .row {
+      display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px;
+      align-items: center;
     }
-    .equip-inv-item:hover { border-color: var(--accent); background: #fff; transform: translateY(-1px); }
-    .equip-inv-item.selected { border-color: var(--accent); background: var(--acc-dim); box-shadow: 0 0 0 2px rgba(99,102,241,.10); }
-    .equip-inv-item.equipped { border-color: rgba(22,163,74,.35); }
-    .equip-inv-emoji { font-size: 20px; line-height: 1; }
-    .equip-inv-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-    .equip-inv-name {
-      display: block;
-      font-size: 11px; font-weight: 800; line-height: 1.2;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .equip-inv-meta { display: block; font-size: 9px; color: #667085; }
-    .equip-action-row { display: flex; gap: 7px; margin-bottom: 9px; }
-    .equip-action-row .btn-ghost { flex: 1; font-size: 11px; padding: 6px 8px; }
-    .equip-status { min-height: 16px; color: #5f6f5a; font-size: 11px; margin-bottom: 7px; }
-    .equip-size-panel {
-      display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
-      gap: 8px; margin-bottom: 9px; padding: 8px;
-      background: rgba(22,163,74,.06);
-      border: 1px solid rgba(22,163,74,.20);
-      border-radius: 8px;
-    }
-    .equip-size-preview {
-      width: 38px; min-height: 38px;
+    .acc-tool-preview {
+      width: 44px; height: 44px;
       display: flex; align-items: center; justify-content: center;
-      line-height: 1; filter: drop-shadow(0 1px 3px rgba(0,0,0,.22));
-    }
-    .equip-size-main { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-    .equip-size-head {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      font-size: 10px; font-weight: 800; color: #3d2810;
-    }
-    .equip-size-value { color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .equip-size-slider { margin: 0; }
-    .equip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-    .equip-cell {
-      min-height: 48px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 4px;
-      background: rgba(22,163,74,.06);
-      border: 1px dashed rgba(22,163,74,.28);
+      background: rgba(22,163,74,.08);
+      border: 1px solid rgba(22,163,74,.22);
       border-radius: 8px;
-      cursor: pointer; font-family: inherit; color: #14532d;
-      appearance: none;
-      transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
+      line-height: 1; filter: drop-shadow(0 1px 3px rgba(0,0,0,.18));
     }
-    .equip-cell:hover { background: rgba(22,163,74,.13); border-color: rgba(22,163,74,.50); transform: translateY(-1px); }
-    .equip-cell.occupied { border-style: solid; background: rgba(255,250,240,.95); border-color: rgba(109,76,44,.28); }
-    .equip-cell.target { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,.10); }
-    .equip-cell.busy { opacity: .55; cursor: wait; pointer-events: none; }
-    .equip-cell-emoji { font-size: 20px; line-height: 1; min-height: 22px; }
-    .equip-cell-label {
-      font-size: 8px; color: #667085; margin-top: 3px;
-      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    .acc-tool-main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .acc-tool-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      font-size: 11px; font-weight: 800; color: #3d2810;
     }
+    .acc-tool-size-value { color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .acc-tool-slider { width: 100%; margin: 0; }
+    .acc-tool-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .acc-tool-actions .btn-ghost { flex: 1; font-size: 11px; padding: 6px 8px; }
+    .acc-tool-actions .btn-remove { color: #b91c1c; }
     .garden-admin-panel {
-      margin-top: 12px; padding-top: 10px;
-      border-top: 1px dashed rgba(109,76,44,.35);
+      margin-top: 12px; padding: 10px;
+      background: rgba(255,255,255,.7);
+      border: 1px dashed rgba(109,76,44,.35);
+      border-radius: 10px;
     }
     .garden-admin-row {
       display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
@@ -1408,14 +1487,7 @@
       position: sticky; top: 80px; align-self: start;
       display: flex; flex-direction: column; align-items: stretch;
       padding-top: 6px; padding-bottom: 6px;
-      max-height: calc(100vh - 88px);
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(109,76,44,.35) transparent;
     }
-    .garden-sign::-webkit-scrollbar { width: 4px; }
-    .garden-sign::-webkit-scrollbar-thumb { background: rgba(109,76,44,.35); border-radius: 2px; }
-    .garden-sign::-webkit-scrollbar-track { background: transparent; }
     .sign-board {
       position: relative;
       background:
@@ -1757,7 +1829,7 @@
     .gp-cancel-btn:hover { color: #ef4444; }
     @media (max-width: 700px) {
       .garden-wrap { grid-template-columns: 1fr; gap: 14px; }
-      .garden-sign { position: static; max-height: none; overflow-y: visible; }
+      .garden-sign { position: static; }
       .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
       .garden-area { padding: 10px 8px 12px; }
       .garden-pot { min-width: 0; padding: 5px 3px 18px; }
@@ -1765,9 +1837,10 @@
       .gp-pot-body { width: 42px; height: 32px; }
       .gp-name { font-size: 9px; }
       .gp-owner { font-size: 8px; }
-      .garden-manager { margin-top: 10px; }
-      .equip-inv { grid-template-columns: 1fr; max-height: none; overflow: visible; padding-right: 0; }
-      .equip-cell { min-height: 46px; }
+      .garden-decorate-card { margin-top: 10px; }
+      .acc-editor-body { grid-template-columns: 1fr; }
+      .acc-editor-pot { width: min(82vw, 320px); height: min(82vw, 320px); font-size: clamp(72px, 22vw, 140px); }
+      .acc-editor-inv { max-height: 220px; }
     }
 
     @media (max-width: 420px) {
@@ -1776,8 +1849,7 @@
       .garden-pot::before { width: 64px; height: 26px; }
       .gp-plant-area { height: 78px; }
       .gp-empty-text { font-size: 10px; }
-      .equip-inv { grid-template-columns: 1fr; }
-      .equip-action-row { flex-direction: column; }
+      .acc-editor-inv { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
     }
 
     /* ── CARD STATS ── */
@@ -5152,7 +5224,10 @@ function renderZenGarden() {
   posts.appendChild(el('span', { className: 'sign-post' }));
   sign.appendChild(posts);
 
-  if (myGarden) sign.appendChild(buildGardenManager());
+  if (myGarden) {
+    sign.appendChild(buildDecorateCard());
+    if (me.nick === 'admin') sign.appendChild(buildGardenAdminPanel());
+  }
 
   wrap.appendChild(sign);
 
@@ -5181,217 +5256,419 @@ function renderZenGarden() {
   wrap.appendChild(area);
 }
 
-function buildGardenManager() {
-  const panel = el('div', { className: 'garden-manager' });
-  panel.appendChild(el('div', { className: 'garden-panel-title' },
-    el('span', {}, '🎒 Moje ozdoby')
-  ));
+// Live-update font size of an accessory in BOTH the background grid pot and the
+// open editor modal, keyed by data-slot. Used during size-slider drags.
+function applyAccessorySizeToDom(slotId, size) {
+  const selector = `.garden-pot.mine .gp-accessory[data-slot="${slotId}"], .acc-editor-pot .gp-accessory[data-slot="${slotId}"]`;
+  document.querySelectorAll(selector).forEach(node => {
+    node.style.fontSize = size + 'px';
+  });
+}
 
-  const ownedIds = (myGarden.accessories || []).filter(id => gardenAccessoryById(id));
+function buildDecorateCard() {
   const equipped = normalizeEquippedSlots(myGarden.equipped);
+  const ownedIds = (myGarden.accessories || []).filter(id => gardenAccessoryById(id));
+  const equippedCount = Object.keys(equipped).length;
+
+  const card = el('div', { className: 'garden-decorate-card' });
+  card.appendChild(el('div', { className: 'garden-panel-title' }, el('span', {}, '🎨 Ozdoby')));
 
   if (!ownedIds.length) {
-    const empty = el('div', { className: 'garden-manager-empty' }, 'Nie masz jeszcze ozdób przy tej roślince.');
+    const hint = el('div', { className: 'deco-hint' });
+    hint.appendChild(document.createTextNode('Nie masz jeszcze żadnych ozdób. Kup je w sklepie, a potem ustaw na roślince.'));
     const shopBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Przejdź do sklepu');
     shopBtn.addEventListener('click', () => switchTab('shop'));
-    empty.appendChild(el('div', { className: 'equip-action-row' }, shopBtn));
-    panel.appendChild(empty);
-  } else {
-    let selectedAcc = null;
-    let pending = false;
-    const status = el('div', { className: 'equip-status' });
-    const invAvailableWrap = el('div', { className: 'equip-inv-section' });
-    invAvailableWrap.append(el('div', { className: 'equip-section-label' }, 'Dostępne'));
-    const invAvailableRow = el('div', { className: 'equip-inv' });
-    invAvailableWrap.appendChild(invAvailableRow);
-    const invEquippedWrap = el('div', { className: 'equip-inv-section' });
-    invEquippedWrap.append(el('div', { className: 'equip-section-label' }, 'Założone'));
-    const invEquippedRow = el('div', { className: 'equip-inv' });
-    invEquippedWrap.appendChild(invEquippedRow);
-    const grid = el('div', { className: 'equip-grid' });
-    const inventoryButtons = new Map();
-    const slotButtons = new Map();
-    const sizePanel = el('div', { className: 'equip-size-panel hidden' });
-    const sizePreview = el('span', { className: 'equip-size-preview' });
-    const sizeMain = el('span', { className: 'equip-size-main' });
-    const sizeValue = el('span', { className: 'equip-size-value' });
-    const sizeSlider = el('input', {
-      className: 'equip-size-slider',
-      type: 'range',
-      min: String(ACCESSORY_SIZE_MIN),
-      max: String(ACCESSORY_SIZE_MAX),
-      step: '1',
-      value: String(ACCESSORY_SIZE_DEFAULT),
-    });
-    sizeMain.append(
-      el('span', { className: 'equip-size-head' },
-        el('span', {}, 'Rozmiar ozdoby'),
-        sizeValue
-      ),
-      sizeSlider
-    );
-    sizePanel.append(sizePreview, sizeMain);
+    hint.appendChild(shopBtn);
+    card.appendChild(hint);
+    return card;
+  }
 
-    sizeSlider.addEventListener('input', () => {
-      const slotId = selectedAcc ? accessorySlot(equipped, selectedAcc) : null;
-      if (!slotId || !equipped[slotId]) return;
-      const size = clampAccessorySize(sizeSlider.value);
-      equipped[slotId].size = size;
-      myGarden.equipped = { ...equipped };
-      applyAccessorySizeToDom(slotId, size);
-      renderEquipState();
-    });
+  card.appendChild(el('div', { className: 'equipped-count' },
+    el('span', {}, 'Założonych: '),
+    el('b', {}, equippedCount + '/9'),
+    el('span', {}, ' · w ekwipunku: '),
+    el('b', {}, String(ownedIds.length))
+  ));
 
-    sizeSlider.addEventListener('change', async () => {
-      const slotId = selectedAcc ? accessorySlot(equipped, selectedAcc) : null;
-      if (!slotId || !equipped[slotId] || pending) return;
-      const size = equippedEntrySize(equipped[slotId]);
-      pending = true;
-      sizeSlider.disabled = true;
-      gardenSuppressOwnSizeReloadUntil = Date.now() + 2000;
-      const { error } = await sb.rpc('set_accessory_size', { p_slot: slotId, p_size: size });
-      pending = false;
-      sizeSlider.disabled = false;
-      if (error) {
-        gardenSuppressOwnSizeReloadUntil = 0;
-        showToast('❌ ' + gardenErr(error));
-        loadGarden();
-        return;
-      }
-      showToast('✅ Rozmiar zapisany: ' + size + ' px');
-    });
+  const btn = el('button', { className: 'btn-decorate', type: 'button' }, '🎨 Ozdób roślinkę');
+  btn.addEventListener('click', () => openAccessoryEditor());
+  card.appendChild(btn);
+  return card;
+}
 
-    ownedIds.forEach(accId => {
-      const item = gardenAccessoryById(accId);
-      const btn = el('button', { className: 'equip-inv-item', type: 'button', title: item.name });
-      btn.appendChild(el('span', { className: 'equip-inv-emoji' }, item.emoji));
-      btn.appendChild(el('span', { className: 'equip-inv-info' },
-        el('span', { className: 'equip-inv-name' }, item.name),
-        el('span', { className: 'equip-inv-meta' })
-      ));
-      btn.addEventListener('click', () => {
-        if (pending) return;
-        selectedAcc = selectedAcc === accId ? null : accId;
-        renderEquipState();
-      });
-      inventoryButtons.set(accId, btn);
-      invAvailableRow.appendChild(btn);
-    });
+// ── Accessory editor modal ─────────────────────────────────────────────────
+// Full-screen editor with a large WYSIWYG pot preview and click-to-place
+// interaction. Always-visible toolbar shows size slider + remove for the
+// currently selected placed accessory.
+function openAccessoryEditor() {
+  if (!myGarden) return;
+  if (document.getElementById('acc-editor-overlay')) return; // already open
+
+  // Local working copy of equipped state; mutated optimistically on each action.
+  // On RPC error we reload from server.
+  const equipped = normalizeEquippedSlots(myGarden.equipped);
+
+  // Interaction state — only one of {targetSlot, pickingItemId, selectedSlot} is
+  // active at a time. Whichever is set drives toolbar content & highlights.
+  let targetSlot = null;       // empty slot the user clicked first, waiting for an item
+  let pickingItemId = null;    // inventory item the user clicked first, waiting for a slot
+  let selectedSlot = null;     // placed accessory currently being edited (shows size+remove)
+  const pendingSlots = new Set(); // slots with in-flight RPC
+
+  const overlay = el('div', {
+    id: 'acc-editor-overlay',
+    className: 'modal-overlay',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': 'Ozdoby',
+  });
+  const modal = el('div', { className: 'modal modal-wide' });
+  overlay.appendChild(modal);
+
+  // Header
+  const titleEmoji = getPlantEmoji(myGarden.plant_type, myGarden.stage);
+  const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  modal.appendChild(el('div', { className: 'modal-header' },
+    el('span', { className: 'modal-title' }, '🎨 Ozdoby — ' + titleEmoji + ' ' + (myGarden.plant_name || '')),
+    closeBtn
+  ));
+
+  const body = el('div', { className: 'acc-editor-body' });
+  modal.appendChild(body);
+
+  // ── Canvas (large pot preview) ──
+  const canvas = el('div', { className: 'acc-editor-canvas' });
+  const potNode = el('div', { className: 'acc-editor-pot' });
+  const plantSpan = el('span', {}, titleEmoji);
+  potNode.appendChild(plantSpan);
+  canvas.appendChild(potNode);
+  body.appendChild(canvas);
+
+  // ── Side panel ──
+  const side = el('div', { className: 'acc-editor-side' });
+  side.appendChild(el('div', { className: 'acc-editor-section-label' }, 'Twoje ozdoby'));
+  const invWrap = el('div', { className: 'acc-editor-inv' });
+  side.appendChild(invWrap);
+
+  const toolbar = el('div', { className: 'acc-editor-toolbar' });
+  side.appendChild(toolbar);
+  body.appendChild(side);
+
+  document.body.appendChild(overlay);
+
+  // ── DOM refs that get re-built on each render ──
+  const slotMarkers = new Map();  // slotId -> DOM node (empty marker)
+  const placedNodes = new Map();  // slotId -> DOM node (placed accessory wrapper)
+  const invButtons = new Map();   // accId -> DOM node (inventory button)
+
+  function clearSelection() {
+    targetSlot = null;
+    pickingItemId = null;
+    selectedSlot = null;
+  }
+
+  function renderPot() {
+    // Wipe existing markers/placed
+    slotMarkers.forEach(n => n.remove());
+    placedNodes.forEach(n => n.remove());
+    slotMarkers.clear();
+    placedNodes.clear();
 
     GARDEN_EQUIP_SLOTS.forEach(slot => {
-      const cell = el('button', { className: 'equip-cell', type: 'button', title: slot.label });
-      cell.addEventListener('click', async () => {
-        if (pending) return;
-        const placedEntry = equipped[slot.id] || null;
-        const placedId = equippedEntryId(placedEntry);
-        if (!selectedAcc && !placedId) {
-          showToast('Najpierw wybierz ozdobę.');
-          return;
-        }
-        if (selectedAcc && placedId === selectedAcc) {
-          selectedAcc = null;
-          renderEquipState();
-          return;
-        }
-
-        const accToPlace = selectedAcc || null;
-        const previousSlot = accToPlace ? accessorySlot(equipped, accToPlace) : null;
-        const previousSize = previousSlot ? equippedEntrySize(equipped[previousSlot]) : ACCESSORY_SIZE_DEFAULT;
-        pending = true;
-        cell.classList.add('busy');
-        const { error } = await sb.rpc('equip_accessory', { p_slot: slot.id, p_accessory_id: accToPlace });
-        pending = false;
-        cell.classList.remove('busy');
-        if (error) {
-          showToast('❌ ' + gardenErr(error));
-          renderEquipState();
-          return;
-        }
-
-        if (accToPlace) {
-          Object.keys(equipped).forEach(key => { if (equippedEntryId(equipped[key]) === accToPlace) delete equipped[key]; });
-          equipped[slot.id] = makeEquippedEntry(accToPlace, previousSize);
-          selectedAcc = null;
-          const item = gardenAccessoryById(accToPlace);
-          showToast('✅ Ustawiono ' + item.emoji + ' ' + item.name);
-        } else {
-          delete equipped[slot.id];
-          const item = gardenAccessoryById(placedId);
-          showToast('✅ Zdjęto ' + (item ? item.emoji + ' ' + item.name : 'ozdobę'));
-        }
-        myGarden.equipped = { ...equipped };
-        renderEquipState();
-        loadGarden();
-      });
-      slotButtons.set(slot.id, cell);
-      grid.appendChild(cell);
-    });
-
-    const clearBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Wyczyść wybór');
-    clearBtn.addEventListener('click', () => { selectedAcc = null; renderEquipState(); });
-    const shopBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Sklep z ozdobami');
-    shopBtn.addEventListener('click', () => switchTab('shop'));
-
-    panel.append(status, invAvailableWrap, invEquippedWrap, sizePanel, el('div', { className: 'equip-action-row' }, clearBtn, shopBtn), grid);
-    renderEquipState();
-
-    function renderEquipState() {
-      const selectedItem = selectedAcc ? gardenAccessoryById(selectedAcc) : null;
-      const selectedSlot = selectedAcc ? accessorySlot(equipped, selectedAcc) : null;
-      const selectedEntry = selectedSlot ? equipped[selectedSlot] : null;
-      status.textContent = selectedItem
-        ? `Wybrano: ${selectedItem.emoji} ${selectedItem.name}`
-        : 'Brak wyboru';
-
-      sizePanel.classList.toggle('hidden', !selectedItem || !selectedEntry);
-      if (selectedItem && selectedEntry) {
-        const size = equippedEntrySize(selectedEntry);
-        sizePreview.textContent = selectedItem.emoji;
-        sizePreview.style.fontSize = size + 'px';
-        sizeValue.textContent = size + ' px';
-        sizeSlider.value = String(size);
-        sizeSlider.disabled = pending;
+      const entry = equipped[slot.id];
+      const accId = equippedEntryId(entry);
+      const item = accId ? gardenAccessoryById(accId) : null;
+      if (item) {
+        // Render placed accessory — wrapper is clickable, inner .gp-accessory
+        // matches the small-pot rendering so applyAccessorySizeToDom works.
+        const wrap = el('div', { className: 'acc-placed acc-slot-' + slot.id });
+        const accSpan = el('span', {
+          className: 'gp-accessory gp-acc-' + slot.id + (item.anim ? ' gp-acc-' + item.anim : ''),
+          style: { position: 'static', fontSize: equippedEntrySize(entry) + 'px' },
+          'data-slot': slot.id,
+        }, item.emoji);
+        wrap.appendChild(accSpan);
+        wrap.addEventListener('click', () => onPlacedClick(slot.id));
+        if (pendingSlots.has(slot.id)) wrap.classList.add('busy');
+        potNode.appendChild(wrap);
+        placedNodes.set(slot.id, wrap);
+      } else {
+        const marker = el('div', {
+          className: 'acc-slot-marker acc-slot-' + slot.id,
+          role: 'button',
+          tabIndex: '0',
+          title: slot.label,
+        }, '+');
+        marker.addEventListener('click', () => onEmptySlotClick(slot.id));
+        marker.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEmptySlotClick(slot.id); }
+        });
+        if (pendingSlots.has(slot.id)) marker.classList.add('busy');
+        potNode.appendChild(marker);
+        slotMarkers.set(slot.id, marker);
       }
+    });
+    renderHighlights();
+  }
 
-      inventoryButtons.forEach((btn, accId) => {
-        const slotId = accessorySlot(equipped, accId);
-        btn.classList.toggle('selected', selectedAcc === accId);
-        btn.classList.toggle('equipped', !!slotId);
-        const meta = btn.querySelector('.equip-inv-meta');
-        if (meta) {
-          meta.textContent = slotId
-            ? 'Założone: ' + gardenSlotLabel(slotId) + ' · ' + equippedEntrySize(equipped[slotId]) + ' px'
-            : 'Wolne';
+  function renderHighlights() {
+    slotMarkers.forEach((node, slotId) => {
+      node.classList.toggle('target', targetSlot === slotId);
+      node.classList.toggle('pulse', !!pickingItemId);
+    });
+    placedNodes.forEach((node, slotId) => {
+      node.classList.toggle('selected', selectedSlot === slotId);
+    });
+    invButtons.forEach((btn, accId) => {
+      btn.classList.toggle('picking', pickingItemId === accId);
+    });
+  }
+
+  function renderInventory() {
+    invWrap.replaceChildren();
+    invButtons.clear();
+    const ownedIds = (myGarden.accessories || []).filter(id => gardenAccessoryById(id));
+    if (!ownedIds.length) {
+      const empty = el('div', { className: 'acc-editor-empty' });
+      empty.appendChild(document.createTextNode('Brak ozdób. '));
+      const link = el('button', { className: 'btn-ghost', type: 'button' }, 'Przejdź do sklepu');
+      link.addEventListener('click', () => { close(); switchTab('shop'); });
+      empty.appendChild(link);
+      invWrap.appendChild(empty);
+      return;
+    }
+    ownedIds.forEach(accId => {
+      const item = gardenAccessoryById(accId);
+      const slotId = accessorySlot(equipped, accId);
+      const btn = el('button', {
+        className: 'acc-inv-item' + (slotId ? ' equipped' : ''),
+        type: 'button',
+        title: item.name + (slotId ? ' (założone)' : ''),
+      }, item.emoji);
+      btn.addEventListener('click', () => onInventoryClick(accId));
+      invButtons.set(accId, btn);
+      invWrap.appendChild(btn);
+    });
+  }
+
+  function renderToolbar() {
+    toolbar.replaceChildren();
+    // Editing a placed accessory: show preview + size slider + remove
+    if (selectedSlot && equipped[selectedSlot]) {
+      const entry = equipped[selectedSlot];
+      const item = gardenAccessoryById(equippedEntryId(entry));
+      if (!item) { selectedSlot = null; renderToolbar(); return; }
+      const size = equippedEntrySize(entry);
+
+      const preview = el('span', { className: 'acc-tool-preview', style: { fontSize: size + 'px' } }, item.emoji);
+      const main = el('span', { className: 'acc-tool-main' });
+      const valueSpan = el('span', { className: 'acc-tool-size-value' }, size + ' px');
+      main.appendChild(el('span', { className: 'acc-tool-head' },
+        el('span', {}, item.name + ' · ' + gardenSlotLabel(selectedSlot)),
+        valueSpan
+      ));
+      const slider = el('input', {
+        className: 'acc-tool-slider',
+        type: 'range',
+        min: String(ACCESSORY_SIZE_MIN),
+        max: String(ACCESSORY_SIZE_MAX),
+        step: '1',
+        value: String(size),
+      });
+      let sizePending = false;
+      slider.addEventListener('input', () => {
+        const newSize = clampAccessorySize(slider.value);
+        if (!equipped[selectedSlot]) return;
+        equipped[selectedSlot].size = newSize;
+        myGarden.equipped = { ...equipped };
+        valueSpan.textContent = newSize + ' px';
+        preview.style.fontSize = newSize + 'px';
+        applyAccessorySizeToDom(selectedSlot, newSize);
+      });
+      slider.addEventListener('change', async () => {
+        if (sizePending || !equipped[selectedSlot]) return;
+        const newSize = equippedEntrySize(equipped[selectedSlot]);
+        sizePending = true;
+        slider.disabled = true;
+        gardenSuppressOwnSizeReloadUntil = Date.now() + 2000;
+        const slotForRpc = selectedSlot;
+        const { error } = await sb.rpc('set_accessory_size', { p_slot: slotForRpc, p_size: newSize });
+        sizePending = false;
+        slider.disabled = false;
+        if (error) {
+          gardenSuppressOwnSizeReloadUntil = 0;
+          showToast('❌ ' + gardenErr(error));
+          loadGarden();
+          return;
         }
-        const target = slotId ? invEquippedRow : invAvailableRow;
-        if (btn.parentElement !== target) target.appendChild(btn);
+        showToast('✅ Rozmiar zapisany: ' + newSize + ' px');
       });
-      invAvailableWrap.classList.toggle('hidden', invAvailableRow.childElementCount === 0);
-      invEquippedWrap.classList.toggle('hidden', invEquippedRow.childElementCount === 0);
+      main.appendChild(slider);
 
-      slotButtons.forEach((cell, slotId) => {
-        const placedEntry = equipped[slotId] || null;
-        const placedItem = gardenAccessoryById(equippedEntryId(placedEntry));
-        const placedSize = placedEntry ? equippedEntrySize(placedEntry) : null;
-        cell.classList.toggle('occupied', !!placedItem);
-        cell.classList.toggle('target', !!selectedAcc && equippedEntryId(placedEntry) !== selectedAcc);
-        cell.title = placedItem ? `${gardenSlotLabel(slotId)}: ${placedItem.name} (${placedSize}px)` : gardenSlotLabel(slotId);
-        cell.replaceChildren(
-          el('span', { className: 'equip-cell-emoji' }, placedItem ? placedItem.emoji : '+'),
-          el('span', { className: 'equip-cell-label' }, placedItem ? placedItem.name + ' · ' + placedSize + ' px' : gardenSlotLabel(slotId))
-        );
+      const removeBtn = el('button', { className: 'btn-ghost btn-remove', type: 'button' }, '🗑️ Zdejmij');
+      removeBtn.addEventListener('click', () => removePlaced(selectedSlot));
+      const swapBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Przenieś');
+      swapBtn.addEventListener('click', () => {
+        // Same as "click inventory item": user wants to move this one elsewhere.
+        const accId = equippedEntryId(equipped[selectedSlot]);
+        pickingItemId = accId;
+        selectedSlot = null;
+        targetSlot = null;
+        renderHighlights();
+        renderToolbar();
       });
+      main.appendChild(el('div', { className: 'acc-tool-actions' }, swapBtn, removeBtn));
+
+      toolbar.appendChild(el('div', { className: 'row' }, preview, main));
+      return;
     }
 
-    function applyAccessorySizeToDom(slotId, size) {
-      document.querySelectorAll(`.garden-pot.mine .gp-accessory[data-slot="${slotId}"]`).forEach(node => {
-        node.style.fontSize = size + 'px';
+    // Hint based on current state
+    let hint;
+    if (pickingItemId) {
+      const item = gardenAccessoryById(pickingItemId);
+      hint = 'Wybrano ' + (item ? item.emoji + ' ' + item.name : 'ozdobę') + '. Kliknij miejsce na doniczce.';
+    } else if (targetSlot) {
+      hint = 'Wybierz ozdobę z listy, aby umieścić ją w „' + gardenSlotLabel(targetSlot) + '".';
+    } else {
+      hint = 'Kliknij ozdobę lub puste miejsce na doniczce, aby zacząć.';
+    }
+    toolbar.appendChild(el('div', { className: 'acc-editor-hint' }, hint));
+
+    if (pickingItemId || targetSlot) {
+      const cancelBtn = el('button', { className: 'btn-ghost', type: 'button', style: { width: '100%', marginTop: '6px', fontSize: '11px', padding: '6px 8px' } }, 'Anuluj');
+      cancelBtn.addEventListener('click', () => {
+        clearSelection();
+        renderHighlights();
+        renderToolbar();
       });
+      toolbar.appendChild(cancelBtn);
     }
   }
 
-  if (me.nick === 'admin') panel.appendChild(buildGardenAdminPanel());
-  return panel;
+  function rerender() {
+    renderPot();
+    renderInventory();
+    renderHighlights();
+    renderToolbar();
+  }
+
+  // ── Event handlers ──
+  function onEmptySlotClick(slotId) {
+    if (pendingSlots.has(slotId)) return;
+    if (pickingItemId) {
+      placeAccessory(slotId, pickingItemId);
+      return;
+    }
+    targetSlot = (targetSlot === slotId) ? null : slotId;
+    selectedSlot = null;
+    pickingItemId = null;
+    renderHighlights();
+    renderToolbar();
+  }
+
+  function onPlacedClick(slotId) {
+    if (pendingSlots.has(slotId)) return;
+    if (pickingItemId) {
+      // Swap: place picked item here (existing item gets unequipped automatically by RPC behavior)
+      placeAccessory(slotId, pickingItemId);
+      return;
+    }
+    selectedSlot = (selectedSlot === slotId) ? null : slotId;
+    targetSlot = null;
+    pickingItemId = null;
+    renderHighlights();
+    renderToolbar();
+  }
+
+  function onInventoryClick(accId) {
+    const existingSlot = accessorySlot(equipped, accId);
+    if (targetSlot) {
+      placeAccessory(targetSlot, accId);
+      return;
+    }
+    if (existingSlot) {
+      // Already placed somewhere — select for editing
+      selectedSlot = existingSlot;
+      targetSlot = null;
+      pickingItemId = null;
+      renderHighlights();
+      renderToolbar();
+      return;
+    }
+    pickingItemId = (pickingItemId === accId) ? null : accId;
+    selectedSlot = null;
+    targetSlot = null;
+    renderHighlights();
+    renderToolbar();
+  }
+
+  async function placeAccessory(slotId, accId) {
+    if (pendingSlots.has(slotId)) return;
+    const previousSlot = accessorySlot(equipped, accId);
+    const previousSize = previousSlot ? equippedEntrySize(equipped[previousSlot]) : ACCESSORY_SIZE_DEFAULT;
+    pendingSlots.add(slotId);
+    rerender();
+
+    const { error } = await sb.rpc('equip_accessory', { p_slot: slotId, p_accessory_id: accId });
+    pendingSlots.delete(slotId);
+
+    if (error) {
+      showToast('❌ ' + gardenErr(error));
+      rerender();
+      return;
+    }
+    // Mirror server-side bookkeeping locally
+    Object.keys(equipped).forEach(key => {
+      if (equippedEntryId(equipped[key]) === accId) delete equipped[key];
+    });
+    equipped[slotId] = makeEquippedEntry(accId, previousSize);
+    myGarden.equipped = { ...equipped };
+    const item = gardenAccessoryById(accId);
+    showToast('✅ Ustawiono ' + item.emoji + ' ' + item.name);
+    clearSelection();
+    selectedSlot = slotId; // auto-select the freshly placed accessory so size slider is ready
+    rerender();
+    loadGarden();
+  }
+
+  async function removePlaced(slotId) {
+    if (pendingSlots.has(slotId)) return;
+    const entry = equipped[slotId];
+    if (!entry) return;
+    pendingSlots.add(slotId);
+    rerender();
+
+    const { error } = await sb.rpc('equip_accessory', { p_slot: slotId, p_accessory_id: null });
+    pendingSlots.delete(slotId);
+    if (error) {
+      showToast('❌ ' + gardenErr(error));
+      rerender();
+      return;
+    }
+    const placedId = equippedEntryId(entry);
+    const item = gardenAccessoryById(placedId);
+    delete equipped[slotId];
+    myGarden.equipped = { ...equipped };
+    showToast('✅ Zdjęto ' + (item ? item.emoji + ' ' + item.name : 'ozdobę'));
+    clearSelection();
+    rerender();
+    loadGarden();
+  }
+
+  // ── Lifecycle ──
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+  }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  rerender();
 }
 
 function buildGardenAdminPanel() {
