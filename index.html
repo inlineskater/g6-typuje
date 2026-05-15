@@ -1405,8 +1405,15 @@
     .garden-sign {
       position: sticky; top: 80px; align-self: start;
       display: flex; flex-direction: column; align-items: stretch;
-      padding-top: 6px; padding-bottom: 0;
+      padding-top: 6px; padding-bottom: 6px;
+      max-height: calc(100vh - 88px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(109,76,44,.35) transparent;
     }
+    .garden-sign::-webkit-scrollbar { width: 4px; }
+    .garden-sign::-webkit-scrollbar-thumb { background: rgba(109,76,44,.35); border-radius: 2px; }
+    .garden-sign::-webkit-scrollbar-track { background: transparent; }
     .sign-board {
       position: relative;
       background:
@@ -1748,7 +1755,7 @@
     .gp-cancel-btn:hover { color: #ef4444; }
     @media (max-width: 700px) {
       .garden-wrap { grid-template-columns: 1fr; gap: 14px; }
-      .garden-sign { position: static; }
+      .garden-sign { position: static; max-height: none; overflow-y: visible; }
       .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
       .garden-area { padding: 10px 8px 12px; }
       .garden-pot { min-width: 0; padding: 5px 3px 18px; }
