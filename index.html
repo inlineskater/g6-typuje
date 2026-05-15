@@ -1308,8 +1308,10 @@
       border: 1px dashed rgba(22,163,74,.28);
       border-radius: 8px; padding: 10px;
     }
+    .equip-inv-section { margin-bottom: 4px; }
+    .equip-section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; padding-left: 2px; }
     .equip-inv {
-      display: grid; grid-template-columns: 1fr; gap: 7px; margin: 8px 0 10px;
+      display: grid; grid-template-columns: 1fr; gap: 7px; margin: 4px 0 8px;
       max-height: 260px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px;
     }
     .equip-inv-item {
@@ -5198,7 +5200,14 @@ function buildGardenManager() {
     let selectedAcc = null;
     let pending = false;
     const status = el('div', { className: 'equip-status' });
-    const invRow = el('div', { className: 'equip-inv' });
+    const invAvailableWrap = el('div', { className: 'equip-inv-section' });
+    invAvailableWrap.append(el('div', { className: 'equip-section-label' }, 'Dostępne'));
+    const invAvailableRow = el('div', { className: 'equip-inv' });
+    invAvailableWrap.appendChild(invAvailableRow);
+    const invEquippedWrap = el('div', { className: 'equip-inv-section' });
+    invEquippedWrap.append(el('div', { className: 'equip-section-label' }, 'Założone'));
+    const invEquippedRow = el('div', { className: 'equip-inv' });
+    invEquippedWrap.appendChild(invEquippedRow);
     const grid = el('div', { className: 'equip-grid' });
     const inventoryButtons = new Map();
     const slotButtons = new Map();
@@ -5266,7 +5275,7 @@ function buildGardenManager() {
         renderEquipState();
       });
       inventoryButtons.set(accId, btn);
-      invRow.appendChild(btn);
+      invAvailableRow.appendChild(btn);
     });
 
     GARDEN_EQUIP_SLOTS.forEach(slot => {
@@ -5302,7 +5311,7 @@ function buildGardenManager() {
         if (accToPlace) {
           Object.keys(equipped).forEach(key => { if (equippedEntryId(equipped[key]) === accToPlace) delete equipped[key]; });
           equipped[slot.id] = makeEquippedEntry(accToPlace, previousSize);
-          selectedAcc = accToPlace;
+          selectedAcc = null;
           const item = gardenAccessoryById(accToPlace);
           showToast('✅ Ustawiono ' + item.emoji + ' ' + item.name);
         } else {
@@ -5323,7 +5332,7 @@ function buildGardenManager() {
     const shopBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Sklep z ozdobami');
     shopBtn.addEventListener('click', () => switchTab('shop'));
 
-    panel.append(status, invRow, sizePanel, el('div', { className: 'equip-action-row' }, clearBtn, shopBtn), grid);
+    panel.append(status, invAvailableWrap, invEquippedWrap, sizePanel, el('div', { className: 'equip-action-row' }, clearBtn, shopBtn), grid);
     renderEquipState();
 
     function renderEquipState() {
@@ -5354,7 +5363,11 @@ function buildGardenManager() {
             ? 'Założone: ' + gardenSlotLabel(slotId) + ' · ' + equippedEntrySize(equipped[slotId]) + ' px'
             : 'Wolne';
         }
+        const target = slotId ? invEquippedRow : invAvailableRow;
+        if (btn.parentElement !== target) target.appendChild(btn);
       });
+      invAvailableWrap.classList.toggle('hidden', invAvailableRow.childElementCount === 0);
+      invEquippedWrap.classList.toggle('hidden', invEquippedRow.childElementCount === 0);
 
       slotButtons.forEach((cell, slotId) => {
         const placedEntry = equipped[slotId] || null;
