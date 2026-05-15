@@ -1273,7 +1273,7 @@
     .cosmetic-owned-label { font-size: 10px; color: var(--yes); font-weight: 700; }
     .cosmetic-equipped-label { font-size: 10px; color: var(--accent); font-weight: 700; }
     .cosmetic-btn { font-size: 11px; padding: 4px 10px; margin-top: auto; }
-    .gp-accessory { position: absolute; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); z-index: 2; pointer-events: none; line-height: 1; }
+    .gp-accessory { position: absolute; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); z-index: 2; pointer-events: none; line-height: 1; transition: font-size .12s; }
     .gp-acc-0 { top: 4px; left: 2px; } .gp-acc-1 { top: 4px; left: 50%; transform: translateX(-50%); } .gp-acc-2 { top: 4px; right: 2px; }
     .gp-acc-3 { top: 50%; left: 2px; transform: translateY(-50%); } .gp-acc-4 { top: 50%; left: 50%; transform: translate(-50%,-50%); } .gp-acc-5 { top: 50%; right: 2px; transform: translateY(-50%); }
     .gp-acc-6 { bottom: 44px; left: 2px; } .gp-acc-7 { bottom: 44px; left: 50%; transform: translateX(-50%); } .gp-acc-8 { bottom: 44px; right: 2px; }
@@ -1338,6 +1338,25 @@
     .equip-action-row { display: flex; gap: 7px; margin-bottom: 9px; }
     .equip-action-row .btn-ghost { flex: 1; font-size: 11px; padding: 6px 8px; }
     .equip-status { min-height: 16px; color: #5f6f5a; font-size: 11px; margin-bottom: 7px; }
+    .equip-size-panel {
+      display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+      gap: 8px; margin-bottom: 9px; padding: 8px;
+      background: rgba(22,163,74,.06);
+      border: 1px solid rgba(22,163,74,.20);
+      border-radius: 8px;
+    }
+    .equip-size-preview {
+      width: 38px; min-height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1; filter: drop-shadow(0 1px 3px rgba(0,0,0,.22));
+    }
+    .equip-size-main { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+    .equip-size-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      font-size: 10px; font-weight: 800; color: #3d2810;
+    }
+    .equip-size-value { color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .equip-size-slider { margin: 0; }
     .equip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .equip-cell {
       min-height: 48px;
@@ -4927,6 +4946,8 @@ const GARDEN_ERR_PL = {
   invalid_slot:         'To miejsce na ozdobę nie istnieje.',
   not_owned:            'Nie posiadasz tej ozdoby.',
   invalid_accessory:    'Ta ozdoba nie istnieje.',
+  invalid_accessory_size:'Nieprawidłowy rozmiar ozdoby.',
+  no_accessory:         'Wybierz założoną ozdobę.',
   insufficient_coins:   'Za mało coinów.'
 };
 const GARDEN_EQUIP_SLOTS = [
@@ -4941,6 +4962,9 @@ const GARDEN_EQUIP_SLOTS = [
   { id: '8', label: 'Dół prawy' },
 ];
 const GARDEN_LEGACY_SLOT_MAP = { left: '3', top: '1', right: '5' };
+const ACCESSORY_SIZE_MIN = 10;
+const ACCESSORY_SIZE_MAX = 34;
+const ACCESSORY_SIZE_DEFAULT = 14;
 function gardenErr(err) {
   if (!err) return 'Błąd';
   const msg = (err.message || String(err)).trim();
@@ -4955,18 +4979,37 @@ function gardenSlotLabel(slotId) {
 function gardenAccessoryById(id) {
   return GARDEN_COSMETICS.find(c => c.id === id) || null;
 }
+function clampAccessorySize(value) {
+  const size = Math.round(Number(value));
+  if (!Number.isFinite(size)) return ACCESSORY_SIZE_DEFAULT;
+  return Math.min(Math.max(size, ACCESSORY_SIZE_MIN), ACCESSORY_SIZE_MAX);
+}
+function equippedEntryId(entry) {
+  if (!entry) return null;
+  if (typeof entry === 'string') return entry;
+  if (typeof entry === 'object') return entry.id || entry.accessory_id || null;
+  return null;
+}
+function equippedEntrySize(entry) {
+  if (!entry || typeof entry !== 'object') return ACCESSORY_SIZE_DEFAULT;
+  return clampAccessorySize(entry.size);
+}
+function makeEquippedEntry(accId, size = ACCESSORY_SIZE_DEFAULT) {
+  return { id: accId, size: clampAccessorySize(size) };
+}
 function normalizeEquippedSlots(equipped) {
   const out = {};
-  Object.entries(equipped || {}).forEach(([slot, accId]) => {
+  Object.entries(equipped || {}).forEach(([slot, entry]) => {
+    const accId = equippedEntryId(entry);
     if (!accId) return;
     const normalizedSlot = GARDEN_LEGACY_SLOT_MAP[slot] || (/^[0-8]$/.test(slot) ? slot : null);
     if (!normalizedSlot || !gardenAccessoryById(accId)) return;
-    out[normalizedSlot] = accId;
+    out[normalizedSlot] = makeEquippedEntry(accId, equippedEntrySize(entry));
   });
   return out;
 }
 function accessorySlot(equipped, accId) {
-  return Object.entries(equipped || {}).find(([, placedId]) => placedId === accId)?.[0] || null;
+  return Object.entries(equipped || {}).find(([, entry]) => equippedEntryId(entry) === accId)?.[0] || null;
 }
 function nextRewardCoins(streak) {
   // 10 + (streak)*2, capped at 20 — reward AFTER next watering (streak grows by 1 next day)
@@ -4977,6 +5020,7 @@ let allGardens = [];
 let gardenCooldownTimers = [];
 let gardenRealtimeReady = false;
 let gardenReloadDebounce = null;
+let gardenSuppressOwnSizeReloadUntil = 0;
 let prevStageByGarden = {}; // garden_id -> last seen stage (to animate growth)
 
 function clearGardenTimers() {
@@ -4990,6 +5034,7 @@ function resetGardenState() {
   myGarden = null;
   allGardens = [];
   gardenRealtimeReady = false;
+  gardenSuppressOwnSizeReloadUntil = 0;
   prevStageByGarden = {};
 }
 
@@ -4997,8 +5042,9 @@ function setupGardenRealtime() {
   if (gardenRealtimeReady) return;
   gardenRealtimeReady = true;
   const ch = sb.channel('garden-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, payload => {
       if (activeTab !== 'garden') return;
+      if (payload?.new?.user_id === me?.id && Date.now() < gardenSuppressOwnSizeReloadUntil) return;
       // Debounce: many users may water around the same time.
       if (gardenReloadDebounce) clearTimeout(gardenReloadDebounce);
       gardenReloadDebounce = setTimeout(() => { gardenReloadDebounce = null; loadGarden(); }, 250);
@@ -5148,6 +5194,55 @@ function buildGardenManager() {
     const grid = el('div', { className: 'equip-grid' });
     const inventoryButtons = new Map();
     const slotButtons = new Map();
+    const sizePanel = el('div', { className: 'equip-size-panel hidden' });
+    const sizePreview = el('span', { className: 'equip-size-preview' });
+    const sizeMain = el('span', { className: 'equip-size-main' });
+    const sizeValue = el('span', { className: 'equip-size-value' });
+    const sizeSlider = el('input', {
+      className: 'equip-size-slider',
+      type: 'range',
+      min: String(ACCESSORY_SIZE_MIN),
+      max: String(ACCESSORY_SIZE_MAX),
+      step: '1',
+      value: String(ACCESSORY_SIZE_DEFAULT),
+    });
+    sizeMain.append(
+      el('span', { className: 'equip-size-head' },
+        el('span', {}, 'Rozmiar ozdoby'),
+        sizeValue
+      ),
+      sizeSlider
+    );
+    sizePanel.append(sizePreview, sizeMain);
+
+    sizeSlider.addEventListener('input', () => {
+      const slotId = selectedAcc ? accessorySlot(equipped, selectedAcc) : null;
+      if (!slotId || !equipped[slotId]) return;
+      const size = clampAccessorySize(sizeSlider.value);
+      equipped[slotId].size = size;
+      myGarden.equipped = { ...equipped };
+      applyAccessorySizeToDom(slotId, size);
+      renderEquipState();
+    });
+
+    sizeSlider.addEventListener('change', async () => {
+      const slotId = selectedAcc ? accessorySlot(equipped, selectedAcc) : null;
+      if (!slotId || !equipped[slotId] || pending) return;
+      const size = equippedEntrySize(equipped[slotId]);
+      pending = true;
+      sizeSlider.disabled = true;
+      gardenSuppressOwnSizeReloadUntil = Date.now() + 2000;
+      const { error } = await sb.rpc('set_accessory_size', { p_slot: slotId, p_size: size });
+      pending = false;
+      sizeSlider.disabled = false;
+      if (error) {
+        gardenSuppressOwnSizeReloadUntil = 0;
+        showToast('❌ ' + gardenErr(error));
+        loadGarden();
+        return;
+      }
+      showToast('✅ Rozmiar zapisany: ' + size + ' px');
+    });
 
     ownedIds.forEach(accId => {
       const item = gardenAccessoryById(accId);
@@ -5170,7 +5265,8 @@ function buildGardenManager() {
       const cell = el('button', { className: 'equip-cell', type: 'button', title: slot.label });
       cell.addEventListener('click', async () => {
         if (pending) return;
-        const placedId = equipped[slot.id] || null;
+        const placedEntry = equipped[slot.id] || null;
+        const placedId = equippedEntryId(placedEntry);
         if (!selectedAcc && !placedId) {
           showToast('Najpierw wybierz ozdobę.');
           return;
@@ -5182,6 +5278,8 @@ function buildGardenManager() {
         }
 
         const accToPlace = selectedAcc || null;
+        const previousSlot = accToPlace ? accessorySlot(equipped, accToPlace) : null;
+        const previousSize = previousSlot ? equippedEntrySize(equipped[previousSlot]) : ACCESSORY_SIZE_DEFAULT;
         pending = true;
         cell.classList.add('busy');
         const { error } = await sb.rpc('equip_accessory', { p_slot: slot.id, p_accessory_id: accToPlace });
@@ -5194,9 +5292,9 @@ function buildGardenManager() {
         }
 
         if (accToPlace) {
-          Object.keys(equipped).forEach(key => { if (equipped[key] === accToPlace) delete equipped[key]; });
-          equipped[slot.id] = accToPlace;
-          selectedAcc = null;
+          Object.keys(equipped).forEach(key => { if (equippedEntryId(equipped[key]) === accToPlace) delete equipped[key]; });
+          equipped[slot.id] = makeEquippedEntry(accToPlace, previousSize);
+          selectedAcc = accToPlace;
           const item = gardenAccessoryById(accToPlace);
           showToast('✅ Ustawiono ' + item.emoji + ' ' + item.name);
         } else {
@@ -5217,31 +5315,56 @@ function buildGardenManager() {
     const shopBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Sklep z ozdobami');
     shopBtn.addEventListener('click', () => switchTab('shop'));
 
-    panel.append(status, invRow, el('div', { className: 'equip-action-row' }, clearBtn, shopBtn), grid);
+    panel.append(status, invRow, sizePanel, el('div', { className: 'equip-action-row' }, clearBtn, shopBtn), grid);
     renderEquipState();
 
     function renderEquipState() {
       const selectedItem = selectedAcc ? gardenAccessoryById(selectedAcc) : null;
+      const selectedSlot = selectedAcc ? accessorySlot(equipped, selectedAcc) : null;
+      const selectedEntry = selectedSlot ? equipped[selectedSlot] : null;
       status.textContent = selectedItem
         ? `Wybrano: ${selectedItem.emoji} ${selectedItem.name}`
         : 'Brak wyboru';
+
+      sizePanel.classList.toggle('hidden', !selectedItem || !selectedEntry);
+      if (selectedItem && selectedEntry) {
+        const size = equippedEntrySize(selectedEntry);
+        sizePreview.textContent = selectedItem.emoji;
+        sizePreview.style.fontSize = size + 'px';
+        sizeValue.textContent = size + ' px';
+        sizeSlider.value = String(size);
+        sizeSlider.disabled = pending;
+      }
 
       inventoryButtons.forEach((btn, accId) => {
         const slotId = accessorySlot(equipped, accId);
         btn.classList.toggle('selected', selectedAcc === accId);
         btn.classList.toggle('equipped', !!slotId);
         const meta = btn.querySelector('.equip-inv-meta');
-        if (meta) meta.textContent = slotId ? 'Założone: ' + gardenSlotLabel(slotId) : 'Wolne';
+        if (meta) {
+          meta.textContent = slotId
+            ? 'Założone: ' + gardenSlotLabel(slotId) + ' · ' + equippedEntrySize(equipped[slotId]) + ' px'
+            : 'Wolne';
+        }
       });
 
       slotButtons.forEach((cell, slotId) => {
-        const placedItem = gardenAccessoryById(equipped[slotId]);
+        const placedEntry = equipped[slotId] || null;
+        const placedItem = gardenAccessoryById(equippedEntryId(placedEntry));
+        const placedSize = placedEntry ? equippedEntrySize(placedEntry) : null;
         cell.classList.toggle('occupied', !!placedItem);
-        cell.classList.toggle('target', !!selectedAcc && equipped[slotId] !== selectedAcc);
+        cell.classList.toggle('target', !!selectedAcc && equippedEntryId(placedEntry) !== selectedAcc);
+        cell.title = placedItem ? `${gardenSlotLabel(slotId)}: ${placedItem.name} (${placedSize}px)` : gardenSlotLabel(slotId);
         cell.replaceChildren(
           el('span', { className: 'equip-cell-emoji' }, placedItem ? placedItem.emoji : '+'),
-          el('span', { className: 'equip-cell-label' }, placedItem ? placedItem.name : gardenSlotLabel(slotId))
+          el('span', { className: 'equip-cell-label' }, placedItem ? placedItem.name + ' · ' + placedSize + ' px' : gardenSlotLabel(slotId))
         );
+      });
+    }
+
+    function applyAccessorySizeToDom(slotId, size) {
+      document.querySelectorAll(`.garden-pot.mine .gp-accessory[data-slot="${slotId}"]`).forEach(node => {
+        node.style.fontSize = size + 'px';
       });
     }
   }
@@ -5328,12 +5451,17 @@ function buildPot(g, isMine) {
   // Accessories (equipped)
   const equipped = normalizeEquippedSlots(g.equipped);
   if (Object.keys(equipped).length) {
-    Object.entries(equipped).forEach(([slot, accId]) => {
+    Object.entries(equipped).forEach(([slot, entry]) => {
+      const accId = equippedEntryId(entry);
       if (!accId) return;
       const item = gardenAccessoryById(accId);
       if (!item) return;
       const animClass = item.anim ? ' gp-acc-' + item.anim : '';
-      pot.appendChild(el('span', { className: 'gp-accessory gp-acc-' + slot + animClass }, item.emoji));
+      pot.appendChild(el('span', {
+        className: 'gp-accessory gp-acc-' + slot + animClass,
+        style: { fontSize: equippedEntrySize(entry) + 'px' },
+        'data-slot': slot,
+      }, item.emoji));
     });
   }
 

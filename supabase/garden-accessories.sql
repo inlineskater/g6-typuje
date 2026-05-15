@@ -79,6 +79,8 @@ DECLARE
   v_accessory text := nullif(p_accessory_id, '');
   v_equipped jsonb;
   v_existing_slot text;
+  v_existing_value jsonb;
+  v_existing_size integer := 14;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
@@ -102,16 +104,30 @@ BEGIN
   IF v_accessory IS NULL THEN
     v_equipped := v_equipped - v_slot;
   ELSE
-    SELECT key INTO v_existing_slot
-    FROM jsonb_each_text(v_equipped)
-    WHERE value = v_accessory
+    SELECT key, value INTO v_existing_slot, v_existing_value
+    FROM jsonb_each(v_equipped)
+    WHERE CASE
+      WHEN jsonb_typeof(value) = 'string' THEN value #>> '{}'
+      WHEN jsonb_typeof(value) = 'object' THEN value ->> 'id'
+      ELSE NULL
+    END = v_accessory
     LIMIT 1;
 
     IF v_existing_slot IS NOT NULL THEN
+      IF jsonb_typeof(v_existing_value) = 'object'
+         AND COALESCE(v_existing_value ->> 'size', '') ~ '^\d+$' THEN
+        v_existing_size := (v_existing_value ->> 'size')::integer;
+      END IF;
+      v_existing_size := GREATEST(10, LEAST(34, v_existing_size));
       v_equipped := v_equipped - v_existing_slot;
     END IF;
 
-    v_equipped := jsonb_set(v_equipped, ARRAY[v_slot], to_jsonb(v_accessory), true);
+    v_equipped := jsonb_set(
+      v_equipped,
+      ARRAY[v_slot],
+      jsonb_build_object('id', v_accessory, 'size', v_existing_size),
+      true
+    );
   END IF;
 
   UPDATE public.gardens SET equipped = v_equipped WHERE user_id = v_user;
@@ -120,10 +136,65 @@ BEGIN
 END;
 $fn$;
 
+CREATE OR REPLACE FUNCTION public.set_accessory_size(p_slot text, p_size integer)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
+DECLARE
+  v_user uuid := auth.uid();
+  v_garden public.gardens%ROWTYPE;
+  v_slot text := p_slot;
+  v_size integer;
+  v_equipped jsonb;
+  v_entry jsonb;
+  v_accessory text;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+
+  v_slot := CASE v_slot
+    WHEN 'left'  THEN '3'
+    WHEN 'top'   THEN '1'
+    WHEN 'right' THEN '5'
+    ELSE v_slot
+  END;
+  IF v_slot NOT IN ('0','1','2','3','4','5','6','7','8') THEN RAISE EXCEPTION 'invalid_slot'; END IF;
+  IF p_size IS NULL THEN RAISE EXCEPTION 'invalid_accessory_size'; END IF;
+  v_size := GREATEST(10, LEAST(34, p_size));
+
+  SELECT * INTO v_garden FROM public.gardens WHERE user_id = v_user FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'no_garden'; END IF;
+
+  v_equipped := COALESCE(v_garden.equipped, '{}'::jsonb);
+  v_entry := v_equipped -> v_slot;
+  IF v_entry IS NULL THEN RAISE EXCEPTION 'no_accessory'; END IF;
+
+  IF jsonb_typeof(v_entry) = 'string' THEN
+    v_accessory := v_entry #>> '{}';
+  ELSIF jsonb_typeof(v_entry) = 'object' THEN
+    v_accessory := v_entry ->> 'id';
+  END IF;
+
+  IF v_accessory IS NULL OR NOT (v_accessory = ANY(v_garden.accessories)) THEN
+    RAISE EXCEPTION 'invalid_accessory';
+  END IF;
+
+  v_equipped := jsonb_set(
+    v_equipped,
+    ARRAY[v_slot],
+    jsonb_build_object('id', v_accessory, 'size', v_size),
+    true
+  );
+
+  UPDATE public.gardens SET equipped = v_equipped WHERE user_id = v_user;
+
+  RETURN json_build_object('ok', true, 'slot', v_slot, 'size', v_size);
+END;
+$fn$;
+
 REVOKE ALL ON FUNCTION public.purchase_accessory(text, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.purchase_accessory(text, integer) TO authenticated;
 REVOKE ALL ON FUNCTION public.equip_accessory(text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.equip_accessory(text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.set_accessory_size(text, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.set_accessory_size(text, integer) TO authenticated;
 
 -- Migrate existing flag_pl owners to flaga_pl
 UPDATE public.gardens
