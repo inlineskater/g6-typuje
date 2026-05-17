@@ -7,7 +7,13 @@ LANGUAGE sql
 STABLE
 SET search_path = public
 AS $$
-  SELECT date_trunc('week', p_ts AT TIME ZONE 'Europe/Warsaw')::date;
+  -- Sunday-starting week (Sun..Sat) in Europe/Warsaw. Sundays count as the
+  -- first day of the next leaderboard cycle; Monday's award cron still pays
+  -- top 3 of the Sun..Sat window that just ended.
+  SELECT (
+    date_trunc('week', (p_ts AT TIME ZONE 'Europe/Warsaw') + interval '1 day')
+    - interval '1 day'
+  )::date;
 $$;
 
 CREATE TABLE IF NOT EXISTS public.whack_boss_rounds (
