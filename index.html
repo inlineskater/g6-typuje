@@ -1335,6 +1335,22 @@
       width: auto; min-width: 160px; margin: 0; padding-left: 18px; padding-right: 18px;
     }
     .wb-status { color: var(--muted); font-size: 12px; line-height: 1.5; min-height: 18px; }
+    .wb-rules {
+      border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+      padding: 10px 12px; font-size: 12.5px; color: var(--text);
+    }
+    .wb-rules > summary {
+      cursor: pointer; font-weight: 700; color: var(--text); list-style: none;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .wb-rules > summary::-webkit-details-marker { display: none; }
+    .wb-rules > summary::after {
+      content: '▾'; color: var(--muted); transition: transform .15s ease;
+    }
+    .wb-rules[open] > summary::after { transform: rotate(180deg); }
+    .wb-rules ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.55; }
+    .wb-rules ul li { margin-bottom: 4px; }
+    .wb-rules ul li strong { color: var(--text); }
     .wb-board-panel { display: grid; gap: 16px; }
     .wb-board-title {
       display: flex; align-items: center; justify-content: space-between;
@@ -2430,6 +2446,17 @@
             <button class="btn-primary wb-start-btn" id="wb-start-btn">Start rundy</button>
             <div class="wb-status" id="wb-status">Najlepsze wyniki zapisują się automatycznie po rundzie.</div>
           </div>
+
+          <details class="wb-rules">
+            <summary>Jak grać i nagrody</summary>
+            <ul>
+              <li><strong>18 sekund.</strong> Klikaj bossa za każdym razem, gdy pojawi się w polu gry. Bossowie znikają coraz szybciej.</li>
+              <li><strong>Punkty:</strong> każde trafienie = 1 pkt. <strong>Combo</strong> rośnie, gdy trafiasz bossów po kolei (każdy spudłowany boss zeruje combo).</li>
+              <li><strong>Forma w rankingu:</strong> <em>skuteczność</em> (% trafień w najlepszej rundzie) · <em>liczba zagranych rund</em>.</li>
+              <li><strong>Tydzień</strong> liczony jest od poniedziałku do niedzieli (czas warszawski). W tabeli „Ten tydzień” widać datę startu bieżącego tygodnia.</li>
+              <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z poprzedniego tygodnia.</li>
+            </ul>
+          </details>
         </section>
 
         <aside class="wb-board-panel">
@@ -2450,7 +2477,7 @@
           <section class="wb-awards-section">
             <div class="wb-board-title">
               <span>Ostatnie nagrody</span>
-              <span class="wb-board-sub">poniedziałki</span>
+              <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdy poniedziałek rano">wypłata: poniedziałek</span>
             </div>
             <div class="wb-awards" id="wb-awards"></div>
           </section>
@@ -5364,8 +5391,8 @@ function renderWhackBossState(data) {
 
   const weekLabel = document.getElementById('wb-week-label');
   if (weekLabel && data.weekStart) {
-    const d = new Date(String(data.weekStart) + 'T12:00:00');
-    weekLabel.textContent = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+    const d = new Date(String(data.weekStart).slice(0, 10) + 'T12:00:00');
+    weekLabel.textContent = isNaN(d) ? '' : ('od ' + d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' }));
   }
 
   renderWhackBossTable(document.getElementById('wb-weekly-board'), data.weekly || [], 'weekly');
@@ -5404,7 +5431,7 @@ function renderWhackBossTable(wrap, rows, mode) {
 
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Wynik'), el('th', {}, 'Forma'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik w rundzie' }, 'Wynik'), el('th', { title: 'Skuteczność · liczba zagranych rund' }, 'Forma'))),
       el('tbody', {}, ...bodyRows)
     )
   );
@@ -5417,10 +5444,10 @@ function renderWhackBossAwards(wrap, awards) {
     return;
   }
   const rows = awards.slice(0, 6).map(row => {
-    const d = new Date(String(row.week_start) + 'T12:00:00');
-    const label = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+    const d = new Date(String(row.week_start).slice(0, 10) + 'T12:00:00');
+    const label = isNaN(d) ? '' : d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
     return el('div', { className: 'wb-award-row' },
-      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + ' · ' + label),
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
       el('strong', {}, '+' + row.prize_coins + ' 🪙')
     );
   });
