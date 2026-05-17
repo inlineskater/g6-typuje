@@ -5546,10 +5546,7 @@ async function finishWhackBossRound() {
   updateWhackBossStats(0);
 
   try {
-    await Promise.race([
-      Promise.allSettled(rt.pendingHits),
-      new Promise(resolve => setTimeout(resolve, 1600)),
-    ]);
+    await Promise.allSettled(rt.pendingHits);
     const data = await invokeWhackBoss({
       action: 'submit',
       roundId: rt.roundId,
@@ -5586,25 +5583,30 @@ if (wbTarget) {
     if (!Number.isInteger(targetIndex) || rt.hitTargets.has(targetIndex)) return;
 
     const coords = whackBossCoords(evt);
-    const atMs = whackBossElapsed();
     rt.hitTargets.add(targetIndex);
+    wbTarget.classList.add('whacked');
     rt.pendingHits.push(
       recordWhackBossHit(rt.roundId, targetIndex, coords)
         .then(data => {
-          if (data?.accepted && whackBossRuntime === rt && !rt.playing) {
-            // Final submit will render the authoritative score.
-            return;
-          }
+          if (whackBossRuntime !== rt || !data?.accepted) return;
+          const serverHits = Number(data.hits);
+          if (Number.isFinite(serverHits)) rt.score = serverHits;
+          rt.combo = targetIndex === rt.lastHitIndex + 1 ? rt.combo + 1 : 1;
+          rt.lastHitIndex = targetIndex;
+          const serverMaxCombo = Number(data.maxCombo);
+          rt.maxCombo = Math.max(rt.maxCombo, rt.combo, Number.isFinite(serverMaxCombo) ? serverMaxCombo : 0);
+          showWhackBossFloat('+1', coords.x, coords.y);
+          updateWhackBossStats(rt.durationMs - whackBossElapsed());
         })
-        .catch(() => {})
+        .catch(err => {
+          if (whackBossRuntime !== rt) return;
+          rt.hitTargets.delete(targetIndex);
+          rt.combo = 0;
+          const label = err && err.message ? err.message : 'pudło';
+          showWhackBossFloat(label, coords.x, coords.y, true);
+          updateWhackBossStats(rt.durationMs - whackBossElapsed());
+        })
     );
-    rt.score += 1;
-    rt.combo = targetIndex === rt.lastHitIndex + 1 ? rt.combo + 1 : 1;
-    rt.maxCombo = Math.max(rt.maxCombo, rt.combo);
-    rt.lastHitIndex = targetIndex;
-    showWhackBossFloat('+1', coords.x, coords.y);
-    wbTarget.classList.add('whacked');
-    updateWhackBossStats(rt.durationMs - atMs);
     setTimeout(() => {
       if (whackBossRuntime?.currentIndex === targetIndex) hideWhackBossTarget();
     }, 80);
