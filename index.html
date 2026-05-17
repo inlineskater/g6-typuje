@@ -2450,9 +2450,9 @@
           <details class="wb-rules">
             <summary>Jak grać i nagrody</summary>
             <ul>
-              <li><strong>18 sekund.</strong> Klikaj bossa za każdym razem, gdy pojawi się w polu gry. Bossowie znikają coraz szybciej.</li>
+              <li><strong>18 sekund.</strong> Klikaj bossa za każdym razem, gdy pojawi się w polu gry.</li>
+              <li><strong>Tempo dopasowuje się do Ciebie:</strong> im szybciej trafiasz, tym krócej boss jest widoczny. Spudłowany boss daje chwilę oddechu.</li>
               <li><strong>Punkty:</strong> każde trafienie = 1 pkt. <strong>Combo</strong> rośnie, gdy trafiasz bossów po kolei (każdy spudłowany boss zeruje combo).</li>
-              <li><strong>Forma w rankingu:</strong> <em>skuteczność</em> (% trafień w najlepszej rundzie) · <em>liczba zagranych rund</em>.</li>
               <li><strong>Tydzień</strong> liczony jest od poniedziałku do niedzieli (czas warszawski). W tabeli „Ten tydzień” widać datę startu bieżącego tygodnia.</li>
               <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z poprzedniego tygodnia.</li>
             </ul>
@@ -5298,12 +5298,42 @@ function newWhackBossRuntime() {
     timer: null,
     currentIndex: -1,
     hitTargets: new Set(),
+    missedTargets: new Set(),
     score: 0,
     misses: 0,
     combo: 0,
     maxCombo: 0,
     lastHitIndex: -2,
+    difficulty: 0,
+    nextSpawnAt: 620,
   };
+}
+
+function whackBossNextDuration(difficulty) {
+  return Math.max(320, Math.round(900 - difficulty * 25));
+}
+
+function whackBossNextGap(difficulty) {
+  return Math.max(70, Math.round(130 - difficulty * 4));
+}
+
+function whackBossRandInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function spawnWhackBossTarget(elapsed) {
+  const rt = whackBossRuntime;
+  if (!rt) return;
+  const target = {
+    index: rt.schedule.length,
+    startMs: elapsed,
+    durationMs: whackBossNextDuration(rt.difficulty),
+    x: whackBossRandInt(12, 88),
+    y: whackBossRandInt(16, 84),
+    spawnedPerf: performance.now(),
+  };
+  rt.schedule.push(target);
+  showWhackBossTarget(target);
 }
 
 function stopWhackBossRound() {
@@ -5336,8 +5366,8 @@ function whackBossElapsed() {
 
 function updateWhackBossStats(remainingMs = null) {
   const rt = whackBossRuntime || newWhackBossRuntime();
-  const totalTargets = rt.schedule.length || 0;
-  const accuracy = totalTargets ? Math.round((rt.score / totalTargets) * 100) : 0;
+  const attempts = rt.score + rt.misses;
+  const accuracy = attempts ? Math.round((rt.score / attempts) * 100) : 0;
   const remaining = remainingMs == null ? rt.durationMs : remainingMs;
   if (wbTime) wbTime.textContent = Math.max(0, remaining / 1000).toFixed(1);
   if (wbScore) wbScore.textContent = String(rt.score);
@@ -5425,13 +5455,12 @@ function renderWhackBossTable(wrap, rows, mode) {
   const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
     el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
-    el('td', { className: 'lb-net' }, String(row.score)),
-    el('td', { className: 'lb-coins', title: 'Skuteczność / rundy' }, Math.round(+row.accuracy || 0) + '% · ' + row.rounds_played + 'x')
+    el('td', { className: 'lb-net' }, String(row.score))
   ));
 
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik w rundzie' }, 'Wynik'), el('th', { title: 'Skuteczność · liczba zagranych rund' }, 'Forma'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik w rundzie' }, 'Wynik'))),
       el('tbody', {}, ...bodyRows)
     )
   );
@@ -5485,18 +5514,30 @@ function tickWhackBossRound() {
     return;
   }
 
-  const target = rt.schedule.find(t =>
-    elapsed >= t.startMs &&
-    elapsed <= t.startMs + t.durationMs &&
-    !rt.hitTargets.has(t.index)
-  );
+  const last = rt.schedule.length ? rt.schedule[rt.schedule.length - 1] : null;
+  const lastAlive = last
+    && !rt.hitTargets.has(last.index)
+    && !rt.missedTargets.has(last.index)
+    && elapsed <= last.startMs + last.durationMs;
 
-  if (!target) {
-    hideWhackBossTarget();
+  if (lastAlive) {
+    if (rt.currentIndex !== last.index) showWhackBossTarget(last);
     return;
   }
 
-  if (rt.currentIndex !== target.index) showWhackBossTarget(target);
+  if (last && !rt.hitTargets.has(last.index) && !rt.missedTargets.has(last.index)) {
+    rt.missedTargets.add(last.index);
+    rt.misses += 1;
+    rt.combo = 0;
+    rt.difficulty = Math.max(0, rt.difficulty - 0.5);
+    rt.nextSpawnAt = elapsed + whackBossNextGap(rt.difficulty);
+  }
+
+  hideWhackBossTarget();
+
+  if (elapsed >= rt.nextSpawnAt && elapsed + 250 < rt.durationMs) {
+    spawnWhackBossTarget(elapsed);
+  }
 }
 
 function beginWhackBossRound(round) {
@@ -5505,11 +5546,11 @@ function beginWhackBossRound(round) {
   whackBossRuntime.playing = true;
   whackBossRuntime.roundId = round.id;
   whackBossRuntime.durationMs = round.durationMs || 18000;
-  whackBossRuntime.schedule = round.schedule || [];
   const serverElapsed = round.startedAt && round.serverNow
     ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
     : 0;
   whackBossRuntime.startPerf = performance.now() - serverElapsed;
+  whackBossRuntime.nextSpawnAt = Math.max(serverElapsed, 620);
 
   if (wbReady) hide(wbReady);
   if (wbArena) wbArena.classList.add('playing');
@@ -5606,8 +5647,17 @@ if (wbTarget) {
     rt.combo = targetIndex === rt.lastHitIndex + 1 ? rt.combo + 1 : 1;
     rt.maxCombo = Math.max(rt.maxCombo, rt.combo);
     rt.lastHitIndex = targetIndex;
+
+    const target = rt.schedule[targetIndex];
+    const reactionMs = target ? performance.now() - target.spawnedPerf : 999;
+    const fastBonus = reactionMs < 350 ? 0.5 : 0;
+    rt.difficulty += 1 + fastBonus;
+
+    const elapsed = whackBossElapsed();
+    rt.nextSpawnAt = elapsed + whackBossNextGap(rt.difficulty);
+
     showWhackBossFloat('+1', coords.x, coords.y);
-    updateWhackBossStats(rt.durationMs - whackBossElapsed());
+    updateWhackBossStats(rt.durationMs - elapsed);
 
     setTimeout(() => {
       if (whackBossRuntime?.currentIndex === targetIndex) hideWhackBossTarget();

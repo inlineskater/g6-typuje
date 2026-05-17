@@ -15,6 +15,7 @@ const db = databaseUrl
 
 const ROUND_DURATION_MS = 18_000;
 const ROUND_EXPIRES_SECONDS = 120;
+const MAX_HITS_PER_ROUND = 60;
 const PRIZES = [100, 50, 25];
 
 function json(body, status = 200) {
@@ -38,36 +39,6 @@ function asInt(value, fallback = 0) {
 function asNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
-}
-
-function randInt(min, max) {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return min + (buf[0] % (max - min + 1));
-}
-
-function generateSchedule() {
-  const targets = [];
-  let cursor = 620;
-  let i = 0;
-
-  while (cursor < ROUND_DURATION_MS - 420) {
-    const durationMs = Math.max(460, 880 - i * 15 + randInt(-35, 35));
-    const gapMs = randInt(80, 175);
-    targets.push({
-      index: i,
-      startMs: cursor,
-      durationMs,
-      x: randInt(12, 88),
-      y: randInt(16, 84),
-      radiusPct: 12,
-      sizePct: 14,
-    });
-    cursor += durationMs + gapMs;
-    i += 1;
-  }
-
-  return targets;
 }
 
 async function requireUser(req) {
@@ -172,12 +143,11 @@ async function startRound(userId) {
   `;
   if (!profile) throw gameError("Profil nie istnieje.");
 
-  const schedule = generateSchedule();
   const [round] = await db`
     insert into public.whack_boss_rounds
       (user_id, nick_snapshot, schedule, duration_ms, expires_at)
     values
-      (${userId}, ${profile.nick}, ${JSON.stringify(schedule)}::jsonb, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
+      (${userId}, ${profile.nick}, '[]'::jsonb, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
     returning id, started_at, expires_at
   `;
 
@@ -189,22 +159,8 @@ async function startRound(userId) {
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
       expiresAt: round.expires_at,
-      schedule,
     },
   };
-}
-
-function parseJsonArray(value) {
-  if (Array.isArray(value)) return value;
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (_) {
-      return [];
-    }
-  }
-  return [];
 }
 
 function normalizeMisses(value) {
@@ -232,13 +188,12 @@ async function submitRound(userId, body) {
     const minSubmitAt = new Date(round.started_at).getTime() + asInt(round.duration_ms, ROUND_DURATION_MS) - 750;
     if (Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
 
-    const schedule = parseJsonArray(round.schedule);
-    const scheduleLen = schedule.length;
-    const hits = Math.max(0, Math.min(scheduleLen, asInt(body.hits, 0)));
+    const hits = Math.max(0, Math.min(MAX_HITS_PER_ROUND, asInt(body.hits, 0)));
     const misses = normalizeMisses(body.misses);
     const maxCombo = Math.max(0, Math.min(hits, asInt(body.maxCombo, 0)));
     const scoreValue = hits;
-    const accuracy = scheduleLen > 0 ? Math.round((hits / scheduleLen) * 10000) / 100 : 0;
+    const attempts = hits + misses;
+    const accuracy = attempts > 0 ? Math.round((hits / attempts) * 10000) / 100 : 0;
 
     await tx`
       update public.whack_boss_rounds
