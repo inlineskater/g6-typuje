@@ -15,7 +15,6 @@ const db = databaseUrl
 
 const ROUND_DURATION_MS = 18_000;
 const ROUND_EXPIRES_SECONDS = 120;
-const SERVER_HIT_TOLERANCE_MS = 450;
 const PRIZES = [100, 50, 25];
 
 function json(body, status = 200) {
@@ -213,110 +212,6 @@ function normalizeMisses(value) {
   return Math.max(0, Math.min(999, misses));
 }
 
-function scoreFromServerHits(schedule, hitEvents, misses) {
-  const hitRows = [];
-  const seen = new Set();
-
-  for (const evt of parseJsonArray(hitEvents)) {
-    const targetIndex = asInt(evt?.targetIndex, -1);
-    if (!schedule[targetIndex] || seen.has(targetIndex)) continue;
-    seen.add(targetIndex);
-    hitRows.push({ targetIndex, atMs: asNumber(evt?.serverAtMs, 0) });
-  }
-
-  hitRows.sort((a, b) => a.targetIndex - b.targetIndex);
-  let combo = 0;
-  let maxCombo = 0;
-  let previousIndex = -2;
-  for (const hit of hitRows) {
-    combo = hit.targetIndex === previousIndex + 1 ? combo + 1 : 1;
-    maxCombo = Math.max(maxCombo, combo);
-    previousIndex = hit.targetIndex;
-  }
-
-  const hits = hitRows.length;
-  const accuracy = schedule.length > 0 ? Math.round((hits / schedule.length) * 10000) / 100 : 0;
-  return {
-    score: hits,
-    hits,
-    misses: normalizeMisses(misses),
-    maxCombo,
-    accuracy,
-    eventCount: hits + normalizeMisses(misses),
-  };
-}
-
-function validateServerHit(round, schedule, hitEvents, body) {
-  const targetIndex = asInt(body.targetIndex, -1);
-  const target = schedule[targetIndex];
-  if (!target) throw gameError("Boss już zniknął.");
-  if (parseJsonArray(hitEvents).some((evt) => asInt(evt?.targetIndex, -1) === targetIndex)) {
-    throw gameError("Ten boss już został trafiony.");
-  }
-
-  const serverAtMs = Date.now() - new Date(round.started_at).getTime();
-  const durationMs = asInt(round.duration_ms, ROUND_DURATION_MS);
-  if (serverAtMs < -SERVER_HIT_TOLERANCE_MS || serverAtMs > durationMs + SERVER_HIT_TOLERANCE_MS) {
-    throw gameError("Runda nie jest aktywna.");
-  }
-
-  const windowStart = asNumber(target.startMs) - SERVER_HIT_TOLERANCE_MS;
-  const windowEnd = asNumber(target.startMs) + asNumber(target.durationMs) + SERVER_HIT_TOLERANCE_MS;
-  if (serverAtMs < windowStart || serverAtMs > windowEnd) throw gameError("Boss już zniknął.");
-
-  const x = asNumber(body.x, Number.NaN);
-  const y = asNumber(body.y, Number.NaN);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) throw gameError("Nieprawidłowe trafienie.");
-  const radius = Math.max(6, asNumber(target.radiusPct, 9));
-  const dx = (x - asNumber(target.x)) / radius;
-  const dy = (y - asNumber(target.y)) / radius;
-  if (Math.sqrt(dx * dx + dy * dy) > 1.25) throw gameError("Pudło.");
-
-  return { targetIndex, serverAtMs, x, y };
-}
-
-async function recordHit(userId, body) {
-  if (!db) throw new Error("Database is not configured.");
-  const roundId = String(body.roundId ?? "");
-  if (!roundId) throw gameError("Brak aktywnej rundy.");
-
-  const result = await db.begin(async (tx) => {
-    const [round] = await tx`
-      select *
-      from public.whack_boss_rounds
-      where id = ${roundId}
-        and user_id = ${userId}
-      for update
-    `;
-    if (!round) throw gameError("Runda nie istnieje.");
-    if (round.submitted_at) throw gameError("Ta runda została już zapisana.");
-    if (new Date(round.expires_at).getTime() < Date.now()) throw gameError("Runda wygasła.");
-
-    const schedule = parseJsonArray(round.schedule);
-    const hitEvents = parseJsonArray(round.hit_events);
-    const event = validateServerHit(round, schedule, hitEvents, body);
-    const updated = [...hitEvents, event].sort((a, b) => asInt(a.targetIndex) - asInt(b.targetIndex));
-
-    await tx`
-      update public.whack_boss_rounds
-         set hit_events = ${JSON.stringify(updated)}::jsonb
-       where id = ${round.id}
-    `;
-
-    const score = scoreFromServerHits(schedule, updated, 0);
-    return { ...score, event };
-  });
-
-  return {
-    accepted: true,
-    score: result.score,
-    hits: result.hits,
-    maxCombo: result.maxCombo,
-    accuracy: result.accuracy,
-    targetIndex: result.event.targetIndex,
-  };
-}
-
 async function submitRound(userId, body) {
   if (!db) throw new Error("Database is not configured.");
   const roundId = String(body.roundId ?? "");
@@ -338,7 +233,12 @@ async function submitRound(userId, body) {
     if (Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
 
     const schedule = parseJsonArray(round.schedule);
-    const result = scoreFromServerHits(schedule, round.hit_events, body.misses);
+    const scheduleLen = schedule.length;
+    const hits = Math.max(0, Math.min(scheduleLen, asInt(body.hits, 0)));
+    const misses = normalizeMisses(body.misses);
+    const maxCombo = Math.max(0, Math.min(hits, asInt(body.maxCombo, 0)));
+    const scoreValue = hits;
+    const accuracy = scheduleLen > 0 ? Math.round((hits / scheduleLen) * 10000) / 100 : 0;
 
     await tx`
       update public.whack_boss_rounds
@@ -355,13 +255,13 @@ async function submitRound(userId, body) {
           ${userId},
           ${round.nick_snapshot},
           public.whack_boss_week_start(now()),
-          ${result.score},
-          ${result.hits},
-          ${result.misses},
-          ${result.accuracy},
-          ${result.maxCombo},
+          ${scoreValue},
+          ${hits},
+          ${misses},
+          ${accuracy},
+          ${maxCombo},
           ${asInt(round.duration_ms, ROUND_DURATION_MS)},
-          ${JSON.stringify({ event_count: result.eventCount, server_validated: true })}::jsonb
+          ${JSON.stringify({ event_count: hits + misses, server_validated: false })}::jsonb
         )
       returning *
     `;
@@ -395,7 +295,6 @@ Deno.serve(async (req) => {
     let result;
     if (action === "state") result = await loadState(user.id);
     else if (action === "start") result = await startRound(user.id);
-    else if (action === "hit") result = await recordHit(user.id, body);
     else if (action === "submit") result = await submitRound(user.id, body);
     else throw gameError("Nieznana akcja.");
 

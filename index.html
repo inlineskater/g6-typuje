@@ -5271,7 +5271,6 @@ function newWhackBossRuntime() {
     timer: null,
     currentIndex: -1,
     hitTargets: new Set(),
-    pendingHits: [],
     score: 0,
     misses: 0,
     combo: 0,
@@ -5333,16 +5332,6 @@ async function invokeWhackBoss(payload) {
   if (error) throw new Error(error.message || 'Nie udało się połączyć z Whack-a-Boss.');
   if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Whack-a-Boss.');
   return data;
-}
-
-async function recordWhackBossHit(roundId, targetIndex, coords) {
-  return await invokeWhackBoss({
-    action: 'hit',
-    roundId,
-    targetIndex,
-    x: coords.x,
-    y: coords.y,
-  });
 }
 
 async function loadWhackBossState(showSpinner = true) {
@@ -5546,11 +5535,12 @@ async function finishWhackBossRound() {
   updateWhackBossStats(0);
 
   try {
-    await Promise.allSettled(rt.pendingHits);
     const data = await invokeWhackBoss({
       action: 'submit',
       roundId: rt.roundId,
+      hits: rt.score,
       misses: rt.misses,
+      maxCombo: rt.maxCombo,
     });
     renderWhackBossState(data);
     showToast('✅ Wynik zapisany: ' + data.score.score);
@@ -5583,10 +5573,6 @@ if (wbTarget) {
     if (!Number.isInteger(targetIndex) || rt.hitTargets.has(targetIndex)) return;
 
     const coords = whackBossCoords(evt);
-    const prevCombo = rt.combo;
-    const prevMaxCombo = rt.maxCombo;
-    const prevLastHitIndex = rt.lastHitIndex;
-
     rt.hitTargets.add(targetIndex);
     wbTarget.classList.add('whacked');
     rt.score += 1;
@@ -5596,30 +5582,6 @@ if (wbTarget) {
     showWhackBossFloat('+1', coords.x, coords.y);
     updateWhackBossStats(rt.durationMs - whackBossElapsed());
 
-    rt.pendingHits.push(
-      recordWhackBossHit(rt.roundId, targetIndex, coords)
-        .then(data => {
-          if (whackBossRuntime !== rt || !data?.accepted) return;
-          const serverHits = Number(data.hits);
-          if (Number.isFinite(serverHits)) rt.score = serverHits;
-          const serverMaxCombo = Number(data.maxCombo);
-          if (Number.isFinite(serverMaxCombo)) {
-            rt.maxCombo = Math.max(rt.maxCombo, serverMaxCombo);
-          }
-          updateWhackBossStats(rt.durationMs - whackBossElapsed());
-        })
-        .catch(err => {
-          if (whackBossRuntime !== rt) return;
-          rt.hitTargets.delete(targetIndex);
-          rt.score = Math.max(0, rt.score - 1);
-          rt.combo = prevCombo;
-          rt.maxCombo = prevMaxCombo;
-          rt.lastHitIndex = prevLastHitIndex;
-          const label = err && err.message ? err.message : 'pudło';
-          showWhackBossFloat(label, coords.x, coords.y, true);
-          updateWhackBossStats(rt.durationMs - whackBossElapsed());
-        })
-    );
     setTimeout(() => {
       if (whackBossRuntime?.currentIndex === targetIndex) hideWhackBossTarget();
     }, 80);
