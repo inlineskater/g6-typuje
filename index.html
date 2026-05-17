@@ -1221,6 +1221,152 @@
     @keyframes slots-fall { 0% { transform: translateY(-50px) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
     @keyframes slots-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 
+    /* ── Whack-a-Boss ── */
+    .wb-layout {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+      gap: 16px; align-items: start;
+    }
+    .wb-game-panel, .wb-board-panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px;
+    }
+    .wb-game-panel { display: grid; gap: 14px; }
+    .wb-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 14px; flex-wrap: wrap;
+    }
+    .wb-prizes {
+      display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+      color: var(--muted); font-size: 11px; font-weight: 700;
+    }
+    .wb-prize {
+      display: inline-flex; align-items: center; gap: 4px;
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 5px 9px; background: var(--surface);
+    }
+    .wb-stats {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .wb-stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; min-width: 0;
+    }
+    .wb-stat-label {
+      color: var(--muted); font-size: 10px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .wb-stat-value {
+      margin-top: 4px; color: var(--text); font-size: 24px; font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .wb-arena {
+      position: relative; overflow: hidden; border: 2px solid var(--border-hi);
+      border-radius: 8px; min-height: 320px; aspect-ratio: 16 / 9;
+      background:
+        linear-gradient(90deg, rgba(15,23,42,.04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(15,23,42,.04) 1px, transparent 1px),
+        #f8fafc;
+      background-size: 34px 34px;
+      user-select: none; touch-action: manipulation;
+    }
+    .wb-arena.playing { cursor: crosshair; border-color: rgba(99,102,241,.5); }
+    .wb-ready {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      color: var(--muted); text-align: center; padding: 22px; pointer-events: none;
+    }
+    .wb-ready strong { color: var(--text); font-size: 18px; }
+    .wb-target {
+      --wb-size: clamp(68px, 14%, 96px);
+      position: absolute; width: var(--wb-size); aspect-ratio: 1;
+      transform: translate(-50%, -50%); border: 0; background: transparent;
+      cursor: pointer; z-index: 4; padding: 0;
+      filter: drop-shadow(0 8px 10px rgba(15,23,42,.22));
+    }
+    .wb-target.pop { animation: wbPop .12s ease-out; }
+    .wb-target.whacked { animation: wbWhack .16s ease-in forwards; }
+    @keyframes wbPop { from { transform: translate(-50%, -50%) scale(.65); } to { transform: translate(-50%, -50%) scale(1); } }
+    @keyframes wbWhack { to { transform: translate(-50%, -50%) scale(.72) rotate(-10deg); opacity: .45; } }
+    .wb-boss {
+      position: absolute; inset: 0; display: grid; place-items: center;
+    }
+    .wb-boss-head {
+      position: relative; width: 74%; height: 70%; border-radius: 42% 42% 46% 46%;
+      background: #ffd7b5; border: 3px solid #7c2d12;
+    }
+    .wb-boss-hair {
+      position: absolute; left: 14%; right: 14%; top: -8%;
+      height: 25%; border-radius: 16px 16px 8px 8px; background: #334155;
+    }
+    .wb-boss-glasses {
+      position: absolute; left: 16%; right: 16%; top: 34%;
+      height: 16%; border-top: 3px solid #0f172a;
+    }
+    .wb-boss-glasses::before, .wb-boss-glasses::after {
+      content: ''; position: absolute; top: -9px; width: 24%; aspect-ratio: 1;
+      border: 3px solid #0f172a; border-radius: 50%; background: rgba(255,255,255,.5);
+    }
+    .wb-boss-glasses::before { left: 2%; }
+    .wb-boss-glasses::after { right: 2%; }
+    .wb-boss-mouth {
+      position: absolute; left: 36%; right: 36%; bottom: 18%;
+      height: 7%; border-radius: 999px; background: #991b1b;
+    }
+    .wb-boss-tie {
+      position: absolute; left: 43%; top: 70%; width: 14%; height: 28%;
+      background: #dc2626; clip-path: polygon(50% 0, 100% 38%, 68% 100%, 32% 100%, 0 38%);
+    }
+    .wb-float-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+    .wb-float {
+      position: absolute; color: var(--yes); font-size: 18px; font-weight: 900;
+      animation: wbFloat .65s ease-out forwards; font-variant-numeric: tabular-nums;
+    }
+    .wb-float.miss { color: var(--no); }
+    @keyframes wbFloat {
+      from { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(.9); }
+      to { opacity: 0; transform: translate(-50%, -50%) translateY(-42px) scale(1.1); }
+    }
+    .wb-actions {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .wb-start-btn {
+      width: auto; min-width: 160px; margin: 0; padding-left: 18px; padding-right: 18px;
+    }
+    .wb-status { color: var(--muted); font-size: 12px; line-height: 1.5; min-height: 18px; }
+    .wb-board-panel { display: grid; gap: 16px; }
+    .wb-board-title {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; font-size: 13px; font-weight: 800; margin-bottom: 8px;
+    }
+    .wb-board-sub { color: var(--muted); font-size: 11px; font-weight: 500; }
+    .wb-empty { color: var(--muted); font-size: 12px; padding: 8px 0; }
+    .wb-me { color: var(--accent); font-weight: 800; }
+    .wb-awards {
+      display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 12px;
+    }
+    .wb-award-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface);
+    }
+
+    @media (max-width: 980px) {
+      .wb-layout { grid-template-columns: 1fr; }
+      .wb-board-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .wb-awards-section { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 620px) {
+      .wb-game-panel, .wb-board-panel { padding: 14px; }
+      .wb-board-panel { grid-template-columns: 1fr; }
+      .wb-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .wb-stat-value { font-size: 21px; }
+      .wb-arena { min-height: 300px; aspect-ratio: 4 / 5; }
+      .wb-actions { align-items: stretch; flex-direction: column; }
+      .wb-start-btn { width: 100%; }
+    }
+
     /* ── Shop ── */
     input[type="number"], textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
@@ -1953,6 +2099,7 @@
     <button class="nav-tab" data-tab="poker">Poker</button>
     <button class="nav-tab" data-tab="roulette">Ruletka</button>
     <button class="nav-tab" data-tab="slots">Jednoręki bandyta</button>
+    <button class="nav-tab" data-tab="whack-boss">Whack-a-Boss</button>
     <button class="nav-tab" data-tab="shop">Sklep</button>
     <button class="nav-tab" data-tab="garden">Ogródek 🌱</button>
   </nav>
@@ -2226,6 +2373,92 @@
     </main>
   </div>
 
+  <div id="tab-whack-boss" class="hidden">
+    <main>
+      <div class="wb-layout">
+        <section class="wb-game-panel">
+          <div class="wb-head">
+            <div>
+              <h2 class="page-title">Whack-a-Boss</h2>
+              <p class="page-sub">18 sekund, szybkie kliknięcia i cotygodniowy ranking z nagrodami.</p>
+            </div>
+            <div class="wb-prizes" aria-label="Nagrody tygodniowe">
+              <span class="wb-prize">🥇 100 🪙</span>
+              <span class="wb-prize">🥈 50 🪙</span>
+              <span class="wb-prize">🥉 25 🪙</span>
+            </div>
+          </div>
+
+          <div class="wb-stats">
+            <div class="wb-stat">
+              <div class="wb-stat-label">Czas</div>
+              <div class="wb-stat-value" id="wb-time">18.0</div>
+            </div>
+            <div class="wb-stat">
+              <div class="wb-stat-label">Wynik</div>
+              <div class="wb-stat-value" id="wb-score">0</div>
+            </div>
+            <div class="wb-stat">
+              <div class="wb-stat-label">Combo</div>
+              <div class="wb-stat-value" id="wb-combo">0</div>
+            </div>
+            <div class="wb-stat">
+              <div class="wb-stat-label">Skuteczność</div>
+              <div class="wb-stat-value" id="wb-accuracy">0%</div>
+            </div>
+          </div>
+
+          <div class="wb-arena" id="wb-arena">
+            <div class="wb-ready" id="wb-ready">
+              <strong>Gotowy?</strong>
+              <span>Klikaj bossa, gdy pojawi się w polu gry.</span>
+            </div>
+            <button class="wb-target hidden" id="wb-target" type="button" aria-label="Boss">
+              <span class="wb-boss" aria-hidden="true">
+                <span class="wb-boss-head">
+                  <span class="wb-boss-hair"></span>
+                  <span class="wb-boss-glasses"></span>
+                  <span class="wb-boss-mouth"></span>
+                  <span class="wb-boss-tie"></span>
+                </span>
+              </span>
+            </button>
+            <div class="wb-float-layer" id="wb-float-layer"></div>
+          </div>
+
+          <div class="wb-actions">
+            <button class="btn-primary wb-start-btn" id="wb-start-btn">Start rundy</button>
+            <div class="wb-status" id="wb-status">Najlepsze wyniki zapisują się automatycznie po rundzie.</div>
+          </div>
+        </section>
+
+        <aside class="wb-board-panel">
+          <section>
+            <div class="wb-board-title">
+              <span>Ten tydzień</span>
+              <span class="wb-board-sub" id="wb-week-label"></span>
+            </div>
+            <div id="wb-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+          </section>
+          <section>
+            <div class="wb-board-title">
+              <span>All-time</span>
+              <span class="wb-board-sub">rekordy</span>
+            </div>
+            <div id="wb-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+          </section>
+          <section class="wb-awards-section">
+            <div class="wb-board-title">
+              <span>Ostatnie nagrody</span>
+              <span class="wb-board-sub">poniedziałki</span>
+            </div>
+            <div class="wb-awards" id="wb-awards"></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+
   <div id="tab-shop" class="hidden">
     <main>
       <div class="markets-toolbar">
@@ -2425,6 +2658,7 @@ let pokerRealtimeReady = false;
 let pokerClockTimer = null;
 let pokerTimeoutClaiming = false;
 let lastPokerStateMs = 0;
+let whackBossRuntime = null;
 const lwCharts = new Map();
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
@@ -2611,6 +2845,16 @@ const pokerWrap       = document.getElementById('poker-wrap');
 const pokerBuyIn      = document.getElementById('poker-buy-in');
 const pokerBlinds     = document.getElementById('poker-blinds');
 const pokerClock      = document.getElementById('poker-clock');
+const wbArena         = document.getElementById('wb-arena');
+const wbReady         = document.getElementById('wb-ready');
+const wbTarget        = document.getElementById('wb-target');
+const wbFloatLayer    = document.getElementById('wb-float-layer');
+const wbStartBtn      = document.getElementById('wb-start-btn');
+const wbStatus        = document.getElementById('wb-status');
+const wbTime          = document.getElementById('wb-time');
+const wbScore         = document.getElementById('wb-score');
+const wbCombo         = document.getElementById('wb-combo');
+const wbAccuracy      = document.getElementById('wb-accuracy');
 const modalOverlay    = document.getElementById('modal-overlay');
 const modalMarketName = document.getElementById('modal-market-name');
 const sideYesBtn      = document.getElementById('side-yes-btn');
@@ -2761,6 +3005,7 @@ async function doLogout() {
   await sb.auth.signOut();
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
+  stopWhackBossRound();
   resetGardenState();
   hide(screenApp);
   pinInput.value = '';
@@ -2802,6 +3047,8 @@ document.querySelectorAll('.nav-tab').forEach(btn =>
 );
 
 function switchTab(tab) {
+  const previousTab = activeTab;
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') stopWhackBossRound();
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   const tM = document.getElementById('tab-markets');
@@ -2809,29 +3056,33 @@ function switchTab(tab) {
   const tP = document.getElementById('tab-poker');
   const tR = document.getElementById('tab-roulette');
   const tSl = document.getElementById('tab-slots');
+  const tWb = document.getElementById('tab-whack-boss');
   const tS = document.getElementById('tab-shop');
   const tG = document.getElementById('tab-garden');
   if (tab === 'markets') {
-    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tS); hide(tG);
+    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     if (markets.length === 0) loadMarkets();
   } else if (tab === 'leaderboard') {
-    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tS); hide(tG);
+    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     loadLeaderboard();
   } else if (tab === 'poker') {
-    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tS); hide(tG);
+    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     setupPokerRealtime();
     loadPokerState();
   } else if (tab === 'roulette') {
-    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tS); hide(tG);
+    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     loadRouletteHistory();
   } else if (tab === 'slots') {
-    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tS); hide(tG);
+    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG);
     loadSlotsHistory();
+  } else if (tab === 'whack-boss') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG);
+    loadWhackBossState();
   } else if (tab === 'shop') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tS); hide(tG);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); show(tS); hide(tG);
     loadShop();
   } else if (tab === 'garden') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tS); show(tG);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); show(tG);
     loadGarden();
   }
 }
@@ -3750,6 +4001,13 @@ function setupRealtime() {
       });
       updateCardChart(t.market_id);
       await renderMarkets();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whack_boss_scores' }, () => {
+      if (activeTab === 'whack-boss') loadWhackBossState(false);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whack_boss_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') loadWhackBossState(false);
+      await refreshMeCoins();
     })
     .subscribe();
 
@@ -4999,6 +5257,372 @@ async function loadSlotsHistory() {
       histEl.appendChild(el('div', { style: { color: 'var(--muted)', fontSize: '12px', textAlign: 'center' } }, 'Brak spinów — zagraj, aby zobaczyć historię.'));
     }
   } catch (err) { /* silent */ }
+}
+
+// ── Whack-a-Boss ──────────────────────────────────────────────────────────
+function newWhackBossRuntime() {
+  return {
+    playing: false,
+    submitting: false,
+    roundId: null,
+    durationMs: 18000,
+    schedule: [],
+    startPerf: 0,
+    timer: null,
+    currentIndex: -1,
+    hitTargets: new Set(),
+    pendingHits: [],
+    score: 0,
+    misses: 0,
+    combo: 0,
+    maxCombo: 0,
+    lastHitIndex: -2,
+  };
+}
+
+function stopWhackBossRound() {
+  if (whackBossRuntime?.timer) clearInterval(whackBossRuntime.timer);
+  whackBossRuntime = newWhackBossRuntime();
+  if (wbArena) wbArena.classList.remove('playing');
+  if (wbTarget) {
+    wbTarget.classList.add('hidden');
+    wbTarget.classList.remove('pop', 'whacked');
+  }
+  if (wbReady) show(wbReady);
+  if (wbStartBtn) {
+    wbStartBtn.disabled = false;
+    wbStartBtn.textContent = 'Start rundy';
+  }
+  updateWhackBossStats(18000);
+}
+
+function whackBossCoords(evt) {
+  const rect = wbArena.getBoundingClientRect();
+  return {
+    x: ((evt.clientX - rect.left) / rect.width) * 100,
+    y: ((evt.clientY - rect.top) / rect.height) * 100,
+  };
+}
+
+function whackBossElapsed() {
+  return Math.max(0, performance.now() - (whackBossRuntime?.startPerf || performance.now()));
+}
+
+function updateWhackBossStats(remainingMs = null) {
+  const rt = whackBossRuntime || newWhackBossRuntime();
+  const totalTargets = rt.schedule.length || 0;
+  const accuracy = totalTargets ? Math.round((rt.score / totalTargets) * 100) : 0;
+  const remaining = remainingMs == null ? rt.durationMs : remainingMs;
+  if (wbTime) wbTime.textContent = Math.max(0, remaining / 1000).toFixed(1);
+  if (wbScore) wbScore.textContent = String(rt.score);
+  if (wbCombo) wbCombo.textContent = String(rt.combo);
+  if (wbAccuracy) wbAccuracy.textContent = accuracy + '%';
+}
+
+function showWhackBossFloat(text, x, y, isMiss = false) {
+  if (!wbFloatLayer) return;
+  const node = el('div', { className: 'wb-float' + (isMiss ? ' miss' : '') }, text);
+  node.style.left = x + '%';
+  node.style.top = y + '%';
+  wbFloatLayer.appendChild(node);
+  setTimeout(() => node.remove(), 700);
+}
+
+async function invokeWhackBoss(payload) {
+  const { data, error } = await sb.functions.invoke('whack-boss-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z Whack-a-Boss.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Whack-a-Boss.');
+  return data;
+}
+
+async function recordWhackBossHit(roundId, targetIndex, coords) {
+  return await invokeWhackBoss({
+    action: 'hit',
+    roundId,
+    targetIndex,
+    x: coords.x,
+    y: coords.y,
+  });
+}
+
+async function loadWhackBossState(showSpinner = true) {
+  const weeklyWrap = document.getElementById('wb-weekly-board');
+  const allTimeWrap = document.getElementById('wb-alltime-board');
+  const awardsWrap = document.getElementById('wb-awards');
+  if (showSpinner) {
+    weeklyWrap.replaceChildren(makeSpinner());
+    allTimeWrap.replaceChildren(makeSpinner());
+    awardsWrap.replaceChildren(makeSpinner());
+  }
+
+  try {
+    const data = await invokeWhackBoss({ action: 'state' });
+    renderWhackBossState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać gry.';
+    weeklyWrap.replaceChildren(el('p', { className: 'wb-empty' }, msg));
+    allTimeWrap.replaceChildren(el('p', { className: 'wb-empty' }, 'Brak danych.'));
+    awardsWrap.replaceChildren(el('p', { className: 'wb-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+    if (wbStatus) wbStatus.textContent = 'Whack-a-Boss nie jest jeszcze aktywny.';
+  }
+}
+
+function renderWhackBossState(data) {
+  if (data.profile) {
+    me.coins = data.profile.coins;
+    setText(headerCoins, me.coins);
+  }
+
+  const weekLabel = document.getElementById('wb-week-label');
+  if (weekLabel && data.weekStart) {
+    const d = new Date(String(data.weekStart) + 'T12:00:00');
+    weekLabel.textContent = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+  }
+
+  renderWhackBossTable(document.getElementById('wb-weekly-board'), data.weekly || [], 'weekly');
+  renderWhackBossTable(document.getElementById('wb-alltime-board'), data.allTime || [], 'allTime');
+  renderWhackBossAwards(document.getElementById('wb-awards'), data.awards || []);
+
+  if (!whackBossRuntime?.playing && wbStatus) {
+    if (data.myWeekly) {
+      wbStatus.textContent = 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.';
+    } else {
+      wbStatus.textContent = 'Najlepsze wyniki zapisują się automatycznie po rundzie.';
+    }
+  }
+}
+
+function whackBossRankLabel(rank) {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return String(rank);
+}
+
+function renderWhackBossTable(wrap, rows, mode) {
+  if (!wrap) return;
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'wb-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+
+  const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
+    el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-net' }, String(row.score)),
+    el('td', { className: 'lb-coins', title: 'Skuteczność / rundy' }, Math.round(+row.accuracy || 0) + '% · ' + row.rounds_played + 'x')
+  ));
+
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Wynik'), el('th', {}, 'Forma'))),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderWhackBossAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'wb-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  const rows = awards.slice(0, 6).map(row => {
+    const d = new Date(String(row.week_start) + 'T12:00:00');
+    const label = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+    return el('div', { className: 'wb-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + ' · ' + label),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  });
+  wrap.replaceChildren(...rows);
+}
+
+function showWhackBossTarget(target) {
+  if (!wbTarget) return;
+  wbTarget.dataset.targetIndex = String(target.index);
+  wbTarget.style.left = target.x + '%';
+  wbTarget.style.top = target.y + '%';
+  wbTarget.classList.remove('hidden', 'whacked', 'pop');
+  void wbTarget.offsetWidth;
+  wbTarget.classList.add('pop');
+  whackBossRuntime.currentIndex = target.index;
+}
+
+function hideWhackBossTarget() {
+  if (!wbTarget) return;
+  wbTarget.classList.add('hidden');
+  wbTarget.classList.remove('pop', 'whacked');
+  if (whackBossRuntime) whackBossRuntime.currentIndex = -1;
+}
+
+function tickWhackBossRound() {
+  const rt = whackBossRuntime;
+  if (!rt?.playing) return;
+
+  const elapsed = whackBossElapsed();
+  const remaining = rt.durationMs - elapsed;
+  updateWhackBossStats(remaining);
+
+  if (elapsed >= rt.durationMs) {
+    finishWhackBossRound();
+    return;
+  }
+
+  const target = rt.schedule.find(t =>
+    elapsed >= t.startMs &&
+    elapsed <= t.startMs + t.durationMs &&
+    !rt.hitTargets.has(t.index)
+  );
+
+  if (!target) {
+    hideWhackBossTarget();
+    return;
+  }
+
+  if (rt.currentIndex !== target.index) showWhackBossTarget(target);
+}
+
+function beginWhackBossRound(round) {
+  stopWhackBossRound();
+  whackBossRuntime = newWhackBossRuntime();
+  whackBossRuntime.playing = true;
+  whackBossRuntime.roundId = round.id;
+  whackBossRuntime.durationMs = round.durationMs || 18000;
+  whackBossRuntime.schedule = round.schedule || [];
+  const serverElapsed = round.startedAt && round.serverNow
+    ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
+    : 0;
+  whackBossRuntime.startPerf = performance.now() - serverElapsed;
+
+  if (wbReady) hide(wbReady);
+  if (wbArena) wbArena.classList.add('playing');
+  if (wbStartBtn) {
+    wbStartBtn.disabled = true;
+    wbStartBtn.textContent = 'Runda trwa';
+  }
+  if (wbStatus) wbStatus.textContent = 'Klikaj tylko wtedy, gdy boss jest widoczny.';
+  if (wbFloatLayer) wbFloatLayer.replaceChildren();
+  updateWhackBossStats(whackBossRuntime.durationMs);
+  whackBossRuntime.timer = setInterval(tickWhackBossRound, 33);
+  tickWhackBossRound();
+}
+
+async function startWhackBossRound() {
+  if (whackBossRuntime?.playing || whackBossRuntime?.submitting) return;
+  if (wbStartBtn) {
+    wbStartBtn.disabled = true;
+    wbStartBtn.textContent = 'Ładuję...';
+  }
+  if (wbStatus) wbStatus.textContent = 'Przygotowuję rundę.';
+
+  try {
+    const data = await invokeWhackBoss({ action: 'start' });
+    renderWhackBossState(data);
+    beginWhackBossRound(data.round);
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (wbStatus) wbStatus.textContent = 'Nie udało się wystartować rundy.';
+    if (wbStartBtn) {
+      wbStartBtn.disabled = false;
+      wbStartBtn.textContent = 'Start rundy';
+    }
+  }
+}
+
+async function finishWhackBossRound() {
+  const rt = whackBossRuntime;
+  if (!rt || rt.submitting) return;
+  rt.playing = false;
+  rt.submitting = true;
+  if (rt.timer) clearInterval(rt.timer);
+  hideWhackBossTarget();
+  if (wbArena) wbArena.classList.remove('playing');
+  if (wbStatus) wbStatus.textContent = 'Zapisuję wynik...';
+  if (wbStartBtn) {
+    wbStartBtn.disabled = true;
+    wbStartBtn.textContent = 'Zapisuję...';
+  }
+  updateWhackBossStats(0);
+
+  try {
+    await Promise.race([
+      Promise.allSettled(rt.pendingHits),
+      new Promise(resolve => setTimeout(resolve, 1600)),
+    ]);
+    const data = await invokeWhackBoss({
+      action: 'submit',
+      roundId: rt.roundId,
+      misses: rt.misses,
+    });
+    renderWhackBossState(data);
+    showToast('✅ Wynik zapisany: ' + data.score.score);
+    if (wbStatus) {
+      wbStatus.textContent = 'Ostatni wynik: ' + data.score.score + ' · combo ' + data.score.max_combo + '.';
+    }
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (wbStatus) wbStatus.textContent = 'Nie udało się zapisać wyniku.';
+  } finally {
+    rt.submitting = false;
+    if (wbReady) show(wbReady);
+    if (wbStartBtn) {
+      wbStartBtn.disabled = false;
+      wbStartBtn.textContent = 'Zagraj ponownie';
+    }
+  }
+}
+
+if (wbStartBtn) wbStartBtn.addEventListener('click', startWhackBossRound);
+
+if (wbTarget) {
+  wbTarget.addEventListener('click', evt => {
+    evt.preventDefault();
+    evt.stopPropagation();
+    const rt = whackBossRuntime;
+    if (!rt?.playing) return;
+
+    const targetIndex = Number(wbTarget.dataset.targetIndex);
+    if (!Number.isInteger(targetIndex) || rt.hitTargets.has(targetIndex)) return;
+
+    const coords = whackBossCoords(evt);
+    const atMs = whackBossElapsed();
+    rt.hitTargets.add(targetIndex);
+    rt.pendingHits.push(
+      recordWhackBossHit(rt.roundId, targetIndex, coords)
+        .then(data => {
+          if (data?.accepted && whackBossRuntime === rt && !rt.playing) {
+            // Final submit will render the authoritative score.
+            return;
+          }
+        })
+        .catch(() => {})
+    );
+    rt.score += 1;
+    rt.combo = targetIndex === rt.lastHitIndex + 1 ? rt.combo + 1 : 1;
+    rt.maxCombo = Math.max(rt.maxCombo, rt.combo);
+    rt.lastHitIndex = targetIndex;
+    showWhackBossFloat('+1', coords.x, coords.y);
+    wbTarget.classList.add('whacked');
+    updateWhackBossStats(rt.durationMs - atMs);
+    setTimeout(() => {
+      if (whackBossRuntime?.currentIndex === targetIndex) hideWhackBossTarget();
+    }, 80);
+  });
+}
+
+if (wbArena) {
+  wbArena.addEventListener('click', evt => {
+    const rt = whackBossRuntime;
+    if (!rt?.playing) return;
+    if (evt.target.closest('#wb-target')) return;
+    const coords = whackBossCoords(evt);
+    const atMs = whackBossElapsed();
+    rt.misses += 1;
+    rt.combo = 0;
+    showWhackBossFloat('pudło', coords.x, coords.y, true);
+    updateWhackBossStats(rt.durationMs - atMs);
+  });
 }
 
 // ── Garden (Ogródek) ──────────────────────────────────────────────────────

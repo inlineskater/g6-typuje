@@ -1,2 +1,5 @@
 [functions.poker-action]
 verify_jwt = true
+
+[functions.whack-boss-action]
+verify_jwt = true
