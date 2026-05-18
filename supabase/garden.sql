@@ -136,13 +136,39 @@ BEGIN
 END;
 $$;
 
+-- ── RPC: change_plant_type ─────────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION public.change_plant_type(p_plant_type text)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user uuid := auth.uid();
+  v_id   uuid;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+  IF p_plant_type NOT IN ('sunflower','rose','cactus','tulip','cherry','herb','tree','banana') THEN
+    RAISE EXCEPTION 'bad_plant_type';
+  END IF;
+
+  UPDATE public.gardens
+     SET plant_type = p_plant_type
+   WHERE user_id = v_user
+  RETURNING id INTO v_id;
+
+  IF v_id IS NULL THEN RAISE EXCEPTION 'no_garden'; END IF;
+
+  RETURN json_build_object('plant_type', p_plant_type);
+END;
+$$;
+
 -- ── Grants ─────────────────────────────────────────────────────────────────
 
 REVOKE ALL ON FUNCTION public.create_garden(text, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.water_plant() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.change_plant_type(text) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.create_garden(text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.water_plant() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.change_plant_type(text) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
 

@@ -1703,6 +1703,20 @@
     .my-plant-details { text-align: center; margin-bottom: 6px; }
     .my-plant-name { font-size: 15px; font-weight: 800; color: #14532d; }
     .my-plant-type { font-size: 11px; color: #6b7280; }
+    .my-plant-type-change {
+      display: flex; align-items: center; gap: 6px;
+      margin: 8px 0 0;
+      font-size: 11px; color: #3d2810;
+    }
+    .my-plant-type-change label { font-weight: 700; }
+    .my-plant-type-select {
+      flex: 1; padding: 4px 6px;
+      border: 1px solid #c8a878; border-radius: 5px;
+      background: #fff8ec; color: #3d2810;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer;
+    }
+    .my-plant-type-select:disabled { opacity: .6; cursor: wait; }
 
     /* Posts under the board */
     .sign-posts {
@@ -5884,6 +5898,7 @@ function renderZenGarden() {
 <div>💧 Dziś: <b>${watersToday}/3</b></div>
 <div>💰 Nagroda: <b>${nextRewardCoins(streak)} 🪙</b></div>
 </div>`;
+    boardPlant.appendChild(buildPlantTypeChanger());
     boardPlant.appendChild(el('div', { className: 'sign-nails' }));
     sign.appendChild(boardPlant);
   }
@@ -5924,6 +5939,35 @@ function renderZenGarden() {
 
   area.appendChild(shelf);
   wrap.appendChild(area);
+}
+
+function buildPlantTypeChanger() {
+  const row = el('div', { className: 'my-plant-type-change' });
+  row.appendChild(el('label', { htmlFor: 'plant-type-select' }, 'Zmień typ:'));
+  const select = el('select', { id: 'plant-type-select', className: 'my-plant-type-select' });
+  const currentType = canonicalPlantType(myGarden.plant_type);
+  ['sunflower','rose','cactus','tulip','cherry','herb','tree','banana'].forEach(t => {
+    const o = el('option', { value: t }, (PLANT_PICK_EMOJI[t] || '') + ' ' + (PLANT_LABELS[t] || t));
+    if (t === currentType) o.selected = true;
+    select.appendChild(o);
+  });
+  select.addEventListener('change', async () => {
+    const newType = select.value;
+    if (newType === canonicalPlantType(myGarden.plant_type)) return;
+    select.disabled = true;
+    const { error } = await sb.rpc('change_plant_type', { p_plant_type: newType });
+    select.disabled = false;
+    if (error) {
+      showToast('❌ ' + gardenErr(error));
+      select.value = canonicalPlantType(myGarden.plant_type);
+      return;
+    }
+    myGarden.plant_type = newType;
+    showToast('🌱 Typ rośliny zmieniony');
+    loadGarden();
+  });
+  row.appendChild(select);
+  return row;
 }
 
 // Live-update font size of an accessory in BOTH the background grid pot and the
