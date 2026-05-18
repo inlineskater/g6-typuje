@@ -2417,8 +2417,10 @@
               <li><strong>18 sekund.</strong> Klikaj bossa za każdym razem, gdy pojawi się w polu gry.</li>
               <li><strong>Tempo dopasowuje się do Ciebie:</strong> im szybciej trafiasz, tym krócej boss jest widoczny. Spudłowany boss daje chwilę oddechu.</li>
               <li><strong>Punkty:</strong> każde trafienie = 1 pkt. <strong>Combo</strong> rośnie, gdy trafiasz bossów po kolei (każdy spudłowany boss zeruje combo).</li>
-              <li><strong>Tydzień</strong> liczony jest od niedzieli do soboty (czas warszawski). W tabeli „Ten tydzień” widać datę startu bieżącego tygodnia.</li>
-              <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z poprzedniego tygodnia.</li>
+              <li><strong>Tydzień:</strong> startuje w niedzielę o 00:00 i kończy się w sobotę o 23:59:59 (Europe/Warsaw). <span id="wb-week-window">Zakres bieżącego tygodnia pojawi się po wczytaniu rankingu.</span></li>
+              <li><strong>Jak liczymy tydzień:</strong> serwer bierze czas zgłoszenia rundy w strefie Europe/Warsaw, wyznacza niedzielę rozpoczynającą ten tydzień i zapisuje wynik pod tą datą.</li>
+              <li><strong>Ranking tygodniowy:</strong> liczy się najlepszy wynik gracza w danym tygodniu. Remisy rozstrzyga wyższy procent trafień, a potem wcześniejsze zgłoszenie.</li>
+              <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
             </ul>
           </div>
 
@@ -5397,6 +5399,35 @@ async function invokeWhackBoss(payload) {
   return data;
 }
 
+function whackBossDateOnly(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').slice(0, 10));
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function whackBossAddDays(date, days) {
+  const d = new Date(date.getTime());
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+
+function whackBossFormatDate(date, opts = {}) {
+  return date.toLocaleDateString('pl-PL', { timeZone: 'UTC', ...opts });
+}
+
+function whackBossWeekRange(weekStart) {
+  const start = whackBossDateOnly(weekStart);
+  if (!start) return null;
+  const end = whackBossAddDays(start, 6);
+  const shortOpts = { day: '2-digit', month: '2-digit' };
+  const longOpts = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
+  return {
+    short: whackBossFormatDate(start, shortOpts) + '-' + whackBossFormatDate(end, shortOpts),
+    long: whackBossFormatDate(start, longOpts) + ' 00:00 - ' + whackBossFormatDate(end, longOpts) + ' 23:59',
+  };
+}
+
 async function loadWhackBossState(showSpinner = true) {
   const weeklyWrap = document.getElementById('wb-weekly-board');
   const allTimeWrap = document.getElementById('wb-alltime-board');
@@ -5426,9 +5457,13 @@ function renderWhackBossState(data) {
   }
 
   const weekLabel = document.getElementById('wb-week-label');
-  if (weekLabel && data.weekStart) {
-    const d = new Date(String(data.weekStart).slice(0, 10) + 'T12:00:00');
-    weekLabel.textContent = isNaN(d) ? '' : ('od ' + d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' }));
+  const weekWindow = document.getElementById('wb-week-window');
+  const weekRange = whackBossWeekRange(data.weekStart);
+  if (weekLabel) {
+    weekLabel.textContent = weekRange ? weekRange.short : '';
+  }
+  if (weekWindow && weekRange) {
+    weekWindow.textContent = 'Aktualnie: ' + weekRange.long + ' (Europe/Warsaw).';
   }
 
   renderWhackBossTable(document.getElementById('wb-weekly-board'), data.weekly || [], 'weekly');
@@ -5479,8 +5514,8 @@ function renderWhackBossAwards(wrap, awards) {
     return;
   }
   const rows = awards.slice(0, 6).map(row => {
-    const d = new Date(String(row.week_start).slice(0, 10) + 'T12:00:00');
-    const label = isNaN(d) ? '' : d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+    const range = whackBossWeekRange(row.week_start);
+    const label = range?.short || '';
     return el('div', { className: 'wb-award-row' },
       el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
       el('strong', {}, '+' + row.prize_coins + ' 🪙')
