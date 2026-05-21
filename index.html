@@ -5137,13 +5137,15 @@ function drawCoinChart(canvas, points) {
     try {
       const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
 
-      const [gamesRes, tradesRes, profileRes] = await Promise.all([
+      const [gamesRes, tradesRes, profileRes, coinTxRes] = await Promise.all([
         sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('trades').select('created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('profiles').select('created_at').eq('id', userId).single(),
+        sb.from('coin_transactions').select('created_at,delta,reason,meta').eq('user_id', userId).order('created_at', { ascending: true }),
       ]);
       const games = gamesRes.data || [];
       const trades = tradesRes.data || [];
+      const coinTxs = coinTxRes.data || [];
       const userAwards = (_seasonHistory || []).filter(a => a.user_id === userId);
       const profileCreatedAt = profileRes.data?.created_at;
 
@@ -5204,6 +5206,14 @@ function drawCoinChart(canvas, points) {
           const medals = ['🥇', '🥈', '🥉'];
           events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + (entry?.displayName || a.gameType) });
         }
+      });
+      coinTxs.forEach(t => {
+        const label = t.reason === 'garden_water'
+          ? '🌱 Podlewanie' + (t.meta?.streak > 1 ? ' (streak ' + t.meta.streak + ')' : '')
+          : t.reason === 'garden_accessory'
+          ? '🌿 Akcesorium: ' + (t.meta?.accessory_id || '?')
+          : '🪙 ' + t.reason;
+        events.push({ ts: new Date(t.created_at).getTime(), delta: +t.delta, label });
       });
       events.sort((a, b) => a.ts - b.ts);
 

@@ -66,6 +66,10 @@ BEGIN
 
   UPDATE public.gardens SET accessories = array_append(accessories, p_accessory_id) WHERE user_id = v_user;
 
+  INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+  VALUES (v_user, -v_price, 'garden_accessory',
+          jsonb_build_object('accessory_id', p_accessory_id));
+
   RETURN json_build_object('ok', true, 'accessory_id', p_accessory_id, 'price_paid', v_price, 'coins_left', v_coins_left);
 END;
 $fn$;

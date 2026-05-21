@@ -123,8 +123,12 @@ BEGIN
     last_watered_at = now()
   WHERE id = v_garden.id;
 
-  -- Credit coins
+  -- Credit coins and log the transaction
   UPDATE public.profiles SET coins = coins + v_reward WHERE id = v_user;
+
+  INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+  VALUES (v_user, v_reward, 'garden_water',
+          jsonb_build_object('streak', v_streak, 'stage', v_stage, 'waters_today', v_waters + 1));
 
   RETURN json_build_object(
     'coins_earned', v_reward,
