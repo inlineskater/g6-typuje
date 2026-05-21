@@ -4715,11 +4715,12 @@ function renderLeaderboardTable(wrap, data, calibByUser = {}) {
   const rows = data.map((row, i) => el('tr', {},
     el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
     el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-    el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙')
+    el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙'),
+    el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth'))),
       el('tbody', {}, ...rows)
     ),
     el('p', { className: 'lb-click-hint' }, 'Kliknij gracza, aby zobaczyć historię →')
@@ -5019,14 +5020,15 @@ function drawCoinChart(svgEl, events) {
       const tr = el('tr', { className: 'lb-row-clickable' },
         el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
         el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-        el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙')
+        el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙'),
+        el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
       );
       tr.addEventListener('click', () => openUserProfile(row.id, row.nick, row.coins));
       return tr;
     });
     container.append(
       el('table', { className: 'lb-table' },
-        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'))),
+        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth'))),
         el('tbody', {}, ...rows)
       ),
       el('p', { className: 'lb-click-hint' }, '👆 Kliknij gracza, aby zobaczyć historię coinów')
@@ -5046,14 +5048,17 @@ function drawCoinChart(svgEl, events) {
 
       const [gamesRes, tradesRes] = await Promise.all([
         sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
-        sb.from('trades').select('created_at,amount').eq('user_id', userId).order('created_at', { ascending: true }).limit(500),
+        sb.from('trades').select('created_at,amount').eq('user_id', userId).order('created_at', { ascending: true }),
       ]);
       const games = gamesRes.data || [];
       const trades = tradesRes.data || [];
       const userAwards = (_seasonHistory || []).filter(a => a.user_id === userId);
 
-      // Build chart events
+      // Build chart events (trades = outflow; games = net P&L; awards = inflow)
       const events = [];
+      trades.forEach(t => {
+        events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0) });
+      });
       games.forEach(g => {
         const bet = +g.bet || 0, won = +g.won || 0;
         const delta = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
@@ -5074,19 +5079,21 @@ function drawCoinChart(svgEl, events) {
       body.replaceChildren(backBtn);
 
       // Stats row
+      const lbRow = (_lbData || []).find(r => r.id === userId);
       body.append(el('div', { className: 'user-profile-stats' },
         el('div', { className: 'user-profile-stat' }, el('strong', {}, fmtNum(coins) + ' 🪙'), el('span', {}, 'Gotówka')),
+        lbRow ? el('div', { className: 'user-profile-stat' }, el('strong', {}, fmtNum(lbRow.net_worth) + ' 🪙'), el('span', {}, 'Net Worth')) : null,
         el('div', { className: 'user-profile-stat' }, el('strong', { style: { color: gamePL >= 0 ? 'var(--yes)' : 'var(--no)' } }, (gamePL >= 0 ? '+' : '') + gamePL + ' 🪙'), el('span', {}, 'Gry P&L')),
         el('div', { className: 'user-profile-stat' }, el('strong', {}, '+' + awardsTotal + ' 🪙'), el('span', {}, 'Nagrody')),
         el('div', { className: 'user-profile-stat' }, el('strong', {}, String(trades.length)), el('span', {}, 'Zakładów'))
       ));
 
       // Chart
-      if (events.length > 1) {
+      if (events.length > 0) {
         const svg = el('svg', { className: 'user-profile-chart' });
         drawCoinChart(svg, events);
         body.append(
-          el('div', { className: 'user-profile-section-title' }, 'Historia P&L (gry + nagrody)'),
+          el('div', { className: 'user-profile-section-title' }, 'Cash flow — zakłady, gry i nagrody'),
           svg,
           el('p', { className: 'user-profile-chart-label' }, '🟢 wpływ · 🔴 wypływ · — saldo bieżące')
         );
