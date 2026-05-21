@@ -5130,7 +5130,7 @@ function drawCoinChart(canvas, points) {
 
       const [gamesRes, tradesRes, profileRes] = await Promise.all([
         sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
-        sb.from('trades').select('created_at,amount,markets(title)').eq('user_id', userId).order('created_at', { ascending: true }),
+        sb.from('trades').select('created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('profiles').select('created_at').eq('id', userId).single(),
       ]);
       const games = gamesRes.data || [];
@@ -5138,22 +5138,62 @@ function drawCoinChart(canvas, points) {
       const userAwards = (_seasonHistory || []).filter(a => a.user_id === userId);
       const profileCreatedAt = profileRes.data?.created_at;
 
-      // Build sorted event list with labels for the transaction table
+      // For resolved markets where this user bet on the winning side, compute payouts
+      // using the same formula as resolve_market(): bet_back + pro_rata_losing_pot
+      const resolvedWinningMarketIds = [...new Set(
+        trades.filter(t => t.markets?.resolved && t.side === t.markets?.resolution).map(t => t.market_id)
+      )];
+
+      let allMarketTrades = [];
+      if (resolvedWinningMarketIds.length > 0) {
+        const { data } = await sb.from('trades').select('market_id,user_id,side,amount,shares')
+          .in('market_id', resolvedWinningMarketIds);
+        allMarketTrades = data || [];
+      }
+
+      // Build sorted event list: bets out, payouts in, games, awards
       const events = [];
+
       trades.forEach(t => {
         const title = t.markets?.title || 'Rynek';
-        events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0), label: '📊 ' + title, raw: t });
+        events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0), label: '📊 ' + title });
       });
+
+      // Inject per-market payout events at resolved_at time
+      resolvedWinningMarketIds.forEach(marketId => {
+        const market = trades.find(t => t.market_id === marketId)?.markets;
+        if (!market) return;
+        const resolution = market.resolution;
+        const resolvedAt = market.resolved_at ? new Date(market.resolved_at).getTime() : null;
+        if (!resolvedAt) return;
+
+        const mTrades = allMarketTrades.filter(t => t.market_id === marketId);
+        const totalYes = mTrades.filter(t => t.side === 'YES').reduce((s, t) => s + (+t.amount || 0), 0);
+        const totalNo  = mTrades.filter(t => t.side === 'NO' ).reduce((s, t) => s + (+t.amount || 0), 0);
+        const losingPot = resolution === 'YES' ? totalNo : totalYes;
+        const winningTrades = mTrades.filter(t => t.side === resolution);
+        const totalWinningShares = winningTrades.reduce((s, t) => s + parseFloat(t.shares || 0), 0);
+
+        const userWinningTrades = mTrades.filter(t => t.user_id === userId && t.side === resolution);
+        const userWinningAmount = userWinningTrades.reduce((s, t) => s + (+t.amount || 0), 0);
+        const userWinningShares = userWinningTrades.reduce((s, t) => s + parseFloat(t.shares || 0), 0);
+        const payout = Math.round(userWinningAmount + (totalWinningShares > 0 ? losingPot * userWinningShares / totalWinningShares : 0));
+
+        if (payout > 0) {
+          events.push({ ts: resolvedAt, delta: payout, label: '💰 ' + market.title + ' (wypłata)' });
+        }
+      });
+
       games.forEach(g => {
         const bet = +g.bet || 0, won = +g.won || 0;
         const delta = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
-        events.push({ ts: new Date(g.created_at).getTime(), delta, label: GAME_NAMES[g.game] || g.game, raw: g });
+        events.push({ ts: new Date(g.created_at).getTime(), delta, label: GAME_NAMES[g.game] || g.game });
       });
       userAwards.forEach(a => {
         if (a.awarded_at) {
           const entry = SEASONAL_SCHEDULE.find(e => e.weekStart === a.week_start && e.gameType === a.gameType);
           const medals = ['🥇', '🥈', '🥉'];
-          events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + (entry?.displayName || a.gameType), raw: a });
+          events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + (entry?.displayName || a.gameType) });
         }
       });
       events.sort((a, b) => a.ts - b.ts);
@@ -5166,11 +5206,10 @@ function drawCoinChart(canvas, points) {
         runBal += e.delta;
         balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta });
       });
-      // Market payouts go directly into profiles.coins with no log — reconcile so the
-      // chart always ends at the actual current balance rather than going negative.
-      const untracked = coins - runBal;
-      if (untracked !== 0) {
-        balancePoints.push({ ts: Date.now(), bal: coins, label: '📊 Wypłaty z rynków (łącznie)', delta: untracked, isReconciliation: true });
+      // Small rounding differences vs backend integer math — absorb silently into chart endpoint
+      const residual = coins - runBal;
+      if (Math.abs(residual) > 0) {
+        balancePoints[balancePoints.length - 1].bal += residual;
       }
 
       // Stats
@@ -5198,7 +5237,7 @@ function drawCoinChart(canvas, points) {
         body.append(
           el('div', { className: 'user-profile-section-title' }, 'Stan coinów w czasie'),
           chartCanvas,
-          el('p', { className: 'user-profile-chart-label' }, '— — — poziom startowy 1 000 🪙 · wypłaty z rynków nie są śledzone')
+          el('p', { className: 'user-profile-chart-label' }, '— — — poziom startowy 1 000 🪙')
         );
         drawCoinChart(chartCanvas, balancePoints);
       }
@@ -5210,12 +5249,10 @@ function drawCoinChart(canvas, points) {
       } else {
         const rows = [...balancePoints].reverse().map(p => {
           const isStart = p.delta === null;
-          const isRecon = p.isReconciliation;
           const deltaStr = isStart ? '—' : (p.delta >= 0 ? '+' + p.delta : String(p.delta));
           const deltaClass = isStart ? 'tx-delta-zero' : p.delta > 0 ? 'tx-delta-pos' : 'tx-delta-neg';
-          const rowStyle = isRecon ? { borderTop: '2px solid var(--border)', color: 'var(--muted)', fontStyle: 'italic' } : {};
-          return el('tr', { style: rowStyle },
-            el('td', { className: 'tx-time' }, isRecon ? '—' : fmtDateTime(new Date(p.ts).toISOString())),
+          return el('tr', {},
+            el('td', { className: 'tx-time' }, fmtDateTime(new Date(p.ts).toISOString())),
             el('td', { className: isStart ? 'tx-start' : '' }, p.label),
             el('td', { className: deltaClass }, deltaStr + (isStart ? '' : ' 🪙')),
             el('td', { className: 'tx-bal' }, fmtNum(p.bal) + ' 🪙')
