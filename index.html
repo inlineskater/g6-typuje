@@ -5229,8 +5229,13 @@ function drawCoinChart(canvas, points) {
       // table, so they can't be fetched individually. Show them as an explicit labeled row so
       // the user sees why the balance doesn't add up from tracked events alone.
       const residual = coins - runBal;
-      if (Math.abs(residual) > 0) {
+      if (Math.abs(residual) > 5) {
+        // Only show when residual is large enough to be real garden activity,
+        // not just ±1-2 coin rounding from the payout formula.
         balancePoints.push({ ts: Date.now(), bal: coins, label: '🌱 Ogródek (łącznie — nagrody za podlewanie, akcesoria)', delta: residual, isGarden: true });
+      } else if (residual !== 0) {
+        // Small rounding difference — silently correct the last point's balance.
+        balancePoints[balancePoints.length - 1].bal += residual;
       }
 
       // Stats
