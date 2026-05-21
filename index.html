@@ -5166,6 +5166,12 @@ function drawCoinChart(canvas, points) {
         runBal += e.delta;
         balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta });
       });
+      // Market payouts go directly into profiles.coins with no log — reconcile so the
+      // chart always ends at the actual current balance rather than going negative.
+      const untracked = coins - runBal;
+      if (untracked !== 0) {
+        balancePoints.push({ ts: Date.now(), bal: coins, label: '📊 Wypłaty z rynków (łącznie)', delta: untracked, isReconciliation: true });
+      }
 
       // Stats
       const gamePL = games.reduce((s, g) => {
@@ -5204,10 +5210,12 @@ function drawCoinChart(canvas, points) {
       } else {
         const rows = [...balancePoints].reverse().map(p => {
           const isStart = p.delta === null;
+          const isRecon = p.isReconciliation;
           const deltaStr = isStart ? '—' : (p.delta >= 0 ? '+' + p.delta : String(p.delta));
           const deltaClass = isStart ? 'tx-delta-zero' : p.delta > 0 ? 'tx-delta-pos' : 'tx-delta-neg';
-          return el('tr', {},
-            el('td', { className: 'tx-time' }, fmtDateTime(new Date(p.ts).toISOString())),
+          const rowStyle = isRecon ? { borderTop: '2px solid var(--border)', color: 'var(--muted)', fontStyle: 'italic' } : {};
+          return el('tr', { style: rowStyle },
+            el('td', { className: 'tx-time' }, isRecon ? '—' : fmtDateTime(new Date(p.ts).toISOString())),
             el('td', { className: isStart ? 'tx-start' : '' }, p.label),
             el('td', { className: deltaClass }, deltaStr + (isStart ? '' : ' 🪙')),
             el('td', { className: 'tx-bal' }, fmtNum(p.bal) + ' 🪙')
