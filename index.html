@@ -2653,7 +2653,7 @@
               <ul>
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera ▲ po siatce.</li>
                 <li>Przejedź przez 3 linie z poruszającymi się blokami i dotrzyj do <strong>PRODUKCJI</strong> (+1 pkt za każdą linię).</li>
-                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz 5 żyć na rundę.</li>
+                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz 3 życia na rundę.</li>
                 <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙</li>
               </ul>
             </div>
@@ -2669,7 +2669,7 @@
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Życia</div>
-                <div class="bj-stat-value" id="bj-lives">♥♥♥♥♥</div>
+                <div class="bj-stat-value" id="bj-lives">♥♥♥</div>
               </div>
             </div>
 
@@ -6064,25 +6064,20 @@ if (wbArena) {
 
 // ── Bug Jumper (canvas) ───────────────────────────────────────────────────
 
-const BJ_COLS        = 10;
-const BJ_ROWS        = 10;       // 0=start, 1-8=lanes, 9=prod
-const BJ_LANE_COUNT  = 8;
+const BJ_COLS        = 5;
+const BJ_ROWS        = 5;        // 0=start, 1-3=lanes, 4=prod
+const BJ_LANE_COUNT  = 3;
 const BJ_CELL        = 64;       // square cell px
-const BJ_CS_W        = BJ_COLS * BJ_CELL;  // 640
-const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 640
+const BJ_CS_W        = BJ_COLS * BJ_CELL;  // 320
+const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 320
 const BJ_DURATION_MS = 20000;
-const BJ_LIVES       = 5;
+const BJ_LIVES       = 3;
 
-// Grid-step obstacles: interval (ms per cell step), direction, count
+// Grid-step obstacles: interval ms/step, direction, count, len (cells wide)
 const BJ_LANE_DEFS = [
-  { interval: 700, dir:  1, count: 2 },
-  { interval: 550, dir: -1, count: 2 },
-  { interval: 650, dir:  1, count: 2 },
-  { interval: 500, dir: -1, count: 2 },
-  { interval: 750, dir:  1, count: 2 },
-  { interval: 600, dir: -1, count: 2 },
-  { interval: 680, dir:  1, count: 2 },
-  { interval: 520, dir: -1, count: 2 },
+  { interval: 700, dir:  1, count: 1, len: 2 },
+  { interval: 600, dir: -1, count: 1, len: 3 },
+  { interval: 750, dir:  1, count: 1, len: 2 },
 ];
 
 function bjInitLanes() {
@@ -6091,6 +6086,7 @@ function bjInitLanes() {
     nextStep: 0,
     bugs: Array.from({ length: def.count }, (_, i) => ({
       col: Math.floor((BJ_COLS / def.count) * i),
+      len: def.len,
     })),
   }));
 }
@@ -6167,17 +6163,20 @@ function bjDraw(now) {
   }
 
   if (rt) {
-    // ── Obstacles — solid full-cell squares (grid-snapped) ──
+    // ── Obstacles — multi-cell blocks, head slightly lighter ──
     rt.lanes.forEach((lane, li) => {
       const row = li + 1;
       const ry = (BJ_ROWS - 1 - row) * C;
       lane.bugs.forEach(bug => {
-        const bx = bug.col * C;
-        ctx.fillStyle = '#111';
-        ctx.fillRect(bx, ry, C, C);
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
+        for (let i = 0; i < bug.len; i++) {
+          const cellCol = ((bug.col + i) + BJ_COLS) % BJ_COLS;
+          const bx = cellCol * C;
+          ctx.fillStyle = i === 0 ? '#333' : '#111';
+          ctx.fillRect(bx, ry, C, C);
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
+        }
       });
     });
 
@@ -6315,7 +6314,12 @@ function bjCheckCollision() {
   const row = rt.playerRow;
   if (row < 1 || row >= BJ_ROWS - 1) return false;
   const lane = rt.lanes[row - 1];
-  return lane.bugs.some(bug => bug.col === rt.playerCol);
+  return lane.bugs.some(bug => {
+    for (let i = 0; i < bug.len; i++) {
+      if (((bug.col + i) + BJ_COLS) % BJ_COLS === rt.playerCol) return true;
+    }
+    return false;
+  });
 }
 
 function bjPlayerHit() {
@@ -6386,7 +6390,7 @@ function stopBugJumperRound() {
   if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
   if (bjTimeEl)  bjTimeEl.textContent  = '20.0';
   if (bjScoreEl) bjScoreEl.textContent = '0';
-  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥♥♥';
+  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
   bjInitCanvas();
   bjDraw(performance.now());
 }
@@ -6404,7 +6408,7 @@ function beginBugJumperRound(round) {
   rt.startPerf = performance.now() - serverElapsed;
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Runda trwa'; }
   if (bjStatus) bjStatus.textContent = '↑ ↓ ← → — strzałki. Dotrzyj do PRODUKCJI!';
-  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥♥♥';
+  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
   rt.rafId = requestAnimationFrame(bjTick);
 }
 
