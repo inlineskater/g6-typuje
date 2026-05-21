@@ -1467,7 +1467,7 @@
     .bj-arena {
       border: 3px solid #222; border-radius: 6px;
       background: #fff; overflow: hidden;
-      aspect-ratio: 1 / 1; width: 100%; max-width: 500px; margin: 0 auto;
+      aspect-ratio: 2 / 1; width: 100%; max-width: 640px; margin: 0 auto;
       user-select: none; touch-action: none;
     }
     .bj-arena canvas { width: 100%; height: 100%; display: block; }
@@ -6067,23 +6067,26 @@ if (wbArena) {
 const BJ_COLS        = 10;
 const BJ_ROWS        = 5;        // 0=start, 1-3=lanes, 4=prod
 const BJ_LANE_COUNT  = 3;
-const BJ_CS          = 480;      // canvas logical px
-const BJ_CW          = BJ_CS / BJ_COLS;  // 48
-const BJ_CH          = BJ_CS / BJ_ROWS;  // 96
+const BJ_CELL        = 64;       // square cell px — all objects snap to this grid
+const BJ_CW          = BJ_CELL;
+const BJ_CH          = BJ_CELL;
+const BJ_CS_W        = BJ_COLS * BJ_CELL;  // 640
+const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 320
 const BJ_DURATION_MS = 20000;
 const BJ_LIVES       = 3;
 
+// Obstacle speed px/s, direction, count, width (always BJ_CELL for full square)
 const BJ_LANE_DEFS = [
-  { speed: 50, dir:  1, count: 2, obstW: 88 },
-  { speed: 68, dir: -1, count: 2, obstW: 80 },
-  { speed: 55, dir:  1, count: 3, obstW: 64 },
+  { speed: 65, dir:  1, count: 3, obstW: BJ_CELL },
+  { speed: 90, dir: -1, count: 4, obstW: BJ_CELL },
+  { speed: 75, dir:  1, count: 3, obstW: BJ_CELL },
 ];
 
 function bjInitLanes() {
   return BJ_LANE_DEFS.map(def => ({
     dir: def.dir, speed: def.speed,
     bugs: Array.from({ length: def.count }, (_, i) => ({
-      x: (BJ_CS / def.count) * i + Math.random() * 24 - 12,
+      x: (BJ_CS_W / def.count) * i + Math.random() * 16 - 8,
       w: def.obstW,
     })),
   }));
@@ -6113,112 +6116,103 @@ function bjInitCanvas() {
   const canvas = document.getElementById('bj-canvas');
   if (!canvas) return;
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width  = BJ_CS * DPR;
-  canvas.height = BJ_CS * DPR;
+  canvas.width  = BJ_CS_W * DPR;
+  canvas.height = BJ_CS_H * DPR;
   bjCtx = canvas.getContext('2d');
   bjCtx.scale(DPR, DPR);
-}
-
-function bjRR(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y, x + w, y + r, r); ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r); ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x, y + h, x, y + h - r, r); ctx.lineTo(x, y + r);
-  ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
 }
 
 function bjDraw(now) {
   const ctx = bjCtx;
   if (!ctx) return;
   const rt = bugJumperRuntime;
-  const S = BJ_CS, CW = BJ_CW, CH = BJ_CH;
+  const W = BJ_CS_W, H = BJ_CS_H, C = BJ_CELL;
 
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, S, S);
-
+  // ── Row backgrounds ──
   for (let row = 0; row < BJ_ROWS; row++) {
-    const y = (BJ_ROWS - 1 - row) * CH;
-    if (row === 0) ctx.fillStyle = '#f0f0f0';
+    const y = (BJ_ROWS - 1 - row) * C;
+    if (row === 0) ctx.fillStyle = '#e8e8e8';
     else if (row === BJ_ROWS - 1) {
       const age = now - (rt?.prodFlash || 0);
-      ctx.fillStyle = age < 350 ? '#cef0ce' : '#eaf5ea';
-    } else ctx.fillStyle = '#fff';
-    ctx.fillRect(0, y, S, CH);
+      ctx.fillStyle = age < 350 ? '#b8e8b8' : '#d8f0d8';
+    } else {
+      ctx.fillStyle = row % 2 === 0 ? '#f8f8f8' : '#ffffff';
+    }
+    ctx.fillRect(0, y, W, C);
   }
 
-  ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+  // ── Grid lines ──
+  ctx.strokeStyle = 'rgba(0,0,0,0.13)';
   ctx.lineWidth = 1;
-  for (let c = 1; c < BJ_COLS; c++) {
-    ctx.beginPath(); ctx.moveTo(c * CW, 0); ctx.lineTo(c * CW, S); ctx.stroke();
+  for (let c = 0; c <= BJ_COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c * C, 0); ctx.lineTo(c * C, H); ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-  for (let r = 1; r < BJ_ROWS; r++) {
-    ctx.beginPath(); ctx.moveTo(0, r * CH); ctx.lineTo(S, r * CH); ctx.stroke();
+  for (let r = 0; r <= BJ_ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * C); ctx.lineTo(W, r * C); ctx.stroke();
   }
 
-  ctx.font = 'bold 9px monospace';
+  // ── Row labels ──
+  ctx.font = 'bold 8px monospace';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   const rowLabels = ['START', 'LINIA 1', 'LINIA 2', 'LINIA 3', 'PRODUKCJA'];
   for (let row = 0; row < BJ_ROWS; row++) {
-    ctx.fillStyle = row === BJ_ROWS - 1 ? 'rgba(0,100,0,0.4)' : 'rgba(0,0,0,0.22)';
-    ctx.fillText(rowLabels[row], 5, (BJ_ROWS - 1 - row) * CH + 5);
+    ctx.fillStyle = row === BJ_ROWS - 1 ? 'rgba(0,80,0,0.45)' : 'rgba(0,0,0,0.2)';
+    ctx.fillText(rowLabels[row], 3, (BJ_ROWS - 1 - row) * C + 3);
   }
 
   if (rt) {
-    const OM = 10;
+    // ── Obstacles — solid full-cell squares ──
     rt.lanes.forEach((lane, li) => {
       const row = li + 1;
-      const ry = (BJ_ROWS - 1 - row) * CH + OM;
-      const oh = CH - OM * 2;
+      const ry = (BJ_ROWS - 1 - row) * C;
       lane.bugs.forEach(bug => {
         const drawAt = (bx) => {
-          ctx.fillStyle = '#1a1a1a';
-          bjRR(ctx, bx, ry, bug.w, oh, 5); ctx.fill();
-          ctx.fillStyle = 'rgba(255,255,255,0.65)';
-          ctx.font = 'bold 12px monospace';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(lane.dir > 0 ? '▶  ▶' : '◀  ◀', bx + bug.w / 2, ry + oh / 2);
-          ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+          ctx.fillStyle = '#111';
+          ctx.fillRect(bx, ry, C, C);
+          // 1-px inset highlight to keep grid visible
+          ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
         };
         drawAt(bug.x);
-        if (bug.x + bug.w > S) drawAt(bug.x - S);
-        if (bug.x < 0)          drawAt(bug.x + S);
+        if (bug.x + C > W) drawAt(bug.x - W);
+        if (bug.x < 0)      drawAt(bug.x + W);
       });
     });
 
+    // ── Player — full-cell square, white ▲ inside ──
     const hitAge = now - rt.hitFlash;
     const blinking = rt.invincible && now < rt.invincEnd && Math.floor(hitAge / 70) % 2 === 1;
     if (!blinking) {
-      const PM = 6;
-      const px = rt.playerCol * CW + PM, py = (BJ_ROWS - 1 - rt.playerRow) * CH + PM;
-      const pw = CW - PM * 2, ph = CH - PM * 2;
+      const px = rt.playerCol * C, py = (BJ_ROWS - 1 - rt.playerRow) * C;
       ctx.fillStyle = '#000';
-      bjRR(ctx, px, py, pw, ph, 5); ctx.fill();
+      ctx.fillRect(px, py, C, C);
       ctx.fillStyle = '#fff';
-      ctx.font = `bold ${Math.round(Math.min(pw, ph) * 0.48)}px sans-serif`;
+      ctx.font = `bold ${Math.round(C * 0.5)}px sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('▲', px + pw / 2, py + ph / 2);
+      ctx.fillText('▲', px + C / 2, py + C / 2);
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     }
   }
 
+  // ── Idle overlay ──
   if (!rt?.playing) {
-    ctx.fillStyle = 'rgba(255,255,255,0.88)';
-    ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#111';
-    ctx.font = 'bold 22px monospace';
+    ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('GOTOWY?', S / 2, S / 2 - 16);
-    ctx.font = '13px monospace';
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillText('↑  ↓  ←  →  strzałki', S / 2, S / 2 + 14);
+    ctx.fillText('GOTOWY?', W / 2, H / 2 - 14);
+    ctx.font = '12px monospace';
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillText('↑  ↓  ←  →  strzałki', W / 2, H / 2 + 12);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   }
 
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(2, 2, S - 4, S - 4);
+  // ── Outer border ──
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
 }
 
 async function invokeBugJumper(payload) {
@@ -6308,8 +6302,8 @@ function bjMoveBugs(dt) {
   rt.lanes.forEach(lane => {
     lane.bugs.forEach(bug => {
       bug.x += lane.dir * lane.speed * rt.speedMult * dt;
-      if (bug.x > BJ_CS)    bug.x -= BJ_CS + bug.w;
-      if (bug.x < -bug.w)   bug.x += BJ_CS + bug.w;
+      if (bug.x > BJ_CS_W)    bug.x -= BJ_CS_W + bug.w;
+      if (bug.x < -bug.w)     bug.x += BJ_CS_W + bug.w;
     });
   });
 }
@@ -6322,14 +6316,14 @@ function bjCheckCollision() {
   const row = rt.playerRow;
   if (row < 1 || row >= BJ_ROWS - 1) return false;
   const lane = rt.lanes[row - 1];
-  const M = 6;
-  const px1 = rt.playerCol * BJ_CW + M;
-  const px2 = px1 + BJ_CW - M * 2;
+  const M = 3;
+  const px1 = rt.playerCol * BJ_CELL + M;
+  const px2 = px1 + BJ_CELL - M * 2;
   return lane.bugs.some(bug => {
     const bx = bug.x, bw = bug.w;
     return overlapX(px1, px2, bx, bx + bw) ||
-           overlapX(px1, px2, bx - BJ_CS, bx - BJ_CS + bw) ||
-           overlapX(px1, px2, bx + BJ_CS, bx + BJ_CS + bw);
+           overlapX(px1, px2, bx - BJ_CS_W, bx - BJ_CS_W + bw) ||
+           overlapX(px1, px2, bx + BJ_CS_W, bx + BJ_CS_W + bw);
   });
 }
 
