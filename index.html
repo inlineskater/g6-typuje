@@ -1445,16 +1445,16 @@
       display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
     }
     .bj-stat {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px; min-width: 0;
+      background: #000; border: 1px solid rgba(255,255,255,.25);
+      border-radius: 4px; padding: 10px; min-width: 0; font-family: monospace;
     }
     .bj-stat-label {
-      color: var(--muted); font-size: 10px; font-weight: 800;
-      letter-spacing: .08em; text-transform: uppercase;
+      color: rgba(255,255,255,.45); font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase; font-family: monospace;
     }
     .bj-stat-value {
-      margin-top: 4px; color: var(--text); font-size: 24px; font-weight: 800;
-      font-variant-numeric: tabular-nums;
+      margin-top: 4px; color: #fff; font-size: 22px; font-weight: 700;
+      font-variant-numeric: tabular-nums; font-family: monospace;
     }
     .bj-rules {
       background: var(--surface); border: 1px solid var(--border);
@@ -1464,74 +1464,90 @@
     .bj-rules ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.55; }
     .bj-rules ul li { margin-bottom: 4px; }
     .bj-rules ul li strong { color: var(--text); }
+    /* Retro square grid arena */
     .bj-arena {
       position: relative; overflow: hidden;
-      border: 2px solid var(--border-hi); border-radius: 8px;
-      background: #0d1117;
+      border: 2px solid rgba(255,255,255,.55);
+      background: #000;
+      background-image:
+        linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+      background-size: 100% 20%, 10% 100%;
       display: flex; flex-direction: column;
       user-select: none; touch-action: none;
-      height: clamp(280px, calc(100vh - 400px), 560px);
+      aspect-ratio: 1 / 1; width: 100%; height: auto; max-width: 500px; margin: 0 auto;
+      font-family: monospace;
     }
-    .bj-arena.playing { border-color: rgba(34,197,94,.5); }
+    /* CRT scanline overlay */
+    .bj-arena::after {
+      content: ''; position: absolute; inset: 0; z-index: 25; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0,0,0,.06) 3px, rgba(0,0,0,.06) 4px
+      );
+    }
+    .bj-arena.playing { border-color: #fff; box-shadow: 0 0 18px rgba(255,255,255,.12); }
     .bj-prod-zone {
-      flex: 0 0 48px;
-      background: rgba(34,197,94,.12); border-bottom: 2px solid rgba(34,197,94,.3);
+      flex: 1; min-height: 0;
+      background: rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.35);
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: #22c55e; font-family: monospace;
-      letter-spacing: .1em; text-transform: uppercase;
+      font-size: 11px; font-weight: 700; color: #fff; font-family: monospace;
+      letter-spacing: .18em; text-transform: uppercase;
     }
     .bj-lane {
-      position: relative; flex: 1; min-height: 50px;
-      border-bottom: 1px solid rgba(255,255,255,.04);
+      position: relative; flex: 1; min-height: 0;
+      border-bottom: 1px solid rgba(255,255,255,.12);
       overflow: visible;
     }
-    .bj-lane.bj-active { background: rgba(99,102,241,.09); }
-    .bj-safe-lane { background: rgba(99,102,241,.04); border-bottom: 1px solid rgba(99,102,241,.12) !important; }
+    .bj-lane.bj-active { background: rgba(255,255,255,.04); }
+    .bj-safe-lane {
+      background: rgba(255,255,255,.02);
+      border-bottom: 1px solid rgba(255,255,255,.22) !important;
+    }
     .bj-start-label {
       position: absolute; top: 50%; left: 10px; transform: translateY(-50%);
-      font-size: 9px; font-weight: 800; letter-spacing: .1em;
-      color: rgba(99,102,241,.4); text-transform: uppercase; font-family: monospace;
+      font-size: 9px; font-weight: 700; letter-spacing: .12em;
+      color: rgba(255,255,255,.28); text-transform: uppercase; font-family: monospace;
       pointer-events: none;
     }
     .bj-lane-label {
       position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
       font-size: 9px; font-weight: 700; letter-spacing: .05em;
-      color: rgba(255,255,255,.12); font-family: monospace;
+      color: rgba(255,255,255,.15); font-family: monospace;
       pointer-events: none;
     }
     .bj-bug {
       position: absolute; top: 50%; transform: translateY(-50%);
-      font-size: 20px; line-height: 1; pointer-events: none; will-change: left;
+      font-size: 18px; line-height: 1; color: #fff;
+      pointer-events: none; will-change: left; font-family: monospace;
     }
     .bj-player {
-      position: absolute; left: 50%;
-      font-size: 22px; line-height: 1; z-index: 10;
-      pointer-events: none; will-change: bottom, transform;
-      transform: translateX(-50%);
-      transition: bottom 0s; /* bottom is set via JS; arc handled by separate animation */
+      position: absolute;
+      font-size: 20px; line-height: 1; z-index: 10; color: #fff;
+      pointer-events: none; will-change: bottom, left, transform;
+      transform: translateX(-50%); font-family: monospace;
+      transition: bottom 0s;
     }
-    .bj-player.jumping {
-      animation: bj-jump .16s ease-out forwards;
-    }
+    .bj-player.jumping { animation: bj-jump .18s ease-out forwards; }
     @keyframes bj-jump {
-      0%   { transform: translateX(-50%) translateY(0)   scale(1); }
-      45%  { transform: translateX(-50%) translateY(-18px) scale(1.18); }
-      100% { transform: translateX(-50%) translateY(0)   scale(1); }
+      0%   { transform: translateX(-50%) translateY(0)    scale(1); }
+      45%  { transform: translateX(-50%) translateY(-14px) scale(1.22); }
+      100% { transform: translateX(-50%) translateY(0)    scale(1); }
     }
-    .bj-player.hit { animation: bj-hit-flash .4s ease; }
+    .bj-player.hit { animation: bj-hit-flash .4s steps(4, end); }
     @keyframes bj-hit-flash {
-      0%, 100% { opacity: 1; transform: translateX(-50%); }
-      25%, 75%  { opacity: .05; transform: translateX(-50%) scale(1.4); }
-      50%       { opacity: .8; filter: brightness(3) saturate(0); transform: translateX(-50%); }
+      0%, 100% { opacity: 1; }
+      25%, 75%  { opacity: 0; }
     }
     .bj-ready {
       position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 8px;
-      color: rgba(200,220,200,.6); text-align: center; padding: 20px;
-      pointer-events: none; z-index: 5;
+      align-items: center; justify-content: center; gap: 6px;
+      color: rgba(255,255,255,.45); text-align: center; padding: 20px;
+      pointer-events: none; z-index: 5; background: rgba(0,0,0,.55);
+      font-family: monospace;
     }
-    .bj-ready strong { color: #cbd5e1; font-size: 16px; }
-    .bj-ready span { font-size: 12px; font-family: monospace; }
+    .bj-ready strong { color: #fff; font-size: 15px; font-family: monospace; letter-spacing: .05em; }
+    .bj-ready span { font-size: 11px; font-family: monospace; color: rgba(255,255,255,.35); }
     .bj-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .bj-start-btn { width: auto; }
     .bj-status { font-size: 12px; color: var(--muted); flex: 1; }
@@ -1563,8 +1579,7 @@
     @media (max-width: 620px) {
       .bj-game-panel, .bj-board-panel { padding: 14px; }
       .bj-board-panel { grid-template-columns: 1fr; }
-      .bj-stat-value { font-size: 20px; }
-      .bj-arena { min-height: 280px; }
+      .bj-stat-value { font-size: 18px; }
     }
 
     /* ── Shop ── */
@@ -2701,7 +2716,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Bug Jumper</h2>
-                <p class="page-sub">20 sekund, przeskakuj bugi i zdobywaj punkty — tempo rośnie z każdym przebiegiem.</p>
+                <p class="page-sub">20 sekund, przeskakuj bugi do PRODUKCJI.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -2711,12 +2726,12 @@
             </div>
 
             <div class="bj-rules">
-              <div class="bj-rules-title">Jak grać i nagrody</div>
+              <div class="bj-rules-title">Jak grać</div>
               <ul>
-                <li><strong>20 sekund.</strong> Przeskakuj przez 3 linie bugów i dotrzyj do PRODUKCJI jak najczęściej.</li>
-                <li><strong>Strzałki ↑ / ↓</strong> lub klawisze <strong>W / S</strong> przesuwają dewelopera między liniami. Można też dotknąć lewej/prawej połowy areny na ekranie dotykowym.</li>
-                <li><strong>Punkty:</strong> każde udane przejście linii = +1 pkt. Dotarcie do PRODUKCJI = +1 pkt bonus (razem +4 za pełny przebieg).</li>
-                <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
+                <li><strong>↑ / W</strong> — wskocz wyżej. <strong>↓ / S</strong> — cofnij się. <strong>← → / A D</strong> — przesuń lewo/prawo.</li>
+                <li>Przejdź przez 3 linie bugów i dotrzyj do <strong>[ PROD ]</strong> — to +1 punkt za każdą linię.</li>
+                <li>Trafienie w buga ● cofa cię na START — bez straty punktów, tylko tracisz postęp.</li>
+                <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙</li>
               </ul>
             </div>
 
@@ -2743,10 +2758,10 @@
               <div class="bj-lane bj-safe-lane" id="bj-lane-0">
                 <span class="bj-start-label">START</span>
               </div>
-              <div class="bj-player" id="bj-player">👨‍💻</div>
+              <div class="bj-player" id="bj-player">▲</div>
               <div class="bj-ready" id="bj-ready">
-                <strong>Gotowy?</strong>
-                <span>Strzałki ↑↓ lub W/S — przeskakuj bugi do PRODUKCJI</span>
+                <strong>[ GOTOWY? ]</strong>
+                <span>↑ W = skok  ↓ S = cofnij  ← → = przesuń</span>
               </div>
             </div>
 
@@ -6140,19 +6155,19 @@ if (wbArena) {
 // ── Bug Jumper ────────────────────────────────────────────────────────────
 
 const BJ_LANE_COUNT    = 3;           // lanes with bugs (indices 1-3; index 0 is safe start)
-const BJ_LANE_HEIGHT   = 60;          // px per lane (must match CSS .bj-lane height)
-const BJ_PROD_HEIGHT   = 44;          // px for production zone (must match CSS)
-const BJ_PLAYER_SIZE   = 22;          // approx px of player emoji for centering
-const BJ_HIT_RADIUS    = 11;          // % collision radius (player center ± this %)
+const BJ_LANE_HEIGHT   = 60;          // fallback px (actual height read from DOM)
+const BJ_PROD_HEIGHT   = 44;          // fallback px
+const BJ_PLAYER_SIZE   = 20;          // approx px of player char for centering
+const BJ_HIT_RADIUS    = 9;           // % collision radius (player center ± this %)
 const BJ_DURATION_MS   = 20000;
-// Base bug x-speeds in %/sec for each lane (indices 0-2 → lanes 1-3)
-const BJ_BUG_SPEEDS    = [18, 22, 28];
+// Base bug x-speeds in %/sec for each lane (slower, more approachable)
+const BJ_BUG_SPEEDS    = [8, 11, 14];
 // Bug count per lane
-const BJ_BUG_COUNTS    = [2, 3, 2];
+const BJ_BUG_COUNTS    = [2, 2, 2];
 // Direction: 1=left→right, -1=right→left
 const BJ_BUG_DIRS      = [1, -1, 1];
-// Bug emoji labels per lane (IT theme)
-const BJ_BUG_EMOJIS    = ['🐛', '💀', '🔥'];
+// Bug chars per lane (monochrome ASCII)
+const BJ_BUG_EMOJIS    = ['●', '○', '◆'];
 
 function newBugJumperRuntime() {
   return {
@@ -6370,13 +6385,13 @@ function bjMovePlayer(dir) {
     // Reached PRODUCTION!
     rt.score += 1;
     rt.runCount += 1;
-    rt.speedMult = Math.min(4.0, 1.0 + rt.runCount * 0.25);
+    rt.speedMult = Math.min(2.5, 1.0 + rt.runCount * 0.12);
     rt.playerLane = 0;
     bjTriggerJump();
     // Flash production zone
     const prodEl = document.getElementById('bj-prod-zone');
     if (prodEl) {
-      prodEl.style.background = 'rgba(34,197,94,.55)';
+      prodEl.style.background = 'rgba(255,255,255,.35)';
       setTimeout(() => { if (prodEl) prodEl.style.background = ''; }, 250);
     }
     return;
