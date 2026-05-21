@@ -1503,15 +1503,25 @@
       font-size: 20px; line-height: 1; pointer-events: none; will-change: left;
     }
     .bj-player {
-      position: absolute; left: 50%; transform: translateX(-50%);
+      position: absolute; left: 50%;
       font-size: 22px; line-height: 1; z-index: 10;
-      pointer-events: none; will-change: bottom;
+      pointer-events: none; will-change: bottom, transform;
+      transform: translateX(-50%);
+      transition: bottom 0s; /* bottom is set via JS; arc handled by separate animation */
+    }
+    .bj-player.jumping {
+      animation: bj-jump .16s ease-out forwards;
+    }
+    @keyframes bj-jump {
+      0%   { transform: translateX(-50%) translateY(0)   scale(1); }
+      45%  { transform: translateX(-50%) translateY(-18px) scale(1.18); }
+      100% { transform: translateX(-50%) translateY(0)   scale(1); }
     }
     .bj-player.hit { animation: bj-hit-flash .4s ease; }
     @keyframes bj-hit-flash {
-      0%, 100% { opacity: 1; }
-      25%, 75%  { opacity: .05; }
-      50%       { opacity: .8; filter: brightness(3) saturate(0); }
+      0%, 100% { opacity: 1; transform: translateX(-50%); }
+      25%, 75%  { opacity: .05; transform: translateX(-50%) scale(1.4); }
+      50%       { opacity: .8; filter: brightness(3) saturate(0); transform: translateX(-50%); }
     }
     .bj-ready {
       position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -6332,12 +6342,20 @@ function bjPlayerHit() {
   }
 }
 
+function bjTriggerJump() {
+  if (!bjPlayer) return;
+  bjPlayer.classList.remove('jumping');
+  void bjPlayer.offsetWidth; // reflow to restart animation
+  bjPlayer.classList.add('jumping');
+  setTimeout(() => bjPlayer.classList.remove('jumping'), 160);
+}
+
 function bjMovePlayer(dir) {
   const rt = bugJumperRuntime;
   if (!rt?.playing) return;
   const now = performance.now();
   if (now < rt.inputCooldown) return;
-  rt.inputCooldown = now + 120;
+  rt.inputCooldown = now + 100;
 
   if (rt.invincible && now < rt.invincEnd) return;
   rt.invincible = false;
@@ -6351,11 +6369,12 @@ function bjMovePlayer(dir) {
     rt.runCount += 1;
     rt.speedMult = Math.min(4.0, 1.0 + rt.runCount * 0.25);
     rt.playerLane = 0;
+    bjTriggerJump();
     // Flash production zone
     const prodEl = document.getElementById('bj-prod-zone');
     if (prodEl) {
-      prodEl.style.background = 'rgba(34,197,94,.4)';
-      setTimeout(() => { if (prodEl) prodEl.style.background = ''; }, 200);
+      prodEl.style.background = 'rgba(34,197,94,.55)';
+      setTimeout(() => { if (prodEl) prodEl.style.background = ''; }, 250);
     }
     return;
   }
@@ -6369,6 +6388,7 @@ function bjMovePlayer(dir) {
   }
 
   rt.playerLane = newLane;
+  if (dir > 0) bjTriggerJump();
   if (dir > 0 && newLane >= 1) rt.score += 1;
 }
 
