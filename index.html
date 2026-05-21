@@ -2639,7 +2639,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Bug Jumper</h2>
-                <p class="page-sub">20 sekund — przeskocz przez linie z blokami i dotrzyj do PRODUKCJI.</p>
+                <p class="page-sub">20 sekund — przeskakuj przez linie bloków jak najwyżej i jak najczęściej.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -2652,9 +2652,9 @@
               <div class="bj-rules-title">Jak grać</div>
               <ul>
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera <strong>▲</strong> po siatce.</li>
-                <li><strong>+1 pkt za każdą nową linię</strong> przekroczoną w górę — LINIA 1, 2, 3 dają po 1 pkt, ale tylko raz na przebieg (cofnięcie i ponowne przejście nie liczy).</li>
-                <li><strong>+1 pkt bonus</strong> gdy dotrzesz do <strong>PRODUKCJI</strong> — i wracasz na START, żeby powtórzyć. Jeden pełny przebieg = <strong>4 pkt</strong>.</li>
-                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz <strong>3 życia</strong> na rundę — po utracie wszystkich runda się kończy.</li>
+                <li><strong>+1 pkt za każdą nową linię</strong> przekroczoną w górę — LINIA 1, 2, 3 i góra dają po 1 pkt (tylko raz na przebieg; cofnięcie i ponowne przejście nie liczy).</li>
+                <li>Jeden pełny przebieg (dół → góra) = <strong>4 pkt</strong>, po czym wracasz automatycznie na dół.</li>
+                <li>Zderzenie z blokiem = wracasz na START, ale <strong>zdobyte punkty zostają</strong>. Bez życ — graj ile razy chcesz przez 20 sekund.</li>
               </ul>
             </div>
 
@@ -2667,10 +2667,6 @@
                 <div class="bj-stat-label">Wynik</div>
                 <div class="bj-stat-value" id="bj-score">0</div>
               </div>
-              <div class="bj-stat">
-                <div class="bj-stat-label">Życia</div>
-                <div class="bj-stat-value" id="bj-lives">♥♥♥</div>
-              </div>
             </div>
 
             <div class="bj-arena" id="bj-arena">
@@ -2679,7 +2675,7 @@
 
             <div class="bj-actions">
               <button class="btn-primary bj-start-btn" id="bj-start-btn">Start rundy</button>
-              <div class="bj-status" id="bj-status">Użyj strzałek kursora. Najlepszy wynik tygodnia trafia do rankingu.</div>
+              <div class="bj-status" id="bj-status">Użyj strzałek. Wspinaj się, zbieraj punkty — blok tylko cofa na START.</div>
             </div>
           </section>
 
@@ -6071,7 +6067,6 @@ const BJ_CELL        = 64;       // square cell px
 const BJ_CS_W        = BJ_COLS * BJ_CELL;  // 320
 const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 320
 const BJ_DURATION_MS = 20000;
-const BJ_LIVES       = 3;
 
 // Grid-step obstacles: interval ms/step, direction, count, len (cells wide)
 const BJ_LANE_DEFS = [
@@ -6095,7 +6090,7 @@ function newBugJumperRuntime() {
   return {
     playing: false, submitting: false, archiveMode: false,
     roundId: null,
-    score: 0, lives: BJ_LIVES,
+    score: 0,
     playerCol: Math.floor(BJ_COLS / 2),
     playerRow: 0,
     lanes: bjInitLanes(),
@@ -6158,7 +6153,7 @@ function bjDraw(now) {
   for (let row = 0; row < BJ_ROWS; row++) {
     let label;
     if (row === 0) label = 'START';
-    else if (row === BJ_ROWS - 1) label = 'PRODUKCJA';
+    else if (row === BJ_ROWS - 1) label = '↺ GÓRA';
     else label = 'LINIA ' + row;
     ctx.fillStyle = row === BJ_ROWS - 1 ? 'rgba(0,80,0,0.45)' : 'rgba(0,0,0,0.2)';
     ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
@@ -6347,18 +6342,13 @@ function bjCheckCollision() {
 function bjPlayerHit() {
   const rt = bugJumperRuntime;
   if (!rt || rt.invincible) return;
-  rt.lives--;
   rt.hitFlash      = performance.now();
   rt.invincible    = true;
-  rt.invincEnd     = performance.now() + 1800;
+  rt.invincEnd     = performance.now() + 1500;
   rt.playerRow     = 0;
   rt.playerCol     = Math.floor(BJ_COLS / 2);
   rt.maxRowReached = 0;
-  if (bjLivesEl) bjLivesEl.textContent = '♥'.repeat(Math.max(0, rt.lives));
-  if (bjStatus) bjStatus.textContent = rt.lives > 0
-    ? `Życie utracone! Zostało: ${'♥'.repeat(rt.lives)} — wróć na START.`
-    : 'Brak żyć — runda zakończona.';
-  if (rt.lives <= 0) setTimeout(finishBugJumperRound, 80);
+  if (bjStatus) bjStatus.textContent = 'Blok! Wróciłeś na START — zdobyłeś punkty zostają.';
 }
 
 function bjMovePlayer(dr, dc) {
@@ -6374,17 +6364,18 @@ function bjMovePlayer(dr, dc) {
   rt.playerCol = newCol;
   if (newRow < 0 || newRow > BJ_ROWS - 1) return;
 
-  if (newRow === BJ_ROWS - 1) {
-    rt.score += 1;
+  if (newRow >= BJ_ROWS - 1) {
+    if (newRow > rt.maxRowReached) {
+      rt.score += 1;
+      rt.toasts.push({ text: '+1 ↺', col: rt.playerCol, row: BJ_ROWS - 1, born: now });
+      if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
+    }
     rt.runCount++;
-    rt.speedMult = Math.min(2.5, 1.0 + rt.runCount * 0.12);
+    rt.speedMult = Math.min(2.5, 1.0 + rt.runCount * 0.15);
     rt.prodFlash = now;
     rt.maxRowReached = 0;
-    rt.toasts.push({ text: '+1 PRODUKCJA!', col: rt.playerCol, row: newRow, born: now });
     rt.playerRow = 0;
     rt.playerCol = Math.floor(BJ_COLS / 2);
-    rt.invincible = false;
-    if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
     return;
   }
 
@@ -6422,7 +6413,6 @@ function stopBugJumperRound() {
   if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
   if (bjTimeEl)  bjTimeEl.textContent  = '20.0';
   if (bjScoreEl) bjScoreEl.textContent = '0';
-  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
   bjInitCanvas();
   bjDraw(performance.now());
 }
@@ -6439,8 +6429,7 @@ function beginBugJumperRound(round) {
     : 0;
   rt.startPerf = performance.now() - serverElapsed;
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Runda trwa'; }
-  if (bjStatus) bjStatus.textContent = '↑ ↓ ← → — strzałki. Dotrzyj do PRODUKCJI!';
-  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
+  if (bjStatus) bjStatus.textContent = '↑ ↓ ← → — strzałki. Wspinaj się jak najwyżej!';
   rt.rafId = requestAnimationFrame(bjTick);
 }
 
