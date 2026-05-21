@@ -478,7 +478,7 @@
     .user-profile-stat { flex: 1; min-width: 80px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
     .user-profile-stat strong { display: block; font-size: 15px; margin-bottom: 2px; }
     .user-profile-stat span { font-size: 11px; color: var(--muted); }
-    .user-profile-chart { width: 100%; height: 90px; display: block; margin: 10px 0 4px; }
+    .user-profile-chart { width: 100%; height: 110px; display: block; margin: 10px 0 4px; }
     .user-profile-chart-label { font-size: 10px; color: var(--muted); text-align: right; margin-bottom: 10px; }
     .user-profile-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
     .lb-click-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; font-style: italic; }
@@ -4937,28 +4937,42 @@ function renderHazardHistory(wrap, rowsData) {
 // ── Coin history chart ────────────────────────────────────────────────────
 function drawCoinChart(svgEl, events) {
   // events: [{ts (ms), delta}] sorted ascending
-  const W = 440, H = 80, PAD = 6;
+  // Bars show individual cash flows; line shows running balance
+  const W = 440, H = 110, MID = 62, PAD = 8;
+  const tMin = events[0].ts, tMax = events[events.length - 1].ts || tMin + 1;
+  const maxAbs = Math.max(1, ...events.map(e => Math.abs(e.delta)));
+  const maxBarH = MID - PAD - 2;
+  const barW = Math.max(3, Math.min(14, (W - PAD * 2) / (events.length + 1) - 2));
+  const scX = ts => PAD + ((ts - tMin) / (tMax - tMin || 1)) * (W - PAD * 2);
+  const barH = v => Math.max(2, (Math.abs(v) / maxAbs) * maxBarH);
+
+  const bars = events.map(e => {
+    const x = (scX(e.ts) - barW / 2).toFixed(1);
+    const h = barH(e.delta).toFixed(1);
+    const y = e.delta >= 0 ? (MID - barH(e.delta)).toFixed(1) : MID.toFixed(1);
+    const fill = e.delta >= 0 ? '#4ade80' : '#f87171';
+    return `<rect x="${x}" y="${y}" width="${barW}" height="${h}" fill="${fill}" opacity="0.75" rx="1"/>`;
+  }).join('');
+
   let cum = 0;
-  const pts = [{ ts: events[0].ts, v: 0 }];
-  events.forEach(e => { cum += e.delta; pts.push({ ts: e.ts, v: cum }); });
-
-  const minV = Math.min(0, ...pts.map(p => p.v));
-  const maxV = Math.max(1, ...pts.map(p => p.v));
-  const tMin = pts[0].ts, tMax = pts[pts.length - 1].ts || tMin + 1;
-  const scX = v => PAD + ((v - tMin) / (tMax - tMin)) * (W - PAD * 2);
-  const scY = v => (H - PAD) - ((v - minV) / (maxV - minV)) * (H - PAD * 2);
-
-  const zeroY = scY(0).toFixed(1);
-  const polyPts = pts.map(p => `${scX(p.ts).toFixed(1)},${scY(p.v).toFixed(1)}`).join(' ');
-  const lastPt = pts[pts.length - 1];
-  const color = lastPt.v >= 0 ? '#22c55e' : '#ef4444';
+  const linePts = [{ x: PAD, y: MID }];
+  events.forEach(e => {
+    cum += e.delta;
+    const y = MID - Math.max(-maxBarH, Math.min(maxBarH, (cum / maxAbs) * maxBarH));
+    linePts.push({ x: scX(e.ts), y });
+  });
+  const lineD = linePts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const last = linePts[linePts.length - 1];
 
   svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svgEl.setAttribute('preserveAspectRatio', 'none');
   svgEl.innerHTML = `
-    <line x1="${PAD}" y1="${zeroY}" x2="${W - PAD}" y2="${zeroY}" stroke="#e5e7eb" stroke-width="1"/>
-    <polyline points="${polyPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
-    <circle cx="${scX(lastPt.ts).toFixed(1)}" cy="${scY(lastPt.v).toFixed(1)}" r="3" fill="${color}"/>
+    <line x1="${PAD}" y1="${MID}" x2="${W - PAD}" y2="${MID}" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="${PAD + 2}" y="${PAD + 9}" font-size="8" fill="#94a3b8" font-family="monospace">+</text>
+    <text x="${PAD + 2}" y="${H - PAD - 2}" font-size="8" fill="#94a3b8" font-family="monospace">−</text>
+    ${bars}
+    <path d="${lineD}" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linejoin="round"/>
+    <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" fill="#6366f1"/>
   `;
 }
 
@@ -5074,7 +5088,7 @@ function drawCoinChart(svgEl, events) {
         body.append(
           el('div', { className: 'user-profile-section-title' }, 'Historia P&L (gry + nagrody)'),
           svg,
-          el('p', { className: 'user-profile-chart-label' }, 'zielony = zysk · czerwony = strata')
+          el('p', { className: 'user-profile-chart-label' }, '🟢 wpływ · 🔴 wypływ · — saldo bieżące')
         );
       }
 
