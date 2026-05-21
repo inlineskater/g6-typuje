@@ -478,7 +478,7 @@
     .user-profile-stat { flex: 1; min-width: 80px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
     .user-profile-stat strong { display: block; font-size: 15px; margin-bottom: 2px; }
     .user-profile-stat span { font-size: 11px; color: var(--muted); }
-    .user-profile-chart { width: 100%; height: 110px; display: block; margin: 10px 0 4px; }
+    .user-profile-chart { width: 100%; height: 130px; display: block; margin: 10px 0 4px; }
     .user-profile-chart-label { font-size: 10px; color: var(--muted); text-align: right; margin-bottom: 10px; }
     .user-profile-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
     .lb-click-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; font-style: italic; }
@@ -4936,72 +4936,84 @@ function renderHazardHistory(wrap, rowsData) {
 }
 
 // ── Coin history chart ────────────────────────────────────────────────────
-function drawCoinChart(canvas, events) {
+function drawCoinChart(canvas, events, currentCoins) {
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const W = canvas.offsetWidth || 400, H = 110;
+  const W = canvas.offsetWidth || 400, H = 130;
   canvas.width  = W * DPR;
   canvas.height = H * DPR;
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
 
-  const PAD = 10, MID = Math.round(H * 0.55);
-  const tMin = events[0].ts;
-  const tMax = events[events.length - 1].ts;
-  const maxAbs = Math.max(1, ...events.map(e => Math.abs(e.delta)));
-  const maxBarH = MID - PAD;
-  const barW = Math.max(2, Math.min(16, (W - PAD * 2) / (events.length + 1) - 1));
-  const scX = ts => PAD + ((tMax === tMin) ? (W - PAD * 2) / 2 : ((ts - tMin) / (tMax - tMin)) * (W - PAD * 2));
-  const scH = v => Math.max(2, (Math.abs(v) / maxAbs) * maxBarH);
+  // Reconstruct balance history: work backward from currentCoins
+  const totalDelta = events.reduce((s, e) => s + e.delta, 0);
+  const startBalance = (currentCoins || 1000) - totalDelta;
+
+  // Build (ts, balance) points; include a synthetic "start" point
+  const points = [{ ts: events[0].ts - 1, bal: startBalance }];
+  let bal = startBalance;
+  events.forEach(e => { bal += e.delta; points.push({ ts: e.ts, bal }); });
+
+  const LPAD = 46, RPAD = 8, TPAD = 12, BPAD = 20;
+  const CW = W - LPAD - RPAD, CH = H - TPAD - BPAD;
+
+  const tMin = points[0].ts, tMax = points[points.length - 1].ts;
+  const balMin = Math.min(...points.map(p => p.bal));
+  const balMax = Math.max(...points.map(p => p.bal));
+  const range = Math.max(1, balMax - balMin);
+  const scX = ts => LPAD + ((tMax === tMin) ? CW / 2 : ((ts - tMin) / (tMax - tMin)) * CW);
+  const scY = b => TPAD + (1 - (b - balMin) / range) * CH;
 
   // Background
   ctx.fillStyle = '#f8fafc';
   ctx.fillRect(0, 0, W, H);
 
-  // Zero line
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(PAD, MID); ctx.lineTo(W - PAD, MID); ctx.stroke();
+  // Y-axis grid lines + labels (3 levels: min, mid, max)
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'right';
+  [balMin, Math.round((balMin + balMax) / 2), balMax].forEach(v => {
+    const y = scY(v);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(LPAD, y); ctx.lineTo(W - RPAD, y); ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(fmtNum(Math.round(v)), LPAD - 3, y + 3);
+  });
 
-  // + / − labels
+  // Area fill under line (gradient green→transparent)
+  const grad = ctx.createLinearGradient(0, TPAD, 0, TPAD + CH);
+  grad.addColorStop(0, 'rgba(74,222,128,0.28)');
+  grad.addColorStop(1, 'rgba(74,222,128,0.03)');
+  ctx.beginPath();
+  ctx.moveTo(scX(points[0].ts), scY(points[0].bal));
+  points.slice(1).forEach(p => ctx.lineTo(scX(p.ts), scY(p.bal)));
+  ctx.lineTo(scX(points[points.length - 1].ts), H - BPAD);
+  ctx.lineTo(scX(points[0].ts), H - BPAD);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Balance line
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  points.forEach((p, i) => i === 0 ? ctx.moveTo(scX(p.ts), scY(p.bal)) : ctx.lineTo(scX(p.ts), scY(p.bal)));
+  ctx.stroke();
+
+  // Dot at final point
+  const lp = points[points.length - 1];
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.arc(scX(lp.ts), scY(lp.bal), 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // X-axis date labels (first and last)
   ctx.fillStyle = '#94a3b8';
   ctx.font = '9px monospace';
   ctx.textAlign = 'left';
-  ctx.fillText('+', PAD, PAD + 9);
-  ctx.fillText('−', PAD, H - PAD + 1);
-
-  // Bars
-  events.forEach(e => {
-    const x = scX(e.ts) - barW / 2;
-    const h = scH(e.delta);
-    const y = e.delta >= 0 ? MID - h : MID;
-    ctx.fillStyle = e.delta >= 0 ? '#4ade80' : '#f87171';
-    ctx.globalAlpha = 0.8;
-    ctx.fillRect(x, y, barW, h);
-    ctx.globalAlpha = 1;
-  });
-
-  // Running balance line
-  let cum = 0;
-  ctx.strokeStyle = '#6366f1';
-  ctx.lineWidth = 1.5;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(PAD, MID);
-  events.forEach(e => {
-    cum += e.delta;
-    const x = scX(e.ts);
-    const y = MID - Math.max(-maxBarH, Math.min(maxBarH, (cum / maxAbs) * maxBarH));
-    ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Dot at end
-  const lastX = scX(events[events.length - 1].ts);
-  const lastY = MID - Math.max(-maxBarH, Math.min(maxBarH, (cum / maxAbs) * maxBarH));
-  ctx.fillStyle = '#6366f1';
-  ctx.beginPath();
-  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillText(new Date(tMin).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit' }), LPAD, H - 4);
+  ctx.textAlign = 'right';
+  ctx.fillText(new Date(tMax).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit' }), W - RPAD, H - 4);
 }
 
 // ── Ranking Detail Modal ──────────────────────────────────────────────────
@@ -5115,15 +5127,15 @@ function drawCoinChart(canvas, events) {
         el('div', { className: 'user-profile-stat' }, el('strong', {}, String(trades.length)), el('span', {}, 'Zakładów'))
       ));
 
-      // Chart
+      // Chart — append first so offsetWidth resolves, then draw
       if (events.length > 0) {
-        const svg = el('canvas', { className: 'user-profile-chart' });
-        drawCoinChart(svg, events);
+        const chartCanvas = el('canvas', { className: 'user-profile-chart' });
         body.append(
-          el('div', { className: 'user-profile-section-title' }, 'Cash flow — zakłady, gry i nagrody'),
-          svg,
-          el('p', { className: 'user-profile-chart-label' }, '🟢 wpływ · 🔴 wypływ · — saldo bieżące')
+          el('div', { className: 'user-profile-section-title' }, 'Stan coinów w czasie'),
+          chartCanvas,
+          el('p', { className: 'user-profile-chart-label' }, 'saldo = gotówka + gry + nagrody sezonowe')
         );
+        drawCoinChart(chartCanvas, events, coins);
       }
 
       // Recent game transactions
