@@ -161,6 +161,11 @@
     }
     .nav-tab:hover { color: var(--text); }
     .nav-tab.active { border-bottom-color: var(--accent); color: var(--text); }
+    .nav-sep {
+      display: inline-flex; align-items: center; align-self: center;
+      color: var(--border); font-size: 18px; padding: 0 2px;
+      user-select: none; pointer-events: none;
+    }
 
     /* ── ACTIVITY STRIP ── */
     .activity-strip { margin-bottom: 20px; }
@@ -2272,14 +2277,18 @@
   </header>
 
   <nav class="nav-tabs">
-    <button class="nav-tab active" data-tab="markets">Rynki</button>
-    <button class="nav-tab" data-tab="leaderboard">Ranking</button>
-    <button class="nav-tab" data-tab="poker">Poker</button>
-    <button class="nav-tab" data-tab="roulette">Ruletka</button>
-    <button class="nav-tab" data-tab="slots">Jednoręki bandyta</button>
-    <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span>Gra Sezonowa</button>
-    <button class="nav-tab" data-tab="shop">Sklep</button>
-    <button class="nav-tab" data-tab="garden">Ogródek 🌱</button>
+    <button class="nav-tab active" data-tab="markets">📊 Rynki</button>
+    <span class="nav-sep">|</span>
+    <button class="nav-tab" data-tab="poker">♠️ Poker</button>
+    <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
+    <button class="nav-tab" data-tab="slots">🎰 Sloty</button>
+    <span class="nav-sep">|</span>
+    <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span>🎮 Gra Sezonowa</button>
+    <span class="nav-sep">|</span>
+    <button class="nav-tab" data-tab="leaderboard">🏆 Ranking</button>
+    <span class="nav-sep">|</span>
+    <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
+    <button class="nav-tab" data-tab="shop">🛒 Sklep</button>
   </nav>
 
   <div id="tab-markets">
