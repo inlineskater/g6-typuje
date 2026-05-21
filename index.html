@@ -2652,10 +2652,9 @@
               <div class="bj-rules-title">Jak grać</div>
               <ul>
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera <strong>▲</strong> po siatce.</li>
-                <li><strong>+1 pkt za każdą linię</strong> przekroczoną w górę — LINIA 1, LINIA 2, LINIA 3 dają po 1 punkcie.</li>
-                <li><strong>+1 pkt bonus</strong> gdy dotrzesz do <strong>PRODUKCJI</strong> (górny rząd) — i wracasz na START, żeby powtórzyć.</li>
-                <li>Jeden pełny przebieg (START → PRODUKCJA) = <strong>4 punkty</strong>. Im więcej przebiegów, tym lepiej.</li>
-                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz <strong>3 życia</strong> na rundę.</li>
+                <li><strong>+1 pkt za każdą nową linię</strong> przekroczoną w górę — LINIA 1, 2, 3 dają po 1 pkt, ale tylko raz na przebieg (cofnięcie i ponowne przejście nie liczy).</li>
+                <li><strong>+1 pkt bonus</strong> gdy dotrzesz do <strong>PRODUKCJI</strong> — i wracasz na START, żeby powtórzyć. Jeden pełny przebieg = <strong>4 pkt</strong>.</li>
+                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz <strong>3 życia</strong> na rundę — po utracie wszystkich runda się kończy.</li>
               </ul>
             </div>
 
@@ -6106,6 +6105,7 @@ function newBugJumperRuntime() {
     invincible: false, invincEnd: 0,
     hitFlash: 0, prodFlash: 0,
     inputCooldown: 0,
+    maxRowReached: 0,
     toasts: [],
   };
 }
@@ -6348,12 +6348,16 @@ function bjPlayerHit() {
   const rt = bugJumperRuntime;
   if (!rt || rt.invincible) return;
   rt.lives--;
-  rt.hitFlash   = performance.now();
-  rt.invincible = true;
-  rt.invincEnd  = performance.now() + 1800;
-  rt.playerRow  = 0;
-  rt.playerCol  = Math.floor(BJ_COLS / 2);
+  rt.hitFlash      = performance.now();
+  rt.invincible    = true;
+  rt.invincEnd     = performance.now() + 1800;
+  rt.playerRow     = 0;
+  rt.playerCol     = Math.floor(BJ_COLS / 2);
+  rt.maxRowReached = 0;
   if (bjLivesEl) bjLivesEl.textContent = '♥'.repeat(Math.max(0, rt.lives));
+  if (bjStatus) bjStatus.textContent = rt.lives > 0
+    ? `Życie utracone! Zostało: ${'♥'.repeat(rt.lives)} — wróć na START.`
+    : 'Brak żyć — runda zakończona.';
   if (rt.lives <= 0) setTimeout(finishBugJumperRound, 80);
 }
 
@@ -6375,6 +6379,7 @@ function bjMovePlayer(dr, dc) {
     rt.runCount++;
     rt.speedMult = Math.min(2.5, 1.0 + rt.runCount * 0.12);
     rt.prodFlash = now;
+    rt.maxRowReached = 0;
     rt.toasts.push({ text: '+1 PRODUKCJA!', col: rt.playerCol, row: newRow, born: now });
     rt.playerRow = 0;
     rt.playerCol = Math.floor(BJ_COLS / 2);
@@ -6383,7 +6388,8 @@ function bjMovePlayer(dr, dc) {
     return;
   }
 
-  if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT) {
+  if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT && newRow > rt.maxRowReached) {
+    rt.maxRowReached = newRow;
     rt.score += 1;
     rt.toasts.push({ text: '+1 Linia ' + newRow, col: rt.playerCol, row: newRow, born: now });
   }
