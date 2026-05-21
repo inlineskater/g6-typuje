@@ -1445,16 +1445,16 @@
       display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
     }
     .bj-stat {
-      background: #000; border: 1px solid rgba(255,255,255,.25);
-      border-radius: 4px; padding: 10px; min-width: 0; font-family: monospace;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; min-width: 0;
     }
     .bj-stat-label {
-      color: rgba(255,255,255,.45); font-size: 10px; font-weight: 700;
-      letter-spacing: .1em; text-transform: uppercase; font-family: monospace;
+      color: var(--muted); font-size: 10px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase;
     }
     .bj-stat-value {
-      margin-top: 4px; color: #fff; font-size: 22px; font-weight: 700;
-      font-variant-numeric: tabular-nums; font-family: monospace;
+      margin-top: 4px; color: var(--text); font-size: 22px; font-weight: 800;
+      font-variant-numeric: tabular-nums;
     }
     .bj-rules {
       background: var(--surface); border: 1px solid var(--border);
@@ -1464,90 +1464,13 @@
     .bj-rules ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.55; }
     .bj-rules ul li { margin-bottom: 4px; }
     .bj-rules ul li strong { color: var(--text); }
-    /* Retro square grid arena */
     .bj-arena {
-      position: relative; overflow: hidden;
-      border: 2px solid rgba(255,255,255,.55);
-      background: #000;
-      background-image:
-        linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-      background-size: 100% 20%, 10% 100%;
-      display: flex; flex-direction: column;
+      border: 3px solid #222; border-radius: 6px;
+      background: #fff; overflow: hidden;
+      aspect-ratio: 1 / 1; width: 100%; max-width: 500px; margin: 0 auto;
       user-select: none; touch-action: none;
-      aspect-ratio: 1 / 1; width: 100%; height: auto; max-width: 500px; margin: 0 auto;
-      font-family: monospace;
     }
-    /* CRT scanline overlay */
-    .bj-arena::after {
-      content: ''; position: absolute; inset: 0; z-index: 25; pointer-events: none;
-      background: repeating-linear-gradient(
-        0deg, transparent, transparent 3px,
-        rgba(0,0,0,.06) 3px, rgba(0,0,0,.06) 4px
-      );
-    }
-    .bj-arena.playing { border-color: #fff; box-shadow: 0 0 18px rgba(255,255,255,.12); }
-    .bj-prod-zone {
-      flex: 1; min-height: 0;
-      background: rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.35);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: #fff; font-family: monospace;
-      letter-spacing: .18em; text-transform: uppercase;
-    }
-    .bj-lane {
-      position: relative; flex: 1; min-height: 0;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-      overflow: visible;
-    }
-    .bj-lane.bj-active { background: rgba(255,255,255,.04); }
-    .bj-safe-lane {
-      background: rgba(255,255,255,.02);
-      border-bottom: 1px solid rgba(255,255,255,.22) !important;
-    }
-    .bj-start-label {
-      position: absolute; top: 50%; left: 10px; transform: translateY(-50%);
-      font-size: 9px; font-weight: 700; letter-spacing: .12em;
-      color: rgba(255,255,255,.28); text-transform: uppercase; font-family: monospace;
-      pointer-events: none;
-    }
-    .bj-lane-label {
-      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
-      font-size: 9px; font-weight: 700; letter-spacing: .05em;
-      color: rgba(255,255,255,.15); font-family: monospace;
-      pointer-events: none;
-    }
-    .bj-bug {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      font-size: 18px; line-height: 1; color: #fff;
-      pointer-events: none; will-change: left; font-family: monospace;
-    }
-    .bj-player {
-      position: absolute;
-      font-size: 20px; line-height: 1; z-index: 10; color: #fff;
-      pointer-events: none; will-change: bottom, left, transform;
-      transform: translateX(-50%); font-family: monospace;
-      transition: bottom 0s;
-    }
-    .bj-player.jumping { animation: bj-jump .18s ease-out forwards; }
-    @keyframes bj-jump {
-      0%   { transform: translateX(-50%) translateY(0)    scale(1); }
-      45%  { transform: translateX(-50%) translateY(-14px) scale(1.22); }
-      100% { transform: translateX(-50%) translateY(0)    scale(1); }
-    }
-    .bj-player.hit { animation: bj-hit-flash .4s steps(4, end); }
-    @keyframes bj-hit-flash {
-      0%, 100% { opacity: 1; }
-      25%, 75%  { opacity: 0; }
-    }
-    .bj-ready {
-      position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 6px;
-      color: rgba(255,255,255,.45); text-align: center; padding: 20px;
-      pointer-events: none; z-index: 5; background: rgba(0,0,0,.55);
-      font-family: monospace;
-    }
-    .bj-ready strong { color: #fff; font-size: 15px; font-family: monospace; letter-spacing: .05em; }
-    .bj-ready span { font-size: 11px; font-family: monospace; color: rgba(255,255,255,.35); }
+    .bj-arena canvas { width: 100%; height: 100%; display: block; }
     .bj-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .bj-start-btn { width: auto; }
     .bj-status { font-size: 12px; color: var(--muted); flex: 1; }
@@ -2728,9 +2651,9 @@
             <div class="bj-rules">
               <div class="bj-rules-title">Jak grać</div>
               <ul>
-                <li><strong>↑ / W</strong> — wskocz wyżej. <strong>↓ / S</strong> — cofnij się. <strong>← → / A D</strong> — przesuń lewo/prawo.</li>
-                <li>Przejdź przez 3 linie bugów i dotrzyj do <strong>[ PROD ]</strong> — to +1 punkt za każdą linię.</li>
-                <li>Trafienie w buga ● cofa cię na START — bez straty punktów, tylko tracisz postęp.</li>
+                <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera ▲ po siatce.</li>
+                <li>Przejedź przez 3 linie z poruszającymi się blokami i dotrzyj do <strong>PRODUKCJI</strong> (+1 pkt za każdą linię).</li>
+                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz 3 życia na rundę.</li>
                 <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙</li>
               </ul>
             </div>
@@ -2745,29 +2668,18 @@
                 <div class="bj-stat-value" id="bj-score">0</div>
               </div>
               <div class="bj-stat">
-                <div class="bj-stat-label">Tempo</div>
-                <div class="bj-stat-value" id="bj-speed">1.0×</div>
+                <div class="bj-stat-label">Życia</div>
+                <div class="bj-stat-value" id="bj-lives">♥♥♥</div>
               </div>
             </div>
 
             <div class="bj-arena" id="bj-arena">
-              <div class="bj-prod-zone" id="bj-prod-zone">▶ PRODUKCJA ◀</div>
-              <div class="bj-lane" id="bj-lane-3"><span class="bj-lane-label">LINE 3</span></div>
-              <div class="bj-lane" id="bj-lane-2"><span class="bj-lane-label">LINE 2</span></div>
-              <div class="bj-lane" id="bj-lane-1"><span class="bj-lane-label">LINE 1</span></div>
-              <div class="bj-lane bj-safe-lane" id="bj-lane-0">
-                <span class="bj-start-label">START</span>
-              </div>
-              <div class="bj-player" id="bj-player">▲</div>
-              <div class="bj-ready" id="bj-ready">
-                <strong>[ GOTOWY? ]</strong>
-                <span>↑ W = skok  ↓ S = cofnij  ← → = przesuń</span>
-              </div>
+              <canvas id="bj-canvas"></canvas>
             </div>
 
             <div class="bj-actions">
               <button class="btn-primary bj-start-btn" id="bj-start-btn">Start rundy</button>
-              <div class="bj-status" id="bj-status">Najlepsze wyniki zapisują się automatycznie po rundzie.</div>
+              <div class="bj-status" id="bj-status">Użyj strzałek kursora. Najlepszy wynik tygodnia trafia do rankingu.</div>
             </div>
           </section>
 
@@ -3197,13 +3109,11 @@ const wbScore         = document.getElementById('wb-score');
 const wbCombo         = document.getElementById('wb-combo');
 const wbAccuracy      = document.getElementById('wb-accuracy');
 const bjArena         = document.getElementById('bj-arena');
-const bjReady         = document.getElementById('bj-ready');
-const bjPlayer        = document.getElementById('bj-player');
 const bjStartBtn      = document.getElementById('bj-start-btn');
 const bjStatus        = document.getElementById('bj-status');
 const bjTimeEl        = document.getElementById('bj-time');
 const bjScoreEl       = document.getElementById('bj-score');
-const bjSpeedEl       = document.getElementById('bj-speed');
+const bjLivesEl       = document.getElementById('bj-lives');
 const modalOverlay    = document.getElementById('modal-overlay');
 const modalMarketName = document.getElementById('modal-market-name');
 const sideYesBtn      = document.getElementById('side-yes-btn');
@@ -6152,54 +6062,163 @@ if (wbArena) {
   });
 }
 
-// ── Bug Jumper ────────────────────────────────────────────────────────────
+// ── Bug Jumper (canvas) ───────────────────────────────────────────────────
 
-const BJ_LANE_COUNT    = 3;           // lanes with bugs (indices 1-3; index 0 is safe start)
-const BJ_LANE_HEIGHT   = 60;          // fallback px (actual height read from DOM)
-const BJ_PROD_HEIGHT   = 44;          // fallback px
-const BJ_PLAYER_SIZE   = 20;          // approx px of player char for centering
-const BJ_HIT_RADIUS    = 9;           // % collision radius (player center ± this %)
-const BJ_DURATION_MS   = 20000;
-// Base bug x-speeds in %/sec for each lane (slower, more approachable)
-const BJ_BUG_SPEEDS    = [8, 11, 14];
-// Bug count per lane
-const BJ_BUG_COUNTS    = [2, 2, 2];
-// Direction: 1=left→right, -1=right→left
-const BJ_BUG_DIRS      = [1, -1, 1];
-// Bug chars per lane (monochrome ASCII)
-const BJ_BUG_EMOJIS    = ['●', '○', '◆'];
+const BJ_COLS        = 10;
+const BJ_ROWS        = 5;        // 0=start, 1-3=lanes, 4=prod
+const BJ_LANE_COUNT  = 3;
+const BJ_CS          = 480;      // canvas logical px
+const BJ_CW          = BJ_CS / BJ_COLS;  // 48
+const BJ_CH          = BJ_CS / BJ_ROWS;  // 96
+const BJ_DURATION_MS = 20000;
+const BJ_LIVES       = 3;
+
+const BJ_LANE_DEFS = [
+  { speed: 50, dir:  1, count: 2, obstW: 88 },
+  { speed: 68, dir: -1, count: 2, obstW: 80 },
+  { speed: 55, dir:  1, count: 3, obstW: 64 },
+];
+
+function bjInitLanes() {
+  return BJ_LANE_DEFS.map(def => ({
+    dir: def.dir, speed: def.speed,
+    bugs: Array.from({ length: def.count }, (_, i) => ({
+      x: (BJ_CS / def.count) * i + Math.random() * 24 - 12,
+      w: def.obstW,
+    })),
+  }));
+}
 
 function newBugJumperRuntime() {
   return {
-    playing: false,
-    submitting: false,
-    archiveMode: false,
+    playing: false, submitting: false, archiveMode: false,
     roundId: null,
-    score: 0,
-    playerLane: 0,         // 0=safe start, 1-3=bug lanes, "4"=prod hit
+    score: 0, lives: BJ_LIVES,
+    playerCol: Math.floor(BJ_COLS / 2),
+    playerRow: 0,
     lanes: bjInitLanes(),
-    speedMult: 1.0,
-    runCount: 0,           // how many times PROD was reached
+    speedMult: 1.0, runCount: 0,
     durationMs: BJ_DURATION_MS,
-    startPerf: 0,
-    rafId: null,
-    lastTs: 0,
-    playerX: 50,           // horizontal position in % (10–90)
-    invincible: false,     // brief invincibility after getting hit
-    invincEnd: 0,
-    inputCooldown: 0,      // prevent key repeat spam
+    startPerf: 0, rafId: null, lastTs: 0,
+    invincible: false, invincEnd: 0,
+    hitFlash: 0, prodFlash: 0,
+    inputCooldown: 0,
   };
 }
 
-function bjInitLanes() {
-  return Array.from({ length: BJ_LANE_COUNT }, (_, li) => ({
-    dir:   BJ_BUG_DIRS[li],
-    speed: BJ_BUG_SPEEDS[li],
-    emoji: BJ_BUG_EMOJIS[li],
-    bugs: Array.from({ length: BJ_BUG_COUNTS[li] }, (_, bi) => ({
-      x: (bi / BJ_BUG_COUNTS[li]) * 100 + (Math.random() - 0.5) * 15,
-    })),
-  }));
+let bjCtx = null;
+
+function bjInitCanvas() {
+  if (bjCtx) return;
+  const canvas = document.getElementById('bj-canvas');
+  if (!canvas) return;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width  = BJ_CS * DPR;
+  canvas.height = BJ_CS * DPR;
+  bjCtx = canvas.getContext('2d');
+  bjCtx.scale(DPR, DPR);
+}
+
+function bjRR(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r); ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r); ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r); ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
+}
+
+function bjDraw(now) {
+  const ctx = bjCtx;
+  if (!ctx) return;
+  const rt = bugJumperRuntime;
+  const S = BJ_CS, CW = BJ_CW, CH = BJ_CH;
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, S, S);
+
+  for (let row = 0; row < BJ_ROWS; row++) {
+    const y = (BJ_ROWS - 1 - row) * CH;
+    if (row === 0) ctx.fillStyle = '#f0f0f0';
+    else if (row === BJ_ROWS - 1) {
+      const age = now - (rt?.prodFlash || 0);
+      ctx.fillStyle = age < 350 ? '#cef0ce' : '#eaf5ea';
+    } else ctx.fillStyle = '#fff';
+    ctx.fillRect(0, y, S, CH);
+  }
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+  ctx.lineWidth = 1;
+  for (let c = 1; c < BJ_COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c * CW, 0); ctx.lineTo(c * CW, S); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  for (let r = 1; r < BJ_ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * CH); ctx.lineTo(S, r * CH); ctx.stroke();
+  }
+
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  const rowLabels = ['START', 'LINIA 1', 'LINIA 2', 'LINIA 3', 'PRODUKCJA'];
+  for (let row = 0; row < BJ_ROWS; row++) {
+    ctx.fillStyle = row === BJ_ROWS - 1 ? 'rgba(0,100,0,0.4)' : 'rgba(0,0,0,0.22)';
+    ctx.fillText(rowLabels[row], 5, (BJ_ROWS - 1 - row) * CH + 5);
+  }
+
+  if (rt) {
+    const OM = 10;
+    rt.lanes.forEach((lane, li) => {
+      const row = li + 1;
+      const ry = (BJ_ROWS - 1 - row) * CH + OM;
+      const oh = CH - OM * 2;
+      lane.bugs.forEach(bug => {
+        const drawAt = (bx) => {
+          ctx.fillStyle = '#1a1a1a';
+          bjRR(ctx, bx, ry, bug.w, oh, 5); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.65)';
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(lane.dir > 0 ? '▶  ▶' : '◀  ◀', bx + bug.w / 2, ry + oh / 2);
+          ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        };
+        drawAt(bug.x);
+        if (bug.x + bug.w > S) drawAt(bug.x - S);
+        if (bug.x < 0)          drawAt(bug.x + S);
+      });
+    });
+
+    const hitAge = now - rt.hitFlash;
+    const blinking = rt.invincible && now < rt.invincEnd && Math.floor(hitAge / 70) % 2 === 1;
+    if (!blinking) {
+      const PM = 6;
+      const px = rt.playerCol * CW + PM, py = (BJ_ROWS - 1 - rt.playerRow) * CH + PM;
+      const pw = CW - PM * 2, ph = CH - PM * 2;
+      ctx.fillStyle = '#000';
+      bjRR(ctx, px, py, pw, ph, 5); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.round(Math.min(pw, ph) * 0.48)}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('▲', px + pw / 2, py + ph / 2);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    }
+  }
+
+  if (!rt?.playing) {
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 22px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('GOTOWY?', S / 2, S / 2 - 16);
+    ctx.font = '13px monospace';
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillText('↑  ↓  ←  →  strzałki', S / 2, S / 2 + 14);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  }
+
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, S - 4, S - 4);
 }
 
 async function invokeBugJumper(payload) {
@@ -6210,6 +6229,8 @@ async function invokeBugJumper(payload) {
 }
 
 async function loadBugJumperState(showSpinner = true) {
+  bjInitCanvas();
+  bjDraw(performance.now());
   const weeklyWrap  = document.getElementById('bj-weekly-board');
   const allTimeWrap = document.getElementById('bj-alltime-board');
   const awardsWrap  = document.getElementById('bj-awards');
@@ -6218,7 +6239,6 @@ async function loadBugJumperState(showSpinner = true) {
     if (allTimeWrap) allTimeWrap.replaceChildren(makeSpinner());
     if (awardsWrap)  awardsWrap.replaceChildren();
   }
-
   try {
     const data = await invokeBugJumper({ action: 'state' });
     renderBugJumperState(data);
@@ -6232,27 +6252,19 @@ async function loadBugJumperState(showSpinner = true) {
 }
 
 function renderBugJumperState(data) {
-  if (data.profile) {
-    me.coins = data.profile.coins;
-    setText(headerCoins, me.coins);
-  }
-
+  if (data.profile) { me.coins = data.profile.coins; setText(headerCoins, me.coins); }
   const weekLabel = document.getElementById('bj-week-label');
   if (weekLabel) {
-    const range = whackBossWeekRange(data.weekStart); // reuse date helper
+    const range = whackBossWeekRange(data.weekStart);
     weekLabel.textContent = range ? range.short : '';
   }
-
   renderBugJumperTable(document.getElementById('bj-weekly-board'), data.weekly || [], 'weekly');
   renderBugJumperTable(document.getElementById('bj-alltime-board'), data.allTime || [], 'allTime');
   renderBugJumperAwards(document.getElementById('bj-awards'), data.awards || []);
-
   if (!bugJumperRuntime?.playing && bjStatus) {
-    if (data.myWeekly) {
-      bjStatus.textContent = 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.';
-    } else {
-      bjStatus.textContent = 'Najlepsze wyniki zapisują się automatycznie po rundzie.';
-    }
+    bjStatus.textContent = data.myWeekly
+      ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
+      : 'Użyj strzałek kursora. Najlepszy wynik tygodnia trafia do rankingu.';
   }
 }
 
@@ -6281,50 +6293,13 @@ function renderBugJumperAwards(wrap, awards) {
     wrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
     return;
   }
-  const rows = awards.slice(0, 6).map(row => {
-    const range = whackBossWeekRange(row.week_start);
-    const label = range?.short || '';
+  wrap.replaceChildren(...awards.slice(0, 6).map(row => {
+    const label = whackBossWeekRange(row.week_start)?.short || '';
     return el('div', { className: 'bj-award-row' },
       el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
       el('strong', {}, '+' + row.prize_coins + ' 🪙')
     );
-  });
-  wrap.replaceChildren(...rows);
-}
-
-function bjGetLaneHeight() {
-  return document.getElementById('bj-lane-0')?.offsetHeight || BJ_LANE_HEIGHT;
-}
-
-function bjPlayerBottom(lane) {
-  const h = bjGetLaneHeight();
-  return lane * h + (h - BJ_PLAYER_SIZE) / 2;
-}
-
-function bjRenderArena() {
-  const rt = bugJumperRuntime;
-  if (!rt || !bjArena || !bjPlayer) return;
-
-  // Update player position
-  bjPlayer.style.bottom = bjPlayerBottom(rt.playerLane) + 'px';
-  bjPlayer.style.left   = rt.playerX + '%';
-
-  // Highlight active lane
-  for (let i = 0; i <= BJ_LANE_COUNT; i++) {
-    const laneEl = document.getElementById('bj-lane-' + i);
-    if (laneEl) laneEl.classList.toggle('bj-active', i === rt.playerLane && i > 0);
-  }
-
-  // Update bug positions
-  rt.lanes.forEach((lane, li) => {
-    const laneEl = document.getElementById('bj-lane-' + (li + 1));
-    if (!laneEl) return;
-    const bugEls = laneEl.querySelectorAll('.bj-bug');
-    lane.bugs.forEach((bug, bi) => {
-      const bugEl = bugEls[bi];
-      if (bugEl) bugEl.style.left = bug.x + '%';
-    });
-  });
+  }));
 }
 
 function bjMoveBugs(dt) {
@@ -6333,87 +6308,72 @@ function bjMoveBugs(dt) {
   rt.lanes.forEach(lane => {
     lane.bugs.forEach(bug => {
       bug.x += lane.dir * lane.speed * rt.speedMult * dt;
-      if (bug.x > 105) bug.x -= 115;
-      if (bug.x < -10) bug.x += 115;
+      if (bug.x > BJ_CS)    bug.x -= BJ_CS + bug.w;
+      if (bug.x < -bug.w)   bug.x += BJ_CS + bug.w;
     });
   });
 }
 
-function bjCheckCollision(targetLane) {
+function overlapX(a1, a2, b1, b2) { return a1 < b2 && a2 > b1; }
+
+function bjCheckCollision() {
   const rt = bugJumperRuntime;
-  if (!rt || targetLane <= 0 || targetLane > BJ_LANE_COUNT) return false;
-  const lane = rt.lanes[targetLane - 1];
-  return lane.bugs.some(bug => Math.abs(bug.x - rt.playerX) < BJ_HIT_RADIUS + 5);
+  if (!rt || rt.invincible) return false;
+  const row = rt.playerRow;
+  if (row < 1 || row >= BJ_ROWS - 1) return false;
+  const lane = rt.lanes[row - 1];
+  const M = 6;
+  const px1 = rt.playerCol * BJ_CW + M;
+  const px2 = px1 + BJ_CW - M * 2;
+  return lane.bugs.some(bug => {
+    const bx = bug.x, bw = bug.w;
+    return overlapX(px1, px2, bx, bx + bw) ||
+           overlapX(px1, px2, bx - BJ_CS, bx - BJ_CS + bw) ||
+           overlapX(px1, px2, bx + BJ_CS, bx + BJ_CS + bw);
+  });
 }
 
 function bjPlayerHit() {
   const rt = bugJumperRuntime;
   if (!rt || rt.invincible) return;
-  rt.playerLane = 0;
+  rt.lives--;
+  rt.hitFlash   = performance.now();
   rt.invincible = true;
-  rt.invincEnd  = performance.now() + 500;
-  if (bjPlayer) {
-    bjPlayer.classList.remove('hit');
-    void bjPlayer.offsetWidth;
-    bjPlayer.classList.add('hit');
-    setTimeout(() => bjPlayer.classList.remove('hit'), 400);
-  }
+  rt.invincEnd  = performance.now() + 1100;
+  rt.playerRow  = 0;
+  rt.playerCol  = Math.floor(BJ_COLS / 2);
+  if (bjLivesEl) bjLivesEl.textContent = '♥'.repeat(Math.max(0, rt.lives));
+  if (rt.lives <= 0) setTimeout(finishBugJumperRound, 80);
 }
 
-function bjTriggerJump() {
-  if (!bjPlayer) return;
-  bjPlayer.classList.remove('jumping');
-  void bjPlayer.offsetWidth; // reflow to restart animation
-  bjPlayer.classList.add('jumping');
-  setTimeout(() => bjPlayer.classList.remove('jumping'), 160);
-}
-
-function bjMovePlayer(dir) {
+function bjMovePlayer(dr, dc) {
   const rt = bugJumperRuntime;
   if (!rt?.playing) return;
   const now = performance.now();
   if (now < rt.inputCooldown) return;
-  rt.inputCooldown = now + 100;
-
+  rt.inputCooldown = now + 130;
   if (rt.invincible && now < rt.invincEnd) return;
-  rt.invincible = false;
 
-  const newLane = rt.playerLane + dir;
-  if (newLane < 0) return;
+  const newRow = rt.playerRow + dr;
+  const newCol = Math.max(0, Math.min(BJ_COLS - 1, rt.playerCol + dc));
+  rt.playerCol = newCol;
+  if (newRow < 0 || newRow > BJ_ROWS - 1) return;
 
-  if (newLane > BJ_LANE_COUNT) {
-    // Reached PRODUCTION!
+  if (newRow === BJ_ROWS - 1) {
     rt.score += 1;
-    rt.runCount += 1;
+    rt.runCount++;
     rt.speedMult = Math.min(2.5, 1.0 + rt.runCount * 0.12);
-    rt.playerLane = 0;
-    bjTriggerJump();
-    // Flash production zone
-    const prodEl = document.getElementById('bj-prod-zone');
-    if (prodEl) {
-      prodEl.style.background = 'rgba(255,255,255,.35)';
-      setTimeout(() => { if (prodEl) prodEl.style.background = ''; }, 250);
-    }
+    rt.prodFlash = now;
+    rt.playerRow = 0;
+    rt.playerCol = Math.floor(BJ_COLS / 2);
+    rt.invincible = false;
+    if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
     return;
   }
 
-  // Check collision in target lane (only when moving up into a bug lane)
-  if (dir > 0 && newLane >= 1 && bjCheckCollision(newLane)) {
-    rt.playerLane = newLane; // briefly show in hit lane
-    bjRenderArena();
-    bjPlayerHit();
-    return;
-  }
-
-  rt.playerLane = newLane;
-  if (dir > 0) bjTriggerJump();
-  if (dir > 0 && newLane >= 1) rt.score += 1;
-}
-
-function bjMoveLateral(dir) {
-  const rt = bugJumperRuntime;
-  if (!rt?.playing) return;
-  rt.playerX = Math.min(90, Math.max(10, rt.playerX + dir * 20));
+  if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT) rt.score += 1;
+  rt.playerRow = newRow;
+  if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
 }
 
 function bjTick(ts) {
@@ -6423,27 +6383,17 @@ function bjTick(ts) {
   const dt = rt.lastTs ? Math.min(50, ts - rt.lastTs) / 1000 : 0;
   rt.lastTs = ts;
 
-  const elapsed   = ts - rt.startPerf;
-  const remaining = rt.durationMs - elapsed;
+  const remaining = rt.durationMs - (ts - rt.startPerf);
+  if (bjTimeEl) bjTimeEl.textContent = Math.max(0, remaining / 1000).toFixed(1);
+  if (remaining <= 0) { finishBugJumperRound(); return; }
 
-  if (bjTimeEl)  bjTimeEl.textContent  = Math.max(0, remaining / 1000).toFixed(1);
-  if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
-  if (bjSpeedEl) bjSpeedEl.textContent = rt.speedMult.toFixed(2) + '×';
-
-  if (remaining <= 0) {
-    finishBugJumperRound();
-    return;
-  }
-
-  // Continuous collision check while standing in a bug lane (not invincible)
-  if (rt.playerLane >= 1 && !rt.invincible) {
-    if (bjCheckCollision(rt.playerLane)) bjPlayerHit();
-  }
   if (rt.invincible && ts >= rt.invincEnd) rt.invincible = false;
 
   bjMoveBugs(dt);
-  bjRenderArena();
-
+  if (rt.playerRow >= 1 && rt.playerRow <= BJ_LANE_COUNT && !rt.invincible) {
+    if (bjCheckCollision()) bjPlayerHit();
+  }
+  bjDraw(ts);
   rt.rafId = requestAnimationFrame(bjTick);
 }
 
@@ -6451,12 +6401,12 @@ function stopBugJumperRound() {
   const rt = bugJumperRuntime;
   if (rt?.rafId) cancelAnimationFrame(rt.rafId);
   bugJumperRuntime = newBugJumperRuntime();
-  if (bjArena) bjArena.classList.remove('playing');
-  if (bjReady) show(bjReady);
   if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
   if (bjTimeEl)  bjTimeEl.textContent  = '20.0';
   if (bjScoreEl) bjScoreEl.textContent = '0';
-  if (bjSpeedEl) bjSpeedEl.textContent = '1.0×';
+  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
+  bjInitCanvas();
+  bjDraw(performance.now());
 }
 
 function beginBugJumperRound(round) {
@@ -6470,25 +6420,9 @@ function beginBugJumperRound(round) {
     ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
     : 0;
   rt.startPerf = performance.now() - serverElapsed;
-
-  if (bjReady) hide(bjReady);
-  if (bjArena) bjArena.classList.add('playing');
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Runda trwa'; }
-  if (bjStatus) bjStatus.textContent = '↑↓ = zmień pas, ←→ = przesuń lewo/prawo. Unikaj bugów!';
-
-  // Build bug elements in their lanes
-  rt.lanes.forEach((lane, li) => {
-    const laneEl = document.getElementById('bj-lane-' + (li + 1));
-    if (!laneEl) return;
-    laneEl.querySelectorAll('.bj-bug').forEach(b => b.remove());
-    lane.bugs.forEach(bug => {
-      const bugEl = el('span', { className: 'bj-bug' }, lane.emoji);
-      bugEl.style.left = bug.x + '%';
-      laneEl.appendChild(bugEl);
-    });
-  });
-
-  bjRenderArena();
+  if (bjStatus) bjStatus.textContent = '↑ ↓ ← → — strzałki. Dotrzyj do PRODUKCJI!';
+  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
   rt.rafId = requestAnimationFrame(bjTick);
 }
 
@@ -6496,8 +6430,7 @@ async function startBugJumperRound() {
   const rt = bugJumperRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Ładuję...'; }
-  if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę.';
-
+  if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę...';
   try {
     const data = await invokeBugJumper({ action: 'start' });
     renderBugJumperState(data);
@@ -6515,14 +6448,13 @@ async function finishBugJumperRound() {
   rt.playing    = false;
   rt.submitting = true;
   if (rt.rafId) cancelAnimationFrame(rt.rafId);
-  if (bjArena) bjArena.classList.remove('playing');
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Zapisuję...'; }
   if (bjStatus) bjStatus.textContent = 'Zapisuję wynik...';
   if (bjTimeEl) bjTimeEl.textContent = '0.0';
+  bjDraw(performance.now());
 
   if (rt.archiveMode) {
     rt.submitting = false;
-    if (bjReady) show(bjReady);
     if (bjStatus) bjStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
     if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Zagraj ponownie'; }
     return;
@@ -6530,12 +6462,8 @@ async function finishBugJumperRound() {
 
   try {
     const data = await invokeBugJumper({
-      action:   'submit',
-      roundId:  rt.roundId,
-      score:    rt.score,
-      hits:     rt.score,
-      misses:   0,
-      maxCombo: rt.runCount,
+      action: 'submit', roundId: rt.roundId,
+      score: rt.score, hits: rt.score, misses: 0, maxCombo: rt.runCount,
     });
     renderBugJumperState(data);
     showToast('✅ Wynik zapisany: ' + data.score.score);
@@ -6545,46 +6473,20 @@ async function finishBugJumperRound() {
     if (bjStatus) bjStatus.textContent = 'Nie udało się zapisać wyniku.';
   } finally {
     rt.submitting = false;
-    if (bjReady) show(bjReady);
     if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Zagraj ponownie'; }
   }
 }
 
 if (bjStartBtn) bjStartBtn.addEventListener('click', startBugJumperRound);
 
-// Keyboard controls for Bug Jumper (↑↓ = lane, ←→ = lateral)
+// Arrow keys only — no WASD, no touch
 document.addEventListener('keydown', evt => {
   if (!bugJumperRuntime?.playing) return;
-  if (evt.key === 'ArrowUp'    || evt.key === 'w' || evt.key === 'W') { evt.preventDefault(); bjMovePlayer(1); }
-  if (evt.key === 'ArrowDown'  || evt.key === 's' || evt.key === 'S') { evt.preventDefault(); bjMovePlayer(-1); }
-  if (evt.key === 'ArrowLeft'  || evt.key === 'a' || evt.key === 'A') { evt.preventDefault(); bjMoveLateral(-1); }
-  if (evt.key === 'ArrowRight' || evt.key === 'd' || evt.key === 'D') { evt.preventDefault(); bjMoveLateral(1); }
+  if (evt.key === 'ArrowUp')    { evt.preventDefault(); bjMovePlayer(1, 0); }
+  if (evt.key === 'ArrowDown')  { evt.preventDefault(); bjMovePlayer(-1, 0); }
+  if (evt.key === 'ArrowLeft')  { evt.preventDefault(); bjMovePlayer(0, -1); }
+  if (evt.key === 'ArrowRight') { evt.preventDefault(); bjMovePlayer(0, 1); }
 });
-
-// Touch controls: swipe up/down = lane change, swipe left/right = lateral, tap = move up
-if (bjArena) {
-  let bjTouchStartX = 0, bjTouchStartY = 0;
-  bjArena.addEventListener('touchstart', evt => {
-    if (!bugJumperRuntime?.playing) return;
-    bjTouchStartX = evt.changedTouches[0].clientX;
-    bjTouchStartY = evt.changedTouches[0].clientY;
-  }, { passive: true });
-  bjArena.addEventListener('touchend', evt => {
-    if (!bugJumperRuntime?.playing) return;
-    evt.preventDefault();
-    const dx = evt.changedTouches[0].clientX - bjTouchStartX;
-    const dy = evt.changedTouches[0].clientY - bjTouchStartY;
-    const adx = Math.abs(dx), ady = Math.abs(dy);
-    const threshold = 20;
-    if (adx < threshold && ady < threshold) {
-      bjMovePlayer(1); // tap = jump up
-    } else if (ady > adx) {
-      bjMovePlayer(dy < 0 ? 1 : -1); // swipe up/down
-    } else {
-      bjMoveLateral(dx > 0 ? 1 : -1); // swipe left/right
-    }
-  }, { passive: false });
-}
 
 // ── Garden (Ogródek) ──────────────────────────────────────────────────────
 const PLANT_STAGES = {
