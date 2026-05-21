@@ -478,8 +478,17 @@
     .user-profile-stat { flex: 1; min-width: 80px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
     .user-profile-stat strong { display: block; font-size: 15px; margin-bottom: 2px; }
     .user-profile-stat span { font-size: 11px; color: var(--muted); }
-    .user-profile-chart { width: 100%; height: 130px; display: block; margin: 10px 0 4px; }
+    .user-profile-chart { width: 100%; height: 160px; display: block; margin: 10px 0 4px; }
     .user-profile-chart-label { font-size: 10px; color: var(--muted); text-align: right; margin-bottom: 10px; }
+    .tx-history-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .tx-history-table th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: 3px 6px; }
+    .tx-history-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .tx-history-table tr:last-child td { border-bottom: none; }
+    .tx-history-table .tx-bal { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .tx-history-table .tx-delta-pos { color: var(--yes); text-align: right; font-variant-numeric: tabular-nums; }
+    .tx-history-table .tx-delta-neg { color: var(--no); text-align: right; font-variant-numeric: tabular-nums; }
+    .tx-history-table .tx-delta-zero { color: var(--muted); text-align: right; }
+    .tx-history-table .tx-start { color: var(--muted); font-style: italic; }
     .user-profile-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
     .lb-click-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; font-style: italic; }
     .season-history-section { padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -4936,84 +4945,118 @@ function renderHazardHistory(wrap, rowsData) {
 }
 
 // ── Coin history chart ────────────────────────────────────────────────────
-function drawCoinChart(canvas, events, currentCoins) {
+function drawCoinChart(canvas, points) {
+  // points: [{ts, bal}] sorted ascending, starting at registration (1000 coins)
+  if (!points || points.length < 2) return;
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const W = canvas.offsetWidth || 400, H = 130;
+  const W = canvas.offsetWidth || 400, H = 160;
   canvas.width  = W * DPR;
   canvas.height = H * DPR;
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
 
-  // Reconstruct balance history: work backward from currentCoins
-  const totalDelta = events.reduce((s, e) => s + e.delta, 0);
-  const startBalance = (currentCoins || 1000) - totalDelta;
-
-  // Build (ts, balance) points; include a synthetic "start" point
-  const points = [{ ts: events[0].ts - 1, bal: startBalance }];
-  let bal = startBalance;
-  events.forEach(e => { bal += e.delta; points.push({ ts: e.ts, bal }); });
-
-  const LPAD = 46, RPAD = 8, TPAD = 12, BPAD = 20;
+  const LPAD = 48, RPAD = 10, TPAD = 14, BPAD = 22;
   const CW = W - LPAD - RPAD, CH = H - TPAD - BPAD;
 
   const tMin = points[0].ts, tMax = points[points.length - 1].ts;
   const balMin = Math.min(...points.map(p => p.bal));
   const balMax = Math.max(...points.map(p => p.bal));
-  const range = Math.max(1, balMax - balMin);
+  // Give a bit of padding so the line doesn't hug edges
+  const padV = Math.max(50, (balMax - balMin) * 0.08);
+  const yLo = balMin - padV, yHi = balMax + padV;
   const scX = ts => LPAD + ((tMax === tMin) ? CW / 2 : ((ts - tMin) / (tMax - tMin)) * CW);
-  const scY = b => TPAD + (1 - (b - balMin) / range) * CH;
+  const scY = b => TPAD + (1 - (b - yLo) / (yHi - yLo)) * CH;
 
   // Background
   ctx.fillStyle = '#f8fafc';
   ctx.fillRect(0, 0, W, H);
 
-  // Y-axis grid lines + labels (3 levels: min, mid, max)
-  ctx.font = '9px monospace';
-  ctx.textAlign = 'right';
-  [balMin, Math.round((balMin + balMax) / 2), balMax].forEach(v => {
+  // Y-axis: 4 evenly spaced grid lines with labels
+  const yStep = (yHi - yLo) / 3;
+  for (let i = 0; i <= 3; i++) {
+    const v = yLo + yStep * i;
     const y = scY(v);
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeStyle = i === 0 ? '#cbd5e1' : '#e2e8f0';
     ctx.lineWidth = 1;
+    ctx.setLineDash(i === 0 ? [] : [3, 3]);
     ctx.beginPath(); ctx.moveTo(LPAD, y); ctx.lineTo(W - RPAD, y); ctx.stroke();
+    ctx.setLineDash([]);
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(fmtNum(Math.round(v)), LPAD - 3, y + 3);
-  });
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(fmtNum(Math.round(v)), LPAD - 4, y + 3);
+  }
 
-  // Area fill under line (gradient green→transparent)
+  // 1000-coin baseline (starting level) — subtle dashed line
+  const baseLine = scY(1000);
+  if (baseLine > TPAD && baseLine < TPAD + CH) {
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(LPAD, baseLine); ctx.lineTo(W - RPAD, baseLine); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Determine if overall gain or loss for color
+  const isGain = points[points.length - 1].bal >= points[0].bal;
+  const lineColor = isGain ? '#22c55e' : '#f87171';
+  const areaColor0 = isGain ? 'rgba(34,197,94,0.22)' : 'rgba(248,113,113,0.18)';
+  const areaColor1 = isGain ? 'rgba(34,197,94,0.02)' : 'rgba(248,113,113,0.02)';
+
+  // Area fill
   const grad = ctx.createLinearGradient(0, TPAD, 0, TPAD + CH);
-  grad.addColorStop(0, 'rgba(74,222,128,0.28)');
-  grad.addColorStop(1, 'rgba(74,222,128,0.03)');
+  grad.addColorStop(0, areaColor0);
+  grad.addColorStop(1, areaColor1);
   ctx.beginPath();
   ctx.moveTo(scX(points[0].ts), scY(points[0].bal));
-  points.slice(1).forEach(p => ctx.lineTo(scX(p.ts), scY(p.bal)));
-  ctx.lineTo(scX(points[points.length - 1].ts), H - BPAD);
-  ctx.lineTo(scX(points[0].ts), H - BPAD);
+  for (let i = 1; i < points.length; i++) ctx.lineTo(scX(points[i].ts), scY(points[i].bal));
+  ctx.lineTo(scX(points[points.length - 1].ts), TPAD + CH);
+  ctx.lineTo(scX(points[0].ts), TPAD + CH);
   ctx.closePath();
   ctx.fillStyle = grad;
   ctx.fill();
 
   // Balance line
-  ctx.strokeStyle = '#22c55e';
+  ctx.strokeStyle = lineColor;
   ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   ctx.beginPath();
   points.forEach((p, i) => i === 0 ? ctx.moveTo(scX(p.ts), scY(p.bal)) : ctx.lineTo(scX(p.ts), scY(p.bal)));
   ctx.stroke();
 
-  // Dot at final point
-  const lp = points[points.length - 1];
-  ctx.fillStyle = '#22c55e';
+  // Start dot
+  ctx.fillStyle = '#94a3b8';
   ctx.beginPath();
-  ctx.arc(scX(lp.ts), scY(lp.bal), 3.5, 0, Math.PI * 2);
+  ctx.arc(scX(points[0].ts), scY(points[0].bal), 3, 0, Math.PI * 2);
   ctx.fill();
 
-  // X-axis date labels (first and last)
+  // End dot
+  const lp = points[points.length - 1];
+  ctx.fillStyle = lineColor;
+  ctx.beginPath();
+  ctx.arc(scX(lp.ts), scY(lp.bal), 4, 0, Math.PI * 2);
+  ctx.fill();
+  // White center
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(scX(lp.ts), scY(lp.bal), 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // X-axis date labels — up to 5, evenly spaced, no overlap
+  const dateLabel = ts => new Date(ts).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '9px monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText(new Date(tMin).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit' }), LPAD, H - 4);
-  ctx.textAlign = 'right';
-  ctx.fillText(new Date(tMax).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit' }), W - RPAD, H - 4);
+  ctx.font = '9px system-ui, sans-serif';
+  const labelCount = Math.min(5, points.length);
+  const step = (points.length - 1) / (labelCount - 1);
+  for (let i = 0; i < labelCount; i++) {
+    const idx = Math.round(i * step);
+    const p = points[idx];
+    const x = scX(p.ts);
+    ctx.textAlign = i === 0 ? 'left' : i === labelCount - 1 ? 'right' : 'center';
+    const lx = i === 0 ? LPAD : i === labelCount - 1 ? W - RPAD : x;
+    ctx.fillText(dateLabel(p.ts), lx, H - 6);
+  }
 }
 
 // ── Ranking Detail Modal ──────────────────────────────────────────────────
@@ -5085,28 +5128,44 @@ function drawCoinChart(canvas, events, currentCoins) {
     try {
       const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
 
-      const [gamesRes, tradesRes] = await Promise.all([
+      const [gamesRes, tradesRes, profileRes] = await Promise.all([
         sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
-        sb.from('trades').select('created_at,amount').eq('user_id', userId).order('created_at', { ascending: true }),
+        sb.from('trades').select('created_at,amount,markets(title)').eq('user_id', userId).order('created_at', { ascending: true }),
+        sb.from('profiles').select('created_at').eq('id', userId).single(),
       ]);
       const games = gamesRes.data || [];
       const trades = tradesRes.data || [];
       const userAwards = (_seasonHistory || []).filter(a => a.user_id === userId);
+      const profileCreatedAt = profileRes.data?.created_at;
 
-      // Build chart events (trades = outflow; games = net P&L; awards = inflow)
+      // Build sorted event list with labels for the transaction table
       const events = [];
       trades.forEach(t => {
-        events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0) });
+        const title = t.markets?.title || 'Rynek';
+        events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0), label: '📊 ' + title, raw: t });
       });
       games.forEach(g => {
         const bet = +g.bet || 0, won = +g.won || 0;
         const delta = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
-        events.push({ ts: new Date(g.created_at).getTime(), delta });
+        events.push({ ts: new Date(g.created_at).getTime(), delta, label: GAME_NAMES[g.game] || g.game, raw: g });
       });
       userAwards.forEach(a => {
-        if (a.awarded_at) events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0 });
+        if (a.awarded_at) {
+          const entry = SEASONAL_SCHEDULE.find(e => e.weekStart === a.week_start && e.gameType === a.gameType);
+          const medals = ['🥇', '🥈', '🥉'];
+          events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + (entry?.displayName || a.gameType), raw: a });
+        }
       });
       events.sort((a, b) => a.ts - b.ts);
+
+      // Build balance history starting from 1000 coins at registration
+      const startTs = profileCreatedAt ? new Date(profileCreatedAt).getTime() : (events[0]?.ts || Date.now());
+      const balancePoints = [{ ts: startTs, bal: 1000, label: 'Rejestracja', delta: null }];
+      let runBal = 1000;
+      events.forEach(e => {
+        runBal += e.delta;
+        balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta });
+      });
 
       // Stats
       const gamePL = games.reduce((s, g) => {
@@ -5128,55 +5187,38 @@ function drawCoinChart(canvas, events, currentCoins) {
       ));
 
       // Chart — append first so offsetWidth resolves, then draw
-      if (events.length > 0) {
+      if (balancePoints.length >= 2) {
         const chartCanvas = el('canvas', { className: 'user-profile-chart' });
         body.append(
           el('div', { className: 'user-profile-section-title' }, 'Stan coinów w czasie'),
           chartCanvas,
-          el('p', { className: 'user-profile-chart-label' }, 'saldo = gotówka + gry + nagrody sezonowe')
+          el('p', { className: 'user-profile-chart-label' }, '— — — poziom startowy 1 000 🪙 · wypłaty z rynków nie są śledzone')
         );
-        drawCoinChart(chartCanvas, events, coins);
+        drawCoinChart(chartCanvas, balancePoints);
       }
 
-      // Recent game transactions
-      if (games.length) {
-        body.append(el('div', { className: 'user-profile-section-title' }, 'Ostatnie transakcje gier'));
-        const recent = [...games].reverse().slice(0, 20);
-        body.append(el('table', { className: 'lb-table-compact' },
-          el('thead', {}, el('tr', {}, el('th', {}, 'Data'), el('th', {}, 'Gra'), el('th', {}, 'P&L'))),
-          el('tbody', {}, ...recent.map(g => {
-            const bet = +g.bet || 0, won = +g.won || 0;
-            const profit = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
-            return el('tr', {},
-              el('td', { className: 'tx-time' }, fmtDateTime(g.created_at)),
-              el('td', {}, GAME_NAMES[g.game] || g.game),
-              el('td', { className: 'tx-pl ' + profitClassName(profit) }, (profit >= 0 ? '+' : '') + profit + ' 🪙')
-            );
-          }))
+      // Transaction history table (all events, newest first)
+      body.append(el('div', { className: 'user-profile-section-title' }, 'Historia transakcji'));
+      if (balancePoints.length <= 1) {
+        body.append(el('p', { style: { color: 'var(--muted)', marginTop: '6px' } }, 'Brak historii transakcji.'));
+      } else {
+        const rows = [...balancePoints].reverse().map(p => {
+          const isStart = p.delta === null;
+          const deltaStr = isStart ? '—' : (p.delta >= 0 ? '+' + p.delta : String(p.delta));
+          const deltaClass = isStart ? 'tx-delta-zero' : p.delta > 0 ? 'tx-delta-pos' : 'tx-delta-neg';
+          return el('tr', {},
+            el('td', { className: 'tx-time' }, fmtDateTime(new Date(p.ts).toISOString())),
+            el('td', { className: isStart ? 'tx-start' : '' }, p.label),
+            el('td', { className: deltaClass }, deltaStr + (isStart ? '' : ' 🪙')),
+            el('td', { className: 'tx-bal' }, fmtNum(p.bal) + ' 🪙')
+          );
+        });
+        body.append(el('table', { className: 'tx-history-table' },
+          el('thead', {}, el('tr', {},
+            el('th', {}, 'Data'), el('th', {}, 'Opis'), el('th', {}, 'Zmiana'), el('th', {}, 'Saldo')
+          )),
+          el('tbody', {}, ...rows)
         ));
-      }
-
-      // Awards
-      if (userAwards.length) {
-        body.append(el('div', { className: 'user-profile-section-title' }, 'Nagrody sezonowe'));
-        body.append(el('table', { className: 'lb-table-compact' },
-          el('thead', {}, el('tr', {}, el('th', {}, 'Data'), el('th', {}, 'Sezon'), el('th', {}, 'Miejsce'), el('th', {}, 'Nagroda'))),
-          el('tbody', {}, ...userAwards.map(a => {
-            const medals = ['🥇', '🥈', '🥉'];
-            const entry = SEASONAL_SCHEDULE.find(e => e.weekStart === a.week_start && e.gameType === a.gameType);
-            const seasonNum = entry ? SEASONAL_SCHEDULE.indexOf(entry) + 1 : '?';
-            return el('tr', {},
-              el('td', { className: 'tx-time' }, a.awarded_at ? fmtDateTime(a.awarded_at) : '—'),
-              el('td', {}, 'Sezon ' + seasonNum + ' · ' + (entry?.displayName || a.gameType)),
-              el('td', {}, medals[a.rank - 1] || String(a.rank)),
-              el('td', { className: 'tx-pl tx-pl-profit' }, '+' + a.prize_coins + ' 🪙')
-            );
-          }))
-        ));
-      }
-
-      if (!games.length && !userAwards.length) {
-        body.append(el('p', { style: { color: 'var(--muted)', marginTop: '12px' } }, 'Brak historii transakcji.'));
       }
     } catch {
       body.append(el('p', {}, 'Błąd ładowania profilu.'));
