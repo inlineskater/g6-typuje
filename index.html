@@ -5215,10 +5215,12 @@ function drawCoinChart(canvas, points) {
         runBal += e.delta;
         balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta });
       });
-      // Small rounding differences vs backend integer math — absorb silently into chart endpoint
+      // Garden watering rewards and accessory purchases update profiles.coins directly with no log
+      // table, so they can't be fetched individually. Show them as an explicit labeled row so
+      // the user sees why the balance doesn't add up from tracked events alone.
       const residual = coins - runBal;
       if (Math.abs(residual) > 0) {
-        balancePoints[balancePoints.length - 1].bal += residual;
+        balancePoints.push({ ts: Date.now(), bal: coins, label: '🌱 Ogródek (łącznie — nagrody za podlewanie, akcesoria)', delta: residual, isGarden: true });
       }
 
       // Stats
@@ -5258,10 +5260,12 @@ function drawCoinChart(canvas, points) {
       } else {
         const rows = [...balancePoints].reverse().map(p => {
           const isStart = p.delta === null;
+          const isGarden = p.isGarden;
           const deltaStr = isStart ? '—' : (p.delta >= 0 ? '+' + p.delta : String(p.delta));
           const deltaClass = isStart ? 'tx-delta-zero' : p.delta > 0 ? 'tx-delta-pos' : 'tx-delta-neg';
-          return el('tr', {},
-            el('td', { className: 'tx-time' }, fmtDateTime(new Date(p.ts).toISOString())),
+          const rowStyle = isGarden ? { color: 'var(--muted)', fontStyle: 'italic' } : {};
+          return el('tr', { style: rowStyle },
+            el('td', { className: 'tx-time' }, isGarden ? '—' : fmtDateTime(new Date(p.ts).toISOString())),
             el('td', { className: isStart ? 'tx-start' : '' }, p.label),
             el('td', { className: deltaClass }, deltaStr + (isStart ? '' : ' 🪙')),
             el('td', { className: 'tx-bal' }, fmtNum(p.bal) + ' 🪙')
