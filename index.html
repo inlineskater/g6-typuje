@@ -1375,6 +1375,187 @@
       .wb-start-btn { width: 100%; }
     }
 
+    /* ── Seasonal Game Framework ── */
+    .seasonal-dot {
+      display: inline-block; width: 8px; height: 8px;
+      background: var(--accent); border-radius: 50%;
+      margin-right: 5px; vertical-align: middle;
+      animation: seasonal-pulse 2s ease-in-out infinite;
+    }
+    @keyframes seasonal-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.6); }
+    }
+    .nav-tab[data-tab="whack-boss"].active { color: var(--accent); }
+    .seasonal-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 12px; color: var(--muted); margin-bottom: 12px;
+    }
+    .seasonal-bar-name { font-weight: 800; color: var(--text); font-size: 13px; }
+    .seasonal-chip {
+      display: inline-block; padding: 2px 9px;
+      border-radius: 999px; font-size: 10px; font-weight: 800;
+      letter-spacing: .07em; text-transform: uppercase;
+    }
+    .seasonal-chip.active {
+      background: rgba(99,102,241,.12); color: var(--accent);
+      border: 1px solid rgba(99,102,241,.3);
+    }
+    .seasonal-chip.archive {
+      background: rgba(156,163,175,.1); color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .seasonal-next-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(99,102,241,.05); border: 1px solid rgba(99,102,241,.18);
+      border-radius: 8px; padding: 8px 14px;
+      font-size: 12px; color: var(--muted); margin-bottom: 12px;
+    }
+    .seasonal-archive-banner {
+      background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.3);
+      border-radius: 8px; padding: 9px 14px;
+      font-size: 12px; color: #b45309; margin-bottom: 12px;
+    }
+    .seasonal-archive-divider {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap;
+      padding: 14px 0 8px; border-top: 1px solid var(--border);
+      margin-top: 20px; margin-bottom: 8px;
+      font-size: 13px; font-weight: 700; color: var(--muted);
+    }
+
+    /* ── Bug Jumper ── */
+    .bj-layout {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+      gap: 16px; align-items: start;
+    }
+    .bj-game-panel, .bj-board-panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px;
+    }
+    .bj-game-panel { display: grid; gap: 14px; }
+    .bj-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 14px; flex-wrap: wrap;
+    }
+    .bj-stats {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+    }
+    .bj-stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; min-width: 0;
+    }
+    .bj-stat-label {
+      color: var(--muted); font-size: 10px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .bj-stat-value {
+      margin-top: 4px; color: var(--text); font-size: 24px; font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .bj-rules {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px; font-size: 12.5px;
+    }
+    .bj-rules-title { font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .bj-rules ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.55; }
+    .bj-rules ul li { margin-bottom: 4px; }
+    .bj-rules ul li strong { color: var(--text); }
+    .bj-arena {
+      position: relative; overflow: hidden;
+      border: 2px solid var(--border-hi); border-radius: 8px;
+      background: #0d1117;
+      display: flex; flex-direction: column;
+      user-select: none; touch-action: manipulation;
+    }
+    .bj-arena.playing { border-color: rgba(34,197,94,.5); }
+    .bj-prod-zone {
+      height: 44px; flex-shrink: 0;
+      background: rgba(34,197,94,.12); border-bottom: 2px solid rgba(34,197,94,.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #22c55e; font-family: monospace;
+      letter-spacing: .1em; text-transform: uppercase;
+    }
+    .bj-lane {
+      position: relative; height: 60px; flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      overflow: visible;
+    }
+    .bj-lane.bj-active { background: rgba(99,102,241,.09); }
+    .bj-safe-lane { background: rgba(99,102,241,.04); border-bottom: 1px solid rgba(99,102,241,.12) !important; }
+    .bj-start-label {
+      position: absolute; top: 50%; left: 10px; transform: translateY(-50%);
+      font-size: 9px; font-weight: 800; letter-spacing: .1em;
+      color: rgba(99,102,241,.4); text-transform: uppercase; font-family: monospace;
+      pointer-events: none;
+    }
+    .bj-lane-label {
+      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+      font-size: 9px; font-weight: 700; letter-spacing: .05em;
+      color: rgba(255,255,255,.12); font-family: monospace;
+      pointer-events: none;
+    }
+    .bj-bug {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      font-size: 20px; line-height: 1; pointer-events: none; will-change: left;
+    }
+    .bj-player {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      font-size: 22px; line-height: 1; z-index: 10;
+      pointer-events: none; will-change: bottom;
+    }
+    .bj-player.hit { animation: bj-hit-flash .4s ease; }
+    @keyframes bj-hit-flash {
+      0%, 100% { opacity: 1; }
+      25%, 75%  { opacity: .05; }
+      50%       { opacity: .8; filter: brightness(3) saturate(0); }
+    }
+    .bj-ready {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      color: rgba(200,220,200,.6); text-align: center; padding: 20px;
+      pointer-events: none; z-index: 5;
+    }
+    .bj-ready strong { color: #cbd5e1; font-size: 16px; }
+    .bj-ready span { font-size: 12px; font-family: monospace; }
+    .bj-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .bj-start-btn { width: auto; }
+    .bj-status { font-size: 12px; color: var(--muted); flex: 1; }
+    .bj-board-panel { display: grid; gap: 16px; }
+    .bj-prizes {
+      display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+      color: var(--muted); font-size: 11px; font-weight: 700;
+    }
+    .bj-prize {
+      display: inline-flex; align-items: center; gap: 4px;
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 5px 9px; background: var(--surface);
+    }
+    .bj-board-title {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; font-size: 13px; font-weight: 800; margin-bottom: 8px;
+    }
+    .bj-board-sub { color: var(--muted); font-size: 11px; font-weight: 500; }
+    .bj-empty { color: var(--muted); font-size: 12px; padding: 8px 0; }
+    .bj-awards { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 12px; }
+    .bj-award-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface);
+    }
+    @media (max-width: 980px) {
+      .bj-layout { grid-template-columns: 1fr; }
+      .bj-board-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 620px) {
+      .bj-game-panel, .bj-board-panel { padding: 14px; }
+      .bj-board-panel { grid-template-columns: 1fr; }
+      .bj-stat-value { font-size: 20px; }
+      .bj-arena { min-height: 280px; }
+    }
+
     /* ── Shop ── */
     input[type="number"], textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
@@ -2121,7 +2302,7 @@
     <button class="nav-tab" data-tab="poker">Poker</button>
     <button class="nav-tab" data-tab="roulette">Ruletka</button>
     <button class="nav-tab" data-tab="slots">Jednoręki bandyta</button>
-    <button class="nav-tab" data-tab="whack-boss">Whack-a-Boss</button>
+    <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span>Gra Sezonowa</button>
     <button class="nav-tab" data-tab="shop">Sklep</button>
     <button class="nav-tab" data-tab="garden">Ogródek 🌱</button>
   </nav>
@@ -2397,99 +2578,197 @@
 
   <div id="tab-whack-boss" class="hidden">
     <main>
-      <div class="wb-layout">
-        <section class="wb-game-panel">
-          <div class="wb-head">
-            <div>
-              <h2 class="page-title">Whack-a-Boss</h2>
-              <p class="page-sub">18 sekund, szybkie kliknięcia i cotygodniowy ranking z nagrodami.</p>
-            </div>
-            <div class="wb-prizes" aria-label="Nagrody tygodniowe">
-              <span class="wb-prize">🥇 100 🪙</span>
-              <span class="wb-prize">🥈 50 🪙</span>
-              <span class="wb-prize">🥉 25 🪙</span>
-            </div>
-          </div>
+      <!-- Seasonal meta headers -->
+      <div id="seasonal-header" class="seasonal-bar hidden"></div>
+      <div id="seasonal-next-bar" class="seasonal-next-bar hidden"></div>
+      <div id="seasonal-archive-banner" class="seasonal-archive-banner hidden">
+        ⚠️ Tryb archiwum — wyniki tej rundy nie są zapisywane do rankingu sezonowego.
+      </div>
 
-          <div class="wb-rules">
-            <div class="wb-rules-title">Jak grać i nagrody</div>
-            <ul>
-              <li><strong>18 sekund.</strong> Klikaj bossa za każdym razem, gdy pojawi się w polu gry.</li>
-              <li><strong>Tempo dopasowuje się do Ciebie:</strong> im szybciej trafiasz, tym krócej boss jest widoczny. Spudłowany boss daje chwilę oddechu.</li>
-              <li><strong>Punkty:</strong> każde trafienie = 1 pkt. <strong>Combo</strong> rośnie, gdy trafiasz bossów po kolei (każdy spudłowany boss zeruje combo).</li>
-              <li><strong>Tydzień:</strong> startuje w niedzielę o 00:00 i kończy się w sobotę o 23:59:59 (Europe/Warsaw). <span id="wb-week-window">Zakres bieżącego tygodnia pojawi się po wczytaniu rankingu.</span></li>
-              <li><strong>Jak liczymy tydzień:</strong> serwer bierze czas zgłoszenia rundy w strefie Europe/Warsaw, wyznacza niedzielę rozpoczynającą ten tydzień i zapisuje wynik pod tą datą.</li>
-              <li><strong>Ranking tygodniowy:</strong> liczy się najlepszy wynik gracza w danym tygodniu. Remisy rozstrzyga wyższy procent trafień, a potem wcześniejsze zgłoszenie.</li>
-              <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
-            </ul>
-          </div>
+      <!-- Whack-a-Boss panel (season 1) -->
+      <div id="seasonal-game-whack-boss">
+        <div class="wb-layout">
+          <section class="wb-game-panel">
+            <div class="wb-head">
+              <div>
+                <h2 class="page-title">Whack-a-Boss</h2>
+                <p class="page-sub">18 sekund, szybkie kliknięcia i cotygodniowy ranking z nagrodami.</p>
+              </div>
+              <div class="wb-prizes" aria-label="Nagrody tygodniowe">
+                <span class="wb-prize">🥇 100 🪙</span>
+                <span class="wb-prize">🥈 50 🪙</span>
+                <span class="wb-prize">🥉 25 🪙</span>
+              </div>
+            </div>
 
-          <div class="wb-stats">
-            <div class="wb-stat">
-              <div class="wb-stat-label">Czas</div>
-              <div class="wb-stat-value" id="wb-time">18.0</div>
+            <div class="wb-rules">
+              <div class="wb-rules-title">Jak grać i nagrody</div>
+              <ul>
+                <li><strong>18 sekund.</strong> Klikaj bossa za każdym razem, gdy pojawi się w polu gry.</li>
+                <li><strong>Tempo dopasowuje się do Ciebie:</strong> im szybciej trafiasz, tym krócej boss jest widoczny. Spudłowany boss daje chwilę oddechu.</li>
+                <li><strong>Punkty:</strong> każde trafienie = 1 pkt. <strong>Combo</strong> rośnie, gdy trafiasz bossów po kolei (każdy spudłowany boss zeruje combo).</li>
+                <li><strong>Tydzień:</strong> startuje w niedzielę o 00:00 i kończy się w sobotę o 23:59:59 (Europe/Warsaw). <span id="wb-week-window">Zakres bieżącego tygodnia pojawi się po wczytaniu rankingu.</span></li>
+                <li><strong>Jak liczymy tydzień:</strong> serwer bierze czas zgłoszenia rundy w strefie Europe/Warsaw, wyznacza niedzielę rozpoczynającą ten tydzień i zapisuje wynik pod tą datą.</li>
+                <li><strong>Ranking tygodniowy:</strong> liczy się najlepszy wynik gracza w danym tygodniu. Remisy rozstrzyga wyższy procent trafień, a potem wcześniejsze zgłoszenie.</li>
+                <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
+              </ul>
             </div>
-            <div class="wb-stat">
-              <div class="wb-stat-label">Wynik</div>
-              <div class="wb-stat-value" id="wb-score">0</div>
-            </div>
-            <div class="wb-stat">
-              <div class="wb-stat-label">Combo</div>
-              <div class="wb-stat-value" id="wb-combo">0</div>
-            </div>
-            <div class="wb-stat">
-              <div class="wb-stat-label">Skuteczność</div>
-              <div class="wb-stat-value" id="wb-accuracy">0%</div>
-            </div>
-          </div>
 
-          <div class="wb-arena" id="wb-arena">
-            <div class="wb-ready" id="wb-ready">
-              <strong>Gotowy?</strong>
-              <span>Klikaj bossa, gdy pojawi się w polu gry.</span>
+            <div class="wb-stats">
+              <div class="wb-stat">
+                <div class="wb-stat-label">Czas</div>
+                <div class="wb-stat-value" id="wb-time">18.0</div>
+              </div>
+              <div class="wb-stat">
+                <div class="wb-stat-label">Wynik</div>
+                <div class="wb-stat-value" id="wb-score">0</div>
+              </div>
+              <div class="wb-stat">
+                <div class="wb-stat-label">Combo</div>
+                <div class="wb-stat-value" id="wb-combo">0</div>
+              </div>
+              <div class="wb-stat">
+                <div class="wb-stat-label">Skuteczność</div>
+                <div class="wb-stat-value" id="wb-accuracy">0%</div>
+              </div>
             </div>
-            <button class="wb-target hidden" id="wb-target" type="button" aria-label="Boss">
-              <span class="wb-boss" aria-hidden="true">
-                <span class="wb-boss-head">
-                  <span class="wb-boss-hair"></span>
-                  <span class="wb-boss-glasses"></span>
-                  <span class="wb-boss-mouth"></span>
-                  <span class="wb-boss-tie"></span>
+
+            <div class="wb-arena" id="wb-arena">
+              <div class="wb-ready" id="wb-ready">
+                <strong>Gotowy?</strong>
+                <span>Klikaj bossa, gdy pojawi się w polu gry.</span>
+              </div>
+              <button class="wb-target hidden" id="wb-target" type="button" aria-label="Boss">
+                <span class="wb-boss" aria-hidden="true">
+                  <span class="wb-boss-head">
+                    <span class="wb-boss-hair"></span>
+                    <span class="wb-boss-glasses"></span>
+                    <span class="wb-boss-mouth"></span>
+                    <span class="wb-boss-tie"></span>
+                  </span>
                 </span>
-              </span>
-            </button>
-            <div class="wb-float-layer" id="wb-float-layer"></div>
-          </div>
+              </button>
+              <div class="wb-float-layer" id="wb-float-layer"></div>
+            </div>
 
-          <div class="wb-actions">
-            <button class="btn-primary wb-start-btn" id="wb-start-btn">Start rundy</button>
-            <div class="wb-status" id="wb-status">Najlepsze wyniki zapisują się automatycznie po rundzie.</div>
-          </div>
-        </section>
+            <div class="wb-actions">
+              <button class="btn-primary wb-start-btn" id="wb-start-btn">Start rundy</button>
+              <div class="wb-status" id="wb-status">Najlepsze wyniki zapisują się automatycznie po rundzie.</div>
+            </div>
+          </section>
 
-        <aside class="wb-board-panel">
-          <section>
-            <div class="wb-board-title">
-              <span>Ten tydzień</span>
-              <span class="wb-board-sub" id="wb-week-label"></span>
+          <aside class="wb-board-panel">
+            <section>
+              <div class="wb-board-title">
+                <span>Ten tydzień</span>
+                <span class="wb-board-sub" id="wb-week-label"></span>
+              </div>
+              <div id="wb-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="wb-board-title">
+                <span>All-time</span>
+                <span class="wb-board-sub">rekordy</span>
+              </div>
+              <div id="wb-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section class="wb-awards-section">
+              <div class="wb-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdy poniedziałek rano">wypłata: poniedziałek</span>
+              </div>
+              <div class="wb-awards" id="wb-awards"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
+
+      <!-- Bug Jumper panel (season 2) -->
+      <div id="seasonal-game-bug-jumper" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">Bug Jumper</h2>
+                <p class="page-sub">20 sekund, przeskakuj bugi i zdobywaj punkty — tempo rośnie z każdym przebiegiem.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 100 🪙</span>
+                <span class="bj-prize">🥈 50 🪙</span>
+                <span class="bj-prize">🥉 25 🪙</span>
+              </div>
             </div>
-            <div id="wb-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
-          </section>
-          <section>
-            <div class="wb-board-title">
-              <span>All-time</span>
-              <span class="wb-board-sub">rekordy</span>
+
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać i nagrody</div>
+              <ul>
+                <li><strong>20 sekund.</strong> Przeskakuj przez 3 linie bugów i dotrzyj do PRODUKCJI jak najczęściej.</li>
+                <li><strong>Strzałki ↑ / ↓</strong> lub klawisze <strong>W / S</strong> przesuwają dewelopera między liniami. Można też dotknąć lewej/prawej połowy areny na ekranie dotykowym.</li>
+                <li><strong>Punkty:</strong> każde udane przejście linii = +1 pkt. Dotarcie do PRODUKCJI = +1 pkt bonus (razem +4 za pełny przebieg).</li>
+                <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
+              </ul>
             </div>
-            <div id="wb-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
-          </section>
-          <section class="wb-awards-section">
-            <div class="wb-board-title">
-              <span>Ostatnie nagrody</span>
-              <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdy poniedziałek rano">wypłata: poniedziałek</span>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Czas</div>
+                <div class="bj-stat-value" id="bj-time">20.0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Wynik</div>
+                <div class="bj-stat-value" id="bj-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Tempo</div>
+                <div class="bj-stat-value" id="bj-speed">1.0×</div>
+              </div>
             </div>
-            <div class="wb-awards" id="wb-awards"></div>
+
+            <div class="bj-arena" id="bj-arena">
+              <div class="bj-prod-zone" id="bj-prod-zone">▶ PRODUKCJA ◀</div>
+              <div class="bj-lane" id="bj-lane-3"><span class="bj-lane-label">LINE 3</span></div>
+              <div class="bj-lane" id="bj-lane-2"><span class="bj-lane-label">LINE 2</span></div>
+              <div class="bj-lane" id="bj-lane-1"><span class="bj-lane-label">LINE 1</span></div>
+              <div class="bj-lane bj-safe-lane" id="bj-lane-0">
+                <span class="bj-start-label">START</span>
+              </div>
+              <div class="bj-player" id="bj-player">👨‍💻</div>
+              <div class="bj-ready" id="bj-ready">
+                <strong>Gotowy?</strong>
+                <span>Strzałki ↑↓ lub W/S — przeskakuj bugi do PRODUKCJI</span>
+              </div>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="bj-start-btn">Start rundy</button>
+              <div class="bj-status" id="bj-status">Najlepsze wyniki zapisują się automatycznie po rundzie.</div>
+            </div>
           </section>
-        </aside>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="bj-week-label"></span>
+              </div>
+              <div id="bj-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="bj-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdy poniedziałek rano">wypłata: poniedziałek</span>
+              </div>
+              <div class="bj-awards" id="bj-awards"></div>
+            </section>
+          </aside>
+        </div>
       </div>
     </main>
   </div>
@@ -2694,6 +2973,7 @@ let pokerClockTimer = null;
 let pokerTimeoutClaiming = false;
 let lastPokerStateMs = 0;
 let whackBossRuntime = null;
+let bugJumperRuntime = null;
 const lwCharts = new Map();
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
@@ -2890,6 +3170,14 @@ const wbTime          = document.getElementById('wb-time');
 const wbScore         = document.getElementById('wb-score');
 const wbCombo         = document.getElementById('wb-combo');
 const wbAccuracy      = document.getElementById('wb-accuracy');
+const bjArena         = document.getElementById('bj-arena');
+const bjReady         = document.getElementById('bj-ready');
+const bjPlayer        = document.getElementById('bj-player');
+const bjStartBtn      = document.getElementById('bj-start-btn');
+const bjStatus        = document.getElementById('bj-status');
+const bjTimeEl        = document.getElementById('bj-time');
+const bjScoreEl       = document.getElementById('bj-score');
+const bjSpeedEl       = document.getElementById('bj-speed');
 const modalOverlay    = document.getElementById('modal-overlay');
 const modalMarketName = document.getElementById('modal-market-name');
 const sideYesBtn      = document.getElementById('side-yes-btn');
@@ -3083,7 +3371,7 @@ document.querySelectorAll('.nav-tab').forEach(btn =>
 
 function switchTab(tab) {
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') stopWhackBossRound();
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); }
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   const tM = document.getElementById('tab-markets');
@@ -3112,7 +3400,7 @@ function switchTab(tab) {
     loadSlotsHistory();
   } else if (tab === 'whack-boss') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG);
-    loadWhackBossState();
+    loadSeasonalTab();
   } else if (tab === 'shop') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); show(tS); hide(tG);
     loadShop();
@@ -4042,6 +4330,13 @@ function setupRealtime() {
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whack_boss_weekly_awards' }, async () => {
       if (activeTab === 'whack-boss') loadWhackBossState(false);
+      await refreshMeCoins();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bug_jumper_scores' }, () => {
+      if (activeTab === 'whack-boss') loadBugJumperState(false);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bug_jumper_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') loadBugJumperState(false);
       await refreshMeCoins();
     })
     .subscribe();
@@ -5294,11 +5589,103 @@ async function loadSlotsHistory() {
   } catch (err) { /* silent */ }
 }
 
+// ── Seasonal Game Framework ───────────────────────────────────────────────
+
+const SEASONAL_SCHEDULE = [
+  { weekStart: '2026-05-17', gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
+  { weekStart: '2026-05-24', gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
+];
+
+function currentSeasonWeekStartStr() {
+  const now = new Date();
+  const warsawDateStr = now.toLocaleDateString('sv', { timeZone: 'Europe/Warsaw' });
+  const [y, m, d] = warsawDateStr.split('-').map(Number);
+  const warsawDate = new Date(Date.UTC(y, m - 1, d, 12));
+  const dow = warsawDate.getUTCDay();
+  const weekStartDate = new Date(Date.UTC(y, m - 1, d - dow, 12));
+  return weekStartDate.toISOString().slice(0, 10);
+}
+
+function getCurrentSeasonalEntry() {
+  const ws = currentSeasonWeekStartStr();
+  return SEASONAL_SCHEDULE.find(e => e.weekStart === ws) || SEASONAL_SCHEDULE[SEASONAL_SCHEDULE.length - 1];
+}
+
+function getNextSeasonalEntry() {
+  const ws = currentSeasonWeekStartStr();
+  const idx = SEASONAL_SCHEDULE.findIndex(e => e.weekStart === ws);
+  return idx >= 0 && idx + 1 < SEASONAL_SCHEDULE.length ? SEASONAL_SCHEDULE[idx + 1] : null;
+}
+
+function seasonDateFmt(weekStartStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStartStr || '');
+  if (!m) return weekStartStr;
+  const start = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12));
+  const end   = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + 6, 12));
+  const fmt = d => d.toLocaleDateString('pl-PL', { timeZone: 'UTC', day: '2-digit', month: '2-digit' });
+  return fmt(start) + '–' + fmt(end);
+}
+
+function loadSeasonalTab(showSpinner = true) {
+  const current = getCurrentSeasonalEntry();
+  const next    = getNextSeasonalEntry();
+
+  const headerEl = document.getElementById('seasonal-header');
+  if (headerEl) {
+    const range = seasonDateFmt(current.weekStart);
+    headerEl.replaceChildren(
+      el('span', { className: 'seasonal-bar-name' }, current.displayName),
+      el('span', {}, 'Sezon: ' + range),
+      el('span', { className: 'seasonal-chip active' }, 'aktywny')
+    );
+    show(headerEl);
+  }
+
+  const nextBar = document.getElementById('seasonal-next-bar');
+  if (nextBar) {
+    if (next) {
+      const fromDate = seasonDateFmt(next.weekStart).split('–')[0];
+      nextBar.replaceChildren(
+        el('span', {}, '🔜 Następny sezon: '),
+        el('strong', {}, next.displayName),
+        el('span', {}, ' · od ' + fromDate)
+      );
+      show(nextBar);
+    } else {
+      hide(nextBar);
+    }
+  }
+
+  const wbPanel       = document.getElementById('seasonal-game-whack-boss');
+  const bjPanel       = document.getElementById('seasonal-game-bug-jumper');
+  const archiveBanner = document.getElementById('seasonal-archive-banner');
+
+  if (current.gameType === 'whack_boss') {
+    if (wbPanel) show(wbPanel);
+    if (bjPanel) hide(bjPanel);
+    if (archiveBanner) hide(archiveBanner);
+    if (whackBossRuntime) whackBossRuntime.archiveMode = false;
+    loadWhackBossState(showSpinner);
+  } else if (current.gameType === 'bug_jumper') {
+    if (bjPanel) show(bjPanel);
+    if (wbPanel) hide(wbPanel);
+    if (archiveBanner) show(archiveBanner);
+    if (whackBossRuntime) whackBossRuntime.archiveMode = true;
+    loadBugJumperState(showSpinner);
+  } else {
+    if (wbPanel) show(wbPanel);
+    if (bjPanel) hide(bjPanel);
+    if (archiveBanner) hide(archiveBanner);
+    loadWhackBossState(showSpinner);
+  }
+}
+
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
 function newWhackBossRuntime() {
   return {
     playing: false,
     submitting: false,
+    archiveMode: false,
     roundId: null,
     durationMs: 18000,
     schedule: [],
@@ -5643,6 +6030,14 @@ async function finishWhackBossRound() {
   }
   updateWhackBossStats(0);
 
+  if (rt.archiveMode) {
+    rt.submitting = false;
+    if (wbReady) show(wbReady);
+    if (wbStatus) wbStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
+    if (wbStartBtn) { wbStartBtn.disabled = false; wbStartBtn.textContent = 'Zagraj ponownie'; }
+    return;
+  }
+
   try {
     const data = await invokeWhackBoss({
       action: 'submit',
@@ -5717,6 +6112,405 @@ if (wbArena) {
     rt.combo = 0;
     showWhackBossFloat('pudło', coords.x, coords.y, true);
     updateWhackBossStats(rt.durationMs - atMs);
+  });
+}
+
+// ── Bug Jumper ────────────────────────────────────────────────────────────
+
+const BJ_LANE_COUNT    = 3;           // lanes with bugs (indices 1-3; index 0 is safe start)
+const BJ_LANE_HEIGHT   = 60;          // px per lane (must match CSS .bj-lane height)
+const BJ_PROD_HEIGHT   = 44;          // px for production zone (must match CSS)
+const BJ_PLAYER_SIZE   = 22;          // approx px of player emoji for centering
+const BJ_HIT_RADIUS    = 11;          // % collision radius (player center ± this %)
+const BJ_DURATION_MS   = 20000;
+// Base bug x-speeds in %/sec for each lane (indices 0-2 → lanes 1-3)
+const BJ_BUG_SPEEDS    = [18, 22, 28];
+// Bug count per lane
+const BJ_BUG_COUNTS    = [2, 3, 2];
+// Direction: 1=left→right, -1=right→left
+const BJ_BUG_DIRS      = [1, -1, 1];
+// Bug emoji labels per lane (IT theme)
+const BJ_BUG_EMOJIS    = ['🐛', '💀', '🔥'];
+
+function newBugJumperRuntime() {
+  return {
+    playing: false,
+    submitting: false,
+    archiveMode: false,
+    roundId: null,
+    score: 0,
+    playerLane: 0,         // 0=safe start, 1-3=bug lanes, "4"=prod hit
+    lanes: bjInitLanes(),
+    speedMult: 1.0,
+    runCount: 0,           // how many times PROD was reached
+    durationMs: BJ_DURATION_MS,
+    startPerf: 0,
+    rafId: null,
+    lastTs: 0,
+    invincible: false,     // brief invincibility after getting hit
+    invincEnd: 0,
+    inputCooldown: 0,      // prevent key repeat spam
+  };
+}
+
+function bjInitLanes() {
+  return Array.from({ length: BJ_LANE_COUNT }, (_, li) => ({
+    dir:   BJ_BUG_DIRS[li],
+    speed: BJ_BUG_SPEEDS[li],
+    emoji: BJ_BUG_EMOJIS[li],
+    bugs: Array.from({ length: BJ_BUG_COUNTS[li] }, (_, bi) => ({
+      x: (bi / BJ_BUG_COUNTS[li]) * 100 + (Math.random() - 0.5) * 15,
+    })),
+  }));
+}
+
+async function invokeBugJumper(payload) {
+  const { data, error } = await sb.functions.invoke('bug-jumper-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z Bug Jumper.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Bug Jumper.');
+  return data;
+}
+
+async function loadBugJumperState(showSpinner = true) {
+  const weeklyWrap  = document.getElementById('bj-weekly-board');
+  const allTimeWrap = document.getElementById('bj-alltime-board');
+  const awardsWrap  = document.getElementById('bj-awards');
+  if (showSpinner) {
+    if (weeklyWrap)  weeklyWrap.replaceChildren(makeSpinner());
+    if (allTimeWrap) allTimeWrap.replaceChildren(makeSpinner());
+    if (awardsWrap)  awardsWrap.replaceChildren();
+  }
+
+  try {
+    const data = await invokeBugJumper({ action: 'state' });
+    renderBugJumperState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać gry.';
+    if (weeklyWrap)  weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, msg));
+    if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Brak danych.'));
+    if (awardsWrap)  awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+    if (bjStatus) bjStatus.textContent = 'Bug Jumper nie jest jeszcze aktywny.';
+  }
+}
+
+function renderBugJumperState(data) {
+  if (data.profile) {
+    me.coins = data.profile.coins;
+    setText(headerCoins, me.coins);
+  }
+
+  const weekLabel = document.getElementById('bj-week-label');
+  if (weekLabel) {
+    const range = whackBossWeekRange(data.weekStart); // reuse date helper
+    weekLabel.textContent = range ? range.short : '';
+  }
+
+  renderBugJumperTable(document.getElementById('bj-weekly-board'), data.weekly || [], 'weekly');
+  renderBugJumperTable(document.getElementById('bj-alltime-board'), data.allTime || [], 'allTime');
+  renderBugJumperAwards(document.getElementById('bj-awards'), data.awards || []);
+
+  if (!bugJumperRuntime?.playing && bjStatus) {
+    if (data.myWeekly) {
+      bjStatus.textContent = 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.';
+    } else {
+      bjStatus.textContent = 'Najlepsze wyniki zapisują się automatycznie po rundzie.';
+    }
+  }
+}
+
+function renderBugJumperTable(wrap, rows, mode) {
+  if (!wrap) return;
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+  const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
+    el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-net' }, String(row.score))
+  ));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik' }, 'Wynik'))),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderBugJumperAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  const rows = awards.slice(0, 6).map(row => {
+    const range = whackBossWeekRange(row.week_start);
+    const label = range?.short || '';
+    return el('div', { className: 'bj-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  });
+  wrap.replaceChildren(...rows);
+}
+
+function bjArenaHeight() {
+  return BJ_PROD_HEIGHT + (BJ_LANE_COUNT + 1) * BJ_LANE_HEIGHT; // prod + 4 lanes (0 safe + 1-3 bug)
+}
+
+function bjPlayerBottom(lane) {
+  // Bottom of lane 0 = 0, each lane is BJ_LANE_HEIGHT px tall
+  return lane * BJ_LANE_HEIGHT + (BJ_LANE_HEIGHT - BJ_PLAYER_SIZE) / 2;
+}
+
+function bjRenderArena() {
+  const rt = bugJumperRuntime;
+  if (!rt || !bjArena || !bjPlayer) return;
+
+  // Update player position
+  bjPlayer.style.bottom = bjPlayerBottom(rt.playerLane) + 'px';
+
+  // Highlight active lane
+  for (let i = 0; i <= BJ_LANE_COUNT; i++) {
+    const laneEl = document.getElementById('bj-lane-' + i);
+    if (laneEl) laneEl.classList.toggle('bj-active', i === rt.playerLane && i > 0);
+  }
+
+  // Update bug positions
+  rt.lanes.forEach((lane, li) => {
+    const laneEl = document.getElementById('bj-lane-' + (li + 1));
+    if (!laneEl) return;
+    const bugEls = laneEl.querySelectorAll('.bj-bug');
+    lane.bugs.forEach((bug, bi) => {
+      const bugEl = bugEls[bi];
+      if (bugEl) bugEl.style.left = bug.x + '%';
+    });
+  });
+}
+
+function bjMoveBugs(dt) {
+  const rt = bugJumperRuntime;
+  if (!rt) return;
+  rt.lanes.forEach(lane => {
+    lane.bugs.forEach(bug => {
+      bug.x += lane.dir * lane.speed * rt.speedMult * dt;
+      if (bug.x > 105) bug.x -= 115;
+      if (bug.x < -10) bug.x += 115;
+    });
+  });
+}
+
+function bjCheckCollision(targetLane) {
+  const rt = bugJumperRuntime;
+  if (!rt || targetLane <= 0 || targetLane > BJ_LANE_COUNT) return false;
+  const lane = rt.lanes[targetLane - 1];
+  return lane.bugs.some(bug => Math.abs(bug.x - 50) < BJ_HIT_RADIUS + 5);
+}
+
+function bjPlayerHit() {
+  const rt = bugJumperRuntime;
+  if (!rt || rt.invincible) return;
+  rt.playerLane = 0;
+  rt.invincible = true;
+  rt.invincEnd  = performance.now() + 500;
+  if (bjPlayer) {
+    bjPlayer.classList.remove('hit');
+    void bjPlayer.offsetWidth;
+    bjPlayer.classList.add('hit');
+    setTimeout(() => bjPlayer.classList.remove('hit'), 400);
+  }
+}
+
+function bjMovePlayer(dir) {
+  const rt = bugJumperRuntime;
+  if (!rt?.playing) return;
+  const now = performance.now();
+  if (now < rt.inputCooldown) return;
+  rt.inputCooldown = now + 120;
+
+  if (rt.invincible && now < rt.invincEnd) return;
+  rt.invincible = false;
+
+  const newLane = rt.playerLane + dir;
+  if (newLane < 0) return;
+
+  if (newLane > BJ_LANE_COUNT) {
+    // Reached PRODUCTION!
+    rt.score += 1;
+    rt.runCount += 1;
+    rt.speedMult = Math.min(4.0, 1.0 + rt.runCount * 0.25);
+    rt.playerLane = 0;
+    // Flash production zone
+    const prodEl = document.getElementById('bj-prod-zone');
+    if (prodEl) {
+      prodEl.style.background = 'rgba(34,197,94,.4)';
+      setTimeout(() => { if (prodEl) prodEl.style.background = ''; }, 200);
+    }
+    return;
+  }
+
+  // Check collision in target lane (only when moving up into a bug lane)
+  if (dir > 0 && newLane >= 1 && bjCheckCollision(newLane)) {
+    rt.playerLane = newLane; // briefly show in hit lane
+    bjRenderArena();
+    bjPlayerHit();
+    return;
+  }
+
+  rt.playerLane = newLane;
+  if (dir > 0 && newLane >= 1) rt.score += 1;
+}
+
+function bjTick(ts) {
+  const rt = bugJumperRuntime;
+  if (!rt?.playing) return;
+
+  const dt = rt.lastTs ? Math.min(50, ts - rt.lastTs) / 1000 : 0;
+  rt.lastTs = ts;
+
+  const elapsed   = ts - rt.startPerf;
+  const remaining = rt.durationMs - elapsed;
+
+  if (bjTimeEl)  bjTimeEl.textContent  = Math.max(0, remaining / 1000).toFixed(1);
+  if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
+  if (bjSpeedEl) bjSpeedEl.textContent = rt.speedMult.toFixed(2) + '×';
+
+  if (remaining <= 0) {
+    finishBugJumperRound();
+    return;
+  }
+
+  // Continuous collision check while standing in a bug lane (not invincible)
+  if (rt.playerLane >= 1 && !rt.invincible) {
+    if (bjCheckCollision(rt.playerLane)) bjPlayerHit();
+  }
+  if (rt.invincible && ts >= rt.invincEnd) rt.invincible = false;
+
+  bjMoveBugs(dt);
+  bjRenderArena();
+
+  rt.rafId = requestAnimationFrame(bjTick);
+}
+
+function stopBugJumperRound() {
+  const rt = bugJumperRuntime;
+  if (rt?.rafId) cancelAnimationFrame(rt.rafId);
+  bugJumperRuntime = newBugJumperRuntime();
+  if (bjArena) bjArena.classList.remove('playing');
+  if (bjReady) show(bjReady);
+  if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
+  if (bjTimeEl)  bjTimeEl.textContent  = '20.0';
+  if (bjScoreEl) bjScoreEl.textContent = '0';
+  if (bjSpeedEl) bjSpeedEl.textContent = '1.0×';
+}
+
+function beginBugJumperRound(round) {
+  stopBugJumperRound();
+  bugJumperRuntime = newBugJumperRuntime();
+  const rt = bugJumperRuntime;
+  rt.playing    = true;
+  rt.roundId    = round.id;
+  rt.durationMs = round.durationMs || BJ_DURATION_MS;
+  const serverElapsed = round.startedAt && round.serverNow
+    ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
+    : 0;
+  rt.startPerf = performance.now() - serverElapsed;
+
+  if (bjReady) hide(bjReady);
+  if (bjArena) bjArena.classList.add('playing');
+  if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Runda trwa'; }
+  if (bjStatus) bjStatus.textContent = 'Strzałki ↑↓ lub W/S — przeskakuj bugi!';
+
+  // Build bug elements in their lanes
+  rt.lanes.forEach((lane, li) => {
+    const laneEl = document.getElementById('bj-lane-' + (li + 1));
+    if (!laneEl) return;
+    laneEl.querySelectorAll('.bj-bug').forEach(b => b.remove());
+    lane.bugs.forEach(bug => {
+      const bugEl = el('span', { className: 'bj-bug' }, lane.emoji);
+      bugEl.style.left = bug.x + '%';
+      laneEl.appendChild(bugEl);
+    });
+  });
+
+  bjRenderArena();
+  rt.rafId = requestAnimationFrame(bjTick);
+}
+
+async function startBugJumperRound() {
+  const rt = bugJumperRuntime;
+  if (rt?.playing || rt?.submitting) return;
+  if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Ładuję...'; }
+  if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę.';
+
+  try {
+    const data = await invokeBugJumper({ action: 'start' });
+    renderBugJumperState(data);
+    beginBugJumperRound(data.round);
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (bjStatus) bjStatus.textContent = 'Nie udało się wystartować rundy.';
+    if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
+  }
+}
+
+async function finishBugJumperRound() {
+  const rt = bugJumperRuntime;
+  if (!rt || rt.submitting) return;
+  rt.playing    = false;
+  rt.submitting = true;
+  if (rt.rafId) cancelAnimationFrame(rt.rafId);
+  if (bjArena) bjArena.classList.remove('playing');
+  if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Zapisuję...'; }
+  if (bjStatus) bjStatus.textContent = 'Zapisuję wynik...';
+  if (bjTimeEl) bjTimeEl.textContent = '0.0';
+
+  if (rt.archiveMode) {
+    rt.submitting = false;
+    if (bjReady) show(bjReady);
+    if (bjStatus) bjStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
+    if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Zagraj ponownie'; }
+    return;
+  }
+
+  try {
+    const data = await invokeBugJumper({
+      action:   'submit',
+      roundId:  rt.roundId,
+      score:    rt.score,
+      hits:     rt.score,
+      misses:   0,
+      maxCombo: rt.runCount,
+    });
+    renderBugJumperState(data);
+    showToast('✅ Wynik zapisany: ' + data.score.score);
+    if (bjStatus) bjStatus.textContent = 'Ostatni wynik: ' + data.score.score + '.';
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (bjStatus) bjStatus.textContent = 'Nie udało się zapisać wyniku.';
+  } finally {
+    rt.submitting = false;
+    if (bjReady) show(bjReady);
+    if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Zagraj ponownie'; }
+  }
+}
+
+if (bjStartBtn) bjStartBtn.addEventListener('click', startBugJumperRound);
+
+// Keyboard controls for Bug Jumper
+document.addEventListener('keydown', evt => {
+  if (!bugJumperRuntime?.playing) return;
+  if (evt.key === 'ArrowUp'   || evt.key === 'w' || evt.key === 'W') { evt.preventDefault(); bjMovePlayer(1); }
+  if (evt.key === 'ArrowDown' || evt.key === 's' || evt.key === 'S') { evt.preventDefault(); bjMovePlayer(-1); }
+});
+
+// Touch controls: tap left half = down, tap right half = up
+if (bjArena) {
+  bjArena.addEventListener('click', evt => {
+    if (!bugJumperRuntime?.playing) return;
+    const rect = bjArena.getBoundingClientRect();
+    const x = evt.clientX - rect.left;
+    bjMovePlayer(x < rect.width / 2 ? -1 : 1);
   });
 }
 
