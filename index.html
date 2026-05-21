@@ -2970,7 +2970,7 @@ function computeBet(m, side, X) {
 }
 
 function fmtPct(p) { return (p * 100).toFixed(1) + '%'; }
-function fmtNum(n) { return (+n).toFixed(2); }
+function fmtNum(n) { return Math.round(+n).toString(); }
 function fmtCoins(n) { return String(Math.round(+n || 0)); }
 
 function fmtSignedCoins(n, approx = false) {
