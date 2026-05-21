@@ -6369,7 +6369,7 @@ function bjMovePlayer(dr, dc) {
   if (newRow >= BJ_ROWS - 1) {
     if (newRow > rt.maxRowReached) {
       rt.score += 1;
-      rt.toasts.push({ text: '+1 ↺  = ' + rt.score, col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
+      rt.toasts.push({ text: String(rt.score), col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
       if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
     }
     rt.runCount++;
@@ -6384,7 +6384,7 @@ function bjMovePlayer(dr, dc) {
   if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT && newRow > rt.maxRowReached) {
     rt.maxRowReached = newRow;
     rt.score += 1;
-    rt.toasts.push({ text: '+1 Linia ' + newRow + '  = ' + rt.score, col: rt.playerCol, row: newRow, born: now, color: '#0055cc' });
+    rt.toasts.push({ text: String(rt.score), col: rt.playerCol, row: newRow, born: now, color: '#0055cc' });
   }
   rt.playerRow = newRow;
   if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
