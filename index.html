@@ -1467,7 +1467,7 @@
     .bj-arena {
       border: 3px solid #222; border-radius: 6px;
       background: #fff; overflow: hidden;
-      aspect-ratio: 2 / 1; width: 100%; max-width: 640px; margin: 0 auto;
+      aspect-ratio: 1 / 1; width: 100%; max-width: 640px; margin: 0 auto;
       user-select: none; touch-action: none;
     }
     .bj-arena canvas { width: 100%; height: 100%; display: block; }
@@ -2653,7 +2653,7 @@
               <ul>
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera ▲ po siatce.</li>
                 <li>Przejedź przez 3 linie z poruszającymi się blokami i dotrzyj do <strong>PRODUKCJI</strong> (+1 pkt za każdą linię).</li>
-                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz 3 życia na rundę.</li>
+                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz 5 żyć na rundę.</li>
                 <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙</li>
               </ul>
             </div>
@@ -2669,7 +2669,7 @@
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Życia</div>
-                <div class="bj-stat-value" id="bj-lives">♥♥♥</div>
+                <div class="bj-stat-value" id="bj-lives">♥♥♥♥♥</div>
               </div>
             </div>
 
@@ -6065,29 +6065,32 @@ if (wbArena) {
 // ── Bug Jumper (canvas) ───────────────────────────────────────────────────
 
 const BJ_COLS        = 10;
-const BJ_ROWS        = 5;        // 0=start, 1-3=lanes, 4=prod
-const BJ_LANE_COUNT  = 3;
-const BJ_CELL        = 64;       // square cell px — all objects snap to this grid
-const BJ_CW          = BJ_CELL;
-const BJ_CH          = BJ_CELL;
+const BJ_ROWS        = 10;       // 0=start, 1-8=lanes, 9=prod
+const BJ_LANE_COUNT  = 8;
+const BJ_CELL        = 64;       // square cell px
 const BJ_CS_W        = BJ_COLS * BJ_CELL;  // 640
-const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 320
+const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 640
 const BJ_DURATION_MS = 20000;
-const BJ_LIVES       = 3;
+const BJ_LIVES       = 5;
 
-// Obstacle speed px/s, direction, count, width (always BJ_CELL for full square)
+// Grid-step obstacles: interval (ms per cell step), direction, count
 const BJ_LANE_DEFS = [
-  { speed: 65, dir:  1, count: 3, obstW: BJ_CELL },
-  { speed: 90, dir: -1, count: 4, obstW: BJ_CELL },
-  { speed: 75, dir:  1, count: 3, obstW: BJ_CELL },
+  { interval: 700, dir:  1, count: 2 },
+  { interval: 550, dir: -1, count: 2 },
+  { interval: 650, dir:  1, count: 2 },
+  { interval: 500, dir: -1, count: 2 },
+  { interval: 750, dir:  1, count: 2 },
+  { interval: 600, dir: -1, count: 2 },
+  { interval: 680, dir:  1, count: 2 },
+  { interval: 520, dir: -1, count: 2 },
 ];
 
 function bjInitLanes() {
   return BJ_LANE_DEFS.map(def => ({
-    dir: def.dir, speed: def.speed,
+    dir: def.dir, interval: def.interval,
+    nextStep: 0,
     bugs: Array.from({ length: def.count }, (_, i) => ({
-      x: (BJ_CS_W / def.count) * i + Math.random() * 16 - 8,
-      w: def.obstW,
+      col: Math.floor((BJ_COLS / def.count) * i),
     })),
   }));
 }
@@ -6102,7 +6105,7 @@ function newBugJumperRuntime() {
     lanes: bjInitLanes(),
     speedMult: 1.0, runCount: 0,
     durationMs: BJ_DURATION_MS,
-    startPerf: 0, rafId: null, lastTs: 0,
+    startPerf: 0, rafId: null,
     invincible: false, invincEnd: 0,
     hitFlash: 0, prodFlash: 0,
     inputCooldown: 0,
@@ -6154,29 +6157,27 @@ function bjDraw(now) {
   // ── Row labels ──
   ctx.font = 'bold 8px monospace';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  const rowLabels = ['START', 'LINIA 1', 'LINIA 2', 'LINIA 3', 'PRODUKCJA'];
   for (let row = 0; row < BJ_ROWS; row++) {
+    let label;
+    if (row === 0) label = 'START';
+    else if (row === BJ_ROWS - 1) label = 'PRODUKCJA';
+    else label = 'LINIA ' + row;
     ctx.fillStyle = row === BJ_ROWS - 1 ? 'rgba(0,80,0,0.45)' : 'rgba(0,0,0,0.2)';
-    ctx.fillText(rowLabels[row], 3, (BJ_ROWS - 1 - row) * C + 3);
+    ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
   }
 
   if (rt) {
-    // ── Obstacles — solid full-cell squares ──
+    // ── Obstacles — solid full-cell squares (grid-snapped) ──
     rt.lanes.forEach((lane, li) => {
       const row = li + 1;
       const ry = (BJ_ROWS - 1 - row) * C;
       lane.bugs.forEach(bug => {
-        const drawAt = (bx) => {
-          ctx.fillStyle = '#111';
-          ctx.fillRect(bx, ry, C, C);
-          // 1-px inset highlight to keep grid visible
-          ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
-        };
-        drawAt(bug.x);
-        if (bug.x + C > W) drawAt(bug.x - W);
-        if (bug.x < 0)      drawAt(bug.x + W);
+        const bx = bug.col * C;
+        ctx.fillStyle = '#111';
+        ctx.fillRect(bx, ry, C, C);
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
       });
     });
 
@@ -6296,19 +6297,17 @@ function renderBugJumperAwards(wrap, awards) {
   }));
 }
 
-function bjMoveBugs(dt) {
+function bjMoveBugs(ts) {
   const rt = bugJumperRuntime;
   if (!rt) return;
   rt.lanes.forEach(lane => {
+    if (ts < lane.nextStep) return;
+    lane.nextStep = ts + lane.interval / rt.speedMult;
     lane.bugs.forEach(bug => {
-      bug.x += lane.dir * lane.speed * rt.speedMult * dt;
-      if (bug.x > BJ_CS_W)    bug.x -= BJ_CS_W + bug.w;
-      if (bug.x < -bug.w)     bug.x += BJ_CS_W + bug.w;
+      bug.col = ((bug.col + lane.dir) + BJ_COLS) % BJ_COLS;
     });
   });
 }
-
-function overlapX(a1, a2, b1, b2) { return a1 < b2 && a2 > b1; }
 
 function bjCheckCollision() {
   const rt = bugJumperRuntime;
@@ -6316,15 +6315,7 @@ function bjCheckCollision() {
   const row = rt.playerRow;
   if (row < 1 || row >= BJ_ROWS - 1) return false;
   const lane = rt.lanes[row - 1];
-  const M = 3;
-  const px1 = rt.playerCol * BJ_CELL + M;
-  const px2 = px1 + BJ_CELL - M * 2;
-  return lane.bugs.some(bug => {
-    const bx = bug.x, bw = bug.w;
-    return overlapX(px1, px2, bx, bx + bw) ||
-           overlapX(px1, px2, bx - BJ_CS_W, bx - BJ_CS_W + bw) ||
-           overlapX(px1, px2, bx + BJ_CS_W, bx + BJ_CS_W + bw);
-  });
+  return lane.bugs.some(bug => bug.col === rt.playerCol);
 }
 
 function bjPlayerHit() {
@@ -6333,7 +6324,7 @@ function bjPlayerHit() {
   rt.lives--;
   rt.hitFlash   = performance.now();
   rt.invincible = true;
-  rt.invincEnd  = performance.now() + 1100;
+  rt.invincEnd  = performance.now() + 1800;
   rt.playerRow  = 0;
   rt.playerCol  = Math.floor(BJ_COLS / 2);
   if (bjLivesEl) bjLivesEl.textContent = '♥'.repeat(Math.max(0, rt.lives));
@@ -6374,16 +6365,13 @@ function bjTick(ts) {
   const rt = bugJumperRuntime;
   if (!rt?.playing) return;
 
-  const dt = rt.lastTs ? Math.min(50, ts - rt.lastTs) / 1000 : 0;
-  rt.lastTs = ts;
-
   const remaining = rt.durationMs - (ts - rt.startPerf);
   if (bjTimeEl) bjTimeEl.textContent = Math.max(0, remaining / 1000).toFixed(1);
   if (remaining <= 0) { finishBugJumperRound(); return; }
 
   if (rt.invincible && ts >= rt.invincEnd) rt.invincible = false;
 
-  bjMoveBugs(dt);
+  bjMoveBugs(ts);
   if (rt.playerRow >= 1 && rt.playerRow <= BJ_LANE_COUNT && !rt.invincible) {
     if (bjCheckCollision()) bjPlayerHit();
   }
@@ -6398,7 +6386,7 @@ function stopBugJumperRound() {
   if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
   if (bjTimeEl)  bjTimeEl.textContent  = '20.0';
   if (bjScoreEl) bjScoreEl.textContent = '0';
-  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
+  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥♥♥';
   bjInitCanvas();
   bjDraw(performance.now());
 }
@@ -6416,7 +6404,7 @@ function beginBugJumperRound(round) {
   rt.startPerf = performance.now() - serverElapsed;
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Runda trwa'; }
   if (bjStatus) bjStatus.textContent = '↑ ↓ ← → — strzałki. Dotrzyj do PRODUKCJI!';
-  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥';
+  if (bjLivesEl) bjLivesEl.textContent = '♥♥♥♥♥';
   rt.rafId = requestAnimationFrame(bjTick);
 }
 
