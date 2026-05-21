@@ -3,3 +3,6 @@ verify_jwt = true
 
 [functions.whack-boss-action]
 verify_jwt = true
+
+[functions.bug-jumper-action]
+verify_jwt = true
