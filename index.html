@@ -2639,7 +2639,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Bug Jumper</h2>
-                <p class="page-sub">20 sekund, przeskakuj bugi do PRODUKCJI.</p>
+                <p class="page-sub">20 sekund — przeskocz przez linie z blokami i dotrzyj do PRODUKCJI.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -2651,10 +2651,11 @@
             <div class="bj-rules">
               <div class="bj-rules-title">Jak grać</div>
               <ul>
-                <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera ▲ po siatce.</li>
-                <li>Przejedź przez 3 linie z poruszającymi się blokami i dotrzyj do <strong>PRODUKCJI</strong> (+1 pkt za każdą linię).</li>
-                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz 3 życia na rundę.</li>
-                <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙</li>
+                <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera <strong>▲</strong> po siatce.</li>
+                <li><strong>+1 pkt za każdą linię</strong> przekroczoną w górę — LINIA 1, LINIA 2, LINIA 3 dają po 1 punkcie.</li>
+                <li><strong>+1 pkt bonus</strong> gdy dotrzesz do <strong>PRODUKCJI</strong> (górny rząd) — i wracasz na START, żeby powtórzyć.</li>
+                <li>Jeden pełny przebieg (START → PRODUKCJA) = <strong>4 punkty</strong>. Im więcej przebiegów, tym lepiej.</li>
+                <li>Zderzenie z blokiem = tracisz życie ♥ i wracasz na START. Masz <strong>3 życia</strong> na rundę.</li>
               </ul>
             </div>
 
@@ -6105,6 +6106,7 @@ function newBugJumperRuntime() {
     invincible: false, invincEnd: 0,
     hitFlash: 0, prodFlash: 0,
     inputCooldown: 0,
+    toasts: [],
   };
 }
 
@@ -6193,6 +6195,26 @@ function bjDraw(now) {
       ctx.fillText('▲', px + C / 2, py + C / 2);
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     }
+  }
+
+  // ── Score toasts ──
+  if (rt?.toasts?.length) {
+    rt.toasts = rt.toasts.filter(t => now - t.born < 900);
+    rt.toasts.forEach(t => {
+      const age = now - t.born;
+      const alpha = Math.max(0, 1 - age / 900);
+      const tx = t.col * C + C / 2;
+      const ty = (BJ_ROWS - 1 - t.row) * C - age * 0.045;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = 'bold 13px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = t.text.includes('PRODUKCJA') ? '#007700' : '#0055cc';
+      ctx.fillText(t.text, tx, ty);
+      ctx.restore();
+    });
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   }
 
   // ── Idle overlay ──
@@ -6353,6 +6375,7 @@ function bjMovePlayer(dr, dc) {
     rt.runCount++;
     rt.speedMult = Math.min(2.5, 1.0 + rt.runCount * 0.12);
     rt.prodFlash = now;
+    rt.toasts.push({ text: '+1 PRODUKCJA!', col: rt.playerCol, row: newRow, born: now });
     rt.playerRow = 0;
     rt.playerCol = Math.floor(BJ_COLS / 2);
     rt.invincible = false;
@@ -6360,7 +6383,10 @@ function bjMovePlayer(dr, dc) {
     return;
   }
 
-  if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT) rt.score += 1;
+  if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT) {
+    rt.score += 1;
+    rt.toasts.push({ text: '+1 Linia ' + newRow, col: rt.playerCol, row: newRow, born: now });
+  }
   rt.playerRow = newRow;
   if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
 }
