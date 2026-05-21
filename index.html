@@ -471,6 +471,12 @@
     .ranking-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px var(--acc-dim); }
     .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
     .ranking-card-body { flex: 1; overflow: hidden; }
+    .season-history-section { padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .season-history-section:last-child { border-bottom: none; padding-bottom: 0; }
+    .season-history-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+    .season-history-title { font-weight: 800; font-size: 13px; }
+    .season-history-range { color: var(--muted); font-size: 11px; }
+    .season-history-pending { color: var(--muted); font-size: 12px; font-style: italic; margin: 0; }
     .lb-table-compact { width: 100%; border-collapse: collapse; min-width: 0; }
     .lb-table-compact th {
       text-align: left; font-size: 9px; color: var(--muted); text-transform: uppercase;
@@ -2319,6 +2325,12 @@
         <div class="ranking-card" data-detail="hazard-history">
           <div class="ranking-card-title">🎰 Historia — Hazard</div>
           <div class="ranking-card-body" id="hazard-history-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card" data-detail="seasons">
+          <div class="ranking-card-title">🎮 Sezony Growe</div>
+          <div class="ranking-card-body" id="seasons-preview-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
@@ -4557,6 +4569,70 @@ async function resolveActiveMarket(resolution) {
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────
+let _seasonHistory = null;
+
+function buildSeasonHistorySections(container, compact) {
+  const medals = ['🥇', '🥈', '🥉'];
+  const current = getCurrentSeasonalEntry();
+  const seasons = compact
+    ? [...SEASONAL_SCHEDULE].reverse().slice(0, 2)
+    : [...SEASONAL_SCHEDULE].reverse();
+
+  seasons.forEach((entry, revIdx) => {
+    const seasonNum = compact
+      ? SEASONAL_SCHEDULE.length - revIdx
+      : SEASONAL_SCHEDULE.length - revIdx;
+    const isCurrent = current.weekStart === entry.weekStart;
+    const awards = (_seasonHistory || []).filter(a => a.gameType === entry.gameType && a.week_start === entry.weekStart);
+    const range = seasonDateFmt(entry.weekStart);
+
+    const head = el('div', { className: 'season-history-head' },
+      el('span', { className: 'season-history-title' }, 'Sezon ' + seasonNum + ' · ' + entry.displayName),
+      el('span', { className: 'season-history-range' }, range),
+      isCurrent ? el('span', { className: 'seasonal-chip active' }, 'aktywny') : null
+    );
+    const section = el('div', { className: 'season-history-section' }, head);
+
+    if (awards.length === 0) {
+      section.append(el('p', { className: 'season-history-pending' },
+        isCurrent ? '⏳ Trwa — nagrody wypłacane w poniedziałek.' : 'Brak danych o nagrodach.'
+      ));
+    } else {
+      const table = el('table', { className: 'lb-table-compact' });
+      awards.slice(0, compact ? 3 : 10).forEach(a => {
+        table.append(el('tr', {},
+          el('td', { className: 'lb-rank' }, medals[a.rank - 1] || String(a.rank)),
+          el('td', { className: 'lb-nick' + (a.nick === me?.nick ? ' me' : '') }, a.nick + (a.nick === me?.nick ? ' (Ty)' : '')),
+          el('td', { className: 'lb-score' }, String(a.score) + ' pkt'),
+          el('td', { className: 'lb-coins' }, '+' + a.prize_coins + ' 🪙')
+        ));
+      });
+      section.append(table);
+    }
+    container.append(section);
+  });
+}
+
+async function loadSeasonHistory() {
+  const wrap = document.getElementById('seasons-preview-wrap');
+  try {
+    const [wbRes, bjRes] = await Promise.all([
+      sb.from('whack_boss_recent_awards').select('week_start,nick,rank,score,prize_coins').order('week_start', { ascending: false }).order('rank'),
+      sb.from('bug_jumper_recent_awards').select('week_start,nick,rank,score,prize_coins').order('week_start', { ascending: false }).order('rank'),
+    ]);
+    _seasonHistory = [
+      ...(wbRes.data || []).map(r => ({ ...r, gameType: 'whack_boss' })),
+      ...(bjRes.data || []).map(r => ({ ...r, gameType: 'bug_jumper' })),
+    ];
+    if (wrap) {
+      wrap.replaceChildren();
+      buildSeasonHistorySections(wrap, true);
+    }
+  } catch {
+    if (wrap) wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px' } }, 'Błąd ładowania.'));
+  }
+}
+
 async function loadLeaderboard() {
   const wrap = document.getElementById('leaderboard-wrap');
   const historyWrap = document.getElementById('transaction-history-wrap');
@@ -4568,6 +4644,7 @@ async function loadLeaderboard() {
   hazardistaWrap.replaceChildren(makeSpinner());
   showAllTransactions = false;
   showAllHazard = false;
+  loadSeasonHistory();
 
   const [leaderboardRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes] = await Promise.all([
     sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20),
@@ -4866,6 +4943,9 @@ function renderHazardHistory(wrap, rowsData) {
     } else if (detail === 'hazard-history') {
       title.textContent = '🎰 Historia — Hazard';
       renderFullHazardHistory(body);
+    } else if (detail === 'seasons') {
+      title.textContent = '🎮 Historia Sezonów Growych';
+      buildSeasonHistorySections(body, false);
     }
     overlay.classList.remove('hidden');
   }
@@ -5564,10 +5644,11 @@ function loadSeasonalTab(showSpinner = true) {
 
   const headerEl = document.getElementById('seasonal-header');
   if (headerEl) {
+    const seasonNum = SEASONAL_SCHEDULE.indexOf(current) + 1;
     const range = seasonDateFmt(current.weekStart);
     headerEl.replaceChildren(
-      el('span', { className: 'seasonal-bar-name' }, current.displayName),
-      el('span', {}, 'Sezon: ' + range),
+      el('span', { className: 'seasonal-bar-name' }, 'Sezon ' + seasonNum + ' · ' + current.displayName),
+      el('span', {}, range),
       el('span', { className: 'seasonal-chip active' }, 'aktywny')
     );
     show(headerEl);
