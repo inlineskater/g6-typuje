@@ -6205,7 +6205,7 @@ function bjDraw(now) {
       ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillStyle = t.text.includes('PRODUKCJA') ? '#007700' : '#0055cc';
+      ctx.fillStyle = t.color || '#0055cc';
       ctx.fillText(t.text, tx, ty);
       ctx.restore();
     });
@@ -6342,13 +6342,15 @@ function bjCheckCollision() {
 function bjPlayerHit() {
   const rt = bugJumperRuntime;
   if (!rt || rt.invincible) return;
+  const hitRow = rt.playerRow;
+  const hitCol = rt.playerCol;
   rt.hitFlash      = performance.now();
   rt.invincible    = true;
   rt.invincEnd     = performance.now() + 1500;
   rt.playerRow     = 0;
   rt.playerCol     = Math.floor(BJ_COLS / 2);
   rt.maxRowReached = 0;
-  if (bjStatus) bjStatus.textContent = 'Blok! Wróciłeś na START — zdobyłeś punkty zostają.';
+  rt.toasts.push({ text: 'HIT! → START', col: hitCol, row: hitRow, born: performance.now(), color: '#cc0000' });
 }
 
 function bjMovePlayer(dr, dc) {
@@ -6367,7 +6369,7 @@ function bjMovePlayer(dr, dc) {
   if (newRow >= BJ_ROWS - 1) {
     if (newRow > rt.maxRowReached) {
       rt.score += 1;
-      rt.toasts.push({ text: '+1 ↺', col: rt.playerCol, row: BJ_ROWS - 1, born: now });
+      rt.toasts.push({ text: '+1 ↺  = ' + rt.score, col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
       if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
     }
     rt.runCount++;
@@ -6382,7 +6384,7 @@ function bjMovePlayer(dr, dc) {
   if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT && newRow > rt.maxRowReached) {
     rt.maxRowReached = newRow;
     rt.score += 1;
-    rt.toasts.push({ text: '+1 Linia ' + newRow, col: rt.playerCol, row: newRow, born: now });
+    rt.toasts.push({ text: '+1 Linia ' + newRow + '  = ' + rt.score, col: rt.playerCol, row: newRow, born: now, color: '#0055cc' });
   }
   rt.playerRow = newRow;
   if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
