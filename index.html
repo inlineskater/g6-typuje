@@ -471,6 +471,17 @@
     .ranking-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px var(--acc-dim); }
     .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
     .ranking-card-body { flex: 1; overflow: hidden; }
+    .lb-row-clickable { cursor: pointer; }
+    .lb-row-clickable:hover td { background: var(--acc-dim); }
+    .user-profile-back { margin-bottom: 14px; }
+    .user-profile-stats { display: flex; gap: 10px; margin: 10px 0 16px; flex-wrap: wrap; }
+    .user-profile-stat { flex: 1; min-width: 80px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+    .user-profile-stat strong { display: block; font-size: 15px; margin-bottom: 2px; }
+    .user-profile-stat span { font-size: 11px; color: var(--muted); }
+    .user-profile-chart { width: 100%; height: 90px; display: block; margin: 10px 0 4px; }
+    .user-profile-chart-label { font-size: 10px; color: var(--muted); text-align: right; margin-bottom: 10px; }
+    .user-profile-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+    .lb-click-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; font-style: italic; }
     .season-history-section { padding: 10px 0; border-bottom: 1px solid var(--border); }
     .season-history-section:last-child { border-bottom: none; padding-bottom: 0; }
     .season-history-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -2305,7 +2316,7 @@
       <p class="page-sub">Kliknij dowolną sekcję, aby zobaczyć szczegóły.</p>
       <div class="ranking-grid">
         <div class="ranking-card" data-detail="ranking">
-          <div class="ranking-card-title">🏆 Net Worth</div>
+          <div class="ranking-card-title">🪙 Gotówka</div>
           <div class="ranking-card-body" id="leaderboard-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
@@ -4617,8 +4628,8 @@ async function loadSeasonHistory() {
   const wrap = document.getElementById('seasons-preview-wrap');
   try {
     const [wbRes, bjRes] = await Promise.all([
-      sb.from('whack_boss_recent_awards').select('week_start,nick,rank,score,prize_coins').order('week_start', { ascending: false }).order('rank'),
-      sb.from('bug_jumper_recent_awards').select('week_start,nick,rank,score,prize_coins').order('week_start', { ascending: false }).order('rank'),
+      sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from('bug_jumper_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
     ]);
     _seasonHistory = [
       ...(wbRes.data || []).map(r => ({ ...r, gameType: 'whack_boss' })),
@@ -4647,7 +4658,7 @@ async function loadLeaderboard() {
   loadSeasonHistory();
 
   const [leaderboardRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes] = await Promise.all([
-    sb.from('leaderboard').select('*').neq('nick', 'admin').order('net_worth', { ascending: false }).limit(20),
+    sb.from('leaderboard').select('*').neq('nick', 'admin').order('coins', { ascending: false }).limit(20),
     sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, shares, p_yes_after').order('created_at', { ascending: false }).limit(500),
     sb.from('markets').select('id, icon, title, resolved, resolution, yes_shares, no_shares'),
     sb.from('trades').select('market_id, user_id, side, amount, shares').limit(5000),
@@ -4704,13 +4715,14 @@ function renderLeaderboardTable(wrap, data, calibByUser = {}) {
   const rows = data.map((row, i) => el('tr', {},
     el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
     el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-    el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
+    el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙')
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Net Worth'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'))),
       el('tbody', {}, ...rows)
-    )
+    ),
+    el('p', { className: 'lb-click-hint' }, 'Kliknij gracza, aby zobaczyć historię →')
   );
 }
 
@@ -4922,6 +4934,34 @@ function renderHazardHistory(wrap, rowsData) {
   );
 }
 
+// ── Coin history chart ────────────────────────────────────────────────────
+function drawCoinChart(svgEl, events) {
+  // events: [{ts (ms), delta}] sorted ascending
+  const W = 440, H = 80, PAD = 6;
+  let cum = 0;
+  const pts = [{ ts: events[0].ts, v: 0 }];
+  events.forEach(e => { cum += e.delta; pts.push({ ts: e.ts, v: cum }); });
+
+  const minV = Math.min(0, ...pts.map(p => p.v));
+  const maxV = Math.max(1, ...pts.map(p => p.v));
+  const tMin = pts[0].ts, tMax = pts[pts.length - 1].ts || tMin + 1;
+  const scX = v => PAD + ((v - tMin) / (tMax - tMin)) * (W - PAD * 2);
+  const scY = v => (H - PAD) - ((v - minV) / (maxV - minV)) * (H - PAD * 2);
+
+  const zeroY = scY(0).toFixed(1);
+  const polyPts = pts.map(p => `${scX(p.ts).toFixed(1)},${scY(p.v).toFixed(1)}`).join(' ');
+  const lastPt = pts[pts.length - 1];
+  const color = lastPt.v >= 0 ? '#22c55e' : '#ef4444';
+
+  svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svgEl.setAttribute('preserveAspectRatio', 'none');
+  svgEl.innerHTML = `
+    <line x1="${PAD}" y1="${zeroY}" x2="${W - PAD}" y2="${zeroY}" stroke="#e5e7eb" stroke-width="1"/>
+    <polyline points="${polyPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${scX(lastPt.ts).toFixed(1)}" cy="${scY(lastPt.v).toFixed(1)}" r="3" fill="${color}"/>
+  `;
+}
+
 // ── Ranking Detail Modal ──────────────────────────────────────────────────
 (function initRankingModal() {
   const overlay = document.getElementById('ranking-detail-overlay');
@@ -4932,7 +4972,7 @@ function renderHazardHistory(wrap, rowsData) {
   function openModal(detail) {
     body.replaceChildren();
     if (detail === 'ranking') {
-      title.textContent = '🏆 Ranking graczy';
+      title.textContent = '🪙 Gotówka — Ranking';
       renderFullLeaderboard(body);
     } else if (detail === 'hazardista') {
       title.textContent = '🎰 Hazardista';
@@ -4959,30 +4999,128 @@ function renderHazardHistory(wrap, rowsData) {
   });
 
   function renderFullLeaderboard(container) {
-    const data = _lbData, calibByUser = _lbCalib;
+    const data = _lbData;
     if (!data || !data.length) { container.append(el('p', {}, 'Brak graczy.')); return; }
     const rows = data.map((row, i) => {
-      const calib = calibByUser[row.id];
-      let calibTd;
-      if (!calib || calib.total === 0) {
-        calibTd = el('td', {}, '—');
-      } else {
-        const pct = Math.round((calib.correct / calib.total) * 100);
-        const cls = pct >= 60 ? 'calib-good' : pct >= 40 ? 'calib-ok' : 'calib-bad';
-        calibTd = el('td', {}, el('span', { className: cls }, pct + '%'), ' ', el('span', { className: 'calib-sub' }, '(' + calib.correct + '/' + calib.total + ')'));
-      }
-      return el('tr', {},
+      const tr = el('tr', { className: 'lb-row-clickable' },
         el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
         el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-        el('td', { className: 'lb-coins' }, row.coins + ' 🪙'),
-        el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙'),
-        calibTd
+        el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙')
       );
+      tr.addEventListener('click', () => openUserProfile(row.id, row.nick, row.coins));
+      return tr;
     });
-    container.append(el('table', { className: 'lb-table' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth'), el('th', {}, 'Trafność'))),
-      el('tbody', {}, ...rows)
-    ));
+    container.append(
+      el('table', { className: 'lb-table' },
+        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'))),
+        el('tbody', {}, ...rows)
+      ),
+      el('p', { className: 'lb-click-hint' }, '👆 Kliknij gracza, aby zobaczyć historię coinów')
+    );
+  }
+
+  async function openUserProfile(userId, nick, coins) {
+    title.textContent = '👤 ' + nick;
+    body.replaceChildren();
+
+    const backBtn = el('button', { className: 'btn-ghost user-profile-back' }, '← Wróć do rankingu');
+    backBtn.addEventListener('click', () => { body.replaceChildren(); title.textContent = '🪙 Gotówka — Ranking'; renderFullLeaderboard(body); });
+    body.append(backBtn, makeSpinner());
+
+    try {
+      const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
+
+      const [gamesRes, tradesRes] = await Promise.all([
+        sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
+        sb.from('trades').select('created_at,amount').eq('user_id', userId).order('created_at', { ascending: true }).limit(500),
+      ]);
+      const games = gamesRes.data || [];
+      const trades = tradesRes.data || [];
+      const userAwards = (_seasonHistory || []).filter(a => a.user_id === userId);
+
+      // Build chart events
+      const events = [];
+      games.forEach(g => {
+        const bet = +g.bet || 0, won = +g.won || 0;
+        const delta = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
+        events.push({ ts: new Date(g.created_at).getTime(), delta });
+      });
+      userAwards.forEach(a => {
+        if (a.awarded_at) events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0 });
+      });
+      events.sort((a, b) => a.ts - b.ts);
+
+      // Stats
+      const gamePL = games.reduce((s, g) => {
+        const bet = +g.bet || 0, won = +g.won || 0;
+        return s + (g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet);
+      }, 0);
+      const awardsTotal = userAwards.reduce((s, a) => s + (+a.prize_coins || 0), 0);
+
+      body.replaceChildren(backBtn);
+
+      // Stats row
+      body.append(el('div', { className: 'user-profile-stats' },
+        el('div', { className: 'user-profile-stat' }, el('strong', {}, fmtNum(coins) + ' 🪙'), el('span', {}, 'Gotówka')),
+        el('div', { className: 'user-profile-stat' }, el('strong', { style: { color: gamePL >= 0 ? 'var(--yes)' : 'var(--no)' } }, (gamePL >= 0 ? '+' : '') + gamePL + ' 🪙'), el('span', {}, 'Gry P&L')),
+        el('div', { className: 'user-profile-stat' }, el('strong', {}, '+' + awardsTotal + ' 🪙'), el('span', {}, 'Nagrody')),
+        el('div', { className: 'user-profile-stat' }, el('strong', {}, String(trades.length)), el('span', {}, 'Zakładów'))
+      ));
+
+      // Chart
+      if (events.length > 1) {
+        const svg = el('svg', { className: 'user-profile-chart' });
+        drawCoinChart(svg, events);
+        body.append(
+          el('div', { className: 'user-profile-section-title' }, 'Historia P&L (gry + nagrody)'),
+          svg,
+          el('p', { className: 'user-profile-chart-label' }, 'zielony = zysk · czerwony = strata')
+        );
+      }
+
+      // Recent game transactions
+      if (games.length) {
+        body.append(el('div', { className: 'user-profile-section-title' }, 'Ostatnie transakcje gier'));
+        const recent = [...games].reverse().slice(0, 20);
+        body.append(el('table', { className: 'lb-table-compact' },
+          el('thead', {}, el('tr', {}, el('th', {}, 'Data'), el('th', {}, 'Gra'), el('th', {}, 'P&L'))),
+          el('tbody', {}, ...recent.map(g => {
+            const bet = +g.bet || 0, won = +g.won || 0;
+            const profit = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
+            return el('tr', {},
+              el('td', { className: 'tx-time' }, fmtDateTime(g.created_at)),
+              el('td', {}, GAME_NAMES[g.game] || g.game),
+              el('td', { className: 'tx-pl ' + profitClassName(profit) }, (profit >= 0 ? '+' : '') + profit + ' 🪙')
+            );
+          }))
+        ));
+      }
+
+      // Awards
+      if (userAwards.length) {
+        body.append(el('div', { className: 'user-profile-section-title' }, 'Nagrody sezonowe'));
+        body.append(el('table', { className: 'lb-table-compact' },
+          el('thead', {}, el('tr', {}, el('th', {}, 'Data'), el('th', {}, 'Sezon'), el('th', {}, 'Miejsce'), el('th', {}, 'Nagroda'))),
+          el('tbody', {}, ...userAwards.map(a => {
+            const medals = ['🥇', '🥈', '🥉'];
+            const entry = SEASONAL_SCHEDULE.find(e => e.weekStart === a.week_start && e.gameType === a.gameType);
+            const seasonNum = entry ? SEASONAL_SCHEDULE.indexOf(entry) + 1 : '?';
+            return el('tr', {},
+              el('td', { className: 'tx-time' }, a.awarded_at ? fmtDateTime(a.awarded_at) : '—'),
+              el('td', {}, 'Sezon ' + seasonNum + ' · ' + (entry?.displayName || a.gameType)),
+              el('td', {}, medals[a.rank - 1] || String(a.rank)),
+              el('td', { className: 'tx-pl tx-pl-profit' }, '+' + a.prize_coins + ' 🪙')
+            );
+          }))
+        ));
+      }
+
+      if (!games.length && !userAwards.length) {
+        body.append(el('p', { style: { color: 'var(--muted)', marginTop: '12px' } }, 'Brak historii transakcji.'));
+      }
+    } catch {
+      body.append(el('p', {}, 'Błąd ładowania profilu.'));
+    }
   }
 
   function renderFullHazardista(container) {
