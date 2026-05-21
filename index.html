@@ -5660,6 +5660,17 @@ function loadSeasonalTab(showSpinner = true) {
   const bjPanel       = document.getElementById('seasonal-game-bug-jumper');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
+  // Admin sees all games with no archive restrictions
+  if (me?.nick === 'admin') {
+    if (wbPanel) show(wbPanel);
+    if (bjPanel) show(bjPanel);
+    if (archiveBanner) hide(archiveBanner);
+    if (whackBossRuntime) whackBossRuntime.archiveMode = false;
+    loadWhackBossState(showSpinner);
+    loadBugJumperState(showSpinner);
+    return;
+  }
+
   if (current.gameType === 'whack_boss') {
     if (wbPanel) show(wbPanel);
     if (bjPanel) hide(bjPanel);
