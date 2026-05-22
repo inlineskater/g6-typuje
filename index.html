@@ -6453,24 +6453,18 @@ const BJ_DURATION_MS = 20000;
 const BJ_ACTIVE_DATE = new Date('2026-05-25T00:00:00+02:00'); // Sunday — prizes count from this week
 function bjIsDemoMode() { return Date.now() < BJ_ACTIVE_DATE.getTime(); }
 
-// Grid-step obstacles: interval ms/step, direction, count, len (cells wide)
-const BJ_LANE_DEFS = [
-  { interval: 900, dir:  1, count: 1, len: 1 },
-  { interval: 850, dir: -1, count: 1, len: 2 },
-  { interval: 800, dir:  1, count: 1, len: 1 },
-  { interval: 750, dir: -1, count: 1, len: 2 },
-  { interval: 700, dir:  1, count: 1, len: 2 },
-  { interval: 650, dir: -1, count: 1, len: 2 },
-];
+// Grid-step obstacles: intervals fixed, direction & size randomized each round
+const BJ_LANE_INTERVALS = [900, 850, 800, 750, 700, 650];
 
 function bjInitLanes() {
-  return BJ_LANE_DEFS.map(def => ({
-    dir: def.dir, interval: def.interval,
+  let dirs;
+  do {
+    dirs = BJ_LANE_INTERVALS.map(() => Math.random() < 0.5 ? 1 : -1);
+  } while (dirs.filter(d => d === 1).length < 2 || dirs.filter(d => d === -1).length < 2);
+  return BJ_LANE_INTERVALS.map((interval, i) => ({
+    dir: dirs[i], interval,
     nextStep: 0,
-    bugs: Array.from({ length: def.count }, (_, i) => ({
-      col: Math.floor((BJ_COLS / def.count) * i),
-      len: def.len,
-    })),
+    bugs: [{ col: Math.floor(Math.random() * BJ_COLS), len: Math.random() < 0.5 ? 1 : 2 }],
   }));
 }
 
