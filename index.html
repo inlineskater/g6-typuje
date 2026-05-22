@@ -5987,35 +5987,14 @@ function loadSeasonalTab(showSpinner = true) {
   const bjPanel       = document.getElementById('seasonal-game-bug-jumper');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
-  // Admin sees all games with no archive restrictions
-  if (me?.nick === 'admin') {
-    if (wbPanel) show(wbPanel);
-    if (bjPanel) show(bjPanel);
-    if (archiveBanner) hide(archiveBanner);
-    if (whackBossRuntime) whackBossRuntime.archiveMode = false;
-    loadWhackBossState(showSpinner);
-    loadBugJumperState(showSpinner);
-    return;
-  }
-
-  if (current.gameType === 'whack_boss') {
-    if (wbPanel) show(wbPanel);
-    if (bjPanel) hide(bjPanel);
-    if (archiveBanner) hide(archiveBanner);
-    if (whackBossRuntime) whackBossRuntime.archiveMode = false;
-    loadWhackBossState(showSpinner);
-  } else if (current.gameType === 'bug_jumper') {
-    if (bjPanel) show(bjPanel);
-    if (wbPanel) hide(wbPanel);
-    if (archiveBanner) show(archiveBanner);
-    if (whackBossRuntime) whackBossRuntime.archiveMode = true;
-    loadBugJumperState(showSpinner);
-  } else {
-    if (wbPanel) show(wbPanel);
-    if (bjPanel) hide(bjPanel);
-    if (archiveBanner) hide(archiveBanner);
-    loadWhackBossState(showSpinner);
-  }
+  // Show both games to all players — scores are saved for both
+  if (wbPanel) show(wbPanel);
+  if (bjPanel) show(bjPanel);
+  if (archiveBanner) hide(archiveBanner);
+  if (whackBossRuntime) whackBossRuntime.archiveMode = false;
+  if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
+  loadWhackBossState(showSpinner);
+  loadBugJumperState(showSpinner);
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
