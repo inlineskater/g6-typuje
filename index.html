@@ -6192,6 +6192,7 @@ function whackBossRankLabel(rank) {
 
 function renderWhackBossTable(wrap, rows, mode) {
   if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
   if (!rows.length) {
     wrap.replaceChildren(el('p', { className: 'wb-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
     return;
@@ -6675,6 +6676,7 @@ function renderBugJumperState(data) {
 
 function renderBugJumperTable(wrap, rows, mode) {
   if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
   if (!rows.length) {
     wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
     return;
