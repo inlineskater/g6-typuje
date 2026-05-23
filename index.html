@@ -2337,53 +2337,34 @@
     .tavern-scene {
       position: relative; height: 300px; overflow: hidden; margin: 10px 12px 14px;
       border-radius: 10px; border: 3px solid #5a3e28;
-      background: linear-gradient(180deg,
-        #0d1635 0%, #1a2d5a 27%,
-        #2a4a1e 27%, #3a6028 35%,
-        #4a7032 35%, #567833 43%,
-        #6b5530 43%, #5a4525 100%
-      );
+      background:
+        radial-gradient(ellipse 70% 45% at 50% 100%, rgba(255,160,30,.18) 0%, transparent 65%),
+        repeating-linear-gradient(90deg, #8B6340 0px, #8B6340 58px, #7A5530 58px, #7A5530 60px),
+        linear-gradient(180deg, #2d1a0e 0%, #2d1a0e 38%, #8B6340 38%, #8B6340 100%);
     }
     .tavern-scene::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 30%;
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 38%;
       background:
-        radial-gradient(circle 14px at 20% 40%, #faf0c0 0%, #ffe88a 55%, transparent 72%),
-        radial-gradient(circle 1px at 8% 20%, #fff 100%, transparent),
-        radial-gradient(circle 1px at 18% 8%, #fff 100%, transparent),
-        radial-gradient(circle 1.5px at 32% 22%, #fff 100%, transparent),
-        radial-gradient(circle 1px at 47% 6%, #fff 100%, transparent),
-        radial-gradient(circle 1px at 58% 18%, #fff 100%, transparent),
-        radial-gradient(circle 1.5px at 70% 10%, #fff 100%, transparent),
-        radial-gradient(circle 1px at 82% 25%, #fff 100%, transparent),
-        radial-gradient(circle 1px at 91% 5%, #fff 100%, transparent),
-        radial-gradient(circle 1px at 38% 14%, rgba(255,255,255,.7) 100%, transparent),
-        radial-gradient(circle 1px at 25% 28%, rgba(255,255,255,.5) 100%, transparent);
+        repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(0,0,0,.18) 59px, rgba(0,0,0,.18) 60px),
+        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0,0,0,.1) 19px, rgba(0,0,0,.1) 20px);
       pointer-events: none;
     }
-    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 25% 55% at 97% 50%, rgba(255,160,30,.2) 0%, transparent 70%), radial-gradient(ellipse 15% 25% at 97% 38%, rgba(255,200,80,.15) 0%, transparent 65%); pointer-events: none; z-index: 3; }
-    .tavern-building { position: absolute; right: 0; bottom: 0; width: 190px; height: 290px; z-index: 1; pointer-events: none; }
-    .tb-wall { position: absolute; top: 88px; left: 0; right: 0; bottom: 0; background: #C09060; background-image: repeating-linear-gradient(180deg, transparent, transparent 11px, rgba(0,0,0,.1) 11px, rgba(0,0,0,.1) 12px); }
-    .tb-roof { position: absolute; top: 8px; left: 0; right: 0; height: 90px; background: #8B3A18; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
-    .tb-roof::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.22) 0%, transparent 50%); clip-path: polygon(50% 0%, 0% 100%, 50% 100%); }
-    .tb-sign { position: absolute; top: 82px; left: 26px; right: 26px; height: 24px; background: #7a4820; border: 2px solid #3a1a08; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #FFE040; font-size: 10px; font-weight: 800; font-family: Georgia, serif; letter-spacing: .1em; box-shadow: 0 2px 8px rgba(0,0,0,.55); }
-    .tb-win { position: absolute; top: 110px; width: 56px; height: 44px; background: #FFB020; border: 3px solid #2a1808; border-radius: 2px; box-shadow: 0 0 16px rgba(255,176,32,.75), inset 0 0 6px rgba(255,220,80,.3); }
-    .tb-win::before { content: ''; position: absolute; top: 0; bottom: 0; left: calc(50% - 1.5px); width: 3px; background: #2a1808; }
-    .tb-win::after { content: ''; position: absolute; left: 0; right: 0; top: calc(50% - 1.5px); height: 3px; background: #2a1808; }
-    .tb-lantern { position: absolute; top: 92px; width: 12px; height: 18px; background: #FFA828; border-radius: 2px; box-shadow: 0 0 12px rgba(255,160,32,.85); }
-    .tb-chimney { position: absolute; bottom: 202px; left: 120px; width: 22px; height: 60px; background: #7a5a38; box-shadow: inset -3px 0 0 rgba(0,0,0,.25); }
-    .tb-chimney::before { content: ''; position: absolute; top: -8px; left: -5px; right: -5px; height: 8px; background: #9a7048; border-radius: 2px 2px 0 0; }
-    .tb-door { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 52px; height: 108px; background: #6a3e1a; border: 3px solid #2a1408; border-bottom: none; border-radius: 3px 3px 0 0; }
-    .tb-door::before { content: ''; position: absolute; top: 8px; left: 6px; right: 6px; height: 44px; background: #523010; border-radius: 2px; }
-    .tb-door::after { content: ''; position: absolute; right: 8px; top: 50%; width: 7px; height: 7px; background: #d4aa50; border-radius: 50%; transform: translateY(-50%); }
-    .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-approach var(--walk-dur, 12s) linear infinite; }
+    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 50% 95%, rgba(255,160,30,.13) 0%, transparent 65%); pointer-events: none; z-index: 3; }
+    /* interior furniture */
+    .tavern-fireplace { position: absolute; left: 10px; top: 0; width: 58px; height: 112px; background: #3a2818; border: 2px solid #5a4030; z-index: 1; }
+    .tavern-fireplace::before { content: ''; position: absolute; left: 6px; right: 6px; bottom: 8px; height: 60px; background: linear-gradient(180deg, #ff9a20 0%, #ff5500 55%, #c02000 100%); border-radius: 2px; animation: fire-flicker .6s ease-in-out infinite alternate; }
+    .tavern-fireplace::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: #4a3020; border-bottom: 2px solid #6a5040; }
+    @keyframes fire-flicker { 0% { opacity:.8; transform:scaleX(.94); } 100% { opacity:1; transform:scaleX(1.06); } }
+    .tavern-table { position: absolute; bottom: 42px; width: 80px; height: 18px; background: #5a3e28; border-radius: 4px; z-index: 1; }
+    .tavern-table::after { content: '🍺'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 14px; }
+    .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-hero var(--walk-dur, 9s) linear infinite; }
     .tavern-lane.hero-mine { filter: drop-shadow(0 0 6px rgba(99,102,241,.75)); }
-    @keyframes tavern-approach {
-      0%   { left: -10%; opacity: 0; }
-      5%   { left: -2%;  opacity: 1; }
-      70%  { left: 55%;  opacity: 1; }
-      78%  { left: 57%;  opacity: 0; }
-      79%  { left: -10%; opacity: 0; }
-      100% { left: -10%; opacity: 0; }
+    @keyframes tavern-hero {
+      0%   { left: 3%;  transform: scaleX(1);  }
+      44%  { left: 78%; transform: scaleX(1);  }
+      50%  { left: 78%; transform: scaleX(-1); }
+      94%  { left: 3%;  transform: scaleX(-1); }
+      100% { left: 3%;  transform: scaleX(1);  }
     }
     @keyframes leg-l { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
     @keyframes leg-r { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
@@ -8317,27 +8298,12 @@ function buildTavernPanel() {
   panel.appendChild(el('div', { className: 'tavern-panel-title' }, 'Karczma'));
   const scene = el('div', { className: 'tavern-scene' });
 
-  // Stardew Valley-style tavern building — pure HTML+CSS, no SVG
-  const building = el('div', { className: 'tavern-building' });
-  // wall first (back), then roof, sign, windows, lanterns, chimney (front)
-  building.appendChild(el('div', { className: 'tb-wall' }));
-  building.appendChild(el('div', { className: 'tb-roof' }));
-  building.appendChild(el('div', { className: 'tb-sign' }, 'KARCZMA'));
-  const winL = el('div', { className: 'tb-win' });
-  winL.style.left = '10px';
-  building.appendChild(winL);
-  const winR = el('div', { className: 'tb-win' });
-  winR.style.right = '10px';
-  building.appendChild(winR);
-  const lanL = el('div', { className: 'tb-lantern' });
-  lanL.style.left = '3px';
-  building.appendChild(lanL);
-  const lanR = el('div', { className: 'tb-lantern' });
-  lanR.style.right = '3px';
-  building.appendChild(lanR);
-  building.appendChild(el('div', { className: 'tb-door' }));
-  building.appendChild(el('div', { className: 'tb-chimney' }));
-  scene.appendChild(building);
+  // Interior furniture
+  scene.appendChild(el('div', { className: 'tavern-fireplace' }));
+  const t1 = el('div', { className: 'tavern-table' }); t1.style.left = '22%';
+  const t2 = el('div', { className: 'tavern-table' }); t2.style.left = '58%';
+  scene.appendChild(t1);
+  scene.appendChild(t2);
 
   const heroes = myHero
     ? [myHero, ...allHeroes.filter(h => h.user_id !== me.id)]
@@ -8356,8 +8322,8 @@ function buildTavernPanel() {
       const isMe = hero.user_id === me.id;
       const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
       lane.style.bottom = bottoms[i % bottoms.length];
-      lane.style.setProperty('--walk-dur', (10 + (i * 2.3 % 6)).toFixed(1) + 's');
-      lane.style.animationDelay = -(i * 2.8).toFixed(1) + 's';
+      lane.style.setProperty('--walk-dur', (6 + (i * 1.7 % 5)).toFixed(1) + 's');
+      lane.style.animationDelay = -(i * 2.1).toFixed(1) + 's';
       lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true });
 
       const speech = el('div', { className: 'hero-speech' }, '');
