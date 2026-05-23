@@ -5224,6 +5224,12 @@ function drawCoinChart(canvas, points) {
           : '🪙 ' + t.reason;
         events.push({ ts: new Date(t.created_at).getTime(), delta: +t.delta, label });
       });
+      // Residual = coins that moved before coin_transactions logging was introduced (pre-2026-05-21).
+      // Inject into events before sorting so the running balance stays correct in order.
+      const residual = coins - (1000 + events.reduce((s, e) => s + e.delta, 0));
+      if (Math.abs(residual) > 5) {
+        events.push({ ts: new Date('2026-05-21T12:00:00+02:00').getTime(), delta: residual, label: '🌱 Wyrównanie — wcześniej nie zapisywałem logów dat podlania i kupowania akcesoriów', isGarden: true });
+      }
       events.sort((a, b) => a.ts - b.ts);
 
       // Build balance history starting from 1000 coins at registration
@@ -5232,20 +5238,12 @@ function drawCoinChart(canvas, points) {
       let runBal = 1000;
       events.forEach(e => {
         runBal += e.delta;
-        balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta });
+        balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta, isGarden: e.isGarden });
       });
-      // Residual = coins that moved before coin_transactions logging was introduced (pre-2026-05-21).
-      // Garden watering and accessory purchases from that era updated profiles.coins directly.
-      // Show as a single adjustment entry dated when logging was deployed.
-      const residual = coins - runBal;
-      if (Math.abs(residual) > 5) {
-        // Only show when residual is large enough to be real garden activity,
-        // not just ±1-2 coin rounding from the payout formula.
-        const adjustmentTs = new Date('2026-05-21T12:00:00+02:00').getTime();
-        balancePoints.push({ ts: adjustmentTs, bal: coins, label: '🌱 Wyrównanie — wcześniej nie zapisywałem logów dat podlania i kupowania akcesoriów', delta: residual, isGarden: true });
-      } else if (residual !== 0) {
-        // Small rounding difference — silently correct the last point's balance.
-        balancePoints[balancePoints.length - 1].bal += residual;
+      // Small rounding difference after all events — silently correct the last point.
+      const finalResidual = coins - runBal;
+      if (finalResidual !== 0 && Math.abs(finalResidual) <= 5) {
+        balancePoints[balancePoints.length - 1].bal += finalResidual;
       }
 
       // Stats
