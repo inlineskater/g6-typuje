@@ -1547,23 +1547,22 @@
     input[type="number"]:focus, textarea:focus { border-color: var(--accent); }
     textarea { min-height: 80px; resize: vertical; }
 
-    .shop-category-tabs {
+    .shop-category-filters {
       display: flex; gap: 8px; flex-wrap: wrap;
       margin: 18px 0 4px;
     }
-    .shop-category-tab {
+    .shop-category-filter {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 999px; color: var(--muted); cursor: pointer;
       font: inherit; font-size: 13px; font-weight: 800;
       min-height: 36px; padding: 7px 13px;
       transition: border-color .15s, color .15s, background .15s;
     }
-    .shop-category-tab:hover { border-color: var(--accent); color: var(--text); }
-    .shop-category-tab.active {
+    .shop-category-filter:hover { border-color: var(--accent); color: var(--text); }
+    .shop-category-filter.active {
       background: var(--acc-dim); border-color: var(--accent); color: var(--accent);
     }
-    .shop-section { margin-top: 18px; }
-    .shop-section[hidden] { display: none; }
+    .shop-section { margin-top: 22px; scroll-margin-top: 84px; }
     .shop-section-head {
       display: flex; align-items: flex-end; justify-content: space-between;
       gap: 14px; margin-bottom: 4px;
@@ -2939,16 +2938,16 @@
       <div class="markets-toolbar">
         <div>
           <h2>Sklep 🛒</h2>
-          <p>Wydaj coiny na nagrody, ogródek i rzeczy dla herosa. Monety przepadają — nie trafiają do nikogo, po prostu znikają z obiegu.</p>
+          <p>Wydaj coiny na nagrody, ogródek i herosów. Monety przepadają — nie trafiają do nikogo, po prostu znikają z obiegu.</p>
         </div>
         <button class="btn-primary" id="btn-new-item" style="display:none;width:auto;padding:10px 18px">+ Dodaj nagrodę</button>
       </div>
-      <div class="shop-category-tabs" id="shop-category-tabs" role="tablist" aria-label="Kategorie sklepu">
-        <button class="shop-category-tab active" type="button" data-shop-category="rewards">🎁 Nagrody</button>
-        <button class="shop-category-tab" type="button" data-shop-category="garden">🌿 Ogródek</button>
-        <button class="shop-category-tab" type="button" data-shop-category="hero">⚔️ Heros</button>
+      <div class="shop-category-filters" id="shop-category-filters" aria-label="Kategorie sklepu">
+        <button class="shop-category-filter active" type="button" data-shop-target="shop-rewards-section">🎁 Nagrody</button>
+        <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">⚔️ Herosi</button>
+        <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🌿 Ogródek</button>
       </div>
-      <section class="shop-section" id="shop-rewards-section" data-shop-category-panel="rewards">
+      <section class="shop-section" id="shop-rewards-section">
         <div class="shop-section-head">
           <div>
             <div class="shop-section-title">🎁 Nagrody</div>
@@ -2959,19 +2958,19 @@
           <div class="loading-center"><div class="spinner"></div></div>
         </div>
       </section>
-      <section class="shop-section cosmetics-section" id="cosmetics-section" data-shop-category-panel="garden" hidden>
-        <div class="cosmetics-title">🌿 Ozdoby do ogródka</div>
-        <div class="cosmetics-sub">Udekoruj swoją roślinkę — widoczne dla wszystkich w Zen Garden. Musisz mieć roślinę, żeby kupić.</div>
-        <div class="cosmetics-grid" id="cosmetics-grid"></div>
-      </section>
-      <section class="shop-section" id="hero-shop-section" data-shop-category-panel="hero" hidden>
+      <section class="shop-section" id="hero-shop-section">
         <div class="shop-section-head">
           <div>
-            <div class="shop-section-title">⚔️ Przedmioty dla herosa</div>
+            <div class="shop-section-title">⚔️ Herosi</div>
             <div class="shop-section-sub">Usługi i kosmetyki wpływające na wygląd Twojego bohatera.</div>
           </div>
         </div>
         <div class="shop-grid" id="hero-shop-grid"></div>
+      </section>
+      <section class="shop-section cosmetics-section" id="cosmetics-section">
+        <div class="cosmetics-title">🌿 Ozdoby do ogródka</div>
+        <div class="cosmetics-sub">Udekoruj swoją roślinkę — widoczne dla wszystkich w Zen Garden. Musisz mieć roślinę, żeby kupić.</div>
+        <div class="cosmetics-grid" id="cosmetics-grid"></div>
       </section>
     </main>
   </div>
@@ -3165,7 +3164,6 @@ let pokerTimeoutClaiming = false;
 let lastPokerStateMs = 0;
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
-let activeShopCategory = 'rewards';
 const lwCharts = new Map();
 const HERO_STYLE_CHANGE_PRICE = 1;
 const HERO_APPEARANCE_FIELDS = [
@@ -5651,27 +5649,19 @@ async function loadMyHeroForShop() {
   if (!error) myHero = data || null;
 }
 
-function setShopCategory(category) {
-  activeShopCategory = category;
-  document.querySelectorAll('[data-shop-category]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.shopCategory === category);
-  });
-  document.querySelectorAll('[data-shop-category-panel]').forEach(panel => {
-    panel.hidden = panel.dataset.shopCategoryPanel !== category;
-  });
-}
-
-function setupShopCategoryTabs() {
-  document.querySelectorAll('[data-shop-category]').forEach(btn => {
-    btn.addEventListener('click', () => setShopCategory(btn.dataset.shopCategory));
+function setupShopCategoryFilters() {
+  document.querySelectorAll('[data-shop-target]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-shop-target]').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById(btn.dataset.shopTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   });
 }
-setupShopCategoryTabs();
+setupShopCategoryFilters();
 
 async function loadShop() {
   const grid = document.getElementById('shop-grid');
   grid.replaceChildren(makeSpinner());
-  setShopCategory(activeShopCategory);
 
   const btnNew = document.getElementById('btn-new-item');
   btnNew.style.display = me?.nick === 'admin' ? '' : 'none';
