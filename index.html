@@ -2336,38 +2336,43 @@
     .tavern-panel-title { padding: 14px 18px 0; font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8b6914; }
     .tavern-scene {
       position: relative; height: 300px; overflow: hidden; margin: 10px 12px 14px;
-      border-radius: 10px; border: 3px solid #5a3e28;
+      border-radius: 10px; border: 3px solid #6b4a1e;
       background:
-        radial-gradient(ellipse 70% 45% at 50% 100%, rgba(255,160,30,.18) 0%, transparent 65%),
-        repeating-linear-gradient(90deg, #8B6340 0px, #8B6340 58px, #7A5530 58px, #7A5530 60px),
-        linear-gradient(180deg, #2d1a0e 0%, #2d1a0e 38%, #8B6340 38%, #8B6340 100%);
+        radial-gradient(ellipse 50% 80% at 12% 50%, rgba(255,90,10,.30) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 35% at 50% 108%, rgba(255,140,40,.14) 0%, transparent 65%),
+        repeating-linear-gradient(90deg, #7a5230 0px, #7a5230 46px, #6a4525 46px, #6a4525 48px),
+        linear-gradient(180deg, #160a06 0%, #1e0f08 34%, #7a5230 34%, #7a5230 100%);
     }
     .tavern-scene::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 38%;
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 34%;
       background:
-        repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(0,0,0,.18) 59px, rgba(0,0,0,.18) 60px),
-        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0,0,0,.1) 19px, rgba(0,0,0,.1) 20px);
+        repeating-linear-gradient(90deg, transparent, transparent 77px, rgba(0,0,0,.45) 77px, rgba(0,0,0,.45) 80px),
+        repeating-linear-gradient(0deg, transparent, transparent 13px, rgba(255,200,100,.04) 13px, rgba(255,200,100,.04) 14px);
       pointer-events: none;
     }
-    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 50% 95%, rgba(255,160,30,.13) 0%, transparent 65%); pointer-events: none; z-index: 3; }
+    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 45% at 50% 100%, rgba(255,150,30,.12) 0%, transparent 65%); pointer-events: none; z-index: 3; }
     /* interior furniture */
-    .tavern-fireplace { position: absolute; left: 10px; top: 0; width: 58px; height: 112px; background: #3a2818; border: 2px solid #5a4030; z-index: 1; }
-    .tavern-fireplace::before { content: ''; position: absolute; left: 6px; right: 6px; bottom: 8px; height: 60px; background: linear-gradient(180deg, #ff9a20 0%, #ff5500 55%, #c02000 100%); border-radius: 2px; animation: fire-flicker .6s ease-in-out infinite alternate; }
-    .tavern-fireplace::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: #4a3020; border-bottom: 2px solid #6a5040; }
+    .tavern-fireplace { position: absolute; left: 8px; top: 0; width: 60px; height: 120px; background: #1e0e06; border: 2px solid #3a2010; border-radius: 0 0 4px 4px; z-index: 1; }
+    .tavern-fireplace::before { content: ''; position: absolute; left: 8px; right: 8px; bottom: 10px; height: 66px; background: linear-gradient(180deg, #ffca40 0%, #ff7010 40%, #ff2a00 72%, #7a0000 100%); border-radius: 3px 3px 0 0; animation: fire-flicker .55s ease-in-out infinite alternate; box-shadow: 0 0 22px rgba(255,90,0,.65); }
+    .tavern-fireplace::after { content: ''; position: absolute; left: -5px; right: -5px; top: 0; height: 20px; background: linear-gradient(180deg, #5a3820 0%, #3a2010 100%); border-radius: 3px 3px 0 0; border: 2px solid #6a4830; box-shadow: 0 3px 8px rgba(0,0,0,.5); }
     @keyframes fire-flicker { 0% { opacity:.8; transform:scaleX(.94); } 100% { opacity:1; transform:scaleX(1.06); } }
     .tavern-table { position: absolute; bottom: 42px; width: 80px; height: 18px; background: #5a3e28; border-radius: 4px; z-index: 1; }
     .tavern-table::after { content: '🍺'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 14px; }
     .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-hero var(--walk-dur, 9s) linear infinite; }
     .tavern-lane.hero-mine { filter: drop-shadow(0 0 6px rgba(99,102,241,.75)); }
     @keyframes tavern-hero {
-      0%   { left: 3%;  transform: scaleX(1);  }
-      44%  { left: 78%; transform: scaleX(1);  }
-      50%  { left: 78%; transform: scaleX(-1); }
-      94%  { left: 3%;  transform: scaleX(-1); }
-      100% { left: 3%;  transform: scaleX(1);  }
+      0%   { left: 3%;  transform: scaleX(1)  translateY(0px);   }
+      22%  { left: 40%; transform: scaleX(1)  translateY(-12px); }
+      44%  { left: 78%; transform: scaleX(1)  translateY(0px);   }
+      50%  { left: 78%; transform: scaleX(-1) translateY(0px);   }
+      72%  { left: 40%; transform: scaleX(-1) translateY(-12px); }
+      94%  { left: 3%;  transform: scaleX(-1) translateY(0px);   }
+      100% { left: 3%;  transform: scaleX(1)  translateY(0px);   }
     }
-    @keyframes leg-l { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
-    @keyframes leg-r { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
+    @keyframes leg-l { 0%,100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
+    @keyframes leg-r { 0%,100% { transform: translateX(2px); } 50% { transform: translateX(-2px); } }
+    @keyframes arm-l { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
+    @keyframes arm-r { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
     @keyframes body-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
     .hero-speech { position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); color: #2d1b0e; border-radius: 8px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .4s ease; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     .hero-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(255,255,255,.95); }
@@ -8117,6 +8122,10 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
   })[hero.weapon] || '';
 
   const bob = walking ? `style="animation: body-bob 0.4s ease-in-out infinite;"` : '';
+  const aL  = walking ? ` style="transform-box:fill-box;transform-origin:50% 0%;animation:arm-l .5s ease-in-out infinite;"` : '';
+  const aR  = walking ? ` style="transform-box:fill-box;transform-origin:50% 0%;animation:arm-r .5s ease-in-out infinite;"` : '';
+  const lL  = walking ? ` style="animation:leg-l .5s ease-in-out infinite;"` : '';
+  const lR  = walking ? ` style="animation:leg-r .5s ease-in-out infinite;"` : '';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}" role="img">
     <g ${bob}>
@@ -8128,11 +8137,11 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
       ${beardSVG}
       <rect x="${bx}" y="28" width="${bw}" height="28" rx="4" fill="${outfit}"/>
       ${outfitDetail}
-      <rect x="${bx-6}" y="29" width="6" height="18" rx="3" fill="${skin}"/>
-      ${hasWeapon ? '' : `<rect x="${bx+bw}" y="29" width="6" height="18" rx="3" fill="${skin}"/>`}
+      <rect x="${bx-6}" y="29" width="6" height="18" rx="3" fill="${skin}"${aL}/>
+      ${hasWeapon ? '' : `<rect x="${bx+bw}" y="29" width="6" height="18" rx="3" fill="${skin}"${aR}/>`}
       ${weaponSVG}
-      <rect x="23" y="56" width="12" height="6" rx="3" fill="#3d2b1a"/>
-      <rect x="29" y="56" width="12" height="6" rx="3" fill="#3d2b1a"/>
+      <rect x="23" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lL}/>
+      <rect x="29" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lR}/>
     </g>
   </svg>`;
 }
@@ -8322,8 +8331,9 @@ function buildTavernPanel() {
       const isMe = hero.user_id === me.id;
       const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
       lane.style.bottom = bottoms[i % bottoms.length];
-      lane.style.setProperty('--walk-dur', (6 + (i * 1.7 % 5)).toFixed(1) + 's');
-      lane.style.animationDelay = -(i * 2.1).toFixed(1) + 's';
+      const dur = (13 + (i * 2.7 % 6)).toFixed(1);
+      lane.style.setProperty('--walk-dur', dur + 's');
+      lane.style.animationDelay = -(i * 3.4).toFixed(1) + 's';
       lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true });
 
       const speech = el('div', { className: 'hero-speech' }, '');
