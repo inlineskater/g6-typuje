@@ -1547,6 +1547,29 @@
     input[type="number"]:focus, textarea:focus { border-color: var(--accent); }
     textarea { min-height: 80px; resize: vertical; }
 
+    .shop-category-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin: 18px 0 4px;
+    }
+    .shop-category-tab {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; color: var(--muted); cursor: pointer;
+      font: inherit; font-size: 13px; font-weight: 800;
+      min-height: 36px; padding: 7px 13px;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    .shop-category-tab:hover { border-color: var(--accent); color: var(--text); }
+    .shop-category-tab.active {
+      background: var(--acc-dim); border-color: var(--accent); color: var(--accent);
+    }
+    .shop-section { margin-top: 18px; }
+    .shop-section[hidden] { display: none; }
+    .shop-section-head {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 14px; margin-bottom: 4px;
+    }
+    .shop-section-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+    .shop-section-sub { font-size: 12px; color: var(--muted); line-height: 1.45; }
     .shop-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
@@ -1570,7 +1593,7 @@
     .shop-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 48px 0; grid-column: 1 / -1; }
 
     /* ── COSMETICS ── */
-    .cosmetics-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .cosmetics-section { margin-top: 18px; }
     .cosmetics-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
     .cosmetics-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
     .cosmetics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 10px; }
@@ -2916,18 +2939,40 @@
       <div class="markets-toolbar">
         <div>
           <h2>Sklep 🛒</h2>
-          <p>Wydaj coiny na realne nagrody. Monety przepadają — nie trafiają do nikogo, po prostu znikają z obiegu.</p>
+          <p>Wydaj coiny na nagrody, ogródek i rzeczy dla herosa. Monety przepadają — nie trafiają do nikogo, po prostu znikają z obiegu.</p>
         </div>
         <button class="btn-primary" id="btn-new-item" style="display:none;width:auto;padding:10px 18px">+ Dodaj nagrodę</button>
       </div>
-      <div class="shop-grid" id="shop-grid">
-        <div class="loading-center"><div class="spinner"></div></div>
+      <div class="shop-category-tabs" id="shop-category-tabs" role="tablist" aria-label="Kategorie sklepu">
+        <button class="shop-category-tab active" type="button" data-shop-category="rewards">🎁 Nagrody</button>
+        <button class="shop-category-tab" type="button" data-shop-category="garden">🌿 Ogródek</button>
+        <button class="shop-category-tab" type="button" data-shop-category="hero">⚔️ Heros</button>
       </div>
-      <div class="cosmetics-section" id="cosmetics-section">
+      <section class="shop-section" id="shop-rewards-section" data-shop-category-panel="rewards">
+        <div class="shop-section-head">
+          <div>
+            <div class="shop-section-title">🎁 Nagrody</div>
+            <div class="shop-section-sub">Realne nagrody dodawane przez admina.</div>
+          </div>
+        </div>
+        <div class="shop-grid" id="shop-grid">
+          <div class="loading-center"><div class="spinner"></div></div>
+        </div>
+      </section>
+      <section class="shop-section cosmetics-section" id="cosmetics-section" data-shop-category-panel="garden" hidden>
         <div class="cosmetics-title">🌿 Ozdoby do ogródka</div>
         <div class="cosmetics-sub">Udekoruj swoją roślinkę — widoczne dla wszystkich w Zen Garden. Musisz mieć roślinę, żeby kupić.</div>
         <div class="cosmetics-grid" id="cosmetics-grid"></div>
-      </div>
+      </section>
+      <section class="shop-section" id="hero-shop-section" data-shop-category-panel="hero" hidden>
+        <div class="shop-section-head">
+          <div>
+            <div class="shop-section-title">⚔️ Przedmioty dla herosa</div>
+            <div class="shop-section-sub">Usługi i kosmetyki wpływające na wygląd Twojego bohatera.</div>
+          </div>
+        </div>
+        <div class="shop-grid" id="hero-shop-grid"></div>
+      </section>
     </main>
   </div>
 
@@ -3120,7 +3165,13 @@ let pokerTimeoutClaiming = false;
 let lastPokerStateMs = 0;
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
+let activeShopCategory = 'rewards';
 const lwCharts = new Map();
+const HERO_STYLE_CHANGE_PRICE = 1;
+const HERO_APPEARANCE_FIELDS = [
+  'skin_tone', 'hair_style', 'hair_color', 'beard',
+  'body_shape', 'outfit', 'outfit_color', 'weapon',
+];
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
 function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
@@ -5590,9 +5641,37 @@ async function loadMyGardenForCosmetics() {
   if (!error) myGarden = data || null;
 }
 
+async function loadMyHeroForShop() {
+  if (!me?.id) { myHero = null; return; }
+  const { data, error } = await sb
+    .from('user_heroes')
+    .select('*')
+    .eq('user_id', me.id)
+    .maybeSingle();
+  if (!error) myHero = data || null;
+}
+
+function setShopCategory(category) {
+  activeShopCategory = category;
+  document.querySelectorAll('[data-shop-category]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.shopCategory === category);
+  });
+  document.querySelectorAll('[data-shop-category-panel]').forEach(panel => {
+    panel.hidden = panel.dataset.shopCategoryPanel !== category;
+  });
+}
+
+function setupShopCategoryTabs() {
+  document.querySelectorAll('[data-shop-category]').forEach(btn => {
+    btn.addEventListener('click', () => setShopCategory(btn.dataset.shopCategory));
+  });
+}
+setupShopCategoryTabs();
+
 async function loadShop() {
   const grid = document.getElementById('shop-grid');
   grid.replaceChildren(makeSpinner());
+  setShopCategory(activeShopCategory);
 
   const btnNew = document.getElementById('btn-new-item');
   btnNew.style.display = me?.nick === 'admin' ? '' : 'none';
@@ -5604,6 +5683,7 @@ async function loadShop() {
       .eq('is_active', true)
       .order('created_at', { ascending: false }),
     loadMyGardenForCosmetics(),
+    loadMyHeroForShop(),
   ]);
 
   if (error) { grid.replaceChildren(); grid.append(document.createTextNode('Błąd ładowania sklepu.')); return; }
@@ -5615,6 +5695,7 @@ async function loadShop() {
     items.forEach(item => grid.appendChild(buildShopCard(item)));
   }
   renderCosmeticsGrid();
+  renderHeroShopGrid();
 }
 
 function buildShopCard(item) {
@@ -5675,12 +5756,49 @@ async function purchaseItem(itemId, price, btn) {
   loadShop();
 }
 
+function renderHeroShopGrid() {
+  const grid = document.getElementById('hero-shop-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+
+  const hasHero = !!myHero;
+  const canAfford = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
+  const card = el('div', { className: 'shop-card' });
+  card.appendChild(el('div', { className: 'shop-card-icon' }, '🎨'));
+  card.appendChild(el('div', { className: 'shop-card-title' }, 'Zmiana wyglądu bohatera'));
+  card.appendChild(el('div', { className: 'shop-card-desc' },
+    hasHero
+      ? 'Edytuj fryzurę, brodę, sylwetkę, strój i broń. Opłata pobierana jest przy zapisie każdej zmiany.'
+      : 'Stwórz pierwszego bohatera za darmo. Późniejsze zmiany wyglądu kosztują 1 coin przy zapisie.'
+  ));
+  card.appendChild(el('div', { className: 'shop-card-price' }, hasHero ? HERO_STYLE_CHANGE_PRICE + ' 🪙' : '0 🪙'));
+  card.appendChild(el('div', { className: 'shop-card-slots' },
+    hasHero ? 'Płatne za każde zapisanie zmienionego wyglądu' : 'Pierwszy bohater jest darmowy'
+  ));
+
+  const btn = el('button', {
+    className: 'btn-primary shop-card-btn',
+    disabled: hasHero && !canAfford,
+    title: hasHero && !canAfford ? 'Za mało coinów' : '',
+  }, hasHero
+    ? (canAfford ? `Zmień za ${HERO_STYLE_CHANGE_PRICE} 🪙` : `Potrzebujesz ${HERO_STYLE_CHANGE_PRICE} 🪙`)
+    : 'Stwórz bohatera'
+  );
+  btn.addEventListener('click', () => {
+    heroesEditMode = hasHero;
+    switchTab('heroes');
+  });
+  card.appendChild(btn);
+  grid.appendChild(card);
+}
+
 // Shop realtime
 function setupShopRealtime() {
   const reload = () => { if (activeTab === 'shop') loadShop(); };
   const ch = sb.channel('shop-db-changes')
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'store_items'     }, reload)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'store_purchases' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'user_heroes'      }, reload)
     .subscribe();
   realtimeChannels.push(ch);
 }
@@ -8179,13 +8297,23 @@ function buildHeroDisplay() {
   av.innerHTML = buildHeroSVG(myHero, { size: 128 });
   panel.appendChild(av);
   panel.appendChild(el('div', { className: 'hero-name-display' }, myHero.profiles?.nick || me.nick));
-  const editBtn = el('button', { className: 'btn-edit-hero' }, 'Edytuj bohatera');
+  const canPayForEdit = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
+  const editBtn = el('button', {
+    className: 'btn-edit-hero',
+    disabled: !canPayForEdit,
+    title: canPayForEdit ? '' : 'Za mało coinów',
+  }, canPayForEdit ? `Edytuj bohatera (${HERO_STYLE_CHANGE_PRICE} 🪙)` : `Potrzebujesz ${HERO_STYLE_CHANGE_PRICE} 🪙`);
   editBtn.addEventListener('click', () => {
     heroesEditMode = true;
     renderHeroesTab(document.getElementById('heroes-content'));
   });
   panel.appendChild(editBtn);
   return panel;
+}
+
+function heroAppearanceChanged(draft, current) {
+  if (!current) return true;
+  return HERO_APPEARANCE_FIELDS.some(field => String(draft[field] || '') !== String(current[field] || ''));
 }
 
 function buildHeroWizard() {
@@ -8195,12 +8323,32 @@ function buildHeroWizard() {
   };
   const wizard = el('div', { className: 'hero-wizard' });
   wizard.appendChild(el('div', { className: 'hero-wizard-head' }, myHero ? 'Edytuj Bohatera' : 'Stwórz Bohatera'));
-  wizard.appendChild(el('div', { className: 'hero-wizard-sub' }, 'Wybierz wygląd swojego awatara w Karczmie.'));
+  wizard.appendChild(el('div', { className: 'hero-wizard-sub' },
+    myHero ? `Zmiana wyglądu kosztuje ${HERO_STYLE_CHANGE_PRICE} coin przy zapisie.` : 'Pierwszy bohater jest darmowy.'
+  ));
 
   const previewWrap = el('div', { className: 'hero-wizard-preview' });
   const updatePreview = () => { previewWrap.innerHTML = buildHeroSVG(draft, { size: 96 }); };
   updatePreview();
   wizard.appendChild(previewWrap);
+
+  let saveBtn = null;
+  function updateSaveState() {
+    if (!saveBtn) return;
+    if (!myHero) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Stwórz bohatera!';
+      return;
+    }
+    const changed = heroAppearanceChanged(draft, myHero);
+    const canPay = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
+    saveBtn.disabled = !changed || !canPay;
+    saveBtn.textContent = !changed
+      ? 'Brak zmian'
+      : canPay
+        ? `Zapisz za ${HERO_STYLE_CHANGE_PRICE} 🪙`
+        : `Potrzebujesz ${HERO_STYLE_CHANGE_PRICE} 🪙`;
+  }
 
   function addChips(label, field, opts) {
     wizard.appendChild(el('div', { className: 'wizard-section-label' }, label));
@@ -8211,6 +8359,7 @@ function buildHeroWizard() {
         draft[field] = value;
         row.querySelectorAll('.wizard-chip').forEach(c => c.classList.toggle('selected', c === chip));
         updatePreview();
+        updateSaveState();
       });
       row.appendChild(chip);
     });
@@ -8227,6 +8376,7 @@ function buildHeroWizard() {
         draft[field] = value;
         row.querySelectorAll('.wizard-swatch').forEach(s => s.classList.toggle('selected', s === sw));
         updatePreview();
+        updateSaveState();
       });
       row.appendChild(sw);
     });
@@ -8250,23 +8400,38 @@ function buildHeroWizard() {
   addSwatches('Kolor stroju', 'outfit_color', OUTFIT_COLORS);
   addChips('Broń', 'weapon', [{ value: 'sword', label: 'Miecz' }, { value: 'axe', label: 'Topór' }, { value: 'staff', label: 'Laska' }, { value: 'bow', label: 'Łuk' }, { value: 'fists', label: 'Pięści' }]);
 
-  const saveBtn = el('button', { className: 'btn-save-hero' }, myHero ? 'Zapisz zmiany' : 'Stwórz bohatera!');
+  saveBtn = el('button', { className: 'btn-save-hero' }, myHero ? `Zapisz za ${HERO_STYLE_CHANGE_PRICE} 🪙` : 'Stwórz bohatera!');
+  updateSaveState();
   saveBtn.addEventListener('click', async () => {
+    if (myHero && !heroAppearanceChanged(draft, myHero)) return;
+    if (myHero && (me?.coins || 0) < HERO_STYLE_CHANGE_PRICE) {
+      showToast('❌ Za mało coinów na zmianę wyglądu.');
+      updateSaveState();
+      return;
+    }
     saveBtn.disabled = true;
     saveBtn.textContent = 'Zapisuję…';
     heroSuppressReloadUntil = Date.now() + 2500;
-    const { error } = await sb.rpc('save_hero', {
+    const { data, error } = await sb.rpc('save_hero', {
       p_hero_name: me.nick, p_skin_tone: 'medium', p_hair_style: draft.hair_style,
       p_hair_color: draft.hair_color, p_beard: draft.beard, p_body_shape: draft.body_shape,
       p_outfit: draft.outfit, p_outfit_color: draft.outfit_color, p_weapon: draft.weapon,
     });
     if (error) {
-      showToast('❌ ' + (error.message || 'Błąd zapisu.'));
-      saveBtn.disabled = false;
-      saveBtn.textContent = myHero ? 'Zapisz zmiany' : 'Stwórz bohatera!';
+      const msg = error.message?.includes('insufficient') ? 'Za mało coinów na zmianę wyglądu.' : (error.message || 'Błąd zapisu.');
+      showToast('❌ ' + msg);
+      updateSaveState();
       return;
     }
-    showToast(myHero ? '✅ Bohater zaktualizowany!' : '✅ Bohater stworzony!');
+    const pricePaid = Number(data?.price_paid || 0);
+    if (data?.coins_left !== undefined) {
+      me.coins = data.coins_left;
+      setText(headerCoins, me.coins);
+    } else if (pricePaid > 0) {
+      me.coins -= pricePaid;
+      setText(headerCoins, me.coins);
+    }
+    showToast(myHero ? `✅ Bohater zaktualizowany${pricePaid > 0 ? ' za ' + pricePaid + ' 🪙' : ''}!` : '✅ Bohater stworzony!');
     heroesEditMode = false;
     await loadHeroes();
   });
