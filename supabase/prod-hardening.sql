@@ -30,6 +30,9 @@ GRANT EXECUTE ON FUNCTION public.place_bet(uuid, text, integer) TO authenticated
 GRANT EXECUTE ON FUNCTION public.create_market(text, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.resolve_market(uuid, text) TO authenticated;
 
+CREATE INDEX IF NOT EXISTS user_heroes_user_id_idx ON public.user_heroes(user_id);
+GRANT SELECT ON public.user_heroes TO anon, authenticated;
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

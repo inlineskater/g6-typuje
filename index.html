@@ -2218,6 +2218,65 @@
     .calib-bad  { color: var(--no);  font-weight: 700; }
     .calib-na   { color: var(--dim); font-size: 12px; }
     .calib-sub  { color: var(--dim); font-size: 10px; font-weight: 400; }
+
+    /* ── HEROES & TAVERN ─────────────────────────────────────────────────── */
+    .heroes-wrap { max-width: 1200px; margin: 0 auto; padding: var(--page-pad); display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+    .hero-panel { position: sticky; top: 80px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .hero-panel-title { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); align-self: flex-start; }
+    .hero-avatar-lg { width: 128px; height: 160px; display: flex; align-items: center; justify-content: center; }
+    .hero-name-display { font-size: 17px; font-weight: 800; color: var(--text); text-align: center; }
+    .hero-nick-display { font-size: 12px; color: var(--muted); text-align: center; margin-top: -8px; }
+    .btn-edit-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; color: var(--muted); cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; min-height: 34px; padding: 5px 16px; transition: all .15s; width: 100%; }
+    .btn-edit-hero:hover { border-color: var(--accent); color: var(--accent); }
+    .hero-wizard { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px; display: flex; flex-direction: column; gap: 0; }
+    .hero-wizard-head { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+    .hero-wizard-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+    .hero-wizard-preview { display: flex; justify-content: center; margin-bottom: 20px; }
+    .wizard-section-label { font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; margin-top: 14px; }
+    .wizard-name-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit; min-height: 44px; padding: 11px 13px; outline: none; transition: border-color .15s; margin-bottom: 4px; box-sizing: border-box; }
+    .wizard-name-input:focus { border-color: var(--accent); }
+    .wizard-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+    .wizard-chip { background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; color: var(--muted); cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; padding: 4px 12px; transition: all .15s; user-select: none; }
+    .wizard-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .wizard-chip.selected { background: var(--acc-dim); border-color: var(--accent); color: var(--accent); }
+    .wizard-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+    .wizard-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid transparent; cursor: pointer; transition: transform .15s, border-color .15s; }
+    .wizard-swatch:hover { transform: scale(1.15); }
+    .wizard-swatch.selected { border-color: var(--accent); transform: scale(1.15); box-shadow: 0 0 0 2px var(--acc-dim); }
+    .btn-save-hero { width: 100%; background: var(--accent); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 15px; font-weight: 700; font-family: inherit; min-height: 44px; padding: 12px; transition: opacity .15s; margin-top: 20px; }
+    .btn-save-hero:hover { opacity: .86; }
+    .btn-save-hero:disabled { opacity: .4; cursor: not-allowed; }
+    .tavern-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .tavern-panel-title { padding: 14px 18px 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .tavern-scene {
+      position: relative; height: 300px; overflow: hidden; margin: 10px 12px 14px;
+      border-radius: 10px; border: 3px solid #5a3e28;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% 100%, rgba(255,170,50,.12) 0%, transparent 65%),
+        repeating-linear-gradient(90deg, #8B6340 0px, #8B6340 58px, #7A5530 58px, #7A5530 60px),
+        linear-gradient(180deg, #3d2b1e 0%, #3d2b1e 40%, #8B6340 40%, #8B6340 100%);
+    }
+    .tavern-scene::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 40%; background: repeating-linear-gradient(0deg, transparent 0px, transparent 13px, rgba(0,0,0,.1) 13px, rgba(0,0,0,.1) 14px); pointer-events: none; }
+    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 50% 95%, rgba(255,160,30,.1) 0%, transparent 65%); pointer-events: none; z-index: 3; }
+    .tavern-table { position: absolute; bottom: 42px; width: 80px; height: 18px; background: #5a3e28; border-radius: 4px; z-index: 1; }
+    .tavern-table::after { content: '🍺'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 14px; }
+    .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-hero var(--walk-dur, 9s) linear infinite; }
+    .tavern-lane.hero-mine { filter: drop-shadow(0 0 6px rgba(99,102,241,.75)); }
+    @keyframes tavern-hero {
+      0%   { left: 3%;  transform: scaleX(1);  }
+      44%  { left: 78%; transform: scaleX(1);  }
+      50%  { left: 78%; transform: scaleX(-1); }
+      94%  { left: 3%;  transform: scaleX(-1); }
+      100% { left: 3%;  transform: scaleX(1);  }
+    }
+    @keyframes leg-l { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
+    @keyframes leg-r { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
+    @keyframes body-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+    .hero-tooltip { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: rgba(15,23,42,.9); color: #fff; border-radius: 7px; padding: 5px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+    .hero-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(15,23,42,.9); }
+    .tavern-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: rgba(255,255,255,.5); font-size: 13px; font-weight: 600; pointer-events: none; z-index: 4; }
+    @media (max-width: 900px) { .heroes-wrap { grid-template-columns: 1fr; } .hero-panel { position: static; } }
+    @media (max-width: 560px) { .tavern-scene { height: 220px; } }
   </style>
 </head>
 <body>
@@ -2294,6 +2353,7 @@
     <span class="nav-sep">|</span>
     <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
     <button class="nav-tab" data-tab="shop">🛒 Sklep</button>
+    <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
   </nav>
 
   <div id="tab-markets">
@@ -2780,6 +2840,14 @@
   <div id="tab-garden" class="hidden">
     <main>
       <div class="garden-wrap" id="garden-content">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-heroes" class="hidden">
+    <main>
+      <div class="heroes-wrap" id="heroes-content">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
     </main>
@@ -3312,6 +3380,7 @@ async function doLogout() {
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
   stopWhackBossRound();
   resetGardenState();
+  resetHeroState();
   hide(screenApp);
   pinInput.value = '';
   const rp = document.getElementById('reg-pin'); if (rp) rp.value = '';
@@ -3364,31 +3433,35 @@ function switchTab(tab) {
   const tWb = document.getElementById('tab-whack-boss');
   const tS = document.getElementById('tab-shop');
   const tG = document.getElementById('tab-garden');
+  const tH = document.getElementById('tab-heroes');
   if (tab === 'markets') {
-    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
   } else if (tab === 'leaderboard') {
-    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     loadLeaderboard();
   } else if (tab === 'poker') {
-    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     setupPokerRealtime();
     loadPokerState();
   } else if (tab === 'roulette') {
-    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     loadRouletteHistory();
   } else if (tab === 'slots') {
-    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG);
+    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     loadSlotsHistory();
   } else if (tab === 'whack-boss') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG); hide(tH);
     loadSeasonalTab();
   } else if (tab === 'shop') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); show(tS); hide(tG);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); show(tS); hide(tG); hide(tH);
     loadShop();
   } else if (tab === 'garden') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); show(tG);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); show(tG); hide(tH);
     loadGarden();
+  } else if (tab === 'heroes') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); show(tH);
+    loadHeroes();
   }
 }
 
@@ -7875,6 +7948,275 @@ function buildEmptyPot() {
   };
 
   return pot;
+}
+
+// ── Heroes & Tavern ───────────────────────────────────────────────────────
+let myHero = null;
+let allHeroes = [];
+let heroRealtimeReady = false;
+let heroesEditMode = false;
+let heroSuppressReloadUntil = 0;
+
+const SKIN_COLORS   = { light: '#fddbb4', medium: '#c68642', tan: '#8d5524', dark: '#4a2912' };
+const HAIR_COLORS   = { brown: '#6b3f2a', black: '#1a1a1a', blonde: '#f5d76e', red: '#b34700', gray: '#9e9e9e', white: '#f0f0f0' };
+const OUTFIT_COLORS = { blue: '#4a90d9', red: '#c0392b', green: '#27ae60', purple: '#8e44ad', gray: '#7f8c8d' };
+
+function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
+  const skin   = SKIN_COLORS[hero.skin_tone]      || SKIN_COLORS.medium;
+  const hair   = HAIR_COLORS[hero.hair_color]     || HAIR_COLORS.brown;
+  const outfit = OUTFIT_COLORS[hero.outfit_color] || OUTFIT_COLORS.blue;
+  const bw = hero.body_shape === 'stocky' ? 24 : hero.body_shape === 'slim' ? 16 : 20;
+  const bx = 32 - bw / 2;
+
+  const hairSVG = ({
+    bald:   '',
+    short:  `<ellipse cx="32" cy="10" rx="12" ry="7" fill="${hair}"/>`,
+    medium: `<ellipse cx="32" cy="10" rx="12" ry="8" fill="${hair}"/><rect x="20" y="10" width="4" height="10" rx="2" fill="${hair}"/><rect x="40" y="10" width="4" height="10" rx="2" fill="${hair}"/>`,
+    long:   `<ellipse cx="32" cy="10" rx="12" ry="8" fill="${hair}"/><rect x="20" y="10" width="4" height="18" rx="2" fill="${hair}"/><rect x="40" y="10" width="4" height="18" rx="2" fill="${hair}"/>`,
+    curly:  `<circle cx="24" cy="9" r="6" fill="${hair}"/><circle cx="32" cy="5" r="7" fill="${hair}"/><circle cx="40" cy="9" r="6" fill="${hair}"/><circle cx="28" cy="13" r="5" fill="${hair}"/><circle cx="36" cy="13" r="5" fill="${hair}"/>`,
+  })[hero.hair_style] || '';
+
+  const beardSVG = ({
+    none:    '',
+    stubble: `<ellipse cx="32" cy="23" rx="8" ry="4" fill="${hair}" opacity="0.45"/>`,
+    goatee:  `<ellipse cx="32" cy="25" rx="5" ry="5" fill="${hair}"/>`,
+    full:    `<ellipse cx="32" cy="23" rx="10" ry="6" fill="${hair}"/>`,
+  })[hero.beard] || '';
+
+  const outfitDetail = ({
+    armor: `<rect x="${bx+1}" y="28" width="${bw-2}" height="4" rx="1" fill="rgba(255,255,255,.25)"/><rect x="${bx+1}" y="36" width="${bw-2}" height="2" rx="1" fill="rgba(0,0,0,.2)"/>`,
+    robe:  `<line x1="32" y1="28" x2="32" y2="56" stroke="rgba(255,255,255,.2)" stroke-width="2"/>`,
+    cloak: `<path d="M${bx} 28 L${bx-4} 56 L${bx+bw+4} 56 L${bx+bw} 28 Z" fill="${outfit}" opacity="0.65"/>`,
+    tunic: `<rect x="${bx+2}" y="28" width="${bw-4}" height="5" rx="1" fill="rgba(255,255,255,.18)"/>`,
+  })[hero.outfit] || '';
+
+  const weaponSVG = ({
+    sword: `<g transform="translate(${bx+bw+2},28)"><rect x="-2" y="-18" width="4" height="22" rx="1" fill="#c0c0c0"/><rect x="-6" y="0" width="12" height="3" rx="1" fill="#8b6914"/><rect x="-1" y="-22" width="2" height="5" rx="1" fill="#d0d0d0"/></g>`,
+    axe:   `<g transform="translate(${bx+bw+2},28)"><rect x="-1" y="-18" width="3" height="22" rx="1" fill="#8b6914"/><path d="M1,-18 C8,-20 10,-12 1,-10 Z" fill="#a0a0a0"/></g>`,
+    staff: `<g transform="translate(${bx+bw+2},26)"><rect x="-1.5" y="-22" width="3" height="30" rx="1.5" fill="#8b6914"/><circle cx="0" cy="-22" r="5" fill="none" stroke="#8e44ad" stroke-width="2"/><circle cx="0" cy="-22" r="3" fill="#a855f7"/></g>`,
+    bow:   `<g transform="translate(${bx+bw+2},30)"><path d="M0,-18 Q8,-9 0,0" fill="none" stroke="#8b6914" stroke-width="2.5"/><line x1="0" y1="-18" x2="0" y2="0" stroke="#c8a96a" stroke-width="1" stroke-dasharray="2,2"/></g>`,
+    fists: '',
+  })[hero.weapon] || '';
+
+  const legL = walking ? `style="transform-origin: 50% 0%; transform-box: fill-box; animation: leg-l 0.4s ease-in-out infinite;"` : '';
+  const legR = walking ? `style="transform-origin: 50% 0%; transform-box: fill-box; animation: leg-r 0.4s ease-in-out infinite;"` : '';
+  const bob  = walking ? `style="animation: body-bob 0.4s ease-in-out infinite;"` : '';
+  const h = Math.round(size * 80 / 64);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" width="${size}" height="${h}" role="img">
+    <g ${bob}>
+      ${hairSVG}
+      <circle cx="32" cy="16" r="12" fill="${skin}"/>
+      <circle cx="28" cy="15" r="1.5" fill="#1a1a1a"/>
+      <circle cx="36" cy="15" r="1.5" fill="#1a1a1a"/>
+      <path d="M29 20 Q32 22 35 20" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+      ${beardSVG}
+      <rect x="${bx}" y="28" width="${bw}" height="28" rx="4" fill="${outfit}"/>
+      ${outfitDetail}
+      <rect x="${bx-6}" y="29" width="6" height="18" rx="3" fill="${skin}"/>
+      <rect x="${bx+bw}" y="29" width="6" height="18" rx="3" fill="${skin}"/>
+      ${weaponSVG}
+      <rect x="26" y="56" width="8" height="16" rx="3" fill="${outfit}" ${legL}/>
+      <rect x="30" y="56" width="8" height="16" rx="3" fill="${outfit}" ${legR}/>
+      <rect x="24" y="69" width="11" height="5" rx="2" fill="#3d2b1a"/>
+      <rect x="29" y="69" width="11" height="5" rx="2" fill="#3d2b1a"/>
+    </g>
+  </svg>`;
+}
+
+function resetHeroState() {
+  myHero = null; allHeroes = []; heroRealtimeReady = false;
+  heroesEditMode = false; heroSuppressReloadUntil = 0;
+}
+
+function setupHeroesRealtime() {
+  if (heroRealtimeReady) return;
+  heroRealtimeReady = true;
+  const ch = sb.channel('heroes-rt')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'user_heroes' }, () => {
+      if (activeTab !== 'heroes' || Date.now() < heroSuppressReloadUntil) return;
+      loadHeroes();
+    }).subscribe();
+  realtimeChannels.push(ch);
+}
+
+async function loadHeroes() {
+  setupHeroesRealtime();
+  const wrap = document.getElementById('heroes-content');
+  if (!wrap) return;
+  if (!wrap.querySelector('.heroes-wrap')) wrap.replaceChildren(makeSpinner());
+
+  const { data, error } = await sb.from('user_heroes').select('*, profiles(nick)');
+  if (error) {
+    wrap.replaceChildren(el('div', { style: { color: 'var(--muted)', textAlign: 'center', padding: '32px' } }, 'Błąd ładowania bohaterów.'));
+    return;
+  }
+  allHeroes = data || [];
+  myHero = allHeroes.find(h => h.user_id === me.id) || null;
+  renderHeroesTab(wrap);
+}
+
+function renderHeroesTab(wrap) {
+  const outer = el('div', { className: 'heroes-wrap' });
+  outer.appendChild(heroesEditMode || !myHero ? buildHeroWizard() : buildHeroDisplay());
+  outer.appendChild(buildTavernPanel());
+  wrap.replaceChildren(outer);
+}
+
+function buildHeroDisplay() {
+  const panel = el('div', { className: 'hero-panel' });
+  panel.appendChild(el('div', { className: 'hero-panel-title' }, 'Twój Bohater'));
+  const av = el('div', { className: 'hero-avatar-lg' });
+  av.innerHTML = buildHeroSVG(myHero, { size: 128 });
+  panel.appendChild(av);
+  panel.appendChild(el('div', { className: 'hero-name-display' }, myHero.hero_name));
+  panel.appendChild(el('div', { className: 'hero-nick-display' }, '@' + (myHero.profiles?.nick || me.nick)));
+  const editBtn = el('button', { className: 'btn-edit-hero' }, 'Edytuj bohatera');
+  editBtn.addEventListener('click', () => {
+    heroesEditMode = true;
+    renderHeroesTab(document.getElementById('heroes-content'));
+  });
+  panel.appendChild(editBtn);
+  return panel;
+}
+
+function buildHeroWizard() {
+  const draft = myHero ? { ...myHero } : {
+    hero_name: '', skin_tone: 'medium', hair_style: 'short', hair_color: 'brown',
+    beard: 'none', body_shape: 'average', outfit: 'tunic', outfit_color: 'blue', weapon: 'fists',
+  };
+  const wizard = el('div', { className: 'hero-wizard' });
+  wizard.appendChild(el('div', { className: 'hero-wizard-head' }, myHero ? 'Edytuj Bohatera' : 'Stwórz Bohatera'));
+  wizard.appendChild(el('div', { className: 'hero-wizard-sub' }, 'Wybierz wygląd swojego awatara w Karczmie.'));
+
+  const previewWrap = el('div', { className: 'hero-wizard-preview' });
+  const updatePreview = () => { previewWrap.innerHTML = buildHeroSVG(draft, { size: 96 }); };
+  updatePreview();
+  wizard.appendChild(previewWrap);
+
+  wizard.appendChild(el('div', { className: 'wizard-section-label' }, 'Imię bohatera'));
+  const nameInput = el('input', { className: 'wizard-name-input', type: 'text', placeholder: 'Np. Artorius Wielki', maxLength: '32' });
+  nameInput.value = draft.hero_name;
+  nameInput.addEventListener('input', () => { draft.hero_name = nameInput.value; });
+  wizard.appendChild(nameInput);
+
+  function addChips(label, field, opts) {
+    wizard.appendChild(el('div', { className: 'wizard-section-label' }, label));
+    const row = el('div', { className: 'wizard-chips' });
+    opts.forEach(({ value, label: lbl }) => {
+      const chip = el('button', { className: 'wizard-chip' + (draft[field] === value ? ' selected' : '') }, lbl);
+      chip.addEventListener('click', () => {
+        draft[field] = value;
+        row.querySelectorAll('.wizard-chip').forEach(c => c.classList.toggle('selected', c === chip));
+        updatePreview();
+      });
+      row.appendChild(chip);
+    });
+    wizard.appendChild(row);
+  }
+
+  function addSwatches(label, field, colorMap) {
+    wizard.appendChild(el('div', { className: 'wizard-section-label' }, label));
+    const row = el('div', { className: 'wizard-swatches' });
+    Object.entries(colorMap).forEach(([value, hex]) => {
+      const sw = el('div', { className: 'wizard-swatch' + (draft[field] === value ? ' selected' : ''), title: value });
+      sw.style.background = hex;
+      sw.addEventListener('click', () => {
+        draft[field] = value;
+        row.querySelectorAll('.wizard-swatch').forEach(s => s.classList.toggle('selected', s === sw));
+        updatePreview();
+      });
+      row.appendChild(sw);
+    });
+    wizard.appendChild(row);
+  }
+
+  addSwatches('Kolor skóry', 'skin_tone', SKIN_COLORS);
+  addChips('Sylwetka', 'body_shape', [{ value: 'slim', label: 'Szczupła' }, { value: 'average', label: 'Średnia' }, { value: 'stocky', label: 'Krępa' }]);
+  addChips('Fryzura', 'hair_style', [{ value: 'bald', label: 'Łysy' }, { value: 'short', label: 'Krótkie' }, { value: 'medium', label: 'Średnie' }, { value: 'long', label: 'Długie' }, { value: 'curly', label: 'Kędzierzawe' }]);
+  addSwatches('Kolor włosów', 'hair_color', HAIR_COLORS);
+  addChips('Broda', 'beard', [{ value: 'none', label: 'Brak' }, { value: 'stubble', label: 'Zarost' }, { value: 'goatee', label: 'Kozioł' }, { value: 'full', label: 'Pełna' }]);
+  addChips('Strój', 'outfit', [{ value: 'tunic', label: 'Tunika' }, { value: 'armor', label: 'Zbroja' }, { value: 'robe', label: 'Szata' }, { value: 'cloak', label: 'Peleryna' }]);
+  addSwatches('Kolor stroju', 'outfit_color', OUTFIT_COLORS);
+  addChips('Broń', 'weapon', [{ value: 'sword', label: 'Miecz' }, { value: 'axe', label: 'Topór' }, { value: 'staff', label: 'Laska' }, { value: 'bow', label: 'Łuk' }, { value: 'fists', label: 'Pięści' }]);
+
+  const saveBtn = el('button', { className: 'btn-save-hero' }, myHero ? 'Zapisz zmiany' : 'Stwórz bohatera!');
+  saveBtn.addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    if (!name) { showToast('❌ Podaj imię bohatera!'); return; }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisuję…';
+    heroSuppressReloadUntil = Date.now() + 2500;
+    const { error } = await sb.rpc('save_hero', {
+      p_hero_name: name, p_skin_tone: draft.skin_tone, p_hair_style: draft.hair_style,
+      p_hair_color: draft.hair_color, p_beard: draft.beard, p_body_shape: draft.body_shape,
+      p_outfit: draft.outfit, p_outfit_color: draft.outfit_color, p_weapon: draft.weapon,
+    });
+    if (error) {
+      showToast('❌ ' + (error.message || 'Błąd zapisu.'));
+      saveBtn.disabled = false;
+      saveBtn.textContent = myHero ? 'Zapisz zmiany' : 'Stwórz bohatera!';
+      return;
+    }
+    showToast(myHero ? '✅ Bohater zaktualizowany!' : '✅ Bohater stworzony!');
+    heroesEditMode = false;
+    await loadHeroes();
+  });
+  wizard.appendChild(saveBtn);
+
+  if (myHero && heroesEditMode) {
+    const cancelBtn = el('button', { className: 'btn-edit-hero', style: { marginTop: '8px' } }, 'Anuluj');
+    cancelBtn.addEventListener('click', () => {
+      heroesEditMode = false;
+      renderHeroesTab(document.getElementById('heroes-content'));
+    });
+    wizard.appendChild(cancelBtn);
+  }
+  return wizard;
+}
+
+function buildTavernPanel() {
+  const panel = el('div', { className: 'tavern-panel' });
+  panel.appendChild(el('div', { className: 'tavern-panel-title' }, 'Karczma'));
+  const scene = el('div', { className: 'tavern-scene' });
+
+  const t1 = el('div', { className: 'tavern-table' }); t1.style.left = '18%';
+  const t2 = el('div', { className: 'tavern-table' }); t2.style.left = '62%';
+  scene.appendChild(t1);
+  scene.appendChild(t2);
+
+  const heroes = myHero
+    ? [myHero, ...allHeroes.filter(h => h.user_id !== me.id)]
+    : allHeroes;
+  const bottoms = ['58px', '72px', '60px', '76px', '54px'];
+
+  if (!heroes.length) {
+    const empty = el('div', { className: 'tavern-empty' });
+    empty.append('🍺');
+    empty.appendChild(el('span', null, 'Karczma świeci pustkami…'));
+    empty.appendChild(el('span', { style: { fontSize: '11px', fontWeight: '400' } }, 'Stwórz bohatera, żeby wejść do karczmy!'));
+    scene.appendChild(empty);
+  } else {
+    heroes.forEach((hero, i) => {
+      const isMe = hero.user_id === me.id;
+      const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
+      lane.style.bottom = bottoms[i % bottoms.length];
+      lane.style.setProperty('--walk-dur', (6 + (i * 1.7 % 5)).toFixed(1) + 's');
+      lane.style.animationDelay = -(i * 2.1).toFixed(1) + 's';
+      lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true });
+
+      let tip = null;
+      lane.addEventListener('click', () => {
+        if (tip) { tip.remove(); tip = null; return; }
+        tip = el('div', { className: 'hero-tooltip' }, (hero.profiles?.nick || '?') + ' · ' + hero.hero_name);
+        lane.appendChild(tip);
+        setTimeout(() => { if (tip) { tip.remove(); tip = null; } }, 3000);
+      });
+      scene.appendChild(lane);
+    });
+  }
+  panel.appendChild(scene);
+  return panel;
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────
