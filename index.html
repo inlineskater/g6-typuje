@@ -2337,27 +2337,45 @@
     .tavern-scene {
       position: relative; height: 300px; overflow: hidden; margin: 10px 12px 14px;
       border-radius: 10px; border: 3px solid #5a3e28;
-      background:
-        radial-gradient(ellipse 70% 50% at 50% 100%, rgba(255,170,50,.12) 0%, transparent 65%),
-        repeating-linear-gradient(90deg, #8B6340 0px, #8B6340 58px, #7A5530 58px, #7A5530 60px),
-        linear-gradient(180deg, #3d2b1e 0%, #3d2b1e 40%, #8B6340 40%, #8B6340 100%);
+      background: linear-gradient(180deg,
+        #0d1635 0%, #1a2d5a 27%,
+        #2a4a1e 27%, #3a6028 35%,
+        #4a7032 35%, #567833 43%,
+        #6b5530 43%, #5a4525 100%
+      );
     }
-    .tavern-scene::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 40%; background: repeating-linear-gradient(0deg, transparent 0px, transparent 13px, rgba(0,0,0,.1) 13px, rgba(0,0,0,.1) 14px); pointer-events: none; }
-    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 50% 95%, rgba(255,160,30,.1) 0%, transparent 65%); pointer-events: none; z-index: 3; }
-    .tavern-table { position: absolute; bottom: 42px; width: 80px; height: 18px; background: #5a3e28; border-radius: 4px; z-index: 1; }
-    .tavern-table::after { content: '🍺'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 14px; }
-    .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-hero var(--walk-dur, 9s) linear infinite; }
+    .tavern-scene::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 30%;
+      background:
+        radial-gradient(circle 1px at 8% 20%, #fff 100%, transparent),
+        radial-gradient(circle 1px at 18% 8%, #fff 100%, transparent),
+        radial-gradient(circle 1.5px at 32% 22%, #fff 100%, transparent),
+        radial-gradient(circle 1px at 47% 6%, #fff 100%, transparent),
+        radial-gradient(circle 1px at 58% 18%, #fff 100%, transparent),
+        radial-gradient(circle 1.5px at 70% 10%, #fff 100%, transparent),
+        radial-gradient(circle 1px at 82% 25%, #fff 100%, transparent),
+        radial-gradient(circle 1px at 91% 5%, #fff 100%, transparent),
+        radial-gradient(circle 1px at 38% 14%, rgba(255,255,255,.7) 100%, transparent),
+        radial-gradient(circle 1px at 25% 28%, rgba(255,255,255,.5) 100%, transparent);
+      pointer-events: none;
+    }
+    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 25% 55% at 97% 50%, rgba(255,160,30,.2) 0%, transparent 70%), radial-gradient(ellipse 15% 25% at 97% 38%, rgba(255,200,80,.15) 0%, transparent 65%); pointer-events: none; z-index: 3; }
+    .tavern-building { position: absolute; right: 0; bottom: 0; z-index: 1; pointer-events: none; }
+    .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-approach var(--walk-dur, 12s) linear infinite; }
     .tavern-lane.hero-mine { filter: drop-shadow(0 0 6px rgba(99,102,241,.75)); }
-    @keyframes tavern-hero {
-      0%   { left: 3%;  transform: scaleX(1);  }
-      44%  { left: 78%; transform: scaleX(1);  }
-      50%  { left: 78%; transform: scaleX(-1); }
-      94%  { left: 3%;  transform: scaleX(-1); }
-      100% { left: 3%;  transform: scaleX(1);  }
+    @keyframes tavern-approach {
+      0%   { left: -10%; opacity: 0; }
+      5%   { left: -2%;  opacity: 1; }
+      70%  { left: 55%;  opacity: 1; }
+      78%  { left: 57%;  opacity: 0; }
+      79%  { left: -10%; opacity: 0; }
+      100% { left: -10%; opacity: 0; }
     }
     @keyframes leg-l { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
     @keyframes leg-r { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
     @keyframes body-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+    .hero-speech { position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); color: #2d1b0e; border-radius: 8px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .4s ease; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .hero-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(255,255,255,.95); }
     .hero-tooltip { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: rgba(15,23,42,.9); color: #fff; border-radius: 7px; padding: 5px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
     .hero-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(15,23,42,.9); }
     .tavern-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: rgba(255,255,255,.5); font-size: 13px; font-weight: 600; pointer-events: none; z-index: 4; }
@@ -8042,6 +8060,14 @@ let allHeroes = [];
 let heroRealtimeReady = false;
 let heroesEditMode = false;
 let heroSuppressReloadUntil = 0;
+let tavernSpeechTimer = null;
+
+const TAVERN_PHRASES = [
+  'Czas na piwko! 🍺', 'Obstawiam na TAK!', 'Gdzie mój miód?',
+  'Niezła karczma!', 'Stawiam wszystkim!', 'Jestem spragniony!',
+  'Kto mi postawi?', 'W lewo czy w prawo?', 'Mam system! 🎲',
+  'Dzisiaj mi idzie!', 'Za Rynek Proroctw!', 'Postawię wszystko!',
+];
 
 const SKIN_COLORS   = { light: '#fddbb4', medium: '#c68642', tan: '#8d5524', dark: '#4a2912' };
 const HAIR_COLORS   = { brown: '#6b3f2a', black: '#1a1a1a', blonde: '#f5d76e', red: '#b34700', gray: '#9e9e9e', white: '#f0f0f0' };
@@ -8119,6 +8145,7 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
 function resetHeroState() {
   myHero = null; allHeroes = []; heroRealtimeReady = false;
   heroesEditMode = false; heroSuppressReloadUntil = 0;
+  clearInterval(tavernSpeechTimer); tavernSpeechTimer = null;
 }
 
 function setupHeroesRealtime() {
@@ -8267,19 +8294,70 @@ function buildHeroWizard() {
 }
 
 function buildTavernPanel() {
+  clearInterval(tavernSpeechTimer);
+  tavernSpeechTimer = null;
+
   const panel = el('div', { className: 'tavern-panel' });
   panel.appendChild(el('div', { className: 'tavern-panel-title' }, 'Karczma'));
   const scene = el('div', { className: 'tavern-scene' });
 
-  const t1 = el('div', { className: 'tavern-table' }); t1.style.left = '18%';
-  const t2 = el('div', { className: 'tavern-table' }); t2.style.left = '62%';
-  scene.appendChild(t1);
-  scene.appendChild(t2);
+  // Stardew Valley-style tavern building on the right
+  const building = el('div', { className: 'tavern-building' });
+  building.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 290" width="170" height="290">
+    <rect x="108" y="14" width="22" height="58" fill="#3a2515"/>
+    <rect x="105" y="12" width="28" height="7" rx="1" fill="#4a3020"/>
+    <ellipse cx="119" cy="9" rx="6" ry="5" fill="#b0b0b0" opacity="0.45"/>
+    <ellipse cx="125" cy="2" rx="5" ry="4" fill="#a0a0a0" opacity="0.3"/>
+    <polygon points="0,90 85,15 170,90" fill="#4a3020"/>
+    <polygon points="0,90 85,15 85,90" fill="rgba(0,0,0,.18)"/>
+    <line x1="0" y1="90" x2="85" y2="15" stroke="#3a2010" stroke-width="2"/>
+    <rect x="0" y="86" width="170" height="204" fill="#8B6340"/>
+    <line x1="0" y1="99" x2="170" y2="99" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="112" x2="170" y2="112" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="125" x2="170" y2="125" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="138" x2="170" y2="138" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="151" x2="170" y2="151" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="164" x2="170" y2="164" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="177" x2="170" y2="177" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="190" x2="170" y2="190" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="203" x2="170" y2="203" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="216" x2="170" y2="216" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="229" x2="170" y2="229" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="242" x2="170" y2="242" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="255" x2="170" y2="255" stroke="#7a5530" stroke-width="1"/>
+    <line x1="0" y1="268" x2="170" y2="268" stroke="#7a5530" stroke-width="1"/>
+    <rect x="10" y="102" width="52" height="42" rx="2" fill="#3a2510"/>
+    <rect x="13" y="105" width="46" height="36" rx="1" fill="#e89a1c"/>
+    <line x1="36" y1="105" x2="36" y2="141" stroke="#3a2510" stroke-width="2"/>
+    <line x1="13" y1="123" x2="59" y2="123" stroke="#3a2510" stroke-width="2"/>
+    <rect x="13" y="105" width="46" height="36" rx="1" fill="rgba(255,200,80,.2)"/>
+    <rect x="108" y="102" width="52" height="42" rx="2" fill="#3a2510"/>
+    <rect x="111" y="105" width="46" height="36" rx="1" fill="#e89a1c"/>
+    <line x1="134" y1="105" x2="134" y2="141" stroke="#3a2510" stroke-width="2"/>
+    <line x1="111" y1="123" x2="157" y2="123" stroke="#3a2510" stroke-width="2"/>
+    <rect x="111" y="105" width="46" height="36" rx="1" fill="rgba(255,200,80,.2)"/>
+    <rect x="38" y="80" width="94" height="22" rx="3" fill="#3a2010"/>
+    <rect x="40" y="82" width="90" height="18" rx="2" fill="#6a4020"/>
+    <text x="85" y="95" text-anchor="middle" fill="#f0c050" font-size="10" font-weight="bold" font-family="Georgia,serif">KARCZMA</text>
+    <rect x="5" y="86" width="2" height="18" fill="#4a3020"/>
+    <rect x="1" y="98" width="10" height="14" rx="2" fill="#f5aa30"/>
+    <rect x="163" y="86" width="2" height="18" fill="#4a3020"/>
+    <rect x="159" y="98" width="10" height="14" rx="2" fill="#f5aa30"/>
+    <rect x="57" y="157" width="56" height="133" rx="4" fill="#3a2010"/>
+    <rect x="60" y="160" width="50" height="130" rx="3" fill="#5a3618"/>
+    <rect x="64" y="167" width="42" height="50" rx="2" fill="#4a2c12"/>
+    <rect x="64" y="223" width="42" height="33" rx="2" fill="#4a2c12"/>
+    <circle cx="104" cy="236" r="4" fill="#c0a050"/>
+    <rect x="0" y="283" width="170" height="7" fill="#3a2a18"/>
+    <rect x="46" y="277" width="78" height="7" rx="1" fill="#5a4828"/>
+  </svg>`;
+  scene.appendChild(building);
 
   const heroes = myHero
     ? [myHero, ...allHeroes.filter(h => h.user_id !== me.id)]
     : allHeroes;
   const bottoms = ['58px', '72px', '60px', '76px', '54px'];
+  const lanes = [];
 
   if (!heroes.length) {
     const empty = el('div', { className: 'tavern-empty' });
@@ -8292,9 +8370,13 @@ function buildTavernPanel() {
       const isMe = hero.user_id === me.id;
       const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
       lane.style.bottom = bottoms[i % bottoms.length];
-      lane.style.setProperty('--walk-dur', (6 + (i * 1.7 % 5)).toFixed(1) + 's');
-      lane.style.animationDelay = -(i * 2.1).toFixed(1) + 's';
+      lane.style.setProperty('--walk-dur', (10 + (i * 2.3 % 6)).toFixed(1) + 's');
+      lane.style.animationDelay = -(i * 2.8).toFixed(1) + 's';
       lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true });
+
+      const speech = el('div', { className: 'hero-speech' }, '');
+      lane.appendChild(speech);
+      lanes.push(speech);
 
       let tip = null;
       lane.addEventListener('click', () => {
@@ -8305,7 +8387,15 @@ function buildTavernPanel() {
       });
       scene.appendChild(lane);
     });
+
+    tavernSpeechTimer = setInterval(() => {
+      const bubble = lanes[Math.floor(Math.random() * lanes.length)];
+      bubble.textContent = TAVERN_PHRASES[Math.floor(Math.random() * TAVERN_PHRASES.length)];
+      bubble.style.opacity = '1';
+      setTimeout(() => { bubble.style.opacity = '0'; }, 3000);
+    }, 4000);
   }
+
   panel.appendChild(scene);
   return panel;
 }
