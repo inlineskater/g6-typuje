@@ -5290,7 +5290,7 @@ function drawCoinChart(canvas, points) {
           const deltaClass = isStart ? 'tx-delta-zero' : p.delta > 0 ? 'tx-delta-pos' : 'tx-delta-neg';
           const rowStyle = isGarden ? { color: 'var(--muted)', fontStyle: 'italic' } : {};
           return el('tr', { style: rowStyle },
-            el('td', { className: 'tx-time' }, isGarden ? '—' : fmtDateTime(new Date(p.ts).toISOString())),
+            el('td', { className: 'tx-time' }, fmtDateTime(new Date(p.ts).toISOString())),
             el('td', { className: isStart ? 'tx-start' : '' }, p.label),
             el('td', { className: deltaClass }, deltaStr + (isStart ? '' : ' 🪙')),
             el('td', { className: 'tx-bal' }, fmtNum(p.bal) + ' 🪙')
