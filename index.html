@@ -2371,8 +2371,6 @@
     }
     @keyframes leg-l { 0%,100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
     @keyframes leg-r { 0%,100% { transform: translateX(2px); } 50% { transform: translateX(-2px); } }
-    @keyframes arm-l { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
-    @keyframes arm-r { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
     @keyframes body-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
     .hero-speech { position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); color: #2d1b0e; border-radius: 8px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .4s ease; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     .hero-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(255,255,255,.95); }
@@ -8122,8 +8120,6 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
   })[hero.weapon] || '';
 
   const bob = walking ? `style="animation: body-bob 0.4s ease-in-out infinite;"` : '';
-  const aL  = walking ? ` style="transform-box:fill-box;transform-origin:50% 0%;animation:arm-l .5s ease-in-out infinite;"` : '';
-  const aR  = walking ? ` style="transform-box:fill-box;transform-origin:50% 0%;animation:arm-r .5s ease-in-out infinite;"` : '';
   const lL  = walking ? ` style="animation:leg-l .5s ease-in-out infinite;"` : '';
   const lR  = walking ? ` style="animation:leg-r .5s ease-in-out infinite;"` : '';
 
@@ -8137,8 +8133,8 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
       ${beardSVG}
       <rect x="${bx}" y="28" width="${bw}" height="28" rx="4" fill="${outfit}"/>
       ${outfitDetail}
-      <rect x="${bx-6}" y="29" width="6" height="18" rx="3" fill="${skin}"${aL}/>
-      ${hasWeapon ? '' : `<rect x="${bx+bw}" y="29" width="6" height="18" rx="3" fill="${skin}"${aR}/>`}
+      <rect x="${bx-6}" y="29" width="6" height="18" rx="3" fill="${skin}"/>
+      ${hasWeapon ? '' : `<rect x="${bx+bw}" y="29" width="6" height="18" rx="3" fill="${skin}"/>`}
       ${weaponSVG}
       <rect x="23" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lL}/>
       <rect x="29" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lR}/>
@@ -8350,12 +8346,17 @@ function buildTavernPanel() {
       scene.appendChild(lane);
     });
 
+    const laneEls = lanes.map(b => b.parentElement);
     tavernSpeechTimer = setInterval(() => {
-      const bubble = lanes[Math.floor(Math.random() * lanes.length)];
+      const idx = Math.floor(Math.random() * lanes.length);
+      const bubble = lanes[idx];
+      const lane = laneEls[idx];
+      const m = new DOMMatrix(window.getComputedStyle(lane).transform);
+      bubble.style.transform = `translateX(-50%) scaleX(${m.a < 0 ? -1 : 1})`;
       bubble.textContent = TAVERN_PHRASES[Math.floor(Math.random() * TAVERN_PHRASES.length)];
       bubble.style.opacity = '1';
-      setTimeout(() => { bubble.style.opacity = '0'; }, 3000);
-    }, 4000);
+      setTimeout(() => { bubble.style.opacity = '0'; }, 3500);
+    }, 20000);
   }
 
   panel.appendChild(scene);
