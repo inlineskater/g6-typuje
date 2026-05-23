@@ -2361,7 +2361,20 @@
       pointer-events: none;
     }
     .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 25% 55% at 97% 50%, rgba(255,160,30,.2) 0%, transparent 70%), radial-gradient(ellipse 15% 25% at 97% 38%, rgba(255,200,80,.15) 0%, transparent 65%); pointer-events: none; z-index: 3; }
-    .tavern-building { position: absolute; right: 0; bottom: 0; z-index: 1; pointer-events: none; }
+    .tavern-building { position: absolute; right: 0; bottom: 0; width: 190px; height: 290px; z-index: 1; pointer-events: none; }
+    .tb-wall { position: absolute; top: 88px; left: 0; right: 0; bottom: 0; background: #C09060; background-image: repeating-linear-gradient(180deg, transparent, transparent 11px, rgba(0,0,0,.1) 11px, rgba(0,0,0,.1) 12px); }
+    .tb-roof { position: absolute; top: 8px; left: 0; right: 0; height: 90px; background: #8B3A18; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+    .tb-roof::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.22) 0%, transparent 50%); clip-path: polygon(50% 0%, 0% 100%, 50% 100%); }
+    .tb-sign { position: absolute; top: 82px; left: 26px; right: 26px; height: 24px; background: #7a4820; border: 2px solid #3a1a08; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #FFE040; font-size: 10px; font-weight: 800; font-family: Georgia, serif; letter-spacing: .1em; box-shadow: 0 2px 8px rgba(0,0,0,.55); }
+    .tb-win { position: absolute; top: 110px; width: 56px; height: 44px; background: #FFB020; border: 3px solid #2a1808; border-radius: 2px; box-shadow: 0 0 16px rgba(255,176,32,.75), inset 0 0 6px rgba(255,220,80,.3); }
+    .tb-win::before { content: ''; position: absolute; top: 0; bottom: 0; left: calc(50% - 1.5px); width: 3px; background: #2a1808; }
+    .tb-win::after { content: ''; position: absolute; left: 0; right: 0; top: calc(50% - 1.5px); height: 3px; background: #2a1808; }
+    .tb-lantern { position: absolute; top: 92px; width: 12px; height: 18px; background: #FFA828; border-radius: 2px; box-shadow: 0 0 12px rgba(255,160,32,.85); }
+    .tb-chimney { position: absolute; bottom: 202px; left: 120px; width: 22px; height: 60px; background: #7a5a38; box-shadow: inset -3px 0 0 rgba(0,0,0,.25); }
+    .tb-chimney::before { content: ''; position: absolute; top: -8px; left: -5px; right: -5px; height: 8px; background: #9a7048; border-radius: 2px 2px 0 0; }
+    .tb-door { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 52px; height: 108px; background: #6a3e1a; border: 3px solid #2a1408; border-bottom: none; border-radius: 3px 3px 0 0; }
+    .tb-door::before { content: ''; position: absolute; top: 8px; left: 6px; right: 6px; height: 44px; background: #523010; border-radius: 2px; }
+    .tb-door::after { content: ''; position: absolute; right: 8px; top: 50%; width: 7px; height: 7px; background: #d4aa50; border-radius: 50%; transform: translateY(-50%); }
     .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-approach var(--walk-dur, 12s) linear infinite; }
     .tavern-lane.hero-mine { filter: drop-shadow(0 0 6px rgba(99,102,241,.75)); }
     @keyframes tavern-approach {
@@ -8302,85 +8315,26 @@ function buildTavernPanel() {
   panel.appendChild(el('div', { className: 'tavern-panel-title' }, 'Karczma'));
   const scene = el('div', { className: 'tavern-scene' });
 
-  // Stardew Valley-style tavern building on the right
+  // Stardew Valley-style tavern building — pure HTML+CSS, no SVG
   const building = el('div', { className: 'tavern-building' });
-  building.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 290" width="190" height="290">
-    <!-- chimney -->
-    <rect x="122" y="16" width="24" height="60" fill="#6a4a30"/>
-    <rect x="118" y="13" width="32" height="8" rx="1" fill="#8a6040"/>
-    <!-- smoke -->
-    <ellipse cx="134" cy="10" rx="7" ry="5" fill="#cccccc" opacity="0.55"/>
-    <ellipse cx="140" cy="3" rx="6" ry="4" fill="#bbbbbb" opacity="0.38"/>
-    <!-- roof — reddish-brown terracotta, clearly visible on night sky -->
-    <polygon points="0,92 95,14 190,92" fill="#8B3A18"/>
-    <polygon points="0,92 95,14 95,92" fill="rgba(0,0,0,.22)"/>
-    <!-- roof tile lines -->
-    <line x1="19" y1="92" x2="95" y2="55" stroke="#6a2c12" stroke-width="1" opacity="0.6"/>
-    <line x1="38" y1="92" x2="95" y2="40" stroke="#6a2c12" stroke-width="1" opacity="0.6"/>
-    <line x1="57" y1="92" x2="95" y2="28" stroke="#6a2c12" stroke-width="1" opacity="0.6"/>
-    <line x1="133" y1="92" x2="95" y2="55" stroke="#a04a22" stroke-width="1" opacity="0.5"/>
-    <line x1="152" y1="92" x2="95" y2="40" stroke="#a04a22" stroke-width="1" opacity="0.5"/>
-    <line x1="171" y1="92" x2="95" y2="28" stroke="#a04a22" stroke-width="1" opacity="0.5"/>
-    <!-- roof ridge -->
-    <line x1="0" y1="92" x2="95" y2="14" stroke="#5a2510" stroke-width="2"/>
-    <line x1="95" y1="14" x2="190" y2="92" stroke="#aa4a28" stroke-width="1.5"/>
-    <!-- wall — warm tan, good contrast against dark ground -->
-    <rect x="0" y="88" width="190" height="202" fill="#C09060"/>
-    <!-- plank lines -->
-    <line x1="0" y1="100" x2="190" y2="100" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="112" x2="190" y2="112" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="124" x2="190" y2="124" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="136" x2="190" y2="136" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="148" x2="190" y2="148" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="160" x2="190" y2="160" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="172" x2="190" y2="172" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="184" x2="190" y2="184" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="196" x2="190" y2="196" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="208" x2="190" y2="208" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="220" x2="190" y2="220" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="232" x2="190" y2="232" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="244" x2="190" y2="244" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="256" x2="190" y2="256" stroke="#9a7040" stroke-width="1"/>
-    <line x1="0" y1="268" x2="190" y2="268" stroke="#9a7040" stroke-width="1"/>
-    <!-- left window — large, bright amber glow -->
-    <rect x="8" y="100" width="60" height="48" rx="2" fill="#2a1808"/>
-    <rect x="11" y="103" width="54" height="42" rx="1" fill="#FFB020"/>
-    <line x1="38" y1="103" x2="38" y2="145" stroke="#2a1808" stroke-width="2.5"/>
-    <line x1="11" y1="124" x2="65" y2="124" stroke="#2a1808" stroke-width="2.5"/>
-    <rect x="11" y="103" width="54" height="42" rx="1" fill="rgba(255,220,100,.3)"/>
-    <!-- right window — large, bright amber glow -->
-    <rect x="122" y="100" width="60" height="48" rx="2" fill="#2a1808"/>
-    <rect x="125" y="103" width="54" height="42" rx="1" fill="#FFB020"/>
-    <line x1="152" y1="103" x2="152" y2="145" stroke="#2a1808" stroke-width="2.5"/>
-    <line x1="125" y1="124" x2="179" y2="124" stroke="#2a1808" stroke-width="2.5"/>
-    <rect x="125" y="103" width="54" height="42" rx="1" fill="rgba(255,220,100,.3)"/>
-    <!-- hanging sign -->
-    <rect x="45" y="80" width="100" height="24" rx="3" fill="#2a1408"/>
-    <rect x="47" y="82" width="96" height="20" rx="2" fill="#7a4820"/>
-    <text x="95" y="96" text-anchor="middle" fill="#FFE040" font-size="11" font-weight="bold" font-family="Georgia,serif">KARCZMA</text>
-    <!-- left lantern -->
-    <rect x="5" y="88" width="3" height="20" fill="#6a4a28"/>
-    <rect x="1" y="102" width="12" height="16" rx="2" fill="#FFA020"/>
-    <rect x="1" y="102" width="12" height="16" rx="2" fill="rgba(255,210,80,.45)"/>
-    <!-- right lantern -->
-    <rect x="182" y="88" width="3" height="20" fill="#6a4a28"/>
-    <rect x="177" y="102" width="12" height="16" rx="2" fill="#FFA020"/>
-    <rect x="177" y="102" width="12" height="16" rx="2" fill="rgba(255,210,80,.45)"/>
-    <!-- door frame -->
-    <rect x="65" y="160" width="60" height="130" rx="4" fill="#2a1408"/>
-    <!-- door -->
-    <rect x="68" y="163" width="54" height="127" rx="3" fill="#6a3e1a"/>
-    <!-- door panels -->
-    <rect x="72" y="170" width="46" height="52" rx="2" fill="#523010"/>
-    <rect x="72" y="228" width="46" height="36" rx="2" fill="#523010"/>
-    <!-- door handle -->
-    <circle cx="115" cy="244" r="5" fill="#d4aa50"/>
-    <!-- foundation -->
-    <rect x="0" y="282" width="190" height="8" fill="#4a3820"/>
-    <!-- steps -->
-    <rect x="54" y="276" width="82" height="7" rx="1" fill="#6a5438"/>
-    <rect x="49" y="283" width="92" height="7" rx="1" fill="#5a4428"/>
-  </svg>`;
+  // wall first (back), then roof, sign, windows, lanterns, chimney (front)
+  building.appendChild(el('div', { className: 'tb-wall' }));
+  building.appendChild(el('div', { className: 'tb-roof' }));
+  building.appendChild(el('div', { className: 'tb-sign' }, 'KARCZMA'));
+  const winL = el('div', { className: 'tb-win' });
+  winL.style.left = '10px';
+  building.appendChild(winL);
+  const winR = el('div', { className: 'tb-win' });
+  winR.style.right = '10px';
+  building.appendChild(winR);
+  const lanL = el('div', { className: 'tb-lantern' });
+  lanL.style.left = '3px';
+  building.appendChild(lanL);
+  const lanR = el('div', { className: 'tb-lantern' });
+  lanR.style.right = '3px';
+  building.appendChild(lanR);
+  building.appendChild(el('div', { className: 'tb-door' }));
+  building.appendChild(el('div', { className: 'tb-chimney' }));
   scene.appendChild(building);
 
   const heroes = myHero
