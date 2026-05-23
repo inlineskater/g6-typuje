@@ -1491,10 +1491,6 @@
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 8px; padding: 12px 14px; font-size: 12.5px;
     }
-    .bj-demo-banner {
-      background: #2a1800; border: 1px solid #f5a623; border-radius: 8px;
-      padding: 10px 14px; font-size: 12.5px; color: #f5a623; line-height: 1.5;
-    }
     .bj-rules-title { font-weight: 700; color: var(--text); margin-bottom: 6px; }
     .bj-rules ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.55; }
     .bj-rules ul li { margin-bottom: 4px; }
@@ -2854,10 +2850,6 @@
                 <span class="bj-prize">🥈 50 🪙</span>
                 <span class="bj-prize">🥉 25 🪙</span>
               </div>
-            </div>
-
-            <div class="bj-demo-banner hidden" id="bj-demo-banner">
-              🧪 <strong>Tryb demo</strong> — graj i testuj, wyniki się zapisują. Nagrody tygodniowe aktywne od niedzieli 25 maja.
             </div>
 
             <div class="bj-rules">
@@ -6627,8 +6619,6 @@ const BJ_CELL        = 48;       // square cell px
 const BJ_CS_W        = BJ_COLS * BJ_CELL;  // 384
 const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 384
 const BJ_DURATION_MS = 20000;
-const BJ_ACTIVE_DATE = new Date('2026-05-25T00:00:00+02:00'); // Sunday — prizes count from this week
-function bjIsDemoMode() { return Date.now() < BJ_ACTIVE_DATE.getTime(); }
 
 // Grid-step obstacles: intervals fixed, direction & size randomized each round
 const BJ_LANE_INTERVALS = [900, 850, 800, 750, 700, 650];
@@ -6818,8 +6808,6 @@ async function invokeBugJumper(payload) {
 async function loadBugJumperState(showSpinner = true) {
   bjInitCanvas();
   bjDraw(performance.now());
-  const demoBanner = document.getElementById('bj-demo-banner');
-  if (demoBanner) { bjIsDemoMode() ? show(demoBanner) : hide(demoBanner); }
   const weeklyWrap  = document.getElementById('bj-weekly-board');
   const allTimeWrap = document.getElementById('bj-alltime-board');
   const awardsWrap  = document.getElementById('bj-awards');
@@ -6842,8 +6830,6 @@ async function loadBugJumperState(showSpinner = true) {
 
 function renderBugJumperState(data) {
   if (data.profile) { me.coins = data.profile.coins; setText(headerCoins, me.coins); }
-  const demoBanner = document.getElementById('bj-demo-banner');
-  if (demoBanner) { bjIsDemoMode() ? show(demoBanner) : hide(demoBanner); }
   const weekLabel = document.getElementById('bj-week-label');
   if (weekLabel) {
     const range = whackBossWeekRange(data.weekStart);
@@ -7056,9 +7042,8 @@ async function finishBugJumperRound() {
       score: rt.score, hits: rt.score, misses: 0, maxCombo: rt.runCount,
     });
     renderBugJumperState(data);
-    const demoTag = bjIsDemoMode() ? ' (demo)' : '';
-    showToast('✅ Wynik zapisany: ' + data.score.score + demoTag);
-    if (bjStatus) bjStatus.textContent = 'Ostatni wynik: ' + data.score.score + '.' + (bjIsDemoMode() ? ' Tryb demo — nagrody od 25 maja.' : '');
+    showToast('✅ Wynik zapisany: ' + data.score.score);
+    if (bjStatus) bjStatus.textContent = 'Ostatni wynik: ' + data.score.score + '.';
   } catch (err) {
     showToast('❌ ' + err.message);
     if (bjStatus) bjStatus.textContent = 'Nie udało się zapisać wyniku.';
