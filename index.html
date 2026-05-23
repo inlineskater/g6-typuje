@@ -8177,7 +8177,7 @@ async function loadHeroes() {
   setupHeroesRealtime();
   const wrap = document.getElementById('heroes-content');
   if (!wrap) return;
-  if (!wrap.querySelector('.heroes-wrap')) wrap.replaceChildren(makeSpinner());
+  if (!wrap.querySelector('.tavern-panel, .hero-wizard, .hero-panel')) wrap.replaceChildren(makeSpinner());
 
   const { data, error } = await sb.from('user_heroes').select('*, profiles(nick)');
   if (error) {
@@ -8190,10 +8190,12 @@ async function loadHeroes() {
 }
 
 function renderHeroesTab(wrap) {
-  const outer = el('div', { className: 'heroes-wrap' });
-  outer.appendChild(heroesEditMode || !myHero ? buildHeroWizard() : buildHeroDisplay());
-  outer.appendChild(buildTavernPanel());
-  wrap.replaceChildren(outer);
+  // wrap (#heroes-content) already has class heroes-wrap and the 2-column grid;
+  // adding another heroes-wrap inside would squash the tavern to 0px
+  wrap.replaceChildren(
+    heroesEditMode || !myHero ? buildHeroWizard() : buildHeroDisplay(),
+    buildTavernPanel()
+  );
 }
 
 function buildHeroDisplay() {
