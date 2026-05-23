@@ -6169,14 +6169,17 @@ function loadSeasonalTab(showSpinner = true) {
   const bjPanel       = document.getElementById('seasonal-game-bug-jumper');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
-  // Show both games to all players — scores are saved for both
-  if (wbPanel) show(wbPanel);
-  if (bjPanel) show(bjPanel);
+  const isWB = current.gameType === 'whack_boss';
+  const isBJ = current.gameType === 'bug_jumper';
+  if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
+  if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (archiveBanner) hide(archiveBanner);
+  if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
+  if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
-  loadWhackBossState(showSpinner);
-  loadBugJumperState(showSpinner);
+  if (isWB) loadWhackBossState(showSpinner);
+  if (isBJ) loadBugJumperState(showSpinner);
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
