@@ -1016,7 +1016,7 @@
       .garden-pot { padding: 4px 4px 16px; }
       .garden-pot::before { width: 80px; height: 32px; bottom: 50px; }
       .gp-pot-body { width: 48px; height: 36px; }
-      .gp-plant-area { height: 80px; min-height: auto; }
+      .gp-plant-area { height: 80px; min-height: auto; } .gp-acc-grid { height: 80px; }
 
       footer { margin-top: 32px; }
     }
@@ -1664,10 +1664,9 @@
     .cosmetic-owned-label { font-size: 10px; color: var(--yes); font-weight: 700; }
     .cosmetic-equipped-label { font-size: 10px; color: var(--accent); font-weight: 700; }
     .cosmetic-btn { font-size: 11px; padding: 4px 10px; margin-top: auto; }
-    .gp-accessory { position: absolute; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); z-index: 2; pointer-events: none; line-height: 1; transition: font-size .12s; }
-    .gp-acc-0 { top: 4px; left: 2px; } .gp-acc-1 { top: 4px; left: 50%; transform: translateX(-50%); } .gp-acc-2 { top: 4px; right: 2px; }
-    .gp-acc-3 { top: 50%; left: 2px; transform: translateY(-50%); } .gp-acc-4 { top: 50%; left: 50%; transform: translate(-50%,-50%); } .gp-acc-5 { top: 50%; right: 2px; transform: translateY(-50%); }
-    .gp-acc-6 { bottom: 44px; left: 2px; } .gp-acc-7 { bottom: 44px; left: 50%; transform: translateX(-50%); } .gp-acc-8 { bottom: 44px; right: 2px; }
+    .gp-acc-grid { position: absolute; top: 0; left: 0; right: 0; height: 85px; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; pointer-events: none; z-index: 2; }
+    .gp-accessory { display: flex; align-items: center; justify-content: center; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); line-height: 1; transition: font-size .12s; }
+    .flag-pl-css { display: inline-block; width: 1.5em; height: 1em; background: linear-gradient(to bottom, #fff 50%, #DC143C 50%); border: 1px solid rgba(0,0,0,.18); border-radius: 1px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
     @keyframes accBob { 0%,100%{ transform: translateY(0) scale(1); } 50%{ transform: translateY(-2px) scale(1.08); } }
     @keyframes accFloat { 0%,100%{ transform: translate(0,0) rotate(0deg); } 33%{ transform: translate(1px,-2px) rotate(4deg); } 66%{ transform: translate(-1px,-1px) rotate(-3deg); } }
     @keyframes accBuzz { 0%,100%{ transform: translate(0,0); } 25%{ transform: translate(1px,-1px); } 50%{ transform: translate(-1px,1px); } 75%{ transform: translate(1px,0); } }
@@ -1732,9 +1731,8 @@
       font-size: 140px; line-height: 1;
       filter: drop-shadow(0 4px 10px rgba(0,0,0,.18));
     }
-    /* Slot markers reuse .gp-acc-N positioning (same top/left/right/bottom + transforms).
-       The marker is sized 36px and centered on the position; for non-center slots we
-       nudge with translate via the shared classes below. */
+    /* Slot markers for the accessory editor — 40px circles positioned in a 3×3 grid
+       inside the 320px editor pot. Uses acc-slot-N classes defined below. */
     .acc-slot-marker {
       position: absolute;
       width: 40px; height: 40px;
@@ -1751,8 +1749,7 @@
     .acc-slot-marker.target { border-style: solid; border-color: var(--accent); background: var(--acc-dim); box-shadow: 0 0 0 3px rgba(99,102,241,.18); transform: scale(1.12); }
     .acc-slot-marker.pulse { animation: accSlotPulse 1.4s ease-in-out infinite; }
     @keyframes accSlotPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,.45); } 50% { box-shadow: 0 0 0 6px rgba(22,163,74,0); } }
-    /* Position offsets for slot markers — same logic as .gp-acc-N but sized for 40px markers
-       and inside a 320px square. The pot center is the plant; markers ring it. */
+    /* Position offsets for slot markers inside the 320px editor square. */
     .acc-slot-0 { top: 8px;    left: 8px; }
     .acc-slot-1 { top: 8px;    left: 50%; transform: translateX(-50%); }
     .acc-slot-2 { top: 8px;    right: 8px; }
@@ -2238,7 +2235,7 @@
       .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
       .garden-area { padding: 10px 8px 12px; }
       .garden-pot { min-width: 0; padding: 5px 3px 18px; }
-      .gp-plant-area { height: 86px; }
+      .gp-plant-area { height: 86px; } .gp-acc-grid { height: 86px; }
       .gp-pot-body { width: 42px; height: 32px; }
       .gp-name { font-size: 9px; }
       .gp-owner { font-size: 8px; }
@@ -2252,7 +2249,7 @@
       .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
       .garden-title { font-size: 14px; }
       .garden-pot::before { width: 64px; height: 26px; }
-      .gp-plant-area { height: 78px; }
+      .gp-plant-area { height: 78px; } .gp-acc-grid { height: 78px; }
       .gp-empty-text { font-size: 10px; }
       .acc-editor-inv { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
     }
@@ -5766,12 +5763,12 @@ function drawCoinChart(canvas, points) {
 // ── Shop ──────────────────────────────────────────────────────────────────
 async function loadMyGardenForCosmetics() {
   if (!me?.id) { myGarden = null; return; }
-  const { data, error } = await sb
-    .from('gardens')
-    .select('*')
-    .eq('user_id', me.id)
-    .maybeSingle();
-  if (!error) myGarden = data || null;
+  const [{ data: garden }, { data: prof }] = await Promise.all([
+    sb.from('gardens').select('*').eq('user_id', me.id).eq('slot_index', 1).maybeSingle(),
+    sb.from('profiles').select('second_garden_unlocked').eq('id', me.id).maybeSingle(),
+  ]);
+  myGarden = garden || null;
+  secondGardenUnlocked = prof?.second_garden_unlocked || false;
 }
 
 async function loadMyHeroForShop() {
@@ -5800,6 +5797,7 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'tavern' && item.effect_type === 'loud_speech') return 'Karczma: głośniejsza obecność';
   if (item?.effect_type === 'daily_interest') return `Pasywne: +${value}% coinów dziennie`;
   if (item?.effect_game === 'poker' && item.effect_type === 'odds_view') return 'Poker: widoczna szansa wygranej';
+  if (item?.effect_type === 'extra_garden_slot') return 'Ogródek: odblokuj drugi slot na roślinę';
   return 'Efekt bohatera';
 }
 
@@ -5967,6 +5965,29 @@ async function purchaseHeroItem(slug, price, btn) {
     setText(headerCoins, me.coins);
   }
   showToast('✅ Przedmiot kupiony!');
+  await refreshHeroItemSurface();
+}
+
+async function purchaseGardenCertificate(price, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Kupuję…';
+  const { data, error } = await sb.rpc('activate_garden_certificate');
+  if (error) {
+    const msg = error.message.includes('insufficient')    ? 'Za mało coinów.'
+              : error.message.includes('already_unlocked') ? 'Certyfikat już aktywny.'
+              : error.message.includes('no_first_garden')  ? 'Najpierw zasadź pierwszą roślinę w Ogródku.'
+              : heroItemError(error);
+    showToast('❌ ' + msg);
+    btn.disabled = false;
+    btn.textContent = `Kup za ${price.toLocaleString('pl-PL')} 🪙`;
+    return;
+  }
+  if (data?.coins_left !== undefined) {
+    me.coins = data.coins_left;
+    setText(headerCoins, me.coins);
+  }
+  secondGardenUnlocked = true;
+  showToast('✅ Certyfikat aktywny! Wróć do Ogródka i zasadź drugi kwiatek.');
   await refreshHeroItemSurface();
 }
 
@@ -6242,7 +6263,19 @@ function renderHeroShopGrid() {
       itemCard.appendChild(el('div', { className: 'shop-card-slots' }, `Posiadasz: ${ownedCount}`));
     }
 
-    if (equipped) {
+    if (item.slug === 'garden_certificate') {
+      if (secondGardenUnlocked || ownedCount > 0) {
+        itemCard.appendChild(el('button', { className: 'btn-primary shop-card-btn', disabled: true }, '✅ Aktywny'));
+      } else {
+        const buyBtn = el('button', {
+          className: 'btn-primary shop-card-btn',
+          disabled: !itemCanAfford,
+          title: itemCanAfford ? '' : 'Za mało coinów',
+        }, itemCanAfford ? `Kup za ${itemPrice.toLocaleString('pl-PL')} 🪙` : `Potrzebujesz ${itemPrice.toLocaleString('pl-PL')} 🪙`);
+        buyBtn.addEventListener('click', () => purchaseGardenCertificate(itemPrice, buyBtn));
+        itemCard.appendChild(buyBtn);
+      }
+    } else if (equipped) {
       itemCard.appendChild(el('button', {
         className: 'btn-primary shop-card-btn',
         disabled: true,
@@ -6485,7 +6518,7 @@ function renderCosmeticsGrid() {
     const owned = myAcc.includes(item.id);
     const equippedSlot = owned ? accessorySlot(equipped, item.id) : null;
     const card = el('div', { className: 'cosmetic-card' + (owned ? ' owned' : '') });
-    card.appendChild(el('div', { className: 'cosmetic-icon' }, item.emoji));
+    card.appendChild(el('div', { className: 'cosmetic-icon' }, renderAccEmoji(item)));
     card.appendChild(el('div', { className: 'cosmetic-name' }, item.name));
     if (owned) {
       card.appendChild(el('div', { className: 'cosmetic-owned-label' }, '✓ Posiadasz'));
@@ -7819,7 +7852,11 @@ const GARDEN_ERR_PL = {
   invalid_accessory:    'Ta ozdoba nie istnieje.',
   invalid_accessory_size:'Nieprawidłowy rozmiar ozdoby.',
   no_accessory:         'Wybierz założoną ozdobę.',
-  insufficient_coins:   'Za mało coinów.'
+  insufficient_coins:   'Za mało coinów.',
+  second_slot_locked:   'Kup Certyfikat Drugiego Ogródka w sklepie bohatera.',
+  no_first_garden:      'Najpierw zasadź pierwszą roślinę.',
+  already_unlocked:     'Certyfikat jest już aktywny.',
+  insufficient:         'Za mało coinów.',
 };
 const GARDEN_EQUIP_SLOTS = [
   { id: '0', label: 'Góra lewa' },
@@ -7887,6 +7924,8 @@ function nextRewardCoins(streak) {
   return Math.min(10 + Math.max(0, streak) * 2, 20);
 }
 let myGarden = null;
+let myGarden2 = null;
+let secondGardenUnlocked = false;
 let allGardens = [];
 let gardenCooldownTimers = [];
 let gardenRealtimeReady = false;
@@ -7903,6 +7942,8 @@ function resetGardenState() {
   clearGardenTimers();
   if (gardenReloadDebounce) { clearTimeout(gardenReloadDebounce); gardenReloadDebounce = null; }
   myGarden = null;
+  myGarden2 = null;
+  secondGardenUnlocked = false;
   allGardens = [];
   gardenRealtimeReady = false;
   gardenSuppressOwnSizeReloadUntil = 0;
@@ -7953,10 +7994,15 @@ async function loadGarden() {
     if ((b.streak_days || 0) !== (a.streak_days || 0)) return (b.streak_days || 0) - (a.streak_days || 0);
     return (a.created_at || '').localeCompare(b.created_at || '');
   });
-  myGarden = allGardens.find(g => g.user_id === me.id) || null;
+  myGarden  = allGardens.find(g => g.user_id === me.id && (g.slot_index || 1) === 1) || null;
+  myGarden2 = allGardens.find(g => g.user_id === me.id && g.slot_index === 2) || null;
 
-  // Refresh own coins — keep header in sync with watering rewards across tabs.
-  refreshMeCoins();
+  // Refresh own coins and second-slot unlock flag in parallel.
+  const [, { data: profData }] = await Promise.all([
+    refreshMeCoins(),
+    sb.from('profiles').select('second_garden_unlocked').eq('id', me.id).maybeSingle(),
+  ]);
+  secondGardenUnlocked = profData?.second_garden_unlocked || false;
 
   try { renderZenGarden(); } catch(e) {
     console.error('Garden render error:', e);
@@ -7985,28 +8031,54 @@ function renderZenGarden() {
   boardRules.appendChild(el('div', { className: 'sign-nails' }));
   sign.appendChild(boardRules);
 
-  // Board 2: My plant
-  if (myGarden) {
-    const boardPlant = el('div', { className: 'sign-board', style: { marginTop: '12px' } });
+  function buildPlantBoard(garden, label) {
+    const board = el('div', { className: 'sign-board', style: { marginTop: '12px' } });
     const today = new Date().toISOString().slice(0, 10);
-    const watersToday = (myGarden.last_water_date === today) ? (myGarden.waters_today || 0) : 0;
-    const streak = myGarden.streak_days || 0;
-    const emoji = getPlantEmoji(myGarden.plant_type, myGarden.stage);
-    boardPlant.innerHTML = `<h3>🌱 Twoja roślinka</h3>
+    const watersToday = (garden.last_water_date === today) ? (garden.waters_today || 0) : 0;
+    const streak = garden.streak_days || 0;
+    const emoji = getPlantEmoji(garden.plant_type, garden.stage);
+    board.innerHTML = `<h3>${label}</h3>
 <div class="my-plant-preview">${emoji}</div>
 <div class="my-plant-details">
-<div class="my-plant-name">${myGarden.plant_name}</div>
-<div class="my-plant-type">${PLANT_LABELS[canonicalPlantType(myGarden.plant_type)] || ''}</div>
+<div class="my-plant-name">${garden.plant_name}</div>
+<div class="my-plant-type">${PLANT_LABELS[canonicalPlantType(garden.plant_type)] || ''}</div>
 </div>
 <div class="my-summary">
 <div>🔥 Seria: <b>${streak} ${streak === 1 ? 'dzień' : 'dni'}</b></div>
-<div>⭐ Etap: <b>${myGarden.stage}/6</b></div>
+<div>⭐ Etap: <b>${garden.stage}/6</b></div>
 <div>💧 Dziś: <b>${watersToday}/3</b></div>
 <div>💰 Nagroda: <b>${nextRewardCoins(streak)} 🪙</b></div>
 </div>`;
-    boardPlant.appendChild(buildPlantTypeChanger());
-    boardPlant.appendChild(el('div', { className: 'sign-nails' }));
-    sign.appendChild(boardPlant);
+    board.appendChild(buildPlantTypeChanger(garden));
+    board.appendChild(el('div', { className: 'sign-nails' }));
+    return board;
+  }
+
+  // Board 2: My first plant
+  if (myGarden) sign.appendChild(buildPlantBoard(myGarden, '🌱 Twoja roślinka'));
+
+  // Board 3: My second plant (or unlock teaser)
+  if (myGarden2) {
+    sign.appendChild(buildPlantBoard(myGarden2, '🌱 Drugi kwiatek'));
+  } else if (secondGardenUnlocked && myGarden) {
+    const board2 = el('div', { className: 'sign-board', style: { marginTop: '12px' } });
+    board2.innerHTML = `<h3>🌱 Drugi slot — gotowy!</h3>
+<div class="my-plant-preview" style="font-size:48px;opacity:.5">🪴</div>
+<div class="my-summary"><div>Certyfikat aktywny — zasadź drugą roślinę w ogródku poniżej.</div></div>`;
+    board2.appendChild(el('div', { className: 'sign-nails' }));
+    sign.appendChild(board2);
+  } else if (!myGarden) {
+    // no-op — user has no first garden yet
+  } else if (!secondGardenUnlocked) {
+    const board2 = el('div', { className: 'sign-board', style: { marginTop: '12px' } });
+    board2.innerHTML = `<h3>🔒 Drugi slot</h3>
+<div class="my-plant-preview" style="font-size:48px;opacity:.35">🪴</div>
+<div class="my-summary"><div>Odblokuj drugi kwiatek kupując <b>Certyfikat Drugiego Ogródka</b> w sklepie bohatera.</div></div>`;
+    const shopBtn = el('button', { className: 'btn-ghost', type: 'button', style: { marginTop: '8px', width: '100%' } }, '🛒 Przejdź do sklepu');
+    shopBtn.addEventListener('click', () => switchTab('shop'));
+    board2.appendChild(shopBtn);
+    board2.appendChild(el('div', { className: 'sign-nails' }));
+    sign.appendChild(board2);
   }
 
   // Two posts under the board
@@ -8016,9 +8088,10 @@ function renderZenGarden() {
   sign.appendChild(posts);
 
   if (myGarden) {
-    sign.appendChild(buildDecorateCard());
+    sign.appendChild(buildDecorateCard(myGarden));
     if (me.nick === 'admin') sign.appendChild(buildGardenAdminPanel());
   }
+  if (myGarden2) sign.appendChild(buildDecorateCard(myGarden2));
 
   wrap.appendChild(sign);
 
@@ -8033,11 +8106,13 @@ function renderZenGarden() {
     const isMine = g.user_id === me.id;
     shelf.appendChild(buildPot(g, isMine));
   });
-  // Fill remaining spots with empty pots (only first one is plantable if user has no garden)
+  // Fill remaining spots with empty pots (plantable if user has no garden or has unlocked slot 2)
   const emptyCount = Math.max(0, TOTAL_SPOTS - allGardens.length);
   for (let i = 0; i < emptyCount; i++) {
     if (i === 0 && !myGarden) {
-      shelf.appendChild(buildEmptyPot());
+      shelf.appendChild(buildEmptyPot(1));
+    } else if (i === 0 && myGarden && secondGardenUnlocked && !myGarden2) {
+      shelf.appendChild(buildEmptyPot(2));
     } else {
       shelf.appendChild(buildPlaceholderPot());
     }
@@ -8047,11 +8122,11 @@ function renderZenGarden() {
   wrap.appendChild(area);
 }
 
-function buildPlantTypeChanger() {
+function buildPlantTypeChanger(garden) {
   const row = el('div', { className: 'my-plant-type-change' });
-  row.appendChild(el('label', { htmlFor: 'plant-type-select' }, 'Zmień typ:'));
-  const select = el('select', { id: 'plant-type-select', className: 'my-plant-type-select' });
-  const currentType = canonicalPlantType(myGarden.plant_type);
+  row.appendChild(el('label', {}, 'Zmień typ:'));
+  const select = el('select', { className: 'my-plant-type-select' });
+  const currentType = canonicalPlantType(garden.plant_type);
   ['sunflower','rose','cactus','tulip','cherry','herb','tree','banana'].forEach(t => {
     const o = el('option', { value: t }, (PLANT_PICK_EMOJI[t] || '') + ' ' + (PLANT_LABELS[t] || t));
     if (t === currentType) o.selected = true;
@@ -8059,16 +8134,16 @@ function buildPlantTypeChanger() {
   });
   select.addEventListener('change', async () => {
     const newType = select.value;
-    if (newType === canonicalPlantType(myGarden.plant_type)) return;
+    if (newType === canonicalPlantType(garden.plant_type)) return;
     select.disabled = true;
-    const { error } = await sb.rpc('change_plant_type', { p_plant_type: newType });
+    const { error } = await sb.rpc('change_plant_type', { p_plant_type: newType, p_slot_index: garden.slot_index || 1 });
     select.disabled = false;
     if (error) {
       showToast('❌ ' + gardenErr(error));
-      select.value = canonicalPlantType(myGarden.plant_type);
+      select.value = canonicalPlantType(garden.plant_type);
       return;
     }
-    myGarden.plant_type = newType;
+    garden.plant_type = newType;
     showToast('🌱 Typ rośliny zmieniony');
     loadGarden();
   });
@@ -8085,9 +8160,9 @@ function applyAccessorySizeToDom(slotId, size) {
   });
 }
 
-function buildDecorateCard() {
-  const equipped = normalizeEquippedSlots(myGarden.equipped);
-  const ownedIds = (myGarden.accessories || []).filter(id => gardenAccessoryById(id));
+function buildDecorateCard(garden) {
+  const equipped = normalizeEquippedSlots(garden.equipped);
+  const ownedIds = (garden.accessories || []).filter(id => gardenAccessoryById(id));
   const equippedCount = Object.keys(equipped).length;
 
   const card = el('div', { className: 'garden-decorate-card' });
@@ -8111,7 +8186,7 @@ function buildDecorateCard() {
   ));
 
   const btn = el('button', { className: 'btn-decorate', type: 'button' }, '🎨 Ozdób roślinkę');
-  btn.addEventListener('click', () => openAccessoryEditor());
+  btn.addEventListener('click', () => openAccessoryEditor(garden));
   card.appendChild(btn);
   return card;
 }
@@ -8120,13 +8195,13 @@ function buildDecorateCard() {
 // Full-screen editor with a large WYSIWYG pot preview and click-to-place
 // interaction. Always-visible toolbar shows size slider + remove for the
 // currently selected placed accessory.
-function openAccessoryEditor() {
-  if (!myGarden) return;
+function openAccessoryEditor(garden) {
+  if (!garden) return;
   if (document.getElementById('acc-editor-overlay')) return; // already open
 
   // Local working copy of equipped state; mutated optimistically on each action.
   // On RPC error we reload from server.
-  const equipped = normalizeEquippedSlots(myGarden.equipped);
+  const equipped = normalizeEquippedSlots(garden.equipped);
 
   // Interaction state — only one of {targetSlot, pickingItemId, selectedSlot} is
   // active at a time. Whichever is set drives toolbar content & highlights.
@@ -8146,10 +8221,10 @@ function openAccessoryEditor() {
   overlay.appendChild(modal);
 
   // Header
-  const titleEmoji = getPlantEmoji(myGarden.plant_type, myGarden.stage);
+  const titleEmoji = getPlantEmoji(garden.plant_type, garden.stage);
   const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
   modal.appendChild(el('div', { className: 'modal-header' },
-    el('span', { className: 'modal-title' }, '🎨 Ozdoby — ' + titleEmoji + ' ' + (myGarden.plant_name || '')),
+    el('span', { className: 'modal-title' }, '🎨 Ozdoby — ' + titleEmoji + ' ' + (garden.plant_name || '')),
     closeBtn
   ));
 
@@ -8206,7 +8281,7 @@ function openAccessoryEditor() {
           className: 'gp-accessory gp-acc-' + slot.id + (item.anim ? ' gp-acc-' + item.anim : ''),
           style: { position: 'static', fontSize: equippedEntrySize(entry) + 'px' },
           'data-slot': slot.id,
-        }, item.emoji);
+        }, renderAccEmoji(item));
         wrap.appendChild(accSpan);
         wrap.addEventListener('click', () => onPlacedClick(slot.id));
         if (pendingSlots.has(slot.id)) wrap.classList.add('busy');
@@ -8247,7 +8322,7 @@ function openAccessoryEditor() {
   function renderInventory() {
     invWrap.replaceChildren();
     invButtons.clear();
-    const ownedIds = (myGarden.accessories || []).filter(id => gardenAccessoryById(id));
+    const ownedIds = (garden.accessories || []).filter(id => gardenAccessoryById(id));
     if (!ownedIds.length) {
       const empty = el('div', { className: 'acc-editor-empty' });
       empty.appendChild(document.createTextNode('Brak ozdób. '));
@@ -8264,7 +8339,7 @@ function openAccessoryEditor() {
         className: 'acc-inv-item' + (slotId ? ' equipped' : ''),
         type: 'button',
         title: item.name + (slotId ? ' (założone)' : ''),
-      }, item.emoji);
+      }, renderAccEmoji(item));
       btn.addEventListener('click', () => onInventoryClick(accId));
       invButtons.set(accId, btn);
       invWrap.appendChild(btn);
@@ -8280,7 +8355,7 @@ function openAccessoryEditor() {
       if (!item) { selectedSlot = null; renderToolbar(); return; }
       const size = equippedEntrySize(entry);
 
-      const preview = el('span', { className: 'acc-tool-preview', style: { fontSize: size + 'px' } }, item.emoji);
+      const preview = el('span', { className: 'acc-tool-preview', style: { fontSize: size + 'px' } }, renderAccEmoji(item));
       const main = el('span', { className: 'acc-tool-main' });
       const valueSpan = el('span', { className: 'acc-tool-size-value' }, size + ' px');
       main.appendChild(el('span', { className: 'acc-tool-head' },
@@ -8300,7 +8375,7 @@ function openAccessoryEditor() {
         const newSize = clampAccessorySize(slider.value);
         if (!equipped[selectedSlot]) return;
         equipped[selectedSlot].size = newSize;
-        myGarden.equipped = { ...equipped };
+        garden.equipped = { ...equipped };
         valueSpan.textContent = newSize + ' px';
         preview.style.fontSize = newSize + 'px';
         applyAccessorySizeToDom(selectedSlot, newSize);
@@ -8312,7 +8387,7 @@ function openAccessoryEditor() {
         slider.disabled = true;
         gardenSuppressOwnSizeReloadUntil = Date.now() + 2000;
         const slotForRpc = selectedSlot;
-        const { error } = await sb.rpc('set_accessory_size', { p_slot: slotForRpc, p_size: newSize });
+        const { error } = await sb.rpc('set_accessory_size', { p_slot: slotForRpc, p_size: newSize, p_slot_index: garden.slot_index || 1 });
         sizePending = false;
         slider.disabled = false;
         if (error) {
@@ -8430,7 +8505,7 @@ function openAccessoryEditor() {
     pendingSlots.add(slotId);
     rerender();
 
-    const { error } = await sb.rpc('equip_accessory', { p_slot: slotId, p_accessory_id: accId });
+    const { error } = await sb.rpc('equip_accessory', { p_slot: slotId, p_accessory_id: accId, p_slot_index: garden.slot_index || 1 });
     pendingSlots.delete(slotId);
 
     if (error) {
@@ -8443,7 +8518,7 @@ function openAccessoryEditor() {
       if (equippedEntryId(equipped[key]) === accId) delete equipped[key];
     });
     equipped[slotId] = makeEquippedEntry(accId, previousSize);
-    myGarden.equipped = { ...equipped };
+    garden.equipped = { ...equipped };
     const item = gardenAccessoryById(accId);
     showToast('✅ Ustawiono ' + item.emoji + ' ' + item.name);
     clearSelection();
@@ -8459,7 +8534,7 @@ function openAccessoryEditor() {
     pendingSlots.add(slotId);
     rerender();
 
-    const { error } = await sb.rpc('equip_accessory', { p_slot: slotId, p_accessory_id: null });
+    const { error } = await sb.rpc('equip_accessory', { p_slot: slotId, p_accessory_id: null, p_slot_index: garden.slot_index || 1 });
     pendingSlots.delete(slotId);
     if (error) {
       showToast('❌ ' + gardenErr(error));
@@ -8469,7 +8544,7 @@ function openAccessoryEditor() {
     const placedId = equippedEntryId(entry);
     const item = gardenAccessoryById(placedId);
     delete equipped[slotId];
-    myGarden.equipped = { ...equipped };
+    garden.equipped = { ...equipped };
     showToast('✅ Zdjęto ' + (item ? item.emoji + ' ' + item.name : 'ozdobę'));
     clearSelection();
     rerender();
@@ -8506,7 +8581,7 @@ function buildGardenAdminPanel() {
   sizeSelect.addEventListener('change', async () => {
     sizeSelect.disabled = true;
     const nextStage = parseInt(sizeSelect.value, 10);
-    const { error } = await sb.from('gardens').update({ stage: nextStage }).eq('user_id', me.id);
+    const { error } = await sb.from('gardens').update({ stage: nextStage }).eq('user_id', me.id).eq('slot_index', 1);
     sizeSelect.disabled = false;
     if (error) { showToast('❌ ' + error.message); sizeSelect.value = String(myGarden.stage); return; }
     myGarden.stage = nextStage;
@@ -8518,7 +8593,7 @@ function buildGardenAdminPanel() {
   const resetBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Reset serii');
   resetBtn.addEventListener('click', async () => {
     resetBtn.disabled = true;
-    const { error } = await sb.from('gardens').update({ streak_days: 0, stage: 1 }).eq('user_id', me.id);
+    const { error } = await sb.from('gardens').update({ streak_days: 0, stage: 1 }).eq('user_id', me.id).eq('slot_index', 1);
     resetBtn.disabled = false;
     if (error) { showToast('❌ ' + error.message); return; }
     myGarden.streak_days = 0; myGarden.stage = 1;
@@ -8530,7 +8605,7 @@ function buildGardenAdminPanel() {
   delBtn.addEventListener('click', async () => {
     if (!confirm('Na pewno usunąć roślinę?')) return;
     delBtn.disabled = true;
-    const { error } = await sb.from('gardens').delete().eq('user_id', me.id);
+    const { error } = await sb.from('gardens').delete().eq('user_id', me.id).eq('slot_index', 1);
     delBtn.disabled = false;
     if (error) { showToast('❌ ' + error.message); return; }
     myGarden = null;
@@ -8539,6 +8614,11 @@ function buildGardenAdminPanel() {
   });
   adminDiv.appendChild(el('div', { className: 'garden-admin-actions' }, resetBtn, delBtn));
   return adminDiv;
+}
+
+function renderAccEmoji(item) {
+  if (item.id === 'flaga_pl') return el('span', { className: 'flag-pl-css' });
+  return item.emoji;
 }
 
 function buildPot(g, isMine) {
@@ -8566,21 +8646,28 @@ function buildPot(g, isMine) {
   potBody.appendChild(el('div', { className: 'gp-soil' }));
   pot.appendChild(potBody);
 
-  // Accessories (equipped)
+  // Accessories (equipped) — laid out in a 3×3 CSS grid inside plantArea
   const equipped = normalizeEquippedSlots(g.equipped);
-  if (Object.keys(equipped).length) {
-    Object.entries(equipped).forEach(([slot, entry]) => {
-      const accId = equippedEntryId(entry);
-      if (!accId) return;
-      const item = gardenAccessoryById(accId);
-      if (!item) return;
+  const equippedEntries = Object.entries(equipped).filter(([, entry]) => {
+    const id = equippedEntryId(entry);
+    return id && gardenAccessoryById(id);
+  });
+  if (equippedEntries.length) {
+    const accGrid = el('div', { className: 'gp-acc-grid' });
+    equippedEntries.forEach(([slot, entry]) => {
+      const item = gardenAccessoryById(equippedEntryId(entry));
+      const s = parseInt(slot, 10);
       const animClass = item.anim ? ' gp-acc-' + item.anim : '';
-      pot.appendChild(el('span', {
-        className: 'gp-accessory gp-acc-' + slot + animClass,
-        style: { fontSize: equippedEntrySize(entry) + 'px' },
+      accGrid.appendChild(el('span', {
+        className: 'gp-accessory' + animClass,
+        style: {
+          gridArea: (Math.floor(s / 3) + 1) + ' / ' + (s % 3 + 1),
+          fontSize: equippedEntrySize(entry) + 'px',
+        },
         'data-slot': slot,
-      }, item.emoji));
+      }, renderAccEmoji(item)));
     });
+    plantArea.appendChild(accGrid);
   }
 
   // Info below pot
@@ -8628,7 +8715,7 @@ function buildPot(g, isMine) {
         drops.appendChild(el('span'));
         pot.appendChild(can);
         pot.appendChild(drops);
-        const { data, error } = await sb.rpc('water_plant');
+        const { data, error } = await sb.rpc('water_plant', { p_slot_index: g.slot_index || 1 });
         if (error) {
           can.remove(); drops.remove();
           showToast('❌ ' + gardenErr(error));
@@ -8678,7 +8765,7 @@ function buildPlaceholderPot() {
   return pot;
 }
 
-function buildEmptyPot() {
+function buildEmptyPot(slotIndex = 1) {
   const pot = el('div', { className: 'garden-pot empty' });
   let creating = false;
 
@@ -8691,8 +8778,8 @@ function buildEmptyPot() {
   pot.appendChild(potBody);
 
   const info = el('div', { className: 'gp-info' });
-  info.appendChild(el('div', { className: 'gp-empty-text' }, 'Zasadź roślinę!'));
-  info.appendChild(el('div', { className: 'gp-owner' }, 'Bezpłatnie · 1× na konto'));
+  info.appendChild(el('div', { className: 'gp-empty-text' }, slotIndex === 2 ? 'Drugi kwiatek!' : 'Zasadź roślinę!'));
+  info.appendChild(el('div', { className: 'gp-owner' }, slotIndex === 2 ? 'Certyfikat aktywny' : 'Bezpłatnie · 1× na konto'));
   pot.appendChild(info);
 
   pot.onclick = () => {
@@ -8745,7 +8832,7 @@ function buildEmptyPot() {
     plantBtn.onclick = async (e) => {
       e.stopPropagation();
       plantBtn.disabled = true; plantBtn.textContent = '...';
-      const { error } = await sb.rpc('create_garden', { p_plant_type: selectedType, p_plant_name: nameInp.value.trim() });
+      const { error } = await sb.rpc('create_garden', { p_plant_type: selectedType, p_plant_name: nameInp.value.trim(), p_slot_index: slotIndex });
       if (error) {
         showToast('❌ ' + gardenErr(error));
         plantBtn.disabled = false; plantBtn.textContent = '🌱 Zasadź';
