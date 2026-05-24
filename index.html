@@ -9097,11 +9097,6 @@ function buildTavernPanel() {
       lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true, gear: equipmentForHero(hero.user_id) });
       const gear = equipmentForHero(hero.user_id);
       visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
-      if (gear.length) {
-        const gearRow = el('div', { className: 'tavern-gear' });
-        gear.slice(0, 4).forEach(item => gearRow.appendChild(el('span', { title: heroItemDisplayName(item) }, item.emoji || '🎒')));
-        lane.appendChild(gearRow);
-      }
 
       const speech = el('div', { className: 'hero-speech' }, '');
       lane.appendChild(speech);
