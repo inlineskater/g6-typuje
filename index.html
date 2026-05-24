@@ -1016,7 +1016,7 @@
       .garden-pot { padding: 4px 4px 16px; }
       .garden-pot::before { width: 80px; height: 32px; bottom: 50px; }
       .gp-pot-body { width: 48px; height: 36px; }
-      .gp-plant-area { height: 80px; min-height: auto; } .gp-acc-grid { height: 80px; }
+      .gp-plant-area { height: 80px; min-height: auto; }
 
       footer { margin-top: 32px; }
     }
@@ -1664,9 +1664,10 @@
     .cosmetic-owned-label { font-size: 10px; color: var(--yes); font-weight: 700; }
     .cosmetic-equipped-label { font-size: 10px; color: var(--accent); font-weight: 700; }
     .cosmetic-btn { font-size: 11px; padding: 4px 10px; margin-top: auto; }
-    .gp-acc-grid { position: absolute; top: 0; left: 0; right: 0; height: 85px; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; pointer-events: none; z-index: 2; }
-    .gp-accessory { display: flex; align-items: center; justify-content: center; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); line-height: 1; transition: font-size .12s; }
-    .flag-pl-css { display: inline-block; width: 1.5em; height: 1em; background: linear-gradient(to bottom, #fff 50%, #DC143C 50%); border: 1px solid rgba(0,0,0,.18); border-radius: 1px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    .gp-accessory { position: absolute; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); z-index: 2; pointer-events: none; line-height: 1; transition: font-size .12s; }
+    .gp-acc-0 { top: 2px; left: 2px; } .gp-acc-1 { top: 2px; left: 50%; transform: translateX(-50%); } .gp-acc-2 { top: 2px; right: 2px; }
+    .gp-acc-3 { top: 40%; left: 2px; transform: translateY(-50%); } .gp-acc-4 { top: 40%; left: 50%; transform: translate(-50%,-50%); } .gp-acc-5 { top: 40%; right: 2px; transform: translateY(-50%); }
+    .gp-acc-6 { top: 65%; left: 2px; transform: translateY(-50%); } .gp-acc-7 { top: 65%; left: 50%; transform: translate(-50%,-50%); } .gp-acc-8 { top: 65%; right: 2px; transform: translateY(-50%); }
     @keyframes accBob { 0%,100%{ transform: translateY(0) scale(1); } 50%{ transform: translateY(-2px) scale(1.08); } }
     @keyframes accFloat { 0%,100%{ transform: translate(0,0) rotate(0deg); } 33%{ transform: translate(1px,-2px) rotate(4deg); } 66%{ transform: translate(-1px,-1px) rotate(-3deg); } }
     @keyframes accBuzz { 0%,100%{ transform: translate(0,0); } 25%{ transform: translate(1px,-1px); } 50%{ transform: translate(-1px,1px); } 75%{ transform: translate(1px,0); } }
@@ -2235,7 +2236,7 @@
       .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
       .garden-area { padding: 10px 8px 12px; }
       .garden-pot { min-width: 0; padding: 5px 3px 18px; }
-      .gp-plant-area { height: 86px; } .gp-acc-grid { height: 86px; }
+      .gp-plant-area { height: 86px; }
       .gp-pot-body { width: 42px; height: 32px; }
       .gp-name { font-size: 9px; }
       .gp-owner { font-size: 8px; }
@@ -2249,7 +2250,7 @@
       .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
       .garden-title { font-size: 14px; }
       .garden-pot::before { width: 64px; height: 26px; }
-      .gp-plant-area { height: 78px; } .gp-acc-grid { height: 78px; }
+      .gp-plant-area { height: 78px; }
       .gp-empty-text { font-size: 10px; }
       .acc-editor-inv { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
     }
@@ -8617,7 +8618,13 @@ function buildGardenAdminPanel() {
 }
 
 function renderAccEmoji(item) {
-  if (item.id === 'flaga_pl') return el('span', { className: 'flag-pl-css' });
+  if (item.id === 'flaga_pl') {
+    const img = document.createElement('img');
+    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 5'%3E%3Crect width='8' height='2.5' fill='white'/%3E%3Crect y='2.5' width='8' height='2.5' fill='%23DC143C'/%3E%3C/svg%3E";
+    img.style.cssText = 'display:inline-block;width:1.3em;height:0.82em;border:1px solid rgba(0,0,0,.18);border-radius:1px;vertical-align:middle';
+    img.alt = '🇵🇱';
+    return img;
+  }
   return item.emoji;
 }
 
@@ -8646,29 +8653,20 @@ function buildPot(g, isMine) {
   potBody.appendChild(el('div', { className: 'gp-soil' }));
   pot.appendChild(potBody);
 
-  // Accessories (equipped) — laid out in a 3×3 CSS grid inside plantArea
+  // Accessories (equipped)
   const equipped = normalizeEquippedSlots(g.equipped);
-  const equippedEntries = Object.entries(equipped).filter(([, entry]) => {
-    const id = equippedEntryId(entry);
-    return id && gardenAccessoryById(id);
+  Object.entries(equipped).forEach(([slot, entry]) => {
+    const accId = equippedEntryId(entry);
+    if (!accId) return;
+    const item = gardenAccessoryById(accId);
+    if (!item) return;
+    const animClass = item.anim ? ' gp-acc-' + item.anim : '';
+    pot.appendChild(el('span', {
+      className: 'gp-accessory gp-acc-' + slot + animClass,
+      style: { fontSize: equippedEntrySize(entry) + 'px' },
+      'data-slot': slot,
+    }, renderAccEmoji(item)));
   });
-  if (equippedEntries.length) {
-    const accGrid = el('div', { className: 'gp-acc-grid' });
-    equippedEntries.forEach(([slot, entry]) => {
-      const item = gardenAccessoryById(equippedEntryId(entry));
-      const s = parseInt(slot, 10);
-      const animClass = item.anim ? ' gp-acc-' + item.anim : '';
-      accGrid.appendChild(el('span', {
-        className: 'gp-accessory' + animClass,
-        style: {
-          gridArea: (Math.floor(s / 3) + 1) + ' / ' + (s % 3 + 1),
-          fontSize: equippedEntrySize(entry) + 'px',
-        },
-        'data-slot': slot,
-      }, renderAccEmoji(item)));
-    });
-    plantArea.appendChild(accGrid);
-  }
 
   // Info below pot
   const info = el('div', { className: 'gp-info' });
