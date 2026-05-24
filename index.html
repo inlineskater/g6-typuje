@@ -8695,7 +8695,7 @@ const SKIN_COLORS   = { light: '#fddbb4', medium: '#c68642', tan: '#8d5524', dar
 const HAIR_COLORS   = { brown: '#6b3f2a', black: '#1a1a1a', blonde: '#f5d76e', red: '#b34700', gray: '#9e9e9e', white: '#f0f0f0' };
 const OUTFIT_COLORS = { blue: '#4a90d9', red: '#c0392b', green: '#27ae60', purple: '#8e44ad', gray: '#7f8c8d' };
 
-function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
+function buildHeroSVG(hero, { size = 64, walking = false, gear = [] } = {}) {
   const skin   = '#c68642';
   const hair   = HAIR_COLORS[hero.hair_color]     || HAIR_COLORS.brown;
   const outfit = OUTFIT_COLORS[hero.outfit_color] || OUTFIT_COLORS.blue;
@@ -8747,6 +8747,21 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
   const lL  = walking ? ` style="animation:leg-l .5s ease-in-out infinite;"` : '';
   const lR  = walking ? ` style="animation:leg-r .5s ease-in-out infinite;"` : '';
 
+  const SLOT_BADGE_POS = {
+    head:    { x: 46, y: 8  },
+    trinket: { x: 10, y: 28 },
+    chest:   { x: 46, y: 38 },
+    hands:   { x: 10, y: 42 },
+    legs:    { x: 46, y: 52 },
+    feet:    { x: 32, y: 61 },
+  };
+  const gearBadges = gear.map(item => {
+    const pos = SLOT_BADGE_POS[item.slot];
+    if (!pos || !item.emoji) return '';
+    return `<circle cx="${pos.x}" cy="${pos.y}" r="6.5" fill="rgba(0,0,0,.55)" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>` +
+           `<text x="${pos.x}" y="${pos.y}" font-size="9" text-anchor="middle" dominant-baseline="middle">${item.emoji}</text>`;
+  }).join('');
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}" role="img">
     <g ${bob}>
       ${hairSVG}
@@ -8762,6 +8777,7 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
       ${weaponSVG}
       <rect x="23" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lL}/>
       <rect x="29" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lR}/>
+      ${gearBadges}
     </g>
   </svg>`;
 }
@@ -8830,7 +8846,7 @@ function buildHeroDisplay() {
   const panel = el('div', { className: 'hero-panel' });
   panel.appendChild(el('div', { className: 'hero-panel-title' }, 'Twój Bohater'));
   const av = el('div', { className: 'hero-avatar-lg' });
-  av.innerHTML = buildHeroSVG(myHero, { size: 128 });
+  av.innerHTML = buildHeroSVG(myHero, { size: 128, gear: myHeroInventory.filter(i => i.equipped) });
   panel.appendChild(av);
   panel.appendChild(el('div', { className: 'hero-name-display' }, myHero.profiles?.nick || me.nick));
   const canPayForEdit = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
@@ -9078,7 +9094,7 @@ function buildTavernPanel() {
       const dur = (13 + (i * 2.7 % 6)).toFixed(1);
       lane.style.setProperty('--walk-dur', dur + 's');
       lane.style.animationDelay = -(i * 3.4).toFixed(1) + 's';
-      lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true });
+      lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true, gear: equipmentForHero(hero.user_id) });
       const gear = equipmentForHero(hero.user_id);
       visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
       if (gear.length) {
