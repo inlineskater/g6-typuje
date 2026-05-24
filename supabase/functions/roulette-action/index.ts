@@ -90,6 +90,42 @@ function randomNumber() {
   return buf[0] % 37;
 }
 
+function chancePercent(percent) {
+  const n = Number(percent);
+  if (!Number.isFinite(n) || n <= 0) return false;
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return (buf[0] % 10000) < Math.min(10000, Math.round(n * 100));
+}
+
+function randomFrom(values) {
+  if (!values.length) return null;
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return values[buf[0] % values.length];
+}
+
+async function getStrongestHeroEffect(tx, userId, game) {
+  try {
+    const rows = await tx`
+      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
+      from public.hero_equipment e
+      join public.hero_item_instances i on i.id = e.item_instance_id
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where e.user_id = ${userId}
+        and i.owner_id = ${userId}
+        and d.is_active = true
+        and d.effect_game = ${game}
+      order by d.effect_value desc, d.price desc, d.slug
+      limit 1
+    `;
+    return rows[0] ?? null;
+  } catch (err) {
+    console.warn("Hero item effects unavailable:", err?.message ?? err);
+    return null;
+  }
+}
+
 function riggedNumber(bets) {
   // 85% chance: pick a number that loses all bets
   const buf = new Uint32Array(1);
@@ -108,18 +144,54 @@ function riggedNumber(bets) {
 
 async function spin(userId, bets) {
   const totalBet = validateBets(bets);
+  const effect = await getStrongestHeroEffect(db, userId, "roulette");
 
   return await db.begin(async (tx) => {
     const [profile] = await tx`select coins from public.profiles where id = ${userId} for update`;
     if (!profile) throw Object.assign(new Error("Profil nie istnieje."), { isGame: true });
     if (profile.coins < totalBet) throw Object.assign(new Error("Za mało coinów!"), { isGame: true });
 
-    const number = randomNumber();
-    const color = numberColor(number);
+    let number = randomNumber();
+    let color = numberColor(number);
+    let itemEffect = null;
 
     let totalWon = 0;
     for (const b of bets) {
       if (betWins(b, number)) totalWon += b.amount * betMultiplier(b.type);
+    }
+
+    if (effect?.effect_type === "win_chance_bonus" && totalWon === 0 && chancePercent(effect.effect_value)) {
+      const winners = [];
+      for (let n = 0; n <= 36; n++) {
+        if (bets.some((b) => betWins(b, n))) winners.push(n);
+      }
+      const rescuedNumber = randomFrom(winners);
+      if (rescuedNumber !== null) {
+        number = rescuedNumber;
+        color = numberColor(number);
+        totalWon = 0;
+        for (const b of bets) {
+          if (betWins(b, number)) totalWon += b.amount * betMultiplier(b.type);
+        }
+        itemEffect = {
+          slug: effect.slug,
+          name: effect.name,
+          type: effect.effect_type,
+          value: Number(effect.effect_value),
+        };
+      }
+    } else if (effect?.effect_type === "payout_bonus" && totalWon > 0) {
+      const bonus = Math.floor(totalWon * Number(effect.effect_value) / 100);
+      if (bonus > 0) {
+        totalWon += bonus;
+        itemEffect = {
+          slug: effect.slug,
+          name: effect.name,
+          type: effect.effect_type,
+          value: Number(effect.effect_value),
+          bonus,
+        };
+      }
     }
 
     const newBalance = profile.coins - totalBet + totalWon;
@@ -127,7 +199,7 @@ async function spin(userId, bets) {
     await tx`insert into public.roulette_spins (user_id, bets, result_number, result_color, total_bet, total_won)
              values (${userId}, ${JSON.stringify(bets)}, ${number}, ${color}, ${totalBet}, ${totalWon})`;
 
-    return { number, color, totalWon, balance: newBalance };
+    return { number, color, totalWon, balance: newBalance, itemEffect };
   });
 }
 

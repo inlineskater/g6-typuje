@@ -166,6 +166,27 @@ async function requireUser(req) {
   return data.user;
 }
 
+async function getStrongestHeroEffect(tx, userId, game) {
+  try {
+    const rows = await tx`
+      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
+      from public.hero_equipment e
+      join public.hero_item_instances i on i.id = e.item_instance_id
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where e.user_id = ${userId}
+        and i.owner_id = ${userId}
+        and d.is_active = true
+        and d.effect_game = ${game}
+      order by d.effect_value desc, d.price desc, d.slug
+      limit 1
+    `;
+    return rows[0] ?? null;
+  } catch (err) {
+    console.warn("Hero item effects unavailable:", err?.message ?? err);
+    return null;
+  }
+}
+
 async function ensureMainTable(tx) {
   await tx`
     insert into public.poker_tables (slug)
@@ -770,6 +791,8 @@ async function getState(userId) {
 }
 
 async function sit(userId) {
+  const effect = await getStrongestHeroEffect(db, userId, "poker");
+
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
     if (seats.some((seat) => !seat.is_bot && seat.user_id === userId)) throw gameError("Już siedzisz przy stole.");
@@ -786,6 +809,11 @@ async function sit(userId) {
     if (!profile) throw gameError("Nie znaleziono profilu.");
     if (asInt(profile.coins) < asInt(table.buy_in)) throw gameError("Masz za mało coinów na buy-in.");
 
+    const stackBonus = effect?.effect_type === "buy_in_bonus"
+      ? Math.max(0, asInt(effect.effect_value, 0))
+      : 0;
+    const startingStack = asInt(table.buy_in) + stackBonus;
+
     const occupied = seats.map((seat) => seat.seat_no);
     let seatNo = 0;
     while (occupied.includes(seatNo)) seatNo += 1;
@@ -797,13 +825,20 @@ async function sit(userId) {
     `;
     await tx`
       insert into public.poker_seats (table_id, seat_no, user_id, nick_snapshot, stack)
-      values (${table.id}, ${seatNo}, ${userId}, ${profile.nick}, ${asInt(table.buy_in)})
+      values (${table.id}, ${seatNo}, ${userId}, ${profile.nick}, ${startingStack})
     `;
     await tx`
       insert into public.poker_ledger (user_id, nick_snapshot, type, amount)
       values (${userId}, ${profile.nick}, 'buy_in', ${asInt(table.buy_in)})
     `;
-    await logEvent(tx, table.id, table.hand_id, `${profile.nick} siada do stołu za ${table.buy_in} coinów.`);
+    await logEvent(
+      tx,
+      table.id,
+      table.hand_id,
+      stackBonus > 0
+        ? `${profile.nick} siada do stołu za ${table.buy_in} coinów (+${stackBonus} stacka z ${effect.name}).`
+        : `${profile.nick} siada do stołu za ${table.buy_in} coinów.`
+    );
     return stateResponse(tx, userId);
   });
 }

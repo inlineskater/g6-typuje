@@ -1589,6 +1589,28 @@
     .shop-card-bought { font-size: 13px; color: var(--yes); font-weight: 600; margin-top: 4px; }
     .shop-card-buyer  { font-size: 14px; font-weight: 700; margin-top: 4px; }
     .shop-card-btn { margin-top: 6px; }
+    .shop-card-meta { font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .auction-admin {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px; margin-top: 14px;
+      display: grid; grid-template-columns: minmax(180px, 1fr) 120px 120px 120px auto;
+      gap: 10px; align-items: end;
+    }
+    .auction-admin label { display: grid; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+    .auction-admin select, .auction-admin input {
+      width: 100%; min-height: 38px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--bg); color: var(--text);
+      font: inherit; font-size: 13px; padding: 8px 10px; margin: 0;
+    }
+    .auction-admin .btn-primary { min-height: 38px; margin: 0; padding: 8px 13px; white-space: nowrap; }
+    .auction-bid-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-top: 6px; }
+    .auction-bid-row input {
+      min-height: 42px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--bg); color: var(--text); font: inherit; padding: 9px 10px; margin: 0;
+    }
+    .auction-status { font-size: 12px; font-weight: 800; color: var(--accent); }
+    .shop-card.auction-ended { opacity: .78; }
+    @media (max-width: 800px) { .auction-admin { grid-template-columns: 1fr; } }
     .shop-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 48px 0; grid-column: 1 / -1; }
 
     /* ── COSMETICS ── */
@@ -2239,6 +2261,7 @@
 
     /* ── HEROES & TAVERN ─────────────────────────────────────────────────── */
     .heroes-wrap { max-width: 1200px; margin: 0 auto; padding: var(--page-pad); display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+    .hero-side { display: grid; gap: 14px; align-self: start; }
     /* ── Hero panel (display mode) ─────────────────────────────────────── */
     .hero-panel { position: sticky; top: 80px; background: linear-gradient(160deg,#1e1208 0%,#2d1b0e 100%); border: 2px solid #8b6914; border-radius: 14px; padding: 22px 20px; display: flex; flex-direction: column; align-items: center; gap: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(212,160,23,.12); }
     .hero-panel-title { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8b6914; align-self: flex-start; }
@@ -2247,6 +2270,30 @@
     .hero-nick-display { font-size: 12px; color: #a08050; text-align: center; margin-top: -8px; }
     .btn-edit-hero { background: #2d1b0e; border: 1.5px solid #5a3e28; border-radius: 7px; color: #c8a96a; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 700; min-height: 36px; padding: 6px 16px; transition: all .15s; width: 100%; }
     .btn-edit-hero:hover { border-color: #d4a017; color: #f0c050; }
+    .hero-equipment-panel { background: linear-gradient(160deg,#1e1208 0%,#2d1b0e 100%); border: 2px solid #8b6914; border-radius: 14px; padding: 18px; display: grid; gap: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(212,160,23,.12); }
+    .hero-equip-title { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8b6914; }
+    .hero-equip-sub { font-size: 11px; color: #a08050; line-height: 1.45; }
+    .hero-slot-list, .hero-owned-list { display: grid; gap: 8px; }
+    .hero-slot-row, .hero-owned-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; background: rgba(15,10,5,.55); border: 1px solid #5a3e28; border-radius: 8px; padding: 8px 9px; min-width: 0; }
+    .hero-slot-main, .hero-item-main { display: grid; gap: 2px; min-width: 0; }
+    .hero-slot-label { font-size: 10px; font-weight: 800; color: #8b6914; text-transform: uppercase; letter-spacing: .08em; }
+    .hero-item-name { font-size: 12px; font-weight: 800; color: #f0c050; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hero-item-effect, .hero-slot-empty { font-size: 11px; color: #a08050; line-height: 1.35; }
+    .hero-mini-btn { background: #2d1b0e; border: 1px solid #5a3e28; border-radius: 7px; color: #c8a96a; cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 700; min-height: 30px; padding: 5px 9px; white-space: nowrap; }
+    .hero-mini-btn:hover:not(:disabled) { border-color: #d4a017; color: #f0c050; }
+    .hero-mini-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .hero-owned-item.equipped { border-color: #d4a017; box-shadow: inset 0 0 0 1px rgba(212,160,23,.18); }
+    .tavern-gear { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; max-width: 74px; justify-content: center; pointer-events: none; }
+    .tavern-gear span { width: 16px; height: 16px; border-radius: 50%; background: rgba(15,10,5,.86); border: 1px solid rgba(240,192,80,.55); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+    .tavern-lane.fx-gold_aura { filter: drop-shadow(0 0 10px rgba(240,192,80,.95)); }
+    .tavern-lane.fx-cloak_aura { filter: drop-shadow(0 0 9px rgba(168,85,247,.85)); }
+    .tavern-lane.fx-coin_sparkle .tavern-gear span { animation: gear-sparkle 1.4s ease-in-out infinite; }
+    .tavern-lane.fx-disco_aura .tavern-gear span { animation: gear-disco .9s linear infinite; }
+    .tavern-lane.fx-fire_trail::before { content: '🔥'; position: absolute; left: 6px; bottom: 8px; font-size: 13px; opacity: .8; animation: gear-flicker .6s ease-in-out infinite alternate; }
+    .tavern-lane.fx-loud_speech .hero-speech { font-size: 12px; border: 2px solid rgba(240,192,80,.65); }
+    @keyframes gear-sparkle { 0%,100% { transform: scale(1); box-shadow: 0 1px 4px rgba(0,0,0,.35); } 50% { transform: scale(1.18); box-shadow: 0 0 12px rgba(240,192,80,.9); } }
+    @keyframes gear-disco { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+    @keyframes gear-flicker { from { transform: translateX(0) scale(.92); } to { transform: translateX(-4px) scale(1.08); } }
 
     /* ── Hero wizard ────────────────────────────────────────────────────── */
     .hero-wizard {
@@ -2393,6 +2440,9 @@
     .hero-speech { position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); color: #2d1b0e; border-radius: 8px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .4s ease; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     .hero-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(255,255,255,.95); }
     .hero-tooltip { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: rgba(15,23,42,.9); color: #fff; border-radius: 7px; padding: 5px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+    .hero-tooltip-rich { display: grid; gap: 3px; min-width: 150px; max-width: 220px; white-space: normal; text-align: left; }
+    .hero-tooltip-rich strong { color: #fff; font-size: 12px; }
+    .hero-tooltip-item { color: rgba(255,255,255,.82); font-size: 10px; line-height: 1.3; }
     .hero-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(15,23,42,.9); }
     .tavern-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: rgba(255,255,255,.5); font-size: 13px; font-weight: 600; pointer-events: none; z-index: 4; }
     @media (max-width: 900px) { .heroes-wrap { grid-template-columns: 1fr; } .hero-panel { position: static; } }
@@ -2945,6 +2995,7 @@
       <div class="shop-category-filters" id="shop-category-filters" aria-label="Kategorie sklepu">
         <button class="shop-category-filter active" type="button" data-shop-target="shop-rewards-section">🎁 Nagrody</button>
         <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">⚔️ Herosi</button>
+        <button class="shop-category-filter" type="button" data-shop-target="hero-auctions-section">🏷️ Aukcje</button>
         <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🌿 Ogródek</button>
       </div>
       <section class="shop-section" id="shop-rewards-section">
@@ -2962,10 +3013,20 @@
         <div class="shop-section-head">
           <div>
             <div class="shop-section-title">⚔️ Herosi</div>
-            <div class="shop-section-sub">Usługi i kosmetyki wpływające na wygląd Twojego bohatera.</div>
+            <div class="shop-section-sub">Usługi, ekwipunek i małe bonusy do gier dla Twojego bohatera.</div>
           </div>
         </div>
         <div class="shop-grid" id="hero-shop-grid"></div>
+      </section>
+      <section class="shop-section" id="hero-auctions-section">
+        <div class="shop-section-head">
+          <div>
+            <div class="shop-section-title">🏷️ Aukcje bohaterów</div>
+            <div class="shop-section-sub">Limitowane przedmioty społecznościowe. Coiny z wygranej aukcji znikają z obiegu.</div>
+          </div>
+        </div>
+        <div id="hero-auction-admin"></div>
+        <div class="shop-grid" id="hero-auction-grid"></div>
       </section>
       <section class="shop-section cosmetics-section" id="cosmetics-section">
         <div class="cosmetics-title">🌿 Ozdoby do ogródka</div>
@@ -3170,6 +3231,21 @@ const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
   'body_shape', 'outfit', 'outfit_color', 'weapon',
 ];
+const HERO_ITEM_SLOTS = [
+  { id: 'head', label: 'Głowa' },
+  { id: 'chest', label: 'Korpus' },
+  { id: 'legs', label: 'Nogi' },
+  { id: 'hands', label: 'Ręce' },
+  { id: 'feet', label: 'Stopy' },
+  { id: 'trinket', label: 'Talizman' },
+  { id: 'weapon', label: 'Broń' },
+];
+const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
+let heroItemDefs = [];
+let myHeroInventory = [];
+let publicHeroEquipment = [];
+let heroAuctionItemDefs = [];
+let heroAuctions = [];
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
 function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
@@ -5649,6 +5725,280 @@ async function loadMyHeroForShop() {
   if (!error) myHero = data || null;
 }
 
+function heroItemEffectLabel(item) {
+  const value = Number(item?.effect_value || 0);
+  if (item?.effect_game === 'roulette' && item.effect_type === 'win_chance_bonus') return `Ruletka: +${value}% szansy ratunku po przegranej`;
+  if (item?.effect_game === 'roulette' && item.effect_type === 'payout_bonus') return `Ruletka: +${value}% do wygranej wypłaty`;
+  if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') return `Sloty: +${value} punkt wagi symbolu G6`;
+  if (item?.effect_game === 'whack_boss' && item.effect_type === 'score_bonus') return `Gra sezonowa: +${value} do wyniku`;
+  if (item?.effect_game === 'bug_jumper' && item.effect_type === 'score_bonus') return `Bug Jumper: +${value} do wyniku`;
+  if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: +${value} stacka po buy-inie`;
+  if (item?.effect_game === 'tavern' && item.effect_type === 'gold_aura') return 'Karczma: królewska złota aura';
+  if (item?.effect_game === 'tavern' && item.effect_type === 'cloak_aura') return 'Karczma: efektowna peleryna';
+  if (item?.effect_game === 'tavern' && item.effect_type === 'coin_sparkle') return 'Karczma: błysk coinów';
+  if (item?.effect_game === 'tavern' && item.effect_type === 'disco_aura') return 'Karczma: disco aura';
+  if (item?.effect_game === 'tavern' && item.effect_type === 'fire_trail') return 'Karczma: płomienny ślad';
+  if (item?.effect_game === 'tavern' && item.effect_type === 'loud_speech') return 'Karczma: głośniejsza obecność';
+  return 'Efekt bohatera';
+}
+
+function heroItemSerialLabel(item) {
+  const serial = item?.serial_no;
+  const size = item?.instance_edition_size ?? item?.edition_size;
+  if (!serial) return '';
+  return '#' + serial + (size ? '/' + size : '');
+}
+
+function heroItemDisplayName(item) {
+  const serial = heroItemSerialLabel(item);
+  return `${item?.emoji || '🎒'} ${item?.name || 'Przedmiot'}${serial ? ' ' + serial : ''}`;
+}
+
+function heroItemError(error) {
+  const msg = error?.message || '';
+  if (msg.includes('insufficient')) return 'Za mało coinów.';
+  if (msg.includes('item_not_found')) return 'Przedmiot nie jest już dostępny.';
+  if (msg.includes('item_not_owned')) return 'Nie posiadasz tego przedmiotu.';
+  if (msg.includes('bad_slot')) return 'Nieprawidłowy slot.';
+  if (msg.includes('item_not_auctionable')) return 'Tego przedmiotu nie można wystawić na aukcję.';
+  if (msg.includes('auction_not_found')) return 'Aukcja nie istnieje.';
+  if (msg.includes('auction_not_open')) return 'Aukcja nie jest otwarta.';
+  if (msg.includes('auction_not_started')) return 'Aukcja jeszcze się nie zaczęła.';
+  if (msg.includes('auction_finished')) return 'Aukcja już się skończyła.';
+  if (msg.includes('auction_still_open')) return 'Aukcja jeszcze trwa.';
+  if (msg.includes('bid_too_low')) return 'Oferta jest za niska.';
+  if (msg.includes('not_authorized')) return 'Tylko admin może tworzyć aukcje.';
+  if (msg.includes('edition_sold_out')) return 'Ta edycja jest już wyprzedana.';
+  return msg || 'Nie udało się wykonać akcji.';
+}
+
+async function refreshMyCoins() {
+  if (!me?.id) return;
+  const { data, error } = await sb
+    .from('profiles')
+    .select('coins')
+    .eq('id', me.id)
+    .maybeSingle();
+  if (!error && data?.coins !== undefined) {
+    me.coins = data.coins;
+    setText(headerCoins, me.coins);
+  }
+}
+
+async function loadHeroItemCatalog() {
+  const { data, error } = await sb
+    .from('hero_item_defs')
+    .select('*')
+    .eq('is_active', true)
+    .in('sale_type', ['shop', 'both'])
+    .order('price', { ascending: true });
+  if (error) {
+    console.warn('Hero item catalog unavailable:', error.message);
+    heroItemDefs = [];
+    return;
+  }
+  heroItemDefs = data || [];
+}
+
+async function loadHeroAuctionItemDefs() {
+  const { data, error } = await sb
+    .from('hero_item_defs')
+    .select('*')
+    .eq('is_active', true)
+    .in('sale_type', ['auction', 'both'])
+    .order('rarity', { ascending: true });
+  if (error) {
+    console.warn('Hero auction item defs unavailable:', error.message);
+    heroAuctionItemDefs = [];
+    return;
+  }
+  heroAuctionItemDefs = data || [];
+}
+
+async function loadHeroAuctions() {
+  const { data, error } = await sb
+    .from('hero_item_auction_cards')
+    .select('*')
+    .order('status', { ascending: true })
+    .order('ends_at', { ascending: true });
+  if (error) {
+    console.warn('Hero auctions unavailable:', error.message);
+    heroAuctions = [];
+    return;
+  }
+  heroAuctions = data || [];
+}
+
+async function loadMyHeroInventory() {
+  if (!me?.id) { myHeroInventory = []; return; }
+  const { data, error } = await sb
+    .from('my_hero_inventory')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.warn('Hero inventory unavailable:', error.message);
+    myHeroInventory = [];
+    return;
+  }
+  myHeroInventory = data || [];
+}
+
+async function loadPublicHeroEquipment() {
+  const { data, error } = await sb
+    .from('public_hero_equipment')
+    .select('*')
+    .order('equipped_at', { ascending: true });
+  if (error) {
+    console.warn('Public hero equipment unavailable:', error.message);
+    publicHeroEquipment = [];
+    return;
+  }
+  publicHeroEquipment = data || [];
+}
+
+function myEquippedItemForSlot(slot) {
+  return myHeroInventory.find(item => item.equipped && item.slot === slot) || null;
+}
+
+function firstOwnedHeroItem(slug) {
+  return myHeroInventory.find(item => item.slug === slug) || null;
+}
+
+function heroItemOwnedCount(slug) {
+  return myHeroInventory.filter(item => item.slug === slug).length;
+}
+
+function heroItemEquippedForSlug(slug) {
+  return myHeroInventory.find(item => item.slug === slug && item.equipped) || null;
+}
+
+function equipmentForHero(userId) {
+  const order = Object.fromEntries(HERO_ITEM_SLOTS.map((slot, i) => [slot.id, i]));
+  return publicHeroEquipment
+    .filter(item => item.user_id === userId)
+    .sort((a, b) => (order[a.slot] ?? 99) - (order[b.slot] ?? 99));
+}
+
+function visualEffectsForGear(gear) {
+  return gear
+    .map(item => item.visual_effect)
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+async function refreshHeroItemSurface() {
+  if (activeTab === 'heroes') await loadHeroes();
+  else if (activeTab === 'shop') await loadShop();
+}
+
+async function purchaseHeroItem(slug, price, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Kupuję…';
+  const { data, error } = await sb.rpc('purchase_hero_item', { p_item_slug: slug });
+  if (error) {
+    showToast('❌ ' + heroItemError(error));
+    btn.disabled = false;
+    btn.textContent = `Kup za ${price.toLocaleString('pl-PL')} 🪙`;
+    return;
+  }
+  if (data?.coins_left !== undefined) {
+    me.coins = data.coins_left;
+    setText(headerCoins, me.coins);
+  }
+  showToast('✅ Przedmiot kupiony!');
+  await refreshHeroItemSurface();
+}
+
+async function equipHeroItem(instanceId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Zakładam…';
+  const { error } = await sb.rpc('equip_hero_item', { p_instance_id: instanceId });
+  if (error) {
+    showToast('❌ ' + heroItemError(error));
+    btn.disabled = false;
+    btn.textContent = 'Załóż';
+    return;
+  }
+  showToast('✅ Przedmiot założony!');
+  await refreshHeroItemSurface();
+}
+
+async function unequipHeroItem(slot, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Zdejmuję…';
+  const { error } = await sb.rpc('unequip_hero_item', { p_slot: slot });
+  if (error) {
+    showToast('❌ ' + heroItemError(error));
+    btn.disabled = false;
+    btn.textContent = 'Zdejmij';
+    return;
+  }
+  showToast('✅ Przedmiot zdjęty.');
+  await refreshHeroItemSurface();
+}
+
+function auctionTimeLabel(auction) {
+  const end = new Date(auction.ends_at);
+  if (Number.isNaN(end.getTime())) return '';
+  const diff = end.getTime() - Date.now();
+  if (auction.status !== 'open') return 'Zakończona: ' + fmtDateTime(auction.ends_at);
+  if (diff <= 0) return 'Czeka na rozstrzygnięcie';
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return h > 0 ? `Koniec za ${h}h ${m}m` : `Koniec za ${Math.max(1, m)}m`;
+}
+
+async function createHeroAuction(slug, startPrice, durationHours, minIncrement, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Tworzę…';
+  const { error } = await sb.rpc('create_hero_item_auction', {
+    p_item_slug: slug,
+    p_start_price: startPrice,
+    p_duration_hours: durationHours,
+    p_min_increment: minIncrement,
+  });
+  btn.disabled = false;
+  btn.textContent = 'Utwórz aukcję';
+  if (error) { showToast('❌ ' + heroItemError(error)); return; }
+  showToast('✅ Aukcja utworzona!');
+  await loadShop();
+}
+
+async function placeHeroAuctionBid(auctionId, amount, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Licytuję…';
+  const { data, error } = await sb.rpc('place_hero_item_bid', {
+    p_auction_id: auctionId,
+    p_amount: amount,
+  });
+  if (error) {
+    showToast('❌ ' + heroItemError(error));
+    btn.disabled = false;
+    btn.textContent = 'Licytuj';
+    return;
+  }
+  if (data?.coins_left !== undefined) {
+    me.coins = data.coins_left;
+    setText(headerCoins, me.coins);
+  }
+  showToast('✅ Oferta złożona!');
+  await loadShop();
+}
+
+async function settleHeroAuction(auctionId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Rozstrzygam…';
+  const { data, error } = await sb.rpc('settle_hero_item_auction', { p_auction_id: auctionId });
+  if (error) {
+    showToast('❌ ' + heroItemError(error));
+    btn.disabled = false;
+    btn.textContent = 'Rozstrzygnij';
+    return;
+  }
+  showToast(data?.winner_id === me?.id ? '🏆 Wygrałeś przedmiot!' : '✅ Aukcja rozstrzygnięta.');
+  await loadShop();
+}
+
 function setupShopCategoryFilters() {
   document.querySelectorAll('[data-shop-target]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -5674,6 +6024,11 @@ async function loadShop() {
       .order('created_at', { ascending: false }),
     loadMyGardenForCosmetics(),
     loadMyHeroForShop(),
+    loadHeroItemCatalog(),
+    loadHeroAuctionItemDefs(),
+    loadHeroAuctions(),
+    loadMyHeroInventory(),
+    refreshMyCoins(),
   ]);
 
   if (error) { grid.replaceChildren(); grid.append(document.createTextNode('Błąd ładowania sklepu.')); return; }
@@ -5686,6 +6041,8 @@ async function loadShop() {
   }
   renderCosmeticsGrid();
   renderHeroShopGrid();
+  renderHeroAuctionAdmin();
+  renderHeroAuctionGrid();
 }
 
 function buildShopCard(item) {
@@ -5753,20 +6110,20 @@ function renderHeroShopGrid() {
 
   const hasHero = !!myHero;
   const canAfford = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
-  const card = el('div', { className: 'shop-card' });
-  card.appendChild(el('div', { className: 'shop-card-icon' }, '🎨'));
-  card.appendChild(el('div', { className: 'shop-card-title' }, 'Zmiana wyglądu bohatera'));
-  card.appendChild(el('div', { className: 'shop-card-desc' },
+  const appearanceCard = el('div', { className: 'shop-card' });
+  appearanceCard.appendChild(el('div', { className: 'shop-card-icon' }, '🎨'));
+  appearanceCard.appendChild(el('div', { className: 'shop-card-title' }, 'Zmiana wyglądu bohatera'));
+  appearanceCard.appendChild(el('div', { className: 'shop-card-desc' },
     hasHero
       ? 'Edytuj fryzurę, brodę, sylwetkę, strój i broń. Opłata pobierana jest przy zapisie każdej zmiany.'
       : 'Stwórz pierwszego bohatera za darmo. Późniejsze zmiany wyglądu kosztują 1 coin przy zapisie.'
   ));
-  card.appendChild(el('div', { className: 'shop-card-price' }, hasHero ? HERO_STYLE_CHANGE_PRICE + ' 🪙' : '0 🪙'));
-  card.appendChild(el('div', { className: 'shop-card-slots' },
+  appearanceCard.appendChild(el('div', { className: 'shop-card-price' }, hasHero ? HERO_STYLE_CHANGE_PRICE + ' 🪙' : '0 🪙'));
+  appearanceCard.appendChild(el('div', { className: 'shop-card-slots' },
     hasHero ? 'Płatne za każde zapisanie zmienionego wyglądu' : 'Pierwszy bohater jest darmowy'
   ));
 
-  const btn = el('button', {
+  const appearanceBtn = el('button', {
     className: 'btn-primary shop-card-btn',
     disabled: hasHero && !canAfford,
     title: hasHero && !canAfford ? 'Za mało coinów' : '',
@@ -5774,12 +6131,173 @@ function renderHeroShopGrid() {
     ? (canAfford ? `Zmień za ${HERO_STYLE_CHANGE_PRICE} 🪙` : `Potrzebujesz ${HERO_STYLE_CHANGE_PRICE} 🪙`)
     : 'Stwórz bohatera'
   );
-  btn.addEventListener('click', () => {
+  appearanceBtn.addEventListener('click', () => {
     heroesEditMode = hasHero;
     switchTab('heroes');
   });
-  card.appendChild(btn);
-  grid.appendChild(card);
+  appearanceCard.appendChild(appearanceBtn);
+  grid.appendChild(appearanceCard);
+
+  if (!heroItemDefs.length) {
+    grid.appendChild(el('div', { className: 'shop-card' },
+      el('div', { className: 'shop-card-icon' }, '🎒'),
+      el('div', { className: 'shop-card-title' }, 'Przedmioty bohatera'),
+      el('div', { className: 'shop-card-desc' }, 'Po wdrożeniu supabase/hero-items.sql pojawią się tu ekwipunek i bonusy do gier.'),
+      el('div', { className: 'shop-card-slots' }, 'Brak aktywnych przedmiotów')
+    ));
+    return;
+  }
+
+  heroItemDefs.forEach(item => {
+    const owned = firstOwnedHeroItem(item.slug);
+    const equipped = heroItemEquippedForSlug(item.slug);
+    const ownedCount = heroItemOwnedCount(item.slug);
+    const itemPrice = Number(item.price || 0);
+    const itemCanAfford = (me?.coins || 0) >= itemPrice;
+    const itemCard = el('div', { className: 'shop-card' });
+    itemCard.appendChild(el('div', { className: 'shop-card-icon' }, item.emoji || '🎒'));
+    itemCard.appendChild(el('div', { className: 'shop-card-title' }, item.name));
+    itemCard.appendChild(el('div', { className: 'shop-card-desc' }, item.description || heroItemEffectLabel(item)));
+    itemCard.appendChild(el('div', { className: 'shop-card-price' }, itemPrice.toLocaleString('pl-PL') + ' 🪙'));
+    itemCard.appendChild(el('div', { className: 'shop-card-meta' },
+      `${HERO_ITEM_SLOT_LABELS[item.slot] || item.slot} · ${heroItemEffectLabel(item)}`
+    ));
+    if (ownedCount > 0) {
+      itemCard.appendChild(el('div', { className: 'shop-card-slots' }, `Posiadasz: ${ownedCount}`));
+    }
+
+    if (equipped) {
+      itemCard.appendChild(el('button', {
+        className: 'btn-primary shop-card-btn',
+        disabled: true,
+      }, 'Założone'));
+    } else if (owned) {
+      const equipBtn = el('button', { className: 'btn-primary shop-card-btn' }, 'Załóż');
+      equipBtn.addEventListener('click', () => equipHeroItem(owned.instance_id, equipBtn));
+      itemCard.appendChild(equipBtn);
+    } else {
+      const buyBtn = el('button', {
+        className: 'btn-primary shop-card-btn',
+        disabled: !itemCanAfford,
+        title: itemCanAfford ? '' : 'Za mało coinów',
+      }, itemCanAfford ? `Kup za ${itemPrice.toLocaleString('pl-PL')} 🪙` : `Potrzebujesz ${itemPrice.toLocaleString('pl-PL')} 🪙`);
+      buyBtn.addEventListener('click', () => purchaseHeroItem(item.slug, itemPrice, buyBtn));
+      itemCard.appendChild(buyBtn);
+    }
+    grid.appendChild(itemCard);
+  });
+}
+
+function renderHeroAuctionAdmin() {
+  const wrap = document.getElementById('hero-auction-admin');
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (me?.nick !== 'admin') return;
+
+  if (!heroAuctionItemDefs.length) {
+    wrap.appendChild(el('div', { className: 'shop-card-meta', style: { marginTop: '12px' } },
+      'Brak przedmiotów aukcyjnych. Wdróż najnowsze supabase/hero-items.sql.'
+    ));
+    return;
+  }
+
+  const form = el('div', { className: 'auction-admin' });
+  const select = el('select', {});
+  heroAuctionItemDefs.forEach(item => {
+    select.appendChild(el('option', { value: item.slug }, `${item.emoji || '🎒'} ${item.name}${item.edition_size ? ' #' + item.edition_size : ''}`));
+  });
+  const startInput = el('input', { type: 'number', min: '1', step: '10', value: '300' });
+  const durationInput = el('input', { type: 'number', min: '1', max: '720', step: '1', value: '72' });
+  const incInput = el('input', { type: 'number', min: '1', step: '5', value: '10' });
+  const btn = el('button', { className: 'btn-primary', type: 'button' }, 'Utwórz aukcję');
+  btn.addEventListener('click', () => {
+    const startPrice = Math.max(1, Math.trunc(Number(startInput.value) || 0));
+    const hours = Math.max(1, Math.min(720, Math.trunc(Number(durationInput.value) || 72)));
+    const inc = Math.max(1, Math.trunc(Number(incInput.value) || 10));
+    createHeroAuction(select.value, startPrice, hours, inc, btn);
+  });
+  form.append(
+    el('label', {}, 'Przedmiot', select),
+    el('label', {}, 'Start', startInput),
+    el('label', {}, 'Godziny', durationInput),
+    el('label', {}, 'Przebicie', incInput),
+    btn
+  );
+  wrap.appendChild(form);
+}
+
+function renderHeroAuctionGrid() {
+  const grid = document.getElementById('hero-auction-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+
+  if (!heroAuctions.length) {
+    grid.appendChild(el('p', { className: 'shop-empty' }, 'Brak aktywnych aukcji. Admin może wystawić limitowany przedmiot.'));
+    return;
+  }
+
+  heroAuctions.forEach(auction => {
+    const isOpen = auction.status === 'open';
+    const ended = isOpen && new Date(auction.ends_at).getTime() <= Date.now();
+    const currentBid = Number(auction.current_bid || 0);
+    const nextBid = Number(auction.next_min_bid || auction.start_price || 1);
+    const mine = auction.current_bidder_id === me?.id;
+    const winnerMine = auction.winner_id === me?.id;
+    const card = el('div', { className: 'shop-card' + (!isOpen ? ' auction-ended' : '') });
+
+    card.appendChild(el('div', { className: 'shop-card-icon' }, auction.emoji || '🎒'));
+    card.appendChild(el('div', { className: 'shop-card-title' }, auction.name));
+    card.appendChild(el('div', { className: 'shop-card-desc' }, auction.description || heroItemEffectLabel(auction)));
+    card.appendChild(el('div', { className: 'shop-card-price' },
+      currentBid > 0 ? currentBid.toLocaleString('pl-PL') + ' 🪙' : Number(auction.start_price || 0).toLocaleString('pl-PL') + ' 🪙'
+    ));
+    card.appendChild(el('div', { className: 'shop-card-meta' },
+      `${HERO_ITEM_SLOT_LABELS[auction.slot] || auction.slot} · ${heroItemEffectLabel(auction)}`
+    ));
+    if (auction.edition_size) {
+      card.appendChild(el('div', { className: 'shop-card-slots' }, `Limitowana edycja: ${auction.edition_size} szt.`));
+    }
+    card.appendChild(el('div', { className: 'auction-status' }, auctionTimeLabel(auction)));
+    card.appendChild(el('div', { className: 'shop-card-slots' },
+      currentBid > 0
+        ? `Prowadzi: ${auction.current_bidder_nick || auction.winner_nick || '?'}${mine ? ' (Ty)' : ''}`
+        : `Cena startowa: ${Number(auction.start_price || 0).toLocaleString('pl-PL')} 🪙`
+    ));
+
+    if (auction.status === 'settled') {
+      card.appendChild(el('div', { className: winnerMine ? 'shop-card-bought' : 'shop-card-buyer' },
+        `🏆 Wygrał: ${auction.winner_nick || '?'} za ${Number(auction.winning_bid || currentBid || 0).toLocaleString('pl-PL')} 🪙`
+      ));
+    } else if (ended) {
+      const btn = el('button', { className: 'btn-primary shop-card-btn' }, 'Rozstrzygnij aukcję');
+      btn.addEventListener('click', () => settleHeroAuction(auction.id, btn));
+      card.appendChild(btn);
+    } else if (isOpen) {
+      const row = el('div', { className: 'auction-bid-row' });
+      const requiredCoins = mine ? Math.max(1, nextBid - currentBid) : nextBid;
+      const input = el('input', {
+        type: 'number',
+        min: String(nextBid),
+        step: String(Math.max(1, Number(auction.min_increment || 10))),
+        value: String(nextBid),
+      });
+      const btn = el('button', {
+        className: 'btn-primary shop-card-btn',
+        disabled: (me?.coins || 0) < requiredCoins,
+        title: (me?.coins || 0) < requiredCoins ? 'Za mało coinów' : '',
+      }, (me?.coins || 0) >= requiredCoins ? 'Licytuj' : 'Za mało');
+      btn.addEventListener('click', () => {
+        const amount = Math.max(nextBid, Math.trunc(Number(input.value) || 0));
+        placeHeroAuctionBid(auction.id, amount, btn);
+      });
+      row.append(input, btn);
+      card.appendChild(row);
+    } else {
+      card.appendChild(el('div', { className: 'shop-card-slots' }, 'Aukcja zakończona bez zwycięzcy.'));
+    }
+
+    grid.appendChild(card);
+  });
 }
 
 // Shop realtime
@@ -5789,6 +6307,10 @@ function setupShopRealtime() {
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'store_items'     }, reload)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'store_purchases' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'user_heroes'      }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_instances' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_equipment'   }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auctions' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auction_bids' }, reload)
     .subscribe();
   realtimeChannels.push(ch);
 }
@@ -6046,7 +6568,12 @@ document.getElementById('roulette-spin-btn').addEventListener('click', async () 
       const msgClass = net > 0 ? 'win' : 'lose';
       const msgText = net > 0 ? `+${net} coinów! 🎉` : net === 0 ? 'Zwrot stawki' : `${net} coinów`;
       const msgEl = el('div', { className: `roulette-result-msg ${msgClass}` }, msgText);
-      resultDiv.replaceChildren(numEl, msgEl);
+      const resultChildren = [numEl, msgEl];
+      if (data.itemEffect) {
+        const bonusText = data.itemEffect.bonus ? ` (+${data.itemEffect.bonus} 🪙)` : '';
+        resultChildren.push(el('div', { className: 'roulette-result-msg win' }, `${data.itemEffect.name}${bonusText}`));
+      }
+      resultDiv.replaceChildren(...resultChildren);
       show(resultDiv);
 
       const histEl = document.getElementById('roulette-history');
@@ -6152,15 +6679,16 @@ document.getElementById('slots-spin-btn').addEventListener('click', async () => 
                 for (const [r2, c2] of PAYLINES[w.line]) cells[r2 * 3 + c2].classList.add('win');
               }
               const net = data.totalWon - 10;
+              const effectText = data.itemEffect ? ` · ${data.itemEffect.name}` : '';
               if (net > 0) {
                 const msg = SLOTS_WIN_MSGS[Math.floor(Math.random() * SLOTS_WIN_MSGS.length)];
                 resultEl.className = 'slots-result win';
-                resultEl.textContent = `+${net} coinów! ${msg}`;
+                resultEl.textContent = `+${net} coinów! ${msg}${effectText}`;
                 slotsWinAnimation(data.totalWon);
               } else {
                 const msg = SLOTS_LOSE_MSGS[Math.floor(Math.random() * SLOTS_LOSE_MSGS.length)];
                 resultEl.className = 'slots-result lose';
-                resultEl.textContent = `−10 coinów. ${msg}`;
+                resultEl.textContent = `−10 coinów. ${msg}${effectText}`;
               }
               btn.disabled = false;
             }, 200);
@@ -8241,6 +8769,7 @@ function buildHeroSVG(hero, { size = 64, walking = false } = {}) {
 function resetHeroState() {
   myHero = null; allHeroes = []; heroRealtimeReady = false;
   heroesEditMode = false; heroSuppressReloadUntil = 0;
+  myHeroInventory = []; publicHeroEquipment = [];
   clearInterval(tavernSpeechTimer); tavernSpeechTimer = null;
 }
 
@@ -8250,6 +8779,14 @@ function setupHeroesRealtime() {
   const ch = sb.channel('heroes-rt')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'user_heroes' }, () => {
       if (activeTab !== 'heroes' || Date.now() < heroSuppressReloadUntil) return;
+      loadHeroes();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_equipment' }, () => {
+      if (activeTab !== 'heroes') return;
+      loadHeroes();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_item_instances' }, () => {
+      if (activeTab !== 'heroes') return;
       loadHeroes();
     }).subscribe();
   realtimeChannels.push(ch);
@@ -8261,7 +8798,12 @@ async function loadHeroes() {
   if (!wrap) return;
   if (!wrap.querySelector('.tavern-panel, .hero-wizard, .hero-panel')) wrap.replaceChildren(makeSpinner());
 
-  const { data, error } = await sb.from('user_heroes').select('*, profiles(nick)');
+  const [{ data, error }] = await Promise.all([
+    sb.from('user_heroes').select('*, profiles(nick)'),
+    loadHeroItemCatalog(),
+    loadMyHeroInventory(),
+    loadPublicHeroEquipment(),
+  ]);
   if (error) {
     wrap.replaceChildren(el('div', { style: { color: 'var(--muted)', textAlign: 'center', padding: '32px' } }, 'Błąd ładowania bohaterów.'));
     return;
@@ -8274,8 +8816,12 @@ async function loadHeroes() {
 function renderHeroesTab(wrap) {
   // wrap (#heroes-content) already has class heroes-wrap and the 2-column grid;
   // adding another heroes-wrap inside would squash the tavern to 0px
-  wrap.replaceChildren(
+  const side = el('div', { className: 'hero-side' },
     heroesEditMode || !myHero ? buildHeroWizard() : buildHeroDisplay(),
+    buildHeroEquipmentPanel()
+  );
+  wrap.replaceChildren(
+    side,
     buildTavernPanel()
   );
 }
@@ -8438,6 +8984,65 @@ function buildHeroWizard() {
   return wizard;
 }
 
+function buildHeroEquipmentPanel() {
+  const panel = el('div', { className: 'hero-equipment-panel' });
+  panel.appendChild(el('div', { className: 'hero-equip-title' }, 'Ekwipunek'));
+  panel.appendChild(el('div', { className: 'hero-equip-sub' }, 'Założone przedmioty są widoczne w karczmie i działają w grach po stronie serwera.'));
+
+  const slots = el('div', { className: 'hero-slot-list' });
+  HERO_ITEM_SLOTS.forEach(slot => {
+    const equipped = myEquippedItemForSlot(slot.id);
+    const row = el('div', { className: 'hero-slot-row' });
+    const main = el('div', { className: 'hero-slot-main' },
+      el('div', { className: 'hero-slot-label' }, slot.label)
+    );
+    if (equipped) {
+      main.appendChild(el('div', { className: 'hero-item-name' }, heroItemDisplayName(equipped)));
+      main.appendChild(el('div', { className: 'hero-item-effect' }, heroItemEffectLabel(equipped)));
+      const removeBtn = el('button', { className: 'hero-mini-btn', type: 'button' }, 'Zdejmij');
+      removeBtn.addEventListener('click', () => unequipHeroItem(slot.id, removeBtn));
+      row.append(main, removeBtn);
+    } else {
+      main.appendChild(el('div', { className: 'hero-slot-empty' }, 'Puste'));
+      row.appendChild(main);
+    }
+    slots.appendChild(row);
+  });
+  panel.appendChild(slots);
+
+  panel.appendChild(el('div', { className: 'hero-equip-title', style: { marginTop: '4px' } }, 'Plecak'));
+  const ownedList = el('div', { className: 'hero-owned-list' });
+  if (!myHeroInventory.length) {
+    const shopBtn = el('button', { className: 'hero-mini-btn', type: 'button' }, 'Przejdź do sklepu');
+    shopBtn.addEventListener('click', () => switchTab('shop'));
+    ownedList.appendChild(el('div', { className: 'hero-slot-row' },
+      el('div', { className: 'hero-slot-main' },
+        el('div', { className: 'hero-item-name' }, 'Brak przedmiotów'),
+        el('div', { className: 'hero-item-effect' }, heroItemDefs.length ? 'Kup ekwipunek w sklepie.' : 'Wdróż supabase/hero-items.sql, żeby odblokować ekwipunek.')
+      ),
+      shopBtn
+    ));
+  } else {
+    myHeroInventory.forEach(item => {
+      const row = el('div', { className: 'hero-owned-item' + (item.equipped ? ' equipped' : '') });
+      const main = el('div', { className: 'hero-item-main' },
+        el('div', { className: 'hero-item-name' }, heroItemDisplayName(item)),
+        el('div', { className: 'hero-item-effect' }, `${HERO_ITEM_SLOT_LABELS[item.slot] || item.slot} · ${heroItemEffectLabel(item)}`)
+      );
+      const btn = el('button', {
+        className: 'hero-mini-btn',
+        type: 'button',
+        disabled: !!item.equipped,
+      }, item.equipped ? 'Założone' : 'Załóż');
+      if (!item.equipped) btn.addEventListener('click', () => equipHeroItem(item.instance_id, btn));
+      row.append(main, btn);
+      ownedList.appendChild(row);
+    });
+  }
+  panel.appendChild(ownedList);
+  return panel;
+}
+
 function buildTavernPanel() {
   clearInterval(tavernSpeechTimer);
   tavernSpeechTimer = null;
@@ -8474,6 +9079,13 @@ function buildTavernPanel() {
       lane.style.setProperty('--walk-dur', dur + 's');
       lane.style.animationDelay = -(i * 3.4).toFixed(1) + 's';
       lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true });
+      const gear = equipmentForHero(hero.user_id);
+      visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
+      if (gear.length) {
+        const gearRow = el('div', { className: 'tavern-gear' });
+        gear.slice(0, 4).forEach(item => gearRow.appendChild(el('span', { title: heroItemDisplayName(item) }, item.emoji || '🎒')));
+        lane.appendChild(gearRow);
+      }
 
       const speech = el('div', { className: 'hero-speech' }, '');
       lane.appendChild(speech);
@@ -8482,7 +9094,13 @@ function buildTavernPanel() {
       let tip = null;
       lane.addEventListener('click', () => {
         if (tip) { tip.remove(); tip = null; return; }
-        tip = el('div', { className: 'hero-tooltip' }, hero.profiles?.nick || '?');
+        const tipItems = gear.length
+          ? gear.map(item => el('div', { className: 'hero-tooltip-item' }, `${heroItemDisplayName(item)}: ${heroItemEffectLabel(item)}`))
+          : [el('div', { className: 'hero-tooltip-item' }, 'Bez ekwipunku')];
+        tip = el('div', { className: 'hero-tooltip hero-tooltip-rich' },
+          el('strong', null, hero.profiles?.nick || '?'),
+          ...tipItems
+        );
         lane.appendChild(tip);
         setTimeout(() => { if (tip) { tip.remove(); tip = null; } }, 3000);
       });

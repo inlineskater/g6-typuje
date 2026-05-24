@@ -23,7 +23,7 @@ Fresh database setup:
 1. Create a Supabase project.
 2. In SQL Editor, run `supabase/schema.sql`.
 3. In SQL Editor, run `supabase/poker.sql`.
-4. In SQL Editor, run the optional game/shop/garden SQL files you need, including `supabase/whack-boss.sql` for Whack-a-Boss.
+4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/whack-boss.sql` for Whack-a-Boss and `supabase/hero-items.sql` for equipable hero items.
 5. Deploy the Edge Functions in `supabase/functions/poker-action` and `supabase/functions/whack-boss-action`.
 6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
 7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.

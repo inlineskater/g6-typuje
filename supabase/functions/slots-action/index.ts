@@ -23,21 +23,22 @@ const PAYLINES = [
   [[2,0],[1,1],[0,2]],
 ];
 
-function randomSymbol() {
+function randomSymbol(weights = WEIGHTS) {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
-  let r = buf[0] % 100;
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  let r = buf[0] % total;
   for (let i = 0; i < SYMBOLS.length; i++) {
-    r -= WEIGHTS[i];
+    r -= weights[i];
     if (r < 0) return SYMBOLS[i];
   }
   return SYMBOLS[0];
 }
 
-function generateGrid() {
-  return [[randomSymbol(), randomSymbol(), randomSymbol()],
-          [randomSymbol(), randomSymbol(), randomSymbol()],
-          [randomSymbol(), randomSymbol(), randomSymbol()]];
+function generateGrid(weights = WEIGHTS) {
+  return [[randomSymbol(weights), randomSymbol(weights), randomSymbol(weights)],
+          [randomSymbol(weights), randomSymbol(weights), randomSymbol(weights)],
+          [randomSymbol(weights), randomSymbol(weights), randomSymbol(weights)]];
 }
 
 function checkPaylines(grid) {
@@ -77,13 +78,59 @@ async function requireUser(req) {
   return data.user;
 }
 
+async function getStrongestHeroEffect(tx, userId, game) {
+  try {
+    const rows = await tx`
+      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
+      from public.hero_equipment e
+      join public.hero_item_instances i on i.id = e.item_instance_id
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where e.user_id = ${userId}
+        and i.owner_id = ${userId}
+        and d.is_active = true
+        and d.effect_game = ${game}
+      order by d.effect_value desc, d.price desc, d.slug
+      limit 1
+    `;
+    return rows[0] ?? null;
+  } catch (err) {
+    console.warn("Hero item effects unavailable:", err?.message ?? err);
+    return null;
+  }
+}
+
+function weightsForEffect(effect) {
+  if (effect?.effect_type !== "rare_symbol_bonus") return { weights: WEIGHTS, itemEffect: null };
+  const bonus = Math.max(0, Math.trunc(Number(effect.effect_value)));
+  if (bonus <= 0) return { weights: WEIGHTS, itemEffect: null };
+  const weights = [...WEIGHTS];
+  const coffeeIdx = SYMBOLS.indexOf("coffee");
+  const g6Idx = SYMBOLS.indexOf("g6");
+  const applied = Math.min(bonus, Math.max(0, weights[coffeeIdx] - 1));
+  if (applied <= 0) return { weights: WEIGHTS, itemEffect: null };
+  weights[coffeeIdx] -= applied;
+  weights[g6Idx] += applied;
+  return {
+    weights,
+    itemEffect: {
+      slug: effect.slug,
+      name: effect.name,
+      type: effect.effect_type,
+      value: Number(effect.effect_value),
+    },
+  };
+}
+
 async function spin(userId) {
+  const effect = await getStrongestHeroEffect(db, userId, "slots");
+
   return await db.begin(async (tx) => {
     const [profile] = await tx`select coins from public.profiles where id = ${userId} for update`;
     if (!profile) throw Object.assign(new Error("Profil nie istnieje."), { isGame: true });
     if (profile.coins < BET) throw Object.assign(new Error("Za mało coinów!"), { isGame: true });
 
-    const grid = generateGrid();
+    const { weights, itemEffect } = weightsForEffect(effect);
+    const grid = generateGrid(weights);
     const winningLines = checkPaylines(grid);
     const totalWon = winningLines.reduce((s, w) => s + BET * w.multiplier, 0);
     const newBalance = profile.coins - BET + totalWon;
@@ -92,7 +139,7 @@ async function spin(userId) {
     await tx`insert into public.slots_spins (user_id, grid, winning_lines, total_won)
              values (${userId}, ${JSON.stringify(grid)}, ${JSON.stringify(winningLines)}, ${totalWon})`;
 
-    return { grid, winningLines, totalWon, balance: newBalance };
+    return { grid, winningLines, totalWon, balance: newBalance, itemEffect };
   });
 }
 

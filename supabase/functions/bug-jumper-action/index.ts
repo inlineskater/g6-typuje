@@ -57,6 +57,27 @@ async function requireUser(req) {
   return data.user;
 }
 
+async function getStrongestHeroEffect(tx, userId, game) {
+  try {
+    const rows = await tx`
+      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
+      from public.hero_equipment e
+      join public.hero_item_instances i on i.id = e.item_instance_id
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where e.user_id = ${userId}
+        and i.owner_id = ${userId}
+        and d.is_active = true
+        and d.effect_game = ${game}
+      order by d.effect_value desc, d.price desc, d.slug
+      limit 1
+    `;
+    return rows[0] ?? null;
+  } catch (err) {
+    console.warn("Hero item effects unavailable:", err?.message ?? err);
+    return null;
+  }
+}
+
 function mapRows(rows) {
   return (rows || []).map((row) => ({
     ...row,
@@ -167,6 +188,7 @@ async function submitRound(userId, body) {
   if (!db) throw new Error("Database is not configured.");
   const roundId = String(body.roundId ?? "");
   if (!roundId) throw gameError("Brak rundy do zapisania.");
+  const effect = await getStrongestHeroEffect(db, userId, "bug_jumper");
 
   const score = await db.begin(async (tx) => {
     const [round] = await tx`
@@ -183,10 +205,21 @@ async function submitRound(userId, body) {
     const minSubmitAt = new Date(round.started_at).getTime() + asInt(round.duration_ms, ROUND_DURATION_MS) - 750;
     if (Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
 
-    const scoreValue = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.score, 0)));
-    const hits = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.hits, scoreValue)));
+    const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.score, 0)));
+    const hits = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.hits, baseScore)));
     const misses = Math.max(0, Math.min(999, asInt(body.misses, 0)));
     const maxCombo = Math.max(0, Math.min(hits, asInt(body.maxCombo, 0)));
+    const bonus = effect?.effect_type === "score_bonus"
+      ? Math.max(0, asInt(effect.effect_value, 0))
+      : 0;
+    const scoreValue = Math.min(MAX_SCORE_PER_ROUND, baseScore + bonus);
+    const itemEffect = bonus > 0 && scoreValue > baseScore ? {
+      slug: effect.slug,
+      name: effect.name,
+      type: effect.effect_type,
+      value: Number(effect.effect_value),
+      bonus: scoreValue - baseScore,
+    } : null;
     const attempts = hits + misses;
     const accuracy = attempts > 0 ? Math.round((hits / attempts) * 10000) / 100 : 0;
 
@@ -211,7 +244,7 @@ async function submitRound(userId, body) {
           ${accuracy},
           ${maxCombo},
           ${asInt(round.duration_ms, ROUND_DURATION_MS)},
-          ${JSON.stringify({ event_count: hits + misses, server_validated: false })}::jsonb
+          ${JSON.stringify({ event_count: hits + misses, server_validated: false, base_score: baseScore, item_effect: itemEffect })}::jsonb
         )
       returning *
     `;
