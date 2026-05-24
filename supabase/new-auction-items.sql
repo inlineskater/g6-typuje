@@ -3,6 +3,15 @@
 -- Run this in the Supabase SQL Editor.
 -- ═══════════════════════════════════════════════════════════════════
 
+-- ── 0. Loosen effect_game constraint to allow 'global' ──────────────
+
+ALTER TABLE public.hero_item_defs ALTER COLUMN effect_game DROP NOT NULL;
+
+ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_effect_game_check;
+ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_effect_game_check
+  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','poker','tavern','global'));
+
+
 -- ── 1. Item definitions ─────────────────────────────────────────────
 
 INSERT INTO public.hero_item_defs
