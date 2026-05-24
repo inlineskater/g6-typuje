@@ -719,9 +719,18 @@ async function stateResponse(tx, userId) {
   const humanSeats = seats.filter((seat) => !seat.is_bot);
   const playableSeats = seats.filter((seat) => seat.stack > 0);
 
-  // Admin win-probability hint via Monte Carlo simulation.
+  const glassesRows = await tx`
+    SELECT 1 FROM public.hero_equipment he
+    JOIN public.hero_item_instances hii ON hii.id = he.item_instance_id
+    JOIN public.hero_item_defs hid ON hid.id = hii.item_def_id
+    WHERE he.user_id = ${userId} AND hid.slug = 'poker_glasses'
+    LIMIT 1
+  `;
+  const hasPokerGlasses = glassesRows.length > 0;
+
+  // Win-probability hint via Monte Carlo — for admin and poker-glasses owners.
   let adminHint = null;
-  if (profile.nick === "admin" && mySeat && mySeat.in_hand && !mySeat.folded && visibleCards[mySeat.seat_no]) {
+  if ((profile.nick === "admin" || hasPokerGlasses) && mySeat && mySeat.in_hand && !mySeat.folded && visibleCards[mySeat.seat_no]) {
     const myCards = visibleCards[mySeat.seat_no];
     const board = table.board ?? [];
     const opponents = seats.filter((s) => s.seat_no !== mySeat.seat_no && isLive(s)).length;
