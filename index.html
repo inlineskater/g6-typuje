@@ -166,6 +166,33 @@
       color: var(--border); font-size: 18px; padding: 0 2px;
       user-select: none; pointer-events: none;
     }
+    .nav-group { position: relative; display: flex; align-items: stretch; }
+    .nav-group-btn {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600;
+      font-family: inherit; min-height: 44px; padding: 11px 16px; transition: all .15s; margin-bottom: -1px;
+      white-space: nowrap; display: flex; align-items: center; gap: 4px;
+    }
+    .nav-group-btn:hover { color: var(--text); }
+    .nav-group.active .nav-group-btn { border-bottom-color: var(--accent); color: var(--text); }
+    .nav-group.open .nav-group-btn { color: var(--text); }
+    .nav-chevron { font-size: 10px; transition: transform .2s; display: inline-block; }
+    .nav-group.open .nav-chevron { transform: rotate(180deg); }
+    .nav-dropdown {
+      display: none; position: absolute; top: calc(100% + 1px); left: 0;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.18);
+      z-index: 200; min-width: 170px; padding: 4px 0;
+    }
+    .nav-group.open .nav-dropdown { display: block; }
+    .nav-dropdown .nav-tab {
+      display: block; width: 100%; text-align: left;
+      border-bottom: none; border-radius: 0; padding: 10px 16px; margin-bottom: 0;
+    }
+    .nav-dropdown .nav-tab:first-child { border-radius: 8px 8px 0 0; }
+    .nav-dropdown .nav-tab:last-child  { border-radius: 0 0 8px 8px; }
+    .nav-dropdown .nav-tab:hover { background: var(--surface); }
+    .nav-dropdown .nav-tab.active { color: var(--accent); background: var(--surface); border-bottom: none; }
 
     /* ── ACTIVITY STRIP ── */
     .activity-strip { margin-bottom: 20px; }
@@ -947,6 +974,8 @@
       .coins-badge, .btn-ghost { flex: 0 0 auto; }
 
       .nav-tab { flex: 1 0 auto; text-align: center; }
+      .nav-dropdown .nav-tab { flex: none; text-align: left; }
+      .nav-group-btn { flex: 1 0 auto; justify-content: center; }
 
       main { padding-top: 20px; padding-bottom: 20px; }
       .markets-toolbar { align-items: stretch; flex-direction: column; }
@@ -1609,6 +1638,9 @@
       background: var(--bg); color: var(--text); font: inherit; padding: 9px 10px; margin: 0;
     }
     .auction-status { font-size: 12px; font-weight: 800; color: var(--accent); }
+    .auction-top-bidders { font-size: 12px; color: var(--muted); margin-top: 4px; display: grid; gap: 1px; }
+    .auction-top-bidders span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .auction-bid-hint { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
     .shop-card.auction-ended { opacity: .78; }
     @media (max-width: 800px) { .auction-admin { grid-template-columns: 1fr; } }
     .shop-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 48px 0; grid-column: 1 / -1; }
@@ -2518,18 +2550,27 @@
 
   <nav class="nav-tabs">
     <button class="nav-tab active" data-tab="markets">📊 Rynki</button>
-    <span class="nav-sep">|</span>
-    <button class="nav-tab" data-tab="poker">♠️ Poker</button>
-    <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
-    <button class="nav-tab" data-tab="slots">🎰 Sloty</button>
-    <span class="nav-sep">|</span>
-    <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span>🎮 Gra Sezonowa</button>
-    <span class="nav-sep">|</span>
+
+    <div class="nav-group" data-group="casino">
+      <button class="nav-group-btn">🎮 Kasyno <span class="nav-chevron">▾</span></button>
+      <div class="nav-dropdown">
+        <button class="nav-tab" data-tab="poker">♠️ Poker</button>
+        <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
+        <button class="nav-tab" data-tab="slots">🎰 Sloty</button>
+        <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="progress">
+      <button class="nav-group-btn">🎒 Postęp <span class="nav-chevron">▾</span></button>
+      <div class="nav-dropdown">
+        <button class="nav-tab" data-tab="shop">🛒 Sklep</button>
+        <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
+        <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
+      </div>
+    </div>
+
     <button class="nav-tab" data-tab="leaderboard">🏆 Ranking</button>
-    <span class="nav-sep">|</span>
-    <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
-    <button class="nav-tab" data-tab="shop">🛒 Sklep</button>
-    <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
   </nav>
 
   <div id="tab-markets">
@@ -3252,6 +3293,7 @@ let myHeroInventory = [];
 let publicHeroEquipment = [];
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
+let auctionTimerInterval = null;
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
 function pYes(m) { return m.no_shares / (m.yes_shares + m.no_shares); }
@@ -3645,11 +3687,29 @@ document.querySelectorAll('.nav-tab').forEach(btn =>
   btn.addEventListener('click', () => switchTab(btn.dataset.tab))
 );
 
+document.querySelectorAll('.nav-group-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const group = btn.closest('.nav-group');
+    const wasOpen = group.classList.contains('open');
+    document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
+    if (!wasOpen) group.classList.add('open');
+  });
+});
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
+});
+
 function switchTab(tab) {
   const previousTab = activeTab;
   if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); }
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.nav-group').forEach(g => {
+    g.classList.toggle('active', !!g.querySelector('.nav-tab.active'));
+    g.classList.remove('open');
+  });
   const tM = document.getElementById('tab-markets');
   const tL = document.getElementById('tab-leaderboard');
   const tP = document.getElementById('tab-poker');
@@ -5950,10 +6010,16 @@ function auctionTimeLabel(auction) {
   if (Number.isNaN(end.getTime())) return '';
   const diff = end.getTime() - Date.now();
   if (auction.status !== 'open') return 'Zakończona: ' + fmtDateTime(auction.ends_at);
-  if (diff <= 0) return 'Czeka na rozstrzygnięcie';
+  const fmt = new Intl.DateTimeFormat('pl-PL', {
+    timeZone: 'Europe/Warsaw', weekday: 'short', day: 'numeric',
+    month: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+  const exact = fmt.format(end);
+  if (diff <= 0) return `Czeka na rozstrzygnięcie (${exact})`;
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
-  return h > 0 ? `Koniec za ${h}h ${m}m` : `Koniec za ${Math.max(1, m)}m`;
+  const countdown = h > 0 ? `${h}h ${m}m` : `${Math.max(1, m)}m`;
+  return `Koniec za ${countdown} · ${exact}`;
 }
 
 async function createHeroAuction(slug, startPrice, durationHours, minIncrement, btn) {
@@ -6051,6 +6117,15 @@ async function loadShop() {
   renderHeroShopGrid();
   renderHeroAuctionAdmin();
   renderHeroAuctionGrid();
+
+  if (auctionTimerInterval) clearInterval(auctionTimerInterval);
+  auctionTimerInterval = setInterval(() => {
+    if (activeTab !== 'shop') return;
+    document.querySelectorAll('.auction-status[data-auction-id]').forEach(div => {
+      const auction = heroAuctions.find(a => a.id === div.dataset.auctionId);
+      if (auction) div.textContent = auctionTimeLabel(auction);
+    });
+  }, 30000);
 }
 
 function buildShopCard(item) {
@@ -6214,9 +6289,9 @@ function renderHeroAuctionAdmin() {
   heroAuctionItemDefs.forEach(item => {
     select.appendChild(el('option', { value: item.slug }, `${item.emoji || '🎒'} ${item.name}${item.edition_size ? ' #' + item.edition_size : ''}`));
   });
-  const startInput = el('input', { type: 'number', min: '1', step: '10', value: '300' });
+  const startInput = el('input', { type: 'number', min: '1', step: '1', value: '1' });
   const durationInput = el('input', { type: 'number', min: '1', max: '720', step: '1', value: '72' });
-  const incInput = el('input', { type: 'number', min: '1', step: '5', value: '10' });
+  const incInput = el('input', { type: 'number', min: '1', step: '1', value: '1' });
   const btn = el('button', { className: 'btn-primary', type: 'button' }, 'Utwórz aukcję');
   btn.addEventListener('click', () => {
     const startPrice = Math.max(1, Math.trunc(Number(startInput.value) || 0));
@@ -6265,12 +6340,23 @@ function renderHeroAuctionGrid() {
     if (auction.edition_size) {
       card.appendChild(el('div', { className: 'shop-card-slots' }, `Limitowana edycja: ${auction.edition_size} szt.`));
     }
-    card.appendChild(el('div', { className: 'auction-status' }, auctionTimeLabel(auction)));
+    const statusDiv = el('div', { className: 'auction-status', 'data-auction-id': auction.id }, auctionTimeLabel(auction));
+    card.appendChild(statusDiv);
     card.appendChild(el('div', { className: 'shop-card-slots' },
       currentBid > 0
         ? `Prowadzi: ${auction.current_bidder_nick || auction.winner_nick || '?'}${mine ? ' (Ty)' : ''}`
         : `Cena startowa: ${Number(auction.start_price || 0).toLocaleString('pl-PL')} 🪙`
     ));
+
+    const topBidders = auction.top_bidders ? (typeof auction.top_bidders === 'string' ? JSON.parse(auction.top_bidders) : auction.top_bidders) : [];
+    if (topBidders.length > 0) {
+      const medals = ['🥇', '🥈', '🥉'];
+      const listDiv = el('div', { className: 'auction-top-bidders' });
+      topBidders.forEach((b, i) => {
+        listDiv.appendChild(el('span', {}, `${medals[i] || '·'} ${b.nick} · ${Number(b.amount).toLocaleString('pl-PL')} 🪙`));
+      });
+      card.appendChild(listDiv);
+    }
 
     if (auction.status === 'settled') {
       card.appendChild(el('div', { className: winnerMine ? 'shop-card-bought' : 'shop-card-buyer' },
@@ -6286,7 +6372,7 @@ function renderHeroAuctionGrid() {
       const input = el('input', {
         type: 'number',
         min: String(nextBid),
-        step: String(Math.max(1, Number(auction.min_increment || 10))),
+        step: '1',
         value: String(nextBid),
       });
       const btn = el('button', {
@@ -6300,6 +6386,10 @@ function renderHeroAuctionGrid() {
       });
       row.append(input, btn);
       card.appendChild(row);
+      const hintText = mine
+        ? `Prowadzisz! Dopłacisz tylko ${Math.max(1, nextBid - currentBid).toLocaleString('pl-PL')} 🪙 (różnicę od Twojej obecnej oferty)`
+        : `Koszt: ${requiredCoins.toLocaleString('pl-PL')} 🪙 w depozycie — zwrot automatyczny jeśli ktoś przelicytuje`;
+      card.appendChild(el('div', { className: 'auction-bid-hint' }, hintText));
     } else {
       card.appendChild(el('div', { className: 'shop-card-slots' }, 'Aukcja zakończona bez zwycięzcy.'));
     }
