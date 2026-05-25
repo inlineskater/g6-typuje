@@ -2472,7 +2472,10 @@
     @keyframes leg-l { 0%,100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
     @keyframes leg-r { 0%,100% { transform: translateX(2px); } 50% { transform: translateX(-2px); } }
     @keyframes body-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-    .hero-speech { position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); color: #2d1b0e; border-radius: 8px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .4s ease; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .tavern-hero-name { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%) scaleX(1); background: rgba(0,0,0,.65); color: #e8dcc8; font-size: 9px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; padding: 2px 6px; border-radius: 4px; pointer-events: none; z-index: 11; text-shadow: 0 1px 3px rgba(0,0,0,.9); border: 1px solid rgba(255,255,255,.1); animation: tavern-name-counter var(--walk-dur, 9s) linear infinite; animation-delay: var(--walk-delay, 0s); }
+    .tavern-hero-name.is-mine { color: #93c5fd; border-color: rgba(99,102,241,.45); text-shadow: 0 0 8px rgba(99,102,241,.5), 0 1px 3px rgba(0,0,0,.9); }
+    @keyframes tavern-name-counter { 0% { transform: translateX(-50%) scaleX(1); } 44% { transform: translateX(-50%) scaleX(1); } 50% { transform: translateX(-50%) scaleX(-1); } 94% { transform: translateX(-50%) scaleX(-1); } 100% { transform: translateX(-50%) scaleX(1); } }
+    .hero-speech { position: absolute; bottom: calc(100% + 20px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); color: #2d1b0e; border-radius: 8px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .4s ease; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     .hero-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(255,255,255,.95); }
     .hero-tooltip { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: rgba(15,23,42,.9); color: #fff; border-radius: 7px; padding: 5px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
     .hero-tooltip-rich { display: grid; gap: 3px; min-width: 150px; max-width: 220px; white-space: normal; text-align: left; }
@@ -9268,11 +9271,15 @@ function buildTavernPanel() {
       const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
       lane.style.bottom = bottoms[i % bottoms.length];
       const dur = (13 + (i * 2.7 % 6)).toFixed(1);
+      const walkDelay = -(i * 3.4).toFixed(1) + 's';
       lane.style.setProperty('--walk-dur', dur + 's');
-      lane.style.animationDelay = -(i * 3.4).toFixed(1) + 's';
+      lane.style.setProperty('--walk-delay', walkDelay);
+      lane.style.animationDelay = walkDelay;
       lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true, gear: equipmentForHero(hero.user_id) });
       const gear = equipmentForHero(hero.user_id);
       visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
+      const nameLabel = el('div', { className: 'tavern-hero-name' + (isMe ? ' is-mine' : '') }, hero.profiles?.nick || hero.nick || '?');
+      lane.appendChild(nameLabel);
 
       const speech = el('div', { className: 'hero-speech' }, '');
       lane.appendChild(speech);
