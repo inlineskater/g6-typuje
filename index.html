@@ -431,6 +431,7 @@
     .lb-nick.me { color: var(--accent); }
     .lb-coins { color: var(--muted); font-size: 13px; }
     .lb-net { font-weight: 700; color: var(--yes); }
+    .lb-bonus { color: #ffcf5a; font-weight: 700; font-size: 0.85em; margin-left: 1px; }
     .history-section { margin-top: 28px; }
     .section-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0; }
     .section-sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
@@ -3285,6 +3286,7 @@ const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id,
 let heroItemDefs = [];
 let myHeroInventory = [];
 let publicHeroEquipment = [];
+let scoreBonusByUser = {};
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
 let auctionTimerInterval = null;
@@ -5919,6 +5921,14 @@ async function loadPublicHeroEquipment() {
   publicHeroEquipment = data || [];
 }
 
+// Per-user leaderboard score bonus (cross-game, strongest equipped score_bonus item).
+// Read straight from the hero_score_bonus view so the split renders regardless of the Edge Function.
+async function loadScoreBonuses() {
+  const { data, error } = await sb.from('hero_score_bonus').select('user_id,bonus');
+  if (error) { console.warn('Score bonuses unavailable:', error.message); return; }
+  scoreBonusByUser = Object.fromEntries((data || []).map(r => [r.user_id, Number(r.bonus) || 0]));
+}
+
 function myEquippedItemForSlot(slot) {
   return myHeroInventory.find(item => item.equipped && item.slot === slot) || null;
 }
@@ -7084,7 +7094,7 @@ async function loadWhackBossState(showSpinner = true) {
   }
 
   try {
-    const data = await invokeWhackBoss({ action: 'state' });
+    const [data] = await Promise.all([invokeWhackBoss({ action: 'state' }), loadScoreBonuses()]);
     renderWhackBossState(data);
   } catch (err) {
     const msg = err.message || 'Nie udało się wczytać gry.';
@@ -7131,6 +7141,23 @@ function whackBossRankLabel(rank) {
   return String(rank);
 }
 
+// Score cell that shows the item bonus split, e.g. "81+5". Prefers the view's
+// base_score/item_bonus columns; falls back to the locally fetched bonus map.
+function lbScoreCell(row) {
+  let bonus = Number(row.item_bonus);
+  let base  = Number(row.base_score);
+  if (!Number.isFinite(bonus) || !Number.isFinite(base)) {
+    bonus = Number(scoreBonusByUser[row.user_id]) || 0;
+    base  = Number(row.score) - bonus;
+  }
+  if (bonus > 0 && Number.isFinite(base)) {
+    return el('td', { className: 'lb-net', title: `Wynik ${base} + ${bonus} z przedmiotu = ${base + bonus}` },
+      String(base),
+      el('span', { className: 'lb-bonus' }, '+' + bonus));
+  }
+  return el('td', { className: 'lb-net' }, String(row.score));
+}
+
 function renderWhackBossTable(wrap, rows, mode) {
   if (!wrap) return;
   rows = rows.filter(r => r.nick !== 'admin');
@@ -7142,7 +7169,7 @@ function renderWhackBossTable(wrap, rows, mode) {
   const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
     el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
-    el('td', { className: 'lb-net' }, String(row.score))
+    lbScoreCell(row)
   ));
 
   wrap.replaceChildren(
@@ -7581,7 +7608,7 @@ async function loadBugJumperState(showSpinner = true) {
     if (awardsWrap)  awardsWrap.replaceChildren();
   }
   try {
-    const data = await invokeBugJumper({ action: 'state' });
+    const [data] = await Promise.all([invokeBugJumper({ action: 'state' }), loadScoreBonuses()]);
     renderBugJumperState(data);
   } catch (err) {
     const msg = err.message || 'Nie udało się wczytać gry.';
@@ -7619,7 +7646,7 @@ function renderBugJumperTable(wrap, rows, mode) {
   const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
     el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
-    el('td', { className: 'lb-net' }, String(row.score))
+    lbScoreCell(row)
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
