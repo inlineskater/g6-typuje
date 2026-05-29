@@ -6,3 +6,6 @@ verify_jwt = true
 
 [functions.bug-jumper-action]
 verify_jwt = true
+
+[functions.flappy-pants-action]
+verify_jwt = true
