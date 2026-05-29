@@ -119,12 +119,12 @@ SELECT
   nick,
   week_start,
   score,
-  base_score,
-  item_bonus,
   pipes,
   lives_used,
   rounds_played,
-  submitted_at
+  submitted_at,
+  base_score,
+  item_bonus
 FROM user_best
 ORDER BY rank;
 
@@ -156,12 +156,12 @@ SELECT
   nick,
   best_week_start,
   score,
-  base_score,
-  item_bonus,
   pipes,
   lives_used,
   rounds_played,
-  submitted_at
+  submitted_at,
+  base_score,
+  item_bonus
 FROM user_best
 ORDER BY rank;
 

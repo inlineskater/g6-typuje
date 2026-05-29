@@ -126,14 +126,14 @@ SELECT
   nick,
   week_start,
   score,
-  base_score,
-  item_bonus,
   hits,
   misses,
   accuracy,
   max_combo,
   rounds_played,
-  submitted_at
+  submitted_at,
+  base_score,
+  item_bonus
 FROM user_best
 ORDER BY rank;
 
@@ -167,14 +167,14 @@ SELECT
   nick,
   best_week_start,
   score,
-  base_score,
-  item_bonus,
   hits,
   misses,
   accuracy,
   max_combo,
   rounds_played,
-  submitted_at
+  submitted_at,
+  base_score,
+  item_bonus
 FROM user_best
 ORDER BY rank;
 
