@@ -2560,6 +2560,7 @@
     <div class="logo">Rynek Proroctw <span>G6</span></div>
     <div class="user-info">
       <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
+      <button class="btn-ghost" id="wallet-btn">💼 Portfel</button>
       <span class="header-nick" id="header-nick"></span>
       <button class="btn-ghost" id="logout-btn">Wyloguj</button>
     </div>
@@ -5601,6 +5602,17 @@ function drawCoinChart(canvas, points) {
     card.addEventListener('click', () => openModal(card.dataset.detail));
   });
 
+  const walletBtn = document.getElementById('wallet-btn');
+  if (walletBtn) walletBtn.addEventListener('click', async () => {
+    if (!me) return;
+    overlay.classList.remove('hidden');
+    if (!_seasonHistory || !_seasonHistory.length) {
+      body.replaceChildren(makeSpinner());
+      try { await loadSeasonHistory(); } catch {}
+    }
+    openUserProfile(me.id, me.nick, me.coins, { wallet: true });
+  });
+
   function renderFullLeaderboard(container) {
     const data = _lbData;
     if (!data || !data.length) { container.append(el('p', {}, 'Brak graczy.')); return; }
@@ -5623,12 +5635,18 @@ function drawCoinChart(canvas, points) {
     );
   }
 
-  async function openUserProfile(userId, nick, coins) {
-    title.textContent = '👤 ' + nick;
+  async function openUserProfile(userId, nick, coins, opts = {}) {
+    title.textContent = opts.wallet ? '💼 Portfel — ' + nick : '👤 ' + nick;
     body.replaceChildren();
 
-    const backBtn = el('button', { className: 'btn-ghost user-profile-back' }, '← Wróć do rankingu');
-    backBtn.addEventListener('click', () => { body.replaceChildren(); title.textContent = '🪙 Gotówka — Ranking'; renderFullLeaderboard(body); });
+    const backBtn = opts.wallet
+      ? el('button', { className: 'btn-ghost user-profile-back' }, '✕ Zamknij')
+      : el('button', { className: 'btn-ghost user-profile-back' }, '← Wróć do rankingu');
+    if (opts.wallet) {
+      backBtn.addEventListener('click', closeModal);
+    } else {
+      backBtn.addEventListener('click', () => { body.replaceChildren(); title.textContent = '🪙 Gotówka — Ranking'; renderFullLeaderboard(body); });
+    }
     body.append(backBtn, makeSpinner());
 
     try {
@@ -7283,16 +7301,14 @@ function whackBossRankLabel(rank) {
   return String(rank);
 }
 
-// Score cell that shows the item bonus split, e.g. "81+5". Prefers the view's
-// base_score/item_bonus columns; falls back to the locally fetched bonus map.
+// Score cell that shows the item bonus split, e.g. "81+5". Uses the bonus that
+// was actually applied to this stored score (view's base_score/item_bonus from
+// client_meta) — NOT the player's currently equipped item, so the split stays
+// stable whether or not the item is worn now.
 function lbScoreCell(row) {
-  let bonus = Number(row.item_bonus);
-  let base  = Number(row.base_score);
-  if (!Number.isFinite(bonus) || !Number.isFinite(base)) {
-    bonus = Number(scoreBonusByUser[row.user_id]) || 0;
-    base  = Number(row.score) - bonus;
-  }
-  if (bonus > 0 && Number.isFinite(base)) {
+  const bonus = Number(row.item_bonus);
+  const base  = Number(row.base_score);
+  if (Number.isFinite(bonus) && bonus > 0 && Number.isFinite(base)) {
     return el('td', { className: 'lb-net', title: `Wynik ${base} + ${bonus} z przedmiotu = ${base + bonus}` },
       String(base),
       el('span', { className: 'lb-bonus' }, '+' + bonus));
