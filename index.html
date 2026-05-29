@@ -8020,6 +8020,7 @@ function newFlappyPantsRuntime() {
     obstacles: [],
     spawnHold: 0,
     lastTs: 0,
+    elapsed: 0, speedMult: 1,
     rafId: null,
     invincible: false, invincEnd: 0,
     hitFlash: 0,
@@ -8090,11 +8091,14 @@ function fpTick(ts) {
   rt.lastTs = ts;
   if (dt > 0.05) dt = 0.05;
 
+  rt.elapsed += dt;
+  rt.speedMult = Math.min(2.6, 1 + rt.elapsed * 0.05);
+
   const p = rt.player;
   p.vy += FP_GRAVITY * dt;
   p.y  += p.vy * dt;
 
-  rt.obstacles.forEach(o => { o.x -= FP_PIPE_SPEED * dt; });
+  rt.obstacles.forEach(o => { o.x -= FP_PIPE_SPEED * rt.speedMult * dt; });
   rt.obstacles = rt.obstacles.filter(o => o.x + FP_PIPE_W > -4);
   const last = rt.obstacles[rt.obstacles.length - 1];
   if ((!last || last.x <= FP_CS_W - FP_PIPE_SPACING) && ts >= rt.spawnHold) fpSpawnObstacle(rt);
