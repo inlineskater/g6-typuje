@@ -2579,7 +2579,6 @@
     </div>
 
     <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
-    <button class="nav-tab" data-tab="flappy-test">🧪 Spodnie (test)</button>
     <button class="nav-tab" data-tab="shop">🛒 Sklep</button>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
     <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
@@ -3113,12 +3112,6 @@
           </aside>
         </div>
       </div>
-    </main>
-  </div>
-
-  <div id="tab-flappy-test" class="hidden">
-    <main id="flappy-test-main">
-      <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy — „3 Pary Spodni" dostępne dla wszystkich, niezależnie od sezonu.</p>
     </main>
   </div>
 
@@ -3800,19 +3793,9 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
 });
 
-let fpPanelHome = null;
-function restoreFlappyPanelHome() {
-  const panel = document.getElementById('seasonal-game-flappy-pants');
-  if (panel && fpPanelHome && panel.parentElement !== fpPanelHome) {
-    hide(panel);
-    fpPanelHome.appendChild(panel);
-  }
-}
-
 function switchTab(tab) {
   const previousTab = activeTab;
   if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); }
-  if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
@@ -3828,8 +3811,6 @@ function switchTab(tab) {
   const tS = document.getElementById('tab-shop');
   const tG = document.getElementById('tab-garden');
   const tH = document.getElementById('tab-heroes');
-  const tFp = document.getElementById('tab-flappy-test');
-  hide(tFp);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
@@ -3858,17 +3839,6 @@ function switchTab(tab) {
   } else if (tab === 'heroes') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); show(tH);
     loadHeroes();
-  } else if (tab === 'flappy-test') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
-    const panel = document.getElementById('seasonal-game-flappy-pants');
-    const testMain = document.getElementById('flappy-test-main');
-    if (panel && testMain) {
-      if (!fpPanelHome) fpPanelHome = panel.parentElement;
-      if (panel.parentElement !== testMain) testMain.appendChild(panel);
-      show(panel);
-    }
-    show(tFp);
-    loadFlappyPantsState();
   }
 }
 
