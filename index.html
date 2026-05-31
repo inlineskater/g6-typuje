@@ -7030,7 +7030,7 @@ async function loadSlotsHistory() {
 
 // ── Seasonal Game Framework ───────────────────────────────────────────────
 
-const SEASONAL_ANCHOR_WEEK_START = '2026-05-17';
+const SEASONAL_ANCHOR_WEEK_START = '2026-05-18';
 const SEASONAL_ROTATION = [
   { gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
   { gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
@@ -7074,7 +7074,7 @@ function currentSeasonWeekStartStr() {
   const [y, m, d] = warsawDateStr.split('-').map(Number);
   const warsawDate = new Date(Date.UTC(y, m - 1, d, 12));
   const dow = warsawDate.getUTCDay();
-  const weekStartDate = new Date(Date.UTC(y, m - 1, d - dow, 12));
+  const weekStartDate = new Date(Date.UTC(y, m - 1, d - ((dow + 6) % 7), 12));
   return weekStartDate.toISOString().slice(0, 10);
 }
 
@@ -9862,7 +9862,9 @@ function buildTavernPanel() {
   const heroes = myHero
     ? [myHero, ...allHeroes.filter(h => h.user_id !== me.id)]
     : allHeroes;
-  const bottoms = ['58px', '72px', '60px', '76px', '54px'];
+  const bottoms  = ['58px', '72px', '60px', '76px', '54px'];
+  const lefts    = ['6%', '20%', '36%', '52%', '68%', '84%'];
+  const facings  = [1, -1, 1, -1, 1, -1];
   const lanes = [];
 
   if (!heroes.length) {
@@ -9876,15 +9878,14 @@ function buildTavernPanel() {
       const isMe = hero.user_id === me.id;
       const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
       lane.style.bottom = bottoms[i % bottoms.length];
-      const dur = (13 + (i * 2.7 % 6)).toFixed(1);
-      const walkDelay = -(i * 3.4).toFixed(1) + 's';
-      lane.style.setProperty('--walk-dur', dur + 's');
-      lane.style.setProperty('--walk-delay', walkDelay);
-      lane.style.animationDelay = walkDelay;
-      lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: true, gear: equipmentForHero(hero.user_id) });
+      lane.style.left = lefts[i % lefts.length];
+      lane.style.transform = `scaleX(${facings[i % facings.length]})`;
+      lane.style.animation = 'none';
+      lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: false, gear: equipmentForHero(hero.user_id) });
       const gear = equipmentForHero(hero.user_id);
       visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
       const nameLabel = el('div', { className: 'tavern-hero-name' + (isMe ? ' is-mine' : '') }, hero.profiles?.nick || hero.nick || '?');
+      nameLabel.style.animation = 'none';
       lane.appendChild(nameLabel);
 
       const speech = el('div', { className: 'hero-speech' }, '');
