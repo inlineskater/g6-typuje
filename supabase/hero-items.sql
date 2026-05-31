@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.hero_item_defs (
   price        integer NOT NULL CHECK (price >= 0),
   rarity       text NOT NULL DEFAULT 'common' CHECK (rarity IN ('common','rare','epic','legendary')),
   description  text NOT NULL DEFAULT '',
-  effect_game  text NOT NULL CHECK (effect_game IN ('roulette','slots','whack_boss','bug_jumper','poker','tavern')),
+  effect_game  text CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','poker','tavern','global')),
   effect_type  text NOT NULL,
   effect_value numeric NOT NULL DEFAULT 0,
   sale_type    text NOT NULL DEFAULT 'shop' CHECK (sale_type IN ('shop','auction','both','hidden')),
@@ -54,13 +54,15 @@ ALTER TABLE public.hero_item_defs
   ADD COLUMN IF NOT EXISTS edition_size integer,
   ADD COLUMN IF NOT EXISTS visual_effect text;
 
+ALTER TABLE public.hero_item_defs ALTER COLUMN effect_game DROP NOT NULL;
+
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_rarity_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_rarity_check
   CHECK (rarity IN ('common','rare','epic','legendary'));
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_effect_game_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_effect_game_check
-  CHECK (effect_game IN ('roulette','slots','whack_boss','bug_jumper','poker','tavern'));
+  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','poker','tavern','global'));
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_sale_type_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_sale_type_check
@@ -84,65 +86,65 @@ ALTER TABLE public.hero_item_instances ADD CONSTRAINT hero_item_instances_editio
   CHECK (edition_size IS NULL OR edition_size > 0);
 
 INSERT INTO public.hero_item_defs
-  (slug, name, emoji, slot, price, rarity, description, effect_game, effect_type, effect_value, sale_type, edition_size, visual_effect)
+  (slug, name, emoji, slot, price, rarity, description, effect_game, effect_type, effect_value, sale_type, edition_size, visual_effect, is_active)
 VALUES
   ('lucky_trousers', 'Szczęśliwe Majtki', '🩳', 'legs', 450, 'rare',
    'Dają małą szansę ratunku przy przegranej w ruletce.',
-   'roulette', 'win_chance_bonus', 1, 'shop', null, null),
+   'roulette', 'win_chance_bonus', 1, 'shop', null, null, true),
   ('dealer_hat', 'Kapelusz Krupiera', '🎩', 'head', 100, 'common',
    'Delikatnie podbija wypłatę, gdy ruletka już wygra.',
-   'roulette', 'payout_bonus', 1, 'shop', null, null),
+   'roulette', 'payout_bonus', 1, 'shop', null, null, true),
   ('luck_brooch', 'Broszka Farta', '🍀', 'trinket', 150, 'rare',
    'Lekko zwiększa szansę na symbol G6 w slotach.',
-   'slots', 'rare_symbol_bonus', 1, 'shop', null, null),
+   'slots', 'rare_symbol_bonus', 1, 'shop', null, null, true),
   ('reflex_gloves', 'Rękawice Refleksu', '🧤', 'hands', 150, 'common',
    'Dodają jeden punkt do wyniku Gry Sezonowej.',
-   'whack_boss', 'score_bonus', 1, 'shop', null, null),
+   'whack_boss', 'score_bonus', 1, 'shop', null, null, true),
   ('jumper_boots', 'Buty Skoczka', '🥾', 'feet', 150, 'common',
    'Dodają jeden punkt do wyniku Bug Jumpera.',
-   'bug_jumper', 'score_bonus', 1, 'shop', null, null),
+   'bug_jumper', 'score_bonus', 1, 'shop', null, null, true),
   ('bluff_dagger', 'Sztylet Blefu', '🗡️', 'weapon', 300, 'epic',
-   'Dodaje mały bonus do stacka po pokerowym buy-inie.',
-   'poker', 'buy_in_bonus', 10, 'shop', null, null),
+   'Pozwala wejść do pokera z większym stackiem; pełny stack jest pobierany jako buy-in.',
+   'poker', 'buy_in_bonus', 10, 'shop', null, null, true),
   ('g6_magnet', 'Magnes na G6', '🧲', 'trinket', 300, 'epic',
    'Mocniej przyciąga symbol G6 w slotach.',
-   'slots', 'rare_symbol_bonus', 2, 'shop', null, null),
+   'slots', 'rare_symbol_bonus', 2, 'shop', null, null, false),
   ('fate_die', 'Kość Przeznaczenia', '🎲', 'trinket', 450, 'rare',
    'Daje dodatkową szansę ratunku przy przegranej w ruletce.',
-   'roulette', 'win_chance_bonus', 1, 'shop', null, null),
+   'roulette', 'win_chance_bonus', 1, 'shop', null, null, false),
   ('fortune_eye', 'Oko Fortuny', '🧿', 'head', 800, 'epic',
    'Silniejszy talizman ruletki dla hazardzistów z nerwami.',
-   'roulette', 'win_chance_bonus', 2, 'shop', null, null),
+   'roulette', 'win_chance_bonus', 2, 'shop', null, null, false),
   ('turbo_gloves', 'Rękawice Turbo', '🧤', 'hands', 300, 'rare',
    'Dodają większy bonus punktowy w Grze Sezonowej.',
-   'whack_boss', 'score_bonus', 2, 'shop', null, null),
+   'whack_boss', 'score_bonus', 2, 'shop', null, null, false),
   ('rocket_boots', 'Buty Rakietowe', '🚀', 'feet', 300, 'rare',
    'Dodają większy bonus punktowy w Bug Jumperze.',
-   'bug_jumper', 'score_bonus', 2, 'shop', null, null),
+   'bug_jumper', 'score_bonus', 2, 'shop', null, null, false),
   ('bluff_vest', 'Kamizelka Blefu', '🛡️', 'chest', 500, 'rare',
-   'Daje większy stack startowy po pokerowym buy-inie.',
-   'poker', 'buy_in_bonus', 15, 'shop', null, null),
+   'Pozwala wejść do pokera z większym opłaconym stackiem.',
+   'poker', 'buy_in_bonus', 15, 'shop', null, null, false),
   ('golden_bluff_dagger', 'Złoty Sztylet Blefu', '🗡️', 'weapon', 750, 'epic',
-   'Najmocniejszy pokerowy bonus startowego stacka w sklepie.',
-   'poker', 'buy_in_bonus', 25, 'shop', null, null),
+   'Najmocniejsze zwiększenie opłaconego stacka pokerowego w sklepie.',
+   'poker', 'buy_in_bonus', 25, 'shop', null, null, false),
   ('tavern_king_crown', 'Korona Króla Karczmy', '👑', 'head', 1000, 'legendary',
    'Limitowana korona z królewską aurą w karczmie. Przedmiot do licytacji.',
-   'tavern', 'gold_aura', 0, 'auction', 1, 'gold_aura'),
+   'tavern', 'gold_aura', 0, 'auction', 1, 'gold_aura', true),
   ('prophet_cloak', 'Płaszcz Proroka', '🧥', 'chest', 450, 'epic',
    'Efektowna peleryna dla bohatera, który lubi wejścia z dramatem.',
-   'tavern', 'cloak_aura', 0, 'auction', 5, 'cloak_aura'),
+   'tavern', 'cloak_aura', 0, 'auction', 5, 'cloak_aura', true),
   ('whale_ring', 'Pierścień Wieloryba', '💍', 'trinket', 650, 'legendary',
    'Błyszczący symbol bogactwa widoczny w karczmie.',
-   'tavern', 'coin_sparkle', 0, 'auction', 3, 'coin_sparkle'),
+   'tavern', 'coin_sparkle', 0, 'auction', 3, 'coin_sparkle', true),
   ('disco_aura', 'Disco Aura', '🪩', 'trinket', 300, 'epic',
    'Imprezowa aura do pokazania się przy stole w karczmie.',
-   'tavern', 'disco_aura', 0, 'auction', 10, 'disco_aura'),
+   'tavern', 'disco_aura', 0, 'auction', 10, 'disco_aura', true),
   ('flame_boots', 'Buty Płomienia', '🔥', 'feet', 300, 'epic',
    'Mały płomienny ślad za bohaterem w karczmie.',
-   'tavern', 'fire_trail', 0, 'auction', 8, 'fire_trail'),
+   'tavern', 'fire_trail', 0, 'auction', 8, 'fire_trail', true),
   ('tavern_megaphone', 'Megafon Karczmy', '📣', 'hands', 200, 'rare',
    'Przedmiot dla ludzi, których karczma ma słyszeć.',
-   'tavern', 'loud_speech', 0, 'auction', 12, 'loud_speech')
+   'tavern', 'loud_speech', 0, 'auction', 12, 'loud_speech', true)
 ON CONFLICT (slug) DO UPDATE SET
   name         = EXCLUDED.name,
   emoji        = EXCLUDED.emoji,
@@ -156,7 +158,7 @@ ON CONFLICT (slug) DO UPDATE SET
   sale_type    = EXCLUDED.sale_type,
   edition_size = EXCLUDED.edition_size,
   visual_effect = EXCLUDED.visual_effect,
-  is_active    = true;
+  is_active    = EXCLUDED.is_active;
 
 ALTER TABLE public.hero_item_defs      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hero_item_instances ENABLE ROW LEVEL SECURITY;
@@ -506,7 +508,35 @@ BEGIN
      AND acquired_from = 'auction';
 
   IF v_def.edition_size IS NOT NULL AND v_serial > v_def.edition_size THEN
-    RAISE EXCEPTION 'edition_sold_out';
+    UPDATE public.hero_item_auction_bids
+       SET status = 'outbid'
+     WHERE id = v_bid.id;
+
+    UPDATE public.profiles
+       SET coins = coins + v_bid.amount
+     WHERE id = v_bid.bidder_id;
+
+    IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+      INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+      VALUES (
+        v_bid.bidder_id,
+        v_bid.amount,
+        'hero_auction_edition_refund',
+        jsonb_build_object('auction_id', p_auction_id, 'item_slug', v_def.slug)
+      );
+    END IF;
+
+    UPDATE public.hero_item_auctions
+       SET status = 'cancelled',
+           settled_at = now()
+     WHERE id = p_auction_id;
+
+    RETURN json_build_object(
+      'ok', true,
+      'status', 'cancelled',
+      'reason', 'edition_sold_out',
+      'refunded_bid', v_bid.amount
+    );
   END IF;
 
   INSERT INTO public.hero_item_instances
@@ -623,7 +653,8 @@ SELECT
     WHEN a.status = 'open' AND hb.amount IS NOT NULL THEN hb.amount + a.min_increment
     WHEN a.status = 'open' THEN a.start_price
     ELSE NULL
-  END AS next_min_bid
+  END AS next_min_bid,
+  tb.top_bidders
 FROM public.hero_item_auctions a
 JOIN public.hero_item_defs d ON d.id = a.item_def_id
 LEFT JOIN LATERAL (
@@ -636,6 +667,21 @@ LEFT JOIN LATERAL (
 ) hb ON true
 LEFT JOIN public.profiles bp ON bp.id = hb.bidder_id
 LEFT JOIN public.profiles wp ON wp.id = a.winner_id
+LEFT JOIN LATERAL (
+  SELECT jsonb_agg(
+    jsonb_build_object('nick', p.nick, 'amount', top.max_amount)
+    ORDER BY top.max_amount DESC
+  ) AS top_bidders
+  FROM (
+    SELECT b.bidder_id, MAX(b.amount) AS max_amount
+    FROM public.hero_item_auction_bids b
+    WHERE b.auction_id = a.id
+    GROUP BY b.bidder_id
+    ORDER BY max_amount DESC
+    LIMIT 3
+  ) top
+  JOIN public.profiles p ON p.id = top.bidder_id
+) tb ON true
 WHERE a.status = 'open'
    OR a.created_at > now() - interval '14 days';
 

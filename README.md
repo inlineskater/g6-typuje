@@ -23,7 +23,7 @@ Fresh database setup:
 1. Create a Supabase project.
 2. In SQL Editor, run `supabase/schema.sql`.
 3. In SQL Editor, run `supabase/poker.sql`.
-4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/whack-boss.sql` for Whack-a-Boss and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper) and `supabase/flappy-pants.sql` („3 Pary Spodni").
+4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper) and `supabase/flappy-pants.sql` („3 Pary Spodni").
 5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, and `supabase/functions/flappy-pants-action`.
 6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
 7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
@@ -39,7 +39,7 @@ Existing project Whack-a-Boss rollout:
 
 1. Paste and run `supabase/whack-boss.sql` in Supabase SQL Editor.
 2. Deploy `supabase/functions/whack-boss-action` with Supabase CLI or from the Supabase dashboard.
-3. Confirm the `pg_cron` schedule exists if weekly prizes should pay automatically every Monday.
+3. Confirm the `pg_cron` schedule exists if weekly prizes should pay automatically after the week closes.
 
 Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni"):
 

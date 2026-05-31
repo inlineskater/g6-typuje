@@ -9,7 +9,7 @@ ALTER TABLE public.hero_item_defs ALTER COLUMN effect_game DROP NOT NULL;
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_effect_game_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_effect_game_check
-  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','poker','tavern','global'));
+  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','poker','tavern','global'));
 
 
 -- ── 1. Item definitions ─────────────────────────────────────────────
@@ -56,36 +56,117 @@ SELECT
   now(),
   '2026-05-27T10:00:00Z'
 FROM (VALUES
-  ('interest_ring', 300),
-  ('kaiser_helm',   400),
-  ('poker_glasses', 500)
+  ('interest_ring', 1),
+  ('kaiser_helm',   1),
+  ('poker_glasses', 1)
 ) AS v(slug, start_price)
 JOIN public.hero_item_defs hid ON hid.slug = v.slug
 CROSS JOIN (SELECT id FROM public.profiles WHERE nick = 'admin' LIMIT 1) p
 WHERE NOT EXISTS (
   SELECT 1 FROM public.hero_item_auctions a
-  WHERE a.item_def_id = hid.id AND a.status = 'active'
+  WHERE a.item_def_id = hid.id AND a.status = 'open'
 );
 
 
 -- ── 3. Daily interest cron ─────────────────────────────────────────
 
+CREATE TABLE IF NOT EXISTS public.hero_daily_interest_awards (
+  award_date       date NOT NULL,
+  user_id          uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  item_instance_id uuid NOT NULL REFERENCES public.hero_item_instances(id) ON DELETE CASCADE,
+  amount           integer NOT NULL CHECK (amount > 0),
+  awarded_at       timestamptz NOT NULL DEFAULT now(),
+  logged_at        timestamptz,
+  PRIMARY KEY (award_date, item_instance_id)
+);
+
+ALTER TABLE public.hero_daily_interest_awards
+  ADD COLUMN IF NOT EXISTS logged_at timestamptz;
+
+ALTER TABLE public.hero_daily_interest_awards ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "hero_daily_interest_awards_select" ON public.hero_daily_interest_awards;
+CREATE POLICY "hero_daily_interest_awards_select" ON public.hero_daily_interest_awards
+  FOR SELECT TO authenticated USING (true);
+
+REVOKE ALL ON public.hero_daily_interest_awards FROM anon, authenticated;
+GRANT SELECT ON public.hero_daily_interest_awards TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.award_daily_interest()
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_award_date date := (now() AT TIME ZONE 'Europe/Warsaw')::date;
+  v_count integer := 0;
+  v_total integer := 0;
 BEGIN
-  UPDATE public.profiles p
-  SET coins = p.coins + GREATEST(1, FLOOR(p.coins * 0.02)::integer)
-  FROM public.hero_equipment he
-  JOIN public.hero_item_instances hii ON hii.id = he.item_instance_id
-  JOIN public.hero_item_defs hid       ON hid.id = hii.item_def_id
-  WHERE hid.slug   = 'interest_ring'
-    AND hii.owner_id = p.id
-    AND he.user_id   = p.id;
+  WITH eligible AS (
+    SELECT
+      p.id AS user_id,
+      hii.id AS item_instance_id,
+      GREATEST(1, FLOOR(p.coins * 0.02)::integer) AS amount
+    FROM public.profiles p
+    JOIN public.hero_equipment he ON he.user_id = p.id
+    JOIN public.hero_item_instances hii ON hii.id = he.item_instance_id AND hii.owner_id = p.id
+    JOIN public.hero_item_defs hid ON hid.id = hii.item_def_id
+    WHERE hid.slug = 'interest_ring'
+      AND hid.is_active = true
+  ),
+  inserted AS (
+    INSERT INTO public.hero_daily_interest_awards (award_date, user_id, item_instance_id, amount)
+    SELECT v_award_date, user_id, item_instance_id, amount
+    FROM eligible
+    ON CONFLICT DO NOTHING
+    RETURNING user_id, item_instance_id, amount
+  ),
+  credited AS (
+    UPDATE public.profiles p
+       SET coins = p.coins + i.amount
+      FROM inserted i
+     WHERE p.id = i.user_id
+     RETURNING i.user_id, i.item_instance_id, i.amount
+  )
+  SELECT COUNT(*)::integer, COALESCE(SUM(amount), 0)::integer
+    INTO v_count, v_total
+  FROM credited;
+
+  IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+    INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+    SELECT
+      a.user_id,
+      a.amount,
+      'daily_interest',
+      jsonb_build_object('item_instance_id', a.item_instance_id, 'award_date', v_award_date)
+    FROM public.hero_daily_interest_awards a
+    WHERE a.award_date = v_award_date
+      AND a.logged_at IS NULL;
+
+    UPDATE public.hero_daily_interest_awards
+       SET logged_at = now()
+     WHERE award_date = v_award_date
+       AND logged_at IS NULL;
+  END IF;
+
+  RETURN json_build_object('ok', true, 'award_date', v_award_date, 'awards_created', v_count, 'coins_awarded', v_total);
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.award_daily_interest() FROM PUBLIC, anon, authenticated;
+
+CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+
 -- Runs every day at 08:00 UTC. Idempotent — safe to re-run.
-SELECT cron.unschedule('daily-interest') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'daily-interest'
-);
-SELECT cron.schedule('daily-interest', '0 8 * * *', 'SELECT public.award_daily_interest()');
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'cron') THEN
+    PERFORM cron.unschedule(jobname)
+    FROM cron.job
+    WHERE jobname = 'daily-interest';
+
+    PERFORM cron.schedule(
+      'daily-interest',
+      '0 8 * * *',
+      $cron$SELECT public.award_daily_interest();$cron$
+    );
+  END IF;
+END;
+$$;

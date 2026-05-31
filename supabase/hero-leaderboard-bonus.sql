@@ -1,13 +1,10 @@
 -- Hero score-bonus reflected in game leaderboards and weekly awards.
 --
--- Behaviour (decided with the product owner 2026-05-27):
---   * Cross-game: ANY equipped score_bonus item boosts the user's best result on
---     EVERY leaderboard (Bug Jumper + Whack-a-Boss), not only the item's effect_game.
---   * The bonus also drives the weekly prize ranking, so the board and the
---     100/50/25-coin payouts always agree.
---   * Bonus = the single STRONGEST equipped score_bonus item per user (MAX), mirroring
---     the in-game getStrongestHeroEffect logic. Switch MAX -> SUM below to make items stack.
---   * Only equipped + active items count (public_hero_equipment already filters is_active).
+-- Behaviour:
+--   * Edge Functions apply the strongest equipped seasonal score_bonus at submit time.
+--   * Leaderboards and awards use the stored score only, so changing equipment later
+--     cannot alter historical ranks or apply the bonus twice.
+--   * base_score/item_bonus are exposed from score client_meta for UI display.
 --
 -- Idempotent; safe to re-run. Apply via Supabase SQL Editor or the Management API.
 
@@ -34,6 +31,8 @@ user_best AS (
   SELECT DISTINCT ON (s.user_id)
     s.user_id, s.nick_snapshot AS nick, s.week_start, s.score, s.hits, s.misses,
     s.accuracy, s.max_combo, s.submitted_at,
+    COALESCE((s.client_meta->>'base_score')::int, s.score) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.bug_jumper_scores s
   JOIN current_week cw ON cw.week_start = s.week_start
@@ -41,21 +40,20 @@ user_best AS (
   ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at
 )
 SELECT
-  row_number() OVER (ORDER BY (ub.score + COALESCE(b.bonus, 0)) DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
+  row_number() OVER (ORDER BY ub.score DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
   ub.user_id,
   ub.nick,
   ub.week_start,
-  (ub.score + COALESCE(b.bonus, 0)) AS score,
+  ub.score,
   ub.hits,
   ub.misses,
   ub.accuracy,
   ub.max_combo,
   ub.rounds_played,
   ub.submitted_at,
-  ub.score AS base_score,
-  COALESCE(b.bonus, 0) AS item_bonus
+  ub.base_score,
+  ub.item_bonus
 FROM user_best ub
-LEFT JOIN public.hero_score_bonus b ON b.user_id = ub.user_id
 ORDER BY rank;
 
 -- 3. Bug Jumper — all time
@@ -69,27 +67,28 @@ user_best AS (
   SELECT DISTINCT ON (s.user_id)
     s.user_id, s.nick_snapshot AS nick, s.week_start AS best_week_start, s.score, s.hits, s.misses,
     s.accuracy, s.max_combo, s.submitted_at,
+    COALESCE((s.client_meta->>'base_score')::int, s.score) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.bug_jumper_scores s
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id
   ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at
 )
 SELECT
-  row_number() OVER (ORDER BY (ub.score + COALESCE(b.bonus, 0)) DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
+  row_number() OVER (ORDER BY ub.score DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
   ub.user_id,
   ub.nick,
   ub.best_week_start,
-  (ub.score + COALESCE(b.bonus, 0)) AS score,
+  ub.score,
   ub.hits,
   ub.misses,
   ub.accuracy,
   ub.max_combo,
   ub.rounds_played,
   ub.submitted_at,
-  ub.score AS base_score,
-  COALESCE(b.bonus, 0) AS item_bonus
+  ub.base_score,
+  ub.item_bonus
 FROM user_best ub
-LEFT JOIN public.hero_score_bonus b ON b.user_id = ub.user_id
 ORDER BY rank;
 
 -- 4. Whack-a-Boss — current week
@@ -106,6 +105,11 @@ user_best AS (
   SELECT DISTINCT ON (s.user_id)
     s.user_id, s.nick_snapshot AS nick, s.week_start, s.score, s.hits, s.misses,
     s.accuracy, s.max_combo, s.submitted_at,
+    COALESCE(
+      (s.client_meta->>'base_score')::int,
+      GREATEST(0, s.score - COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0))
+    ) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.whack_boss_scores s
   JOIN current_week cw ON cw.week_start = s.week_start
@@ -113,21 +117,20 @@ user_best AS (
   ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at
 )
 SELECT
-  row_number() OVER (ORDER BY (ub.score + COALESCE(b.bonus, 0)) DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
+  row_number() OVER (ORDER BY ub.score DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
   ub.user_id,
   ub.nick,
   ub.week_start,
-  (ub.score + COALESCE(b.bonus, 0)) AS score,
+  ub.score,
   ub.hits,
   ub.misses,
   ub.accuracy,
   ub.max_combo,
   ub.rounds_played,
   ub.submitted_at,
-  ub.score AS base_score,
-  COALESCE(b.bonus, 0) AS item_bonus
+  ub.base_score,
+  ub.item_bonus
 FROM user_best ub
-LEFT JOIN public.hero_score_bonus b ON b.user_id = ub.user_id
 ORDER BY rank;
 
 -- 5. Whack-a-Boss — all time
@@ -141,30 +144,34 @@ user_best AS (
   SELECT DISTINCT ON (s.user_id)
     s.user_id, s.nick_snapshot AS nick, s.week_start AS best_week_start, s.score, s.hits, s.misses,
     s.accuracy, s.max_combo, s.submitted_at,
+    COALESCE(
+      (s.client_meta->>'base_score')::int,
+      GREATEST(0, s.score - COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0))
+    ) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.whack_boss_scores s
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id
   ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at
 )
 SELECT
-  row_number() OVER (ORDER BY (ub.score + COALESCE(b.bonus, 0)) DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
+  row_number() OVER (ORDER BY ub.score DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
   ub.user_id,
   ub.nick,
   ub.best_week_start,
-  (ub.score + COALESCE(b.bonus, 0)) AS score,
+  ub.score,
   ub.hits,
   ub.misses,
   ub.accuracy,
   ub.max_combo,
   ub.rounds_played,
   ub.submitted_at,
-  ub.score AS base_score,
-  COALESCE(b.bonus, 0) AS item_bonus
+  ub.base_score,
+  ub.item_bonus
 FROM user_best ub
-LEFT JOIN public.hero_score_bonus b ON b.user_id = ub.user_id
 ORDER BY rank;
 
--- 6. Bug Jumper weekly award — rank and record by boosted score.
+-- 6. Bug Jumper weekly award — rank and record by stored score.
 CREATE OR REPLACE FUNCTION public.award_bug_jumper_week(
   p_week_start date DEFAULT public.bug_jumper_week_start(now() - interval '7 days')
 )
@@ -212,16 +219,6 @@ BEGIN
     WHERE s.week_start = p_week_start
     ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at ASC
   ),
-  boosted AS (
-    SELECT
-      ub.user_id,
-      ub.nick_snapshot,
-      (ub.score + COALESCE(b.bonus, 0)) AS score,
-      ub.accuracy,
-      ub.submitted_at
-    FROM user_best ub
-    LEFT JOIN public.hero_score_bonus b ON b.user_id = ub.user_id
-  ),
   ranked AS (
     SELECT
       user_id,
@@ -229,7 +226,7 @@ BEGIN
       score,
       accuracy,
       (ROW_NUMBER() OVER (ORDER BY score DESC, accuracy DESC, submitted_at ASC))::integer AS rank
-    FROM boosted
+    FROM user_best
   ),
   winners AS (
     SELECT
@@ -281,7 +278,7 @@ BEGIN
 END;
 $$;
 
--- 7. Whack-a-Boss weekly award — rank and record by boosted score.
+-- 7. Whack-a-Boss weekly award — rank and record by stored score.
 CREATE OR REPLACE FUNCTION public.award_whack_boss_week(
   p_week_start date DEFAULT public.whack_boss_week_start(now() - interval '7 days')
 )
@@ -329,16 +326,6 @@ BEGIN
     WHERE s.week_start = p_week_start
     ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at ASC
   ),
-  boosted AS (
-    SELECT
-      ub.user_id,
-      ub.nick_snapshot,
-      (ub.score + COALESCE(b.bonus, 0)) AS score,
-      ub.accuracy,
-      ub.submitted_at
-    FROM user_best ub
-    LEFT JOIN public.hero_score_bonus b ON b.user_id = ub.user_id
-  ),
   ranked AS (
     SELECT
       user_id,
@@ -346,7 +333,7 @@ BEGIN
       score,
       accuracy,
       (ROW_NUMBER() OVER (ORDER BY score DESC, accuracy DESC, submitted_at ASC))::integer AS rank
-    FROM boosted
+    FROM user_best
   ),
   winners AS (
     SELECT

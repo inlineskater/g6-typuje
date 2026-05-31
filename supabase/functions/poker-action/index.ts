@@ -37,6 +37,12 @@ function asInt(value, fallback = 0) {
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
+function pokerBuyInBonus(effect) {
+  return effect?.effect_type === "buy_in_bonus"
+    ? Math.max(0, asInt(effect.effect_value, 0))
+    : 0;
+}
+
 function sortSeats(seats) {
   return [...seats].sort((a, b) => a.seat_no - b.seat_no);
 }
@@ -718,12 +724,18 @@ async function stateResponse(tx, userId) {
   const mySeat = seats.find((seat) => !seat.is_bot && seat.user_id === userId) ?? null;
   const humanSeats = seats.filter((seat) => !seat.is_bot);
   const playableSeats = seats.filter((seat) => seat.stack > 0);
+  const pokerEffect = await getStrongestHeroEffect(tx, userId, "poker");
+  const buyInBonus = pokerBuyInBonus(pokerEffect);
+  const buyInCost = asInt(table.buy_in) + buyInBonus;
 
   const glassesRows = await tx`
     SELECT 1 FROM public.hero_equipment he
     JOIN public.hero_item_instances hii ON hii.id = he.item_instance_id
     JOIN public.hero_item_defs hid ON hid.id = hii.item_def_id
-    WHERE he.user_id = ${userId} AND hid.slug = 'poker_glasses'
+    WHERE he.user_id = ${userId}
+      AND hii.owner_id = ${userId}
+      AND hid.is_active = true
+      AND hid.slug = 'poker_glasses'
     LIMIT 1
   `;
   const hasPokerGlasses = glassesRows.length > 0;
@@ -774,6 +786,8 @@ async function stateResponse(tx, userId) {
       pot: asInt(table.pot),
       board: table.board ?? [],
       actionDeadline: table.action_deadline,
+      buyInBonus,
+      buyInCost,
     },
     profile: {
       coins: asInt(profile.coins),
@@ -784,7 +798,7 @@ async function stateResponse(tx, userId) {
       seatNo: mySeat?.seat_no ?? null,
       stack: mySeat ? asInt(mySeat.stack) : 0,
       // canSit counts only human seats against the limit — bot seats don't block humans.
-      canSit: !mySeat && humanSeats.length < asInt(table.max_seats, 6) && asInt(profile.coins) >= asInt(table.buy_in),
+      canSit: !mySeat && humanSeats.length < asInt(table.max_seats, 6) && asInt(profile.coins) >= buyInCost,
       canStand: !!mySeat && table.phase === "waiting",
       canStart: !!mySeat && table.phase === "waiting" && playableSeats.length >= 2,
       legalActions: legalActionsFor(table, mySeat),
@@ -800,8 +814,6 @@ async function getState(userId) {
 }
 
 async function sit(userId) {
-  const effect = await getStrongestHeroEffect(db, userId, "poker");
-
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
     if (seats.some((seat) => !seat.is_bot && seat.user_id === userId)) throw gameError("Już siedzisz przy stole.");
@@ -816,12 +828,12 @@ async function sit(userId) {
     `;
     const profile = profileRows[0];
     if (!profile) throw gameError("Nie znaleziono profilu.");
-    if (asInt(profile.coins) < asInt(table.buy_in)) throw gameError("Masz za mało coinów na buy-in.");
 
-    const stackBonus = effect?.effect_type === "buy_in_bonus"
-      ? Math.max(0, asInt(effect.effect_value, 0))
-      : 0;
-    const startingStack = asInt(table.buy_in) + stackBonus;
+    const effect = await getStrongestHeroEffect(tx, userId, "poker");
+    const stackBonus = pokerBuyInBonus(effect);
+    const buyInCost = asInt(table.buy_in) + stackBonus;
+    if (asInt(profile.coins) < buyInCost) throw gameError("Masz za mało coinów na buy-in.");
+    const startingStack = buyInCost;
 
     const occupied = seats.map((seat) => seat.seat_no);
     let seatNo = 0;
@@ -829,7 +841,7 @@ async function sit(userId) {
 
     await tx`
       update public.profiles
-         set coins = coins - ${asInt(table.buy_in)}
+         set coins = coins - ${buyInCost}
        where id = ${userId}
     `;
     await tx`
@@ -838,14 +850,14 @@ async function sit(userId) {
     `;
     await tx`
       insert into public.poker_ledger (user_id, nick_snapshot, type, amount)
-      values (${userId}, ${profile.nick}, 'buy_in', ${asInt(table.buy_in)})
+      values (${userId}, ${profile.nick}, 'buy_in', ${buyInCost})
     `;
     await logEvent(
       tx,
       table.id,
       table.hand_id,
       stackBonus > 0
-        ? `${profile.nick} siada do stołu za ${table.buy_in} coinów (+${stackBonus} stacka z ${effect.name}).`
+        ? `${profile.nick} siada do stołu za ${buyInCost} coinów (${table.buy_in}+${stackBonus} dzięki ${effect.name}).`
         : `${profile.nick} siada do stołu za ${table.buy_in} coinów.`
     );
     return stateResponse(tx, userId);
@@ -1057,6 +1069,8 @@ async function claimTimeout(userId) {
 async function setBots(userId, count) {
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
+    const [profile] = await tx`select nick from public.profiles where id = ${userId}`;
+    if (profile?.nick !== "admin") throw gameError("Tylko admin może zmieniać boty.");
     if (table.phase !== "waiting") throw gameError("Boty można zmienić tylko między rozdaniami.");
 
     const n = Math.max(0, Math.min(4, asInt(count)));

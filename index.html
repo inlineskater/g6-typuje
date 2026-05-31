@@ -3383,7 +3383,6 @@ const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id,
 let heroItemDefs = [];
 let myHeroInventory = [];
 let publicHeroEquipment = [];
-let scoreBonusByUser = {};
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
 let auctionTimerInterval = null;
@@ -3930,7 +3929,7 @@ function applyPokerState(data) {
     setText(headerCoins, me.coins);
   }
   if (data.table) {
-    setText(pokerBuyIn, data.table.buyIn);
+    setText(pokerBuyIn, data.table.buyInCost || data.table.buyIn);
     setText(pokerBlinds, data.table.smallBlind + '/' + data.table.bigBlind);
   }
   renderPoker();
@@ -4136,6 +4135,7 @@ function buildPokerSeat(state, seat) {
 }
 
 function buildPokerBotSelector(state) {
+  if (state.profile?.nick !== 'admin') return null;
   const currentBotCount = state.seats.filter(s => s.isBot).length;
   const inWaiting = state.table.phase === 'waiting';
   const canControl = inWaiting && (state.me.canSit || state.me.canStand || state.me.canStart);
@@ -4205,7 +4205,15 @@ function buildPokerControls(state, legal) {
   const controls = el('div', { className: 'poker-actions' });
 
   if (state.me.canSit) {
-    const sitBtn = el('button', { className: 'poker-action-btn primary', type: 'button' }, 'Siądź za ' + state.table.buyIn + ' 🪙');
+    const sitCost = state.table.buyInCost || state.table.buyIn;
+    const label = state.table.buyInBonus > 0
+      ? 'Siądź za ' + sitCost + ' 🪙'
+      : 'Siądź za ' + state.table.buyIn + ' 🪙';
+    const sitBtn = el('button', {
+      className: 'poker-action-btn primary',
+      type: 'button',
+      title: state.table.buyInBonus > 0 ? 'Stack powiększony o ' + state.table.buyInBonus + ' 🪙 z przedmiotu' : '',
+    }, label);
     sitBtn.addEventListener('click', () => pokerAction({ action: 'sit' }));
     controls.appendChild(sitBtn);
   }
@@ -4253,7 +4261,11 @@ function buildPokerControls(state, legal) {
   }
 
   if (!state.me.canSit && !state.me.canStand && state.table.phase === 'waiting' && !state.me.canStart) {
-    controls.appendChild(el('p', { className: 'poker-note' }, 'Do startu potrzeba co najmniej dwóch graczy przy stole.'));
+    const sitCost = state.table.buyInCost || state.table.buyIn;
+    const note = (state.profile?.coins || 0) < sitCost
+      ? 'Potrzebujesz ' + sitCost + ' 🪙, żeby usiąść przy stole.'
+      : 'Do startu potrzeba co najmniej dwóch graczy przy stole.';
+    controls.appendChild(el('p', { className: 'poker-note' }, note));
   }
 
   return controls;
@@ -5098,14 +5110,10 @@ let _seasonHistory = null;
 function buildSeasonHistorySections(container, compact) {
   const medals = ['🥇', '🥈', '🥉'];
   const current = getCurrentSeasonalEntry();
-  const seasons = compact
-    ? [...SEASONAL_SCHEDULE].reverse().slice(0, 2)
-    : [...SEASONAL_SCHEDULE].reverse();
+  const seasons = recentSeasonalEntries(compact ? 2 : null);
 
-  seasons.forEach((entry, revIdx) => {
-    const seasonNum = compact
-      ? SEASONAL_SCHEDULE.length - revIdx
-      : SEASONAL_SCHEDULE.length - revIdx;
+  seasons.forEach(entry => {
+    const seasonNum = entry.seasonNum;
     const isCurrent = current.weekStart === entry.weekStart;
     const awards = (_seasonHistory || []).filter(a => a.gameType === entry.gameType && a.week_start === entry.weekStart);
     const range = seasonDateFmt(entry.weekStart);
@@ -5716,9 +5724,10 @@ function drawCoinChart(canvas, points) {
       });
       userAwards.forEach(a => {
         if (a.awarded_at) {
-          const entry = SEASONAL_SCHEDULE.find(e => e.weekStart === a.week_start && e.gameType === a.gameType);
+          const entry = seasonalEntryForWeekStart(a.week_start);
           const medals = ['🥇', '🥈', '🥉'];
-          events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + (entry?.displayName || a.gameType) });
+          const gameName = entry?.gameType === a.gameType ? entry.displayName : a.gameType;
+          events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + gameName });
         }
       });
       coinTxs.forEach(t => {
@@ -5726,6 +5735,18 @@ function drawCoinChart(canvas, points) {
           ? '🌱 Podlewanie' + (t.meta?.streak > 1 ? ' (streak ' + t.meta.streak + ')' : '')
           : t.reason === 'garden_accessory'
           ? '🌿 Akcesorium: ' + (t.meta?.accessory_id || '?')
+          : t.reason === 'store_purchase'
+          ? '🎁 Sklep: ' + (t.meta?.title || '?')
+          : t.reason === 'daily_interest'
+          ? '💍 Odsetki dzienne'
+          : t.reason === 'hero_item_purchase'
+          ? '🎒 Przedmiot: ' + (t.meta?.item_name || t.meta?.item_slug || '?')
+          : t.reason === 'hero_auction_bid_reserved'
+          ? '🔨 Aukcja: depozyt'
+          : t.reason === 'hero_auction_outbid_refund' || t.reason === 'hero_auction_edition_refund'
+          ? '↩️ Aukcja: zwrot'
+          : t.reason === 'garden_certificate'
+          ? '📜 Certyfikat Drugiego Ogródka'
           : '🪙 ' + t.reason;
         events.push({ ts: new Date(t.created_at).getTime(), delta: +t.delta, label });
       });
@@ -5946,7 +5967,7 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'whack_boss' && item.effect_type === 'score_bonus') return `Gra sezonowa: +${value} do wyniku`;
   if (item?.effect_game === 'bug_jumper' && item.effect_type === 'score_bonus') return `Bug Jumper: +${value} do wyniku`;
   if (item?.effect_game === 'flappy_pants' && item.effect_type === 'score_bonus') return `3 Pary Spodni: +${value} do wyniku`;
-  if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: +${value} stacka po buy-inie`;
+  if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
   if (item?.effect_game === 'tavern' && item.effect_type === 'gold_aura') return 'Karczma: królewska złota aura';
   if (item?.effect_game === 'tavern' && item.effect_type === 'cloak_aura') return 'Karczma: efektowna peleryna';
   if (item?.effect_game === 'tavern' && item.effect_type === 'coin_sparkle') return 'Karczma: błysk coinów';
@@ -6071,14 +6092,6 @@ async function loadPublicHeroEquipment() {
     return;
   }
   publicHeroEquipment = data || [];
-}
-
-// Per-user leaderboard score bonus (cross-game, strongest equipped score_bonus item).
-// Read straight from the hero_score_bonus view so the split renders regardless of the Edge Function.
-async function loadScoreBonuses() {
-  const { data, error } = await sb.from('hero_score_bonus').select('user_id,bonus');
-  if (error) { console.warn('Score bonuses unavailable:', error.message); return; }
-  scoreBonusByUser = Object.fromEntries((data || []).map(r => [r.user_id, Number(r.bonus) || 0]));
 }
 
 function myEquippedItemForSlot(slot) {
@@ -7017,11 +7030,43 @@ async function loadSlotsHistory() {
 
 // ── Seasonal Game Framework ───────────────────────────────────────────────
 
-const SEASONAL_SCHEDULE = [
-  { weekStart: '2026-05-17', gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
-  { weekStart: '2026-05-24', gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
-  { weekStart: '2026-05-31', gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },
+const SEASONAL_ANCHOR_WEEK_START = '2026-05-17';
+const SEASONAL_ROTATION = [
+  { gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
+  { gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
+  { gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },
 ];
+
+function parseWeekStartDate(weekStartStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStartStr || '');
+  if (!m) return null;
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12));
+}
+
+function addDaysStr(weekStartStr, days) {
+  const date = parseWeekStartDate(weekStartStr);
+  if (!date) return weekStartStr;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function seasonalEntryForWeekStart(weekStart) {
+  const anchor = parseWeekStartDate(SEASONAL_ANCHOR_WEEK_START);
+  const week = parseWeekStartDate(weekStart);
+  if (!anchor || !week) return { ...SEASONAL_ROTATION[0], weekStart, seasonNum: 1 };
+  const idx = Math.max(0, Math.round((week.getTime() - anchor.getTime()) / (7 * 86400000)));
+  const base = SEASONAL_ROTATION[idx % SEASONAL_ROTATION.length];
+  return { ...base, weekStart, seasonNum: idx + 1 };
+}
+
+function recentSeasonalEntries(limit = null) {
+  const current = getCurrentSeasonalEntry();
+  const count = limit == null ? current.seasonNum : Math.min(limit, current.seasonNum);
+  return Array.from({ length: count }, (_, i) => {
+    const seasonNum = current.seasonNum - i;
+    return seasonalEntryForWeekStart(addDaysStr(SEASONAL_ANCHOR_WEEK_START, (seasonNum - 1) * 7));
+  });
+}
 
 function currentSeasonWeekStartStr() {
   const now = new Date();
@@ -7035,13 +7080,11 @@ function currentSeasonWeekStartStr() {
 
 function getCurrentSeasonalEntry() {
   const ws = currentSeasonWeekStartStr();
-  return SEASONAL_SCHEDULE.find(e => e.weekStart === ws) || SEASONAL_SCHEDULE[SEASONAL_SCHEDULE.length - 1];
+  return seasonalEntryForWeekStart(ws);
 }
 
 function getNextSeasonalEntry() {
-  const ws = currentSeasonWeekStartStr();
-  const idx = SEASONAL_SCHEDULE.findIndex(e => e.weekStart === ws);
-  return idx >= 0 && idx + 1 < SEASONAL_SCHEDULE.length ? SEASONAL_SCHEDULE[idx + 1] : null;
+  return seasonalEntryForWeekStart(addDaysStr(currentSeasonWeekStartStr(), 7));
 }
 
 function seasonDateFmt(weekStartStr) {
@@ -7059,7 +7102,7 @@ function loadSeasonalTab(showSpinner = true) {
 
   const headerEl = document.getElementById('seasonal-header');
   if (headerEl) {
-    const seasonNum = SEASONAL_SCHEDULE.indexOf(current) + 1;
+    const seasonNum = current.seasonNum;
     const range = seasonDateFmt(current.weekStart);
     headerEl.replaceChildren(
       el('span', { className: 'seasonal-bar-name' }, 'Sezon ' + seasonNum + ' · ' + current.displayName),
@@ -7253,7 +7296,7 @@ async function loadWhackBossState(showSpinner = true) {
   }
 
   try {
-    const [data] = await Promise.all([invokeWhackBoss({ action: 'state' }), loadScoreBonuses()]);
+    const data = await invokeWhackBoss({ action: 'state' });
     renderWhackBossState(data);
   } catch (err) {
     const msg = err.message || 'Nie udało się wczytać gry.';
@@ -7765,7 +7808,7 @@ async function loadBugJumperState(showSpinner = true) {
     if (awardsWrap)  awardsWrap.replaceChildren();
   }
   try {
-    const [data] = await Promise.all([invokeBugJumper({ action: 'state' }), loadScoreBonuses()]);
+    const data = await invokeBugJumper({ action: 'state' });
     renderBugJumperState(data);
   } catch (err) {
     const msg = err.message || 'Nie udało się wczytać gry.';
@@ -8239,7 +8282,7 @@ async function loadFlappyPantsState(showSpinner = true) {
     if (awardsWrap)  awardsWrap.replaceChildren();
   }
   try {
-    const [data] = await Promise.all([invokeFlappyPants({ action: 'state' }), loadScoreBonuses()]);
+    const data = await invokeFlappyPants({ action: 'state' });
     renderFlappyPantsState(data);
   } catch (err) {
     const msg = err.message || 'Nie udało się wczytać gry.';

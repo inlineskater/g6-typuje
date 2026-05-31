@@ -67,7 +67,14 @@ async function getStrongestHeroEffect(tx, userId, game) {
       where e.user_id = ${userId}
         and i.owner_id = ${userId}
         and d.is_active = true
-        and d.effect_game = ${game}
+        and (
+          d.effect_game = ${game}
+          or (
+            ${game} in ('whack_boss', 'bug_jumper', 'flappy_pants')
+            and d.effect_type = 'score_bonus'
+            and d.effect_game in ('whack_boss', 'bug_jumper', 'flappy_pants')
+          )
+        )
       order by d.effect_value desc, d.price desc, d.slug
       limit 1
     `;
@@ -248,7 +255,7 @@ async function submitRound(userId, body) {
           ${accuracy},
           ${maxCombo},
           ${asInt(round.duration_ms, ROUND_DURATION_MS)},
-          ${JSON.stringify({ event_count: hits + misses, server_validated: false, item_effect: itemEffect })}::jsonb
+          ${JSON.stringify({ event_count: hits + misses, server_validated: false, base_score: hits, item_effect: itemEffect })}::jsonb
         )
       returning *
     `;

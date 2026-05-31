@@ -119,6 +119,11 @@ user_best AS (
     s.accuracy,
     s.max_combo,
     s.submitted_at,
+    COALESCE(
+      (s.client_meta->>'base_score')::int,
+      GREATEST(0, s.score - COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0))
+    ) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.whack_boss_scores s
   JOIN current_week cw ON cw.week_start = s.week_start
@@ -136,7 +141,9 @@ SELECT
   accuracy,
   max_combo,
   rounds_played,
-  submitted_at
+  submitted_at,
+  base_score,
+  item_bonus
 FROM user_best
 ORDER BY rank;
 
@@ -157,6 +164,11 @@ user_best AS (
     s.accuracy,
     s.max_combo,
     s.submitted_at,
+    COALESCE(
+      (s.client_meta->>'base_score')::int,
+      GREATEST(0, s.score - COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0))
+    ) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.whack_boss_scores s
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id
@@ -173,7 +185,9 @@ SELECT
   accuracy,
   max_combo,
   rounds_played,
-  submitted_at
+  submitted_at,
+  base_score,
+  item_bonus
 FROM user_best
 ORDER BY rank;
 

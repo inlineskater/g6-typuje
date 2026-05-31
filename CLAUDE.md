@@ -15,6 +15,7 @@ There is no build step. Push to `main` → GitHub Actions copies `index.html` to
 To apply database changes: paste the relevant SQL into the Supabase SQL Editor (Dashboard → SQL Editor → Run). There is no migration runner.
 
 - `supabase/schema.sql` — core prediction-market schema, run once on a fresh project
+- `supabase/store.sql` — reward shop tables/RPCs used by the Sklep tab
 - `supabase/poker.sql` — poker tables, RLS, realtime publication, and leaderboard stack accounting
 - `supabase/functions/poker-action` — authenticated Edge Function that owns poker state transitions, hidden cards, and chip accounting
 - `supabase/whack-boss.sql` — Whack-a-Boss rounds, weekly/all-time leaderboard views, and scheduled weekly prize payout
@@ -95,11 +96,11 @@ Whack-a-Boss is an 18-second authenticated mini-game. The browser calls `sb.func
 
 ### Seasonal games
 
-The seasonal tab hosts one rotating arcade game per Sunday-start week (Europe/Warsaw). `SEASONAL_SCHEDULE` in `index.html` maps `weekStart` → `gameType`/`displayName`; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni", from 2026-05-31).
+The seasonal tab hosts one rotating arcade game per Sunday-start week (Europe/Warsaw). `SEASONAL_ANCHOR_WEEK_START` plus `SEASONAL_ROTATION` in `index.html` derive the active game for any future week; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni").
 
 Each seasonal game mirrors the same stack:
 - `<game>_rounds` / `<game>_scores` / `<game>_weekly_awards` tables, `<game>_current_week` / `_all_time` / `_recent_awards` views, an `award_<game>_week()` SECURITY DEFINER payout (100/50/25), realtime publication, and a `pg_cron` job at `'5 23 * * 6'` (Saturday 23:05) that pays the previous week's top 3.
-- An Edge Function (`<game>-action`) with `state`/`start`/`submit` actions. The browser cannot write score tables (RLS grants SELECT only); the function owns inserts via `SUPABASE_DB_URL`, caps the per-round score, enforces the round expiry window, and applies the strongest equipped hero `score_bonus` for that `effect_game`.
+- An Edge Function (`<game>-action`) with `state`/`start`/`submit` actions. The browser cannot write score tables (RLS grants SELECT only); the function owns inserts via `SUPABASE_DB_URL`, caps the per-round score, enforces the round expiry window, and applies the strongest equipped seasonal hero `score_bonus`.
 - Frontend: a canvas runtime (`new<Game>Runtime`/`<g>Draw`/RAF loop) plus `invoke*`/`load*`/`render*` helpers, wired into `loadSeasonalTab()`, the realtime subscriptions, and the `loadSeasonHistory()` recent-awards aggregator.
 
 „3 Pary Spodni" (Flappy Pants) is a Flappy Bird clone: you ARE a pair of trousers (Space/click/↑ to flap) with 3 lives (the "3 pary spodni"); each crash costs one pair with brief invincibility, and the round ends after the third. Score = obstacles passed; it persists across lives.
