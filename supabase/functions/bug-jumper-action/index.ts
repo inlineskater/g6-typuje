@@ -67,7 +67,14 @@ async function getStrongestHeroEffect(tx, userId, game) {
       where e.user_id = ${userId}
         and i.owner_id = ${userId}
         and d.is_active = true
-        and d.effect_game = ${game}
+        and (
+          d.effect_game = ${game}
+          or (
+            ${game} = 'bug_jumper'
+            and d.effect_game = 'whack_boss'
+            and d.effect_type = 'score_bonus'
+          )
+        )
       order by d.effect_value desc, d.price desc, d.slug
       limit 1
     `;
@@ -212,7 +219,7 @@ async function submitRound(userId, body) {
     const bonus = effect?.effect_type === "score_bonus"
       ? Math.max(0, asInt(effect.effect_value, 0))
       : 0;
-    const scoreValue = Math.min(MAX_SCORE_PER_ROUND, baseScore + bonus);
+    const scoreValue = Math.min(MAX_SCORE_PER_ROUND + bonus, baseScore + bonus);
     const itemEffect = bonus > 0 && scoreValue > baseScore ? {
       slug: effect.slug,
       name: effect.name,
