@@ -65,7 +65,8 @@ CROSS JOIN (SELECT id FROM public.profiles WHERE nick = 'admin' LIMIT 1) p
 WHERE NOT EXISTS (
   SELECT 1 FROM public.hero_item_auctions a
   WHERE a.item_def_id = hid.id AND a.status = 'open'
-);
+)
+  AND now() < '2026-05-27T10:00:00Z'::timestamptz;
 
 
 -- ── 3. Daily interest cron ─────────────────────────────────────────
@@ -91,6 +92,8 @@ CREATE POLICY "hero_daily_interest_awards_select" ON public.hero_daily_interest_
 
 REVOKE ALL ON public.hero_daily_interest_awards FROM anon, authenticated;
 GRANT SELECT ON public.hero_daily_interest_awards TO authenticated;
+
+DROP FUNCTION IF EXISTS public.award_daily_interest();
 
 CREATE OR REPLACE FUNCTION public.award_daily_interest()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$

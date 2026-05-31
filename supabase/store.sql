@@ -47,6 +47,8 @@ CREATE POLICY "store_purchases_select" ON public.store_purchases
 REVOKE ALL ON public.store_items, public.store_purchases FROM anon, authenticated;
 GRANT SELECT ON public.store_items, public.store_purchases TO anon, authenticated;
 
+DROP FUNCTION IF EXISTS public.create_store_item(text, text, integer, integer);
+
 CREATE OR REPLACE FUNCTION public.create_store_item(
   p_title       text,
   p_description text,
@@ -71,6 +73,8 @@ BEGIN
   RETURN json_build_object('ok', true, 'item_id', v_item.id);
 END;
 $$;
+
+DROP FUNCTION IF EXISTS public.purchase_store_item(uuid);
 
 CREATE OR REPLACE FUNCTION public.purchase_store_item(p_item_id uuid)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
