@@ -2959,7 +2959,7 @@
             <section class="wb-awards-section">
               <div class="wb-board-title">
                 <span>Ostatnie nagrody</span>
-                <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdy poniedziałek rano">wypłata: poniedziałek</span>
+                <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą sobotę o 23:05 (czas Warszawy)">wypłata: sobota 23:05</span>
               </div>
               <div class="wb-awards" id="wb-awards"></div>
             </section>
@@ -3032,7 +3032,7 @@
             <section>
               <div class="bj-board-title">
                 <span>Ostatnie nagrody</span>
-                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdy poniedziałek rano">wypłata: poniedziałek</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą sobotę o 23:05 (czas Warszawy)">wypłata: sobota 23:05</span>
               </div>
               <div class="bj-awards" id="bj-awards"></div>
             </section>
@@ -3061,8 +3061,13 @@
               <ul>
                 <li><strong>Spacja / klik / dotyk / ↑</strong> — trzepnij, żeby spodnie podskoczyły do góry.</li>
                 <li><strong>+1 pkt</strong> za każdą przeleconą szparę między wiszącymi spodniami.</li>
-                <li>Masz <strong>3 pary spodni</strong> (3 życia). Zderzenie lub upadek = tracisz parę, masz chwilę nietykalności i lecisz dalej — <strong>punkty zostają</strong>.</li>
-                <li>Po stracie <strong>trzeciej pary</strong> runda się kończy. Najlepszy wynik tygodnia trafia do rankingu.</li>
+                <li>Masz <strong>3 pary spodni</strong> (3 życia). Zderzenie lub upadek kosztuje 1 parę — lecisz dalej z krótką nietykalnoścą, <strong>punkty zostają</strong>.</li>
+                <li>Po stracie <strong>trzeciej pary</strong> runda się kończy. Najlepszy wynik z tygodnia trafia do rankingu.</li>
+              </ul>
+              <div class="bj-rules-title" style="margin-top:10px">Kiedy</div>
+              <ul>
+                <li>Tydzień punktowy trwa od <strong>niedzieli 00:00</strong> do <strong>soboty 23:05</strong> (czas Warszawy).</li>
+                <li>Nagrody wypłacane automatycznie w sobotę o 23:05 za <em>miniony</em> tydzień.</li>
               </ul>
             </div>
 
@@ -3105,7 +3110,7 @@
             <section>
               <div class="bj-board-title">
                 <span>Ostatnie nagrody</span>
-                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdy poniedziałek rano">wypłata: poniedziałek</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą sobotę o 23:05 (czas Warszawy)">wypłata: sobota 23:05</span>
               </div>
               <div class="bj-awards" id="fp-awards"></div>
             </section>
@@ -5133,12 +5138,13 @@ function buildSeasonHistorySections(container, compact) {
     } else {
       const table = el('table', { className: 'lb-table-compact' });
       awards.slice(0, compact ? 3 : 10).forEach(a => {
-        table.append(el('tr', {},
+        const tr = el('tr', {},
           el('td', { className: 'lb-rank' }, medals[a.rank - 1] || String(a.rank)),
-          el('td', { className: 'lb-nick' + (a.nick === me?.nick ? ' me' : '') }, a.nick + (a.nick === me?.nick ? ' (Ty)' : '')),
-          el('td', { className: 'lb-score' }, String(a.score) + ' pkt'),
-          el('td', { className: 'lb-coins' }, (a.isPending ? '~' : '+') + a.prize_coins + ' 🪙')
-        ));
+          el('td', { className: 'lb-nick' + (a.nick === me?.nick ? ' me' : '') }, a.nick + (a.nick === me?.nick ? ' (Ty)' : ''))
+        );
+        if (hasPending) tr.append(lbScoreCell(a));
+        tr.append(el('td', { className: 'lb-coins' }, (a.isPending ? '~' : '+') + a.prize_coins + ' 🪙'));
+        table.append(tr);
       });
       section.append(table);
       if (hasPending) {
@@ -5163,7 +5169,7 @@ async function loadSeasonHistory() {
       sb.from('bug_jumper_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from(current.gameType + '_scores')
-        .select('user_id,nick_snapshot,score,accuracy,submitted_at')
+        .select('user_id,nick_snapshot,score,accuracy,submitted_at,client_meta')
         .eq('week_start', currentDbWeekStart)
         .order('score', { ascending: false })
         .order('accuracy', { ascending: false })
@@ -5179,10 +5185,14 @@ async function loadSeasonHistory() {
       if (seen.has(r.user_id)) continue;
       seen.add(r.user_id);
       const rank = pendingEntries.length + 1;
+      const cm = r.client_meta || {};
+      const baseScore = cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
+      const itemBonus = cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
       pendingEntries.push({
         user_id: r.user_id, nick: r.nick_snapshot,
         week_start: current.weekStart, rank,
-        score: r.score, prize_coins: PENDING_PRIZES[rank - 1] || 0,
+        score: r.score, base_score: baseScore, item_bonus: itemBonus,
+        prize_coins: PENDING_PRIZES[rank - 1] || 0,
         isPending: true, gameType: current.gameType,
       });
     }
