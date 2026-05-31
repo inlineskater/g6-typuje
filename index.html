@@ -5125,9 +5125,10 @@ function buildSeasonHistorySections(container, compact) {
     );
     const section = el('div', { className: 'season-history-section' }, head);
 
+    const hasPending = awards.some(a => a.isPending);
     if (awards.length === 0) {
       section.append(el('p', { className: 'season-history-pending' },
-        isCurrent ? '⏳ Trwa — nagrody wypłacane w poniedziałek.' : 'Brak danych o nagrodach.'
+        isCurrent ? '⏳ Trwa — brak wyników.' : 'Brak danych o nagrodach.'
       ));
     } else {
       const table = el('table', { className: 'lb-table-compact' });
@@ -5136,10 +5137,16 @@ function buildSeasonHistorySections(container, compact) {
           el('td', { className: 'lb-rank' }, medals[a.rank - 1] || String(a.rank)),
           el('td', { className: 'lb-nick' + (a.nick === me?.nick ? ' me' : '') }, a.nick + (a.nick === me?.nick ? ' (Ty)' : '')),
           el('td', { className: 'lb-score' }, String(a.score) + ' pkt'),
-          el('td', { className: 'lb-coins' }, '+' + a.prize_coins + ' 🪙')
+          el('td', { className: 'lb-coins' }, (a.isPending ? '~' : '+') + a.prize_coins + ' 🪙')
         ));
       });
       section.append(table);
+      if (hasPending) {
+        const [py, pm, pd] = addDaysStr(entry.weekStart, 12).split('-').map(Number);
+        section.append(el('p', { className: 'season-history-pending' },
+          '⏳ Wyniki wstępne — nagrody wypłacane w sobotę ' + pd + '.' + String(pm).padStart(2, '0') + '.'
+        ));
+      }
     }
     container.append(section);
   });
@@ -5148,15 +5155,44 @@ function buildSeasonHistorySections(container, compact) {
 async function loadSeasonHistory() {
   const wrap = document.getElementById('seasons-preview-wrap');
   try {
-    const [wbRes, bjRes, fpRes] = await Promise.all([
+    const current = getCurrentSeasonalEntry();
+    const currentDbWeekStart = addDaysStr(current.weekStart, -1); // JS Monday → DB Sunday
+
+    const [wbRes, bjRes, fpRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from(current.gameType + '_scores')
+        .select('user_id,nick_snapshot,score,accuracy,submitted_at')
+        .eq('week_start', currentDbWeekStart)
+        .order('score', { ascending: false })
+        .order('accuracy', { ascending: false })
+        .order('submitted_at', { ascending: true })
+        .limit(20),
     ]);
+
+    // Build pending entries from live scores (dedup by user, keep best score)
+    const PENDING_PRIZES = [100, 50, 25];
+    const seen = new Set();
+    const pendingEntries = [];
+    for (const r of (liveRes.data || [])) {
+      if (seen.has(r.user_id)) continue;
+      seen.add(r.user_id);
+      const rank = pendingEntries.length + 1;
+      pendingEntries.push({
+        user_id: r.user_id, nick: r.nick_snapshot,
+        week_start: current.weekStart, rank,
+        score: r.score, prize_coins: PENDING_PRIZES[rank - 1] || 0,
+        isPending: true, gameType: current.gameType,
+      });
+    }
+
+    // DB uses Sunday-start weeks; add 1 day to align with JS Monday-start seasons
     _seasonHistory = [
-      ...(wbRes.data || []).map(r => ({ ...r, gameType: 'whack_boss' })),
-      ...(bjRes.data || []).map(r => ({ ...r, gameType: 'bug_jumper' })),
-      ...(fpRes.data || []).map(r => ({ ...r, gameType: 'flappy_pants' })),
+      ...(wbRes.data || []).map(r => ({ ...r, week_start: addDaysStr(r.week_start, 1), gameType: 'whack_boss' })),
+      ...(bjRes.data || []).map(r => ({ ...r, week_start: addDaysStr(r.week_start, 1), gameType: 'bug_jumper' })),
+      ...(fpRes.data || []).map(r => ({ ...r, week_start: addDaysStr(r.week_start, 1), gameType: 'flappy_pants' })),
+      ...pendingEntries,
     ];
     if (wrap) {
       wrap.replaceChildren();
