@@ -2892,10 +2892,10 @@
                 <li><strong>18 sekund.</strong> Klikaj bossa za każdym razem, gdy pojawi się w polu gry.</li>
                 <li><strong>Tempo dopasowuje się do Ciebie:</strong> im szybciej trafiasz, tym krócej boss jest widoczny. Spudłowany boss daje chwilę oddechu.</li>
                 <li><strong>Punkty:</strong> każde trafienie = 1 pkt. <strong>Combo</strong> rośnie, gdy trafiasz bossów po kolei (każdy spudłowany boss zeruje combo).</li>
-                <li><strong>Tydzień:</strong> startuje w niedzielę o 00:00 i kończy się w sobotę o 23:59:59 (Europe/Warsaw). <span id="wb-week-window">Zakres bieżącego tygodnia pojawi się po wczytaniu rankingu.</span></li>
-                <li><strong>Jak liczymy tydzień:</strong> serwer bierze czas zgłoszenia rundy w strefie Europe/Warsaw, wyznacza niedzielę rozpoczynającą ten tydzień i zapisuje wynik pod tą datą.</li>
+                <li><strong>Tydzień:</strong> startuje w poniedziałek o 00:00 i kończy się w niedzielę o 23:59:59 (Europe/Warsaw). <span id="wb-week-window">Zakres bieżącego tygodnia pojawi się po wczytaniu rankingu.</span></li>
+                <li><strong>Jak liczymy tydzień:</strong> serwer bierze czas zgłoszenia rundy w strefie Europe/Warsaw, wyznacza poniedziałek rozpoczynający ten tydzień i zapisuje wynik pod tą datą.</li>
                 <li><strong>Ranking tygodniowy:</strong> liczy się najlepszy wynik gracza w danym tygodniu. Remisy rozstrzyga wyższy procent trafień, a potem wcześniejsze zgłoszenie.</li>
-                <li><strong>Nagrody co poniedziałek:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
+                <li><strong>Nagrody co niedzielę:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
               </ul>
             </div>
 
@@ -2960,7 +2960,7 @@
             <section class="wb-awards-section">
               <div class="wb-board-title">
                 <span>Ostatnie nagrody</span>
-                <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą sobotę o 23:05 (czas Warszawy)">wypłata: sobota 23:05</span>
+                <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą niedzielę o 23:59 (czas Warszawy)">wypłata: niedziela 23:59</span>
               </div>
               <div class="wb-awards" id="wb-awards"></div>
             </section>
@@ -3071,8 +3071,8 @@
               </ul>
               <div class="bj-rules-title" style="margin-top:10px">Kiedy</div>
               <ul>
-                <li>Tydzień punktowy trwa od <strong>niedzieli 00:00</strong> do <strong>soboty 23:05</strong> (czas Warszawy).</li>
-                <li>Nagrody wypłacane automatycznie w sobotę o 23:05 za <em>miniony</em> tydzień.</li>
+                <li>Tydzień punktowy trwa od <strong>poniedziałku 00:00</strong> do <strong>niedzieli 23:59</strong> (czas Warszawy).</li>
+                <li>Nagrody wypłacane automatycznie w niedzielę o 23:59 za <em>miniony</em> tydzień.</li>
               </ul>
             </div>
 
@@ -5189,9 +5189,9 @@ function buildSeasonHistorySections(container, compact) {
       });
       section.append(table);
       if (hasPending) {
-        const [py, pm, pd] = addDaysStr(entry.weekStart, 12).split('-').map(Number);
+        const [py, pm, pd] = addDaysStr(entry.weekStart, 6).split('-').map(Number);
         section.append(el('p', { className: 'season-history-pending' },
-          '⏳ Wyniki wstępne — nagrody wypłacane w sobotę ' + pd + '.' + String(pm).padStart(2, '0') + '.'
+          '⏳ Wyniki wstępne — nagrody wypłacane w niedzielę ' + pd + '.' + String(pm).padStart(2, '0') + '.'
         ));
       }
     }
@@ -5203,7 +5203,7 @@ async function loadSeasonHistory() {
   const wrap = document.getElementById('seasons-preview-wrap');
   try {
     const current = getCurrentSeasonalEntry();
-    const currentDbWeekStart = addDaysStr(current.weekStart, -1); // JS Monday → DB Sunday
+    const currentDbWeekStart = current.weekStart; // DB now also Monday-start
     const liveScoreColumns = current.gameType === 'bug_jumper'
       ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
       : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
@@ -5249,11 +5249,10 @@ async function loadSeasonHistory() {
       });
     }
 
-    // DB uses Sunday-start weeks; add 1 day to align with JS Monday-start seasons
     _seasonHistory = [
-      ...(wbRes.data || []).map(r => ({ ...r, week_start: addDaysStr(r.week_start, 1), gameType: 'whack_boss' })),
-      ...(bjRes.data || []).map(r => ({ ...r, week_start: addDaysStr(r.week_start, 1), gameType: 'bug_jumper' })),
-      ...(fpRes.data || []).map(r => ({ ...r, week_start: addDaysStr(r.week_start, 1), gameType: 'flappy_pants' })),
+      ...(wbRes.data || []).map(r => ({ ...r, gameType: 'whack_boss' })),
+      ...(bjRes.data || []).map(r => ({ ...r, gameType: 'bug_jumper' })),
+      ...(fpRes.data || []).map(r => ({ ...r, gameType: 'flappy_pants' })),
       ...pendingEntries,
     ];
     if (wrap) {

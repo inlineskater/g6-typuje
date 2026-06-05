@@ -7,13 +7,8 @@ LANGUAGE sql
 STABLE
 SET search_path = public
 AS $$
-  -- Sunday-starting week (Sun..Sat) in Europe/Warsaw. Sundays count as the
-  -- first day of the next leaderboard cycle; Monday's award cron still pays
-  -- top 3 of the Sun..Sat window that just ended.
-  SELECT (
-    date_trunc('week', (p_ts AT TIME ZONE 'Europe/Warsaw') + interval '1 day')
-    - interval '1 day'
-  )::date;
+  -- Monday-starting week (Mon..Sun) in Europe/Warsaw.
+  SELECT date_trunc('week', p_ts AT TIME ZONE 'Europe/Warsaw')::date;
 $$;
 
 CREATE TABLE IF NOT EXISTS public.whack_boss_rounds (
@@ -351,7 +346,7 @@ BEGIN
 
     PERFORM cron.schedule(
       'whack_boss_weekly_awards',
-      '0 23 * * 6',
+      '59 21 * * 0',
       $cron$SELECT public.award_whack_boss_week(public.whack_boss_week_start(now() - interval '7 days'));$cron$
     );
   END IF;

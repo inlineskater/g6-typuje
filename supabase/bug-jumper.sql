@@ -7,11 +7,8 @@ LANGUAGE sql
 STABLE
 SET search_path = public
 AS $$
-  -- Identical Sunday-starting week logic as whack_boss_week_start.
-  SELECT (
-    date_trunc('week', (p_ts AT TIME ZONE 'Europe/Warsaw') + interval '1 day')
-    - interval '1 day'
-  )::date;
+  -- Monday-starting week (Mon..Sun) in Europe/Warsaw.
+  SELECT date_trunc('week', p_ts AT TIME ZONE 'Europe/Warsaw')::date;
 $$;
 
 CREATE TABLE IF NOT EXISTS public.bug_jumper_rounds (
@@ -381,7 +378,7 @@ BEGIN
 
     PERFORM cron.schedule(
       'bug_jumper_weekly_awards',
-      '5 23 * * 6',
+      '59 21 * * 0',
       $cron$SELECT public.award_bug_jumper_week(public.bug_jumper_week_start(now() - interval '7 days'));$cron$
     );
   END IF;
