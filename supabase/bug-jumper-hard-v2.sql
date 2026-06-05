@@ -1,62 +1,6 @@
--- Bug Jumper seasonal game support for Rynek Proroctw G6.
--- Run after supabase/schema.sql and supabase/whack-boss.sql.
-
-CREATE OR REPLACE FUNCTION public.bug_jumper_week_start(p_ts timestamptz DEFAULT now())
-RETURNS date
-LANGUAGE sql
-STABLE
-SET search_path = public
-AS $$
-  -- Identical Sunday-starting week logic as whack_boss_week_start.
-  SELECT (
-    date_trunc('week', (p_ts AT TIME ZONE 'Europe/Warsaw') + interval '1 day')
-    - interval '1 day'
-  )::date;
-$$;
-
-CREATE TABLE IF NOT EXISTS public.bug_jumper_rounds (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id       uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  nick_snapshot text NOT NULL,
-  duration_ms   integer NOT NULL DEFAULT 20000 CHECK (duration_ms BETWEEN 10000 AND 60000),
-  started_at    timestamptz NOT NULL DEFAULT now(),
-  expires_at    timestamptz NOT NULL DEFAULT (now() + interval '2 minutes'),
-  submitted_at  timestamptz,
-  created_at    timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.bug_jumper_scores (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  round_id      uuid NOT NULL UNIQUE REFERENCES public.bug_jumper_rounds(id) ON DELETE CASCADE,
-  user_id       uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  nick_snapshot text NOT NULL,
-  week_start    date NOT NULL,
-  course_id     text NOT NULL DEFAULT 'legacy_random_v1',
-  score         integer NOT NULL CHECK (score >= 0),
-  hits          integer NOT NULL CHECK (hits >= 0),
-  misses        integer NOT NULL CHECK (misses >= 0),
-  accuracy      numeric(5,2) NOT NULL DEFAULT 0 CHECK (accuracy >= 0 AND accuracy <= 100),
-  max_combo     integer NOT NULL DEFAULT 0 CHECK (max_combo >= 0),
-  duration_ms   integer NOT NULL DEFAULT 20000,
-  completion_ms integer CHECK (completion_ms IS NULL OR completion_ms >= 0),
-  submitted_at  timestamptz NOT NULL DEFAULT now(),
-  client_meta   jsonb NOT NULL DEFAULT '{}'::jsonb
-);
-
-CREATE TABLE IF NOT EXISTS public.bug_jumper_weekly_awards (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  week_start    date NOT NULL,
-  course_id     text NOT NULL DEFAULT 'legacy_random_v1',
-  user_id       uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  nick_snapshot text NOT NULL,
-  rank          integer NOT NULL CHECK (rank BETWEEN 1 AND 3),
-  score         integer NOT NULL CHECK (score >= 0),
-  accuracy      numeric(5,2) NOT NULL DEFAULT 0,
-  prize_coins   integer NOT NULL CHECK (prize_coins > 0),
-  awarded_at    timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (week_start, rank),
-  UNIQUE (week_start, user_id)
-);
+-- Bug Jumper Hard Course v2 rollout.
+-- Preserves legacy random-course scores and makes active Bug Jumper boards use
+-- only the fixed hard course.
 
 ALTER TABLE public.bug_jumper_scores
   ADD COLUMN IF NOT EXISTS course_id text NOT NULL DEFAULT 'legacy_random_v1',
@@ -72,45 +16,8 @@ ALTER TABLE public.bug_jumper_scores
 ALTER TABLE public.bug_jumper_weekly_awards
   ADD COLUMN IF NOT EXISTS course_id text NOT NULL DEFAULT 'legacy_random_v1';
 
-CREATE INDEX IF NOT EXISTS bug_jumper_rounds_user_time_idx
-  ON public.bug_jumper_rounds(user_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS bug_jumper_rounds_expires_idx
-  ON public.bug_jumper_rounds(expires_at)
-  WHERE submitted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS bug_jumper_scores_week_rank_idx
-  ON public.bug_jumper_scores(week_start, score DESC, accuracy DESC, submitted_at ASC);
-
 CREATE INDEX IF NOT EXISTS bug_jumper_scores_course_week_rank_idx
   ON public.bug_jumper_scores(course_id, week_start, score DESC, completion_ms ASC NULLS LAST, accuracy DESC, submitted_at ASC);
-
-CREATE INDEX IF NOT EXISTS bug_jumper_scores_user_time_idx
-  ON public.bug_jumper_scores(user_id, submitted_at DESC);
-
-CREATE INDEX IF NOT EXISTS bug_jumper_awards_week_idx
-  ON public.bug_jumper_weekly_awards(week_start DESC, rank ASC);
-
-ALTER TABLE public.bug_jumper_rounds ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bug_jumper_scores ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bug_jumper_weekly_awards ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "bug_jumper_rounds_select_own" ON public.bug_jumper_rounds;
-CREATE POLICY "bug_jumper_rounds_select_own" ON public.bug_jumper_rounds
-  FOR SELECT TO authenticated USING (user_id = auth.uid());
-
-DROP POLICY IF EXISTS "bug_jumper_scores_select" ON public.bug_jumper_scores;
-CREATE POLICY "bug_jumper_scores_select" ON public.bug_jumper_scores
-  FOR SELECT TO authenticated USING (true);
-
-DROP POLICY IF EXISTS "bug_jumper_awards_select" ON public.bug_jumper_weekly_awards;
-CREATE POLICY "bug_jumper_awards_select" ON public.bug_jumper_weekly_awards
-  FOR SELECT TO authenticated USING (true);
-
-REVOKE ALL ON public.bug_jumper_rounds, public.bug_jumper_scores, public.bug_jumper_weekly_awards
-  FROM anon, authenticated;
-GRANT SELECT ON public.bug_jumper_rounds, public.bug_jumper_scores, public.bug_jumper_weekly_awards
-  TO authenticated;
 
 CREATE OR REPLACE VIEW public.bug_jumper_current_week WITH (security_invoker = true) AS
 WITH current_week AS (
@@ -341,51 +248,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.bug_jumper_week_start(timestamptz) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.award_bug_jumper_week(date) FROM PUBLIC, anon, authenticated;
-
-GRANT EXECUTE ON FUNCTION public.bug_jumper_week_start(timestamptz) TO authenticated;
 GRANT SELECT ON public.bug_jumper_current_week, public.bug_jumper_all_time, public.bug_jumper_recent_awards
   TO authenticated;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_publication_tables
-    WHERE pubname = 'supabase_realtime'
-      AND schemaname = 'public'
-      AND tablename = 'bug_jumper_scores'
-  ) THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.bug_jumper_scores;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_publication_tables
-    WHERE pubname = 'supabase_realtime'
-      AND schemaname = 'public'
-      AND tablename = 'bug_jumper_weekly_awards'
-  ) THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.bug_jumper_weekly_awards;
-  END IF;
-END;
-$$;
-
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
-
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'cron') THEN
-    PERFORM cron.unschedule(jobname)
-    FROM cron.job
-    WHERE jobname = 'bug_jumper_weekly_awards';
-
-    PERFORM cron.schedule(
-      'bug_jumper_weekly_awards',
-      '5 23 * * 6',
-      $cron$SELECT public.award_bug_jumper_week(public.bug_jumper_week_start(now() - interval '7 days'));$cron$
-    );
-  END IF;
-END;
-$$;
 
 NOTIFY pgrst, 'reload schema';

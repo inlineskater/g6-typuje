@@ -17,6 +17,23 @@ GROUP BY user_id;
 
 GRANT SELECT ON public.hero_score_bonus TO anon, authenticated;
 
+ALTER TABLE public.bug_jumper_scores
+  ADD COLUMN IF NOT EXISTS course_id text NOT NULL DEFAULT 'legacy_random_v1',
+  ADD COLUMN IF NOT EXISTS completion_ms integer;
+
+ALTER TABLE public.bug_jumper_scores
+  DROP CONSTRAINT IF EXISTS bug_jumper_scores_completion_ms_check;
+
+ALTER TABLE public.bug_jumper_scores
+  ADD CONSTRAINT bug_jumper_scores_completion_ms_check
+  CHECK (completion_ms IS NULL OR completion_ms >= 0);
+
+ALTER TABLE public.bug_jumper_weekly_awards
+  ADD COLUMN IF NOT EXISTS course_id text NOT NULL DEFAULT 'legacy_random_v1';
+
+CREATE INDEX IF NOT EXISTS bug_jumper_scores_course_week_rank_idx
+  ON public.bug_jumper_scores(course_id, week_start, score DESC, completion_ms ASC NULLS LAST, accuracy DESC, submitted_at ASC);
+
 -- 2. Bug Jumper — current week
 CREATE OR REPLACE VIEW public.bug_jumper_current_week WITH (security_invoker = true) AS
 WITH current_week AS (
@@ -25,22 +42,24 @@ WITH current_week AS (
 round_counts AS (
   SELECT user_id, week_start, count(*)::integer AS rounds_played
   FROM public.bug_jumper_scores
+  WHERE course_id = 'bug_jumper_hard_v2'
   GROUP BY user_id, week_start
 ),
 user_best AS (
   SELECT DISTINCT ON (s.user_id)
-    s.user_id, s.nick_snapshot AS nick, s.week_start, s.score, s.hits, s.misses,
-    s.accuracy, s.max_combo, s.submitted_at,
+    s.user_id, s.nick_snapshot AS nick, s.week_start, s.course_id, s.score, s.hits, s.misses,
+    s.accuracy, s.max_combo, s.completion_ms, s.submitted_at,
     COALESCE((s.client_meta->>'base_score')::int, s.score) AS base_score,
     COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.bug_jumper_scores s
   JOIN current_week cw ON cw.week_start = s.week_start
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id AND rc.week_start = s.week_start
-  ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at
+  WHERE s.course_id = 'bug_jumper_hard_v2'
+  ORDER BY s.user_id, s.score DESC, s.completion_ms ASC NULLS LAST, s.accuracy DESC, s.submitted_at
 )
 SELECT
-  row_number() OVER (ORDER BY ub.score DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
+  row_number() OVER (ORDER BY ub.score DESC, ub.completion_ms ASC NULLS LAST, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
   ub.user_id,
   ub.nick,
   ub.week_start,
@@ -52,7 +71,9 @@ SELECT
   ub.rounds_played,
   ub.submitted_at,
   ub.base_score,
-  ub.item_bonus
+  ub.item_bonus,
+  ub.course_id,
+  ub.completion_ms
 FROM user_best ub
 ORDER BY rank;
 
@@ -61,21 +82,23 @@ CREATE OR REPLACE VIEW public.bug_jumper_all_time WITH (security_invoker = true)
 WITH round_counts AS (
   SELECT user_id, count(*)::integer AS rounds_played
   FROM public.bug_jumper_scores
+  WHERE course_id = 'bug_jumper_hard_v2'
   GROUP BY user_id
 ),
 user_best AS (
   SELECT DISTINCT ON (s.user_id)
-    s.user_id, s.nick_snapshot AS nick, s.week_start AS best_week_start, s.score, s.hits, s.misses,
-    s.accuracy, s.max_combo, s.submitted_at,
+    s.user_id, s.nick_snapshot AS nick, s.week_start AS best_week_start, s.course_id, s.score, s.hits, s.misses,
+    s.accuracy, s.max_combo, s.completion_ms, s.submitted_at,
     COALESCE((s.client_meta->>'base_score')::int, s.score) AS base_score,
     COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.bug_jumper_scores s
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id
-  ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at
+  WHERE s.course_id = 'bug_jumper_hard_v2'
+  ORDER BY s.user_id, s.score DESC, s.completion_ms ASC NULLS LAST, s.accuracy DESC, s.submitted_at
 )
 SELECT
-  row_number() OVER (ORDER BY ub.score DESC, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
+  row_number() OVER (ORDER BY ub.score DESC, ub.completion_ms ASC NULLS LAST, ub.accuracy DESC, ub.submitted_at)::integer AS rank,
   ub.user_id,
   ub.nick,
   ub.best_week_start,
@@ -87,9 +110,27 @@ SELECT
   ub.rounds_played,
   ub.submitted_at,
   ub.base_score,
-  ub.item_bonus
+  ub.item_bonus,
+  ub.course_id,
+  ub.completion_ms
 FROM user_best ub
 ORDER BY rank;
+
+CREATE OR REPLACE VIEW public.bug_jumper_recent_awards WITH (security_invoker = true) AS
+SELECT
+  id,
+  week_start,
+  user_id,
+  nick_snapshot AS nick,
+  rank,
+  score,
+  accuracy,
+  prize_coins,
+  awarded_at,
+  course_id
+FROM public.bug_jumper_weekly_awards
+WHERE course_id = 'bug_jumper_hard_v2'
+ORDER BY week_start DESC, rank ASC;
 
 -- 4. Whack-a-Boss — current week
 CREATE OR REPLACE VIEW public.whack_boss_current_week WITH (security_invoker = true) AS
@@ -190,13 +231,19 @@ BEGIN
     RAISE EXCEPTION 'week_not_closed';
   END IF;
 
-  IF EXISTS (SELECT 1 FROM public.bug_jumper_weekly_awards WHERE week_start = p_week_start) THEN
+  IF EXISTS (
+    SELECT 1
+    FROM public.bug_jumper_weekly_awards
+    WHERE week_start = p_week_start
+      AND course_id = 'bug_jumper_hard_v2'
+  ) THEN
     SELECT COALESCE(json_agg(row_to_json(a) ORDER BY a.rank), '[]'::json)
       INTO v_awards
     FROM (
       SELECT rank, nick_snapshot AS nick, score, accuracy, prize_coins
       FROM public.bug_jumper_weekly_awards
       WHERE week_start = p_week_start
+        AND course_id = 'bug_jumper_hard_v2'
       ORDER BY rank
     ) a;
 
@@ -214,10 +261,12 @@ BEGIN
       s.nick_snapshot,
       s.score,
       s.accuracy,
+      s.completion_ms,
       s.submitted_at
     FROM public.bug_jumper_scores s
     WHERE s.week_start = p_week_start
-    ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at ASC
+      AND s.course_id = 'bug_jumper_hard_v2'
+    ORDER BY s.user_id, s.score DESC, s.completion_ms ASC NULLS LAST, s.accuracy DESC, s.submitted_at ASC
   ),
   ranked AS (
     SELECT
@@ -225,7 +274,7 @@ BEGIN
       nick_snapshot,
       score,
       accuracy,
-      (ROW_NUMBER() OVER (ORDER BY score DESC, accuracy DESC, submitted_at ASC))::integer AS rank
+      (ROW_NUMBER() OVER (ORDER BY score DESC, completion_ms ASC NULLS LAST, accuracy DESC, submitted_at ASC))::integer AS rank
     FROM user_best
   ),
   winners AS (
@@ -241,8 +290,8 @@ BEGIN
   ),
   inserted AS (
     INSERT INTO public.bug_jumper_weekly_awards
-      (week_start, user_id, nick_snapshot, rank, score, accuracy, prize_coins)
-    SELECT p_week_start, user_id, nick_snapshot, rank, score, accuracy, prize_coins
+      (week_start, course_id, user_id, nick_snapshot, rank, score, accuracy, prize_coins)
+    SELECT p_week_start, 'bug_jumper_hard_v2', user_id, nick_snapshot, rank, score, accuracy, prize_coins
     FROM winners
     ON CONFLICT DO NOTHING
     RETURNING *
@@ -264,6 +313,7 @@ BEGIN
     SELECT rank, nick_snapshot AS nick, score, accuracy, prize_coins
     FROM public.bug_jumper_weekly_awards
     WHERE week_start = p_week_start
+      AND course_id = 'bug_jumper_hard_v2'
     ORDER BY rank
   ) a;
 

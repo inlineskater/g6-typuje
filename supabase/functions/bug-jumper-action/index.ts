@@ -13,9 +13,36 @@ const db = databaseUrl
   ? postgres(databaseUrl, { prepare: false, max: 4, idle_timeout: 20 })
   : null;
 
-const ROUND_DURATION_MS = 20_000;
+const COURSE = Object.freeze({
+  id: "bug_jumper_hard_v2",
+  version: 2,
+  cols: 10,
+  rows: 14,
+  laneCount: 12,
+  durationMs: 20_000,
+  inputCooldownMs: 300,
+  completionBonus: 20,
+  maxBaseScore: 32,
+  lanes: Object.freeze([
+    { dir:  1, intervalMs: 680, phaseMs: 260, bugs: [{ col: 0, len: 3 }, { col: 5, len: 3 }] },
+    { dir: -1, intervalMs: 640, phaseMs: 140, bugs: [{ col: 2, len: 3 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 610, phaseMs: 360, bugs: [{ col: 4, len: 3 }, { col: 8, len: 3 }] },
+    { dir: -1, intervalMs: 580, phaseMs: 220, bugs: [{ col: 1, len: 4 }, { col: 7, len: 3 }] },
+    { dir:  1, intervalMs: 550, phaseMs: 420, bugs: [{ col: 3, len: 3 }, { col: 8, len: 3 }] },
+    { dir: -1, intervalMs: 520, phaseMs: 160, bugs: [{ col: 0, len: 3 }, { col: 4, len: 4 }] },
+    { dir:  1, intervalMs: 500, phaseMs: 310, bugs: [{ col: 2, len: 4 }, { col: 8, len: 3 }] },
+    { dir: -1, intervalMs: 480, phaseMs:  90, bugs: [{ col: 0, len: 3 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 460, phaseMs: 360, bugs: [{ col: 1, len: 3 }, { col: 6, len: 3 }] },
+    { dir: -1, intervalMs: 440, phaseMs: 210, bugs: [{ col: 3, len: 4 }, { col: 9, len: 3 }] },
+    { dir:  1, intervalMs: 420, phaseMs: 330, bugs: [{ col: 0, len: 4 }, { col: 6, len: 3 }] },
+    { dir: -1, intervalMs: 400, phaseMs: 140, bugs: [{ col: 2, len: 4 }, { col: 7, len: 3 }] },
+  ]),
+});
+const ROUND_DURATION_MS = COURSE.durationMs;
 const ROUND_EXPIRES_SECONDS = 120;
-const MAX_SCORE_PER_ROUND = 30;
+const MAX_SCORE_PER_ROUND = COURSE.maxBaseScore;
+const MAX_MOVES_PER_ROUND = 400;
+const MOVE_TIME_TOLERANCE_MS = 12;
 const PRIZES = [100, 50, 25];
 
 function json(body, status = 200) {
@@ -39,6 +66,156 @@ function asInt(value, fallback = 0) {
 function asNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function publicCourse() {
+  return {
+    id: COURSE.id,
+    version: COURSE.version,
+    cols: COURSE.cols,
+    rows: COURSE.rows,
+    laneCount: COURSE.laneCount,
+    durationMs: COURSE.durationMs,
+    inputCooldownMs: COURSE.inputCooldownMs,
+    completionBonus: COURSE.completionBonus,
+    maxBaseScore: COURSE.maxBaseScore,
+    lanes: COURSE.lanes,
+  };
+}
+
+function mod(n, m) {
+  return ((n % m) + m) % m;
+}
+
+function bugColAt(lane, bug, elapsedMs) {
+  const interval = Math.max(1, asInt(lane.intervalMs, 1));
+  const phase = Math.max(0, asInt(lane.phaseMs, 0));
+  const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
+  return mod(asInt(bug.col, 0) + steps * asInt(lane.dir, 1), COURSE.cols);
+}
+
+function cellBlocked(row, col, elapsedMs) {
+  if (row < 1 || row > COURSE.laneCount) return false;
+  const lane = COURSE.lanes[row - 1];
+  if (!lane) return false;
+  return lane.bugs.some((bug) => {
+    const head = bugColAt(lane, bug, elapsedMs);
+    for (let i = 0; i < asInt(bug.len, 1); i += 1) {
+      if (mod(head + i, COURSE.cols) === col) return true;
+    }
+    return false;
+  });
+}
+
+function nextLaneStepAfter(lane, elapsedMs) {
+  const interval = Math.max(1, asInt(lane.intervalMs, 1));
+  const phase = Math.max(0, asInt(lane.phaseMs, 0));
+  const step = Math.floor((Math.max(0, elapsedMs) + phase) / interval) + 1;
+  return Math.max(0, step * interval - phase);
+}
+
+function firstCollisionBetween(state, fromMs, toMs) {
+  if (state.row < 1 || state.row > COURSE.laneCount) return null;
+  const start = Math.max(0, fromMs);
+  const end = Math.max(start, toMs);
+  if (cellBlocked(state.row, state.col, start)) return start;
+  const lane = COURSE.lanes[state.row - 1];
+  let t = nextLaneStepAfter(lane, start);
+  let guard = 0;
+  while (t <= end + MOVE_TIME_TOLERANCE_MS && guard < 100) {
+    if (t >= start && cellBlocked(state.row, state.col, t)) return Math.min(end, Math.max(start, t));
+    t += Math.max(1, asInt(lane.intervalMs, 1));
+    guard += 1;
+  }
+  if (cellBlocked(state.row, state.col, end)) return end;
+  return null;
+}
+
+function parseMoves(value) {
+  if (!Array.isArray(value)) throw gameError("Brak zapisu ruchów rundy.");
+  if (value.length > MAX_MOVES_PER_ROUND) throw gameError("Za dużo ruchów w rundzie.");
+  return value.map((move) => {
+    const t = Math.round(asNumber(move?.t, NaN));
+    const dr = asInt(move?.dr, 0);
+    const dc = asInt(move?.dc, 0);
+    if (!Number.isFinite(t) || t < 0 || t > COURSE.durationMs + 1000) {
+      throw gameError("Nieprawidłowy czas ruchu.");
+    }
+    const manhattan = Math.abs(dr) + Math.abs(dc);
+    if (manhattan !== 1 || Math.abs(dr) > 1 || Math.abs(dc) > 1) {
+      throw gameError("Nieprawidłowy ruch.");
+    }
+    return { t, dr, dc };
+  });
+}
+
+function replayMoves(moves, untilMs = COURSE.durationMs) {
+  const state = {
+    row: 0,
+    col: Math.floor(COURSE.cols / 2),
+    bestRow: 0,
+    completed: false,
+    completionMs: null,
+    collisions: 0,
+    lastMs: 0,
+    nextInputAt: 0,
+  };
+
+  function resolveUntil(toMs) {
+    if (state.completed) return;
+    const hitAt = firstCollisionBetween(state, state.lastMs, toMs);
+    if (hitAt != null) {
+      state.collisions += 1;
+      state.row = 0;
+      state.col = Math.floor(COURSE.cols / 2);
+      state.lastMs = hitAt;
+    }
+    state.lastMs = Math.max(state.lastMs, toMs);
+  }
+
+  let previousMoveAt = -1;
+  for (const move of moves) {
+    if (move.t + MOVE_TIME_TOLERANCE_MS < previousMoveAt) {
+      throw gameError("Ruchy nie są uporządkowane.");
+    }
+    previousMoveAt = move.t;
+    resolveUntil(move.t);
+    if (state.completed) break;
+    if (move.t + MOVE_TIME_TOLERANCE_MS < state.nextInputAt) {
+      throw gameError("Ruchy są za szybkie.");
+    }
+    state.nextInputAt = move.t + COURSE.inputCooldownMs;
+
+    const newRow = state.row + move.dr;
+    const newCol = Math.max(0, Math.min(COURSE.cols - 1, state.col + move.dc));
+    state.col = newCol;
+    if (newRow < 0 || newRow > COURSE.rows - 1) continue;
+
+    if (newRow >= COURSE.rows - 1) {
+      state.row = COURSE.rows - 1;
+      state.bestRow = COURSE.laneCount;
+      state.completed = true;
+      state.completionMs = move.t;
+      break;
+    }
+
+    state.row = newRow;
+    if (move.dr > 0 && newRow >= 1 && newRow <= COURSE.laneCount) {
+      state.bestRow = Math.max(state.bestRow, newRow);
+    }
+    resolveUntil(move.t);
+  }
+
+  if (!state.completed) resolveUntil(Math.min(COURSE.durationMs, Math.max(0, untilMs)));
+  const baseScore = state.completed ? COURSE.maxBaseScore : Math.min(COURSE.laneCount, state.bestRow);
+  return {
+    baseScore,
+    bestRow: Math.min(COURSE.laneCount, state.bestRow),
+    completed: state.completed,
+    completionMs: state.completed ? Math.round(state.completionMs) : null,
+    collisions: state.collisions,
+    moveCount: moves.length,
+  };
 }
 
 async function requireUser(req) {
@@ -95,6 +272,8 @@ function mapRows(rows) {
     max_combo: asInt(row.max_combo),
     rounds_played: asInt(row.rounds_played),
     accuracy: asNumber(row.accuracy),
+    course_id: row.course_id ?? null,
+    completion_ms: row.completion_ms == null ? null : asInt(row.completion_ms),
   }));
 }
 
@@ -105,6 +284,7 @@ function mapAwards(rows) {
     score: asInt(row.score),
     prize_coins: asInt(row.prize_coins),
     accuracy: asNumber(row.accuracy),
+    course_id: row.course_id ?? null,
   }));
 }
 
@@ -151,6 +331,10 @@ async function loadState(userId) {
   return {
     profile: { id: profile.id, nick: profile.nick, coins: asInt(profile.coins) },
     weekStart: weekRow?.week_start,
+    courseId: COURSE.id,
+    courseVersion: COURSE.version,
+    course: publicCourse(),
+    maxBaseScore: COURSE.maxBaseScore,
     roundDurationMs: ROUND_DURATION_MS,
     prizes: PRIZES,
     weekly: mapRows(weekly),
@@ -183,6 +367,9 @@ async function startRound(userId) {
     ...(await loadState(userId)),
     round: {
       id: round.id,
+      courseId: COURSE.id,
+      courseVersion: COURSE.version,
+      course: publicCourse(),
       durationMs: ROUND_DURATION_MS,
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
@@ -195,6 +382,9 @@ async function submitRound(userId, body) {
   if (!db) throw new Error("Database is not configured.");
   const roundId = String(body.roundId ?? "");
   if (!roundId) throw gameError("Brak rundy do zapisania.");
+  const courseId = String(body.courseId ?? "");
+  if (courseId !== COURSE.id) throw gameError("Nieprawidłowa wersja planszy.");
+  const moves = parseMoves(body.moves);
   const effect = await getStrongestHeroEffect(db, userId, "bug_jumper");
 
   const score = await db.begin(async (tx) => {
@@ -209,13 +399,16 @@ async function submitRound(userId, body) {
     if (!round) throw gameError("Runda nie istnieje.");
     if (round.submitted_at) throw gameError("Ta runda została już zapisana.");
     if (new Date(round.expires_at).getTime() < Date.now()) throw gameError("Runda wygasła.");
+    const actualElapsed = Date.now() - new Date(round.started_at).getTime();
+    const replay = replayMoves(moves, Math.min(asInt(round.duration_ms, ROUND_DURATION_MS), Math.max(0, actualElapsed)));
     const minSubmitAt = new Date(round.started_at).getTime() + asInt(round.duration_ms, ROUND_DURATION_MS) - 750;
-    if (Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
+    if (!replay.completed && Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
+    if (replay.completed && replay.completionMs > actualElapsed + 1000) throw gameError("Runda jeszcze trwa.");
 
-    const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.score, 0)));
-    const hits = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.hits, baseScore)));
-    const misses = Math.max(0, Math.min(999, asInt(body.misses, 0)));
-    const maxCombo = Math.max(0, Math.min(hits, asInt(body.maxCombo, 0)));
+    const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.baseScore));
+    const hits = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.bestRow));
+    const misses = Math.max(0, Math.min(999, replay.collisions));
+    const maxCombo = replay.completed ? 1 : 0;
     const bonus = effect?.effect_type === "score_bonus"
       ? Math.max(0, asInt(effect.effect_value, 0))
       : 0;
@@ -227,8 +420,7 @@ async function submitRound(userId, body) {
       value: Number(effect.effect_value),
       bonus: scoreValue - baseScore,
     } : null;
-    const attempts = hits + misses;
-    const accuracy = attempts > 0 ? Math.round((hits / attempts) * 10000) / 100 : 0;
+    const accuracy = Math.round((baseScore / MAX_SCORE_PER_ROUND) * 10000) / 100;
 
     await tx`
       update public.bug_jumper_rounds
@@ -238,20 +430,48 @@ async function submitRound(userId, body) {
 
     const [inserted] = await tx`
       insert into public.bug_jumper_scores
-        (round_id, user_id, nick_snapshot, week_start, score, hits, misses, accuracy, max_combo, duration_ms, client_meta)
+        (
+          round_id,
+          user_id,
+          nick_snapshot,
+          week_start,
+          course_id,
+          score,
+          hits,
+          misses,
+          accuracy,
+          max_combo,
+          duration_ms,
+          completion_ms,
+          client_meta
+        )
       values
         (
           ${round.id},
           ${userId},
           ${round.nick_snapshot},
           public.bug_jumper_week_start(now()),
+          ${COURSE.id},
           ${scoreValue},
           ${hits},
           ${misses},
           ${accuracy},
           ${maxCombo},
           ${asInt(round.duration_ms, ROUND_DURATION_MS)},
-          ${JSON.stringify({ event_count: hits + misses, server_validated: false, base_score: baseScore, item_effect: itemEffect })}::jsonb
+          ${replay.completionMs},
+          ${JSON.stringify({
+            course_id: COURSE.id,
+            course_version: COURSE.version,
+            move_count: replay.moveCount,
+            client_score: asInt(body.score, 0),
+            server_validated: true,
+            completed: replay.completed,
+            completion_ms: replay.completionMs,
+            best_row: replay.bestRow,
+            collisions: replay.collisions,
+            base_score: baseScore,
+            item_effect: itemEffect,
+          })}::jsonb
         )
       returning *
     `;
@@ -268,6 +488,8 @@ async function submitRound(userId, body) {
       misses: asInt(score.misses),
       accuracy: asNumber(score.accuracy),
       max_combo: asInt(score.max_combo),
+      course_id: score.course_id,
+      completion_ms: score.completion_ms == null ? null : asInt(score.completion_ms),
       submitted_at: score.submitted_at,
     },
   };

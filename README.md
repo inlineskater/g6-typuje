@@ -47,6 +47,12 @@ Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni"):
 2. Deploy `supabase/functions/bug-jumper-action` and `supabase/functions/flappy-pants-action` with Supabase CLI or from the Supabase dashboard.
 3. Confirm each game's `pg_cron` weekly-award job exists (`bug_jumper_weekly_awards`, `flappy_pants_weekly_awards`) so the weekly top 3 are paid automatically.
 
+Existing project Bug Jumper hard-course rollout:
+
+1. Paste and run `supabase/bug-jumper-hard-v2.sql` in Supabase SQL Editor.
+2. Deploy the updated `supabase/functions/bug-jumper-action`.
+3. Publish the updated `index.html` so the June 8, 2026 season override and fixed hard course are live together.
+
 ## How It Works
 
 - Auth: nick + 4-digit PIN. First login creates the account.
@@ -56,7 +62,7 @@ Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni"):
 - Resolution: market creator or `admin` nick can resolve a market.
 - Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
 - Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
-- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives). Each pays the weekly top 3 100/50/25 coins.
+- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives). Bug Jumper's hard-course season uses the same fixed 10x14 course for everyone. Each pays the weekly top 3 100/50/25 coins.
 - Leaderboard: cash plus open position value.
 
 ## Security Note

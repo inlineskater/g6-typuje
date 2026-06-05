@@ -1533,7 +1533,7 @@
     .bj-arena {
       border: 2px solid #00ff66; border-radius: 6px;
       background: #0a0a1a; overflow: hidden;
-      aspect-ratio: 1 / 1; width: 100%; max-width: 640px; margin: 0 auto;
+      aspect-ratio: 10 / 14; width: 100%; max-width: 520px; margin: 0 auto;
       user-select: none; touch-action: none;
       box-shadow: 0 0 15px rgba(0,255,100,0.3), inset 0 0 10px rgba(0,255,100,0.1);
     }
@@ -2583,6 +2583,7 @@
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
     <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
     <button class="nav-tab" data-tab="leaderboard">🏆 Ranking</button>
+    <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
   </nav>
 
   <div id="tab-markets">
@@ -2974,7 +2975,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Bug Jumper</h2>
-                <p class="page-sub">20 sekund — przeskakuj przez linie bloków jak najwyżej i jak najczęściej.</p>
+                <p class="page-sub">20 sekund — stała, większa plansza dla wszystkich. Dotarcie na górę kończy rundę.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -2987,9 +2988,9 @@
               <div class="bj-rules-title">Jak grać</div>
               <ul>
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera <strong>▲</strong> po siatce.</li>
-                <li><strong>+1 pkt za każdą nową linię</strong> przekroczoną w górę — LINIA 1, 2, 3 i góra dają po 1 pkt (tylko raz na przebieg; cofnięcie i ponowne przejście nie liczy).</li>
-                <li>Jeden pełny przebieg (dół → góra) = <strong>4 pkt</strong>, po czym wracasz automatycznie na dół.</li>
-                <li>Zderzenie z blokiem = wracasz na START, ale <strong>zdobyte punkty zostają</strong>. Bez życ — graj ile razy chcesz przez 20 sekund.</li>
+                <li><strong>+1 pkt za najwyższą nową linię</strong> przekroczoną w górę. Cofnięcie i ponowne wejście na tę samą linię nie daje punktów.</li>
+                <li>Dotarcie do <strong>GÓRY</strong> kończy rundę od razu i daje <strong>32 pkt</strong> przed bonusem z przedmiotu.</li>
+                <li>Zderzenie z blokiem = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>.</li>
               </ul>
             </div>
 
@@ -3002,6 +3003,10 @@
                 <div class="bj-stat-label">Wynik</div>
                 <div class="bj-stat-value" id="bj-score">0</div>
               </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Postęp</div>
+                <div class="bj-stat-value" id="bj-progress">0/12</div>
+              </div>
             </div>
 
             <div class="bj-arena" id="bj-arena">
@@ -3010,7 +3015,7 @@
 
             <div class="bj-actions">
               <button class="btn-primary bj-start-btn" id="bj-start-btn">Start rundy</button>
-              <div class="bj-status" id="bj-status">Użyj strzałek. Wspinaj się, zbieraj punkty — blok tylko cofa na START.</div>
+              <div class="bj-status" id="bj-status">Użyj strzałek. Stała plansza jest taka sama dla wszystkich.</div>
             </div>
           </section>
 
@@ -3123,6 +3128,12 @@
   <div id="tab-flappy-test" class="hidden">
     <main id="flappy-test-main">
       <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy — „3 Pary Spodni" dostępne dla wszystkich, niezależnie od sezonu.</p>
+    </main>
+  </div>
+
+  <div id="tab-bug-jumper-test" class="hidden">
+    <main id="bug-jumper-test-main">
+      <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy admina — Bug Jumper Hard Course, bez zapisu wyniku.</p>
     </main>
   </div>
 
@@ -3781,8 +3792,14 @@ function showApp() {
   hide(screenLogin); show(screenApp);
   setText(headerNick, me.nick);
   setText(headerCoins, me.coins);
+  updateAdminTestTabs();
   switchTab('markets');
   setupRealtime();
+}
+
+function updateAdminTestTabs() {
+  const bugTestNav = document.getElementById('nav-bug-jumper-test');
+  if (bugTestNav) bugTestNav.style.display = me?.nick === 'admin' ? '' : 'none';
 }
 
 document.querySelectorAll('.nav-tab').forEach(btn =>
@@ -3804,6 +3821,7 @@ document.addEventListener('click', () => {
 });
 
 let fpPanelHome = null;
+let bjPanelHome = null;
 function restoreFlappyPanelHome() {
   const panel = document.getElementById('seasonal-game-flappy-pants');
   if (panel && fpPanelHome && panel.parentElement !== fpPanelHome) {
@@ -3812,10 +3830,20 @@ function restoreFlappyPanelHome() {
   }
 }
 
+function restoreBugJumperPanelHome() {
+  const panel = document.getElementById('seasonal-game-bug-jumper');
+  if (panel && bjPanelHome && panel.parentElement !== bjPanelHome) {
+    hide(panel);
+    bjPanelHome.appendChild(panel);
+  }
+}
+
 function switchTab(tab) {
+  if (tab === 'bug-jumper-test' && me?.nick !== 'admin') tab = 'markets';
   const previousTab = activeTab;
   if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); }
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
+  if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
@@ -3832,7 +3860,9 @@ function switchTab(tab) {
   const tG = document.getElementById('tab-garden');
   const tH = document.getElementById('tab-heroes');
   const tFp = document.getElementById('tab-flappy-test');
+  const tBj = document.getElementById('tab-bug-jumper-test');
   hide(tFp);
+  hide(tBj);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
@@ -3872,6 +3902,17 @@ function switchTab(tab) {
     }
     show(tFp);
     loadFlappyPantsState();
+  } else if (tab === 'bug-jumper-test') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    const panel = document.getElementById('seasonal-game-bug-jumper');
+    const testMain = document.getElementById('bug-jumper-test-main');
+    if (panel && testMain) {
+      if (!bjPanelHome) bjPanelHome = panel.parentElement;
+      if (panel.parentElement !== testMain) testMain.appendChild(panel);
+      show(panel);
+    }
+    show(tBj);
+    prepareBugJumperAdminTest();
   }
 }
 
@@ -5163,18 +5204,28 @@ async function loadSeasonHistory() {
   try {
     const current = getCurrentSeasonalEntry();
     const currentDbWeekStart = addDaysStr(current.weekStart, -1); // JS Monday → DB Sunday
+    const liveScoreColumns = current.gameType === 'bug_jumper'
+      ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
+      : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
+    let liveScoresQuery = sb.from(current.gameType + '_scores')
+      .select(liveScoreColumns)
+      .eq('week_start', currentDbWeekStart)
+      .order('score', { ascending: false });
+    if (current.gameType === 'bug_jumper') {
+      liveScoresQuery = liveScoresQuery
+        .eq('course_id', BUG_JUMPER_HARD_COURSE_ID)
+        .order('completion_ms', { ascending: true, nullsFirst: false });
+    }
+    liveScoresQuery = liveScoresQuery
+      .order('accuracy', { ascending: false })
+      .order('submitted_at', { ascending: true })
+      .limit(20);
 
     const [wbRes, bjRes, fpRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from(current.gameType + '_scores')
-        .select('user_id,nick_snapshot,score,accuracy,submitted_at,client_meta')
-        .eq('week_start', currentDbWeekStart)
-        .order('score', { ascending: false })
-        .order('accuracy', { ascending: false })
-        .order('submitted_at', { ascending: true })
-        .limit(20),
+      liveScoresQuery,
     ]);
 
     // Build pending entries from live scores (dedup by user, keep best score)
@@ -7077,11 +7128,15 @@ async function loadSlotsHistory() {
 // ── Seasonal Game Framework ───────────────────────────────────────────────
 
 const SEASONAL_ANCHOR_WEEK_START = '2026-05-18';
+const BUG_JUMPER_HARD_COURSE_ID = 'bug_jumper_hard_v2';
 const SEASONAL_ROTATION = [
   { gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
   { gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
   { gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },
 ];
+const SEASONAL_OVERRIDES = {
+  '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
+};
 
 function parseWeekStartDate(weekStartStr) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStartStr || '');
@@ -7102,7 +7157,8 @@ function seasonalEntryForWeekStart(weekStart) {
   if (!anchor || !week) return { ...SEASONAL_ROTATION[0], weekStart, seasonNum: 1 };
   const idx = Math.max(0, Math.round((week.getTime() - anchor.getTime()) / (7 * 86400000)));
   const base = SEASONAL_ROTATION[idx % SEASONAL_ROTATION.length];
-  return { ...base, weekStart, seasonNum: idx + 1 };
+  const override = SEASONAL_OVERRIDES[weekStart];
+  return { ...base, ...(override || {}), weekStart, seasonNum: idx + 1 };
 }
 
 function recentSeasonalEntries(limit = null) {
@@ -7649,44 +7705,59 @@ if (wbArena) {
 
 // ── Bug Jumper (canvas) ───────────────────────────────────────────────────
 
-const BJ_COLS        = 8;
-const BJ_ROWS        = 8;        // 0=start, 1-6=lanes, 7=prod
-const BJ_LANE_COUNT  = 6;
-const BJ_CELL        = 48;       // square cell px
-const BJ_CS_W        = BJ_COLS * BJ_CELL;  // 384
-const BJ_CS_H        = BJ_ROWS * BJ_CELL;  // 384
-const BJ_DURATION_MS = 20000;
+const BJ_COURSE = Object.freeze({
+  id: BUG_JUMPER_HARD_COURSE_ID,
+  version: 2,
+  cols: 10,
+  rows: 14,
+  laneCount: 12,
+  durationMs: 20000,
+  inputCooldownMs: 300,
+  completionBonus: 20,
+  maxBaseScore: 32,
+  lanes: Object.freeze([
+    { dir:  1, intervalMs: 680, phaseMs: 260, bugs: [{ col: 0, len: 3 }, { col: 5, len: 3 }] },
+    { dir: -1, intervalMs: 640, phaseMs: 140, bugs: [{ col: 2, len: 3 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 610, phaseMs: 360, bugs: [{ col: 4, len: 3 }, { col: 8, len: 3 }] },
+    { dir: -1, intervalMs: 580, phaseMs: 220, bugs: [{ col: 1, len: 4 }, { col: 7, len: 3 }] },
+    { dir:  1, intervalMs: 550, phaseMs: 420, bugs: [{ col: 3, len: 3 }, { col: 8, len: 3 }] },
+    { dir: -1, intervalMs: 520, phaseMs: 160, bugs: [{ col: 0, len: 3 }, { col: 4, len: 4 }] },
+    { dir:  1, intervalMs: 500, phaseMs: 310, bugs: [{ col: 2, len: 4 }, { col: 8, len: 3 }] },
+    { dir: -1, intervalMs: 480, phaseMs:  90, bugs: [{ col: 0, len: 3 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 460, phaseMs: 360, bugs: [{ col: 1, len: 3 }, { col: 6, len: 3 }] },
+    { dir: -1, intervalMs: 440, phaseMs: 210, bugs: [{ col: 3, len: 4 }, { col: 9, len: 3 }] },
+    { dir:  1, intervalMs: 420, phaseMs: 330, bugs: [{ col: 0, len: 4 }, { col: 6, len: 3 }] },
+    { dir: -1, intervalMs: 400, phaseMs: 140, bugs: [{ col: 2, len: 4 }, { col: 7, len: 3 }] },
+  ]),
+});
 
-// Grid-step obstacles: intervals fixed, direction & size randomized each round
-const BJ_LANE_INTERVALS = [900, 850, 800, 750, 700, 650];
-
-function bjInitLanes() {
-  let dirs;
-  do {
-    dirs = BJ_LANE_INTERVALS.map(() => Math.random() < 0.5 ? 1 : -1);
-  } while (dirs.filter(d => d === 1).length < 2 || dirs.filter(d => d === -1).length < 2);
-  return BJ_LANE_INTERVALS.map((interval, i) => ({
-    dir: dirs[i], interval,
-    nextStep: 0,
-    bugs: [{ col: Math.floor(Math.random() * BJ_COLS), len: Math.random() < 0.5 ? 1 : 2 }],
-  }));
-}
+const BJ_COLS        = BJ_COURSE.cols;
+const BJ_ROWS        = BJ_COURSE.rows;       // 0=start, 1-12=lanes, 13=finish
+const BJ_LANE_COUNT  = BJ_COURSE.laneCount;
+const BJ_CELL        = 40;
+const BJ_CS_W        = BJ_COLS * BJ_CELL;    // 400
+const BJ_CS_H        = BJ_ROWS * BJ_CELL;    // 560
+const BJ_DURATION_MS = BJ_COURSE.durationMs;
+const BJ_START_COL   = Math.floor(BJ_COLS / 2);
 
 function newBugJumperRuntime() {
   return {
     playing: false, submitting: false, archiveMode: false,
     roundId: null,
+    courseId: BJ_COURSE.id,
+    course: BJ_COURSE,
     score: 0,
-    playerCol: Math.floor(BJ_COLS / 2),
+    playerCol: BJ_START_COL,
     playerRow: 0,
-    lanes: bjInitLanes(),
-    speedMult: 1.0, runCount: 0,
+    bestRowReached: 0,
+    completed: false,
+    completionMs: null,
+    collisions: 0,
+    moveLog: [],
     durationMs: BJ_DURATION_MS,
     startPerf: 0, rafId: null,
-    invincible: false, invincEnd: 0,
     hitFlash: 0, prodFlash: 0,
     inputCooldown: 0,
-    maxRowReached: 0,
     toasts: [],
   };
 }
@@ -7694,23 +7765,71 @@ function newBugJumperRuntime() {
 let bjCtx = null;
 
 function bjInitCanvas() {
-  if (bjCtx) return;
   const canvas = document.getElementById('bj-canvas');
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
   const DPR = window.devicePixelRatio || 1;
   const w = Math.round((rect.width || BJ_CS_W) * DPR);
   const h = Math.round((rect.height || BJ_CS_H) * DPR);
+  if (bjCtx && canvas.width === w && canvas.height === h) return;
   canvas.width  = w;
   canvas.height = h;
   bjCtx = canvas.getContext('2d');
   bjCtx.scale(w / BJ_CS_W, h / BJ_CS_H);
 }
 
+function bjMod(n, m) {
+  return ((n % m) + m) % m;
+}
+
+function bjElapsed(now = performance.now()) {
+  const rt = bugJumperRuntime;
+  if (!rt?.startPerf) return 0;
+  return Math.max(0, Math.min(rt.durationMs, now - rt.startPerf));
+}
+
+function bjBugColAt(lane, bug, elapsedMs) {
+  const interval = Math.max(1, Number(lane.intervalMs) || 1);
+  const phase = Math.max(0, Number(lane.phaseMs) || 0);
+  const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
+  return bjMod(Number(bug.col) + steps * Number(lane.dir || 1), BJ_COLS);
+}
+
+function bjCellBlocked(row, col, elapsedMs, course = BJ_COURSE) {
+  if (row < 1 || row > course.laneCount) return false;
+  const lane = course.lanes[row - 1];
+  if (!lane) return false;
+  return lane.bugs.some(bug => {
+    const head = bjBugColAt(lane, bug, elapsedMs);
+    for (let i = 0; i < bug.len; i++) {
+      if (bjMod(head + i, course.cols) === col) return true;
+    }
+    return false;
+  });
+}
+
+function bjBaseScore(rt = bugJumperRuntime) {
+  if (!rt) return 0;
+  return rt.completed ? BJ_COURSE.maxBaseScore : Math.min(BJ_LANE_COUNT, rt.bestRowReached);
+}
+
+function bjSetStats(remainingMs = null) {
+  const rt = bugJumperRuntime;
+  const remaining = remainingMs == null
+    ? (rt?.playing ? Math.max(0, rt.durationMs - bjElapsed()) : BJ_DURATION_MS)
+    : remainingMs;
+  if (bjTimeEl) bjTimeEl.textContent = Math.max(0, remaining / 1000).toFixed(1);
+  if (bjScoreEl) bjScoreEl.textContent = String(bjBaseScore(rt));
+  const progressEl = document.getElementById('bj-progress');
+  if (progressEl) progressEl.textContent = String(rt?.bestRowReached || 0) + '/' + BJ_LANE_COUNT;
+}
+
 function bjDraw(now) {
   const ctx = bjCtx;
   if (!ctx) return;
   const rt = bugJumperRuntime;
+  const course = rt?.course || BJ_COURSE;
+  const elapsed = rt ? bjElapsed(now) : 0;
   const W = BJ_CS_W, H = BJ_CS_H, C = BJ_CELL;
 
   // ── Row backgrounds (dark retro) ──
@@ -7742,7 +7861,7 @@ function bjDraw(now) {
   for (let row = 0; row < BJ_ROWS; row++) {
     let label;
     if (row === 0) label = 'START';
-    else if (row === BJ_ROWS - 1) label = '↺ GÓRA';
+    else if (row === BJ_ROWS - 1) label = 'GÓRA';
     else label = 'LINIA ' + row;
     ctx.fillStyle = row === BJ_ROWS - 1 ? '#00ff66' : 'rgba(0,255,100,0.4)';
     ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
@@ -7750,12 +7869,13 @@ function bjDraw(now) {
 
   if (rt) {
     // ── Obstacles — bug emoji on colored cells ──
-    rt.lanes.forEach((lane, li) => {
+    course.lanes.forEach((lane, li) => {
       const row = li + 1;
       const ry = (BJ_ROWS - 1 - row) * C;
       lane.bugs.forEach(bug => {
+        const head = bjBugColAt(lane, bug, elapsed);
         for (let i = 0; i < bug.len; i++) {
-          const cellCol = ((bug.col + i) + BJ_COLS) % BJ_COLS;
+          const cellCol = bjMod(head + i, BJ_COLS);
           const bx = cellCol * C;
           ctx.fillStyle = i === 0 ? '#cc2200' : '#993300';
           ctx.fillRect(bx, ry, C, C);
@@ -7772,17 +7892,14 @@ function bjDraw(now) {
     });
 
     // ── Player — cyan cell with white ▲ ──
+    const px = rt.playerCol * C, py = (BJ_ROWS - 1 - rt.playerRow) * C;
     const hitAge = now - rt.hitFlash;
-    const blinking = rt.invincible && now < rt.invincEnd && Math.floor(hitAge / 70) % 2 === 1;
-    if (!blinking) {
-      const px = rt.playerCol * C, py = (BJ_ROWS - 1 - rt.playerRow) * C;
-      ctx.fillStyle = '#00ffff';
-      ctx.fillRect(px, py, C, C);
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${Math.round(C * 0.5)}px sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('▲', px + C / 2, py + C / 2);
-    }
+    ctx.fillStyle = hitAge < 180 ? '#ff4444' : '#00ffff';
+    ctx.fillRect(px, py, C, C);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(C * 0.5)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('▲', px + C / 2, py + C / 2);
   }
 
   // ── Score toasts (neon yellow) ──
@@ -7811,7 +7928,7 @@ function bjDraw(now) {
     ctx.fillStyle = '#00ff66';
     ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('GOTOWY?', W / 2, H / 2 - 14);
+    ctx.fillText('HARD V2', W / 2, H / 2 - 14);
     ctx.font = '12px monospace';
     ctx.fillStyle = 'rgba(0,255,100,0.5)';
     ctx.fillText('↑  ↓  ←  →  strzałki', W / 2, H / 2 + 12);
@@ -7840,6 +7957,13 @@ async function invokeBugJumper(payload) {
   if (error) throw new Error(error.message || 'Nie udało się połączyć z Bug Jumper.');
   if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Bug Jumper.');
   return data;
+}
+
+function bjCourseFromServer(course) {
+  if (course?.id !== BJ_COURSE.id || Number(course?.version) !== BJ_COURSE.version) {
+    console.warn('Unexpected Bug Jumper course from server; using bundled hard course.');
+  }
+  return BJ_COURSE;
 }
 
 async function loadBugJumperState(showSpinner = true) {
@@ -7878,7 +8002,7 @@ function renderBugJumperState(data) {
   if (!bugJumperRuntime?.playing && bjStatus) {
     bjStatus.textContent = data.myWeekly
       ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
-      : 'Użyj strzałek kursora. Najlepszy wynik tygodnia trafia do rankingu.';
+      : 'Użyj strzałek kursora. Hard Course jest taki sam w każdej rundzie.';
   }
 }
 
@@ -7917,53 +8041,44 @@ function renderBugJumperAwards(wrap, awards) {
   }));
 }
 
-function bjMoveBugs(ts) {
+function bjCheckCollision(elapsedMs = bjElapsed()) {
   const rt = bugJumperRuntime;
-  if (!rt) return;
-  rt.lanes.forEach(lane => {
-    if (ts < lane.nextStep) return;
-    lane.nextStep = ts + lane.interval / rt.speedMult;
-    lane.bugs.forEach(bug => {
-      bug.col = ((bug.col + lane.dir) + BJ_COLS) % BJ_COLS;
-    });
-  });
-}
-
-function bjCheckCollision() {
-  const rt = bugJumperRuntime;
-  if (!rt || rt.invincible) return false;
+  if (!rt) return false;
   const row = rt.playerRow;
   if (row < 1 || row >= BJ_ROWS - 1) return false;
-  const lane = rt.lanes[row - 1];
-  return lane.bugs.some(bug => {
-    for (let i = 0; i < bug.len; i++) {
-      if (((bug.col + i) + BJ_COLS) % BJ_COLS === rt.playerCol) return true;
-    }
-    return false;
-  });
+  return bjCellBlocked(row, rt.playerCol, elapsedMs, rt.course);
 }
 
-function bjPlayerHit() {
+function bjPlayerHit(elapsedMs = bjElapsed()) {
   const rt = bugJumperRuntime;
-  if (!rt || rt.invincible) return;
+  if (!rt) return;
   const hitRow = rt.playerRow;
   const hitCol = rt.playerCol;
   rt.hitFlash      = performance.now();
-  rt.invincible    = true;
-  rt.invincEnd     = performance.now() + 1500;
+  rt.collisions   += 1;
   rt.playerRow     = 0;
-  rt.playerCol     = Math.floor(BJ_COLS / 2);
-  rt.maxRowReached = 0;
+  rt.playerCol     = BJ_START_COL;
   rt.toasts.push({ text: 'HIT! → START', col: hitCol, row: hitRow, born: performance.now(), color: '#cc0000' });
+  bjSetStats(Math.max(0, rt.durationMs - elapsedMs));
+}
+
+function bjResolveCollisionAt(elapsedMs = bjElapsed()) {
+  if (bjCheckCollision(elapsedMs)) {
+    bjPlayerHit(elapsedMs);
+    return true;
+  }
+  return false;
 }
 
 function bjMovePlayer(dr, dc) {
   const rt = bugJumperRuntime;
-  if (!rt?.playing) return;
+  if (!rt?.playing || rt.completed) return;
   const now = performance.now();
   if (now < rt.inputCooldown) return;
-  rt.inputCooldown = now + 130;
-  if (rt.invincible && now < rt.invincEnd) return;
+  const elapsed = bjElapsed(now);
+  bjResolveCollisionAt(elapsed);
+  rt.inputCooldown = now + BJ_COURSE.inputCooldownMs;
+  rt.moveLog.push({ t: Math.round(elapsed), dr, dc });
 
   const newRow = rt.playerRow + dr;
   const newCol = Math.max(0, Math.min(BJ_COLS - 1, rt.playerCol + dc));
@@ -7971,27 +8086,28 @@ function bjMovePlayer(dr, dc) {
   if (newRow < 0 || newRow > BJ_ROWS - 1) return;
 
   if (newRow >= BJ_ROWS - 1) {
-    if (newRow > rt.maxRowReached) {
-      rt.score += 1;
-      rt.toasts.push({ text: String(rt.score), col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
-      if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
-    }
-    rt.runCount++;
-    rt.speedMult = Math.min(2.5, 1.0 + rt.runCount * 0.15);
+    rt.bestRowReached = BJ_LANE_COUNT;
+    rt.completed = true;
+    rt.completionMs = Math.round(elapsed);
+    rt.score = BJ_COURSE.maxBaseScore;
     rt.prodFlash = now;
-    rt.maxRowReached = 0;
-    rt.playerRow = 0;
-    rt.playerCol = Math.floor(BJ_COLS / 2);
+    rt.playerRow = BJ_ROWS - 1;
+    rt.toasts.push({ text: 'META', col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
+    bjSetStats(0);
+    bjDraw(now);
+    finishBugJumperRound();
     return;
   }
 
-  if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT && newRow > rt.maxRowReached) {
-    rt.maxRowReached = newRow;
-    rt.score += 1;
+  if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT && newRow > rt.bestRowReached) {
+    rt.bestRowReached = newRow;
+    rt.score = bjBaseScore(rt);
     rt.toasts.push({ text: String(rt.score), col: rt.playerCol, row: newRow, born: now, color: '#0055cc' });
   }
   rt.playerRow = newRow;
-  if (bjScoreEl) bjScoreEl.textContent = String(rt.score);
+  bjResolveCollisionAt(elapsed);
+  bjSetStats(Math.max(0, rt.durationMs - elapsed));
+  bjDraw(now);
 }
 
 function bjTick(ts) {
@@ -7999,14 +8115,11 @@ function bjTick(ts) {
   if (!rt?.playing) return;
 
   const remaining = rt.durationMs - (ts - rt.startPerf);
-  if (bjTimeEl) bjTimeEl.textContent = Math.max(0, remaining / 1000).toFixed(1);
+  bjSetStats(remaining);
   if (remaining <= 0) { finishBugJumperRound(); return; }
 
-  if (rt.invincible && ts >= rt.invincEnd) rt.invincible = false;
-
-  bjMoveBugs(ts);
-  if (rt.playerRow >= 1 && rt.playerRow <= BJ_LANE_COUNT && !rt.invincible) {
-    if (bjCheckCollision()) bjPlayerHit();
+  if (rt.playerRow >= 1 && rt.playerRow <= BJ_LANE_COUNT) {
+    bjResolveCollisionAt(bjElapsed(ts));
   }
   bjDraw(ts);
   rt.rafId = requestAnimationFrame(bjTick);
@@ -8017,37 +8130,69 @@ function stopBugJumperRound() {
   if (rt?.rafId) cancelAnimationFrame(rt.rafId);
   bugJumperRuntime = newBugJumperRuntime();
   if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
-  if (bjTimeEl)  bjTimeEl.textContent  = '20.0';
-  if (bjScoreEl) bjScoreEl.textContent = '0';
+  bjSetStats(BJ_DURATION_MS);
   bjInitCanvas();
   bjDraw(performance.now());
 }
 
-function beginBugJumperRound(round) {
+function beginBugJumperRound(round, course, options = {}) {
   stopBugJumperRound();
   bugJumperRuntime = newBugJumperRuntime();
   const rt = bugJumperRuntime;
   rt.playing    = true;
   rt.roundId    = round.id;
+  rt.archiveMode = !!options.archiveMode;
+  rt.courseId   = round.courseId || course?.id || BJ_COURSE.id;
+  rt.course     = bjCourseFromServer(course || round.course);
   rt.durationMs = round.durationMs || BJ_DURATION_MS;
   const serverElapsed = round.startedAt && round.serverNow
     ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
     : 0;
   rt.startPerf = performance.now() - serverElapsed;
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Runda trwa'; }
-  if (bjStatus) bjStatus.textContent = '↑ ↓ ← → — strzałki. Wspinaj się jak najwyżej!';
+  if (bjStatus) {
+    bjStatus.textContent = rt.archiveMode
+      ? 'Tryb testowy admina — wynik nie zostanie zapisany.'
+      : '↑ ↓ ← → — przejdź stałą planszę do góry.';
+  }
+  bjSetStats(rt.durationMs - serverElapsed);
   rt.rafId = requestAnimationFrame(bjTick);
+}
+
+function prepareBugJumperAdminTest() {
+  bjInitCanvas();
+  stopBugJumperRound();
+  const weekLabel = document.getElementById('bj-week-label');
+  if (weekLabel) weekLabel.textContent = 'test';
+  const weeklyWrap = document.getElementById('bj-weekly-board');
+  const allTimeWrap = document.getElementById('bj-alltime-board');
+  const awardsWrap = document.getElementById('bj-awards');
+  if (weeklyWrap) weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Tryb testowy admina — ranking nie jest używany.'));
+  if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Start uruchamia lokalną rundę bez zapisu w bazie.'));
+  if (awardsWrap) awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Nagrody nie są naliczane w teście.'));
+  if (bjStatus) bjStatus.textContent = 'Admin test — stała plansza Hard Course, bez zapisu wyniku.';
 }
 
 async function startBugJumperRound() {
   const rt = bugJumperRuntime;
   if (rt?.playing || rt?.submitting) return;
+  if (activeTab === 'bug-jumper-test') {
+    const now = new Date().toISOString();
+    beginBugJumperRound({
+      id: 'admin-test-' + Date.now(),
+      courseId: BJ_COURSE.id,
+      durationMs: BJ_DURATION_MS,
+      startedAt: now,
+      serverNow: now,
+    }, BJ_COURSE, { archiveMode: true });
+    return;
+  }
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Ładuję...'; }
   if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę...';
   try {
     const data = await invokeBugJumper({ action: 'start' });
     renderBugJumperState(data);
-    beginBugJumperRound(data.round);
+    beginBugJumperRound(data.round, data.course);
   } catch (err) {
     showToast('❌ ' + err.message);
     if (bjStatus) bjStatus.textContent = 'Nie udało się wystartować rundy.';
@@ -8076,11 +8221,20 @@ async function finishBugJumperRound() {
   try {
     const data = await invokeBugJumper({
       action: 'submit', roundId: rt.roundId,
-      score: rt.score, hits: rt.score, misses: 0, maxCombo: rt.runCount,
+      courseId: rt.courseId,
+      moves: rt.moveLog.slice(0, 400),
+      score: bjBaseScore(rt),
+      hits: rt.bestRowReached,
+      misses: rt.collisions,
+      maxCombo: rt.completed ? 1 : 0,
+      completionMs: rt.completionMs,
     });
     renderBugJumperState(data);
     showToast('✅ Wynik zapisany: ' + data.score.score);
-    if (bjStatus) bjStatus.textContent = 'Ostatni wynik: ' + data.score.score + '.';
+    if (bjStatus) {
+      const finish = data.score.completion_ms != null ? ' · meta ' + (data.score.completion_ms / 1000).toFixed(2) + ' s' : '';
+      bjStatus.textContent = 'Ostatni wynik: ' + data.score.score + finish + '.';
+    }
   } catch (err) {
     showToast('❌ ' + err.message);
     if (bjStatus) bjStatus.textContent = 'Nie udało się zapisać wyniku.';
