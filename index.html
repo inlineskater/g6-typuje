@@ -1533,7 +1533,7 @@
     .bj-arena {
       border: 2px solid #00ff66; border-radius: 6px;
       background: #0a0a1a; overflow: hidden;
-      aspect-ratio: 10 / 14; width: 100%; max-width: 520px; margin: 0 auto;
+      aspect-ratio: 10 / 32; width: 100%; max-width: 320px; margin: 0 auto;
       user-select: none; touch-action: none;
       box-shadow: 0 0 15px rgba(0,255,100,0.3), inset 0 0 10px rgba(0,255,100,0.1);
     }
@@ -2975,7 +2975,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Bug Jumper</h2>
-                <p class="page-sub">20 sekund — stała, większa plansza dla wszystkich. Dotarcie na górę kończy rundę.</p>
+                <p class="page-sub">20 sekund — 30 trudnych linii, stała plansza dla wszystkich i bez losowych zmian.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -2988,9 +2988,9 @@
               <div class="bj-rules-title">Jak grać</div>
               <ul>
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera <strong>▲</strong> po siatce.</li>
-                <li><strong>+1 pkt za najwyższą nową linię</strong> przekroczoną w górę. Cofnięcie i ponowne wejście na tę samą linię nie daje punktów.</li>
-                <li>Dotarcie do <strong>GÓRY</strong> kończy rundę od razu i daje <strong>32 pkt</strong> przed bonusem z przedmiotu.</li>
-                <li>Zderzenie z blokiem = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>.</li>
+                <li><strong>30 linii, każda za +1 pkt.</strong> Cofnięcie i ponowne wejście na tę samą linię nie daje punktów.</li>
+                <li><strong>Linie 10, 20 i 30 są bezpieczne</strong> — możesz tam chwilę poczekać i złapać rytm.</li>
+                <li>Zderzenie z blokiem = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>. Po linii 30 wejście na GÓRĘ kończy rundę.</li>
               </ul>
             </div>
 
@@ -3005,7 +3005,7 @@
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Postęp</div>
-                <div class="bj-stat-value" id="bj-progress">0/12</div>
+                <div class="bj-stat-value" id="bj-progress">0/30</div>
               </div>
             </div>
 
@@ -5237,8 +5237,9 @@ async function loadSeasonHistory() {
       seen.add(r.user_id);
       const rank = pendingEntries.length + 1;
       const cm = r.client_meta || {};
-      const baseScore = cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
-      const itemBonus = cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
+      const isBugJumper = current.gameType === 'bug_jumper';
+      const baseScore = !isBugJumper && cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
+      const itemBonus = !isBugJumper && cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
       pendingEntries.push({
         user_id: r.user_id, nick: r.nick_snapshot,
         week_start: current.weekStart, rank,
@@ -7709,12 +7710,12 @@ const BJ_COURSE = Object.freeze({
   id: BUG_JUMPER_HARD_COURSE_ID,
   version: 2,
   cols: 10,
-  rows: 14,
-  laneCount: 12,
+  rows: 32,
+  laneCount: 30,
+  safeRows: Object.freeze([10, 20, 30]),
   durationMs: 20000,
   inputCooldownMs: 240,
-  completionBonus: 20,
-  maxBaseScore: 32,
+  maxScore: 30,
   lanes: Object.freeze([
     { dir:  1, intervalMs: 520, phaseMs: 120, bugs: [{ col: 1, len: 2 }, { col: 7, len: 2 }] },
     { dir: -1, intervalMs: 500, phaseMs: 260, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
@@ -7725,18 +7726,36 @@ const BJ_COURSE = Object.freeze({
     { dir:  1, intervalMs: 400, phaseMs: 290, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
     { dir: -1, intervalMs: 380, phaseMs:  60, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
     { dir:  1, intervalMs: 360, phaseMs: 240, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
+    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
     { dir: -1, intervalMs: 340, phaseMs: 110, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
     { dir:  1, intervalMs: 320, phaseMs: 220, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
     { dir: -1, intervalMs: 300, phaseMs:  90, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
+    { dir:  1, intervalMs: 290, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 2 }] },
+    { dir: -1, intervalMs: 280, phaseMs:  40, bugs: [{ col: 0, len: 3 }, { col: 7, len: 2 }] },
+    { dir:  1, intervalMs: 270, phaseMs: 130, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
+    { dir: -1, intervalMs: 260, phaseMs: 210, bugs: [{ col: 1, len: 2 }, { col: 5, len: 3 }] },
+    { dir:  1, intervalMs: 250, phaseMs:  70, bugs: [{ col: 0, len: 2 }, { col: 6, len: 2 }] },
+    { dir: -1, intervalMs: 240, phaseMs: 160, bugs: [{ col: 3, len: 3 }, { col: 8, len: 2 }] },
+    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
+    { dir:  1, intervalMs: 230, phaseMs:  20, bugs: [{ col: 1, len: 2 }, { col: 7, len: 3 }] },
+    { dir: -1, intervalMs: 225, phaseMs: 120, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
+    { dir:  1, intervalMs: 220, phaseMs:  80, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
+    { dir: -1, intervalMs: 215, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 210, phaseMs:  50, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
+    { dir: -1, intervalMs: 205, phaseMs: 130, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
+    { dir:  1, intervalMs: 200, phaseMs:  90, bugs: [{ col: 1, len: 3 }, { col: 7, len: 2 }] },
+    { dir: -1, intervalMs: 195, phaseMs: 150, bugs: [{ col: 0, len: 2 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 190, phaseMs:  30, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
+    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
   ]),
 });
 
 const BJ_COLS        = BJ_COURSE.cols;
-const BJ_ROWS        = BJ_COURSE.rows;       // 0=start, 1-12=lanes, 13=finish
+const BJ_ROWS        = BJ_COURSE.rows;       // 0=start, 1-30=lines, 31=finish
 const BJ_LANE_COUNT  = BJ_COURSE.laneCount;
-const BJ_CELL        = 40;
-const BJ_CS_W        = BJ_COLS * BJ_CELL;    // 400
-const BJ_CS_H        = BJ_ROWS * BJ_CELL;    // 560
+const BJ_CELL        = 24;
+const BJ_CS_W        = BJ_COLS * BJ_CELL;    // 240
+const BJ_CS_H        = BJ_ROWS * BJ_CELL;    // 768
 const BJ_DURATION_MS = BJ_COURSE.durationMs;
 const BJ_START_COL   = Math.floor(BJ_COLS / 2);
 
@@ -7798,7 +7817,7 @@ function bjBugColAt(lane, bug, elapsedMs) {
 function bjCellBlocked(row, col, elapsedMs, course = BJ_COURSE) {
   if (row < 1 || row > course.laneCount) return false;
   const lane = course.lanes[row - 1];
-  if (!lane) return false;
+  if (!lane || lane.safe) return false;
   return lane.bugs.some(bug => {
     const head = bjBugColAt(lane, bug, elapsedMs);
     for (let i = 0; i < bug.len; i++) {
@@ -7808,9 +7827,9 @@ function bjCellBlocked(row, col, elapsedMs, course = BJ_COURSE) {
   });
 }
 
-function bjBaseScore(rt = bugJumperRuntime) {
+function bjGameScore(rt = bugJumperRuntime) {
   if (!rt) return 0;
-  return rt.completed ? BJ_COURSE.maxBaseScore : Math.min(BJ_LANE_COUNT, rt.bestRowReached);
+  return Math.min(BJ_LANE_COUNT, rt.bestRowReached);
 }
 
 function bjSetStats(remainingMs = null) {
@@ -7819,7 +7838,7 @@ function bjSetStats(remainingMs = null) {
     ? (rt?.playing ? Math.max(0, rt.durationMs - bjElapsed()) : BJ_DURATION_MS)
     : remainingMs;
   if (bjTimeEl) bjTimeEl.textContent = Math.max(0, remaining / 1000).toFixed(1);
-  if (bjScoreEl) bjScoreEl.textContent = String(bjBaseScore(rt));
+  if (bjScoreEl) bjScoreEl.textContent = String(bjGameScore(rt));
   const progressEl = document.getElementById('bj-progress');
   if (progressEl) progressEl.textContent = String(rt?.bestRowReached || 0) + '/' + BJ_LANE_COUNT;
 }
@@ -7839,6 +7858,8 @@ function bjDraw(now) {
     else if (row === BJ_ROWS - 1) {
       const age = now - (rt?.prodFlash || 0);
       ctx.fillStyle = age < 350 ? '#0a4a0a' : '#0a2a0a';
+    } else if (course.safeRows?.includes(row)) {
+      ctx.fillStyle = '#102d24';
     } else {
       ctx.fillStyle = row % 2 === 0 ? '#0d0d22' : '#0a0a1a';
     }
@@ -7862,8 +7883,10 @@ function bjDraw(now) {
     let label;
     if (row === 0) label = 'START';
     else if (row === BJ_ROWS - 1) label = 'GÓRA';
+    else if (course.safeRows?.includes(row)) label = 'SAFE ' + row;
     else label = 'LINIA ' + row;
     ctx.fillStyle = row === BJ_ROWS - 1 ? '#00ff66' : 'rgba(0,255,100,0.4)';
+    if (course.safeRows?.includes(row)) ctx.fillStyle = '#7cffc4';
     ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
   }
 
@@ -8016,7 +8039,7 @@ function renderBugJumperTable(wrap, rows, mode) {
   const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
     el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
-    lbScoreCell(row)
+    el('td', { className: 'lb-net' }, String(row.score))
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
@@ -8089,7 +8112,7 @@ function bjMovePlayer(dr, dc) {
     rt.bestRowReached = BJ_LANE_COUNT;
     rt.completed = true;
     rt.completionMs = Math.round(elapsed);
-    rt.score = BJ_COURSE.maxBaseScore;
+    rt.score = BJ_LANE_COUNT;
     rt.prodFlash = now;
     rt.playerRow = BJ_ROWS - 1;
     rt.toasts.push({ text: 'META', col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
@@ -8101,7 +8124,7 @@ function bjMovePlayer(dr, dc) {
 
   if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT && newRow > rt.bestRowReached) {
     rt.bestRowReached = newRow;
-    rt.score = bjBaseScore(rt);
+    rt.score = bjGameScore(rt);
     rt.toasts.push({ text: String(rt.score), col: rt.playerCol, row: newRow, born: now, color: '#0055cc' });
   }
   rt.playerRow = newRow;
@@ -8223,7 +8246,7 @@ async function finishBugJumperRound() {
       action: 'submit', roundId: rt.roundId,
       courseId: rt.courseId,
       moves: rt.moveLog.slice(0, 400),
-      score: bjBaseScore(rt),
+      score: bjGameScore(rt),
       hits: rt.bestRowReached,
       misses: rt.collisions,
       maxCombo: rt.completed ? 1 : 0,

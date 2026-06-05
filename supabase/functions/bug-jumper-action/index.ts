@@ -17,12 +17,12 @@ const COURSE = Object.freeze({
   id: "bug_jumper_hard_v2",
   version: 2,
   cols: 10,
-  rows: 14,
-  laneCount: 12,
+  rows: 32,
+  laneCount: 30,
+  safeRows: Object.freeze([10, 20, 30]),
   durationMs: 20_000,
   inputCooldownMs: 240,
-  completionBonus: 20,
-  maxBaseScore: 32,
+  maxScore: 30,
   lanes: Object.freeze([
     { dir:  1, intervalMs: 520, phaseMs: 120, bugs: [{ col: 1, len: 2 }, { col: 7, len: 2 }] },
     { dir: -1, intervalMs: 500, phaseMs: 260, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
@@ -33,14 +33,32 @@ const COURSE = Object.freeze({
     { dir:  1, intervalMs: 400, phaseMs: 290, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
     { dir: -1, intervalMs: 380, phaseMs:  60, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
     { dir:  1, intervalMs: 360, phaseMs: 240, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
+    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
     { dir: -1, intervalMs: 340, phaseMs: 110, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
     { dir:  1, intervalMs: 320, phaseMs: 220, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
     { dir: -1, intervalMs: 300, phaseMs:  90, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
+    { dir:  1, intervalMs: 290, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 2 }] },
+    { dir: -1, intervalMs: 280, phaseMs:  40, bugs: [{ col: 0, len: 3 }, { col: 7, len: 2 }] },
+    { dir:  1, intervalMs: 270, phaseMs: 130, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
+    { dir: -1, intervalMs: 260, phaseMs: 210, bugs: [{ col: 1, len: 2 }, { col: 5, len: 3 }] },
+    { dir:  1, intervalMs: 250, phaseMs:  70, bugs: [{ col: 0, len: 2 }, { col: 6, len: 2 }] },
+    { dir: -1, intervalMs: 240, phaseMs: 160, bugs: [{ col: 3, len: 3 }, { col: 8, len: 2 }] },
+    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
+    { dir:  1, intervalMs: 230, phaseMs:  20, bugs: [{ col: 1, len: 2 }, { col: 7, len: 3 }] },
+    { dir: -1, intervalMs: 225, phaseMs: 120, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
+    { dir:  1, intervalMs: 220, phaseMs:  80, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
+    { dir: -1, intervalMs: 215, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 210, phaseMs:  50, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
+    { dir: -1, intervalMs: 205, phaseMs: 130, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
+    { dir:  1, intervalMs: 200, phaseMs:  90, bugs: [{ col: 1, len: 3 }, { col: 7, len: 2 }] },
+    { dir: -1, intervalMs: 195, phaseMs: 150, bugs: [{ col: 0, len: 2 }, { col: 6, len: 3 }] },
+    { dir:  1, intervalMs: 190, phaseMs:  30, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
+    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
   ]),
 });
 const ROUND_DURATION_MS = COURSE.durationMs;
 const ROUND_EXPIRES_SECONDS = 120;
-const MAX_SCORE_PER_ROUND = COURSE.maxBaseScore;
+const MAX_SCORE_PER_ROUND = COURSE.maxScore;
 const MAX_MOVES_PER_ROUND = 400;
 const MOVE_TIME_TOLERANCE_MS = 12;
 const PRIZES = [100, 50, 25];
@@ -75,10 +93,10 @@ function publicCourse() {
     cols: COURSE.cols,
     rows: COURSE.rows,
     laneCount: COURSE.laneCount,
+    safeRows: COURSE.safeRows,
     durationMs: COURSE.durationMs,
     inputCooldownMs: COURSE.inputCooldownMs,
-    completionBonus: COURSE.completionBonus,
-    maxBaseScore: COURSE.maxBaseScore,
+    maxScore: COURSE.maxScore,
     lanes: COURSE.lanes,
   };
 }
@@ -97,7 +115,7 @@ function bugColAt(lane, bug, elapsedMs) {
 function cellBlocked(row, col, elapsedMs) {
   if (row < 1 || row > COURSE.laneCount) return false;
   const lane = COURSE.lanes[row - 1];
-  if (!lane) return false;
+  if (!lane || lane.safe) return false;
   return lane.bugs.some((bug) => {
     const head = bugColAt(lane, bug, elapsedMs);
     for (let i = 0; i < asInt(bug.len, 1); i += 1) {
@@ -207,9 +225,9 @@ function replayMoves(moves, untilMs = COURSE.durationMs) {
   }
 
   if (!state.completed) resolveUntil(Math.min(COURSE.durationMs, Math.max(0, untilMs)));
-  const baseScore = state.completed ? COURSE.maxBaseScore : Math.min(COURSE.laneCount, state.bestRow);
+  const lineScore = Math.min(COURSE.laneCount, state.bestRow);
   return {
-    baseScore,
+    lineScore,
     bestRow: Math.min(COURSE.laneCount, state.bestRow),
     completed: state.completed,
     completionMs: state.completed ? Math.round(state.completionMs) : null,
@@ -232,34 +250,6 @@ async function requireUser(req) {
   const { data, error } = await authClient.auth.getUser();
   if (error || !data?.user) throw gameError("Sesja wygasła. Zaloguj się ponownie.");
   return data.user;
-}
-
-async function getStrongestHeroEffect(tx, userId, game) {
-  try {
-    const rows = await tx`
-      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
-      from public.hero_equipment e
-      join public.hero_item_instances i on i.id = e.item_instance_id
-      join public.hero_item_defs d on d.id = i.item_def_id
-      where e.user_id = ${userId}
-        and i.owner_id = ${userId}
-        and d.is_active = true
-        and (
-          d.effect_game = ${game}
-          or (
-            ${game} in ('whack_boss', 'bug_jumper', 'flappy_pants')
-            and d.effect_type = 'score_bonus'
-            and d.effect_game in ('whack_boss', 'bug_jumper', 'flappy_pants')
-          )
-        )
-      order by d.effect_value desc, d.price desc, d.slug
-      limit 1
-    `;
-    return rows[0] ?? null;
-  } catch (err) {
-    console.warn("Hero item effects unavailable:", err?.message ?? err);
-    return null;
-  }
 }
 
 function mapRows(rows) {
@@ -334,7 +324,7 @@ async function loadState(userId) {
     courseId: COURSE.id,
     courseVersion: COURSE.version,
     course: publicCourse(),
-    maxBaseScore: COURSE.maxBaseScore,
+    maxScore: COURSE.maxScore,
     roundDurationMs: ROUND_DURATION_MS,
     prizes: PRIZES,
     weekly: mapRows(weekly),
@@ -385,7 +375,6 @@ async function submitRound(userId, body) {
   const courseId = String(body.courseId ?? "");
   if (courseId !== COURSE.id) throw gameError("Nieprawidłowa wersja planszy.");
   const moves = parseMoves(body.moves);
-  const effect = await getStrongestHeroEffect(db, userId, "bug_jumper");
 
   const score = await db.begin(async (tx) => {
     const [round] = await tx`
@@ -405,22 +394,11 @@ async function submitRound(userId, body) {
     if (!replay.completed && Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
     if (replay.completed && replay.completionMs > actualElapsed + 1000) throw gameError("Runda jeszcze trwa.");
 
-    const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.baseScore));
+    const lineScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.lineScore));
     const hits = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.bestRow));
     const misses = Math.max(0, Math.min(999, replay.collisions));
     const maxCombo = replay.completed ? 1 : 0;
-    const bonus = effect?.effect_type === "score_bonus"
-      ? Math.max(0, asInt(effect.effect_value, 0))
-      : 0;
-    const scoreValue = Math.min(MAX_SCORE_PER_ROUND + bonus, baseScore + bonus);
-    const itemEffect = bonus > 0 && scoreValue > baseScore ? {
-      slug: effect.slug,
-      name: effect.name,
-      type: effect.effect_type,
-      value: Number(effect.effect_value),
-      bonus: scoreValue - baseScore,
-    } : null;
-    const accuracy = Math.round((baseScore / MAX_SCORE_PER_ROUND) * 10000) / 100;
+    const accuracy = Math.round((lineScore / MAX_SCORE_PER_ROUND) * 10000) / 100;
 
     await tx`
       update public.bug_jumper_rounds
@@ -452,7 +430,7 @@ async function submitRound(userId, body) {
           ${round.nick_snapshot},
           public.bug_jumper_week_start(now()),
           ${COURSE.id},
-          ${scoreValue},
+          ${lineScore},
           ${hits},
           ${misses},
           ${accuracy},
@@ -469,8 +447,7 @@ async function submitRound(userId, body) {
             completion_ms: replay.completionMs,
             best_row: replay.bestRow,
             collisions: replay.collisions,
-            base_score: baseScore,
-            item_effect: itemEffect,
+            line_score: lineScore,
           })}::jsonb
         )
       returning *

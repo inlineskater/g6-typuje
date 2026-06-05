@@ -100,9 +100,9 @@ The seasonal tab hosts one rotating arcade game per Sunday-start week (Europe/Wa
 
 Each seasonal game mirrors the same stack:
 - `<game>_rounds` / `<game>_scores` / `<game>_weekly_awards` tables, `<game>_current_week` / `_all_time` / `_recent_awards` views, an `award_<game>_week()` SECURITY DEFINER payout (100/50/25), realtime publication, and a `pg_cron` job at `'5 23 * * 6'` (Saturday 23:05) that pays the previous week's top 3.
-- An Edge Function (`<game>-action`) with `state`/`start`/`submit` actions. The browser cannot write score tables (RLS grants SELECT only); the function owns inserts via `SUPABASE_DB_URL`, caps the per-round score, enforces the round expiry window, and applies the strongest equipped seasonal hero `score_bonus`.
+- An Edge Function (`<game>-action`) with `state`/`start`/`submit` actions. The browser cannot write score tables (RLS grants SELECT only); the function owns inserts via `SUPABASE_DB_URL`, caps the per-round score, enforces the round expiry window, and applies hero score bonuses only for games that support them.
 - Frontend: a canvas runtime (`new<Game>Runtime`/`<g>Draw`/RAF loop) plus `invoke*`/`load*`/`render*` helpers, wired into `loadSeasonalTab()`, the realtime subscriptions, and the `loadSeasonHistory()` recent-awards aggregator.
 
-Bug Jumper hard course v2 uses `course_id = 'bug_jumper_hard_v2'`: a fixed 10x14 course shared by every player, no per-round random lane setup, server replay of the submitted movement log, `completion_ms` tie-breaks, and hard-course-only leaderboard/award views. Existing legacy rows remain stored as `legacy_random_v1`.
+Bug Jumper hard course v2 uses `course_id = 'bug_jumper_hard_v2'`: a fixed 10-column, 30-line course shared by every player, no per-round random lane setup, safe rest lines at 10/20/30, one point per line reached, server replay of the submitted movement log, `completion_ms` tie-breaks, and hard-course-only leaderboard/award views. Existing legacy rows remain stored as `legacy_random_v1`.
 
 „3 Pary Spodni" (Flappy Pants) is a Flappy Bird clone: you ARE a pair of trousers (Space/click/↑ to flap) with 3 lives (the "3 pary spodni"); each crash costs one pair with brief invincibility, and the round ends after the third. Score = obstacles passed; it persists across lives.

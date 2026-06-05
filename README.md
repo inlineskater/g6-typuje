@@ -62,7 +62,7 @@ Existing project Bug Jumper hard-course rollout:
 - Resolution: market creator or `admin` nick can resolve a market.
 - Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
 - Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
-- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives). Bug Jumper's hard-course season uses the same fixed 10x14 course for everyone. Each pays the weekly top 3 100/50/25 coins.
+- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Each pays the weekly top 3 100/50/25 coins.
 - Leaderboard: cash plus open position value.
 
 ## Security Note
