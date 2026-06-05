@@ -2469,6 +2469,16 @@
     }
     .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 45% at 50% 100%, rgba(255,150,30,.12) 0%, transparent 65%); pointer-events: none; z-index: 3; }
     /* interior furniture */
+    .tavern-beam { position:absolute; top:0; left:0; right:0; height:14px; background:linear-gradient(180deg,#0e0804 0%,#2d1b0e 100%); border-bottom:2px solid #3a2010; z-index:2; }
+    .tavern-lantern { position:absolute; top:18px; width:14px; height:20px; background:linear-gradient(180deg,#3a2010 0%,#5a3820 28%,rgba(255,160,40,.9) 29%,rgba(255,100,15,.75) 100%); border:1.5px solid #6a4830; border-radius:2px 2px 5px 5px; z-index:2; box-shadow:0 0 14px 4px rgba(255,130,20,.3); }
+    .tavern-lantern::before { content:''; position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:2px; height:10px; background:#3a2010; }
+    .tavern-lantern::after { content:''; position:absolute; inset:-10px; border-radius:50%; background:radial-gradient(circle,rgba(255,140,30,.28) 0%,transparent 65%); pointer-events:none; }
+    .tavern-bar { position:absolute; right:0; bottom:34px; width:88px; height:58px; background:linear-gradient(160deg,#3a2810 0%,#241608 100%); border:2px solid #5a3820; border-left-color:#7a5230; border-radius:5px 0 0 5px; z-index:1; box-shadow:inset -2px 0 6px rgba(0,0,0,.4); }
+    .tavern-bar::before { content:'🍶🥃🍷'; position:absolute; top:-18px; left:0; right:0; text-align:center; font-size:11px; letter-spacing:3px; }
+    .tavern-bar::after { content:''; position:absolute; top:0; left:0; right:0; height:7px; background:linear-gradient(180deg,#7a5230 0%,#4a2c18 100%); border-radius:5px 0 0 0; }
+    .tavern-barrel { position:absolute; width:22px; height:26px; background:linear-gradient(135deg,#8a6040 0%,#5a3820 45%,#3a2010 100%); border:2px solid #2a1408; border-radius:38% 38% 44% 44% / 30% 30% 50% 50%; z-index:1; box-shadow:2px 2px 5px rgba(0,0,0,.4); }
+    .tavern-barrel::before { content:''; position:absolute; top:8px; left:-2px; right:-2px; height:2px; background:#2a1408; border-radius:2px; }
+    .tavern-barrel::after { content:''; position:absolute; top:15px; left:-2px; right:-2px; height:2px; background:#2a1408; border-radius:2px; }
     .tavern-fireplace { position: absolute; left: 8px; top: 0; width: 60px; height: 120px; background: #1e0e06; border: 2px solid #3a2010; border-radius: 0 0 4px 4px; z-index: 1; }
     .tavern-fireplace::before { content: ''; position: absolute; left: 8px; right: 8px; bottom: 10px; height: 66px; background: linear-gradient(180deg, #ffca40 0%, #ff7010 40%, #ff2a00 72%, #7a0000 100%); border-radius: 3px 3px 0 0; animation: fire-flicker .55s ease-in-out infinite alternate; box-shadow: 0 0 22px rgba(255,90,0,.65); }
     .tavern-fireplace::after { content: ''; position: absolute; left: -5px; right: -5px; top: 0; height: 20px; background: linear-gradient(180deg, #5a3820 0%, #3a2010 100%); border-radius: 3px 3px 0 0; border: 2px solid #6a4830; box-shadow: 0 3px 8px rgba(0,0,0,.5); }
@@ -10076,8 +10086,16 @@ function buildTavernPanel() {
 
   // Interior furniture
   scene.appendChild(el('div', { className: 'tavern-fireplace' }));
+  scene.appendChild(el('div', { className: 'tavern-beam' }));
+  const tl1 = el('div', { className: 'tavern-lantern' }); tl1.style.left = '32%';
+  const tl2 = el('div', { className: 'tavern-lantern' }); tl2.style.left = '63%';
+  scene.appendChild(tl1); scene.appendChild(tl2);
+  const bar = el('div', { className: 'tavern-bar' }); scene.appendChild(bar);
+  const br1 = el('div', { className: 'tavern-barrel' }); br1.style.left = '74px'; br1.style.bottom = '36px';
+  const br2 = el('div', { className: 'tavern-barrel' }); br2.style.right = '94px'; br2.style.bottom = '36px';
+  scene.appendChild(br1); scene.appendChild(br2);
   const t1 = el('div', { className: 'tavern-table' }); t1.style.left = '22%';
-  const t2 = el('div', { className: 'tavern-table' }); t2.style.left = '58%';
+  const t2 = el('div', { className: 'tavern-table' }); t2.style.left = '52%';
   scene.appendChild(t1);
   scene.appendChild(t2);
 
@@ -10108,6 +10126,7 @@ function buildTavernPanel() {
       visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
       const nameLabel = el('div', { className: 'tavern-hero-name' + (isMe ? ' is-mine' : '') }, hero.profiles?.nick || hero.nick || '?');
       nameLabel.style.animation = 'none';
+      nameLabel.style.transform = `translateX(-50%) scaleX(${facings[i % facings.length]})`;
       lane.appendChild(nameLabel);
 
       const speech = el('div', { className: 'hero-speech' }, '');
