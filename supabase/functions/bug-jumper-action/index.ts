@@ -252,6 +252,33 @@ async function requireUser(req) {
   return data.user;
 }
 
+async function getStrongestHeroEffect(tx, userId, game) {
+  try {
+    const rows = await tx`
+      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
+      from public.hero_equipment e
+      join public.hero_item_instances i on i.id = e.item_instance_id
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where e.user_id = ${userId}
+        and i.owner_id = ${userId}
+        and d.is_active = true
+        and (
+          d.effect_game = ${game}
+          or (
+            d.effect_type = 'score_bonus'
+            and d.effect_game in ('whack_boss', 'bug_jumper', 'flappy_pants')
+          )
+        )
+      order by d.effect_value desc, d.price desc, d.slug
+      limit 1
+    `;
+    return rows[0] ?? null;
+  } catch (err) {
+    console.warn("Hero item effects unavailable:", err?.message ?? err);
+    return null;
+  }
+}
+
 function mapRows(rows) {
   return (rows || []).map((row) => ({
     ...row,
@@ -376,6 +403,8 @@ async function submitRound(userId, body) {
   if (courseId !== COURSE.id) throw gameError("Nieprawidłowa wersja planszy.");
   const moves = parseMoves(body.moves);
 
+  const effect = await getStrongestHeroEffect(db, userId, "bug_jumper");
+
   const score = await db.begin(async (tx) => {
     const [round] = await tx`
       select r.*, p.nick
@@ -394,7 +423,18 @@ async function submitRound(userId, body) {
     if (!replay.completed && Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
     if (replay.completed && replay.completionMs > actualElapsed + 1000) throw gameError("Runda jeszcze trwa.");
 
-    const lineScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.lineScore));
+    const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.lineScore));
+    const bonus = effect?.effect_type === "score_bonus"
+      ? Math.max(0, asInt(effect.effect_value, 0))
+      : 0;
+    const lineScore = Math.min(MAX_SCORE_PER_ROUND, baseScore + bonus);
+    const itemEffect = bonus > 0 && lineScore > baseScore ? {
+      slug: effect.slug,
+      name: effect.name,
+      type: effect.effect_type,
+      value: Number(effect.effect_value),
+      bonus: lineScore - baseScore,
+    } : null;
     const hits = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.bestRow));
     const misses = Math.max(0, Math.min(999, replay.collisions));
     const maxCombo = replay.completed ? 1 : 0;
@@ -447,27 +487,29 @@ async function submitRound(userId, body) {
             completion_ms: replay.completionMs,
             best_row: replay.bestRow,
             collisions: replay.collisions,
-            line_score: lineScore,
+            base_score: baseScore,
+            item_effect: itemEffect,
           })}::jsonb
         )
       returning *
     `;
 
-    return inserted;
+    return { inserted, itemEffect };
   });
 
   return {
     ...(await loadState(userId)),
     score: {
-      id: score.id,
-      score: asInt(score.score),
-      hits: asInt(score.hits),
-      misses: asInt(score.misses),
-      accuracy: asNumber(score.accuracy),
-      max_combo: asInt(score.max_combo),
-      course_id: score.course_id,
-      completion_ms: score.completion_ms == null ? null : asInt(score.completion_ms),
-      submitted_at: score.submitted_at,
+      id: score.inserted.id,
+      score: asInt(score.inserted.score),
+      hits: asInt(score.inserted.hits),
+      misses: asInt(score.inserted.misses),
+      accuracy: asNumber(score.inserted.accuracy),
+      max_combo: asInt(score.inserted.max_combo),
+      course_id: score.inserted.course_id,
+      completion_ms: score.inserted.completion_ms == null ? null : asInt(score.inserted.completion_ms),
+      submitted_at: score.inserted.submitted_at,
+      itemEffect: score.itemEffect,
     },
   };
 }

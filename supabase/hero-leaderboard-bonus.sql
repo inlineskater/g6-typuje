@@ -6,7 +6,6 @@
 --   * Leaderboards and awards use the stored score only, so changing equipment later
 --     cannot alter historical ranks or apply the bonus twice.
 --   * base_score/item_bonus are exposed for UI display where a game uses bonuses.
---     Bug Jumper hard-course scores are plain line scores, so item_bonus is 0.
 --
 -- Idempotent; safe to re-run. Apply via Supabase SQL Editor or the Management API.
 
@@ -51,8 +50,8 @@ user_best AS (
   SELECT DISTINCT ON (s.user_id)
     s.user_id, s.nick_snapshot AS nick, s.week_start, s.course_id, s.score, s.hits, s.misses,
     s.accuracy, s.max_combo, s.completion_ms, s.submitted_at,
-    s.score AS base_score,
-    0::integer AS item_bonus,
+    COALESCE((s.client_meta->>'base_score')::int, s.score) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.bug_jumper_scores s
   JOIN current_week cw ON cw.week_start = s.week_start
@@ -91,8 +90,8 @@ user_best AS (
   SELECT DISTINCT ON (s.user_id)
     s.user_id, s.nick_snapshot AS nick, s.week_start AS best_week_start, s.course_id, s.score, s.hits, s.misses,
     s.accuracy, s.max_combo, s.completion_ms, s.submitted_at,
-    s.score AS base_score,
-    0::integer AS item_bonus,
+    COALESCE((s.client_meta->>'base_score')::int, s.score) AS base_score,
+    COALESCE((s.client_meta->'item_effect'->>'bonus')::int, 0) AS item_bonus,
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.bug_jumper_scores s
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id

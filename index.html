@@ -3003,6 +3003,10 @@
                 <div class="bj-stat-label">Postęp</div>
                 <div class="bj-stat-value" id="bj-progress">0/30</div>
               </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Czas</div>
+                <div class="bj-stat-value" id="bj-time">20.0</div>
+              </div>
             </div>
 
             <div class="bj-arena" id="bj-arena">
@@ -6057,8 +6061,8 @@ function heroItemEffectLabel(item) {
   const value = Number(item?.effect_value || 0);
   if (item?.effect_game === 'roulette' && item.effect_type === 'win_chance_bonus') return `Ruletka: +${value}% szansy ratunku po przegranej`;
   if (item?.effect_game === 'roulette' && item.effect_type === 'payout_bonus') return `Ruletka: +${value}% do wygranej wypłaty`;
-  if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') return `Sloty: +${value} punkt wagi symbolu G6`;
-  if (item?.effect_game === 'whack_boss' && item.effect_type === 'score_bonus') return `Gra sezonowa: +${value} do wyniku`;
+  if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') { const pts = value === 1 ? 'punkt' : (value >= 2 && value <= 4) ? 'punkty' : 'punktów'; return `Sloty: +${value} ${pts} wagi symbolu G6`; }
+  if (item?.effect_game === 'whack_boss' && item.effect_type === 'score_bonus') return `Whack-a-Boss: +${value} do wyniku`;
   if (item?.effect_game === 'bug_jumper' && item.effect_type === 'score_bonus') return `Bug Jumper: +${value} do wyniku`;
   if (item?.effect_game === 'flappy_pants' && item.effect_type === 'score_bonus') return `3 Pary Spodni: +${value} do wyniku`;
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
@@ -8622,7 +8626,7 @@ async function finishFlappyPantsRound() {
   try {
     const data = await invokeFlappyPants({
       action: 'submit', roundId: rt.roundId,
-      score: rt.score, pipes: rt.pipes, livesUsed: FP_MAX_LIVES,
+      score: rt.score, pipes: rt.pipes, livesUsed: FP_MAX_LIVES - rt.lives,
     });
     renderFlappyPantsState(data);
     showToast('✅ Wynik zapisany: ' + data.score.score);
@@ -10007,7 +10011,7 @@ function buildHeroWizard() {
 function buildHeroEquipmentPanel() {
   const panel = el('div', { className: 'hero-equipment-panel' });
   panel.appendChild(el('div', { className: 'hero-equip-title' }, 'Ekwipunek'));
-  panel.appendChild(el('div', { className: 'hero-equip-sub' }, 'Założone przedmioty są widoczne w karczmie i działają w grach po stronie serwera.'));
+  panel.appendChild(el('div', { className: 'hero-equip-sub' }, 'Założone przedmioty są widoczne w karczmie i działają w grach po stronie serwera. Działa najsilniejszy przedmiot na grę.'));
 
   const slots = el('div', { className: 'hero-slot-list' });
   HERO_ITEM_SLOTS.forEach(slot => {

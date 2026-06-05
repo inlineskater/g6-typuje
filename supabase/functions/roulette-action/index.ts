@@ -181,7 +181,7 @@ async function spin(userId, bets) {
         };
       }
     } else if (effect?.effect_type === "payout_bonus" && totalWon > 0) {
-      const bonus = Math.floor(totalWon * Number(effect.effect_value) / 100);
+      const bonus = Math.ceil(totalWon * Number(effect.effect_value) / 100);
       if (bonus > 0) {
         totalWon += bonus;
         itemEffect = {
