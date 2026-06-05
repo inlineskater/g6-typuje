@@ -10143,6 +10143,7 @@ function buildTavernPanel() {
           el('strong', null, hero.profiles?.nick || '?'),
           ...tipItems
         );
+        tip.style.transform = `translateX(-50%) scaleX(${facings[i % facings.length]})`;
         lane.appendChild(tip);
         setTimeout(() => { if (tip) { tip.remove(); tip = null; } }, 3000);
       });
