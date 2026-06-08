@@ -3612,6 +3612,7 @@ const bjStartBtn      = document.getElementById('bj-start-btn');
 const bjStatus        = document.getElementById('bj-status');
 const bjTimeEl        = document.getElementById('bj-time');
 const bjScoreEl       = document.getElementById('bj-score');
+const bjProgressEl    = document.getElementById('bj-progress');
 const bjLivesEl       = document.getElementById('bj-lives');
 const fpArena         = document.getElementById('fp-arena');
 const fpStartBtn      = document.getElementById('fp-start-btn');
@@ -7767,6 +7768,8 @@ const BJ_CS_W        = BJ_COLS * BJ_CELL;    // 240
 const BJ_CS_H        = BJ_ROWS * BJ_CELL;    // 768
 const BJ_DURATION_MS = BJ_COURSE.durationMs;
 const BJ_START_COL   = Math.floor(BJ_COLS / 2);
+const BJ_MAX_DPR     = 1.5;
+const BJ_INPUT_BUFFER_MS = 180;
 
 function newBugJumperRuntime() {
   return {
@@ -7786,24 +7789,151 @@ function newBugJumperRuntime() {
     startPerf: 0, rafId: null,
     hitFlash: 0, prodFlash: 0,
     inputCooldown: 0,
+    queuedMove: null,
     toasts: [],
   };
 }
 
 let bjCtx = null;
+let bjStaticLayer = null;
+let bjStaticLayerKey = '';
+let bjOverlayLayer = null;
+let bjOverlayLayerKey = '';
+let bjSpriteCache = null;
+let bjStatScoreText = null;
+let bjStatProgressText = null;
+let bjStatTimeText = null;
 
 function bjInitCanvas() {
   const canvas = document.getElementById('bj-canvas');
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
-  const DPR = window.devicePixelRatio || 1;
+  const DPR = Math.min(window.devicePixelRatio || 1, BJ_MAX_DPR);
   const w = Math.round((rect.width || BJ_CS_W) * DPR);
   const h = Math.round((rect.height || BJ_CS_H) * DPR);
   if (bjCtx && canvas.width === w && canvas.height === h) return;
   canvas.width  = w;
   canvas.height = h;
   bjCtx = canvas.getContext('2d');
-  bjCtx.scale(w / BJ_CS_W, h / BJ_CS_H);
+  bjCtx.setTransform(w / BJ_CS_W, 0, 0, h / BJ_CS_H, 0, 0);
+  bjCtx.imageSmoothingEnabled = false;
+}
+
+function bjCourseKey(course = BJ_COURSE) {
+  return [course.id || 'course', course.version || 0, course.rows || BJ_ROWS, course.cols || BJ_COLS].join(':');
+}
+
+function bjCreateLayer() {
+  const canvas = document.createElement('canvas');
+  canvas.width = BJ_CS_W;
+  canvas.height = BJ_CS_H;
+  return { canvas, ctx: canvas.getContext('2d') };
+}
+
+function bjGetStaticLayer(course = BJ_COURSE) {
+  const key = bjCourseKey(course);
+  if (bjStaticLayer && bjStaticLayerKey === key) return bjStaticLayer;
+
+  const { canvas, ctx } = bjCreateLayer();
+  const W = BJ_CS_W, H = BJ_CS_H, C = BJ_CELL;
+
+  for (let row = 0; row < BJ_ROWS; row++) {
+    const y = (BJ_ROWS - 1 - row) * C;
+    if (row === 0) ctx.fillStyle = '#1a1a2e';
+    else if (row === BJ_ROWS - 1) ctx.fillStyle = '#0a2a0a';
+    else if (course.safeRows?.includes(row)) ctx.fillStyle = '#102d24';
+    else ctx.fillStyle = row % 2 === 0 ? '#0d0d22' : '#0a0a1a';
+    ctx.fillRect(0, y, W, C);
+  }
+
+  ctx.strokeStyle = 'rgba(0,255,100,0.15)';
+  ctx.lineWidth = 1;
+  for (let c = 0; c <= BJ_COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c * C, 0); ctx.lineTo(c * C, H); ctx.stroke();
+  }
+  for (let r = 0; r <= BJ_ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * C); ctx.lineTo(W, r * C); ctx.stroke();
+  }
+
+  ctx.font = 'bold 8px monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  for (let row = 0; row < BJ_ROWS; row++) {
+    let label;
+    if (row === 0) label = 'START';
+    else if (row === BJ_ROWS - 1) label = 'GÓRA';
+    else if (course.safeRows?.includes(row)) label = 'SAFE ' + row;
+    else label = 'LINIA ' + row;
+    ctx.fillStyle = row === BJ_ROWS - 1 ? '#00ff66' : 'rgba(0,255,100,0.4)';
+    if (course.safeRows?.includes(row)) ctx.fillStyle = '#7cffc4';
+    ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
+  }
+
+  bjStaticLayer = canvas;
+  bjStaticLayerKey = key;
+  return bjStaticLayer;
+}
+
+function bjGetOverlayLayer(course = BJ_COURSE) {
+  const key = bjCourseKey(course);
+  if (bjOverlayLayer && bjOverlayLayerKey === key) return bjOverlayLayer;
+
+  const { canvas, ctx } = bjCreateLayer();
+  const W = BJ_CS_W, H = BJ_CS_H;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  for (let sy = 0; sy < H; sy += 3) {
+    ctx.fillRect(0, sy, W, 1);
+  }
+
+  ctx.strokeStyle = 'rgba(0,255,100,0.25)';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(2.5, 2.5, W - 5, H - 5);
+  ctx.strokeStyle = '#00ff66';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(1, 1, W - 2, H - 2);
+
+  bjOverlayLayer = canvas;
+  bjOverlayLayerKey = key;
+  return bjOverlayLayer;
+}
+
+function bjCreateCellSprite(draw) {
+  const canvas = document.createElement('canvas');
+  canvas.width = BJ_CELL;
+  canvas.height = BJ_CELL;
+  const ctx = canvas.getContext('2d');
+  draw(ctx, BJ_CELL);
+  return canvas;
+}
+
+function bjGetSprites() {
+  if (bjSpriteCache) return bjSpriteCache;
+
+  const bugHead = bjCreateCellSprite((ctx, C) => {
+    ctx.fillStyle = '#cc2200';
+    ctx.fillRect(0, 0, C, C);
+    ctx.strokeStyle = 'rgba(255,100,0,0.3)';
+    ctx.strokeRect(0.5, 0.5, C - 1, C - 1);
+    ctx.font = `${Math.round(C * 0.5)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🐛', C / 2, C / 2);
+  });
+
+  const makePlayer = (fill) => bjCreateCellSprite((ctx, C) => {
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, 0, C, C);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(C * 0.5)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('▲', C / 2, C / 2);
+  });
+
+  bjSpriteCache = {
+    bugHead,
+    player: makePlayer('#00ffff'),
+    playerHit: makePlayer('#ff4444'),
+  };
+  return bjSpriteCache;
 }
 
 function bjMod(n, m) {
@@ -7841,15 +7971,32 @@ function bjGameScore(rt = bugJumperRuntime) {
   return Math.min(BJ_LANE_COUNT, rt.bestRowReached);
 }
 
-function bjSetStats(remainingMs = null) {
+function bjResetStatCache() {
+  bjStatScoreText = null;
+  bjStatProgressText = null;
+  bjStatTimeText = null;
+}
+
+function bjSetStats(remainingMs = null, force = false) {
   const rt = bugJumperRuntime;
   const remaining = remainingMs == null
     ? (rt?.playing ? Math.max(0, rt.durationMs - bjElapsed()) : BJ_DURATION_MS)
     : remainingMs;
-  if (bjTimeEl) bjTimeEl.textContent = Math.max(0, remaining / 1000).toFixed(1);
-  if (bjScoreEl) bjScoreEl.textContent = String(bjGameScore(rt));
-  const progressEl = document.getElementById('bj-progress');
-  if (progressEl) progressEl.textContent = String(rt?.bestRowReached || 0) + '/' + BJ_LANE_COUNT;
+  const timeText = Math.max(0, remaining / 1000).toFixed(1);
+  const scoreText = String(bjGameScore(rt));
+  const progressText = String(rt?.bestRowReached || 0) + '/' + BJ_LANE_COUNT;
+  if (bjTimeEl && (force || timeText !== bjStatTimeText)) {
+    bjTimeEl.textContent = timeText;
+    bjStatTimeText = timeText;
+  }
+  if (bjScoreEl && (force || scoreText !== bjStatScoreText)) {
+    bjScoreEl.textContent = scoreText;
+    bjStatScoreText = scoreText;
+  }
+  if (bjProgressEl && (force || progressText !== bjStatProgressText)) {
+    bjProgressEl.textContent = progressText;
+    bjStatProgressText = progressText;
+  }
 }
 
 function bjDraw(now) {
@@ -7860,46 +8007,18 @@ function bjDraw(now) {
   const elapsed = rt ? bjElapsed(now) : 0;
   const W = BJ_CS_W, H = BJ_CS_H, C = BJ_CELL;
 
-  // ── Row backgrounds (dark retro) ──
-  for (let row = 0; row < BJ_ROWS; row++) {
-    const y = (BJ_ROWS - 1 - row) * C;
-    if (row === 0) ctx.fillStyle = '#1a1a2e';
-    else if (row === BJ_ROWS - 1) {
-      const age = now - (rt?.prodFlash || 0);
-      ctx.fillStyle = age < 350 ? '#0a4a0a' : '#0a2a0a';
-    } else if (course.safeRows?.includes(row)) {
-      ctx.fillStyle = '#102d24';
-    } else {
-      ctx.fillStyle = row % 2 === 0 ? '#0d0d22' : '#0a0a1a';
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(bjGetStaticLayer(course), 0, 0, W, H);
+
+  if (rt?.playing) {
+    const sprites = bjGetSprites();
+
+    const finishAge = now - (rt.prodFlash || 0);
+    if (finishAge < 350) {
+      ctx.fillStyle = 'rgba(0,120,0,0.55)';
+      ctx.fillRect(0, 0, W, C);
     }
-    ctx.fillRect(0, y, W, C);
-  }
 
-  // ── Grid lines (neon green) ──
-  ctx.strokeStyle = 'rgba(0,255,100,0.15)';
-  ctx.lineWidth = 1;
-  for (let c = 0; c <= BJ_COLS; c++) {
-    ctx.beginPath(); ctx.moveTo(c * C, 0); ctx.lineTo(c * C, H); ctx.stroke();
-  }
-  for (let r = 0; r <= BJ_ROWS; r++) {
-    ctx.beginPath(); ctx.moveTo(0, r * C); ctx.lineTo(W, r * C); ctx.stroke();
-  }
-
-  // ── Row labels (bright green) ──
-  ctx.font = 'bold 8px monospace';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  for (let row = 0; row < BJ_ROWS; row++) {
-    let label;
-    if (row === 0) label = 'START';
-    else if (row === BJ_ROWS - 1) label = 'GÓRA';
-    else if (course.safeRows?.includes(row)) label = 'SAFE ' + row;
-    else label = 'LINIA ' + row;
-    ctx.fillStyle = row === BJ_ROWS - 1 ? '#00ff66' : 'rgba(0,255,100,0.4)';
-    if (course.safeRows?.includes(row)) ctx.fillStyle = '#7cffc4';
-    ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
-  }
-
-  if (rt) {
     // ── Obstacles — bug emoji on colored cells ──
     course.lanes.forEach((lane, li) => {
       const row = li + 1;
@@ -7909,15 +8028,14 @@ function bjDraw(now) {
         for (let i = 0; i < bug.len; i++) {
           const cellCol = bjMod(head + i, BJ_COLS);
           const bx = cellCol * C;
-          ctx.fillStyle = i === 0 ? '#cc2200' : '#993300';
-          ctx.fillRect(bx, ry, C, C);
-          ctx.strokeStyle = 'rgba(255,100,0,0.3)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
           if (i === 0) {
-            ctx.font = `${Math.round(C * 0.5)}px sans-serif`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('🐛', bx + C / 2, ry + C / 2);
+            ctx.drawImage(sprites.bugHead, bx, ry, C, C);
+          } else {
+            ctx.fillStyle = '#993300';
+            ctx.fillRect(bx, ry, C, C);
+            ctx.strokeStyle = 'rgba(255,100,0,0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
           }
         }
       });
@@ -7926,12 +8044,7 @@ function bjDraw(now) {
     // ── Player — cyan cell with white ▲ ──
     const px = rt.playerCol * C, py = (BJ_ROWS - 1 - rt.playerRow) * C;
     const hitAge = now - rt.hitFlash;
-    ctx.fillStyle = hitAge < 180 ? '#ff4444' : '#00ffff';
-    ctx.fillRect(px, py, C, C);
-    ctx.fillStyle = '#fff';
-    ctx.font = `bold ${Math.round(C * 0.5)}px sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('▲', px + C / 2, py + C / 2);
+    ctx.drawImage(hitAge < 180 ? sprites.playerHit : sprites.player, px, py, C, C);
   }
 
   // ── Score toasts (neon yellow) ──
@@ -7966,19 +8079,7 @@ function bjDraw(now) {
     ctx.fillText('↑  ↓  ←  →  strzałki', W / 2, H / 2 + 12);
   }
 
-  // ── Scanline CRT overlay ──
-  ctx.fillStyle = 'rgba(0,0,0,0.08)';
-  for (let sy = 0; sy < H; sy += 3) {
-    ctx.fillRect(0, sy, W, 1);
-  }
-
-  // ── Outer border (green glow) ──
-  ctx.strokeStyle = 'rgba(0,255,100,0.25)';
-  ctx.lineWidth = 5;
-  ctx.strokeRect(2.5, 2.5, W - 5, H - 5);
-  ctx.strokeStyle = '#00ff66';
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(1, 1, W - 2, H - 2);
+  ctx.drawImage(bjGetOverlayLayer(course), 0, 0, W, H);
 
   // reset text state
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
@@ -8102,20 +8203,23 @@ function bjResolveCollisionAt(elapsedMs = bjElapsed()) {
   return false;
 }
 
-function bjMovePlayer(dr, dc) {
+function bjInputCooldownMs(rt = bugJumperRuntime) {
+  return Math.max(1, Number(rt?.course?.inputCooldownMs || BJ_COURSE.inputCooldownMs) || BJ_COURSE.inputCooldownMs);
+}
+
+function bjMovePlayer(dr, dc, now = performance.now()) {
   const rt = bugJumperRuntime;
-  if (!rt?.playing || rt.completed) return;
-  const now = performance.now();
-  if (now < rt.inputCooldown) return;
+  if (!rt?.playing || rt.completed) return false;
+  if (now < rt.inputCooldown) return false;
   const elapsed = bjElapsed(now);
   bjResolveCollisionAt(elapsed);
-  rt.inputCooldown = now + BJ_COURSE.inputCooldownMs;
+  rt.inputCooldown = now + bjInputCooldownMs(rt);
   rt.moveLog.push({ t: Math.round(elapsed), dr, dc });
 
   const newRow = rt.playerRow + dr;
   const newCol = Math.max(0, Math.min(BJ_COLS - 1, rt.playerCol + dc));
   rt.playerCol = newCol;
-  if (newRow < 0 || newRow > BJ_ROWS - 1) return;
+  if (newRow < 0 || newRow > BJ_ROWS - 1) return true;
 
   if (newRow >= BJ_ROWS - 1) {
     rt.bestRowReached = BJ_LANE_COUNT;
@@ -8125,10 +8229,10 @@ function bjMovePlayer(dr, dc) {
     rt.prodFlash = now;
     rt.playerRow = BJ_ROWS - 1;
     rt.toasts.push({ text: 'META', col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
-    bjSetStats(0);
+    bjSetStats(0, true);
     bjDraw(now);
     finishBugJumperRound();
-    return;
+    return true;
   }
 
   if (dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT && newRow > rt.bestRowReached) {
@@ -8138,8 +8242,34 @@ function bjMovePlayer(dr, dc) {
   }
   rt.playerRow = newRow;
   bjResolveCollisionAt(elapsed);
-  bjSetStats(Math.max(0, rt.durationMs - elapsed));
-  bjDraw(now);
+  bjSetStats(Math.max(0, rt.durationMs - elapsed), true);
+  return true;
+}
+
+function bjQueueMove(dr, dc, now = performance.now()) {
+  const rt = bugJumperRuntime;
+  if (!rt?.playing || rt.completed) return;
+  if (now >= rt.inputCooldown) {
+    rt.queuedMove = null;
+    bjMovePlayer(dr, dc, now);
+    return;
+  }
+  if (rt.inputCooldown - now <= BJ_INPUT_BUFFER_MS) {
+    rt.queuedMove = { dr, dc, expiresAt: now + BJ_INPUT_BUFFER_MS };
+  }
+}
+
+function bjFlushQueuedMove(now = performance.now()) {
+  const rt = bugJumperRuntime;
+  if (!rt?.playing || rt.completed || !rt.queuedMove) return false;
+  const queued = rt.queuedMove;
+  if (now > queued.expiresAt) {
+    rt.queuedMove = null;
+    return false;
+  }
+  if (now < rt.inputCooldown) return false;
+  rt.queuedMove = null;
+  return bjMovePlayer(queued.dr, queued.dc, now);
 }
 
 function bjTick(ts) {
@@ -8149,12 +8279,14 @@ function bjTick(ts) {
   const remaining = rt.durationMs - (ts - rt.startPerf);
   bjSetStats(remaining);
   if (remaining <= 0) { finishBugJumperRound(); return; }
+  bjFlushQueuedMove(ts);
+  if (!bugJumperRuntime?.playing) return;
 
-  if (rt.playerRow >= 1 && rt.playerRow <= BJ_LANE_COUNT) {
+  if (bugJumperRuntime.playerRow >= 1 && bugJumperRuntime.playerRow <= BJ_LANE_COUNT) {
     bjResolveCollisionAt(bjElapsed(ts));
   }
   bjDraw(ts);
-  rt.rafId = requestAnimationFrame(bjTick);
+  if (bugJumperRuntime?.playing) bugJumperRuntime.rafId = requestAnimationFrame(bjTick);
 }
 
 function stopBugJumperRound() {
@@ -8162,7 +8294,8 @@ function stopBugJumperRound() {
   if (rt?.rafId) cancelAnimationFrame(rt.rafId);
   bugJumperRuntime = newBugJumperRuntime();
   if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
-  bjSetStats(BJ_DURATION_MS);
+  bjResetStatCache();
+  bjSetStats(BJ_DURATION_MS, true);
   bjInitCanvas();
   bjDraw(performance.now());
 }
@@ -8187,7 +8320,12 @@ function beginBugJumperRound(round, course, options = {}) {
       ? 'Tryb testowy admina — wynik nie zostanie zapisany.'
       : '↑ ↓ ← → — przejdź stałą planszę do góry.';
   }
-  bjSetStats(rt.durationMs - serverElapsed);
+  if (bjArena) {
+    if (!bjArena.hasAttribute('tabindex')) bjArena.tabIndex = 0;
+    try { bjArena.focus({ preventScroll: true }); } catch { bjArena.focus(); }
+  }
+  bjResetStatCache();
+  bjSetStats(rt.durationMs - serverElapsed, true);
   rt.rafId = requestAnimationFrame(bjTick);
 }
 
@@ -8240,7 +8378,7 @@ async function finishBugJumperRound() {
   if (rt.rafId) cancelAnimationFrame(rt.rafId);
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Zapisuję...'; }
   if (bjStatus) bjStatus.textContent = 'Zapisuję wynik...';
-  if (bjTimeEl) bjTimeEl.textContent = '0.0';
+  bjSetStats(0, true);
   bjDraw(performance.now());
 
   if (rt.archiveMode) {
@@ -8281,10 +8419,10 @@ if (bjStartBtn) bjStartBtn.addEventListener('click', startBugJumperRound);
 // Arrow keys only — no WASD, no touch
 document.addEventListener('keydown', evt => {
   if (!bugJumperRuntime?.playing) return;
-  if (evt.key === 'ArrowUp')    { evt.preventDefault(); bjMovePlayer(1, 0); }
-  if (evt.key === 'ArrowDown')  { evt.preventDefault(); bjMovePlayer(-1, 0); }
-  if (evt.key === 'ArrowLeft')  { evt.preventDefault(); bjMovePlayer(0, -1); }
-  if (evt.key === 'ArrowRight') { evt.preventDefault(); bjMovePlayer(0, 1); }
+  if (evt.key === 'ArrowUp')    { evt.preventDefault(); bjQueueMove(1, 0); }
+  if (evt.key === 'ArrowDown')  { evt.preventDefault(); bjQueueMove(-1, 0); }
+  if (evt.key === 'ArrowLeft')  { evt.preventDefault(); bjQueueMove(0, -1); }
+  if (evt.key === 'ArrowRight') { evt.preventDefault(); bjQueueMove(0, 1); }
 });
 
 // ── Flappy Pants (3 Pary Spodni) — canvas ─────────────────────────────────
