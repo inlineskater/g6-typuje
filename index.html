@@ -7724,7 +7724,7 @@ const BJ_COURSE = Object.freeze({
   laneCount: 30,
   safeRows: Object.freeze([10, 20, 30]),
   durationMs: 20000,
-  inputCooldownMs: 240,
+  inputCooldownMs: 120,
   maxScore: 30,
   lanes: Object.freeze([
     { dir:  1, intervalMs: 520, phaseMs: 120, bugs: [{ col: 1, len: 2 }, { col: 7, len: 2 }] },
@@ -7769,7 +7769,8 @@ const BJ_CS_H        = BJ_ROWS * BJ_CELL;    // 768
 const BJ_DURATION_MS = BJ_COURSE.durationMs;
 const BJ_START_COL   = Math.floor(BJ_COLS / 2);
 const BJ_MAX_DPR     = 1.5;
-const BJ_INPUT_BUFFER_MS = 180;
+const BJ_INPUT_QUEUE_MAX = 4;
+const BJ_INPUT_QUEUE_TTL_MS = 600;
 
 function newBugJumperRuntime() {
   return {
@@ -7789,7 +7790,7 @@ function newBugJumperRuntime() {
     startPerf: 0, rafId: null,
     hitFlash: 0, prodFlash: 0,
     inputCooldown: 0,
-    queuedMove: null,
+    inputQueue: [],
     toasts: [],
   };
 }
@@ -8174,6 +8175,17 @@ function renderBugJumperAwards(wrap, awards) {
   }));
 }
 
+function bjClearInputQueue(rt = bugJumperRuntime) {
+  if (rt?.inputQueue) rt.inputQueue.length = 0;
+}
+
+function bjPruneInputQueue(rt, now = performance.now()) {
+  if (!rt?.inputQueue) return;
+  while (rt.inputQueue.length && now > rt.inputQueue[0].expiresAt) {
+    rt.inputQueue.shift();
+  }
+}
+
 function bjCheckCollision(elapsedMs = bjElapsed()) {
   const rt = bugJumperRuntime;
   if (!rt) return false;
@@ -8191,6 +8203,7 @@ function bjPlayerHit(elapsedMs = bjElapsed()) {
   rt.collisions   += 1;
   rt.playerRow     = 0;
   rt.playerCol     = BJ_START_COL;
+  bjClearInputQueue(rt);
   rt.toasts.push({ text: 'HIT! → START', col: hitCol, row: hitRow, born: performance.now(), color: '#cc0000' });
   bjSetStats(Math.max(0, rt.durationMs - elapsedMs));
 }
@@ -8228,6 +8241,7 @@ function bjMovePlayer(dr, dc, now = performance.now()) {
     rt.score = BJ_LANE_COUNT;
     rt.prodFlash = now;
     rt.playerRow = BJ_ROWS - 1;
+    bjClearInputQueue(rt);
     rt.toasts.push({ text: 'META', col: rt.playerCol, row: BJ_ROWS - 1, born: now, color: '#0077aa' });
     bjSetStats(0, true);
     bjDraw(now);
@@ -8249,26 +8263,23 @@ function bjMovePlayer(dr, dc, now = performance.now()) {
 function bjQueueMove(dr, dc, now = performance.now()) {
   const rt = bugJumperRuntime;
   if (!rt?.playing || rt.completed) return;
-  if (now >= rt.inputCooldown) {
-    rt.queuedMove = null;
+  if (!Array.isArray(rt.inputQueue)) rt.inputQueue = [];
+  bjPruneInputQueue(rt, now);
+  if (now >= rt.inputCooldown && rt.inputQueue.length === 0) {
     bjMovePlayer(dr, dc, now);
     return;
   }
-  if (rt.inputCooldown - now <= BJ_INPUT_BUFFER_MS) {
-    rt.queuedMove = { dr, dc, expiresAt: now + BJ_INPUT_BUFFER_MS };
-  }
+  if (rt.inputQueue.length >= BJ_INPUT_QUEUE_MAX) return;
+  rt.inputQueue.push({ dr, dc, expiresAt: now + BJ_INPUT_QUEUE_TTL_MS });
 }
 
 function bjFlushQueuedMove(now = performance.now()) {
   const rt = bugJumperRuntime;
-  if (!rt?.playing || rt.completed || !rt.queuedMove) return false;
-  const queued = rt.queuedMove;
-  if (now > queued.expiresAt) {
-    rt.queuedMove = null;
-    return false;
-  }
+  if (!rt?.playing || rt.completed || !rt.inputQueue?.length) return false;
+  bjPruneInputQueue(rt, now);
+  if (!rt.inputQueue.length) return false;
   if (now < rt.inputCooldown) return false;
-  rt.queuedMove = null;
+  const queued = rt.inputQueue.shift();
   return bjMovePlayer(queued.dr, queued.dc, now);
 }
 
@@ -8373,6 +8384,7 @@ async function startBugJumperRound() {
 async function finishBugJumperRound() {
   const rt = bugJumperRuntime;
   if (!rt || rt.submitting) return;
+  bjClearInputQueue(rt);
   rt.playing    = false;
   rt.submitting = true;
   if (rt.rafId) cancelAnimationFrame(rt.rafId);

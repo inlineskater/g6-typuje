@@ -21,7 +21,7 @@ const COURSE = Object.freeze({
   laneCount: 30,
   safeRows: Object.freeze([10, 20, 30]),
   durationMs: 20_000,
-  inputCooldownMs: 240,
+  inputCooldownMs: 120,
   maxScore: 30,
   lanes: Object.freeze([
     { dir:  1, intervalMs: 520, phaseMs: 120, bugs: [{ col: 1, len: 2 }, { col: 7, len: 2 }] },
