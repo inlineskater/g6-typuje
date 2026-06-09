@@ -961,13 +961,6 @@
     .info-rule-icon { flex-shrink: 0; }
     .info-rule-text { min-width: 0; }
 
-    /* ── FOOTER ── */
-    footer {
-      border-top: 1px solid var(--border); color: var(--muted);
-      font-size: 11px; margin-top: 48px; padding: 18px var(--page-pad);
-      text-align: center; line-height: 1.9;
-    }
-
     @media (max-width: 760px) {
       :root { --page-pad: 16px; }
 
@@ -1019,14 +1012,6 @@
       .slider-label { align-items: flex-start; gap: 10px; }
       .amount-input-wrap { margin-left: auto; }
       .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
-
-      .garden-shelf { grid-template-columns: repeat(3, 1fr); gap: 10px; }
-      .garden-pot { padding: 4px 4px 16px; }
-      .garden-pot::before { width: 80px; height: 32px; bottom: 50px; }
-      .gp-pot-body { width: 48px; height: 36px; }
-      .gp-plant-area { height: 80px; min-height: auto; }
-
-      footer { margin-top: 32px; }
     }
 
     @media (max-width: 480px) {
@@ -1682,10 +1667,20 @@
     .cosmetic-owned-label { font-size: 10px; color: var(--yes); font-weight: 700; }
     .cosmetic-equipped-label { font-size: 10px; color: var(--accent); font-weight: 700; }
     .cosmetic-btn { font-size: 11px; padding: 4px 10px; margin-top: auto; }
-    .gp-accessory { position: absolute; font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); z-index: 2; pointer-events: none; line-height: 1; transition: font-size .12s; }
-    .gp-acc-0 { top: 2px; left: 2px; } .gp-acc-1 { top: 2px; left: 50%; transform: translateX(-50%); } .gp-acc-2 { top: 2px; right: 2px; }
-    .gp-acc-3 { top: 40%; left: 2px; transform: translateY(-50%); } .gp-acc-4 { top: 40%; left: 50%; transform: translate(-50%,-50%); } .gp-acc-5 { top: 40%; right: 2px; transform: translateY(-50%); }
-    .gp-acc-6 { top: 65%; left: 2px; transform: translateY(-50%); } .gp-acc-7 { top: 65%; left: 50%; transform: translate(-50%,-50%); } .gp-acc-8 { top: 65%; right: 2px; transform: translateY(-50%); }
+    .gp-accessory {
+      position: absolute;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,.22));
+      z-index: 3; pointer-events: none; line-height: 1;
+      opacity: .96;
+      transition: font-size .12s, opacity .12s;
+    }
+    .garden-pot > .gp-accessory { min-width: 18px; height: 18px; }
+    .garden-pot > .gp-acc-0 { top: 12px; left: 18px; }
+    .garden-pot > .gp-acc-1 { top: 12px; right: 18px; }
+    .garden-pot > .gp-acc-2 { bottom: 50px; left: 18px; }
+    .garden-pot > .gp-acc-3 { bottom: 50px; right: 18px; }
     @keyframes accBob { 0%,100%{ transform: translateY(0) scale(1); } 50%{ transform: translateY(-2px) scale(1.08); } }
     @keyframes accFloat { 0%,100%{ transform: translate(0,0) rotate(0deg); } 33%{ transform: translate(1px,-2px) rotate(4deg); } 66%{ transform: translate(-1px,-1px) rotate(-3deg); } }
     @keyframes accBuzz { 0%,100%{ transform: translate(0,0); } 25%{ transform: translate(1px,-1px); } 50%{ transform: translate(-1px,1px); } 75%{ transform: translate(1px,0); } }
@@ -1731,68 +1726,82 @@
     }
     .garden-decorate-card .deco-hint .btn-ghost { font-size: 11px; padding: 5px 9px; margin-top: 6px; }
     /* ── Accessory editor modal ── */
-    .modal.modal-wide { max-width: 960px; }
+    .modal.modal-wide { max-width: 920px; }
     .acc-editor-body {
-      display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px;
+      display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 16px;
       margin-top: 4px;
     }
     .acc-editor-canvas {
       display: flex; flex-direction: column; align-items: center; gap: 8px;
-      padding: 14px;
-      background: linear-gradient(180deg, #d9eadb 0%, #bfd7c2 100%);
-      border-radius: 12px;
-      border: 3px solid #6d4c2c;
+      padding: 18px;
+      background:
+        radial-gradient(ellipse at 22% 12%, rgba(255,255,255,.46) 0%, transparent 34%),
+        linear-gradient(180deg, #dcefd8 0%, #c3dfb7 100%);
+      border-radius: 10px;
+      border: 1px solid rgba(62,95,55,.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
     }
     .acc-editor-pot {
       position: relative;
-      width: 320px; height: 320px;
+      width: min(100%, 340px); height: 300px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 140px; line-height: 1;
+      line-height: 1;
+      isolation: isolate;
+    }
+    .acc-editor-pot::before {
+      content: '';
+      position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%);
+      width: 220px; height: 60px;
+      background: radial-gradient(ellipse at center, rgba(105,73,42,.23) 0%, rgba(105,73,42,.12) 46%, transparent 72%);
+      z-index: 0; pointer-events: none;
+    }
+    .acc-editor-pot::after {
+      content: '';
+      position: absolute; left: 50%; bottom: 58px; transform: translateX(-50%);
+      width: 76px; height: 48px;
+      background: linear-gradient(180deg, #cf7e46 0%, #a75b2e 54%, #804016 100%);
+      border-top: 9px solid #df9360;
+      border-radius: 0 0 34px 34px;
+      box-shadow: 0 7px 14px rgba(64,38,17,.24), inset 0 -3px 5px rgba(0,0,0,.16);
+      z-index: 1; pointer-events: none;
+    }
+    .acc-editor-plant {
+      position: relative; z-index: 2;
+      font-size: 132px;
+      transform: translateY(-24px);
       filter: drop-shadow(0 4px 10px rgba(0,0,0,.18));
     }
-    /* Slot markers for the accessory editor — 40px circles positioned in a 3×3 grid
-       inside the 320px editor pot. Uses acc-slot-N classes defined below. */
+    /* Four visible decoration slots: two near the top, two near the pot. */
     .acc-slot-marker {
       position: absolute;
-      width: 40px; height: 40px;
+      width: 46px; height: 46px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 20px; font-weight: 800; color: #14532d;
-      border: 2px dashed rgba(22,163,74,.55);
+      font-size: 20px; font-weight: 800; color: #166534;
+      border: 2px dashed rgba(22,101,52,.42);
       border-radius: 50%;
-      background: rgba(255,255,255,.55);
+      background: rgba(255,255,255,.70);
       cursor: pointer;
       transition: background .15s, border-color .15s, transform .15s, box-shadow .15s;
-      z-index: 1; pointer-events: auto;
+      z-index: 3; pointer-events: auto;
     }
     .acc-slot-marker:hover { background: rgba(255,255,255,.85); border-color: var(--accent); transform: scale(1.08); }
     .acc-slot-marker.target { border-style: solid; border-color: var(--accent); background: var(--acc-dim); box-shadow: 0 0 0 3px rgba(99,102,241,.18); transform: scale(1.12); }
     .acc-slot-marker.pulse { animation: accSlotPulse 1.4s ease-in-out infinite; }
     @keyframes accSlotPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,.45); } 50% { box-shadow: 0 0 0 6px rgba(22,163,74,0); } }
-    /* Position offsets for slot markers inside the 320px editor square. */
-    .acc-slot-0 { top: 8px;    left: 8px; }
-    .acc-slot-1 { top: 8px;    left: 50%; transform: translateX(-50%); }
-    .acc-slot-2 { top: 8px;    right: 8px; }
-    .acc-slot-3 { top: 50%;    left: 8px;  transform: translateY(-50%); }
-    .acc-slot-4 { top: 50%;    left: 50%; transform: translate(-50%,-50%); }
-    .acc-slot-5 { top: 50%;    right: 8px; transform: translateY(-50%); }
-    .acc-slot-6 { bottom: 8px; left: 8px; }
-    .acc-slot-7 { bottom: 8px; left: 50%; transform: translateX(-50%); }
-    .acc-slot-8 { bottom: 8px; right: 8px; }
-    .acc-slot-marker.acc-slot-1:hover, .acc-slot-marker.acc-slot-1.target { transform: translateX(-50%) scale(1.08); }
-    .acc-slot-marker.acc-slot-7:hover, .acc-slot-marker.acc-slot-7.target { transform: translateX(-50%) scale(1.08); }
-    .acc-slot-marker.acc-slot-3:hover, .acc-slot-marker.acc-slot-3.target { transform: translateY(-50%) scale(1.08); }
-    .acc-slot-marker.acc-slot-5:hover, .acc-slot-marker.acc-slot-5.target { transform: translateY(-50%) scale(1.08); }
-    .acc-slot-marker.acc-slot-4:hover, .acc-slot-marker.acc-slot-4.target { transform: translate(-50%,-50%) scale(1.08); }
+    .acc-slot-0 { top: 24px; left: 42px; }
+    .acc-slot-1 { top: 24px; right: 42px; }
+    .acc-slot-2 { bottom: 40px; left: 48px; }
+    .acc-slot-3 { bottom: 40px; right: 48px; }
     /* Placed accessory in the modal — clickable. */
     .acc-editor-pot .acc-placed {
       position: absolute;
       display: flex; align-items: center; justify-content: center;
-      width: 48px; height: 48px;
+      width: 54px; height: 54px;
       cursor: pointer;
       border-radius: 50%;
       transition: box-shadow .15s, background .15s;
       pointer-events: auto;
-      z-index: 2;
+      z-index: 4;
     }
     .acc-editor-pot .acc-placed:hover { background: rgba(255,255,255,.4); }
     .acc-editor-pot .acc-placed.selected { background: rgba(255,255,255,.6); box-shadow: 0 0 0 3px var(--accent), 0 0 0 6px rgba(99,102,241,.22); }
@@ -1800,6 +1809,52 @@
       position: static; pointer-events: none;
     }
     .acc-editor-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .acc-editor-summary {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 12px;
+      background: rgba(22,163,74,.07);
+      border: 1px solid rgba(22,163,74,.18);
+      border-radius: 8px;
+      color: #28543a;
+      font-size: 12px; font-weight: 700;
+    }
+    .acc-editor-summary b { color: #14532d; }
+    .acc-editor-slots {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+    }
+    .acc-slot-chip {
+      min-height: 50px;
+      display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: center; gap: 7px;
+      padding: 8px;
+      background: #fffaf0;
+      border: 1px solid rgba(109,76,44,.18);
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+      color: #3d2810;
+      text-align: left;
+      transition: border-color .15s, background .15s, box-shadow .15s, transform .15s;
+    }
+    .acc-slot-chip:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .acc-slot-chip.target, .acc-slot-chip.selected {
+      border-color: var(--accent);
+      background: var(--acc-dim);
+      box-shadow: 0 0 0 2px rgba(99,102,241,.12);
+    }
+    .acc-slot-chip.busy { opacity: .55; cursor: wait; pointer-events: none; }
+    .acc-slot-chip-icon { font-size: 22px; line-height: 1; text-align: center; }
+    .acc-slot-chip-label {
+      display: block;
+      min-width: 0;
+      font-size: 10px; font-weight: 800; color: #5f6f5a;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .acc-slot-chip-name {
+      display: block;
+      min-width: 0;
+      font-size: 11px; font-weight: 800;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
     .acc-editor-section-label {
       font-size: 11px; color: var(--muted); text-transform: uppercase;
       letter-spacing: .04em; margin: 0;
@@ -1825,8 +1880,14 @@
       content: '✓'; position: absolute; top: 2px; right: 5px;
       font-size: 11px; color: #14532d; font-weight: 800;
     }
+    .acc-inv-item.hidden-equipped::after {
+      content: '•'; position: absolute; top: 2px; right: 6px;
+      font-size: 15px; color: #a16207; font-weight: 900;
+    }
     .acc-inv-item.picking { border-color: var(--accent); background: var(--acc-dim); box-shadow: 0 0 0 2px rgba(99,102,241,.18); }
+    .acc-inv-item.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,.12); }
     .acc-inv-item.busy { opacity: .55; cursor: wait; pointer-events: none; }
+    .acc-inv-item:disabled { opacity: .42; cursor: not-allowed; transform: none; }
     .acc-editor-empty {
       font-size: 12px; color: #5f6f5a; line-height: 1.45;
       background: rgba(22,163,74,.07);
@@ -1884,6 +1945,33 @@
     .garden-admin-delete { color: var(--no); }
 
     /* ── GARDEN (Ogródek) ── */
+    #tab-garden {
+      position: relative;
+      min-height: calc(100vh - 104px);
+      background:
+        radial-gradient(ellipse at 12% 12%, rgba(255,255,255,.32) 0%, transparent 28%),
+        radial-gradient(ellipse at 88% 6%, rgba(234,179,8,.12) 0%, transparent 24%),
+        repeating-linear-gradient(82deg,
+          rgba(37,99,45,.10) 0px, rgba(37,99,45,.10) 1px,
+          transparent 1px, transparent 9px),
+        repeating-linear-gradient(102deg,
+          rgba(22,101,52,.08) 0px, rgba(22,101,52,.08) 1px,
+          transparent 1px, transparent 11px),
+        linear-gradient(180deg, #dff1d3 0%, #c7e5b2 44%, #b6d897 100%);
+      overflow: hidden;
+    }
+    #tab-garden::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 18% 88%, rgba(92,64,34,.10) 0%, transparent 22%),
+        radial-gradient(circle at 78% 82%, rgba(92,64,34,.08) 0%, transparent 20%);
+      pointer-events: none;
+    }
+    #tab-garden main {
+      position: relative; z-index: 1;
+      max-width: 1420px;
+    }
     .garden-wrap {
       max-width: 1200px; margin: 0 auto;
       display: grid; grid-template-columns: 300px 1fr; gap: 24px;
@@ -1899,21 +1987,21 @@
       position: relative;
       background:
         repeating-linear-gradient(0deg,
-          transparent 0px, transparent 11px,
-          rgba(60,30,10,.10) 11px, rgba(60,30,10,.10) 12px),
+          transparent 0px, transparent 13px,
+          rgba(60,30,10,.075) 13px, rgba(60,30,10,.075) 14px),
         repeating-linear-gradient(90deg,
           rgba(255,255,255,.04) 0px, rgba(255,255,255,.04) 60px,
-          rgba(60,30,10,.05) 60px, rgba(60,30,10,.05) 61px),
-        linear-gradient(180deg, #e9c79a 0%, #d8a872 50%, #c89760 100%);
-      border: 4px solid #6d4c2c;
-      border-radius: 10px;
-      padding: 20px 18px 18px;
+          rgba(60,30,10,.04) 60px, rgba(60,30,10,.04) 61px),
+        linear-gradient(180deg, #efd3a7 0%, #dfb77f 54%, #c9955f 100%);
+      border: 3px solid #765438;
+      border-radius: 8px;
+      padding: 18px 18px 16px;
       font-size: 12px;
       color: #3d2810; line-height: 1.55;
       box-shadow:
-        0 8px 18px rgba(60,30,10,.22),
+        0 8px 16px rgba(60,30,10,.16),
         inset 0 1px 0 rgba(255,255,255,.45),
-        inset 0 -3px 6px rgba(60,30,10,.18);
+        inset 0 -2px 5px rgba(60,30,10,.14);
     }
     /* 4 nails in corners */
     .sign-board::before, .sign-board::after,
@@ -1997,80 +2085,134 @@
 
     /* ── Main garden area ── */
     .garden-area {
-      padding: 10px 8px 12px;
-      border-radius: 14px;
-      border: 4px solid #6d4c2c;
-      background: linear-gradient(180deg, #d9eadb 0%, #bfd7c2 100%);
+      position: relative;
+      padding: 16px 18px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(62,95,55,.28);
+      background:
+        radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.44) 0%, transparent 32%),
+        radial-gradient(ellipse 70% 22% at 50% 96%, rgba(96,64,34,.10) 0%, transparent 68%),
+        linear-gradient(180deg, #dcefd8 0%, #c8e4bd 46%, #b7d7a8 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.7),
+        0 10px 26px rgba(45,72,38,.12);
+      overflow: visible;
+    }
+    .garden-area::before {
+      content: '';
+      position: absolute;
+      inset: 48px 18px 18px;
+      border-radius: 46% 54% 49% 51% / 12% 16% 84% 88%;
+      background:
+        radial-gradient(ellipse at 18% 70%, rgba(239,226,190,.72) 0%, transparent 28%),
+        radial-gradient(ellipse at 62% 42%, rgba(239,226,190,.62) 0%, transparent 34%),
+        repeating-linear-gradient(8deg,
+          rgba(117,90,55,.075) 0px, rgba(117,90,55,.075) 1px,
+          transparent 1px, transparent 12px);
+      opacity: .88;
+      pointer-events: none;
+    }
+    .garden-area::after {
+      content: '';
+      position: absolute;
+      left: 9%; right: 8%; top: 92px; height: 42px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 8% 52%, rgba(105,87,60,.28) 0 4px, transparent 5px),
+        radial-gradient(circle at 22% 35%, rgba(105,87,60,.24) 0 3px, transparent 4px),
+        radial-gradient(circle at 36% 58%, rgba(105,87,60,.22) 0 5px, transparent 6px),
+        radial-gradient(circle at 52% 44%, rgba(105,87,60,.25) 0 3px, transparent 4px),
+        radial-gradient(circle at 70% 60%, rgba(105,87,60,.22) 0 4px, transparent 5px),
+        radial-gradient(circle at 86% 38%, rgba(105,87,60,.24) 0 3px, transparent 4px);
+      opacity: .55;
+      pointer-events: none;
     }
     .garden-title {
-      text-align: center; font-size: 15px; font-weight: 800; color: #166534;
-      margin-bottom: 8px; letter-spacing: .04em;
+      text-align: center; font-size: 15px; font-weight: 800; color: #225c35;
+      margin-bottom: 12px; letter-spacing: 0;
       text-shadow: 0 1px 0 rgba(255,255,255,.5);
     }
     .garden-shelf {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 4px;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 18px 16px;
+      padding: 10px 0 2px;
     }
-    /* ── Zen tile: each pot in its own raked-sand square ── */
+    /* Plant islands: organic placement without the hard grid-card feel. */
     .garden-pot {
+      --resting-offset: 0px;
+      --resting-tilt: 0deg;
       display: flex; flex-direction: column; align-items: center;
-      position: relative; padding: 4px 3px 14px;
-      /* Flat raked-sand surface — no card border */
+      position: relative;
+      flex: 0 1 clamp(136px, calc((100% - 64px) / 5), 166px);
+      min-height: 150px;
+      padding: 10px 10px 29px;
       background:
-        radial-gradient(ellipse 80% 38% at 50% 78%, rgba(140,100,60,.10) 0%, transparent 65%),
-        repeating-linear-gradient(0deg,
-          #f4e8d2 0px, #f4e8d2 5px,
-          #ecdfc2 5px, #ecdfc2 6px);
-      border: none;
-      border-radius: 0;
-      box-shadow: none;
-      transition: transform .15s;
+        radial-gradient(ellipse 82% 42% at 50% 82%, rgba(113,79,44,.23) 0%, rgba(113,79,44,.08) 48%, transparent 74%),
+        radial-gradient(ellipse 92% 72% at 50% 48%, rgba(255,250,238,.78) 0%, rgba(255,250,238,.52) 54%, rgba(255,250,238,0) 75%),
+        repeating-linear-gradient(45deg,
+          rgba(105,86,54,.045) 0px, rgba(105,86,54,.045) 7px,
+          rgba(255,255,255,.08) 7px, rgba(255,255,255,.08) 15px);
+      border: 1px solid rgba(65,106,55,.10);
+      border-radius: 46% 54% 43% 57% / 26% 24% 18% 20%;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.62),
+        0 8px 18px rgba(37,75,42,.08);
+      transition: transform .15s, border-color .15s, box-shadow .15s;
+      transform: translateY(var(--resting-offset)) rotate(var(--resting-tilt));
       overflow: visible;
     }
-    /* Concentric raked-sand rings around the pot */
+    .garden-pot:nth-child(5n+1) { --resting-offset: 2px;  --resting-tilt: -.45deg; }
+    .garden-pot:nth-child(5n+2) { --resting-offset: -4px; --resting-tilt: .35deg; }
+    .garden-pot:nth-child(5n+3) { --resting-offset: 5px;  --resting-tilt: -.25deg; }
+    .garden-pot:nth-child(5n+4) { --resting-offset: -1px; --resting-tilt: .45deg; }
+    .garden-pot:nth-child(5n)   { --resting-offset: 4px;  --resting-tilt: -.15deg; }
+    .garden-pot:not(.empty):hover {
+      transform: translateY(calc(var(--resting-offset) - 4px)) rotate(0deg);
+      border-color: rgba(47,125,70,.34);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.78),
+        0 12px 22px rgba(37,75,42,.14);
+      z-index: 8;
+    }
+    .garden-pot:focus { outline: 2px solid rgba(99,102,241,.42); outline-offset: 2px; }
+    /* Soft soil halo around the pot. */
     .garden-pot::before {
       content: '';
       position: absolute;
-      bottom: 42px; left: 50%; transform: translateX(-50%);
-      width: 80px; height: 30px;
+      bottom: 44px; left: 50%; transform: translateX(-50%);
+      width: 92px; height: 28px;
       background:
-        radial-gradient(ellipse,
-          transparent 32%,
-          rgba(140,100,60,.12) 32%, rgba(140,100,60,.12) 35%,
-          transparent 35%, transparent 50%,
-          rgba(140,100,60,.10) 50%, rgba(140,100,60,.10) 53%,
-          transparent 53%, transparent 70%,
-          rgba(140,100,60,.07) 70%, rgba(140,100,60,.07) 73%,
-          transparent 73%);
-      pointer-events: none; opacity: .85;
+        radial-gradient(ellipse at center, rgba(105,73,42,.24) 0%, rgba(105,73,42,.13) 42%, transparent 70%);
+      pointer-events: none; opacity: .9;
     }
     .garden-pot.mine {
-      border: none;
+      border-color: rgba(34,139,79,.55);
       background:
-        radial-gradient(ellipse 80% 38% at 50% 78%, rgba(34,197,94,.10) 0%, transparent 65%),
-        repeating-linear-gradient(0deg,
-          #ecfdf5 0px, #ecfdf5 5px,
-          #d8f4e3 5px, #d8f4e3 6px);
-      box-shadow: none;
+        radial-gradient(ellipse 90% 48% at 50% 82%, rgba(34,139,79,.22) 0%, rgba(34,139,79,.08) 48%, transparent 72%),
+        radial-gradient(ellipse 92% 72% at 50% 48%, rgba(238,253,242,.88) 0%, rgba(238,253,242,.56) 54%, rgba(238,253,242,0) 75%),
+        repeating-linear-gradient(45deg,
+          rgba(22,101,52,.06) 0px, rgba(22,101,52,.06) 8px,
+          rgba(255,255,255,.10) 8px, rgba(255,255,255,.10) 16px);
+      box-shadow:
+        inset 0 0 0 1px rgba(34,139,79,.14),
+        inset 0 1px 0 rgba(255,255,255,.78),
+        0 8px 18px rgba(34,139,79,.14);
     }
     .garden-pot.mine::before {
       background:
-        radial-gradient(ellipse,
-          transparent 32%,
-          rgba(22,163,74,.18) 32%, rgba(22,163,74,.18) 35%,
-          transparent 35%, transparent 50%,
-          rgba(22,163,74,.14) 50%, rgba(22,163,74,.14) 53%,
-          transparent 53%, transparent 70%,
-          rgba(22,163,74,.10) 70%, rgba(22,163,74,.10) 73%,
-          transparent 73%);
+        radial-gradient(ellipse at center, rgba(22,101,52,.26) 0%, rgba(22,101,52,.14) 42%, transparent 70%);
     }
     /* Plant area takes top space */
     .gp-plant-area {
-      height: 85px;
+      height: 88px;
       display: flex; align-items: flex-end; justify-content: center;
       padding-bottom: 2px;
-      position: relative; z-index: 1;
+      position: relative; z-index: 2;
     }
     .gp-plant {
       line-height: 1;
@@ -2094,18 +2236,21 @@
     }
     /* Pot — fixed size */
     .gp-pot-body {
-      width: 38px; height: 28px; position: relative; flex-shrink: 0;
-      background: linear-gradient(180deg, #c2703a 0%, #a0522d 50%, #8b4513 100%);
-      border-radius: 0 0 18px 18px; border-top: 5px solid #d4845a;
-      box-shadow: 0 3px 6px rgba(0,0,0,.22), inset 0 -2px 4px rgba(0,0,0,.15);
+      width: 42px; height: 30px; position: relative; flex-shrink: 0;
+      background: linear-gradient(180deg, #cf7e46 0%, #a75b2e 54%, #804016 100%);
+      border-radius: 0 0 20px 20px; border-top: 5px solid #df9360;
+      box-shadow:
+        0 4px 8px rgba(64,38,17,.22),
+        inset 0 -2px 4px rgba(0,0,0,.16),
+        inset 0 1px 0 rgba(255,255,255,.22);
       transition: transform .15s, box-shadow .15s;
-      z-index: 1;
+      z-index: 2;
     }
     .garden-pot:not(.empty):hover .gp-pot-body { transform: translateY(-2px); }
     .gp-pot-body::before {
       content: ''; position: absolute; top: -10px; left: -5px; right: -5px; height: 10px;
-      background: linear-gradient(180deg, #d4845a, #c2703a);
-      border-radius: 3px 3px 0 0;
+      background: linear-gradient(180deg, #e4a071, #c8743e);
+      border-radius: 4px 4px 0 0;
     }
     .gp-soil {
       position: absolute; top: 0; left: 5px; right: 5px; height: 14px;
@@ -2116,7 +2261,7 @@
     .gp-info {
       text-align: center; margin-top: 4px; width: 100%;
       display: flex; flex-direction: column; align-items: center; gap: 1px;
-      position: relative; z-index: 1;
+      position: relative; z-index: 2;
       padding: 0 2px;
     }
     .gp-name {
@@ -2125,27 +2270,90 @@
       line-height: 1.2;
     }
     .gp-owner { font-size: 9px; color: #6b7280; font-weight: 400; }
+    .gp-details-popover {
+      position: absolute;
+      left: 50%; bottom: calc(100% + 8px);
+      transform: translate(-50%, 4px);
+      width: 205px;
+      max-width: min(205px, 82vw);
+      display: grid; gap: 5px;
+      padding: 10px;
+      background: rgba(15,23,42,.94);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      box-shadow: 0 12px 28px rgba(15,23,42,.24);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s, transform .15s;
+      z-index: 30;
+      text-align: left;
+    }
+    .gp-details-popover::after {
+      content: '';
+      position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: rgba(15,23,42,.94);
+    }
+    .garden-pot:hover .gp-details-popover,
+    .garden-pot:focus .gp-details-popover,
+    .garden-pot:focus-within .gp-details-popover {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    .garden-shelf .garden-pot:nth-child(-n+5) .gp-details-popover {
+      top: calc(100% + 8px);
+      bottom: auto;
+      transform: translate(-50%, -4px);
+    }
+    .garden-shelf .garden-pot:nth-child(-n+5) .gp-details-popover::after {
+      top: auto; bottom: 100%;
+      border-top-color: transparent;
+      border-bottom-color: rgba(15,23,42,.94);
+    }
+    .garden-shelf .garden-pot:nth-child(-n+5):hover .gp-details-popover,
+    .garden-shelf .garden-pot:nth-child(-n+5):focus .gp-details-popover,
+    .garden-shelf .garden-pot:nth-child(-n+5):focus-within .gp-details-popover {
+      transform: translate(-50%, 0);
+    }
+    .gp-details-title {
+      min-width: 0;
+      font-size: 12px; font-weight: 800;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .gp-details-owner { font-size: 10px; color: rgba(255,255,255,.70); }
+    .gp-details-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px;
+      font-size: 10px; color: rgba(255,255,255,.82);
+    }
+    .gp-details-grid b { color: #fff; font-weight: 800; }
     .gp-streak {
-      position: absolute; top: 4px; right: 4px;
-      font-size: 9px; color: #a0a0a0; font-weight: 600;
-      background: none; padding: 0; border-radius: 0; border: none;
+      position: absolute; top: 6px; right: 6px;
+      font-size: 9px; color: #9a4c00; font-weight: 800;
+      background: rgba(255,247,237,.88); padding: 2px 5px; border-radius: 999px;
+      border: 1px solid rgba(251,146,60,.24);
+      box-shadow: 0 1px 3px rgba(154,76,0,.10);
+      z-index: 4;
     }
     /* Timeline bar */
     .gp-timeline {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      height: 18px; background: #e5e7eb;
-      overflow: visible;
+      position: absolute; bottom: 7px; left: 8px; right: 8px;
+      height: 16px; background: rgba(255,255,255,.64);
+      border: 1px solid rgba(45,72,38,.14);
+      border-radius: 999px;
+      overflow: hidden;
+      z-index: 3;
     }
     .gp-timeline-fill {
       height: 100%; transition: width .4s;
       background: linear-gradient(90deg, #22c55e, #86efac);
     }
-    .gp-timeline-fill.ready { background: linear-gradient(90deg, #3b82f6, #60a5fa); animation: pulseBar 1.6s infinite; }
+    .gp-timeline-fill.ready { background: linear-gradient(90deg, #0ea5e9, #7dd3fc); animation: pulseBar 1.6s infinite; }
     .gp-timeline-fill.full  { background: linear-gradient(90deg, #f59e0b, #fde68a); }
     @keyframes pulseBar { 0%,100%{opacity:1} 50%{opacity:.55} }
     .gp-timer {
       position: absolute; bottom: 0; left: 0; right: 0;
-      height: 18px; line-height: 18px;
+      height: 16px; line-height: 16px;
       font-size: 9px; color: #333; font-weight: 600;
       text-align: center;
       font-variant-numeric: tabular-nums;
@@ -2155,7 +2363,7 @@
     .gp-water-btn {
       position: relative; z-index: 2;
       background: linear-gradient(180deg, #38bdf8, #0ea5e9);
-      border: none; border-radius: 0; color: #fff;
+      border: none; border-radius: 999px; color: #fff;
       padding: 0; width: 100%; height: 100%;
       font-size: 9px; font-weight: 700; cursor: pointer; font-family: inherit;
       box-shadow: none;
@@ -2197,14 +2405,13 @@
     /* Empty pot tile */
     .garden-pot.empty {
       cursor: pointer;
-      border: none;
-      border-radius: 0;
+      border: 1px dashed rgba(65,106,55,.20);
+      border-radius: 46% 54% 43% 57% / 26% 24% 18% 20%;
       background:
-        repeating-linear-gradient(0deg,
-          #fbf3e1 0px, #fbf3e1 5px,
-          #f4e8d2 5px, #f4e8d2 6px);
+        radial-gradient(ellipse 90% 48% at 50% 82%, rgba(113,79,44,.13) 0%, transparent 66%),
+        radial-gradient(ellipse 92% 72% at 50% 48%, rgba(255,250,238,.50) 0%, rgba(255,250,238,.30) 54%, rgba(255,250,238,0) 75%);
     }
-    .garden-pot.empty:hover { transform: translateY(-2px); }
+    .garden-pot.empty:hover { transform: translateY(calc(var(--resting-offset) - 3px)) rotate(0deg); }
     .garden-pot.placeholder { cursor: default; opacity: .5; }
     .garden-pot.placeholder:hover { transform: none; }
     .garden-pot.empty .gp-pot-body {
@@ -2251,25 +2458,38 @@
     @media (max-width: 700px) {
       .garden-wrap { grid-template-columns: 1fr; gap: 14px; }
       .garden-sign { position: static; }
-      .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-      .garden-area { padding: 10px 8px 12px; }
-      .garden-pot { min-width: 0; padding: 5px 3px 18px; }
+      .garden-shelf { gap: 12px 10px; padding-top: 8px; }
+      .garden-area { padding: 12px 10px 14px; }
+      .garden-area::before { inset: 44px 10px 14px; }
+      .garden-area::after { left: 8%; right: 8%; top: 82px; }
+      .garden-pot {
+        flex-basis: clamp(104px, calc((100% - 20px) / 3), 150px);
+        min-width: 0; min-height: 144px; padding: 6px 5px 28px;
+      }
       .gp-plant-area { height: 86px; }
       .gp-pot-body { width: 42px; height: 32px; }
       .gp-name { font-size: 9px; }
       .gp-owner { font-size: 8px; }
+      .gp-details-popover { width: 190px; }
       .garden-decorate-card { margin-top: 10px; }
       .acc-editor-body { grid-template-columns: 1fr; }
-      .acc-editor-pot { width: min(82vw, 320px); height: min(82vw, 320px); font-size: clamp(72px, 22vw, 140px); }
+      .acc-editor-pot { width: min(82vw, 320px); height: min(76vw, 285px); }
+      .acc-editor-plant { font-size: clamp(86px, 27vw, 128px); }
+      .acc-editor-side { gap: 10px; }
       .acc-editor-inv { max-height: 220px; }
     }
 
     @media (max-width: 420px) {
-      .garden-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+      .garden-shelf { gap: 10px 8px; }
       .garden-title { font-size: 14px; }
       .garden-pot::before { width: 64px; height: 26px; }
       .gp-plant-area { height: 78px; }
       .gp-empty-text { font-size: 10px; }
+      .garden-pot > .gp-acc-0 { left: 10px; }
+      .garden-pot > .gp-acc-1 { right: 10px; }
+      .garden-pot > .gp-acc-2 { left: 10px; }
+      .garden-pot > .gp-acc-3 { right: 10px; }
+      .acc-editor-slots { grid-template-columns: 1fr; }
       .acc-editor-inv { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
     }
 
@@ -3217,10 +3437,6 @@
     </main>
   </div>
 
-  <footer>
-    Masz pytania? Zgłoś się do twórcy rynku lub admina.<br>
-    Pamiętaj: coiny są wirtualne i służą tylko do zabawy. 🎲
-  </footer>
 </div>
 
 <!-- ── BET MODAL ── -->
@@ -8858,10 +9074,19 @@ const GARDEN_EQUIP_SLOTS = [
   { id: '7', label: 'Dół' },
   { id: '8', label: 'Dół prawy' },
 ];
+const GARDEN_EDITOR_SLOTS = [
+  { id: '0', label: 'Góra lewa' },
+  { id: '1', label: 'Góra prawa' },
+  { id: '2', label: 'Dół lewy' },
+  { id: '3', label: 'Dół prawy' },
+];
+const GARDEN_EDITOR_SLOT_IDS = GARDEN_EDITOR_SLOTS.map(s => s.id);
 const GARDEN_LEGACY_SLOT_MAP = { left: '3', top: '1', right: '5' };
 const ACCESSORY_SIZE_MIN = 10;
 const ACCESSORY_SIZE_MAX = 34;
 const ACCESSORY_SIZE_DEFAULT = 14;
+const GARDEN_TILE_ACCESSORY_LIMIT = 4;
+const GARDEN_TILE_ACCESSORY_SIZE_MAX = 18;
 function gardenErr(err) {
   if (!err) return 'Błąd';
   const msg = (err.message || String(err)).trim();
@@ -8872,6 +9097,12 @@ function canonicalPlantType(type) {
 }
 function gardenSlotLabel(slotId) {
   return GARDEN_EQUIP_SLOTS.find(s => s.id === slotId)?.label || 'Miejsce';
+}
+function isGardenEditorSlot(slotId) {
+  return GARDEN_EDITOR_SLOT_IDS.includes(String(slotId));
+}
+function gardenEditorSlotLabel(slotId) {
+  return GARDEN_EDITOR_SLOTS.find(s => s.id === slotId)?.label || gardenSlotLabel(slotId);
 }
 function gardenAccessoryById(id) {
   return GARDEN_COSMETICS.find(c => c.id === id) || null;
@@ -8891,6 +9122,9 @@ function equippedEntrySize(entry) {
   if (!entry || typeof entry !== 'object') return ACCESSORY_SIZE_DEFAULT;
   return clampAccessorySize(entry.size);
 }
+function gardenTileAccessorySize(entry) {
+  return Math.min(equippedEntrySize(entry), GARDEN_TILE_ACCESSORY_SIZE_MAX);
+}
 function makeEquippedEntry(accId, size = ACCESSORY_SIZE_DEFAULT) {
   return { id: accId, size: clampAccessorySize(size) };
 }
@@ -8907,6 +9141,26 @@ function normalizeEquippedSlots(equipped) {
 }
 function accessorySlot(equipped, accId) {
   return Object.entries(equipped || {}).find(([, entry]) => equippedEntryId(entry) === accId)?.[0] || null;
+}
+function gardenActiveEquippedCount(equipped) {
+  return GARDEN_EDITOR_SLOT_IDS.reduce((count, slotId) => {
+    const accId = equippedEntryId(equipped?.[slotId]);
+    return accId && gardenAccessoryById(accId) ? count + 1 : count;
+  }, 0);
+}
+function gardenHiddenEquippedCount(equipped) {
+  return Object.entries(equipped || {}).reduce((count, [slotId, entry]) => {
+    const accId = equippedEntryId(entry);
+    return accId && gardenAccessoryById(accId) && !isGardenEditorSlot(slotId) ? count + 1 : count;
+  }, 0);
+}
+function gardenTileAccessories(equipped) {
+  return GARDEN_EDITOR_SLOTS.map(slotDef => {
+    const entry = equipped?.[slotDef.id];
+    const accId = equippedEntryId(entry);
+    const item = accId ? gardenAccessoryById(accId) : null;
+    return item ? { slot: slotDef.id, entry, item } : null;
+  }).filter(Boolean).slice(0, GARDEN_TILE_ACCESSORY_LIMIT);
 }
 function uniqueAccessoryIds(...lists) {
   const seen = new Set();
@@ -8935,7 +9189,7 @@ function accessoryPlacementLabels(accId) {
     { garden: myGarden2, label: 'Drugi' },
   ].forEach(({ garden, label }) => {
     const slotId = accessorySlot(normalizeEquippedSlots(garden?.equipped), accId);
-    if (slotId) labels.push(label + ': ' + gardenSlotLabel(slotId));
+    if (slotId) labels.push(label + ': ' + (isGardenEditorSlot(slotId) ? gardenEditorSlotLabel(slotId) : 'ukryte'));
   });
   return labels;
 }
@@ -9176,8 +9430,12 @@ function buildPlantTypeChanger(garden) {
 
 // Live-update font size in the edited garden pot and the open editor modal.
 function applyAccessorySizeToDom(garden, slotId, size) {
-  const selector = `.garden-pot.mine[data-garden-key="${gardenDomKey(garden)}"] .gp-accessory[data-slot="${slotId}"], .acc-editor-pot .gp-accessory[data-slot="${slotId}"]`;
-  document.querySelectorAll(selector).forEach(node => {
+  const tileSelector = `.garden-pot.mine[data-garden-key="${gardenDomKey(garden)}"] .gp-accessory[data-slot="${slotId}"]`;
+  document.querySelectorAll(tileSelector).forEach(node => {
+    node.style.fontSize = gardenTileAccessorySize({ size }) + 'px';
+  });
+  const editorSelector = `.acc-editor-pot .gp-accessory[data-slot="${slotId}"]`;
+  document.querySelectorAll(editorSelector).forEach(node => {
     node.style.fontSize = size + 'px';
   });
 }
@@ -9185,7 +9443,7 @@ function applyAccessorySizeToDom(garden, slotId, size) {
 function buildDecorateCard(garden) {
   const equipped = normalizeEquippedSlots(garden.equipped);
   const ownedIds = accessoriesForGarden(garden);
-  const equippedCount = Object.keys(equipped).length;
+  const equippedCount = gardenActiveEquippedCount(equipped);
 
   const card = el('div', { className: 'garden-decorate-card' });
   card.appendChild(el('div', { className: 'garden-panel-title' }, el('span', {}, '🎨 Ozdoby · ' + gardenDisplayLabel(garden))));
@@ -9202,7 +9460,7 @@ function buildDecorateCard(garden) {
 
   card.appendChild(el('div', { className: 'equipped-count' },
     el('span', {}, 'Założonych: '),
-    el('b', {}, equippedCount + '/9'),
+    el('b', {}, equippedCount + '/' + GARDEN_TILE_ACCESSORY_LIMIT),
     el('span', {}, ' · wspólny ekwipunek: '),
     el('b', {}, String(ownedIds.length))
   ));
@@ -9256,13 +9514,17 @@ function openAccessoryEditor(garden) {
   // ── Canvas (large pot preview) ──
   const canvas = el('div', { className: 'acc-editor-canvas' });
   const potNode = el('div', { className: 'acc-editor-pot' });
-  const plantSpan = el('span', {}, titleEmoji);
+  const plantSpan = el('span', { className: 'acc-editor-plant' }, titleEmoji);
   potNode.appendChild(plantSpan);
   canvas.appendChild(potNode);
   body.appendChild(canvas);
 
   // ── Side panel ──
   const side = el('div', { className: 'acc-editor-side' });
+  const summary = el('div', { className: 'acc-editor-summary' });
+  side.appendChild(summary);
+  const slotTray = el('div', { className: 'acc-editor-slots' });
+  side.appendChild(slotTray);
   side.appendChild(el('div', { className: 'acc-editor-section-label' }, 'Twoje ozdoby'));
   const invWrap = el('div', { className: 'acc-editor-inv' });
   side.appendChild(invWrap);
@@ -9277,6 +9539,7 @@ function openAccessoryEditor(garden) {
   const slotMarkers = new Map();  // slotId -> DOM node (empty marker)
   const placedNodes = new Map();  // slotId -> DOM node (placed accessory wrapper)
   const invButtons = new Map();   // accId -> DOM node (inventory button)
+  const slotButtons = new Map();  // slotId -> side tray button
 
   function clearSelection() {
     targetSlot = null;
@@ -9291,7 +9554,7 @@ function openAccessoryEditor(garden) {
     slotMarkers.clear();
     placedNodes.clear();
 
-    GARDEN_EQUIP_SLOTS.forEach(slot => {
+    GARDEN_EDITOR_SLOTS.forEach(slot => {
       const entry = equipped[slot.id];
       const accId = equippedEntryId(entry);
       const item = accId ? gardenAccessoryById(accId) : null;
@@ -9328,6 +9591,40 @@ function openAccessoryEditor(garden) {
     renderHighlights();
   }
 
+  function renderSummary() {
+    const visibleCount = gardenActiveEquippedCount(equipped);
+    const hiddenCount = gardenHiddenEquippedCount(equipped);
+    summary.replaceChildren(
+      el('span', {}, 'Widoczne ozdoby'),
+      el('b', {}, visibleCount + '/' + GARDEN_TILE_ACCESSORY_LIMIT + (hiddenCount ? ' · ukryte ' + hiddenCount : ''))
+    );
+  }
+
+  function renderSlotTray() {
+    slotTray.replaceChildren();
+    slotButtons.clear();
+    GARDEN_EDITOR_SLOTS.forEach(slot => {
+      const entry = equipped[slot.id];
+      const accId = equippedEntryId(entry);
+      const item = accId ? gardenAccessoryById(accId) : null;
+      const btn = el('button', {
+        className: 'acc-slot-chip' + (item ? ' filled' : '') + (pendingSlots.has(slot.id) ? ' busy' : ''),
+        type: 'button',
+        title: item ? item.name + ' · ' + slot.label : slot.label,
+      });
+      const icon = el('span', { className: 'acc-slot-chip-icon' });
+      icon.append(item ? renderAccEmoji(item) : '+');
+      btn.appendChild(icon);
+      btn.appendChild(el('span', {},
+        el('span', { className: 'acc-slot-chip-label' }, slot.label),
+        el('span', { className: 'acc-slot-chip-name' }, item ? item.name : 'Puste')
+      ));
+      btn.addEventListener('click', () => item ? onPlacedClick(slot.id) : onEmptySlotClick(slot.id));
+      slotButtons.set(slot.id, btn);
+      slotTray.appendChild(btn);
+    });
+  }
+
   function renderHighlights() {
     slotMarkers.forEach((node, slotId) => {
       node.classList.toggle('target', targetSlot === slotId);
@@ -9336,8 +9633,14 @@ function openAccessoryEditor(garden) {
     placedNodes.forEach((node, slotId) => {
       node.classList.toggle('selected', selectedSlot === slotId);
     });
+    slotButtons.forEach((node, slotId) => {
+      node.classList.toggle('target', targetSlot === slotId);
+      node.classList.toggle('selected', selectedSlot === slotId);
+    });
     invButtons.forEach((btn, accId) => {
+      const slotId = accessorySlot(equipped, accId);
       btn.classList.toggle('picking', pickingItemId === accId);
+      btn.classList.toggle('selected', !!slotId && selectedSlot === slotId);
     });
   }
 
@@ -9357,10 +9660,15 @@ function openAccessoryEditor(garden) {
     ownedIds.forEach(accId => {
       const item = gardenAccessoryById(accId);
       const slotId = accessorySlot(equipped, accId);
+      const isVisible = !!slotId && isGardenEditorSlot(slotId);
+      const isHidden = !!slotId && !isVisible;
       const btn = el('button', {
-        className: 'acc-inv-item' + (slotId ? ' equipped' : ''),
+        className: 'acc-inv-item'
+          + (isVisible ? ' equipped' : '')
+          + (isHidden ? ' hidden-equipped' : '')
+          + (slotId && pendingSlots.has(slotId) ? ' busy' : ''),
         type: 'button',
-        title: item.name + (slotId ? ' (założone)' : ''),
+        title: item.name + (isVisible ? ' (założone)' : isHidden ? ' (ukryte)' : ''),
       }, renderAccEmoji(item));
       btn.addEventListener('click', () => onInventoryClick(accId));
       invButtons.set(accId, btn);
@@ -9376,12 +9684,13 @@ function openAccessoryEditor(garden) {
       const item = gardenAccessoryById(equippedEntryId(entry));
       if (!item) { selectedSlot = null; renderToolbar(); return; }
       const size = equippedEntrySize(entry);
+      const slotLabel = isGardenEditorSlot(selectedSlot) ? gardenEditorSlotLabel(selectedSlot) : 'Ukryte';
 
       const preview = el('span', { className: 'acc-tool-preview', style: { fontSize: size + 'px' } }, renderAccEmoji(item));
       const main = el('span', { className: 'acc-tool-main' });
       const valueSpan = el('span', { className: 'acc-tool-size-value' }, size + ' px');
       main.appendChild(el('span', { className: 'acc-tool-head' },
-        el('span', {}, item.name + ' · ' + gardenSlotLabel(selectedSlot)),
+        el('span', {}, item.name + ' · ' + slotLabel),
         valueSpan
       ));
       const slider = el('input', {
@@ -9424,7 +9733,7 @@ function openAccessoryEditor(garden) {
 
       const removeBtn = el('button', { className: 'btn-ghost btn-remove', type: 'button' }, '🗑️ Zdejmij');
       removeBtn.addEventListener('click', () => removePlaced(selectedSlot));
-      const swapBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Przenieś');
+      const swapBtn = el('button', { className: 'btn-ghost', type: 'button' }, isGardenEditorSlot(selectedSlot) ? 'Przenieś' : 'Pokaż');
       swapBtn.addEventListener('click', () => {
         // Same as "click inventory item": user wants to move this one elsewhere.
         const accId = equippedEntryId(equipped[selectedSlot]);
@@ -9444,11 +9753,15 @@ function openAccessoryEditor(garden) {
     let hint;
     if (pickingItemId) {
       const item = gardenAccessoryById(pickingItemId);
-      hint = 'Wybrano ' + (item ? item.emoji + ' ' + item.name : 'ozdobę') + '. Kliknij miejsce na doniczce.';
+      const isFull = gardenActiveEquippedCount(equipped) >= GARDEN_TILE_ACCESSORY_LIMIT;
+      hint = 'Wybrano ' + (item ? item.emoji + ' ' + item.name : 'ozdobę') + '. '
+        + (isFull ? 'Kliknij założoną ozdobę, żeby ją zastąpić.' : 'Kliknij wolne miejsce na roślince.');
     } else if (targetSlot) {
-      hint = 'Wybierz ozdobę z listy, aby umieścić ją w „' + gardenSlotLabel(targetSlot) + '".';
+      hint = 'Wybierz ozdobę z listy, aby umieścić ją w „' + gardenEditorSlotLabel(targetSlot) + '".';
+    } else if (gardenActiveEquippedCount(equipped) >= GARDEN_TILE_ACCESSORY_LIMIT) {
+      hint = 'Limit 4/4 — wybierz założoną ozdobę, żeby ją zmienić albo zdjąć.';
     } else {
-      hint = 'Kliknij ozdobę lub puste miejsce na doniczce, aby zacząć.';
+      hint = 'Wybierz ozdobę albo jedno z wolnych miejsc.';
     }
     toolbar.appendChild(el('div', { className: 'acc-editor-hint' }, hint));
 
@@ -9465,6 +9778,8 @@ function openAccessoryEditor(garden) {
 
   function rerender() {
     renderPot();
+    renderSummary();
+    renderSlotTray();
     renderInventory();
     renderHighlights();
     renderToolbar();
@@ -9472,6 +9787,7 @@ function openAccessoryEditor(garden) {
 
   // ── Event handlers ──
   function onEmptySlotClick(slotId) {
+    if (!isGardenEditorSlot(slotId)) return;
     if (pendingSlots.has(slotId)) return;
     if (pickingItemId) {
       placeAccessory(slotId, pickingItemId);
@@ -9485,6 +9801,7 @@ function openAccessoryEditor(garden) {
   }
 
   function onPlacedClick(slotId) {
+    if (!isGardenEditorSlot(slotId)) return;
     if (pendingSlots.has(slotId)) return;
     if (pickingItemId) {
       // Swap: place picked item here (existing item gets unequipped automatically by RPC behavior)
@@ -9521,14 +9838,22 @@ function openAccessoryEditor(garden) {
   }
 
   async function placeAccessory(slotId, accId) {
+    if (!isGardenEditorSlot(slotId)) return;
     if (pendingSlots.has(slotId)) return;
     const previousSlot = accessorySlot(equipped, accId);
+    const replacing = !!equipped[slotId];
+    if (!previousSlot && !replacing && gardenActiveEquippedCount(equipped) >= GARDEN_TILE_ACCESSORY_LIMIT) {
+      showToast('Limit: 4 ozdoby na roślinkę.');
+      return;
+    }
     const previousSize = previousSlot ? equippedEntrySize(equipped[previousSlot]) : ACCESSORY_SIZE_DEFAULT;
     pendingSlots.add(slotId);
+    if (previousSlot) pendingSlots.add(previousSlot);
     rerender();
 
     const { error } = await sb.rpc('equip_accessory', { p_slot: slotId, p_accessory_id: accId, p_slot_index: garden.slot_index || 1 });
     pendingSlots.delete(slotId);
+    if (previousSlot) pendingSlots.delete(previousSlot);
 
     if (error) {
       showToast('❌ ' + gardenErr(error));
@@ -9653,6 +9978,9 @@ function buildPot(g, isMine) {
   const pot = el('div', {
     className: 'garden-pot' + (isMine ? ' mine' : ''),
     'data-garden-key': gardenDomKey(g),
+    tabIndex: 0,
+    role: 'group',
+    'aria-label': (g.plant_name || 'Roślina') + ' · ' + (g.profiles?.nick || '?'),
   });
 
   // Plant emoji (grows above the pot)
@@ -9679,15 +10007,11 @@ function buildPot(g, isMine) {
 
   // Accessories (equipped)
   const equipped = normalizeEquippedSlots(g.equipped);
-  Object.entries(equipped).forEach(([slot, entry]) => {
-    const accId = equippedEntryId(entry);
-    if (!accId) return;
-    const item = gardenAccessoryById(accId);
-    if (!item) return;
+  gardenTileAccessories(equipped).forEach(({ slot, entry, item }) => {
     const animClass = item.anim ? ' gp-acc-' + item.anim : '';
     pot.appendChild(el('span', {
       className: 'gp-accessory gp-acc-' + slot + animClass,
-      style: { fontSize: equippedEntrySize(entry) + 'px' },
+      style: { fontSize: gardenTileAccessorySize(entry) + 'px' },
       'data-slot': slot,
     }, renderAccEmoji(item)));
   });
@@ -9706,6 +10030,8 @@ function buildPot(g, isMine) {
   // Cooldown / daily-cap state
   const today = new Date().toISOString().slice(0, 10);
   const dailyFull = g.waters_today >= 3 && g.last_water_date === today;
+  const watersToday = (g.last_water_date === today) ? (g.waters_today || 0) : 0;
+  const activeAccessoryCount = gardenActiveEquippedCount(equipped);
   let pct = 100;
   let canWater = true;
   let cooldownEnd = null;
@@ -9716,6 +10042,18 @@ function buildPot(g, isMine) {
     canWater = elapsed >= 5 * 3600000;
   }
   if (dailyFull) { pct = 100; canWater = false; }
+
+  pot.appendChild(el('div', { className: 'gp-details-popover' },
+    el('div', { className: 'gp-details-title' }, getPlantEmoji(g.plant_type, displayStage) + ' ' + (g.plant_name || 'Roślina')),
+    el('div', { className: 'gp-details-owner' }, g.profiles?.nick || '?'),
+    el('div', { className: 'gp-details-grid' },
+      el('span', {}, 'Typ'), el('b', {}, PLANT_LABELS[canonicalPlantType(g.plant_type)] || '-'),
+      el('span', {}, 'Etap'), el('b', {}, String(g.stage || 1) + '/6'),
+      el('span', {}, 'Seria'), el('b', {}, String(g.streak_days || 0)),
+      el('span', {}, 'Dziś'), el('b', {}, watersToday + '/3'),
+      el('span', {}, 'Ozdoby'), el('b', {}, activeAccessoryCount + '/' + GARDEN_TILE_ACCESSORY_LIMIT)
+    )
+  ));
 
   // Timeline bar — only for own pot, at bottom of tile
   if (isMine) {
