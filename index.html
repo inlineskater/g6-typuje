@@ -6,6 +6,7 @@
   <title>Rynek Proroctw G6</title>
   <meta name="description" content="Firmowy rynek predykcji z wirtualnymi coinami.">
   <meta name="theme-color" content="#f8fafc">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%236366f1'/%3E%3Ccircle cx='22' cy='22' r='5' fill='white'/%3E%3Ccircle cx='32' cy='32' r='5' fill='white'/%3E%3Ccircle cx='42' cy='42' r='5' fill='white'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2523,7 +2524,7 @@
     <h1 class="login-title">Rynek Proroctw G6</h1>
     <p class="login-sub" id="login-sub">Wybierz swój nick i podaj PIN.</p>
 
-    <div id="mode-login">
+    <form id="mode-login" autocomplete="off">
       <p class="field-label">Twój nick</p>
       <select id="nick-select" class="nick-select">
         <option value="">Ładowanie…</option>
@@ -2532,9 +2533,9 @@
       <input type="password" id="pin-input" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="off">
       <button class="btn-primary" id="login-btn">Zaloguj →</button>
       <p class="login-hint">Nowy gracz? <a href="#" id="go-register">Zarejestruj się →</a></p>
-    </div>
+    </form>
 
-    <div id="mode-register" class="hidden">
+    <form id="mode-register" class="hidden" autocomplete="off">
       <p class="field-label">Twój nick</p>
       <input type="text" id="reg-nick" placeholder="np. Kasia, Marek…" maxlength="30" autocomplete="off" spellcheck="false">
       <p class="field-label">Ustaw 4-cyfrowy PIN</p>
@@ -2542,7 +2543,7 @@
       <button class="btn-primary" id="register-btn">Zarejestruj →</button>
       <p class="login-hint">Dostaniesz <strong>1000 coinów 🪙</strong> na start.<br>
         Masz konto? <a href="#" id="go-login">Wróć do logowania →</a></p>
-    </div>
+    </form>
 
     <p class="login-error" id="login-error"></p>
 
@@ -2905,7 +2906,7 @@
                 <li><strong>Tydzień:</strong> startuje w poniedziałek o 00:00 i kończy się w niedzielę o 23:59:59 (Europe/Warsaw). <span id="wb-week-window">Zakres bieżącego tygodnia pojawi się po wczytaniu rankingu.</span></li>
                 <li><strong>Jak liczymy tydzień:</strong> serwer bierze czas zgłoszenia rundy w strefie Europe/Warsaw, wyznacza poniedziałek rozpoczynający ten tydzień i zapisuje wynik pod tą datą.</li>
                 <li><strong>Ranking tygodniowy:</strong> liczy się najlepszy wynik gracza w danym tygodniu. Remisy rozstrzyga wyższy procent trafień, a potem wcześniejsze zgłoszenie.</li>
-                <li><strong>Nagrody co niedzielę:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
+                <li><strong>Nagrody po zamknięciu tygodnia:</strong> 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
               </ul>
             </div>
 
@@ -2970,7 +2971,7 @@
             <section class="wb-awards-section">
               <div class="wb-board-title">
                 <span>Ostatnie nagrody</span>
-                <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą niedzielę o 23:59 (czas Warszawy)">wypłata: niedziela 23:59</span>
+                <span class="wb-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
               </div>
               <div class="wb-awards" id="wb-awards"></div>
             </section>
@@ -3047,7 +3048,7 @@
             <section>
               <div class="bj-board-title">
                 <span>Ostatnie nagrody</span>
-                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą sobotę o 23:05 (czas Warszawy)">wypłata: sobota 23:05</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
               </div>
               <div class="bj-awards" id="bj-awards"></div>
             </section>
@@ -3082,7 +3083,7 @@
               <div class="bj-rules-title" style="margin-top:10px">Kiedy</div>
               <ul>
                 <li>Tydzień punktowy trwa od <strong>poniedziałku 00:00</strong> do <strong>niedzieli 23:59</strong> (czas Warszawy).</li>
-                <li>Nagrody wypłacane automatycznie w niedzielę o 23:59 za <em>miniony</em> tydzień.</li>
+                <li>Nagrody wypłacane automatycznie po zamknięciu <em>minionego</em> tygodnia.</li>
               </ul>
             </div>
 
@@ -3125,7 +3126,7 @@
             <section>
               <div class="bj-board-title">
                 <span>Ostatnie nagrody</span>
-                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w każdą sobotę o 23:05 (czas Warszawy)">wypłata: sobota 23:05</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
               </div>
               <div class="bj-awards" id="fp-awards"></div>
             </section>
@@ -3613,7 +3614,6 @@ const bjStatus        = document.getElementById('bj-status');
 const bjTimeEl        = document.getElementById('bj-time');
 const bjScoreEl       = document.getElementById('bj-score');
 const bjProgressEl    = document.getElementById('bj-progress');
-const bjLivesEl       = document.getElementById('bj-lives');
 const fpArena         = document.getElementById('fp-arena');
 const fpStartBtn      = document.getElementById('fp-start-btn');
 const fpStatus        = document.getElementById('fp-status');
@@ -3783,20 +3783,17 @@ async function doLogout() {
 }
 
 // ── Login event listeners ─────────────────────────────────────────────────
-document.getElementById('login-btn').addEventListener('click', doLogin);
-document.getElementById('register-btn').addEventListener('click', doRegister);
+document.getElementById('mode-login').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
+document.getElementById('mode-register').addEventListener('submit', e => { e.preventDefault(); doRegister(); });
 document.getElementById('go-register').addEventListener('click', e => { e.preventDefault(); switchLoginMode('register'); });
 document.getElementById('go-login').addEventListener('click', e => { e.preventDefault(); switchLoginMode('login'); });
-pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 const regPinEl  = document.getElementById('reg-pin');
 const regNickEl = document.getElementById('reg-nick');
-if (regPinEl)  regPinEl.addEventListener('keydown',  e => { if (e.key === 'Enter') doRegister(); });
 if (regNickEl) regNickEl.addEventListener('keydown', e => { if (e.key === 'Enter' && regPinEl) regPinEl.focus(); });
 logoutBtn.addEventListener('click', doLogout);
 
-// Filter elements are now created dynamically inside modals
+// Transaction filter elements are created dynamically inside modals.
 let txFilterSearch, txFilterSide, txFilterStatus, txFilterClear;
-let hzFilterSearch, hzFilterGame, hzFilterClear;
 
 // ── App shell ─────────────────────────────────────────────────────────────
 function showApp() {
@@ -5200,9 +5197,9 @@ function buildSeasonHistorySections(container, compact) {
       });
       section.append(table);
       if (hasPending) {
-        const [py, pm, pd] = addDaysStr(entry.weekStart, 6).split('-').map(Number);
+        const [py, pm, pd] = addDaysStr(entry.weekStart, 7).split('-').map(Number);
         section.append(el('p', { className: 'season-history-pending' },
-          '⏳ Wyniki wstępne — nagrody wypłacane w niedzielę ' + pd + '.' + String(pm).padStart(2, '0') + '.'
+          '⏳ Wyniki wstępne — nagrody wypłacane po zamknięciu tygodnia, w poniedziałek ' + pd + '.' + String(pm).padStart(2, '0') + '.'
         ));
       }
     }
@@ -5485,13 +5482,7 @@ function getFilteredMarketRows() {
 }
 
 function getFilteredHazardRows() {
-  const q = (document.getElementById('hz-filter-search')?.value || '').trim().toLowerCase();
-  const game = (document.getElementById('hz-filter-game')?.value || '');
-  return hazardHistoryRows.filter(row => {
-    if (q && !row.searchText.includes(q)) return false;
-    if (game && row.gameType !== game) return false;
-    return true;
-  });
+  return hazardHistoryRows;
 }
 
 function applyTransactionFilters() {
@@ -6048,12 +6039,14 @@ function drawCoinChart(canvas, points) {
 
 // ── Shop ──────────────────────────────────────────────────────────────────
 async function loadMyGardenForCosmetics() {
-  if (!me?.id) { myGarden = null; return; }
-  const [{ data: garden }, { data: prof }] = await Promise.all([
-    sb.from('gardens').select('*').eq('user_id', me.id).eq('slot_index', 1).maybeSingle(),
+  if (!me?.id) { myGarden = null; myGarden2 = null; secondGardenUnlocked = false; return; }
+  const [{ data: gardens }, { data: prof }] = await Promise.all([
+    sb.from('gardens').select('*').eq('user_id', me.id),
     sb.from('profiles').select('second_garden_unlocked').eq('id', me.id).maybeSingle(),
   ]);
-  myGarden = garden || null;
+  const ownGardens = gardens || [];
+  myGarden  = ownGardens.find(g => (g.slot_index || 1) === 1) || null;
+  myGarden2 = ownGardens.find(g => g.slot_index === 2) || null;
   secondGardenUnlocked = prof?.second_garden_unlocked || false;
 }
 
@@ -6797,20 +6790,19 @@ function renderCosmeticsGrid() {
   const grid = document.getElementById('cosmetics-grid');
   if (!grid) return;
   grid.replaceChildren();
-  const myAcc = myGarden?.accessories || [];
-  const hasGarden = !!myGarden;
-  const equipped = normalizeEquippedSlots(myGarden?.equipped);
+  const myAcc = sharedGardenAccessories();
+  const hasGarden = !!myGarden || !!myGarden2;
 
   GARDEN_COSMETICS.forEach(item => {
     const owned = myAcc.includes(item.id);
-    const equippedSlot = owned ? accessorySlot(equipped, item.id) : null;
+    const placements = owned ? accessoryPlacementLabels(item.id) : [];
     const card = el('div', { className: 'cosmetic-card' + (owned ? ' owned' : '') });
     card.appendChild(el('div', { className: 'cosmetic-icon' }, renderAccEmoji(item)));
     card.appendChild(el('div', { className: 'cosmetic-name' }, item.name));
     if (owned) {
       card.appendChild(el('div', { className: 'cosmetic-owned-label' }, '✓ Posiadasz'));
-      if (equippedSlot) card.appendChild(el('div', { className: 'cosmetic-equipped-label' }, 'Założono: ' + gardenSlotLabel(equippedSlot)));
-      const btn = el('button', { className: 'btn-ghost cosmetic-btn' }, equippedSlot ? 'Przestaw' : 'Ustaw');
+      if (placements.length) card.appendChild(el('div', { className: 'cosmetic-equipped-label' }, 'Założono: ' + placements.join(' · ')));
+      const btn = el('button', { className: 'btn-ghost cosmetic-btn' }, placements.length ? 'Przestaw' : 'Ustaw');
       btn.addEventListener('click', () => switchTab('garden'));
       card.appendChild(btn);
     } else {
@@ -6836,7 +6828,12 @@ function renderCosmeticsGrid() {
 async function buyCosmetic(item, btn) {
   btn.disabled = true; btn.textContent = '...';
   const price = me.nick === 'admin' ? 0 : item.price;
-  const { data, error } = await sb.rpc('purchase_accessory', { p_accessory_id: item.id, p_price: price });
+  const targetGarden = myGarden || myGarden2;
+  const { data, error } = await sb.rpc('purchase_accessory', {
+    p_accessory_id: item.id,
+    p_price: price,
+    p_slot_index: targetGarden?.slot_index || 1,
+  });
   if (error) {
     const msg = error.message.includes('already_owned') ? 'Już posiadasz!'
               : gardenErr(error);
@@ -6847,7 +6844,7 @@ async function buyCosmetic(item, btn) {
   const pricePaid = Number(data?.price_paid ?? price);
   me.coins -= pricePaid;
   setText(headerCoins, me.coins);
-  if (myGarden) myGarden.accessories = [...(myGarden.accessories || []), item.id];
+  if (targetGarden) targetGarden.accessories = uniqueAccessoryIds(targetGarden.accessories || [], [item.id]);
   showToast('✅ Kupiono ' + item.emoji + ' ' + item.name + '!');
   renderCosmeticsGrid();
 }
@@ -8911,6 +8908,40 @@ function normalizeEquippedSlots(equipped) {
 function accessorySlot(equipped, accId) {
   return Object.entries(equipped || {}).find(([, entry]) => equippedEntryId(entry) === accId)?.[0] || null;
 }
+function uniqueAccessoryIds(...lists) {
+  const seen = new Set();
+  const out = [];
+  lists.flat().forEach(id => {
+    if (!id || seen.has(id) || !gardenAccessoryById(id)) return;
+    seen.add(id);
+    out.push(id);
+  });
+  return out;
+}
+function sharedGardenAccessories() {
+  return uniqueAccessoryIds(myGarden?.accessories || [], myGarden2?.accessories || []);
+}
+function accessoriesForGarden(garden) {
+  if (garden?.user_id === me?.id) return sharedGardenAccessories();
+  return uniqueAccessoryIds(garden?.accessories || []);
+}
+function gardenDisplayLabel(garden) {
+  return (garden?.slot_index || 1) === 2 ? 'Drugi kwiatek' : 'Pierwszy kwiatek';
+}
+function accessoryPlacementLabels(accId) {
+  const labels = [];
+  [
+    { garden: myGarden, label: 'Pierwszy' },
+    { garden: myGarden2, label: 'Drugi' },
+  ].forEach(({ garden, label }) => {
+    const slotId = accessorySlot(normalizeEquippedSlots(garden?.equipped), accId);
+    if (slotId) labels.push(label + ': ' + gardenSlotLabel(slotId));
+  });
+  return labels;
+}
+function gardenDomKey(garden) {
+  return String(garden?.id || (garden?.user_id ? garden.user_id + '-' + (garden.slot_index || 1) : garden?.slot_index || 1));
+}
 function nextRewardCoins(streak) {
   // 10 + (streak)*2, capped at 20 — reward AFTER next watering (streak grows by 1 next day)
   return Math.min(10 + Math.max(0, streak) * 2, 20);
@@ -9143,10 +9174,9 @@ function buildPlantTypeChanger(garden) {
   return row;
 }
 
-// Live-update font size of an accessory in BOTH the background grid pot and the
-// open editor modal, keyed by data-slot. Used during size-slider drags.
-function applyAccessorySizeToDom(slotId, size) {
-  const selector = `.garden-pot.mine .gp-accessory[data-slot="${slotId}"], .acc-editor-pot .gp-accessory[data-slot="${slotId}"]`;
+// Live-update font size in the edited garden pot and the open editor modal.
+function applyAccessorySizeToDom(garden, slotId, size) {
+  const selector = `.garden-pot.mine[data-garden-key="${gardenDomKey(garden)}"] .gp-accessory[data-slot="${slotId}"], .acc-editor-pot .gp-accessory[data-slot="${slotId}"]`;
   document.querySelectorAll(selector).forEach(node => {
     node.style.fontSize = size + 'px';
   });
@@ -9154,11 +9184,11 @@ function applyAccessorySizeToDom(slotId, size) {
 
 function buildDecorateCard(garden) {
   const equipped = normalizeEquippedSlots(garden.equipped);
-  const ownedIds = (garden.accessories || []).filter(id => gardenAccessoryById(id));
+  const ownedIds = accessoriesForGarden(garden);
   const equippedCount = Object.keys(equipped).length;
 
   const card = el('div', { className: 'garden-decorate-card' });
-  card.appendChild(el('div', { className: 'garden-panel-title' }, el('span', {}, '🎨 Ozdoby')));
+  card.appendChild(el('div', { className: 'garden-panel-title' }, el('span', {}, '🎨 Ozdoby · ' + gardenDisplayLabel(garden))));
 
   if (!ownedIds.length) {
     const hint = el('div', { className: 'deco-hint' });
@@ -9173,7 +9203,7 @@ function buildDecorateCard(garden) {
   card.appendChild(el('div', { className: 'equipped-count' },
     el('span', {}, 'Założonych: '),
     el('b', {}, equippedCount + '/9'),
-    el('span', {}, ' · w ekwipunku: '),
+    el('span', {}, ' · wspólny ekwipunek: '),
     el('b', {}, String(ownedIds.length))
   ));
 
@@ -9314,7 +9344,7 @@ function openAccessoryEditor(garden) {
   function renderInventory() {
     invWrap.replaceChildren();
     invButtons.clear();
-    const ownedIds = (garden.accessories || []).filter(id => gardenAccessoryById(id));
+    const ownedIds = accessoriesForGarden(garden);
     if (!ownedIds.length) {
       const empty = el('div', { className: 'acc-editor-empty' });
       empty.appendChild(document.createTextNode('Brak ozdób. '));
@@ -9370,7 +9400,7 @@ function openAccessoryEditor(garden) {
         garden.equipped = { ...equipped };
         valueSpan.textContent = newSize + ' px';
         preview.style.fontSize = newSize + 'px';
-        applyAccessorySizeToDom(selectedSlot, newSize);
+        applyAccessorySizeToDom(garden, selectedSlot, newSize);
       });
       slider.addEventListener('change', async () => {
         if (sizePending || !equipped[selectedSlot]) return;
@@ -9620,7 +9650,10 @@ function renderAccEmoji(item) {
 }
 
 function buildPot(g, isMine) {
-  const pot = el('div', { className: 'garden-pot' + (isMine ? ' mine' : '') });
+  const pot = el('div', {
+    className: 'garden-pot' + (isMine ? ' mine' : ''),
+    'data-garden-key': gardenDomKey(g),
+  });
 
   // Plant emoji (grows above the pot)
   const plantArea = el('div', { className: 'gp-plant-area' });
@@ -10328,7 +10361,17 @@ function showToast(msg) {
 
 // ── Boot ──────────────────────────────────────────────────────────────────
 (async () => {
-  const { data: { session } } = await sb.auth.getSession();
+  let session = null;
+  try {
+    const { data, error } = await sb.auth.getSession();
+    if (error) {
+      await sb.auth.signOut({ scope: 'local' });
+    } else {
+      session = data?.session || null;
+    }
+  } catch {
+    try { await sb.auth.signOut({ scope: 'local' }); } catch {}
+  }
   if (session?.user) {
     await initSession(session.user);
   } else {

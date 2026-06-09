@@ -378,7 +378,7 @@ BEGIN
 
     PERFORM cron.schedule(
       'bug_jumper_weekly_awards',
-      '59 21 * * 0',
+      '5 0 * * 1',
       $cron$SELECT public.award_bug_jumper_week(public.bug_jumper_week_start(now() - interval '7 days'));$cron$
     );
   END IF;

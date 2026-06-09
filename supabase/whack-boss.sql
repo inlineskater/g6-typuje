@@ -346,7 +346,7 @@ BEGIN
 
     PERFORM cron.schedule(
       'whack_boss_weekly_awards',
-      '59 21 * * 0',
+      '5 0 * * 1',
       $cron$SELECT public.award_whack_boss_week(public.whack_boss_week_start(now() - interval '7 days'));$cron$
     );
   END IF;

@@ -253,7 +253,14 @@ BEGIN
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_garden'; END IF;
 
-  IF p_accessory_id = ANY(v_garden.accessories) THEN RAISE EXCEPTION 'already_owned'; END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM public.gardens
+    WHERE user_id = v_user
+      AND p_accessory_id = ANY(accessories)
+  ) THEN
+    RAISE EXCEPTION 'already_owned';
+  END IF;
 
   UPDATE public.profiles SET coins = coins - v_price WHERE id = v_user AND coins >= v_price
   RETURNING coins INTO v_coins_left;
@@ -309,7 +316,12 @@ BEGIN
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_garden'; END IF;
 
-  IF v_accessory IS NOT NULL AND NOT (v_accessory = ANY(v_garden.accessories)) THEN
+  IF v_accessory IS NOT NULL AND NOT EXISTS (
+    SELECT 1
+    FROM public.gardens
+    WHERE user_id = v_user
+      AND v_accessory = ANY(accessories)
+  ) THEN
     RAISE EXCEPTION 'not_owned';
   END IF;
 
@@ -400,7 +412,12 @@ BEGIN
     v_accessory := v_entry ->> 'id';
   END IF;
 
-  IF v_accessory IS NULL OR NOT (v_accessory = ANY(v_garden.accessories)) THEN
+  IF v_accessory IS NULL OR NOT EXISTS (
+    SELECT 1
+    FROM public.gardens
+    WHERE user_id = v_user
+      AND v_accessory = ANY(accessories)
+  ) THEN
     RAISE EXCEPTION 'invalid_accessory';
   END IF;
 

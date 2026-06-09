@@ -20,7 +20,7 @@ To apply database changes: paste the relevant SQL into the Supabase SQL Editor (
 - `supabase/functions/poker-action` — authenticated Edge Function that owns poker state transitions, hidden cards, and chip accounting
 - `supabase/whack-boss.sql` — Whack-a-Boss rounds, weekly/all-time leaderboard views, and scheduled weekly prize payout
 - `supabase/functions/whack-boss-action` — authenticated Edge Function that issues and validates 18-second Whack-a-Boss rounds
-- `supabase/bug-jumper.sql` / `supabase/flappy-pants.sql` — seasonal arcade games (Bug Jumper, „3 Pary Spodni"); each adds `*_rounds`/`*_scores`/`*_weekly_awards` tables, three leaderboard views, an `award_*_week()` payout, realtime publication, and a Saturday-night `pg_cron` job
+- `supabase/bug-jumper.sql` / `supabase/flappy-pants.sql` — seasonal arcade games (Bug Jumper, „3 Pary Spodni"); each adds `*_rounds`/`*_scores`/`*_weekly_awards` tables, three leaderboard views, an `award_*_week()` payout, realtime publication, and a Monday `pg_cron` job after the week closes
 - `supabase/functions/bug-jumper-action` / `supabase/functions/flappy-pants-action` — authenticated Edge Functions that issue and validate seasonal-game rounds
 - `supabase/prod-hardening.sql` — idempotent; adds indexes and tightens permissions; safe to re-run
 - `supabase/reset-data.sql` — wipes all markets, trades, and poker state, resets every profile to 1000 coins
@@ -96,10 +96,10 @@ Whack-a-Boss is an 18-second authenticated mini-game. The browser calls `sb.func
 
 ### Seasonal games
 
-The seasonal tab hosts one rotating arcade game per Sunday-start week (Europe/Warsaw). `SEASONAL_ANCHOR_WEEK_START` plus `SEASONAL_ROTATION` in `index.html` derive the active game for any future week; `SEASONAL_OVERRIDES` can replace a specific week; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni").
+The seasonal tab hosts one rotating arcade game per Monday-start week (Europe/Warsaw). `SEASONAL_ANCHOR_WEEK_START` plus `SEASONAL_ROTATION` in `index.html` derive the active game for any future week; `SEASONAL_OVERRIDES` can replace a specific week; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni").
 
 Each seasonal game mirrors the same stack:
-- `<game>_rounds` / `<game>_scores` / `<game>_weekly_awards` tables, `<game>_current_week` / `_all_time` / `_recent_awards` views, an `award_<game>_week()` SECURITY DEFINER payout (100/50/25), realtime publication, and a `pg_cron` job at `'5 23 * * 6'` (Saturday 23:05) that pays the previous week's top 3.
+- `<game>_rounds` / `<game>_scores` / `<game>_weekly_awards` tables, `<game>_current_week` / `_all_time` / `_recent_awards` views, an `award_<game>_week()` SECURITY DEFINER payout (100/50/25), realtime publication, and a `pg_cron` job at `'5 0 * * 1'` (Monday 00:05 UTC) that pays the previous week's top 3.
 - An Edge Function (`<game>-action`) with `state`/`start`/`submit` actions. The browser cannot write score tables (RLS grants SELECT only); the function owns inserts via `SUPABASE_DB_URL`, caps the per-round score, enforces the round expiry window, and applies hero score bonuses only for games that support them.
 - Frontend: a canvas runtime (`new<Game>Runtime`/`<g>Draw`/RAF loop) plus `invoke*`/`load*`/`render*` helpers, wired into `loadSeasonalTab()`, the realtime subscriptions, and the `loadSeasonHistory()` recent-awards aggregator.
 

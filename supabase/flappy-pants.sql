@@ -318,7 +318,7 @@ BEGIN
 
     PERFORM cron.schedule(
       'flappy_pants_weekly_awards',
-      '59 21 * * 0',
+      '5 0 * * 1',
       $cron$SELECT public.award_flappy_pants_week(public.flappy_pants_week_start(now() - interval '7 days'));$cron$
     );
   END IF;
