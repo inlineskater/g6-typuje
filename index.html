@@ -3619,12 +3619,13 @@
       <div class="markets-toolbar">
         <div>
           <h2>Sklep 🛒</h2>
-          <p>Wydaj coiny na nagrody, ogródek i herosów. Monety przepadają — nie trafiają do nikogo, po prostu znikają z obiegu.</p>
+          <p>Wydaj coiny na nagrody, ogródek i herosów — albo kup coś od innego użytkownika na Targowisku (tam coiny trafiają do sprzedającego).</p>
         </div>
         <button class="btn-primary" id="btn-new-item" style="display:none;width:auto;padding:10px 18px">+ Dodaj nagrodę</button>
       </div>
       <div class="shop-category-filters" id="shop-category-filters" aria-label="Kategorie sklepu">
         <button class="shop-category-filter active" type="button" data-shop-target="hero-auctions-section">🏷️ Aukcje</button>
+        <button class="shop-category-filter" type="button" data-shop-target="marketplace-section">🛍️ Targowisko</button>
         <button class="shop-category-filter" type="button" data-shop-target="shop-rewards-section">🎁 Nagrody</button>
         <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">⚔️ Herosi</button>
         <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🌿 Ogródek</button>
@@ -3638,6 +3639,18 @@
         </div>
         <div id="hero-auction-admin"></div>
         <div class="shop-grid" id="hero-auction-grid"></div>
+      </section>
+      <section class="shop-section" id="marketplace-section">
+        <div class="shop-section-head">
+          <div>
+            <div class="shop-section-title">🛍️ Targowisko</div>
+            <div class="shop-section-sub">Sprzedaj lub kup usługi i rzeczy od innych użytkowników. Coiny trafiają bezpośrednio do sprzedającego.</div>
+          </div>
+          <button class="btn-primary" id="btn-new-listing" style="display:none;width:auto;padding:10px 18px">+ Wystaw przedmiot</button>
+        </div>
+        <div class="shop-grid" id="marketplace-grid">
+          <div class="loading-center"><div class="spinner"></div></div>
+        </div>
       </section>
       <section class="shop-section" id="shop-rewards-section">
         <div class="shop-section-head">
@@ -3804,6 +3817,52 @@
   </div>
 </div>
 
+<!-- ── MARKETPLACE NEW LISTING MODAL ── -->
+<div id="ml-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Nowe ogłoszenie</span>
+      <button class="btn-close" id="ml-close">✕</button>
+    </div>
+    <div class="nm-field">
+      <label class="field-label">Emoji / logo</label>
+      <div id="ml-icons" class="nm-icons"></div>
+    </div>
+    <div class="nm-field">
+      <label class="field-label" for="ml-title">Tytuł</label>
+      <input type="text" id="ml-title" placeholder="np. Wydruk dokumentów 🖨️" maxlength="80" autocomplete="off">
+    </div>
+    <div class="nm-field">
+      <label class="field-label" for="ml-desc">Opis</label>
+      <textarea id="ml-desc" placeholder="Co oferujesz? Kiedy, gdzie, na jakich zasadach?"></textarea>
+    </div>
+    <div class="nm-field">
+      <label class="field-label">Typ ogłoszenia</label>
+      <div style="display:flex;gap:8px" id="ml-type-toggle">
+        <button class="shop-category-filter active" type="button" data-type="fixed" style="flex:1;padding:8px 12px">💰 Cena stała</button>
+        <button class="shop-category-filter" type="button" data-type="auction" style="flex:1;padding:8px 12px">🏷️ Aukcja</button>
+      </div>
+    </div>
+    <div class="nm-field">
+      <label class="field-label" for="ml-price" id="ml-price-label">Cena (monet)</label>
+      <input type="number" id="ml-price" min="1" value="100">
+    </div>
+    <div id="ml-auction-opts" style="display:none">
+      <div class="nm-field" style="display:flex;gap:12px">
+        <div style="flex:1">
+          <label class="field-label" for="ml-duration">Czas trwania (godz.)</label>
+          <input type="number" id="ml-duration" min="1" max="720" value="72">
+        </div>
+        <div style="flex:1">
+          <label class="field-label" for="ml-increment">Min. podbicie (🪙)</label>
+          <input type="number" id="ml-increment" min="1" value="10">
+        </div>
+      </div>
+    </div>
+    <button class="btn-primary" id="ml-submit">Wystaw ogłoszenie</button>
+  </div>
+</div>
+
 <!-- ── ACTIVITY MODAL ── -->
 <div id="af-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:520px">
@@ -3876,6 +3935,7 @@ let myHeroInventory = [];
 let publicHeroEquipment = [];
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
+let marketplaceListings = [];
 let auctionTimerInterval = null;
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
@@ -5508,6 +5568,23 @@ let nmIcon = '🎲';
   });
 })();
 
+// ── Marketplace new-listing modal emoji picker ─────────────────────────────
+const ML_ICONS = ['🛍️','🎮','📚','🍕','🎸','🔧','🏃','💼','🎨','🧹','🚗','✈️','👕','🖨️','📱','🍰','🎁','🛠️','🧃','🎵'];
+let mlIcon = '🛍️';
+let mlListingType = 'fixed';
+
+(function buildMlIcons() {
+  const wrap = document.getElementById('ml-icons');
+  ML_ICONS.forEach(ic => {
+    const btn = el('button', { className: 'nm-icon-btn' + (ic === '🛍️' ? ' selected' : '') }, ic);
+    btn.addEventListener('click', () => {
+      mlIcon = ic;
+      wrap.querySelectorAll('.nm-icon-btn').forEach(b => b.classList.toggle('selected', b.textContent === ic));
+    });
+    wrap.appendChild(btn);
+  });
+})();
+
 const afOverlay = document.getElementById('af-overlay');
 
 function openActivityModal() {
@@ -6873,6 +6950,261 @@ async function settleHeroAuction(auctionId, btn) {
   await loadShop();
 }
 
+// ── Marketplace (Targowisko) ───────────────────────────────────────────────
+
+async function loadMarketplaceListings() {
+  const { data, error } = await sb
+    .from('marketplace_cards')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (!error && data) marketplaceListings = data;
+}
+
+async function createMarketplaceListing(emoji, title, desc, listingType, price, durationHours, minIncrement, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Wystawiam…';
+  const { error } = await sb.rpc('create_marketplace_listing', {
+    p_emoji: emoji,
+    p_title: title,
+    p_description: desc,
+    p_listing_type: listingType,
+    p_price: price,
+    p_duration_hours: durationHours,
+    p_min_increment: minIncrement,
+  });
+  btn.disabled = false;
+  btn.textContent = 'Wystaw ogłoszenie';
+  if (error) {
+    const msg = error.message.includes('bad_title')  ? 'Podaj tytuł.'
+              : error.message.includes('bad_price')  ? 'Podaj cenę większą od 0.'
+              : error.message;
+    showToast('❌ ' + msg);
+    return;
+  }
+  showToast('✅ Ogłoszenie wystawione!');
+  const overlay = document.getElementById('ml-overlay');
+  hide(overlay);
+  loadShop();
+}
+
+async function buyMarketplaceListing(listingId, price, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Kupuję…';
+  const { data, error } = await sb.rpc('buy_marketplace_listing', { p_listing_id: listingId });
+  if (error) {
+    const msg = error.message.includes('insufficient') ? 'Za mało coinów!'
+              : error.message.includes('listing_not_open') ? 'Ogłoszenie już nieaktywne!'
+              : error.message.includes('cannot_buy_own') ? 'Nie możesz kupić własnej oferty!'
+              : error.message;
+    showToast('❌ ' + msg);
+    btn.disabled = false;
+    btn.textContent = `Kup za ${price.toLocaleString('pl-PL')} 🪙`;
+    return;
+  }
+  if (data?.coins_left !== undefined) {
+    me.coins = data.coins_left;
+    setText(headerCoins, me.coins);
+  }
+  showToast('✅ Kupiono! Skontaktuj się ze sprzedającym.');
+  loadShop();
+}
+
+async function placeMarketplaceBid(listingId, amount, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Licytuję…';
+  const { data, error } = await sb.rpc('place_marketplace_bid', {
+    p_listing_id: listingId,
+    p_amount: amount,
+  });
+  if (error) {
+    const msg = error.message.includes('insufficient')  ? 'Za mało coinów!'
+              : error.message.includes('bid_too_low')   ? 'Oferta zbyt niska!'
+              : error.message.includes('cannot_bid_own') ? 'Nie możesz licytować własnej oferty!'
+              : error.message.includes('auction_finished') ? 'Aukcja zakończona!'
+              : error.message;
+    showToast('❌ ' + msg);
+    btn.disabled = false;
+    btn.textContent = 'Licytuj';
+    return;
+  }
+  if (data?.coins_left !== undefined) {
+    me.coins = data.coins_left;
+    setText(headerCoins, me.coins);
+  }
+  showToast('✅ Oferta złożona!');
+  loadShop();
+}
+
+async function settleMarketplaceListing(listingId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Rozstrzygam…';
+  const { data, error } = await sb.rpc('settle_marketplace_listing', { p_listing_id: listingId });
+  if (error) {
+    showToast('❌ ' + (error.message.includes('auction_still_open') ? 'Aukcja jeszcze trwa!' : error.message));
+    btn.disabled = false;
+    btn.textContent = 'Rozstrzygnij aukcję';
+    return;
+  }
+  if (data?.status === 'settled') {
+    showToast(data.buyer_id === me?.id ? '🏆 Wygrałeś aukcję!' : '✅ Aukcja rozstrzygnięta. Sprzedający otrzymał coiny!');
+  } else {
+    showToast('✅ Aukcja zakończona bez ofert.');
+  }
+  loadShop();
+}
+
+async function cancelMarketplaceListing(listingId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Anulowanie…';
+  const { error } = await sb.rpc('cancel_marketplace_listing', { p_listing_id: listingId });
+  if (error) {
+    showToast('❌ ' + error.message);
+    btn.disabled = false;
+    btn.textContent = 'Anuluj ogłoszenie';
+    return;
+  }
+  showToast('✅ Ogłoszenie anulowane.');
+  loadShop();
+}
+
+function buildMarketplaceCard(listing) {
+  const isOpen  = listing.status === 'open';
+  const isFixed = listing.listing_type === 'fixed';
+  const ended   = isOpen && listing.ends_at && new Date(listing.ends_at).getTime() <= Date.now();
+  const isSeller = listing.seller_id === me?.id;
+  const currentBid = Number(listing.current_bid || 0);
+  const nextBid    = Number(listing.next_min_bid || listing.price || 1);
+  const mine       = listing.current_bidder_id === me?.id;
+
+  const card = el('div', { className: 'shop-card' + (!isOpen ? ' auction-ended' : '') });
+  card.appendChild(el('div', { className: 'shop-card-icon' }, listing.emoji || '🛍️'));
+  card.appendChild(el('div', { className: 'shop-card-title' }, listing.title));
+  if (listing.description) {
+    card.appendChild(el('div', { className: 'shop-card-desc' }, listing.description));
+  }
+  card.appendChild(el('div', { className: 'shop-card-meta' }, `Wystawia: ${listing.seller_nick || '?'}`));
+
+  // Seller or admin may cancel an open listing. Cancelling an auction with bids
+  // refunds the current leader (handled server-side in cancel_marketplace_listing).
+  const canCancel = isOpen && (isSeller || me?.nick === 'admin');
+  function addCancelBtn(label, refundWarning) {
+    const cancelBtn = el('button', { className: 'btn-ghost shop-card-btn', style: { marginTop: '8px', fontSize: '12px' } }, label);
+    cancelBtn.addEventListener('click', () => {
+      if (refundWarning && !window.confirm('Anulować aukcję? Aktualny lider otrzyma zwrot monet.')) return;
+      cancelMarketplaceListing(listing.id, cancelBtn);
+    });
+    card.appendChild(cancelBtn);
+  }
+
+  if (isFixed) {
+    // Fixed-price
+    card.appendChild(el('div', { className: 'shop-card-price' }, listing.price.toLocaleString('pl-PL') + ' 🪙'));
+    if (listing.status === 'settled') {
+      card.appendChild(el('div', { className: listing.buyer_id === me?.id ? 'shop-card-bought' : 'shop-card-buyer' },
+        `✅ Sprzedano: ${listing.buyer_nick || '?'}`
+      ));
+    } else if (isOpen) {
+      if (isSeller) {
+        card.appendChild(el('div', { className: 'shop-card-slots' }, 'To Twoja oferta'));
+      } else {
+        const canAfford = me && me.coins >= listing.price;
+        const btn = el('button', {
+          className: 'btn-primary shop-card-btn',
+          disabled: !canAfford,
+          title: canAfford ? '' : 'Za mało coinów',
+        }, canAfford ? `Kup za ${listing.price.toLocaleString('pl-PL')} 🪙` : `Potrzebujesz ${listing.price.toLocaleString('pl-PL')} 🪙`);
+        btn.addEventListener('click', () => buyMarketplaceListing(listing.id, listing.price, btn));
+        card.appendChild(btn);
+      }
+      if (canCancel) addCancelBtn('Anuluj ogłoszenie', false);
+    } else {
+      card.appendChild(el('div', { className: 'shop-card-slots' }, 'Ogłoszenie zakończone.'));
+    }
+  } else {
+    // Auction
+    card.appendChild(el('div', { className: 'shop-card-price' },
+      currentBid > 0 ? currentBid.toLocaleString('pl-PL') + ' 🪙' : listing.price.toLocaleString('pl-PL') + ' 🪙'
+    ));
+    const statusDiv = el('div', { className: 'auction-status', 'data-auction-id': listing.id }, auctionTimeLabel(listing));
+    card.appendChild(statusDiv);
+    card.appendChild(el('div', { className: 'shop-card-slots' },
+      currentBid > 0
+        ? `Prowadzi: ${listing.current_bidder_nick || listing.buyer_nick || '?'}${mine ? ' (Ty)' : ''}`
+        : `Cena startowa: ${Number(listing.price || 0).toLocaleString('pl-PL')} 🪙`
+    ));
+
+    const topBidders = listing.top_bidders
+      ? (typeof listing.top_bidders === 'string' ? JSON.parse(listing.top_bidders) : listing.top_bidders)
+      : [];
+    if (topBidders.length > 0) {
+      const medals = ['🥇', '🥈', '🥉'];
+      const listDiv = el('div', { className: 'auction-top-bidders' });
+      topBidders.forEach((b, i) => {
+        listDiv.appendChild(el('span', {}, `${medals[i] || '·'} ${b.nick} · ${Number(b.amount).toLocaleString('pl-PL')} 🪙`));
+      });
+      card.appendChild(listDiv);
+    }
+
+    if (listing.status === 'settled') {
+      card.appendChild(el('div', { className: listing.buyer_id === me?.id ? 'shop-card-bought' : 'shop-card-buyer' },
+        `🏆 Wygrał: ${listing.buyer_nick || '?'} za ${Number(listing.final_price || currentBid || 0).toLocaleString('pl-PL')} 🪙`
+      ));
+    } else if (ended) {
+      // Anyone may settle after the deadline so escrowed coins never get stuck.
+      const btn = el('button', { className: 'btn-primary shop-card-btn' }, 'Rozstrzygnij aukcję');
+      btn.addEventListener('click', () => settleMarketplaceListing(listing.id, btn));
+      card.appendChild(btn);
+    } else if (isOpen) {
+      if (isSeller) {
+        card.appendChild(el('div', { className: 'shop-card-slots' }, 'To Twoja aukcja'));
+      } else {
+        const row = el('div', { className: 'auction-bid-row' });
+        const requiredCoins = mine ? Math.max(1, nextBid - currentBid) : nextBid;
+        const input = el('input', { type: 'number', min: String(nextBid), step: '1', value: String(nextBid) });
+        const btn = el('button', {
+          className: 'btn-primary shop-card-btn',
+          disabled: (me?.coins || 0) < requiredCoins,
+          title: (me?.coins || 0) < requiredCoins ? 'Za mało coinów' : '',
+        }, (me?.coins || 0) >= requiredCoins ? 'Licytuj' : 'Za mało');
+        btn.addEventListener('click', () => {
+          const amount = Math.max(nextBid, Math.trunc(Number(input.value) || 0));
+          placeMarketplaceBid(listing.id, amount, btn);
+        });
+        row.append(input, btn);
+        card.appendChild(row);
+        const hintText = mine
+          ? `Prowadzisz! Dopłacisz tylko ${Math.max(1, nextBid - currentBid).toLocaleString('pl-PL')} 🪙 (różnicę od Twojej obecnej oferty)`
+          : `Koszt: ${requiredCoins.toLocaleString('pl-PL')} 🪙 w depozycie — zwrot automatyczny jeśli ktoś przelicytuje`;
+        card.appendChild(el('div', { className: 'auction-bid-hint' }, hintText));
+      }
+      // Seller/admin can cancel even with bids; the current leader is refunded.
+      if (canCancel) addCancelBtn('Anuluj aukcję', currentBid > 0);
+    } else {
+      card.appendChild(el('div', { className: 'shop-card-slots' }, 'Aukcja zakończona bez zwycięzcy.'));
+    }
+  }
+
+  return card;
+}
+
+function renderMarketplaceGrid() {
+  const grid = document.getElementById('marketplace-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+
+  // Show "+ Wystaw przedmiot" button to every logged-in user
+  const btnNew = document.getElementById('btn-new-listing');
+  if (btnNew) btnNew.style.display = me ? '' : 'none';
+
+  if (!marketplaceListings.length) {
+    grid.appendChild(el('p', { className: 'shop-empty' },
+      'Targowisko jest puste. Bądź pierwszy — wystaw coś na sprzedaż! 🛍️'
+    ));
+    return;
+  }
+  marketplaceListings.forEach(listing => grid.appendChild(buildMarketplaceCard(listing)));
+}
+
 function setupShopCategoryFilters() {
   document.querySelectorAll('[data-shop-target]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -6902,6 +7234,7 @@ async function loadShop() {
     loadHeroAuctionItemDefs(),
     loadHeroAuctions(),
     loadMyHeroInventory(),
+    loadMarketplaceListings(),
     refreshMyCoins(),
   ]);
 
@@ -6917,12 +7250,14 @@ async function loadShop() {
   renderHeroShopGrid();
   renderHeroAuctionAdmin();
   renderHeroAuctionGrid();
+  renderMarketplaceGrid();
 
   if (auctionTimerInterval) clearInterval(auctionTimerInterval);
   auctionTimerInterval = setInterval(() => {
     if (activeTab !== 'shop') return;
     document.querySelectorAll('.auction-status[data-auction-id]').forEach(div => {
-      const auction = heroAuctions.find(a => a.id === div.dataset.auctionId);
+      const id = div.dataset.auctionId;
+      const auction = heroAuctions.find(a => a.id === id) || marketplaceListings.find(a => a.id === id);
       if (auction) div.textContent = auctionTimeLabel(auction);
     });
   }, 30000);
@@ -7221,6 +7556,8 @@ function setupShopRealtime() {
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_equipment'   }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auctions' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auction_bids' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_listings' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_bids' }, reload)
     .subscribe();
   realtimeChannels.push(ch);
 }
@@ -7254,6 +7591,55 @@ document.getElementById('si-submit').addEventListener('click', async () => {
   hide(siOverlay);
   showToast('✅ Nagroda dodana!');
   loadShop();
+});
+
+// Marketplace new-listing modal
+const mlOverlay = document.getElementById('ml-overlay');
+document.getElementById('btn-new-listing').addEventListener('click', () => {
+  // Reset form
+  mlIcon = '🛍️';
+  mlListingType = 'fixed';
+  document.getElementById('ml-icons').querySelectorAll('.nm-icon-btn').forEach(b => {
+    b.classList.toggle('selected', b.textContent === '🛍️');
+  });
+  document.getElementById('ml-title').value = '';
+  document.getElementById('ml-desc').value  = '';
+  document.getElementById('ml-price').value = '100';
+  document.getElementById('ml-duration').value  = '72';
+  document.getElementById('ml-increment').value = '10';
+  document.getElementById('ml-price-label').textContent = 'Cena (monet)';
+  document.getElementById('ml-auction-opts').style.display = 'none';
+  document.getElementById('ml-type-toggle').querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === 'fixed');
+  });
+  show(mlOverlay);
+});
+document.getElementById('ml-close').addEventListener('click', () => hide(mlOverlay));
+mlOverlay.addEventListener('click', e => { if (e.target === mlOverlay) hide(mlOverlay); });
+
+// Listing type toggle (fixed / auction)
+document.getElementById('ml-type-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-type]');
+  if (!btn) return;
+  mlListingType = btn.dataset.type;
+  document.getElementById('ml-type-toggle').querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b === btn);
+  });
+  const isAuction = mlListingType === 'auction';
+  document.getElementById('ml-auction-opts').style.display = isAuction ? '' : 'none';
+  document.getElementById('ml-price-label').textContent = isAuction ? 'Cena wywoławcza (monet)' : 'Cena (monet)';
+});
+
+document.getElementById('ml-submit').addEventListener('click', () => {
+  const title  = document.getElementById('ml-title').value.trim();
+  const desc   = document.getElementById('ml-desc').value.trim();
+  const price  = parseInt(document.getElementById('ml-price').value, 10);
+  const hours  = parseInt(document.getElementById('ml-duration').value,  10) || 72;
+  const incr   = parseInt(document.getElementById('ml-increment').value, 10) || 10;
+  if (!title)       { showToast('❌ Podaj tytuł ogłoszenia.'); return; }
+  if (!price || price < 1) { showToast('❌ Podaj cenę większą od 0.'); return; }
+  const btn = document.getElementById('ml-submit');
+  createMarketplaceListing(mlIcon, title, desc, mlListingType, price, hours, incr, btn);
 });
 
 // ── Garden Cosmetics ──────────────────────────────────────────────────────

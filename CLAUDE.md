@@ -16,6 +16,7 @@ To apply database changes: paste the relevant SQL into the Supabase SQL Editor (
 
 - `supabase/schema.sql` — core prediction-market schema, run once on a fresh project
 - `supabase/store.sql` — reward shop tables/RPCs used by the Sklep tab
+- `supabase/marketplace.sql` — peer-to-peer marketplace ("Targowisko") tables/RPCs; any user can list IRL goods/services; winning/buy coins transfer from buyer to seller (not burned)
 - `supabase/poker.sql` — poker tables, RLS, realtime publication, and leaderboard stack accounting
 - `supabase/functions/poker-action` — authenticated Edge Function that owns poker state transitions, hidden cards, and chip accounting
 - `supabase/whack-boss.sql` — Whack-a-Boss rounds, weekly/all-time leaderboard views, and scheduled weekly prize payout
@@ -85,6 +86,10 @@ All mutations require authentication and go through Supabase RPCs:
 - `resolve_market(market_uuid, resolution)` — only market creator or nick `admin` can call this
 
 Users can only add to one side per market (side-locked after first bet). `admin` nick can resolve any market.
+
+### Marketplace (Targowisko)
+
+The Sklep tab contains a peer-to-peer marketplace ("Targowisko 🛍️") where **any logged-in user** can list IRL goods or services for coins. Unlike the admin-only store rewards and hero-item auctions (where coins are burned), marketplace coins **transfer from buyer to seller**. Two listing formats are supported: fixed-price (`listing_type='fixed'`, instant buy) and timed auction (`listing_type='auction'`, bidding with escrow). The bidding engine mirrors `place_hero_item_bid`: coins are escrowed on each bid, the previous leader is auto-refunded when outbid, and the leading bidder only pays the incremental difference to top up their own bid. Settlement (`settle_marketplace_listing`) credits the escrowed winning amount to `seller_id`. Sellers (or admin) can settle their own auction; sellers can cancel an open listing with no bids. All RPCs are in `supabase/marketplace.sql`; the `marketplace_cards` view is used for card rendering.
 
 ### Poker
 
