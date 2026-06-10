@@ -3624,26 +3624,16 @@
         <button class="btn-primary" id="btn-new-item" style="display:none;width:auto;padding:10px 18px">+ Dodaj nagrodę</button>
       </div>
       <div class="shop-category-filters" id="shop-category-filters" aria-label="Kategorie sklepu">
-        <button class="shop-category-filter active" type="button" data-shop-target="hero-auctions-section">🏷️ Aukcje</button>
-        <button class="shop-category-filter" type="button" data-shop-target="marketplace-section">🛍️ Targowisko</button>
+        <button class="shop-category-filter active" type="button" data-shop-target="marketplace-section">🤝 Targowisko</button>
         <button class="shop-category-filter" type="button" data-shop-target="shop-rewards-section">🎁 Nagrody</button>
-        <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">⚔️ Herosi</button>
-        <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🌿 Ogródek</button>
+        <button class="shop-category-filter" type="button" data-shop-target="hero-auctions-section">🔨 Aukcje</button>
+        <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">🛡️ Herosi</button>
+        <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🪴 Ogródek</button>
       </div>
-      <section class="shop-section" id="hero-auctions-section">
-        <div class="shop-section-head">
-          <div>
-            <div class="shop-section-title">🏷️ Aukcje bohaterów</div>
-            <div class="shop-section-sub">Limitowane przedmioty społecznościowe. Coiny z wygranej aukcji znikają z obiegu.</div>
-          </div>
-        </div>
-        <div id="hero-auction-admin"></div>
-        <div class="shop-grid" id="hero-auction-grid"></div>
-      </section>
       <section class="shop-section" id="marketplace-section">
         <div class="shop-section-head">
           <div>
-            <div class="shop-section-title">🛍️ Targowisko</div>
+            <div class="shop-section-title">🤝 Targowisko</div>
             <div class="shop-section-sub">Sprzedaj lub kup usługi i rzeczy od innych użytkowników. Coiny trafiają bezpośrednio do sprzedającego.</div>
           </div>
           <button class="btn-primary" id="btn-new-listing" style="display:none;width:auto;padding:10px 18px">+ Wystaw przedmiot</button>
@@ -3663,17 +3653,27 @@
           <div class="loading-center"><div class="spinner"></div></div>
         </div>
       </section>
+      <section class="shop-section" id="hero-auctions-section">
+        <div class="shop-section-head">
+          <div>
+            <div class="shop-section-title">🔨 Aukcje bohaterów</div>
+            <div class="shop-section-sub">Limitowane przedmioty społecznościowe. Coiny z wygranej aukcji znikają z obiegu.</div>
+          </div>
+        </div>
+        <div id="hero-auction-admin"></div>
+        <div class="shop-grid" id="hero-auction-grid"></div>
+      </section>
       <section class="shop-section" id="hero-shop-section">
         <div class="shop-section-head">
           <div>
-            <div class="shop-section-title">⚔️ Herosi</div>
+            <div class="shop-section-title">🛡️ Herosi</div>
             <div class="shop-section-sub">Usługi, ekwipunek i małe bonusy do gier dla Twojego bohatera.</div>
           </div>
         </div>
         <div class="shop-grid" id="hero-shop-grid"></div>
       </section>
       <section class="shop-section cosmetics-section" id="cosmetics-section">
-        <div class="cosmetics-title">🌿 Ozdoby do ogródka</div>
+        <div class="cosmetics-title">🪴 Ozdoby do ogródka</div>
         <div class="cosmetics-sub">Udekoruj swoją roślinkę — widoczne dla wszystkich w Zen Garden. Musisz mieć roślinę, żeby kupić.</div>
         <div class="cosmetics-grid" id="cosmetics-grid"></div>
       </section>
@@ -3840,7 +3840,7 @@
       <label class="field-label">Typ ogłoszenia</label>
       <div style="display:flex;gap:8px" id="ml-type-toggle">
         <button class="shop-category-filter active" type="button" data-type="fixed" style="flex:1;padding:8px 12px">💰 Cena stała</button>
-        <button class="shop-category-filter" type="button" data-type="auction" style="flex:1;padding:8px 12px">🏷️ Aukcja</button>
+        <button class="shop-category-filter" type="button" data-type="auction" style="flex:1;padding:8px 12px">🔨 Aukcja</button>
       </div>
     </div>
     <div class="nm-field">
