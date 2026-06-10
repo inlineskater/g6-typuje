@@ -2127,10 +2127,143 @@
       opacity: .55;
       pointer-events: none;
     }
+    /* ── Dynamic sky & weather (Wrocław time-of-day + Open-Meteo) ── */
+    .garden-area.garden-dyn {
+      background:
+        radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.22) 0%, transparent 34%),
+        radial-gradient(ellipse 70% 22% at 50% 96%, rgba(96,64,34,.10) 0%, transparent 68%),
+        linear-gradient(180deg, var(--g-grass-a, #cbe9bf) 0%, var(--g-grass-b, #b7d7a8) 100%);
+    }
+    /* Sky is its own band at the top — a horizon, not a backdrop the pots float in. */
+    .garden-sky {
+      position: relative;
+      height: 132px;
+      margin: -16px -18px 16px;
+      border-radius: 11px 11px 0 0;
+      overflow: hidden;
+      pointer-events: none;
+      background: linear-gradient(180deg, var(--g-sky-a, #bfe6f6) 0%, var(--g-sky-b, #a6d6ee) 100%);
+      box-shadow: inset 0 -9px 16px -8px rgba(0,0,0,.14);
+    }
+    /* Hide the daytime grass pebble dots — they read as litter in the sky scene. */
+    .garden-area.garden-dyn::after { display: none; }
+    /* Distant rolling hills, just behind the horizon line. */
+    .garden-sky::before {
+      content: ''; position: absolute; left: -4%; right: -4%; bottom: 20px; height: 64px;
+      background:
+        radial-gradient(58% 150% at 24% 100%, var(--g-grass-b, #aed79e) 0 56%, transparent 58%),
+        radial-gradient(66% 150% at 72% 100%, var(--g-grass-a, #cbe9bf) 0 54%, transparent 56%);
+      opacity: .65; filter: blur(.4px);
+    }
+    /* Soft horizon where the sky meets the garden grass. */
+    .garden-sky::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 34px;
+      background: linear-gradient(180deg, transparent, var(--g-grass-a, #cbe9bf));
+    }
+    .garden-glow {
+      position: absolute; top: 16px; right: 12%;
+      width: 86px; height: 86px; border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%,
+        #fffdf4 0%, var(--g-glow, #fff3c8) 14%, rgba(255,228,150,.55) 38%, rgba(255,224,150,0) 70%);
+      opacity: var(--g-glow-op, .7);
+      filter: drop-shadow(0 0 16px rgba(255,235,170,.55));
+      transition: opacity 1.5s linear, background 1.5s linear, width .6s ease, height .6s ease;
+    }
+    .garden-glow.is-moon {
+      width: 56px; height: 56px;
+      background: radial-gradient(circle at 38% 36%,
+        #ffffff 0%, var(--g-glow, #dfe6fb) 40%, rgba(205,214,239,.5) 64%, transparent 78%);
+      filter: drop-shadow(0 0 12px rgba(210,222,255,.5));
+    }
+    .garden-stars {
+      position: absolute; inset: 0 0 36% 0;
+      opacity: var(--g-star-op, 0);
+      transition: opacity 1.5s linear;
+      background-image:
+        radial-gradient(1.4px 1.4px at 12% 18%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 28% 32%, #fff, transparent),
+        radial-gradient(1.6px 1.6px at 44% 12%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 60% 28%, #fff, transparent),
+        radial-gradient(1.5px 1.5px at 73% 16%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 86% 30%, #fff, transparent),
+        radial-gradient(1.3px 1.3px at 20% 8%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 52% 38%, #fff, transparent);
+      animation: gardenTwinkle 4s ease-in-out infinite;
+    }
+    @keyframes gardenTwinkle { 0%,100% { filter: opacity(.55); } 50% { filter: opacity(1); } }
+    .garden-cloud {
+      position: absolute; left: -34%;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #fff;
+      box-shadow:
+        18px 5px 0 -1px #fff,
+        38px 9px 0 -4px #fff,
+        56px 3px 0 -2px #fff,
+        30px -9px 0 -4px #fff,
+        46px -5px 0 -3px #fff;
+      filter: blur(2.5px);
+      opacity: .92;
+      animation: gardenCloudDrift linear infinite;
+    }
+    .garden-area.night .garden-cloud {
+      filter: blur(3px) brightness(.62) saturate(.5);
+      opacity: .55;
+    }
+    @keyframes gardenCloudDrift {
+      from { transform: translateX(0) scale(var(--cloud-s, 1)); }
+      to   { transform: translateX(170vw) scale(var(--cloud-s, 1)); }
+    }
+
+    .garden-weather {
+      position: absolute; inset: 0; overflow: hidden;
+      border-radius: 12px; z-index: 2; pointer-events: none;
+    }
+    .gw-rain {
+      position: absolute; top: -20px;
+      width: 2px; height: 16px; border-radius: 2px;
+      background: linear-gradient(180deg, rgba(140,170,210,0), rgba(120,150,200,.75));
+      animation: gardenRainFall linear infinite;
+    }
+    @keyframes gardenRainFall { from { transform: translateY(0); } to { transform: translateY(600px); } }
+    .gw-snow {
+      position: absolute; top: -16px; line-height: 1;
+      color: rgba(255,255,255,.95);
+      text-shadow: 0 0 2px rgba(180,200,220,.6);
+      animation: gardenSnowFall linear infinite;
+    }
+    @keyframes gardenSnowFall {
+      from { transform: translateY(0) translateX(0); }
+      to   { transform: translateY(520px) translateX(20px); }
+    }
+    .gw-fog {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(228,232,236,.5), rgba(210,216,222,.32));
+      animation: gardenFogPulse 7s ease-in-out infinite;
+    }
+    @keyframes gardenFogPulse { 0%,100% { opacity: .55; } 50% { opacity: .82; } }
+    .gw-flash {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,.85); opacity: 0;
+      animation: gardenThunder 6s ease-out infinite;
+    }
+    @keyframes gardenThunder {
+      0%, 92%, 100% { opacity: 0; }
+      93% { opacity: .7; } 94% { opacity: .1; } 95% { opacity: .6; } 97% { opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .garden-cloud, .gw-rain, .gw-snow, .gw-fog, .gw-flash, .garden-stars { animation: none !important; }
+    }
+
     .garden-title {
+      position: relative; z-index: 1;
       text-align: center; font-size: 15px; font-weight: 800; color: #225c35;
       margin-bottom: 12px; letter-spacing: 0;
       text-shadow: 0 1px 0 rgba(255,255,255,.5);
+      transition: color 1.5s linear, text-shadow 1.5s linear;
+    }
+    .garden-area.night .garden-title {
+      color: #eaf2ff;
+      text-shadow: 0 1px 4px rgba(0,0,0,.45);
     }
     .garden-shelf {
       position: relative;
@@ -2333,6 +2466,14 @@
       background: rgba(255,247,237,.88); padding: 2px 5px; border-radius: 999px;
       border: 1px solid rgba(251,146,60,.24);
       box-shadow: 0 1px 3px rgba(154,76,0,.10);
+      z-index: 4;
+    }
+    .gp-total {
+      position: absolute; top: 6px; left: 6px;
+      font-size: 9px; color: #0c5a8a; font-weight: 800;
+      background: rgba(237,248,255,.9); padding: 2px 5px; border-radius: 999px;
+      border: 1px solid rgba(56,160,228,.26);
+      box-shadow: 0 1px 3px rgba(12,90,138,.10);
       z-index: 4;
     }
     /* Timeline bar */
@@ -9042,7 +9183,7 @@ const PLANT_STAGES = {
   banana:    ['🌱','🌿','🌴','🌴','🌴','🌴'],
   palm:      ['🌱','🌿','🌴','🌴','🌴','🌴']
 };
-const PLANT_SIZES = { 1: 36, 2: 48, 3: 60, 4: 72, 5: 84, 6: 96 };
+const PLANT_SIZES = { 1: 26, 2: 33, 3: 41, 4: 49, 5: 55, 6: 60 };
 const PLANT_LABELS = { sunflower: 'Słonecznik', rose: 'Róża', cactus: 'Kaktus', tulip: 'Tulipan', cherry: 'Wiśnia', herb: 'Zioła', tree: 'Drzewko', banana: 'Bananowiec', palm: 'Bananowiec' };
 const PLANT_PICK_EMOJI = { sunflower: '🌻', rose: '🌹', cactus: '🌵', tulip: '🌷', cherry: '🌸', herb: '🌾', tree: '🌳', banana: '🌴' };
 const GARDEN_ERR_PL = {
@@ -9210,10 +9351,15 @@ let gardenRealtimeReady = false;
 let gardenReloadDebounce = null;
 let gardenSuppressOwnSizeReloadUntil = 0;
 let prevStageByGarden = {}; // garden_id -> last seen stage (to animate growth)
+let gardenWeather = null;   // cached Wrocław weather { category, code, isDay, cloud, temp, sunrise, sunset, fetchedAt }
+let gardenAtmosphereTimer = null; // minute tick that drifts the sky with Warsaw time
+let gardenWeatherTimer = null;    // periodic Open-Meteo refresh
 
 function clearGardenTimers() {
   gardenCooldownTimers.forEach(id => clearInterval(id));
   gardenCooldownTimers = [];
+  if (gardenAtmosphereTimer) { clearInterval(gardenAtmosphereTimer); gardenAtmosphereTimer = null; }
+  if (gardenWeatherTimer) { clearInterval(gardenWeatherTimer); gardenWeatherTimer = null; }
 }
 
 function resetGardenState() {
@@ -9248,8 +9394,192 @@ function getPlantEmoji(type, stage) {
   return arr[Math.max(0, Math.min(stage - 1, 5))];
 }
 
-function getPlantSize(stage) {
-  return PLANT_SIZES[Math.max(1, Math.min(stage, 6))] || 44;
+// Base size comes from growth stage; lifetime waterings add a near-linear bonus
+// (+0.55px each, capped at +30) so size keeps separating across the real range —
+// e.g. 51 waters stays visibly larger than 35.
+function getPlantSize(stage, totalWaters) {
+  const base = PLANT_SIZES[Math.max(1, Math.min(stage, 6))] || 44;
+  const bonus = Math.min(30, Math.round(Math.max(0, totalWaters || 0) * 0.55));
+  return base + bonus;
+}
+
+// ── Dynamic garden atmosphere: Wrocław time-of-day sky + live weather ──
+const GARDEN_PALETTES = {
+  night:  { skyA: '#16223b', skyB: '#283a5e', grassA: '#2d4836', grassB: '#24402e', glow: '#dfe6fb', glowOp: 0.85, day: 0 },
+  golden: { skyA: '#f4b06a', skyB: '#e87f56', grassA: '#8fb87a', grassB: '#6d9c61', glow: '#ffd49a', glowOp: 1.00, day: 0.5 },
+  day:    { skyA: '#8ec9ee', skyB: '#bfe6f5', grassA: '#cbe9bf', grassB: '#aed79e', glow: '#fff3c8', glowOp: 0.95, day: 1 },
+};
+
+function gLerp(a, b, t) { return a + (b - a) * t; }
+function gHexToRgb(h) { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+function gRgbToHex(r) { return '#' + r.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join(''); }
+function gLerpHex(a, b, t) { const A = gHexToRgb(a), B = gHexToRgb(b); return gRgbToHex([gLerp(A[0], B[0], t), gLerp(A[1], B[1], t), gLerp(A[2], B[2], t)]); }
+
+function getWarsawClock() {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+  let h = 0, m = 0;
+  parts.forEach(p => { if (p.type === 'hour') h = +p.value; if (p.type === 'minute') m = +p.value; });
+  return (h % 24) * 60 + m;
+}
+
+function isoToMinutes(iso) {
+  if (!iso || typeof iso !== 'string') return null;
+  const t = iso.split('T')[1];
+  if (!t) return null;
+  const [h, m] = t.split(':');
+  return (+h) * 60 + (+m);
+}
+
+function wmoCategory(code) {
+  if (code == null) return 'clear';
+  if (code <= 1) return 'clear';
+  if (code <= 3) return 'cloudy';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 95) return 'thunder';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain';
+  return 'cloudy';
+}
+
+async function fetchWroclawWeather() {
+  if (gardenWeather && Date.now() - gardenWeather.fetchedAt < 15 * 60 * 1000) return gardenWeather;
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=51.11&longitude=17.03&current=temperature_2m,weather_code,cloud_cover,is_day&daily=sunrise,sunset&timezone=Europe%2FWarsaw';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('weather http ' + res.status);
+    const j = await res.json();
+    const cur = j.current || {};
+    gardenWeather = {
+      category: wmoCategory(cur.weather_code),
+      code: cur.weather_code,
+      isDay: cur.is_day === 1,
+      cloud: typeof cur.cloud_cover === 'number' ? cur.cloud_cover : null,
+      temp: typeof cur.temperature_2m === 'number' ? cur.temperature_2m : null,
+      sunrise: isoToMinutes(j.daily && j.daily.sunrise && j.daily.sunrise[0]),
+      sunset: isoToMinutes(j.daily && j.daily.sunset && j.daily.sunset[0]),
+      fetchedAt: Date.now(),
+    };
+  } catch (e) {
+    // Offline / API down → keep whatever we had (or null); atmosphere falls back to time-of-day only.
+  }
+  return gardenWeather;
+}
+
+function gardenSkyPalette(minutes, sunrise, sunset) {
+  const sr = (typeof sunrise === 'number') ? sunrise : 6 * 60;
+  const ss = (typeof sunset === 'number') ? sunset : 21 * 60;
+  const N = GARDEN_PALETTES.night, G = GARDEN_PALETTES.golden, D = GARDEN_PALETTES.day;
+  const anchors = [
+    { m: 0, p: N },
+    { m: Math.max(1, sr - 50), p: N },
+    { m: sr, p: G },
+    { m: Math.min(ss - 1, sr + 70), p: D },
+    { m: Math.max(sr + 1, ss - 70), p: D },
+    { m: ss, p: G },
+    { m: Math.min(1439, ss + 50), p: N },
+    { m: 1440, p: N },
+  ].sort((a, b) => a.m - b.m);
+  let lo = anchors[0], hi = anchors[anchors.length - 1];
+  for (let i = 0; i < anchors.length - 1; i++) {
+    if (minutes >= anchors[i].m && minutes <= anchors[i + 1].m) { lo = anchors[i]; hi = anchors[i + 1]; break; }
+  }
+  const span = (hi.m - lo.m) || 1;
+  const t = Math.max(0, Math.min(1, (minutes - lo.m) / span));
+  const day = gLerp(lo.p.day, hi.p.day, t);
+  return {
+    skyA: gLerpHex(lo.p.skyA, hi.p.skyA, t),
+    skyB: gLerpHex(lo.p.skyB, hi.p.skyB, t),
+    grassA: gLerpHex(lo.p.grassA, hi.p.grassA, t),
+    grassB: gLerpHex(lo.p.grassB, hi.p.grassB, t),
+    glow: gLerpHex(lo.p.glow, hi.p.glow, t),
+    glowOp: gLerp(lo.p.glowOp, hi.p.glowOp, t),
+    night: day < 0.28,
+    starOp: Math.max(0, Math.min(1, 1 - day * 2.4)),
+  };
+}
+
+function dampPalette(pal, category) {
+  const overcast = { rain: 0.55, snow: 0.45, fog: 0.6, thunder: 0.7, cloudy: 0.35 }[category] || 0;
+  if (!overcast) return pal;
+  const grey = pal.night ? '#3a4254' : '#9aa6ad';
+  return Object.assign({}, pal, {
+    skyA: gLerpHex(pal.skyA, grey, overcast),
+    skyB: gLerpHex(pal.skyB, grey, overcast),
+    glowOp: pal.glowOp * (1 - overcast * 0.7),
+  });
+}
+
+function renderGardenClouds(sky, category, cloud) {
+  let n = (category === 'clear') ? ((cloud != null && cloud > 25) ? 1 : 0)
+        : (category === 'cloudy') ? 2 : 3;
+  if (cloud != null) n = Math.max(n, Math.min(3, Math.round(cloud / 33)));
+  const key = category + ':' + n;
+  if (sky.dataset.clouds === key) return;
+  sky.dataset.clouds = key;
+  sky.querySelectorAll('.garden-cloud').forEach(c => c.remove());
+  for (let i = 0; i < n; i++) {
+    const c = el('span', { className: 'garden-cloud' });
+    c.style.top = (8 + i * 16 + Math.random() * 8) + 'px';
+    c.style.animationDuration = (44 + Math.random() * 30).toFixed(0) + 's';
+    c.style.animationDelay = (-Math.random() * 50).toFixed(0) + 's';
+    c.style.setProperty('--cloud-s', (0.8 + Math.random() * 0.6).toFixed(2));
+    sky.appendChild(c);
+  }
+}
+
+function renderGardenWeather(container, category) {
+  if (container.dataset.cat === category) return;
+  container.dataset.cat = category;
+  container.replaceChildren();
+  container.className = 'garden-weather weather-' + category;
+  if (category === 'rain' || category === 'thunder') {
+    const drops = category === 'thunder' ? 16 : 14;
+    for (let i = 0; i < drops; i++) {
+      const s = el('span', { className: 'gw-rain' });
+      s.style.left = (Math.random() * 100).toFixed(1) + '%';
+      s.style.animationDelay = (Math.random() * 1.2).toFixed(2) + 's';
+      s.style.animationDuration = (0.5 + Math.random() * 0.4).toFixed(2) + 's';
+      container.appendChild(s);
+    }
+    if (category === 'thunder') container.appendChild(el('span', { className: 'gw-flash' }));
+  } else if (category === 'snow') {
+    for (let i = 0; i < 10; i++) {
+      const s = el('span', { className: 'gw-snow' }, '❄');
+      s.style.left = (Math.random() * 100).toFixed(1) + '%';
+      s.style.animationDelay = (Math.random() * 4).toFixed(2) + 's';
+      s.style.animationDuration = (4 + Math.random() * 3).toFixed(2) + 's';
+      s.style.fontSize = (7 + Math.random() * 7).toFixed(0) + 'px';
+      container.appendChild(s);
+    }
+  } else if (category === 'fog') {
+    container.appendChild(el('span', { className: 'gw-fog' }));
+  }
+}
+
+function applyGardenAtmosphere() {
+  const area = document.querySelector('#tab-garden .garden-area');
+  if (!area) return;
+  const w = gardenWeather;
+  let pal = gardenSkyPalette(getWarsawClock(), w && w.sunrise, w && w.sunset);
+  const category = (w && w.category) || 'clear';
+  pal = dampPalette(pal, category);
+  area.classList.add('garden-dyn');
+  area.classList.toggle('night', pal.night);
+  area.style.setProperty('--g-sky-a', pal.skyA);
+  area.style.setProperty('--g-sky-b', pal.skyB);
+  area.style.setProperty('--g-grass-a', pal.grassA);
+  area.style.setProperty('--g-grass-b', pal.grassB);
+  area.style.setProperty('--g-glow', pal.glow);
+  area.style.setProperty('--g-glow-op', pal.glowOp.toFixed(2));
+  area.style.setProperty('--g-star-op', pal.starOp.toFixed(2));
+  const sky = area.querySelector('.garden-sky');
+  if (sky) {
+    const glow = sky.querySelector('.garden-glow');
+    if (glow) glow.classList.toggle('is-moon', pal.night);
+    renderGardenClouds(sky, category, w && w.cloud);
+  }
+  const weather = area.querySelector('.garden-weather');
+  if (weather) renderGardenWeather(weather, category);
 }
 
 async function loadGarden() {
@@ -9302,6 +9632,7 @@ function renderZenGarden() {
 <ul>
 <li>💧 <b>Podlewaj</b> co 5h (maks. 3×/dzień)</li>
 <li>🔥 <b>Seria</b> — codziennie = rośnie!</li>
+<li>📏 Im więcej <b>podlań łącznie</b>, tym większa roślinka</li>
 <li>💰 <b>10–20 coinów</b> za podlanie</li>
 <li>⚠️ Pominiesz dzień roboczy = reset serii</li>
 <li>📅 Weekend nie liczy się — możesz odpocząć</li>
@@ -9322,7 +9653,8 @@ function renderZenGarden() {
 <div class="my-plant-type">${PLANT_LABELS[canonicalPlantType(garden.plant_type)] || ''}</div>
 </div>
 <div class="my-summary">
-<div>🔥 Seria: <b>${streak} ${streak === 1 ? 'dzień' : 'dni'}</b></div>
+<div>🔥 Seria: <b>${streak} ${streak === 1 ? 'dzień' : 'dni'} z rzędu</b></div>
+<div>💧 Podlano łącznie: <b>${garden.total_waters || 0}×</b></div>
 <div>⭐ Etap: <b>${garden.stage}/6</b></div>
 <div>💧 Dziś: <b>${watersToday}/3</b></div>
 <div>💰 Nagroda: <b>${nextRewardCoins(streak)} 🪙</b></div>
@@ -9375,6 +9707,12 @@ function renderZenGarden() {
 
   // ── Garden area: zen tiles ──
   const area = el('div', { className: 'garden-area' });
+  // Dynamic Wrocław sky (behind pots) + live weather overlay (in front of pots)
+  const sky = el('div', { className: 'garden-sky' });
+  sky.appendChild(el('div', { className: 'garden-glow' }));
+  sky.appendChild(el('div', { className: 'garden-stars' }));
+  area.appendChild(sky);
+  area.appendChild(el('div', { className: 'garden-weather' }));
   area.appendChild(el('div', { className: 'garden-title' }, '🌿 Ogródek Zen 🌿'));
 
   const shelf = el('div', { className: 'garden-shelf' });
@@ -9398,6 +9736,12 @@ function renderZenGarden() {
 
   area.appendChild(shelf);
   wrap.appendChild(area);
+
+  // Drive the sky immediately from Warsaw time, then refine once weather arrives.
+  applyGardenAtmosphere();
+  fetchWroclawWeather().then(applyGardenAtmosphere);
+  gardenAtmosphereTimer = setInterval(applyGardenAtmosphere, 60000);
+  gardenWeatherTimer = setInterval(() => fetchWroclawWeather().then(applyGardenAtmosphere), 15 * 60 * 1000);
 }
 
 function buildPlantTypeChanger(garden) {
@@ -9990,7 +10334,7 @@ function buildPot(g, isMine) {
   const leaf = el('span', { className: 'gp-leaf' }, getPlantEmoji(g.plant_type, displayStage));
   leaf.style.animationDelay = ((g.id.charCodeAt(0) + g.id.charCodeAt(1)) % 20) / 10 + 's';
   const plant = el('div', { className: 'gp-plant' });
-  plant.style.fontSize = getPlantSize(displayStage) + 'px';
+  plant.style.fontSize = getPlantSize(displayStage, g.total_waters) + 'px';
   plant.appendChild(leaf);
   // Animate growth if the plant changed stage since last render.
   if (prevStageByGarden[g.id] != null && prevStageByGarden[g.id] < g.stage) {
@@ -10025,7 +10369,10 @@ function buildPot(g, isMine) {
   info.appendChild(nameLine);
 
   if (g.streak_days > 0) {
-    pot.appendChild(el('div', { className: 'gp-streak' }, `🔥×${g.streak_days}`));
+    pot.appendChild(el('div', { className: 'gp-streak', title: 'Seria — dni z rzędu' }, `🔥×${g.streak_days}`));
+  }
+  if (g.total_waters > 0) {
+    pot.appendChild(el('div', { className: 'gp-total', title: 'Łącznie podlań' }, `💧×${g.total_waters}`));
   }
 
   // Cooldown / daily-cap state
@@ -10050,7 +10397,8 @@ function buildPot(g, isMine) {
     el('div', { className: 'gp-details-grid' },
       el('span', {}, 'Typ'), el('b', {}, PLANT_LABELS[canonicalPlantType(g.plant_type)] || '-'),
       el('span', {}, 'Etap'), el('b', {}, String(g.stage || 1) + '/6'),
-      el('span', {}, 'Seria'), el('b', {}, String(g.streak_days || 0)),
+      el('span', {}, 'Seria'), el('b', {}, String(g.streak_days || 0) + (g.streak_days === 1 ? ' dzień' : ' dni')),
+      el('span', {}, 'Podlano'), el('b', {}, String(g.total_waters || 0) + '×'),
       el('span', {}, 'Dziś'), el('b', {}, watersToday + '/3'),
       el('span', {}, 'Ozdoby'), el('b', {}, activeAccessoryCount + '/' + GARDEN_TILE_ACCESSORY_LIMIT)
     )
