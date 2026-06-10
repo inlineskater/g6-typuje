@@ -2972,7 +2972,7 @@
     <button class="nav-tab active" data-tab="markets">📊 Rynki</button>
 
     <div class="nav-group" data-group="casino">
-      <button class="nav-group-btn">🎰 Kasyno <span class="nav-chevron">▾</span></button>
+      <button class="nav-group-btn">🃏 Kasyno <span class="nav-chevron">▾</span></button>
       <div class="nav-dropdown">
         <button class="nav-tab" data-tab="poker">♠️ Poker</button>
         <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
@@ -2980,8 +2980,18 @@
       </div>
     </div>
 
-    <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
-    <button class="nav-tab has-nav-hint" data-tab="shop" aria-label="Sklep - dodano nowe przedmioty" title="Dodano nowe przedmioty do sklepu">🛒 Sklep <span class="nav-hint-badge" aria-hidden="true">Nowe</span></button>
+    <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> 🕹️ Gra Sezonowa</button>
+
+    <div class="nav-group" data-group="shop">
+      <button class="nav-group-btn">🛒 Sklep <span class="nav-hint-badge" aria-hidden="true">Nowe</span> <span class="nav-chevron">▾</span></button>
+      <div class="nav-dropdown">
+        <button class="nav-tab" data-shop-target="marketplace-section">🤝 Targowisko <span class="nav-hint-badge" aria-hidden="true">Nowe</span></button>
+        <button class="nav-tab" data-shop-target="hero-auctions-section">🔨 Aukcje <span class="nav-hint-badge" aria-hidden="true">Nowe</span></button>
+        <button class="nav-tab" data-shop-target="shop-rewards-section">🎁 Nagrody</button>
+        <button class="nav-tab" data-shop-target="hero-shop-section">🛡️ Herosi</button>
+        <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ogródek</button>
+      </div>
+    </div>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
     <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
     <button class="nav-tab" data-tab="leaderboard">🏆 Ranking</button>
@@ -4351,8 +4361,25 @@ function updateAdminTestTabs() {
 }
 
 document.querySelectorAll('.nav-tab').forEach(btn =>
-  btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+  btn.addEventListener('click', () => {
+    if (btn.dataset.shopTarget) { openShopSection(btn.dataset.shopTarget); return; }
+    switchTab(btn.dataset.tab);
+  })
 );
+
+// Open the Sklep tab and jump to a specific category section.
+let pendingShopScroll = null;
+function openShopSection(sectionId) {
+  document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
+  if (activeTab === 'shop') {
+    const fb = document.querySelector(`.shop-category-filter[data-shop-target="${sectionId}"]`);
+    if (fb) fb.click();
+    else document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    pendingShopScroll = sectionId;   // applied at the end of loadShop()
+    switchTab('shop');
+  }
+}
 
 document.querySelectorAll('.nav-group-btn').forEach(btn => {
   btn.addEventListener('click', e => {
@@ -4395,7 +4422,8 @@ function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
-    g.classList.toggle('active', !!g.querySelector('.nav-tab.active'));
+    const isActive = g.dataset.group === 'shop' ? tab === 'shop' : !!g.querySelector('.nav-tab.active');
+    g.classList.toggle('active', isActive);
     g.classList.remove('open');
   });
   const tM = document.getElementById('tab-markets');
@@ -7269,6 +7297,17 @@ async function loadShop() {
       if (auction) div.textContent = auctionTimeLabel(auction);
     });
   }, 30000);
+
+  // If we arrived here via a Sklep dropdown link, jump to the requested section.
+  if (pendingShopScroll) {
+    const target = pendingShopScroll;
+    pendingShopScroll = null;
+    requestAnimationFrame(() => {
+      const fb = document.querySelector(`.shop-category-filter[data-shop-target="${target}"]`);
+      if (fb) fb.click();
+      else document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 
 function buildShopCard(item) {
