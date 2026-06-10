@@ -1069,8 +1069,7 @@ async function claimTimeout(userId) {
 async function setBots(userId, count) {
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
-    const [profile] = await tx`select nick from public.profiles where id = ${userId}`;
-    if (profile?.nick !== "admin") throw gameError("Tylko admin może zmieniać boty.");
+    // Any authenticated player may manage bots, but only between hands.
     if (table.phase !== "waiting") throw gameError("Boty można zmienić tylko między rozdaniami.");
 
     const n = Math.max(0, Math.min(4, asInt(count)));
