@@ -4405,11 +4405,13 @@ function buildPokerSeat(state, seat) {
 }
 
 function buildPokerBotSelector(state) {
+  // Mirror the server's setBots permission: admin only, between hands.
+  // Don't also gate on canSit/canStand/canStart — otherwise an admin who
+  // isn't seated (or can't afford the buy-in) loses the only control that
+  // can remove a leftover bot occupying a seat.
   if (state.profile?.nick !== 'admin') return null;
+  if (state.table.phase !== 'waiting') return null;
   const currentBotCount = state.seats.filter(s => s.isBot).length;
-  const inWaiting = state.table.phase === 'waiting';
-  const canControl = inWaiting && (state.me.canSit || state.me.canStand || state.me.canStart);
-  if (!canControl) return null;
 
   const row = el('div', { className: 'poker-bot-row' },
     el('span', { className: 'poker-stat-label' }, 'Boty')
