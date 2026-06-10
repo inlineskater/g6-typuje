@@ -2958,7 +2958,6 @@
     </div>
 
     <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
-    <button class="nav-tab" data-tab="snake-demo">🐍 Snake Demo</button>
     <button class="nav-tab" data-tab="shop">🛒 Sklep</button>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
     <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
@@ -3597,12 +3596,6 @@
   <div id="tab-bug-jumper-test" class="hidden">
     <main id="bug-jumper-test-main">
       <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy admina — Bug Jumper Hard Course, bez zapisu wyniku.</p>
-    </main>
-  </div>
-
-  <div id="tab-snake-demo" class="hidden">
-    <main id="snake-demo-main">
-      <p class="page-sub" style="margin-bottom:14px">🧪 Demo Snake — lokalny test gry, bez zapisu wyniku i bez nagród.</p>
     </main>
   </div>
 
@@ -4293,7 +4286,6 @@ document.addEventListener('click', () => {
 
 let fpPanelHome = null;
 let bjPanelHome = null;
-let snPanelHome = null;
 function restoreFlappyPanelHome() {
   const panel = document.getElementById('seasonal-game-flappy-pants');
   if (panel && fpPanelHome && panel.parentElement !== fpPanelHome) {
@@ -4310,21 +4302,12 @@ function restoreBugJumperPanelHome() {
   }
 }
 
-function restoreSnakePanelHome() {
-  const panel = document.getElementById('seasonal-game-snake');
-  if (panel && snPanelHome && panel.parentElement !== snPanelHome) {
-    hide(panel);
-    snPanelHome.appendChild(panel);
-  }
-}
-
 function switchTab(tab) {
   if (tab === 'bug-jumper-test' && me?.nick !== 'admin') tab = 'markets';
   const previousTab = activeTab;
   if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); }
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
-  if (previousTab === 'snake-demo' && tab !== 'snake-demo') { stopSnakeRound(); restoreSnakePanelHome(); }
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
@@ -4342,10 +4325,8 @@ function switchTab(tab) {
   const tH = document.getElementById('tab-heroes');
   const tFp = document.getElementById('tab-flappy-test');
   const tBj = document.getElementById('tab-bug-jumper-test');
-  const tSn = document.getElementById('tab-snake-demo');
   hide(tFp);
   hide(tBj);
-  hide(tSn);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
@@ -4396,17 +4377,6 @@ function switchTab(tab) {
     }
     show(tBj);
     prepareBugJumperAdminTest();
-  } else if (tab === 'snake-demo') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
-    const panel = document.getElementById('seasonal-game-snake');
-    const testMain = document.getElementById('snake-demo-main');
-    if (panel && testMain) {
-      if (!snPanelHome) snPanelHome = panel.parentElement;
-      if (panel.parentElement !== testMain) testMain.appendChild(panel);
-      show(panel);
-    }
-    show(tSn);
-    prepareSnakeDemo();
   }
 }
 
@@ -7646,6 +7616,7 @@ const SEASONAL_ROTATION = [
   { gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
   { gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
   { gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },
+  { gameType: 'snake', displayName: 'Snake 🐍' },
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
@@ -9693,22 +9664,6 @@ function beginSnakeRound(round, options = {}) {
   rt.timer = setInterval(snakeTick, rt.tickMs);
 }
 
-function prepareSnakeDemo() {
-  snakeInitCanvas();
-  stopSnakeRound();
-  snakeRuntime.archiveMode = true;
-  const weekLabel = document.getElementById('sn-week-label');
-  if (weekLabel) weekLabel.textContent = 'demo';
-  const weeklyWrap = document.getElementById('sn-weekly-board');
-  const allTimeWrap = document.getElementById('sn-alltime-board');
-  const awardsWrap = document.getElementById('sn-awards');
-  if (weeklyWrap) weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Demo lokalne — ranking nie jest używany.'));
-  if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Start uruchamia rundę bez zapisu w bazie.'));
-  if (awardsWrap) awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Nagrody nie są naliczane w demo.'));
-  if (snStatus) snStatus.textContent = 'Demo Snake — wynik nie zostanie zapisany.';
-  snakeDraw(performance.now());
-}
-
 function snakeQueueDir(dir) {
   const rt = snakeRuntime;
   if (!rt?.playing || !SN_DIRS[dir]) return false;
@@ -9788,18 +9743,6 @@ function snakeTick() {
 async function startSnakeRound() {
   const rt = snakeRuntime;
   if (rt?.playing || rt?.submitting) return;
-  if (activeTab === 'snake-demo') {
-    const now = new Date().toISOString();
-    beginSnakeRound({
-      id: 'snake-demo-' + Date.now(),
-      seed: Math.floor(Math.random() * 2147483647) + 1,
-      durationMs: SN_DURATION_MS,
-      tickMs: SN_TICK_MS,
-      startedAt: now,
-      serverNow: now,
-    }, { archiveMode: true });
-    return;
-  }
   if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Ładuję...'; }
   if (snStatus) snStatus.textContent = 'Przygotowuję rundę...';
   try {

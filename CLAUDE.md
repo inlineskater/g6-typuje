@@ -96,7 +96,7 @@ Whack-a-Boss is an 18-second authenticated mini-game. The browser calls `sb.func
 
 ### Seasonal games
 
-The seasonal tab hosts one rotating arcade game per Monday-start week (Europe/Warsaw). `SEASONAL_ANCHOR_WEEK_START` plus `SEASONAL_ROTATION` in `index.html` derive the active game for any future week; `SEASONAL_OVERRIDES` can replace a specific week; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni"), with Snake overriding the week starting 2026-06-15.
+The seasonal tab hosts one rotating arcade game per Monday-start week (Europe/Warsaw). `SEASONAL_ANCHOR_WEEK_START` plus `SEASONAL_ROTATION` in `index.html` derive the active game for any future week; `SEASONAL_OVERRIDES` can replace a specific week; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni") → `snake`, with Snake also overriding the week starting 2026-06-15.
 
 Each seasonal game mirrors the same stack:
 - `<game>_rounds` / `<game>_scores` / `<game>_weekly_awards` tables, `<game>_current_week` / `_all_time` / `_recent_awards` views, an `award_<game>_week()` SECURITY DEFINER payout (100/50/25), realtime publication, and a `pg_cron` job at `'5 0 * * 1'` (Monday 00:05 UTC) that pays the previous week's top 3.
@@ -107,4 +107,4 @@ Bug Jumper hard course v2 uses `course_id = 'bug_jumper_hard_v2'`: a fixed 10-co
 
 „3 Pary Spodni" (Flappy Pants) is a Flappy Bird clone: you ARE a pair of trousers (Space/click/↑ to flap) with 3 lives (the "3 pary spodni"); each crash costs one pair with brief invincibility, and the round ends after the third. Score = obstacles passed; it persists across lives.
 
-Snake is a 20x20 seeded-grid seasonal game prompted by Filip with `do snake, make no mistakes`. The browser submits direction changes, and `snake-action` replays them server-side to determine apples eaten before wall/self collision or the 120-second cap. Weekly ranking uses score descending, then shorter `duration_ms`, then earlier submission. `tab-snake-demo` runs the same canvas runtime locally without database writes or rewards.
+Snake is a 20x20 seeded-grid seasonal game prompted by Filip with `do snake, make no mistakes`. The browser submits direction changes, and `snake-action` replays them server-side to determine apples eaten before wall/self collision or the 120-second cap. Weekly ranking uses score descending, then shorter `duration_ms`, then earlier submission.
