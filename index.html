@@ -2460,22 +2460,12 @@
       font-size: 10px; color: rgba(255,255,255,.82);
     }
     .gp-details-grid b { color: #fff; font-weight: 800; }
-    .gp-streak {
-      position: absolute; top: 6px; right: 6px;
-      font-size: 9px; color: #9a4c00; font-weight: 800;
-      background: rgba(255,247,237,.88); padding: 2px 5px; border-radius: 999px;
-      border: 1px solid rgba(251,146,60,.24);
-      box-shadow: 0 1px 3px rgba(154,76,0,.10);
-      z-index: 4;
+    .gp-stats {
+      display: flex; gap: 7px; align-items: center; justify-content: center;
+      margin-top: 1px; line-height: 1;
+      font-size: 9px; font-weight: 600; color: #9aa6b2; opacity: .8;
     }
-    .gp-total {
-      position: absolute; top: 6px; left: 6px;
-      font-size: 9px; color: #0c5a8a; font-weight: 800;
-      background: rgba(237,248,255,.9); padding: 2px 5px; border-radius: 999px;
-      border: 1px solid rgba(56,160,228,.26);
-      box-shadow: 0 1px 3px rgba(12,90,138,.10);
-      z-index: 4;
-    }
+    .gp-stat { white-space: nowrap; }
     /* Timeline bar */
     .gp-timeline {
       position: absolute; bottom: 7px; left: 8px; right: 8px;
@@ -10368,11 +10358,13 @@ function buildPot(g, isMine) {
   nameLine.appendChild(el('span', { className: 'gp-owner' }, g.profiles?.nick || '?'));
   info.appendChild(nameLine);
 
-  if (g.streak_days > 0) {
-    pot.appendChild(el('div', { className: 'gp-streak', title: 'Seria — dni z rzędu' }, `🔥×${g.streak_days}`));
-  }
-  if (g.total_waters > 0) {
-    pot.appendChild(el('div', { className: 'gp-total', title: 'Łącznie podlań' }, `💧×${g.total_waters}`));
+  const streakDays = g.streak_days || 0;
+  const totalWaters = g.total_waters || 0;
+  if (streakDays > 0 || totalWaters > 0) {
+    const stats = el('div', { className: 'gp-stats' });
+    if (streakDays > 0) stats.appendChild(el('span', { className: 'gp-stat', title: 'Seria — dni z rzędu' }, `📅 ${streakDays}`));
+    if (totalWaters > 0) stats.appendChild(el('span', { className: 'gp-stat', title: 'Łącznie podlań' }, `💧 ${totalWaters}`));
+    info.appendChild(stats);
   }
 
   // Cooldown / daily-cap state
