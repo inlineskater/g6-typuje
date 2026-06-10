@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.flappy-pants-action]
 verify_jwt = true
+
+[functions.snake-action]
+verify_jwt = true

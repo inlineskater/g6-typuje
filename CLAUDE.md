@@ -20,8 +20,8 @@ To apply database changes: paste the relevant SQL into the Supabase SQL Editor (
 - `supabase/functions/poker-action` — authenticated Edge Function that owns poker state transitions, hidden cards, and chip accounting
 - `supabase/whack-boss.sql` — Whack-a-Boss rounds, weekly/all-time leaderboard views, and scheduled weekly prize payout
 - `supabase/functions/whack-boss-action` — authenticated Edge Function that issues and validates 18-second Whack-a-Boss rounds
-- `supabase/bug-jumper.sql` / `supabase/flappy-pants.sql` — seasonal arcade games (Bug Jumper, „3 Pary Spodni"); each adds `*_rounds`/`*_scores`/`*_weekly_awards` tables, three leaderboard views, an `award_*_week()` payout, realtime publication, and a Monday `pg_cron` job after the week closes
-- `supabase/functions/bug-jumper-action` / `supabase/functions/flappy-pants-action` — authenticated Edge Functions that issue and validate seasonal-game rounds
+- `supabase/bug-jumper.sql` / `supabase/flappy-pants.sql` / `supabase/snake.sql` — seasonal arcade games (Bug Jumper, „3 Pary Spodni", Snake); each adds `*_rounds`/`*_scores`/`*_weekly_awards` tables, three leaderboard views, an `award_*_week()` payout, realtime publication, and a Monday `pg_cron` job after the week closes
+- `supabase/functions/bug-jumper-action` / `supabase/functions/flappy-pants-action` / `supabase/functions/snake-action` — authenticated Edge Functions that issue and validate seasonal-game rounds
 - `supabase/prod-hardening.sql` — idempotent; adds indexes and tightens permissions; safe to re-run
 - `supabase/reset-data.sql` — wipes all markets, trades, and poker state, resets every profile to 1000 coins
 
@@ -96,7 +96,7 @@ Whack-a-Boss is an 18-second authenticated mini-game. The browser calls `sb.func
 
 ### Seasonal games
 
-The seasonal tab hosts one rotating arcade game per Monday-start week (Europe/Warsaw). `SEASONAL_ANCHOR_WEEK_START` plus `SEASONAL_ROTATION` in `index.html` derive the active game for any future week; `SEASONAL_OVERRIDES` can replace a specific week; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni").
+The seasonal tab hosts one rotating arcade game per Monday-start week (Europe/Warsaw). `SEASONAL_ANCHOR_WEEK_START` plus `SEASONAL_ROTATION` in `index.html` derive the active game for any future week; `SEASONAL_OVERRIDES` can replace a specific week; `getCurrentSeasonalEntry()` picks the active game and `loadSeasonalTab()` shows the matching `seasonal-game-*` panel. Current rotation: `whack_boss` → `bug_jumper` → `flappy_pants` („3 Pary Spodni"), with Snake overriding the week starting 2026-06-15.
 
 Each seasonal game mirrors the same stack:
 - `<game>_rounds` / `<game>_scores` / `<game>_weekly_awards` tables, `<game>_current_week` / `_all_time` / `_recent_awards` views, an `award_<game>_week()` SECURITY DEFINER payout (100/50/25), realtime publication, and a `pg_cron` job at `'5 0 * * 1'` (Monday 00:05 UTC) that pays the previous week's top 3.
@@ -106,3 +106,5 @@ Each seasonal game mirrors the same stack:
 Bug Jumper hard course v2 uses `course_id = 'bug_jumper_hard_v2'`: a fixed 10-column, 30-line course shared by every player, no per-round random lane setup, safe rest lines at 10/20/30, one point per line reached, server replay of the submitted movement log, `completion_ms` tie-breaks, and hard-course-only leaderboard/award views. Existing legacy rows remain stored as `legacy_random_v1`.
 
 „3 Pary Spodni" (Flappy Pants) is a Flappy Bird clone: you ARE a pair of trousers (Space/click/↑ to flap) with 3 lives (the "3 pary spodni"); each crash costs one pair with brief invincibility, and the round ends after the third. Score = obstacles passed; it persists across lives.
+
+Snake is a 20x20 seeded-grid seasonal game prompted by Filip with `do snake, make no mistakes`. The browser submits direction changes, and `snake-action` replays them server-side to determine apples eaten before wall/self collision or the 120-second cap. Weekly ranking uses score descending, then shorter `duration_ms`, then earlier submission. `tab-snake-demo` runs the same canvas runtime locally without database writes or rewards.

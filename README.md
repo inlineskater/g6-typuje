@@ -23,8 +23,8 @@ Fresh database setup:
 1. Create a Supabase project.
 2. In SQL Editor, run `supabase/schema.sql`.
 3. In SQL Editor, run `supabase/poker.sql`.
-4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper) and `supabase/flappy-pants.sql` („3 Pary Spodni").
-5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, and `supabase/functions/flappy-pants-action`.
+4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), and `supabase/snake.sql` (Snake).
+5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, and `supabase/functions/snake-action`.
 6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
 7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
 
@@ -41,11 +41,11 @@ Existing project Whack-a-Boss rollout:
 2. Deploy `supabase/functions/whack-boss-action` with Supabase CLI or from the Supabase dashboard.
 3. Confirm the `pg_cron` schedule exists if weekly prizes should pay automatically after the week closes.
 
-Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni"):
+Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni", Snake):
 
-1. Paste and run `supabase/bug-jumper.sql` and `supabase/flappy-pants.sql` in Supabase SQL Editor.
-2. Deploy `supabase/functions/bug-jumper-action` and `supabase/functions/flappy-pants-action` with Supabase CLI or from the Supabase dashboard.
-3. Confirm each game's `pg_cron` weekly-award job exists (`bug_jumper_weekly_awards`, `flappy_pants_weekly_awards`) so the weekly top 3 are paid automatically.
+1. Paste and run `supabase/bug-jumper.sql`, `supabase/flappy-pants.sql`, and `supabase/snake.sql` in Supabase SQL Editor.
+2. Deploy `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, and `supabase/functions/snake-action` with Supabase CLI or from the Supabase dashboard.
+3. Confirm each game's `pg_cron` weekly-award job exists (`bug_jumper_weekly_awards`, `flappy_pants_weekly_awards`, `snake_weekly_awards`) so the weekly top 3 are paid automatically.
 
 Existing project Bug Jumper hard-course rollout:
 
@@ -62,7 +62,7 @@ Existing project Bug Jumper hard-course rollout:
 - Resolution: market creator or `admin` nick can resolve a market.
 - Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
 - Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
-- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Each pays the weekly top 3 100/50/25 coins.
+- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, and Snake). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`. Each pays the weekly top 3 100/50/25 coins.
 - Leaderboard: cash plus open position value.
 
 ## Security Note

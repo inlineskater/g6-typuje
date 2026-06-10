@@ -1568,6 +1568,23 @@
     }
     .fp-arena canvas { width: 100%; height: 100%; display: block; }
 
+    /* ── Snake ── */
+    .sn-arena {
+      border: 2px solid #22c55e; border-radius: 6px;
+      background: #07140c; overflow: hidden;
+      aspect-ratio: 1 / 1; width: 100%; max-width: 560px; margin: 0 auto;
+      user-select: none; touch-action: none; cursor: pointer;
+      box-shadow: 0 0 15px rgba(34,197,94,0.28), inset 0 0 10px rgba(34,197,94,0.1);
+    }
+    .sn-arena canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .sn-prompt {
+      background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.24);
+      border-radius: 8px; padding: 9px 12px; color: var(--muted);
+      font-size: 12px;
+    }
+    .sn-prompt strong { color: var(--text); }
+    .sn-prompt code { color: #22c55e; font-weight: 800; }
+
     /* ── Shop ── */
     input[type="number"], textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
@@ -2941,6 +2958,7 @@
     </div>
 
     <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
+    <button class="nav-tab" data-tab="snake-demo">🐍 Snake Demo</button>
     <button class="nav-tab" data-tab="shop">🛒 Sklep</button>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
     <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
@@ -3484,6 +3502,89 @@
           </aside>
         </div>
       </div>
+
+      <!-- Snake panel (Filip prompt season) -->
+      <div id="seasonal-game-snake" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">Snake 🐍</h2>
+                <p class="page-sub">Klasyczny Snake w wersji sezonowej: jedz jabłka, nie uderz w ścianę ani we własny ogon.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 100 🪙</span>
+                <span class="bj-prize">🥈 50 🪙</span>
+                <span class="bj-prize">🥉 25 🪙</span>
+              </div>
+            </div>
+
+            <div class="sn-prompt"><strong>Prompted by Filip:</strong> <code>"do snake, make no mistakes"</code></div>
+
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać</div>
+              <ul>
+                <li><strong>Strzałki / WASD / swipe</strong> — steruj wężem po planszy.</li>
+                <li><strong>+1 pkt</strong> za każde jabłko. Zawrót o 180° jest blokowany.</li>
+                <li>Ściana albo własny ogon kończą rundę. Najlepszy wynik tygodnia trafia do rankingu.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
+              </ul>
+            </div>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Wynik</div>
+                <div class="bj-stat-value" id="sn-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Długość</div>
+                <div class="bj-stat-value" id="sn-length">3</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Czas</div>
+                <div class="bj-stat-value" id="sn-time">120.0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Ruchy</div>
+                <div class="bj-stat-value" id="sn-moves">0</div>
+              </div>
+            </div>
+
+            <div class="sn-arena" id="sn-arena">
+              <canvas id="sn-canvas"></canvas>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="sn-start-btn">Start rundy</button>
+              <div class="bj-status" id="sn-status">Użyj strzałek, WASD albo swipe. Wyniki zapisują się po rundzie.</div>
+            </div>
+          </section>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="sn-week-label"></span>
+              </div>
+              <div id="sn-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="sn-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
+              </div>
+              <div class="bj-awards" id="sn-awards"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -3496,6 +3597,12 @@
   <div id="tab-bug-jumper-test" class="hidden">
     <main id="bug-jumper-test-main">
       <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy admina — Bug Jumper Hard Course, bez zapisu wyniku.</p>
+    </main>
+  </div>
+
+  <div id="tab-snake-demo" class="hidden">
+    <main id="snake-demo-main">
+      <p class="page-sub" style="margin-bottom:14px">🧪 Demo Snake — lokalny test gry, bez zapisu wyniku i bez nagród.</p>
     </main>
   </div>
 
@@ -3738,6 +3845,7 @@ let lastPokerStateMs = 0;
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
+let snakeRuntime = null;
 const lwCharts = new Map();
 const HERO_STYLE_CHANGE_PRICE = 1;
 const HERO_APPEARANCE_FIELDS = [
@@ -3966,6 +4074,13 @@ const fpStartBtn      = document.getElementById('fp-start-btn');
 const fpStatus        = document.getElementById('fp-status');
 const fpScoreEl       = document.getElementById('fp-score');
 const fpLivesEl       = document.getElementById('fp-lives');
+const snArena         = document.getElementById('sn-arena');
+const snStartBtn      = document.getElementById('sn-start-btn');
+const snStatus        = document.getElementById('sn-status');
+const snScoreEl       = document.getElementById('sn-score');
+const snLengthEl      = document.getElementById('sn-length');
+const snTimeEl        = document.getElementById('sn-time');
+const snMovesEl       = document.getElementById('sn-moves');
 const modalOverlay    = document.getElementById('modal-overlay');
 const modalMarketName = document.getElementById('modal-market-name');
 const sideYesBtn      = document.getElementById('side-yes-btn');
@@ -4117,6 +4232,7 @@ async function doLogout() {
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
   stopWhackBossRound();
+  stopSnakeRound();
   resetGardenState();
   resetHeroState();
   hide(screenApp);
@@ -4177,6 +4293,7 @@ document.addEventListener('click', () => {
 
 let fpPanelHome = null;
 let bjPanelHome = null;
+let snPanelHome = null;
 function restoreFlappyPanelHome() {
   const panel = document.getElementById('seasonal-game-flappy-pants');
   if (panel && fpPanelHome && panel.parentElement !== fpPanelHome) {
@@ -4193,12 +4310,21 @@ function restoreBugJumperPanelHome() {
   }
 }
 
+function restoreSnakePanelHome() {
+  const panel = document.getElementById('seasonal-game-snake');
+  if (panel && snPanelHome && panel.parentElement !== snPanelHome) {
+    hide(panel);
+    snPanelHome.appendChild(panel);
+  }
+}
+
 function switchTab(tab) {
   if (tab === 'bug-jumper-test' && me?.nick !== 'admin') tab = 'markets';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); }
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
+  if (previousTab === 'snake-demo' && tab !== 'snake-demo') { stopSnakeRound(); restoreSnakePanelHome(); }
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
@@ -4216,8 +4342,10 @@ function switchTab(tab) {
   const tH = document.getElementById('tab-heroes');
   const tFp = document.getElementById('tab-flappy-test');
   const tBj = document.getElementById('tab-bug-jumper-test');
+  const tSn = document.getElementById('tab-snake-demo');
   hide(tFp);
   hide(tBj);
+  hide(tSn);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
@@ -4268,6 +4396,17 @@ function switchTab(tab) {
     }
     show(tBj);
     prepareBugJumperAdminTest();
+  } else if (tab === 'snake-demo') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    const panel = document.getElementById('seasonal-game-snake');
+    const testMain = document.getElementById('snake-demo-main');
+    if (panel && testMain) {
+      if (!snPanelHome) snPanelHome = panel.parentElement;
+      if (panel.parentElement !== testMain) testMain.appendChild(panel);
+      show(panel);
+    }
+    show(tSn);
+    prepareSnakeDemo();
   }
 }
 
@@ -5221,6 +5360,13 @@ function setupRealtime() {
       if (activeTab === 'whack-boss') loadFlappyPantsState(false);
       await refreshMeCoins();
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'snake_scores' }, () => {
+      if (activeTab === 'whack-boss') loadSnakeState(false);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'snake_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') loadSnakeState(false);
+      await refreshMeCoins();
+    })
     .subscribe();
 
   realtimeChannels.push(ch);
@@ -5562,6 +5708,8 @@ async function loadSeasonHistory() {
     const currentDbWeekStart = current.weekStart; // DB now also Monday-start
     const liveScoreColumns = current.gameType === 'bug_jumper'
       ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
+      : current.gameType === 'snake'
+      ? 'user_id,nick_snapshot,score,duration_ms,submitted_at,client_meta'
       : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
     let liveScoresQuery = sb.from(current.gameType + '_scores')
       .select(liveScoreColumns)
@@ -5571,16 +5719,23 @@ async function loadSeasonHistory() {
       liveScoresQuery = liveScoresQuery
         .eq('course_id', BUG_JUMPER_HARD_COURSE_ID)
         .order('completion_ms', { ascending: true, nullsFirst: false });
+    } else if (current.gameType === 'snake') {
+      liveScoresQuery = liveScoresQuery
+        .order('duration_ms', { ascending: true });
+    }
+    if (current.gameType !== 'snake') {
+      liveScoresQuery = liveScoresQuery
+        .order('accuracy', { ascending: false });
     }
     liveScoresQuery = liveScoresQuery
-      .order('accuracy', { ascending: false })
       .order('submitted_at', { ascending: true })
       .limit(20);
 
-    const [wbRes, bjRes, fpRes, liveRes] = await Promise.all([
+    const [wbRes, bjRes, fpRes, snRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from('snake_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       liveScoresQuery,
     ]);
 
@@ -5609,6 +5764,7 @@ async function loadSeasonHistory() {
       ...(wbRes.data || []).map(r => ({ ...r, gameType: 'whack_boss' })),
       ...(bjRes.data || []).map(r => ({ ...r, gameType: 'bug_jumper' })),
       ...(fpRes.data || []).map(r => ({ ...r, gameType: 'flappy_pants' })),
+      ...(snRes.data || []).map(r => ({ ...r, gameType: 'snake' })),
       ...pendingEntries,
     ];
     if (wrap) {
@@ -6416,6 +6572,7 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'whack_boss' && item.effect_type === 'score_bonus') return `Whack-a-Boss: +${value} do wyniku`;
   if (item?.effect_game === 'bug_jumper' && item.effect_type === 'score_bonus') return `Bug Jumper: +${value} do wyniku`;
   if (item?.effect_game === 'flappy_pants' && item.effect_type === 'score_bonus') return `3 Pary Spodni: +${value} do wyniku`;
+  if (item?.effect_game === 'snake' && item.effect_type === 'score_bonus') return `Snake: +${value} do wyniku`;
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
   if (item?.effect_game === 'tavern' && item.effect_type === 'gold_aura') return 'Karczma: królewska złota aura';
   if (item?.effect_game === 'tavern' && item.effect_type === 'cloak_aura') return 'Karczma: efektowna peleryna';
@@ -7492,6 +7649,7 @@ const SEASONAL_ROTATION = [
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
+  '2026-06-15': { gameType: 'snake', displayName: 'Snake 🐍' },
 };
 
 function parseWeekStartDate(weekStartStr) {
@@ -7588,24 +7746,30 @@ function loadSeasonalTab(showSpinner = true) {
   const wbPanel       = document.getElementById('seasonal-game-whack-boss');
   const bjPanel       = document.getElementById('seasonal-game-bug-jumper');
   const fpPanel       = document.getElementById('seasonal-game-flappy-pants');
+  const snPanel       = document.getElementById('seasonal-game-snake');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
   const isBJ = current.gameType === 'bug_jumper';
   const isFP = current.gameType === 'flappy_pants';
+  const isSN = current.gameType === 'snake';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
+  if (snPanel) { if (isSN) show(snPanel); else hide(snPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
   if (!isFP && flappyPantsRuntime?.playing) stopFlappyPantsRound();
+  if (!isSN && snakeRuntime?.playing) stopSnakeRound();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
+  if (snakeRuntime) snakeRuntime.archiveMode = false;
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) loadBugJumperState(showSpinner);
   if (isFP) loadFlappyPantsState(showSpinner);
+  if (isSN) loadSnakeState(showSpinner);
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
@@ -9158,6 +9322,572 @@ if (fpArena) {
     const rt = flappyPantsRuntime;
     if (rt?.playing) { fpFlap(); return; }
     if (!rt?.submitting) startFlappyPantsRound();
+  });
+}
+
+// ── Snake — canvas ──────────────────────────────────────────────────────────
+const SN_GRID = 20;
+const SN_CELL = 20;
+const SN_CS = SN_GRID * SN_CELL;
+const SN_TICK_MS = 120;
+const SN_DURATION_MS = 120000;
+const SN_MAX_TICKS = Math.floor(SN_DURATION_MS / SN_TICK_MS);
+const SN_MAX_DPR = 2;
+const SN_DIRS = Object.freeze({
+  U: Object.freeze({ x: 0, y: -1 }),
+  D: Object.freeze({ x: 0, y: 1 }),
+  L: Object.freeze({ x: -1, y: 0 }),
+  R: Object.freeze({ x: 1, y: 0 }),
+});
+
+function newSnakeRuntime() {
+  return {
+    playing: false, submitting: false, archiveMode: false,
+    roundId: null,
+    seed: 1,
+    durationMs: SN_DURATION_MS,
+    tickMs: SN_TICK_MS,
+    startPerf: 0,
+    timer: null,
+    tick: 0,
+    dir: 'R',
+    queuedDir: null,
+    queuedTick: 0,
+    snake: snakeInitialBody(),
+    food: null,
+    rng: null,
+    score: 0,
+    moves: 0,
+    moveLog: [],
+    endedReason: '',
+    pointerStart: null,
+  };
+}
+
+let snCtx = null;
+let snStatScoreText = null;
+let snStatLengthText = null;
+let snStatTimeText = null;
+let snStatMovesText = null;
+
+function snakeInitialBody() {
+  const mid = Math.floor(SN_GRID / 2);
+  return [
+    { x: mid, y: mid },
+    { x: mid - 1, y: mid },
+    { x: mid - 2, y: mid },
+  ];
+}
+
+function snakeMakeRng(seed) {
+  let state = Number(seed || 1) >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function snakeCellKey(pos) {
+  return pos.x + ',' + pos.y;
+}
+
+function snakeSpawnFood(rt) {
+  const occupied = new Set(rt.snake.map(snakeCellKey));
+  if (occupied.size >= SN_GRID * SN_GRID) return null;
+  for (let guard = 0; guard < 2000; guard += 1) {
+    const pos = {
+      x: Math.floor(rt.rng() * SN_GRID),
+      y: Math.floor(rt.rng() * SN_GRID),
+    };
+    if (!occupied.has(snakeCellKey(pos))) return pos;
+  }
+  for (let y = 0; y < SN_GRID; y += 1) {
+    for (let x = 0; x < SN_GRID; x += 1) {
+      const pos = { x, y };
+      if (!occupied.has(snakeCellKey(pos))) return pos;
+    }
+  }
+  return null;
+}
+
+function snakeResetBoard(seed = 1) {
+  const rt = snakeRuntime || newSnakeRuntime();
+  rt.seed = seed;
+  rt.tick = 0;
+  rt.dir = 'R';
+  rt.queuedDir = null;
+  rt.queuedTick = 0;
+  rt.snake = snakeInitialBody();
+  rt.rng = snakeMakeRng(seed);
+  rt.food = snakeSpawnFood(rt);
+  rt.score = 0;
+  rt.moves = 0;
+  rt.moveLog = [];
+  rt.endedReason = '';
+  snakeRuntime = rt;
+  return rt;
+}
+
+function snakeInitCanvas() {
+  const canvas = document.getElementById('sn-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const DPR = Math.min(window.devicePixelRatio || 1, SN_MAX_DPR);
+  const w = Math.round((rect.width || SN_CS) * DPR);
+  const h = Math.round((rect.height || SN_CS) * DPR);
+  if (!snCtx || canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+    snCtx = canvas.getContext('2d');
+  }
+  snCtx.setTransform(w / SN_CS, 0, 0, h / SN_CS, 0, 0);
+  snCtx.imageSmoothingEnabled = false;
+}
+
+function snakeOpposite(a, b) {
+  const da = SN_DIRS[a], db = SN_DIRS[b];
+  return !!da && !!db && da.x + db.x === 0 && da.y + db.y === 0;
+}
+
+function snakeElapsed(now = performance.now()) {
+  const rt = snakeRuntime;
+  if (!rt?.startPerf) return rt?.tick ? rt.tick * SN_TICK_MS : 0;
+  return Math.max(0, Math.min(rt.durationMs, now - rt.startPerf));
+}
+
+function snakeResetStatCache() {
+  snStatScoreText = null;
+  snStatLengthText = null;
+  snStatTimeText = null;
+  snStatMovesText = null;
+}
+
+function snakeSetStats(force = false) {
+  const rt = snakeRuntime || newSnakeRuntime();
+  const remaining = rt.playing ? Math.max(0, rt.durationMs - snakeElapsed()) : SN_DURATION_MS;
+  const scoreText = String(rt.score || 0);
+  const lengthText = String(rt.snake?.length || 3);
+  const timeText = Math.max(0, remaining / 1000).toFixed(1);
+  const movesText = String(rt.moves || 0);
+  if (snScoreEl && (force || scoreText !== snStatScoreText)) {
+    snScoreEl.textContent = scoreText;
+    snStatScoreText = scoreText;
+  }
+  if (snLengthEl && (force || lengthText !== snStatLengthText)) {
+    snLengthEl.textContent = lengthText;
+    snStatLengthText = lengthText;
+  }
+  if (snTimeEl && (force || timeText !== snStatTimeText)) {
+    snTimeEl.textContent = timeText;
+    snStatTimeText = timeText;
+  }
+  if (snMovesEl && (force || movesText !== snStatMovesText)) {
+    snMovesEl.textContent = movesText;
+    snStatMovesText = movesText;
+  }
+}
+
+function snakeDurationText(ms) {
+  const n = Math.max(0, Number(ms) || 0);
+  return (n / 1000).toFixed(1) + 's';
+}
+
+function snakeDraw(now = performance.now()) {
+  const ctx = snCtx;
+  if (!ctx) return;
+  const rt = snakeRuntime;
+  const W = SN_CS, C = SN_CELL;
+
+  ctx.fillStyle = '#07140c';
+  ctx.fillRect(0, 0, W, W);
+  ctx.fillStyle = '#0d2114';
+  for (let y = 0; y < SN_GRID; y += 1) {
+    for (let x = (y % 2); x < SN_GRID; x += 2) {
+      ctx.fillRect(x * C, y * C, C, C);
+    }
+  }
+  ctx.strokeStyle = 'rgba(34,197,94,.14)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= SN_GRID; i += 1) {
+    ctx.beginPath(); ctx.moveTo(i * C, 0); ctx.lineTo(i * C, W); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * C); ctx.lineTo(W, i * C); ctx.stroke();
+  }
+
+  if (rt?.food) {
+    const fx = rt.food.x * C, fy = rt.food.y * C;
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(fx + C / 2, fy + C / 2, C * 0.34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fef2f2';
+    ctx.fillRect(fx + C * 0.48, fy + C * 0.18, C * 0.12, C * 0.12);
+  }
+
+  if (rt?.snake?.length) {
+    rt.snake.forEach((part, index) => {
+      const x = part.x * C, y = part.y * C;
+      ctx.fillStyle = index === 0 ? '#86efac' : index % 2 ? '#22c55e' : '#16a34a';
+      ctx.fillRect(x + 2, y + 2, C - 4, C - 4);
+      if (index === 0) {
+        ctx.fillStyle = '#052e16';
+        ctx.fillRect(x + 6, y + 6, 3, 3);
+        ctx.fillRect(x + C - 9, y + 6, 3, 3);
+      }
+    });
+  }
+
+  if (rt?.playing) {
+    ctx.fillStyle = 'rgba(255,255,255,.88)';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(String(rt.score || 0), 10, 8);
+  } else {
+    ctx.fillStyle = 'rgba(7,20,12,.88)';
+    ctx.fillRect(0, 0, W, W);
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 26px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('SNAKE', W / 2, W / 2 - 24);
+    ctx.font = '42px sans-serif';
+    ctx.fillText('🐍', W / 2, W / 2 + 12);
+    ctx.font = '12px monospace';
+    ctx.fillStyle = 'rgba(134,239,172,.75)';
+    const hint = rt?.archiveMode ? 'demo lokalne' : 'strzalki / WASD / swipe';
+    ctx.fillText(hint, W / 2, W / 2 + 50);
+  }
+
+  ctx.strokeStyle = 'rgba(34,197,94,.35)';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, W - 6, W - 6);
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(1, 1, W - 2, W - 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+}
+
+async function invokeSnake(payload) {
+  const { data, error } = await sb.functions.invoke('snake-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć ze Snake.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Snake.');
+  return data;
+}
+
+async function loadSnakeState(showSpinner = true) {
+  snakeInitCanvas();
+  if (!snakeRuntime) snakeResetBoard(1);
+  snakeDraw(performance.now());
+  const weeklyWrap  = document.getElementById('sn-weekly-board');
+  const allTimeWrap = document.getElementById('sn-alltime-board');
+  const awardsWrap  = document.getElementById('sn-awards');
+  if (showSpinner) {
+    if (weeklyWrap)  weeklyWrap.replaceChildren(makeSpinner());
+    if (allTimeWrap) allTimeWrap.replaceChildren(makeSpinner());
+    if (awardsWrap)  awardsWrap.replaceChildren();
+  }
+  try {
+    const data = await invokeSnake({ action: 'state' });
+    renderSnakeState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać gry.';
+    if (weeklyWrap)  weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, msg));
+    if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Brak danych.'));
+    if (awardsWrap)  awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+    if (snStatus) snStatus.textContent = 'Snake nie jest jeszcze aktywny.';
+  }
+}
+
+function renderSnakeState(data) {
+  if (data.profile) { me.coins = data.profile.coins; setText(headerCoins, me.coins); }
+  const weekLabel = document.getElementById('sn-week-label');
+  if (weekLabel) {
+    const range = whackBossWeekRange(data.weekStart);
+    weekLabel.textContent = range ? range.short : '';
+  }
+  renderSnakeTable(document.getElementById('sn-weekly-board'), data.weekly || [], 'weekly');
+  renderSnakeTable(document.getElementById('sn-alltime-board'), data.allTime || [], 'allTime');
+  renderSnakeAwards(document.getElementById('sn-awards'), data.awards || []);
+  if (!snakeRuntime?.playing && snStatus) {
+    snStatus.textContent = data.myWeekly
+      ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
+      : 'Jedz jabłka. Najlepszy wynik tygodnia trafia do rankingu.';
+  }
+}
+
+function renderSnakeTable(wrap, rows, mode) {
+  if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+  const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
+    el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    lbScoreCell(row),
+    el('td', { className: 'lb-net', title: 'Czas rundy' }, snakeDurationText(row.duration_ms))
+  ));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik' }, 'Wynik'), el('th', {}, 'Czas'))),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderSnakeAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  wrap.replaceChildren(...awards.slice(0, 6).map(row => {
+    const label = whackBossWeekRange(row.week_start)?.short || '';
+    return el('div', { className: 'bj-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  }));
+}
+
+function stopSnakeRound() {
+  const rt = snakeRuntime;
+  if (rt?.timer) clearInterval(rt.timer);
+  snakeRuntime = newSnakeRuntime();
+  snakeResetBoard(snakeRuntime.seed || 1);
+  snakeRuntime.playing = false;
+  snakeRuntime.archiveMode = rt?.archiveMode || false;
+  if (snStartBtn) { snStartBtn.disabled = false; snStartBtn.textContent = 'Start rundy'; }
+  snakeResetStatCache();
+  snakeSetStats(true);
+  snakeInitCanvas();
+  snakeDraw(performance.now());
+}
+
+function beginSnakeRound(round, options = {}) {
+  stopSnakeRound();
+  const seed = Number(round.seed || Date.now()) || 1;
+  snakeRuntime = newSnakeRuntime();
+  const rt = snakeResetBoard(seed);
+  rt.playing = true;
+  rt.archiveMode = !!options.archiveMode;
+  rt.roundId = round.id;
+  rt.durationMs = Number(round.durationMs || round.duration_ms || SN_DURATION_MS) || SN_DURATION_MS;
+  rt.tickMs = Number(round.tickMs || SN_TICK_MS) || SN_TICK_MS;
+  const serverElapsed = round.startedAt && round.serverNow
+    ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
+    : 0;
+  rt.startPerf = performance.now() - serverElapsed;
+  if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Runda trwa'; }
+  if (snStatus) {
+    snStatus.textContent = rt.archiveMode
+      ? 'Demo — wynik nie zostanie zapisany.'
+      : 'Steruj strzałkami, WASD albo swipe. Nie zawracaj.';
+  }
+  if (snArena) {
+    if (!snArena.hasAttribute('tabindex')) snArena.tabIndex = 0;
+    try { snArena.focus({ preventScroll: true }); } catch { snArena.focus(); }
+  }
+  snakeResetStatCache();
+  snakeSetStats(true);
+  snakeDraw(performance.now());
+  rt.timer = setInterval(snakeTick, rt.tickMs);
+}
+
+function prepareSnakeDemo() {
+  snakeInitCanvas();
+  stopSnakeRound();
+  snakeRuntime.archiveMode = true;
+  const weekLabel = document.getElementById('sn-week-label');
+  if (weekLabel) weekLabel.textContent = 'demo';
+  const weeklyWrap = document.getElementById('sn-weekly-board');
+  const allTimeWrap = document.getElementById('sn-alltime-board');
+  const awardsWrap = document.getElementById('sn-awards');
+  if (weeklyWrap) weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Demo lokalne — ranking nie jest używany.'));
+  if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Start uruchamia rundę bez zapisu w bazie.'));
+  if (awardsWrap) awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Nagrody nie są naliczane w demo.'));
+  if (snStatus) snStatus.textContent = 'Demo Snake — wynik nie zostanie zapisany.';
+  snakeDraw(performance.now());
+}
+
+function snakeQueueDir(dir) {
+  const rt = snakeRuntime;
+  if (!rt?.playing || !SN_DIRS[dir]) return false;
+  const current = rt.queuedDir || rt.dir;
+  if (dir === current || snakeOpposite(current, dir)) return false;
+  const tick = rt.tick + 1;
+  if (rt.queuedTick === tick) return false;
+  rt.queuedDir = dir;
+  rt.queuedTick = tick;
+  rt.moveLog.push({ tick, dir });
+  rt.moves = rt.moveLog.length;
+  snakeSetStats();
+  return true;
+}
+
+function snakeStep() {
+  const rt = snakeRuntime;
+  if (!rt?.playing) return;
+  const nextTick = rt.tick + 1;
+  if (rt.queuedDir && rt.queuedTick <= nextTick) {
+    rt.dir = rt.queuedDir;
+    rt.queuedDir = null;
+    rt.queuedTick = 0;
+  }
+  const step = SN_DIRS[rt.dir];
+  const head = rt.snake[0];
+  const next = { x: head.x + step.x, y: head.y + step.y };
+  rt.tick = nextTick;
+
+  if (next.x < 0 || next.x >= SN_GRID || next.y < 0 || next.y >= SN_GRID) {
+    rt.endedReason = 'ściana';
+    finishSnakeRound();
+    return;
+  }
+
+  const eating = rt.food && next.x === rt.food.x && next.y === rt.food.y;
+  const bodyToCheck = eating ? rt.snake : rt.snake.slice(0, -1);
+  if (bodyToCheck.some(part => part.x === next.x && part.y === next.y)) {
+    rt.endedReason = 'ogon';
+    finishSnakeRound();
+    return;
+  }
+
+  rt.snake.unshift(next);
+  if (eating) {
+    rt.score += 1;
+    rt.food = snakeSpawnFood(rt);
+    if (!rt.food) {
+      rt.endedReason = 'pełna plansza';
+      finishSnakeRound();
+      return;
+    }
+  } else {
+    rt.snake.pop();
+  }
+
+  if (rt.tick >= SN_MAX_TICKS) {
+    rt.endedReason = 'czas';
+    finishSnakeRound();
+    return;
+  }
+  snakeSetStats();
+  snakeDraw(performance.now());
+}
+
+function snakeTick() {
+  const rt = snakeRuntime;
+  if (!rt?.playing) return;
+  if (snakeElapsed() >= rt.durationMs) {
+    rt.endedReason = 'czas';
+    finishSnakeRound();
+    return;
+  }
+  snakeStep();
+}
+
+async function startSnakeRound() {
+  const rt = snakeRuntime;
+  if (rt?.playing || rt?.submitting) return;
+  if (activeTab === 'snake-demo') {
+    const now = new Date().toISOString();
+    beginSnakeRound({
+      id: 'snake-demo-' + Date.now(),
+      seed: Math.floor(Math.random() * 2147483647) + 1,
+      durationMs: SN_DURATION_MS,
+      tickMs: SN_TICK_MS,
+      startedAt: now,
+      serverNow: now,
+    }, { archiveMode: true });
+    return;
+  }
+  if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Ładuję...'; }
+  if (snStatus) snStatus.textContent = 'Przygotowuję rundę...';
+  try {
+    const data = await invokeSnake({ action: 'start' });
+    renderSnakeState(data);
+    beginSnakeRound(data.round);
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (snStatus) snStatus.textContent = 'Nie udało się wystartować rundy.';
+    if (snStartBtn) { snStartBtn.disabled = false; snStartBtn.textContent = 'Start rundy'; }
+  }
+}
+
+async function finishSnakeRound() {
+  const rt = snakeRuntime;
+  if (!rt || rt.submitting) return;
+  rt.playing = false;
+  rt.submitting = true;
+  if (rt.timer) clearInterval(rt.timer);
+  snakeSetStats(true);
+  snakeDraw(performance.now());
+
+  if (rt.archiveMode) {
+    rt.submitting = false;
+    if (snStatus) snStatus.textContent = 'Demo — wynik: ' + rt.score + ' (nie zapisano).';
+    if (snStartBtn) { snStartBtn.disabled = false; snStartBtn.textContent = 'Zagraj ponownie'; }
+    return;
+  }
+
+  if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Zapisuję...'; }
+  if (snStatus) snStatus.textContent = 'Zapisuję wynik...';
+  try {
+    const data = await invokeSnake({
+      action: 'submit',
+      roundId: rt.roundId,
+      seed: rt.seed,
+      moves: rt.moveLog.slice(0, 1200),
+      elapsedTicks: rt.tick,
+      score: rt.score,
+    });
+    renderSnakeState(data);
+    showToast('✅ Wynik zapisany: ' + data.score.score);
+    if (snStatus) {
+      const reason = rt.endedReason ? ' · ' + rt.endedReason : '';
+      snStatus.textContent = 'Ostatni wynik: ' + data.score.score + ' · ' + snakeDurationText(data.score.duration_ms) + reason + '.';
+    }
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (snStatus) snStatus.textContent = 'Nie udało się zapisać wyniku.';
+  } finally {
+    rt.submitting = false;
+    if (snStartBtn) { snStartBtn.disabled = false; snStartBtn.textContent = 'Zagraj ponownie'; }
+  }
+}
+
+if (snStartBtn) snStartBtn.addEventListener('click', startSnakeRound);
+
+document.addEventListener('keydown', evt => {
+  if (!snakeRuntime?.playing) return;
+  const key = evt.key.toLowerCase();
+  const dir = evt.key === 'ArrowUp' || key === 'w' ? 'U'
+    : evt.key === 'ArrowDown' || key === 's' ? 'D'
+    : evt.key === 'ArrowLeft' || key === 'a' ? 'L'
+    : evt.key === 'ArrowRight' || key === 'd' ? 'R'
+    : null;
+  if (!dir) return;
+  evt.preventDefault();
+  snakeQueueDir(dir);
+});
+
+if (snArena) {
+  snArena.addEventListener('pointerdown', evt => {
+    evt.preventDefault();
+    if (!snakeRuntime?.playing && !snakeRuntime?.submitting) {
+      startSnakeRound();
+      return;
+    }
+    snakeRuntime.pointerStart = { x: evt.clientX, y: evt.clientY };
+  });
+  snArena.addEventListener('pointerup', evt => {
+    const rt = snakeRuntime;
+    const start = rt?.pointerStart;
+    if (!rt?.playing || !start) return;
+    rt.pointerStart = null;
+    const dx = evt.clientX - start.x;
+    const dy = evt.clientY - start.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+    snakeQueueDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U'));
   });
 }
 
