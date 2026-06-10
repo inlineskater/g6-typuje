@@ -3032,7 +3032,7 @@
           </div>
         </div>
         <div class="ranking-card" data-detail="seasons">
-          <div class="ranking-card-title">🎮 Sezony Growe</div>
+          <div class="ranking-card-title">🎮 Sezony gier</div>
           <div class="ranking-card-body" id="seasons-preview-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
@@ -3445,7 +3445,7 @@
               <ul>
                 <li><strong>Spacja / klik / dotyk / ↑</strong> — trzepnij, żeby spodnie podskoczyły do góry.</li>
                 <li><strong>+1 pkt</strong> za każdą przeleconą szparę między wiszącymi spodniami.</li>
-                <li>Masz <strong>3 pary spodni</strong> (3 życia). Zderzenie lub upadek kosztuje 1 parę — lecisz dalej z krótką nietykalnoścą, <strong>punkty zostają</strong>.</li>
+                <li>Masz <strong>3 pary spodni</strong> (3 życia). Zderzenie lub upadek kosztuje 1 parę — lecisz dalej z krótką nietykalnością, <strong>punkty zostają</strong>.</li>
                 <li>Po stracie <strong>trzeciej pary</strong> runda się kończy. Najlepszy wynik z tygodnia trafia do rankingu.</li>
               </ul>
               <div class="bj-rules-title" style="margin-top:10px">Kiedy</div>
@@ -3589,7 +3589,7 @@
 
   <div id="tab-flappy-test" class="hidden">
     <main id="flappy-test-main">
-      <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy — „3 Pary Spodni" dostępne dla wszystkich, niezależnie od sezonu.</p>
+      <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy — „3 Pary Spodni” dostępne dla wszystkich, niezależnie od sezonu.</p>
     </main>
   </div>
 
@@ -5625,6 +5625,24 @@ async function resolveActiveMarket(resolution) {
 // ── Leaderboard ───────────────────────────────────────────────────────────
 let _seasonHistory = null;
 
+function normalizeSeasonAwardWeekStart(weekStart, gameType) {
+  const date = parseWeekStartDate(weekStart);
+  if (!date || date.getUTCDay() !== 0) return weekStart;
+
+  const mondayWeekStart = addDaysStr(weekStart, 1);
+  const mondaySeason = seasonalEntryForWeekStart(mondayWeekStart);
+  return mondaySeason.gameType === gameType ? mondayWeekStart : weekStart;
+}
+
+function mapSeasonAwardRows(rows, gameType) {
+  return (rows || []).map(r => ({
+    ...r,
+    nick: r.nick || r.nick_snapshot,
+    week_start: normalizeSeasonAwardWeekStart(r.week_start, gameType),
+    gameType,
+  }));
+}
+
 function buildSeasonHistorySections(container, compact) {
   const medals = ['🥇', '🥈', '🥉'];
   const current = getCurrentSeasonalEntry();
@@ -5646,7 +5664,7 @@ function buildSeasonHistorySections(container, compact) {
     const hasPending = awards.some(a => a.isPending);
     if (awards.length === 0) {
       section.append(el('p', { className: 'season-history-pending' },
-        isCurrent ? '⏳ Trwa — brak wyników.' : 'Brak danych o nagrodach.'
+        isCurrent ? '⏳ Sezon trwa — brak zapisanych wyników.' : 'Brak zapisanych wyników i nagród dla tego sezonu.'
       ));
     } else {
       const table = el('table', { className: 'lb-table-compact' });
@@ -5663,7 +5681,7 @@ function buildSeasonHistorySections(container, compact) {
       if (hasPending) {
         const [py, pm, pd] = addDaysStr(entry.weekStart, 7).split('-').map(Number);
         section.append(el('p', { className: 'season-history-pending' },
-          '⏳ Wyniki wstępne — nagrody wypłacane po zamknięciu tygodnia, w poniedziałek ' + pd + '.' + String(pm).padStart(2, '0') + '.'
+          '⏳ Wyniki wstępne — nagrody zostaną wypłacone po zakończeniu tygodnia, w poniedziałek ' + pd + '.' + String(pm).padStart(2, '0') + '.'
         ));
       }
     }
@@ -5703,7 +5721,7 @@ async function loadSeasonHistory() {
 
     const [wbRes, bjRes, fpRes, snRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('bug_jumper_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from('bug_jumper_weekly_awards').select('week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('snake_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       liveScoresQuery,
@@ -5731,10 +5749,10 @@ async function loadSeasonHistory() {
     }
 
     _seasonHistory = [
-      ...(wbRes.data || []).map(r => ({ ...r, gameType: 'whack_boss' })),
-      ...(bjRes.data || []).map(r => ({ ...r, gameType: 'bug_jumper' })),
-      ...(fpRes.data || []).map(r => ({ ...r, gameType: 'flappy_pants' })),
-      ...(snRes.data || []).map(r => ({ ...r, gameType: 'snake' })),
+      ...mapSeasonAwardRows(wbRes.data, 'whack_boss'),
+      ...mapSeasonAwardRows(bjRes.data, 'bug_jumper'),
+      ...mapSeasonAwardRows(fpRes.data, 'flappy_pants'),
+      ...mapSeasonAwardRows(snRes.data, 'snake'),
       ...pendingEntries,
     ];
     if (wrap) {
@@ -6168,7 +6186,7 @@ function drawCoinChart(canvas, points) {
       title.textContent = '🎰 Historia — Hazard';
       renderFullHazardHistory(body);
     } else if (detail === 'seasons') {
-      title.textContent = '🎮 Historia Sezonów Growych';
+      title.textContent = '🎮 Historia sezonów gier';
       buildSeasonHistorySections(body, false);
     }
     overlay.classList.remove('hidden');
@@ -7615,7 +7633,7 @@ const BUG_JUMPER_HARD_COURSE_ID = 'bug_jumper_hard_v2';
 const SEASONAL_ROTATION = [
   { gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
   { gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
-  { gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },
+  { gameType: 'flappy_pants', displayName: '„3 Pary Spodni” 👖' },
   { gameType: 'snake', displayName: 'Snake 🐍' },
 ];
 const SEASONAL_OVERRIDES = {
