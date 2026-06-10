@@ -3855,6 +3855,7 @@ const HERO_ITEM_SLOTS = [
   { id: 'weapon', label: 'Broń' },
 ];
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake']);
 let heroItemDefs = [];
 let myHeroInventory = [];
 let publicHeroEquipment = [];
@@ -6554,14 +6555,10 @@ async function loadMyHeroForShop() {
 
 function heroItemEffectLabel(item) {
   const value = Number(item?.effect_value || 0);
-  if (item?.slug === 'kaiser_helm' || item?.slug === 'combat_colander') return `Gry sezonowe: +${value} do wyniku w każdej grze`;
+  if (item?.effect_type === 'score_bonus' && SEASONAL_SCORE_GAMES.has(item?.effect_game)) return `Gry sezonowe: +${value} do wyniku w każdej grze`;
   if (item?.effect_game === 'roulette' && item.effect_type === 'win_chance_bonus') return `Ruletka: +${value}% szansy ratunku po przegranej`;
   if (item?.effect_game === 'roulette' && item.effect_type === 'payout_bonus') return `Ruletka: +${value}% do wygranej wypłaty`;
   if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') { const pts = value === 1 ? 'punkt' : (value >= 2 && value <= 4) ? 'punkty' : 'punktów'; return `Sloty: +${value} ${pts} wagi symbolu G6`; }
-  if (item?.effect_game === 'whack_boss' && item.effect_type === 'score_bonus') return `Whack-a-Boss: +${value} do wyniku`;
-  if (item?.effect_game === 'bug_jumper' && item.effect_type === 'score_bonus') return `Bug Jumper: +${value} do wyniku`;
-  if (item?.effect_game === 'flappy_pants' && item.effect_type === 'score_bonus') return `3 Pary Spodni: +${value} do wyniku`;
-  if (item?.effect_game === 'snake' && item.effect_type === 'score_bonus') return `Snake: +${value} do wyniku`;
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
   if (item?.effect_game === 'tavern' && item.effect_type === 'gold_aura') return 'Karczma: królewska złota aura';
   if (item?.effect_game === 'tavern' && item.effect_type === 'cloak_aura') return 'Karczma: efektowna peleryna';
