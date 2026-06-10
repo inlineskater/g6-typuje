@@ -514,7 +514,7 @@
     /* ── RANKING GRID ── */
     .ranking-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      height: calc(100dvh - 140px); grid-template-rows: 1fr 1fr;
+      height: calc(100dvh - 140px); grid-template-rows: 1fr 1fr 1fr;
     }
     @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; } }
     .ranking-card {
@@ -525,6 +525,19 @@
     .ranking-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px var(--acc-dim); }
     .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
     .ranking-card-body { flex: 1; overflow: hidden; }
+    .coin-race-canvas { width: 100%; height: 100%; display: block; }
+    .coin-race-detail-canvas { width: 100%; height: 340px; display: block; margin: 4px 0 12px; }
+    .coin-race-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+    .coin-race-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .coin-race-legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+    .coin-race-canvas, .coin-race-detail-canvas { cursor: crosshair; }
+    .coin-race-tooltip {
+      position: fixed; z-index: 9999; pointer-events: none; display: none; flex-direction: column; gap: 2px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px;
+      font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    }
+    .coin-race-tooltip-row { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    .coin-race-tooltip-date { font-size: 10px; color: var(--muted); }
     .lb-row-clickable { cursor: pointer; }
     .lb-row-clickable:hover td { background: var(--acc-dim); }
     .user-profile-back { margin-bottom: 14px; }
@@ -3064,6 +3077,12 @@
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
+        <div class="ranking-card" data-detail="coin-race">
+          <div class="ranking-card-title">📈 Wyścig coinów</div>
+          <div class="ranking-card-body" id="coin-race-wrap">
+            <canvas class="coin-race-canvas"></canvas>
+          </div>
+        </div>
         <div class="ranking-card" data-detail="seasons">
           <div class="ranking-card-title">🎮 Sezony gier</div>
           <div class="ranking-card-body" id="seasons-preview-wrap">
@@ -3921,6 +3940,7 @@ let hazardHistoryRows = [];
 let showAllTransactions = false;
 let showAllHazard = false;
 let _lbData = [], _lbCalib = {}, _hazardistaData = [];
+let _coinRaceSeries = [], _coinRaceBounds = null, _coinRaceRAF = new WeakMap();
 let activeTab = 'markets';
 let pokerState = null;
 let pokerRealtimeReady = false;
@@ -5904,7 +5924,8 @@ async function loadLeaderboard() {
   hazardistaWrap.replaceChildren(makeSpinner());
   showAllTransactions = false;
   showAllHazard = false;
-  loadSeasonHistory();
+  const seasonPromise = loadSeasonHistory();
+  loadCoinRace(seasonPromise);
 
   const [leaderboardRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes] = await Promise.all([
     sb.from('leaderboard').select('*').neq('nick', 'admin').order('coins', { ascending: false }).limit(20),
@@ -6293,6 +6314,356 @@ function drawCoinChart(canvas, points) {
   }
 }
 
+// Reconstruct a user's cash-balance history from their coin-affecting events.
+// Returns [{ts, bal, label, delta, isGarden}] starting at 1000 at registration.
+// `trades` rows must include a nested `markets(title,resolved,resolution,resolved_at)`;
+// `allMarketTrades` holds every trade (any user) for the resolved markets this user won,
+// needed for the pro-rata payout math.
+function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [], coinTxs = [], awards = [], allMarketTrades = [] }) {
+  const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
+  const resolvedWinningMarketIds = [...new Set(
+    trades.filter(t => t.markets?.resolved && t.side === t.markets?.resolution).map(t => t.market_id)
+  )];
+
+  const events = [];
+
+  trades.forEach(t => {
+    const title = t.markets?.title || 'Rynek';
+    events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0), label: '📊 ' + title });
+  });
+
+  // Inject per-market payout events at resolved_at time
+  resolvedWinningMarketIds.forEach(marketId => {
+    const market = trades.find(t => t.market_id === marketId)?.markets;
+    if (!market) return;
+    const resolution = market.resolution;
+    const resolvedAt = market.resolved_at ? new Date(market.resolved_at).getTime() : null;
+    if (!resolvedAt) return;
+
+    const mTrades = allMarketTrades.filter(t => t.market_id === marketId);
+    const totalYes = mTrades.filter(t => t.side === 'YES').reduce((s, t) => s + (+t.amount || 0), 0);
+    const totalNo  = mTrades.filter(t => t.side === 'NO' ).reduce((s, t) => s + (+t.amount || 0), 0);
+    const losingPot = resolution === 'YES' ? totalNo : totalYes;
+    const winningTrades = mTrades.filter(t => t.side === resolution);
+    const totalWinningShares = winningTrades.reduce((s, t) => s + parseFloat(t.shares || 0), 0);
+
+    const userWinningTrades = mTrades.filter(t => t.user_id === userId && t.side === resolution);
+    const userWinningAmount = userWinningTrades.reduce((s, t) => s + (+t.amount || 0), 0);
+    const userWinningShares = userWinningTrades.reduce((s, t) => s + parseFloat(t.shares || 0), 0);
+    const payout = Math.round(userWinningAmount + (totalWinningShares > 0 ? losingPot * userWinningShares / totalWinningShares : 0));
+
+    if (payout > 0) {
+      events.push({ ts: resolvedAt, delta: payout, label: '💰 ' + market.title + ' (wypłata)' });
+    }
+  });
+
+  games.forEach(g => {
+    const bet = +g.bet || 0, won = +g.won || 0;
+    const delta = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
+    events.push({ ts: new Date(g.created_at).getTime(), delta, label: GAME_NAMES[g.game] || g.game });
+  });
+  awards.forEach(a => {
+    if (a.awarded_at) {
+      const entry = seasonalEntryForWeekStart(a.week_start);
+      const medals = ['🥇', '🥈', '🥉'];
+      const gameName = entry?.gameType === a.gameType ? entry.displayName : a.gameType;
+      events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + gameName });
+    }
+  });
+  coinTxs.forEach(t => {
+    const label = t.reason === 'garden_water'
+      ? '🌱 Podlewanie' + (t.meta?.streak > 1 ? ' (streak ' + t.meta.streak + ')' : '')
+      : t.reason === 'garden_accessory'
+      ? '🌿 Akcesorium: ' + (t.meta?.accessory_id || '?')
+      : t.reason === 'store_purchase'
+      ? '🎁 Sklep: ' + (t.meta?.title || '?')
+      : t.reason === 'daily_interest'
+      ? '💍 Odsetki dzienne'
+      : t.reason === 'hero_item_purchase'
+      ? '🎒 Przedmiot: ' + (t.meta?.item_name || t.meta?.item_slug || '?')
+      : t.reason === 'hero_auction_bid_reserved'
+      ? '🔨 Aukcja: depozyt'
+      : t.reason === 'hero_auction_outbid_refund' || t.reason === 'hero_auction_edition_refund'
+      ? '↩️ Aukcja: zwrot'
+      : t.reason === 'garden_certificate'
+      ? '📜 Certyfikat Drugiego Ogródka'
+      : '🪙 ' + t.reason;
+    events.push({ ts: new Date(t.created_at).getTime(), delta: +t.delta, label });
+  });
+  // Residual = coins that moved before coin_transactions logging was introduced (pre-2026-05-21).
+  const residual = coins - (1000 + events.reduce((s, e) => s + e.delta, 0));
+  if (Math.abs(residual) > 5) {
+    events.push({ ts: new Date('2026-05-21T12:00:00+02:00').getTime(), delta: residual, label: '🌱 Wyrównanie — wcześniej nie zapisywałem logów dat podlania i kupowania akcesoriów', isGarden: true });
+  }
+  events.sort((a, b) => a.ts - b.ts);
+
+  const startTs = createdAt ? new Date(createdAt).getTime() : (events[0]?.ts || Date.now());
+  const balancePoints = [{ ts: startTs, bal: 1000, label: 'Rejestracja', delta: null }];
+  let runBal = 1000;
+  events.forEach(e => {
+    runBal += e.delta;
+    balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta, isGarden: e.isGarden });
+  });
+  const finalResidual = coins - runBal;
+  if (finalResidual !== 0 && Math.abs(finalResidual) <= 5) {
+    balancePoints[balancePoints.length - 1].bal += finalResidual;
+  }
+  return balancePoints;
+}
+
+// ── Coin race: every player's cash balance over time, animated ────────────
+function _raceTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = (n, f) => (cs.getPropertyValue(n).trim() || f);
+  return { card: v('--card', '#ffffff'), border: v('--border', '#e2e8f0'), muted: v('--muted', '#94a3b8') };
+}
+
+// Draw all series up to progressTs on a fixed Y scale. Lines are colored per
+// player; the moving front holds each player's last balance and (optionally)
+// shows their nick so you can watch positions change.
+function drawCoinRace(canvas, series, progressTs, bounds, opts = {}) {
+  if (!canvas || !series || !series.length || !bounds) return;
+  const showLabels = opts.showLabels !== false;
+  const W = canvas.offsetWidth || 400;
+  const H = opts.height || canvas.offsetHeight || 160;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const th = _raceTheme();
+  const LPAD = 46, RPAD = showLabels ? 66 : 12, TPAD = 12, BPAD = 20;
+  const CW = W - LPAD - RPAD, CH = H - TPAD - BPAD;
+  const { tMin, tMax, yLo, yHi } = bounds;
+  const scX = ts => LPAD + (tMax === tMin ? CW / 2 : ((ts - tMin) / (tMax - tMin)) * CW);
+  const scY = b => TPAD + (1 - (b - yLo) / (yHi - yLo)) * CH;
+
+  ctx.fillStyle = th.card; ctx.fillRect(0, 0, W, H);
+
+  // Y grid + labels
+  ctx.font = '9px system-ui, sans-serif';
+  for (let i = 0; i <= 3; i++) {
+    const val = yLo + (yHi - yLo) / 3 * i, y = scY(val);
+    ctx.strokeStyle = th.border; ctx.lineWidth = 1; ctx.setLineDash(i === 0 ? [] : [3, 3]);
+    ctx.beginPath(); ctx.moveTo(LPAD, y); ctx.lineTo(W - RPAD, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = th.muted; ctx.textAlign = 'right';
+    ctx.fillText(fmtNum(Math.round(val)), LPAD - 4, y + 3);
+  }
+  // 1000 baseline
+  if (1000 >= yLo && 1000 <= yHi) {
+    const yb = scY(1000);
+    ctx.strokeStyle = th.muted; ctx.globalAlpha = 0.5; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(LPAD, yb); ctx.lineTo(W - RPAD, yb); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  // X date labels
+  ctx.fillStyle = th.muted;
+  const dlabel = ts => new Date(ts).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+  for (let i = 0; i <= 3; i++) {
+    const ts = tMin + (tMax - tMin) / 3 * i;
+    ctx.textAlign = i === 0 ? 'left' : i === 3 ? 'right' : 'center';
+    ctx.fillText(dlabel(ts), Math.max(LPAD, Math.min(W - RPAD, scX(ts))), H - 6);
+  }
+
+  // Lines
+  const frontX = scX(progressTs);
+  const tips = [];
+  series.forEach(s => {
+    const pts = s.points;
+    if (!pts.length) return;
+    let curBal = pts[0].bal, started = false;
+    ctx.strokeStyle = s.color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (const p of pts) {
+      if (p.ts > progressTs) break;
+      const x = scX(p.ts), y = scY(p.bal);
+      if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+      curBal = p.bal;
+    }
+    const frontY = scY(curBal);
+    if (started) ctx.lineTo(frontX, frontY); else ctx.moveTo(frontX, frontY);
+    ctx.stroke();
+    ctx.fillStyle = s.color;
+    ctx.beginPath(); ctx.arc(frontX, frontY, 2.5, 0, Math.PI * 2); ctx.fill();
+    tips.push({ y: frontY, color: s.color, nick: s.nick });
+  });
+
+  // Tip nick labels with light vertical de-overlap
+  if (showLabels && tips.length) {
+    tips.sort((a, b) => a.y - b.y);
+    const gap = 11;
+    for (let i = 1; i < tips.length; i++) {
+      if (tips[i].y - tips[i - 1].y < gap) tips[i].y = tips[i - 1].y + gap;
+    }
+    ctx.textAlign = 'left'; ctx.font = '9px system-ui, sans-serif';
+    tips.forEach(t => {
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.nick, W - RPAD + 5, Math.min(H - 3, Math.max(9, t.y)) + 3);
+    });
+  }
+
+  // Remember the layout so the hover tooltip can map cursor → nearest player.
+  canvas._raceLayout = { LPAD, RPAD, TPAD, CW, CH, W, H, tMin, tMax, yLo, yHi, series, progressTs };
+}
+
+// Linear-interpolated balance of a series at time t (matches the drawn line).
+function _raceValueAt(points, t) {
+  if (!points || !points.length) return null;
+  if (t <= points[0].ts) return points[0].bal;
+  for (let i = 1; i < points.length; i++) {
+    if (t <= points[i].ts) {
+      const a = points[i - 1], b = points[i];
+      return a.bal + (b.bal - a.bal) * ((t - a.ts) / ((b.ts - a.ts) || 1));
+    }
+  }
+  return points[points.length - 1].bal;
+}
+
+let _raceTooltipEl = null;
+function _hideRaceTooltip() { if (_raceTooltipEl) _raceTooltipEl.style.display = 'none'; }
+function _showRaceTooltip(cx, cy, s, bal, t) {
+  if (!_raceTooltipEl) { _raceTooltipEl = el('div', { className: 'coin-race-tooltip' }); document.body.appendChild(_raceTooltipEl); }
+  _raceTooltipEl.replaceChildren(
+    el('div', { className: 'coin-race-tooltip-row' },
+      el('span', { className: 'coin-race-legend-swatch', style: { background: s.color } }),
+      el('span', {}, s.nick + ' · ' + fmtNum(Math.round(bal)) + ' 🪙')),
+    el('div', { className: 'coin-race-tooltip-date' }, new Date(t).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: '2-digit' }))
+  );
+  _raceTooltipEl.style.display = 'flex';
+  const pad = 14, w = _raceTooltipEl.offsetWidth, h = _raceTooltipEl.offsetHeight;
+  let x = cx + pad, y = cy + pad;
+  if (x + w > window.innerWidth - 8) x = cx - w - pad;
+  if (y + h > window.innerHeight - 8) y = cy - h - pad;
+  _raceTooltipEl.style.left = Math.max(8, x) + 'px';
+  _raceTooltipEl.style.top = Math.max(8, y) + 'px';
+}
+
+// Wire mouse hover on a race canvas to the nearest-line tooltip (idempotent).
+function attachRaceTooltip(canvas) {
+  if (canvas._raceTipBound) return;
+  canvas._raceTipBound = true;
+  canvas.addEventListener('mousemove', ev => {
+    const L = canvas._raceLayout;
+    if (!L) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    if (mx < L.LPAD || mx > L.W - L.RPAD || my < L.TPAD || my > L.TPAD + L.CH) { _hideRaceTooltip(); return; }
+    const t = Math.min(L.progressTs, L.tMin + (mx - L.LPAD) / L.CW * (L.tMax - L.tMin));
+    let best = null, bestDy = Infinity;
+    L.series.forEach(s => {
+      const bal = _raceValueAt(s.points, t);
+      if (bal == null) return;
+      const y = L.TPAD + (1 - (bal - L.yLo) / (L.yHi - L.yLo)) * L.CH;
+      const dy = Math.abs(y - my);
+      if (dy < bestDy) { bestDy = dy; best = { s, bal }; }
+    });
+    if (!best || bestDy > 16) { _hideRaceTooltip(); return; }
+    _showRaceTooltip(ev.clientX, ev.clientY, best.s, best.bal, t);
+  });
+  canvas.addEventListener('mouseleave', _hideRaceTooltip);
+}
+
+function animateCoinRace(canvas, series, bounds, opts = {}) {
+  if (!canvas || !series || !series.length || !bounds) return;
+  const prev = _coinRaceRAF.get(canvas);
+  if (prev) cancelAnimationFrame(prev);
+  const dur = opts.duration || 6000, span = bounds.tMax - bounds.tMin, t0 = performance.now();
+  function frame(now) {
+    const e = Math.min(1, (now - t0) / dur);
+    const eased = 1 - Math.pow(1 - e, 3);
+    drawCoinRace(canvas, series, bounds.tMin + span * eased, bounds, opts);
+    if (e < 1) _coinRaceRAF.set(canvas, requestAnimationFrame(frame));
+    else _coinRaceRAF.delete(canvas);
+  }
+  _coinRaceRAF.set(canvas, requestAnimationFrame(frame));
+}
+
+// Start the animation once the canvas actually has width (the tab may be hidden).
+function playCoinRace(canvas, opts = {}) {
+  if (!canvas || !_coinRaceSeries.length || !_coinRaceBounds) return;
+  attachRaceTooltip(canvas);
+  if (canvas.offsetWidth > 0) { animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, opts); return; }
+  const ro = new ResizeObserver(() => {
+    if (canvas.offsetWidth > 0) { ro.disconnect(); animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, opts); }
+  });
+  ro.observe(canvas);
+}
+
+// Bulk-reconstruct every non-admin player's balance history and animate the
+// preview card. `seasonPromise` is loadSeasonHistory()'s promise so awards are
+// included in the reconstruction.
+async function loadCoinRace(seasonPromise) {
+  const wrap = document.getElementById('coin-race-wrap');
+  if (!wrap) return;
+  try { await (seasonPromise || loadSeasonHistory()); } catch {}
+
+  const [profRes, tradesRes, coinTxRes, gameRes] = await Promise.all([
+    sb.from('profiles').select('id,nick,coins,created_at').neq('nick', 'admin'),
+    sb.from('trades').select('user_id,created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').order('created_at', { ascending: true }).limit(10000),
+    sb.from('coin_transactions').select('user_id,created_at,delta,reason,meta').order('created_at', { ascending: true }).limit(10000),
+    sb.from('game_transactions').select('user_id,created_at,game,bet,won').neq('nick_snapshot', 'admin').order('created_at', { ascending: true }).limit(10000),
+  ]);
+
+  const profiles = profRes.data || [];
+  const allTrades = tradesRes.data || [];
+  const byUser = arr => { const m = {}; (arr || []).forEach(r => { (m[r.user_id] = m[r.user_id] || []).push(r); }); return m; };
+  const tradesByUser = byUser(allTrades), txByUser = byUser(coinTxRes.data), gamesByUser = byUser(gameRes.data);
+  const awardsByUser = byUser(_seasonHistory || []);
+
+  const n = profiles.length;
+  const series = [];
+  profiles.forEach((p, i) => {
+    const points = buildBalancePoints({
+      userId: p.id, coins: p.coins, createdAt: p.created_at,
+      trades: tradesByUser[p.id] || [], games: gamesByUser[p.id] || [],
+      coinTxs: txByUser[p.id] || [], awards: awardsByUser[p.id] || [], allMarketTrades: allTrades,
+    });
+    if (points.length < 2) return;
+    series.push({ userId: p.id, nick: p.nick, color: `hsl(${Math.round(i * 360 / Math.max(1, n))}, 70%, 55%)`, points });
+  });
+
+  let tMin = Infinity, balMin = Infinity, balMax = -Infinity;
+  series.forEach(s => {
+    tMin = Math.min(tMin, s.points[0].ts);
+    s.points.forEach(p => { balMin = Math.min(balMin, p.bal); balMax = Math.max(balMax, p.bal); });
+  });
+  const tMax = Date.now();
+  if (!isFinite(tMin)) tMin = tMax - 86400000;
+  const padV = Math.max(50, (balMax - balMin) * 0.08);
+  _coinRaceSeries = series;
+  _coinRaceBounds = { tMin, tMax, yLo: balMin - padV, yHi: balMax + padV };
+
+  let canvas = wrap.querySelector('.coin-race-canvas');
+  if (!series.length) {
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak danych.'));
+    return;
+  }
+  if (!canvas) { canvas = el('canvas', { className: 'coin-race-canvas' }); wrap.replaceChildren(canvas); }
+  playCoinRace(canvas, { showLabels: true });
+}
+
+// Larger coin-race view for the ranking detail modal: big chart, replay button,
+// and a legend sorted by current balance.
+function renderCoinRaceDetail(container) {
+  if (!_coinRaceSeries.length || !_coinRaceBounds) {
+    container.append(el('p', { style: { color: 'var(--muted)' } }, 'Brak danych.'));
+    return;
+  }
+  const canvas = el('canvas', { className: 'coin-race-detail-canvas' });
+  const replayBtn = el('button', { className: 'btn-ghost' }, '▶ Odtwórz ponownie');
+  replayBtn.addEventListener('click', () => animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, { showLabels: true }));
+
+  const ranked = [..._coinRaceSeries].sort((a, b) => b.points[b.points.length - 1].bal - a.points[a.points.length - 1].bal);
+  const legend = el('div', { className: 'coin-race-legend' },
+    ...ranked.map(s => el('div', { className: 'coin-race-legend-item' },
+      el('span', { className: 'coin-race-legend-swatch', style: { background: s.color } }),
+      s.nick + ' · ' + fmtNum(Math.round(s.points[s.points.length - 1].bal)) + ' 🪙'
+    ))
+  );
+
+  container.append(replayBtn, canvas, legend);
+  playCoinRace(canvas, { showLabels: true });
+}
+
 // ── Ranking Detail Modal ──────────────────────────────────────────────────
 (function initRankingModal() {
   const overlay = document.getElementById('ranking-detail-overlay');
@@ -6317,6 +6688,9 @@ function drawCoinChart(canvas, points) {
     } else if (detail === 'seasons') {
       title.textContent = '🎮 Historia sezonów gier';
       buildSeasonHistorySections(body, false);
+    } else if (detail === 'coin-race') {
+      title.textContent = '📈 Wyścig coinów — stan gotówki w czasie';
+      renderCoinRaceDetail(body);
     }
     overlay.classList.remove('hidden');
   }
@@ -6377,8 +6751,6 @@ function drawCoinChart(canvas, points) {
     body.append(backBtn, makeSpinner());
 
     try {
-      const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
-
       const [gamesRes, tradesRes, profileRes, coinTxRes] = await Promise.all([
         sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('trades').select('created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').eq('user_id', userId).order('created_at', { ascending: true }),
@@ -6404,93 +6776,11 @@ function drawCoinChart(canvas, points) {
         allMarketTrades = data || [];
       }
 
-      // Build sorted event list: bets out, payouts in, games, awards
-      const events = [];
-
-      trades.forEach(t => {
-        const title = t.markets?.title || 'Rynek';
-        events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0), label: '📊 ' + title });
+      // Replay every coin-affecting event into a running balance (shared helper).
+      const balancePoints = buildBalancePoints({
+        userId, coins, createdAt: profileCreatedAt,
+        trades, games, coinTxs, awards: userAwards, allMarketTrades,
       });
-
-      // Inject per-market payout events at resolved_at time
-      resolvedWinningMarketIds.forEach(marketId => {
-        const market = trades.find(t => t.market_id === marketId)?.markets;
-        if (!market) return;
-        const resolution = market.resolution;
-        const resolvedAt = market.resolved_at ? new Date(market.resolved_at).getTime() : null;
-        if (!resolvedAt) return;
-
-        const mTrades = allMarketTrades.filter(t => t.market_id === marketId);
-        const totalYes = mTrades.filter(t => t.side === 'YES').reduce((s, t) => s + (+t.amount || 0), 0);
-        const totalNo  = mTrades.filter(t => t.side === 'NO' ).reduce((s, t) => s + (+t.amount || 0), 0);
-        const losingPot = resolution === 'YES' ? totalNo : totalYes;
-        const winningTrades = mTrades.filter(t => t.side === resolution);
-        const totalWinningShares = winningTrades.reduce((s, t) => s + parseFloat(t.shares || 0), 0);
-
-        const userWinningTrades = mTrades.filter(t => t.user_id === userId && t.side === resolution);
-        const userWinningAmount = userWinningTrades.reduce((s, t) => s + (+t.amount || 0), 0);
-        const userWinningShares = userWinningTrades.reduce((s, t) => s + parseFloat(t.shares || 0), 0);
-        const payout = Math.round(userWinningAmount + (totalWinningShares > 0 ? losingPot * userWinningShares / totalWinningShares : 0));
-
-        if (payout > 0) {
-          events.push({ ts: resolvedAt, delta: payout, label: '💰 ' + market.title + ' (wypłata)' });
-        }
-      });
-
-      games.forEach(g => {
-        const bet = +g.bet || 0, won = +g.won || 0;
-        const delta = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
-        events.push({ ts: new Date(g.created_at).getTime(), delta, label: GAME_NAMES[g.game] || g.game });
-      });
-      userAwards.forEach(a => {
-        if (a.awarded_at) {
-          const entry = seasonalEntryForWeekStart(a.week_start);
-          const medals = ['🥇', '🥈', '🥉'];
-          const gameName = entry?.gameType === a.gameType ? entry.displayName : a.gameType;
-          events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + gameName });
-        }
-      });
-      coinTxs.forEach(t => {
-        const label = t.reason === 'garden_water'
-          ? '🌱 Podlewanie' + (t.meta?.streak > 1 ? ' (streak ' + t.meta.streak + ')' : '')
-          : t.reason === 'garden_accessory'
-          ? '🌿 Akcesorium: ' + (t.meta?.accessory_id || '?')
-          : t.reason === 'store_purchase'
-          ? '🎁 Sklep: ' + (t.meta?.title || '?')
-          : t.reason === 'daily_interest'
-          ? '💍 Odsetki dzienne'
-          : t.reason === 'hero_item_purchase'
-          ? '🎒 Przedmiot: ' + (t.meta?.item_name || t.meta?.item_slug || '?')
-          : t.reason === 'hero_auction_bid_reserved'
-          ? '🔨 Aukcja: depozyt'
-          : t.reason === 'hero_auction_outbid_refund' || t.reason === 'hero_auction_edition_refund'
-          ? '↩️ Aukcja: zwrot'
-          : t.reason === 'garden_certificate'
-          ? '📜 Certyfikat Drugiego Ogródka'
-          : '🪙 ' + t.reason;
-        events.push({ ts: new Date(t.created_at).getTime(), delta: +t.delta, label });
-      });
-      // Residual = coins that moved before coin_transactions logging was introduced (pre-2026-05-21).
-      // Inject into events before sorting so the running balance stays correct in order.
-      const residual = coins - (1000 + events.reduce((s, e) => s + e.delta, 0));
-      if (Math.abs(residual) > 5) {
-        events.push({ ts: new Date('2026-05-21T12:00:00+02:00').getTime(), delta: residual, label: '🌱 Wyrównanie — wcześniej nie zapisywałem logów dat podlania i kupowania akcesoriów', isGarden: true });
-      }
-      events.sort((a, b) => a.ts - b.ts);
-
-      // Build balance history starting from 1000 coins at registration
-      const startTs = profileCreatedAt ? new Date(profileCreatedAt).getTime() : (events[0]?.ts || Date.now());
-      const balancePoints = [{ ts: startTs, bal: 1000, label: 'Rejestracja', delta: null }];
-      let runBal = 1000;
-      events.forEach(e => {
-        runBal += e.delta;
-        balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta, isGarden: e.isGarden });
-      });
-      // Small rounding difference after all events — silently correct the last point.
-      const finalResidual = coins - runBal;
-      if (finalResidual !== 0 && Math.abs(finalResidual) <= 5) {
-        balancePoints[balancePoints.length - 1].bal += finalResidual;
-      }
 
       // Stats
       const gamePL = games.reduce((s, g) => {
