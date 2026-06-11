@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2917,6 +2918,9 @@
     .tavern-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: rgba(255,255,255,.5); font-size: 13px; font-weight: 600; pointer-events: none; z-index: 4; }
     @media (max-width: 900px) { .heroes-wrap { grid-template-columns: 1fr; } .hero-panel { position: static; } }
     @media (max-width: 560px) { .tavern-scene { height: 220px; } }
+    .cf-turnstile-box { margin: 10px 0 4px; min-height: 0; display: flex; justify-content: center; }
+    .force-blame { margin: 4px 0 14px; padding: 10px 12px; border-radius: 10px; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #b91c1c; font-size: 12px; line-height: 1.5; font-weight: 600; text-align: center; }
+    .force-blame-sub { display: inline-block; margin-top: 6px; font-weight: 500; opacity: .85; font-style: italic; }
   </style>
 </head>
 <body>
@@ -2934,20 +2938,48 @@
         <option value="">Ładowanie…</option>
       </select>
       <p class="field-label">PIN</p>
-      <input type="password" id="pin-input" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="off">
+      <input type="password" id="pin-input" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+      <div id="cf-login" class="cf-turnstile-box"></div>
       <button class="btn-primary" id="login-btn">Zaloguj →</button>
       <p class="login-hint">Nowy gracz? <a href="#" id="go-register">Zarejestruj się →</a></p>
+      <p class="login-hint">Masz stary 4-cyfrowy PIN? <a href="#" id="go-migrate">Ustaw nowy 5-cyfrowy PIN →</a></p>
     </form>
 
     <form id="mode-register" class="hidden" autocomplete="off">
       <p class="field-label">Twój nick</p>
       <input type="text" id="reg-nick" placeholder="np. Kasia, Marek…" maxlength="30" autocomplete="off" spellcheck="false">
-      <p class="field-label">Ustaw 4-cyfrowy PIN</p>
-      <input type="password" id="reg-pin" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="off">
+      <p class="field-label">Ustaw 5-cyfrowy PIN</p>
+      <input type="password" id="reg-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+      <div id="cf-register" class="cf-turnstile-box"></div>
       <button class="btn-primary" id="register-btn">Zarejestruj →</button>
       <p class="login-hint">Dostaniesz <strong>1000 coinów 🪙</strong> na start.<br>
         Masz konto? <a href="#" id="go-login">Wróć do logowania →</a></p>
     </form>
+
+    <div id="mode-migrate" class="hidden">
+      <p class="field-label">Twój nick</p>
+      <select id="migrate-nick" class="nick-select">
+        <option value="">Ładowanie…</option>
+      </select>
+      <p class="field-label">Dotychczasowy PIN</p>
+      <input type="password" id="migrate-old-pin" placeholder="stary PIN" maxlength="5" inputmode="numeric" autocomplete="off">
+      <p class="field-label">Nowy 5-cyfrowy PIN</p>
+      <input type="password" id="migrate-new-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+      <div id="cf-migrate" class="cf-turnstile-box"></div>
+      <button class="btn-primary" id="migrate-btn">Zmień PIN →</button>
+      <p class="login-hint">Wróć do <a href="#" id="migrate-back">logowania →</a></p>
+    </div>
+
+    <div id="mode-forcepin" class="hidden">
+      <p class="force-blame">😤 To wina Adama — grzebie gdzie nie trzeba i psuje nam grę.<br>
+        Zgadywał cudze 4-cyfrowe PIN-y, więc teraz wszyscy ustawiają 5 cyfr. Dzięki, Adam. 🙄<br>
+        <span class="force-blame-sub">Adam, jeśli to czytasz: oddaj klawiaturę i idź się napić (wody) 🍺💧</span></p>
+      <p class="field-label">Ustaw nowy 5-cyfrowy PIN</p>
+      <input type="password" id="force-new-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+      <p class="field-label">Powtórz nowy PIN</p>
+      <input type="password" id="force-confirm-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+      <button class="btn-primary" id="force-btn">Zapisz nowy PIN →</button>
+    </div>
 
     <p class="login-error" id="login-error"></p>
 
@@ -3926,6 +3958,33 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const DB_ERROR_MESSAGE = 'Nie można połączyć z bazą danych. Odśwież stronę albo spróbuj później.';
 
+// ── Cloudflare Turnstile (anti-brute-force) ─────────────────────────────────
+// Paste your Turnstile *site* key here (public). The matching *secret* key goes
+// into Supabase → Authentication → Bot and Abuse Protection. Until a real key is
+// set, the captcha is skipped client-side (and Supabase won't enforce it either).
+const TURNSTILE_SITE_KEY = '0x4AAAAAADivG-iPzhotCS-S';
+const CAPTCHA_ON = !!TURNSTILE_SITE_KEY && !TURNSTILE_SITE_KEY.startsWith('YOUR_');
+const cfWidgets = { login: null, register: null, migrate: null };
+const CF_ELEMENT_IDS = { login: 'cf-login', register: 'cf-register', migrate: 'cf-migrate' };
+
+function ensureCaptcha(which) {
+  if (!CAPTCHA_ON) return;
+  if (!window.turnstile) { setTimeout(() => ensureCaptcha(which), 300); return; }
+  if (cfWidgets[which] != null) return;
+  const elId = CF_ELEMENT_IDS[which];
+  if (!document.getElementById(elId)) return;
+  try { cfWidgets[which] = window.turnstile.render('#' + elId, { sitekey: TURNSTILE_SITE_KEY }); }
+  catch (e) { /* already rendered */ }
+}
+function captchaGet(which) {
+  if (!CAPTCHA_ON || !window.turnstile || cfWidgets[which] == null) return '';
+  try { return window.turnstile.getResponse(cfWidgets[which]) || ''; } catch (e) { return ''; }
+}
+function captchaReset(which) {
+  if (!CAPTCHA_ON || !window.turnstile || cfWidgets[which] == null) return;
+  try { window.turnstile.reset(cfWidgets[which]); } catch (e) {}
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 let me = null;
 let markets = [];
@@ -4235,8 +4294,10 @@ async function loadNickList() {
     return;
   }
   const select = document.getElementById('nick-select');
+  const migrateSelect = document.getElementById('migrate-nick');
   if (!select) return;
   while (select.firstChild) select.removeChild(select.firstChild);
+  if (migrateSelect) while (migrateSelect.firstChild) migrateSelect.removeChild(migrateSelect.firstChild);
   if (!data || data.length === 0) {
     switchLoginMode('register');
     const gl = document.getElementById('go-login');
@@ -4249,20 +4310,36 @@ async function loadNickList() {
     const opt = document.createElement('option');
     opt.value = p.nick; opt.textContent = p.nick;
     select.appendChild(opt);
+    if (migrateSelect) {
+      const mOpt = document.createElement('option');
+      mOpt.value = p.nick; mOpt.textContent = p.nick;
+      migrateSelect.appendChild(mOpt);
+    }
   });
 }
 
 function switchLoginMode(mode) {
   const mL = document.getElementById('mode-login');
   const mR = document.getElementById('mode-register');
+  const mM = document.getElementById('mode-migrate');
+  const mF = document.getElementById('mode-forcepin');
   const sub = document.getElementById('login-sub');
   loginError.textContent = '';
-  if (mode === 'login') {
-    show(mL); hide(mR);
-    if (sub) sub.textContent = 'Wybierz swój nick i podaj PIN.';
-  } else {
-    hide(mL); show(mR);
+  if (mode === 'register') {
+    hide(mL); show(mR); if (mM) hide(mM); if (mF) hide(mF);
     if (sub) sub.textContent = 'Stwórz nowe konto i zacznij typować!';
+    ensureCaptcha('register');
+  } else if (mode === 'migrate') {
+    hide(mL); hide(mR); if (mM) show(mM); if (mF) hide(mF);
+    if (sub) sub.textContent = 'Ustaw nowy 5-cyfrowy PIN dla swojego konta.';
+    ensureCaptcha('migrate');
+  } else if (mode === 'forcepin') {
+    hide(mL); hide(mR); if (mM) hide(mM); if (mF) show(mF);
+    if (sub) sub.textContent = 'Twój 4-cyfrowy PIN już nie wystarczy.';
+  } else {
+    show(mL); hide(mR); if (mM) hide(mM); if (mF) hide(mF);
+    if (sub) sub.textContent = 'Wybierz swój nick i podaj PIN.';
+    ensureCaptcha('login');
   }
 }
 
@@ -4272,17 +4349,30 @@ async function doLogin() {
   const nick   = select ? select.value : '';
   const pin    = pinInput.value.trim();
   loginError.textContent = '';
-  if (!nick)                 { loginError.textContent = 'Wybierz nick.'; return; }
-  if (!/^\d{4}$/.test(pin)) { loginError.textContent = 'PIN musi mieć 4 cyfry.'; return; }
+  if (!nick)                   { loginError.textContent = 'Wybierz nick.'; return; }
+  // Accept the legacy 4-digit PIN here so old accounts can authenticate once;
+  // they are then forced to set a 5-digit PIN (see pin5 metadata check below).
+  if (!/^\d{4,5}$/.test(pin)) { loginError.textContent = 'PIN musi mieć 5 cyfr.'; return; }
+
+  let captchaToken = '';
+  if (CAPTCHA_ON) {
+    captchaToken = captchaGet('login');
+    if (!captchaToken) { loginError.textContent = 'Potwierdź, że nie jesteś botem.'; return; }
+  }
 
   const btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = 'Łączę…';
 
-  const email    = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: 'pin-' + pin });
+  const email = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
+  const creds = { email, password: 'pin-' + pin };
+  if (CAPTCHA_ON) creds.options = { captchaToken };
+  const { data, error } = await sb.auth.signInWithPassword(creds);
 
+  if (CAPTCHA_ON) captchaReset('login');
   btn.disabled = false; btn.textContent = 'Zaloguj →';
   if (error) { loginError.textContent = 'Zły nick lub PIN.'; pinInput.value = ''; return; }
+  pinInput.value = '';
+  if (!data.user?.user_metadata?.pin5) { startForcePin(data.user); return; }
   await initSession(data.user);
 }
 
@@ -4293,20 +4383,107 @@ async function doRegister() {
   const pin  = rp ? rp.value.trim() : '';
   loginError.textContent = '';
   if (!nick)                 { loginError.textContent = 'Podaj nick.'; return; }
-  if (!/^\d{4}$/.test(pin)) { loginError.textContent = 'PIN musi mieć 4 cyfry.'; return; }
+  if (!/^\d{5}$/.test(pin)) { loginError.textContent = 'PIN musi mieć 5 cyfr.'; return; }
+
+  let captchaToken = '';
+  if (CAPTCHA_ON) {
+    captchaToken = captchaGet('register');
+    if (!captchaToken) { loginError.textContent = 'Potwierdź, że nie jesteś botem.'; return; }
+  }
 
   const btn = document.getElementById('register-btn');
   btn.disabled = true; btn.textContent = 'Rejestruję…';
 
   const email = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
-  const { data, error } = await sb.auth.signUp({ email, password: 'pin-' + pin, options: { data: { nick } } });
+  const opts = { data: { nick, pin5: true } };
+  if (CAPTCHA_ON) opts.captchaToken = captchaToken;
+  const { data, error } = await sb.auth.signUp({ email, password: 'pin-' + pin, options: opts });
 
+  if (CAPTCHA_ON) captchaReset('register');
   btn.disabled = false; btn.textContent = 'Zarejestruj →';
   if (error) {
     loginError.textContent = error.message.includes('already') ? 'Ten nick jest zajęty.' : error.message;
     return;
   }
   await initSession(data.user);
+}
+
+// Self-service migration: re-key an existing account from its old (4- or 5-digit)
+// PIN to a new 5-digit PIN. This is the only place an old 4-digit PIN is accepted.
+async function doMigratePin() {
+  const select = document.getElementById('migrate-nick');
+  const nick   = select ? select.value : '';
+  const oldEl  = document.getElementById('migrate-old-pin');
+  const newEl  = document.getElementById('migrate-new-pin');
+  const oldPin = oldEl ? oldEl.value.trim() : '';
+  const newPin = newEl ? newEl.value.trim() : '';
+  loginError.textContent = '';
+  if (!nick)                     { loginError.textContent = 'Wybierz nick.'; return; }
+  if (!/^\d{4,5}$/.test(oldPin)) { loginError.textContent = 'Podaj swój dotychczasowy PIN.'; return; }
+  if (!/^\d{5}$/.test(newPin))   { loginError.textContent = 'Nowy PIN musi mieć 5 cyfr.'; return; }
+  if (oldPin === newPin)         { loginError.textContent = 'Nowy PIN musi być inny niż stary.'; return; }
+
+  let captchaToken = '';
+  if (CAPTCHA_ON) {
+    captchaToken = captchaGet('migrate');
+    if (!captchaToken) { loginError.textContent = 'Potwierdź, że nie jesteś botem.'; return; }
+  }
+
+  const btn = document.getElementById('migrate-btn');
+  btn.disabled = true; btn.textContent = 'Zmieniam…';
+
+  const email = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
+  const creds = { email, password: 'pin-' + oldPin };
+  if (CAPTCHA_ON) creds.options = { captchaToken };
+  const { data, error } = await sb.auth.signInWithPassword(creds);
+  if (CAPTCHA_ON) captchaReset('migrate');
+  if (error) {
+    btn.disabled = false; btn.textContent = 'Zmień PIN →';
+    loginError.textContent = 'Zły nick lub dotychczasowy PIN.';
+    if (oldEl) oldEl.value = '';
+    return;
+  }
+
+  const { error: upErr } = await sb.auth.updateUser({ password: 'pin-' + newPin, data: { pin5: true } });
+  btn.disabled = false; btn.textContent = 'Zmień PIN →';
+  if (upErr) { loginError.textContent = 'Nie udało się zmienić PIN-u: ' + upErr.message; return; }
+  if (oldEl) oldEl.value = '';
+  if (newEl) newEl.value = '';
+  await initSession(data.user);
+}
+
+// Forced 5-digit PIN flow: shown after a legacy (4-digit) account authenticates,
+// or on boot when a restored session lacks the pin5 metadata flag. The user is
+// already authenticated here, so no old PIN / captcha is needed.
+let forcePinUser = null;
+
+function startForcePin(user) {
+  forcePinUser = user;
+  hide(screenApp);
+  show(screenLogin);
+  switchLoginMode('forcepin');
+  const nf = document.getElementById('force-new-pin');
+  if (nf) nf.focus();
+}
+
+async function doForcePin() {
+  const newEl = document.getElementById('force-new-pin');
+  const conEl = document.getElementById('force-confirm-pin');
+  const newPin = newEl ? newEl.value.trim() : '';
+  const confirmPin = conEl ? conEl.value.trim() : '';
+  loginError.textContent = '';
+  if (!/^\d{5}$/.test(newPin))   { loginError.textContent = 'PIN musi mieć 5 cyfr.'; return; }
+  if (newPin !== confirmPin)     { loginError.textContent = 'PIN-y się nie zgadzają.'; return; }
+
+  const btn = document.getElementById('force-btn');
+  btn.disabled = true; btn.textContent = 'Zapisuję…';
+  const { error } = await sb.auth.updateUser({ password: 'pin-' + newPin, data: { pin5: true } });
+  btn.disabled = false; btn.textContent = 'Zapisz nowy PIN →';
+  if (error) { loginError.textContent = 'Nie udało się zapisać PIN-u: ' + error.message; return; }
+  if (newEl) newEl.value = '';
+  if (conEl) conEl.value = '';
+  const user = forcePinUser; forcePinUser = null;
+  await initSession(user);
 }
 
 async function initSession(user) {
@@ -4357,9 +4534,22 @@ document.getElementById('mode-login').addEventListener('submit', e => { e.preven
 document.getElementById('mode-register').addEventListener('submit', e => { e.preventDefault(); doRegister(); });
 document.getElementById('go-register').addEventListener('click', e => { e.preventDefault(); switchLoginMode('register'); });
 document.getElementById('go-login').addEventListener('click', e => { e.preventDefault(); switchLoginMode('login'); });
+const goMigrateEl   = document.getElementById('go-migrate');
+const migrateBackEl = document.getElementById('migrate-back');
+const migrateBtnEl  = document.getElementById('migrate-btn');
+if (goMigrateEl)   goMigrateEl.addEventListener('click',   e => { e.preventDefault(); switchLoginMode('migrate'); });
+if (migrateBackEl) migrateBackEl.addEventListener('click', e => { e.preventDefault(); switchLoginMode('login'); });
+if (migrateBtnEl)  migrateBtnEl.addEventListener('click', doMigratePin);
 const regPinEl  = document.getElementById('reg-pin');
 const regNickEl = document.getElementById('reg-nick');
 if (regNickEl) regNickEl.addEventListener('keydown', e => { if (e.key === 'Enter' && regPinEl) regPinEl.focus(); });
+const migrateNewPinEl = document.getElementById('migrate-new-pin');
+if (migrateNewPinEl) migrateNewPinEl.addEventListener('keydown', e => { if (e.key === 'Enter') doMigratePin(); });
+const forceBtnEl = document.getElementById('force-btn');
+const forceConfirmEl = document.getElementById('force-confirm-pin');
+if (forceBtnEl) forceBtnEl.addEventListener('click', doForcePin);
+if (forceConfirmEl) forceConfirmEl.addEventListener('keydown', e => { if (e.key === 'Enter') doForcePin(); });
+ensureCaptcha('login');
 logoutBtn.addEventListener('click', doLogout);
 
 // Transaction filter elements are created dynamically inside modals.
@@ -12479,7 +12669,14 @@ function showToast(msg) {
     try { await sb.auth.signOut({ scope: 'local' }); } catch {}
   }
   if (session?.user) {
-    await initSession(session.user);
+    // A restored session for a legacy 4-digit account must still set a 5-digit
+    // PIN before reaching the app — survives reloads via the pin5 metadata flag.
+    if (!session.user.user_metadata?.pin5) {
+      await loadNickList();
+      startForcePin(session.user);
+    } else {
+      await initSession(session.user);
+    }
   } else {
     await loadNickList();
     show(screenLogin);
