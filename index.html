@@ -8979,9 +8979,10 @@ function buildMatchCard(match, matchBets) {
   const showScore = live || done;
   const myBets = matchBets.filter(b => me && b.user_id === me.id);
 
+  const voided = match.settled && match.result == null;
   const statusBadge = el('span', {
     className: 'fb-status-badge' + (live ? ' fb-status-live' : done ? ' fb-status-done' : ''),
-  }, live ? '🔴 NA ŻYWO' : done ? 'PO MECZU' : fbFormatKickoff(match.kickoff));
+  }, live ? '🔴 NA ŻYWO' : voided ? '⚠️ ODWOŁANY' : done ? 'PO MECZU' : fbFormatKickoff(match.kickoff));
 
   const teamNode = (name, logo) => el('div', { className: 'fb-team' },
     logo ? el('img', { src: logo, alt: name, loading: 'lazy' }) : el('div', { className: 'fb-team-name' }, '⚽'),

@@ -365,11 +365,74 @@ async function settleFinished() {
   return { settledMatches, paidBets, calls: 1, scoresRemaining: remaining };
 }
 
+// Refund + void a single match's open bets in one transaction. Returns the
+// number of bets refunded, or null if the match was already settled/missing.
+async function voidMatchTx(tx, id) {
+  const [m] = await tx`
+    select id, settled from public.football_matches where id = ${id} for update
+  `;
+  if (!m || m.settled) return null;
+  const open = await tx`
+    select id, user_id, stake from public.football_bets
+    where match_id = ${id} and status = 'open' for update
+  `;
+  for (const b of open) {
+    await tx`update public.profiles set coins = coins + ${asInt(b.stake)} where id = ${b.user_id}`;
+    await tx`update public.football_bets set status = 'void', settled_at = now() where id = ${b.id}`;
+  }
+  await tx`
+    update public.football_matches
+       set status = 'CANC', settled = true, updated_at = now()
+     where id = ${id}
+  `;
+  return open.length;
+}
+
+// ── Void: refund open bets on matches with no available result ────────────────
+async function voidStale() {
+  // Settlement runs first and covers a 3-day /scores window, so anything still
+  // open this long after kickoff has no result available (cancelled / abandoned
+  // / walkover / API gap). A WC match incl. ET+penalties never exceeds ~3h, so
+  // 12h is a generous safety margin that never races a slow-but-coming result.
+  const stale = await db`
+    select id from public.football_matches
+    where settled = false and result is null
+      and kickoff <= now() - interval '12 hours'
+  `;
+  let voidedMatches = 0;
+  let refundedBets = 0;
+  for (const { id } of stale) {
+    const refunded = await db.begin((tx) => voidMatchTx(tx, id));
+    if (refunded != null) {
+      voidedMatches += 1;
+      refundedBets += refunded;
+    }
+  }
+  return { voidedMatches, refundedBets };
+}
+
+// Admin-only immediate void of a specific match (safety valve for known
+// cancellations, ahead of the 12h auto-sweep).
+async function voidMatch(userId, body) {
+  if (!db) throw new Error("Database is not configured.");
+  const matchId = String(body.matchId ?? "");
+  if (!matchId) throw gameError("Brak meczu.");
+
+  const [profile] = await db`select nick from public.profiles where id = ${userId}`;
+  if (!profile || profile.nick !== "admin") throw gameError("Tylko admin.");
+
+  const refunded = await db.begin((tx) => voidMatchTx(tx, matchId));
+  if (refunded == null) throw gameError("Mecz już rozliczony lub nie istnieje.");
+
+  return { ...(await loadState(userId)), voidedMatch: matchId, refundedBets: refunded };
+}
+
 async function runCron() {
   if (!db) throw new Error("Database is not configured.");
   const od = await syncOdds();
   const st = await settleFinished();
-  const summary = { ...od, ...st, apiCalls: od.calls + st.calls };
+  const vd = await voidStale();
+  const summary = { ...od, ...st, ...vd, apiCalls: od.calls + st.calls };
   console.log("football cron:", JSON.stringify(summary));
   return summary;
 }
@@ -401,6 +464,12 @@ Deno.serve(async (req) => {
     if (action === "bet") {
       const user = await requireUser(req);
       const result = await placeBet(user.id, body);
+      return json({ ok: true, ...result });
+    }
+
+    if (action === "void") {
+      const user = await requireUser(req);
+      const result = await voidMatch(user.id, body);
       return json({ ok: true, ...result });
     }
 
