@@ -9097,7 +9097,7 @@ fbPlaceBtn.addEventListener('click', async () => {
   setText(fbPlaceBtn, 'Wysyłam…');
   try {
     const data = await invokeFootball({
-      action: 'bet', matchId: Number(fbActiveMatch.id), pick: fbActivePick, stake,
+      action: 'bet', matchId: fbActiveMatch.id, pick: fbActivePick, stake,
     });
     footballMatches = data.matches || footballMatches;
     footballBets = data.bets || footballBets;

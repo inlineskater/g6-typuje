@@ -1,10 +1,14 @@
 // @ts-nocheck
-// World Cup 2026 fixed-odds betting ("Mundial").
+// World Cup 2026 fixed-odds betting ("Mundial") — backed by The Odds API (v4).
 // Owns all writes to football_matches / football_bets. Browsers can only read
 // those tables (RLS SELECT) — odds are never trusted from the client; the bet
-// action locks the odds already stored server-side. The hourly cron (action
-// "cron", authorized by FOOTBALL_CRON_SECRET) refreshes fixtures/odds from
-// API-Football and auto-settles finished matches.
+// action locks the odds already stored server-side. The cron action (gated by
+// FOOTBALL_CRON_SECRET) refreshes events/odds and settles finished matches.
+//
+// Quota note: The Odds API free tier is 500 requests/month. Each cron run costs
+// 1 (odds) + 2 (scores, only when there is something to settle) = up to 3. The
+// pg_cron job therefore runs every 6h (≈12 req/day, ≈360/month) — hourly is
+// impossible on free (24×30 > 500). See supabase/football.sql.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
@@ -19,18 +23,12 @@ const db = databaseUrl
   ? postgres(databaseUrl, { prepare: false, max: 4, idle_timeout: 20 })
   : null;
 
-// ── API-Football config ──────────────────────────────────────────────────────
-// Confirm the league id / season once via GET /leagues?search=world cup&season=2026.
-const API_BASE = "https://v3.football.api-sports.io";
-const LEAGUE_ID = asInt(Deno.env.get("FOOTBALL_LEAGUE_ID"), 1);   // 1 = FIFA World Cup
-const SEASON = asInt(Deno.env.get("FOOTBALL_SEASON"), 2026);
-const PRIMARY_BOOKMAKER_ID = asInt(Deno.env.get("FOOTBALL_BOOKMAKER_ID"), 8); // 8 = Bet365
-const MATCH_WINNER_BET_ID = 1;            // API-Football bet type "Match Winner" (1X2)
-const MAX_ODDS_PAGES = 3;                 // cap API calls per run to respect free quota
-const ODDS_WINDOW_HOURS = 120;            // only price fixtures kicking off within this window
-
-const FINISHED = new Set(["FT", "AET", "PEN"]);
-const VOIDED = new Set(["CANC", "ABD", "PST", "WO", "AWD"]);
+// ── The Odds API config ────────────────────────────────────────────────────
+const ODDS_BASE = "https://api.the-odds-api.com/v4";
+const SPORT_KEY = Deno.env.get("ODDS_SPORT_KEY") ?? "soccer_fifa_world_cup";
+const ODDS_REGIONS = Deno.env.get("ODDS_REGIONS") ?? "eu";
+const PREFERRED_BOOKMAKER = Deno.env.get("ODDS_BOOKMAKER") ?? ""; // e.g. "pinnacle"; empty = first usable
+const SCORES_DAYS_FROM = 3;
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -71,19 +69,19 @@ async function requireUser(req) {
   return data.user;
 }
 
-// ── API-Football fetch ─────────────────────────────────────────────────────────
-async function apiGet(path) {
-  const apiKey = Deno.env.get("FOOTBALL_API_KEY");
-  if (!apiKey) throw new Error("Missing FOOTBALL_API_KEY.");
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "x-apisports-key": apiKey },
-  });
-  if (!res.ok) throw new Error(`API-Football ${path} -> HTTP ${res.status}`);
-  const data = await res.json();
-  if (Array.isArray(data?.errors) ? data.errors.length : (data?.errors && Object.keys(data.errors).length)) {
-    console.warn("API-Football errors:", JSON.stringify(data.errors));
+// ── The Odds API fetch ─────────────────────────────────────────────────────
+async function oddsGet(path) {
+  const apiKey = Deno.env.get("ODDS_API_KEY");
+  if (!apiKey) throw new Error("Missing ODDS_API_KEY.");
+  const sep = path.includes("?") ? "&" : "?";
+  const res = await fetch(`${ODDS_BASE}${path}${sep}apiKey=${apiKey}`);
+  const remaining = res.headers.get("x-requests-remaining");
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Odds API ${path} -> HTTP ${res.status} ${text.slice(0, 200)}`);
   }
-  return data;
+  const data = await res.json();
+  return { data, remaining };
 }
 
 // De-vig: implied prob_i = (1/odd_i) / Σ(1/odd_j).
@@ -94,24 +92,31 @@ function deVig(oddsHome, oddsDraw, oddsAway) {
   return inv.map((v) => Math.round((v / sum) * 10000) / 10000);
 }
 
-function resultFromFixture(fixture) {
-  // Prefer the API's winner flags (handles extra time / penalties); fall back to goals.
-  const home = fixture?.teams?.home;
-  const away = fixture?.teams?.away;
-  if (home?.winner === true) return "1";
-  if (away?.winner === true) return "2";
-  const hg = asInt(fixture?.goals?.home, null);
-  const ag = asInt(fixture?.goals?.away, null);
-  if (hg == null || ag == null) return null;
-  if (hg > ag) return "1";
-  if (hg < ag) return "2";
-  return "X";
+// Extract decimal 1X2 odds from an event's bookmakers (prefer configured book).
+function extractH2H(event) {
+  const books = event.bookmakers ?? [];
+  const ordered = PREFERRED_BOOKMAKER
+    ? [...books].sort((a, b) => (a.key === PREFERRED_BOOKMAKER ? -1 : b.key === PREFERRED_BOOKMAKER ? 1 : 0))
+    : books;
+  for (const book of ordered) {
+    const market = (book.markets ?? []).find((m) => m.key === "h2h");
+    if (!market) continue;
+    let oHome = null, oDraw = null, oAway = null;
+    for (const o of market.outcomes ?? []) {
+      const price = asNum(o.price);
+      if (o.name === event.home_team) oHome = price;
+      else if (o.name === event.away_team) oAway = price;
+      else if (o.name === "Draw") oDraw = price;
+    }
+    if (oHome && oDraw && oAway) return { oHome, oDraw, oAway, book: book.title ?? book.key };
+  }
+  return null;
 }
 
 // ── State (read) ─────────────────────────────────────────────────────────────
 function mapMatch(row) {
   return {
-    id: String(row.id),
+    id: row.id,
     kickoff: row.kickoff,
     status: row.status,
     home_team: row.home_team,
@@ -135,7 +140,7 @@ function mapMatch(row) {
 function mapBet(row) {
   return {
     id: row.id,
-    match_id: String(row.match_id),
+    match_id: row.match_id,
     pick: row.pick,
     stake: asInt(row.stake),
     locked_odds: asNum(row.locked_odds),
@@ -182,7 +187,7 @@ async function loadState(userId) {
 // ── Bet (write) ────────────────────────────────────────────────────────────────
 async function placeBet(userId, body) {
   if (!db) throw new Error("Database is not configured.");
-  const matchId = asInt(body.matchId, 0);
+  const matchId = String(body.matchId ?? "");
   const pick = String(body.pick ?? "");
   const stake = asInt(body.stake, 0);
   if (!matchId) throw gameError("Brak meczu.");
@@ -227,125 +232,83 @@ async function placeBet(userId, body) {
   };
 }
 
-// ── Cron: sync fixtures + odds, then settle finished matches ─────────────────────
-async function syncFixtures() {
-  const data = await apiGet(`/fixtures?league=${LEAGUE_ID}&season=${SEASON}`);
-  const fixtures = data?.response ?? [];
-  for (const f of fixtures) {
-    const id = asInt(f?.fixture?.id, 0);
+// ── Cron: refresh events+odds, then settle finished matches ──────────────────
+async function syncOdds() {
+  const { data: events, remaining } = await oddsGet(
+    `/sports/${SPORT_KEY}/odds?regions=${ODDS_REGIONS}&markets=h2h&oddsFormat=decimal`,
+  );
+  let upserted = 0;
+  let priced = 0;
+  for (const ev of events ?? []) {
+    const id = String(ev.id ?? "");
     if (!id) continue;
-    const status = String(f?.fixture?.status?.short ?? "NS");
+    const kickoff = ev.commence_time;
+    const started = new Date(kickoff).getTime() <= Date.now();
+    const h2h = extractH2H(ev);
+    const [pHome, pDraw, pAway] = h2h ? deVig(h2h.oHome, h2h.oDraw, h2h.oAway) : [null, null, null];
+
     await db`
       insert into public.football_matches
-        (id, league_id, season, kickoff, status, home_team, away_team, home_logo, away_logo, home_goals, away_goals, updated_at)
+        (id, league_id, season, kickoff, status, home_team, away_team,
+         odds_home, odds_draw, odds_away, prob_home, prob_draw, prob_away,
+         bookmaker, odds_updated_at, updated_at)
       values (
-        ${id}, ${LEAGUE_ID}, ${SEASON},
-        ${f?.fixture?.date}, ${status},
-        ${f?.teams?.home?.name ?? "?"}, ${f?.teams?.away?.name ?? "?"},
-        ${f?.teams?.home?.logo ?? null}, ${f?.teams?.away?.logo ?? null},
-        ${asInt(f?.goals?.home, null)}, ${asInt(f?.goals?.away, null)},
-        now()
+        ${id}, 0, 2026, ${kickoff}, ${started ? "LIVE" : "NS"},
+        ${ev.home_team ?? "?"}, ${ev.away_team ?? "?"},
+        ${h2h ? h2h.oHome : null}, ${h2h ? h2h.oDraw : null}, ${h2h ? h2h.oAway : null},
+        ${pHome}, ${pDraw}, ${pAway},
+        ${h2h ? h2h.book : null}, ${h2h ? db`now()` : null}, now()
       )
       on conflict (id) do update set
         kickoff = excluded.kickoff,
-        status = excluded.status,
+        -- never downgrade a settled/finished match back to NS/LIVE
+        status = case when public.football_matches.settled then public.football_matches.status else excluded.status end,
         home_team = excluded.home_team,
         away_team = excluded.away_team,
-        home_logo = excluded.home_logo,
-        away_logo = excluded.away_logo,
-        home_goals = excluded.home_goals,
-        away_goals = excluded.away_goals,
+        odds_home = coalesce(excluded.odds_home, public.football_matches.odds_home),
+        odds_draw = coalesce(excluded.odds_draw, public.football_matches.odds_draw),
+        odds_away = coalesce(excluded.odds_away, public.football_matches.odds_away),
+        prob_home = coalesce(excluded.prob_home, public.football_matches.prob_home),
+        prob_draw = coalesce(excluded.prob_draw, public.football_matches.prob_draw),
+        prob_away = coalesce(excluded.prob_away, public.football_matches.prob_away),
+        bookmaker = coalesce(excluded.bookmaker, public.football_matches.bookmaker),
+        odds_updated_at = coalesce(excluded.odds_updated_at, public.football_matches.odds_updated_at),
         updated_at = now()
     `;
+    upserted += 1;
+    if (h2h) priced += 1;
   }
-  return { fixtures: fixtures.length, calls: 1 };
-}
-
-async function syncOdds() {
-  // Which not-yet-started fixtures are within the pricing window?
-  const windowRows = await db`
-    select id from public.football_matches
-    where status = 'NS'
-      and kickoff between now() and now() + (${ODDS_WINDOW_HOURS} || ' hours')::interval
-  `;
-  const wanted = new Set(windowRows.map((r) => asInt(r.id)));
-  if (wanted.size === 0) return { priced: 0, calls: 0 };
-
-  let priced = 0;
-  let calls = 0;
-  let page = 1;
-  let totalPages = 1;
-  while (page <= totalPages && page <= MAX_ODDS_PAGES) {
-    const data = await apiGet(`/odds?league=${LEAGUE_ID}&season=${SEASON}&bet=${MATCH_WINNER_BET_ID}&page=${page}`);
-    calls += 1;
-    totalPages = asInt(data?.paging?.total, 1);
-    for (const row of data?.response ?? []) {
-      const fixtureId = asInt(row?.fixture?.id, 0);
-      if (!wanted.has(fixtureId)) continue;
-      const books = row?.bookmakers ?? [];
-      const book = books.find((b) => asInt(b?.id) === PRIMARY_BOOKMAKER_ID) ?? books[0];
-      if (!book) continue;
-      const mw = (book.bets ?? []).find((b) => asInt(b?.id) === MATCH_WINNER_BET_ID || b?.name === "Match Winner");
-      if (!mw) continue;
-      let oHome = null, oDraw = null, oAway = null;
-      for (const v of mw.values ?? []) {
-        const label = String(v?.value ?? "").toLowerCase();
-        const odd = asNum(v?.odd);
-        if (label === "home" || label === "1") oHome = odd;
-        else if (label === "draw" || label === "x") oDraw = odd;
-        else if (label === "away" || label === "2") oAway = odd;
-      }
-      if (!oHome || !oDraw || !oAway) continue;
-      const [pHome, pDraw, pAway] = deVig(oHome, oDraw, oAway);
-      await db`
-        update public.football_matches set
-          odds_home = ${oHome}, odds_draw = ${oDraw}, odds_away = ${oAway},
-          prob_home = ${pHome}, prob_draw = ${pDraw}, prob_away = ${pAway},
-          bookmaker = ${book.name ?? null}, odds_updated_at = now(), updated_at = now()
-        where id = ${fixtureId}
-      `;
-      priced += 1;
-    }
-    page += 1;
-  }
-  return { priced, calls };
+  return { events: (events ?? []).length, upserted, priced, oddsRemaining: remaining, calls: 1 };
 }
 
 async function settleFinished() {
-  // Re-read fixtures we just upserted; settle any finished/void match still open.
-  const rows = await db`
-    select id, status, home_goals, away_goals
-    from public.football_matches
-    where settled = false and status = any(${[...FINISHED, ...VOIDED]})
+  // Only spend the (cost-2) scores call when something is actually pending.
+  const [{ pending }] = await db`
+    select count(*)::int as pending from public.football_matches
+    where settled = false and kickoff <= now()
   `;
+  if (!pending) return { settledMatches: 0, paidBets: 0, calls: 0, scoresRemaining: null };
+
+  const { data: events, remaining } = await oddsGet(
+    `/sports/${SPORT_KEY}/scores?daysFrom=${SCORES_DAYS_FROM}`,
+  );
   let settledMatches = 0;
   let paidBets = 0;
-  let voidedBets = 0;
 
-  for (const m of rows) {
-    const id = asInt(m.id);
-    const isVoid = VOIDED.has(m.status);
-    // Build a minimal fixture-like object for result derivation.
-    const hg = m.home_goals == null ? null : asInt(m.home_goals);
-    const ag = m.away_goals == null ? null : asInt(m.away_goals);
-    const result = isVoid ? null : resultFromFixture({ teams: {}, goals: { home: hg, away: ag } });
-    if (!isVoid && !result) continue; // finished but no usable score yet — try next run
+  for (const ev of events ?? []) {
+    if (!ev.completed) continue;
+    const id = String(ev.id ?? "");
+    const scores = ev.scores ?? [];
+    const hs = asInt((scores.find((s) => s.name === ev.home_team) || {}).score, null);
+    const as = asInt((scores.find((s) => s.name === ev.away_team) || {}).score, null);
+    if (hs == null || as == null) continue;
+    const result = hs > as ? "1" : hs < as ? "2" : "X";
 
-    await db.begin(async (tx) => {
-      if (isVoid) {
-        // Refund every open bet on this match.
-        const open = await tx`
-          select id, user_id, stake from public.football_bets
-          where match_id = ${id} and status = 'open' for update
-        `;
-        for (const b of open) {
-          await tx`update public.profiles set coins = coins + ${asInt(b.stake)} where id = ${b.user_id}`;
-          await tx`update public.football_bets set status = 'void', settled_at = now() where id = ${b.id}`;
-          voidedBets += 1;
-        }
-        await tx`update public.football_matches set settled = true, updated_at = now() where id = ${id}`;
-        return;
-      }
+    const settled = await db.begin(async (tx) => {
+      const [match] = await tx`
+        select id, settled from public.football_matches where id = ${id} for update
+      `;
+      if (!match || match.settled) return false;
 
       const open = await tx`
         select id, user_id, pick, potential_payout from public.football_bets
@@ -360,19 +323,24 @@ async function settleFinished() {
           await tx`update public.football_bets set status = 'lost', settled_at = now() where id = ${b.id}`;
         }
       }
-      await tx`update public.football_matches set result = ${result}, settled = true, updated_at = now() where id = ${id}`;
+      await tx`
+        update public.football_matches
+           set status = 'FT', result = ${result}, home_goals = ${hs}, away_goals = ${as},
+               settled = true, updated_at = now()
+         where id = ${id}
+      `;
+      return true;
     });
-    settledMatches += 1;
+    if (settled) settledMatches += 1;
   }
-  return { settledMatches, paidBets, voidedBets };
+  return { settledMatches, paidBets, calls: 1, scoresRemaining: remaining };
 }
 
 async function runCron() {
   if (!db) throw new Error("Database is not configured.");
-  const fx = await syncFixtures();
   const od = await syncOdds();
   const st = await settleFinished();
-  const summary = { ...fx, ...od, ...st, apiCalls: fx.calls + od.calls };
+  const summary = { ...od, ...st, apiCalls: od.calls + st.calls };
   console.log("football cron:", JSON.stringify(summary));
   return summary;
 }
@@ -395,7 +363,6 @@ Deno.serve(async (req) => {
     }
 
     if (action === "state") {
-      // Public read; include user's bets only when a valid session is present.
       let userId = null;
       try { userId = (await requireUser(req)).id; } catch (_e) { userId = null; }
       const result = await loadState(userId);

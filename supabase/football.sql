@@ -1,17 +1,17 @@
 -- World Cup 2026 fixed-odds betting ("Mundial") for Rynek Proroctw G6.
 -- Run after supabase/schema.sql on an existing project.
 --
--- Model: fixed-odds vs the house. Real bookmaker decimal odds (API-Football)
+-- Model: fixed-odds vs the house. Real bookmaker decimal odds (The Odds API)
 -- are locked at bet time; a winning bet pays floor(stake * locked_odds).
 -- Losing stakes are burned, winnings are minted by the house — same coin
--- economy as slots/roulette. Fixtures, odds and final results all come from
--- API-Football and are written ONLY by the `football-action` Edge Function
+-- economy as slots/roulette. Events, odds and final results all come from
+-- The Odds API and are written ONLY by the `football-action` Edge Function
 -- (service connection). Clients get SELECT-only access.
 
 -- ── Tables ───────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.football_matches (
-  id              bigint PRIMARY KEY,                  -- API-Football fixture id
+  id              text PRIMARY KEY,                    -- The Odds API event id (hex string)
   league_id       integer NOT NULL,
   season          integer NOT NULL,
   kickoff         timestamptz NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.football_bets (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id          uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   nick_snapshot    text NOT NULL,
-  match_id         bigint NOT NULL REFERENCES public.football_matches(id) ON DELETE CASCADE,
+  match_id         text NOT NULL REFERENCES public.football_matches(id) ON DELETE CASCADE,
   pick             text NOT NULL CHECK (pick IN ('1','X','2')),
   stake            integer NOT NULL CHECK (stake >= 1),
   locked_odds      numeric(8,3) NOT NULL CHECK (locked_odds >= 1),
@@ -127,9 +127,11 @@ BEGIN
 END;
 $$;
 
--- ── Hourly cron: refresh odds + auto-settle finished matches ───────────────────
+-- ── Cron (every 6h): refresh odds + auto-settle finished matches ───────────────
 -- Calls the football-action Edge Function with the shared cron secret. The
--- function fetches fixtures/odds/results from API-Football and settles bets.
+-- function fetches events/odds/results from The Odds API and settles bets.
+-- Runs every 6 hours (not hourly) to stay within The Odds API free tier of
+-- 500 requests/month: ≤3 requests/run × 4 runs/day × ~30 days ≈ 360/month.
 --
 -- BEFORE RUNNING: replace __PROJECT_REF__ with your Supabase project ref and
 -- __FOOTBALL_CRON_SECRET__ with the same value set as the FOOTBALL_CRON_SECRET
@@ -145,7 +147,7 @@ BEGIN
 
     PERFORM cron.schedule(
       'football_hourly_sync',
-      '0 * * * *',
+      '0 */6 * * *',
       $cron$
         SELECT net.http_post(
           url     := 'https://__PROJECT_REF__.supabase.co/functions/v1/football-action',
