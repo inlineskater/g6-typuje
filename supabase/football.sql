@@ -155,7 +155,10 @@ BEGIN
                        'Content-Type', 'application/json',
                        'x-cron-secret', '__FOOTBALL_CRON_SECRET__'
                      ),
-          body    := jsonb_build_object('action', 'cron')
+          body    := jsonb_build_object('action', 'cron'),
+          -- pg_net default is 5000 ms; a cron run (odds sync + scores settle)
+          -- takes >5 s, which cut off the response and hid the run summary.
+          timeout_milliseconds := 30000
         );
       $cron$
     );
