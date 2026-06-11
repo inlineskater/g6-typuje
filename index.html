@@ -8300,12 +8300,16 @@ function renderHeroAuctionGrid() {
   if (!grid) return;
   grid.replaceChildren();
 
-  if (!heroAuctions.length) {
+  // Won (settled) auctions are hidden — the item is already claimed, no need to
+  // keep showing it in Aukcje. Only open/unsettled auctions are listed.
+  const visibleAuctions = heroAuctions.filter(a => a.status !== 'settled');
+
+  if (!visibleAuctions.length) {
     grid.appendChild(el('p', { className: 'shop-empty' }, 'Brak aktywnych aukcji. Admin może wystawić limitowany przedmiot.'));
     return;
   }
 
-  heroAuctions.forEach(auction => {
+  visibleAuctions.forEach(auction => {
     const isOpen = auction.status === 'open';
     const ended = isOpen && new Date(auction.ends_at).getTime() <= Date.now();
     const currentBid = Number(auction.current_bid || 0);
