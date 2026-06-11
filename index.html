@@ -419,6 +419,8 @@
       border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; color: #fff;
     }
     .fb-hero-pill strong { font-weight: 900; }
+    .fb-hero-pill-timer { background: rgba(0,0,0,.22); border-color: rgba(255,255,255,.34); }
+    .fb-hero-pill-timer strong, #fb-sync-next, #fb-sync-local { font-variant-numeric: tabular-nums; }
     .fb-hero-trophy {
       position: absolute; right: 18px; bottom: -14px; font-size: 150px; line-height: 1;
       opacity: .16; transform: rotate(8deg); pointer-events: none; z-index: 0;
@@ -658,7 +660,7 @@
     /* ── RANKING GRID ── */
     .ranking-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      min-height: calc(100dvh - 140px); grid-template-rows: 1fr 1fr 1fr auto;
+      min-height: calc(100dvh - 140px); grid-template-rows: auto 1fr 1fr 1fr;
     }
     @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; grid-template-rows: auto; min-height: auto; } }
     .ranking-card {
@@ -3241,6 +3243,7 @@
             <span class="fb-hero-pill"><strong id="fb-hero-matches">—</strong> meczów</span>
             <span class="fb-hero-pill"><strong id="fb-hero-bets">—</strong> zakładów</span>
             <span class="fb-hero-pill">🏦 Bank ma <strong id="fb-hero-bank">—</strong> 🪙</span>
+            <span class="fb-hero-pill fb-hero-pill-timer">⏱ Aktualizacja za <strong id="fb-hero-next">—</strong></span>
           </div>
         </div>
         <div class="fb-hero-trophy" aria-hidden="true">🏆</div>
@@ -3250,7 +3253,7 @@
         <summary><span class="fb-how-q">ℹ️ Jak działa Mundial?</span> <span class="fb-how-hint">kursy · odświeżanie · wypłaty</span></summary>
         <div class="info-rules fb-how-rules">
           <span class="info-rule"><span class="info-rule-icon">📊</span><span class="info-rule-text">Kursy pochodzą z <strong>The Odds API</strong> — bierzemy <strong>konsensus (medianę)</strong> z ponad 20 bukmacherów i odejmujemy ich marżę, więc pokazana „szansa" jest uczciwa.</span></span>
-          <span class="info-rule"><span class="info-rule-icon">🔄</span><span class="info-rule-text">Mecze, kursy i wyniki odświeżają się <strong>automatycznie co 6 godzin</strong>.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">🔄</span><span class="info-rule-text">Mecze, kursy i wyniki przeliczają się <strong>automatycznie co 6 godzin</strong> — o <strong>00:00, 06:00, 12:00, 18:00 UTC</strong> (u Ciebie: <strong id="fb-sync-local">—</strong>). Następne przeliczenie za <strong id="fb-sync-next">—</strong>.</span></span>
           <span class="info-rule"><span class="info-rule-icon">🔒</span><span class="info-rule-text">Kurs jest <strong>zamrażany w chwili zakładu</strong> — późniejsze wahania kursów już go nie ruszają.</span></span>
           <span class="info-rule"><span class="info-rule-icon">🏆</span><span class="info-rule-text">Po meczu system pobiera wynik i <strong>automatycznie wypłaca wygrane</strong> (stawka × kurs, zaokrąglone w dół). Zwykle <strong>w ciągu kilku godzin</strong> od końcowego gwizdka.</span></span>
           <span class="info-rule"><span class="info-rule-icon">🏦</span><span class="info-rule-text">Grasz <strong>przeciwko Bankowi</strong>, nie przeciw innym graczom. Przegrana stawka przepada, wygraną dopłaca Bank.</span></span>
@@ -3269,6 +3272,12 @@
       <h2 class="page-title">Ranking graczy 🏆</h2>
       <p class="page-sub">Kliknij dowolną sekcję, aby zobaczyć szczegóły.</p>
       <div class="ranking-grid">
+        <div class="ranking-card ranking-card-wide">
+          <div class="ranking-card-title">⚽ Mundial 2026 — typerzy i bilans Banku</div>
+          <div class="ranking-card-body" id="mundial-preview-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
         <div class="ranking-card" data-detail="ranking">
           <div class="ranking-card-title">🪙 Gotówka</div>
           <div class="ranking-card-body" id="leaderboard-wrap">
@@ -3302,12 +3311,6 @@
         <div class="ranking-card" data-detail="seasons">
           <div class="ranking-card-title">🎮 Sezony gier</div>
           <div class="ranking-card-body" id="seasons-preview-wrap">
-            <div class="loading-center"><div class="spinner"></div></div>
-          </div>
-        </div>
-        <div class="ranking-card ranking-card-wide">
-          <div class="ranking-card-title">⚽ Mundial 2026 — typerzy i bilans Banku</div>
-          <div class="ranking-card-body" id="mundial-preview-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
@@ -4859,6 +4862,7 @@ function switchTab(tab) {
   if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); }
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
+  if (previousTab === 'football' && tab !== 'football') stopFootballCountdown();
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
@@ -4913,6 +4917,7 @@ function switchTab(tab) {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     show(tFb);
     loadFootball();
+    startFootballCountdown();
   } else if (tab === 'flappy-test') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     const panel = document.getElementById('seasonal-game-flappy-pants');
@@ -9119,6 +9124,45 @@ function updateFootballHero() {
   if (m) setText(m, footballMatches.length);
   if (b) setText(b, h.betsTotal);
   if (k) setText(k, h.cashOnHand);
+}
+
+// The cron runs at 00:00, 06:00, 12:00, 18:00 UTC ('0 */6 * * *').
+function fbNextSyncDate(from = new Date()) {
+  const d = new Date(from);
+  d.setUTCMinutes(0, 0, 0);
+  d.setUTCHours(Math.floor(from.getUTCHours() / 6) * 6 + 6);
+  return d;
+}
+function fbFmtCountdown(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return (h > 0 ? h + 'h ' : '') + pad(m) + 'm ' + pad(sec) + 's';
+}
+function fbSyncLocalTimes() {
+  return [0, 6, 12, 18].map(hour => {
+    const d = new Date(); d.setUTCHours(hour, 0, 0, 0);
+    return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+  }).join(', ');
+}
+let footballCountdownTimer = null;
+function updateFootballCountdown() {
+  const ms = fbNextSyncDate() - Date.now();
+  const txt = ms <= 1000 ? 'trwa…' : fbFmtCountdown(ms);
+  ['fb-hero-next', 'fb-sync-next'].forEach(id => {
+    const node = document.getElementById(id);
+    if (node) setText(node, txt);
+  });
+}
+function startFootballCountdown() {
+  stopFootballCountdown();
+  const local = document.getElementById('fb-sync-local');
+  if (local) setText(local, fbSyncLocalTimes());
+  updateFootballCountdown();
+  footballCountdownTimer = setInterval(updateFootballCountdown, 1000);
+}
+function stopFootballCountdown() {
+  if (footballCountdownTimer) { clearInterval(footballCountdownTimer); footballCountdownTimer = null; }
 }
 
 function renderFootball() {
