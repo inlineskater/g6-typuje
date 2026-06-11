@@ -579,15 +579,22 @@
     /* ── RANKING GRID ── */
     .ranking-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      height: calc(100dvh - 140px); grid-template-rows: 1fr 1fr 1fr;
+      min-height: calc(100dvh - 140px); grid-template-rows: 1fr 1fr 1fr auto;
     }
-    @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; } }
+    @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; grid-template-rows: auto; min-height: auto; } }
     .ranking-card {
       background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 12px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column;
       transition: border-color .15s, box-shadow .15s;
     }
     .ranking-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px var(--acc-dim); }
+    .ranking-card-wide { grid-column: 1 / -1; min-height: 240px; padding: 20px 22px;
+      background: linear-gradient(180deg, var(--acc-dim), var(--card)); border-color: var(--border-hi); }
+    .ranking-card-wide .ranking-card-title { font-size: 18px; margin-bottom: 12px; }
+    .mundial-preview-cta { height: 100%; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; text-align: center; color: var(--muted);
+      font-size: 15px; font-weight: 600; line-height: 1.5; }
+    .mundial-preview-emoji { font-size: 44px; }
     .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
     .ranking-card-body { flex: 1; overflow: hidden; }
     .coin-race-canvas { width: 100%; height: 100%; display: block; }
@@ -3167,12 +3174,6 @@
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
-        <div class="ranking-card" data-detail="mundial">
-          <div class="ranking-card-title">⚽ Mundial</div>
-          <div class="ranking-card-body" id="mundial-preview-wrap">
-            <p class="lb-click-hint">Ranking typerów i bilans Banku — kliknij, aby zobaczyć</p>
-          </div>
-        </div>
         <div class="ranking-card" data-detail="market-history">
           <div class="ranking-card-title">📈 Historia — Rynki</div>
           <div class="ranking-card-body" id="transaction-history-wrap">
@@ -3195,6 +3196,15 @@
           <div class="ranking-card-title">🎮 Sezony gier</div>
           <div class="ranking-card-body" id="seasons-preview-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card ranking-card-wide" data-detail="mundial">
+          <div class="ranking-card-title">⚽ Mundial 2026 — typerzy i bilans Banku</div>
+          <div class="ranking-card-body" id="mundial-preview-wrap">
+            <div class="mundial-preview-cta">
+              <span class="mundial-preview-emoji">⚽</span>
+              <span>Pełny ranking typerów Mundialu i bilans Banku 🏦<br>kliknij, aby zobaczyć szczegóły</span>
+            </div>
           </div>
         </div>
       </div>
