@@ -2894,7 +2894,7 @@
     .tavern-panel { background: linear-gradient(160deg,#1e1208 0%,#2d1b0e 100%); border: 2px solid #8b6914; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.45); }
     .tavern-panel-title { padding: 14px 18px 0; font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8b6914; }
     .tavern-scene {
-      position: relative; height: 300px; overflow: hidden; margin: 10px 12px 14px;
+      position: relative; height: 420px; overflow: hidden; margin: 10px 12px 14px;
       border-radius: 10px; border: 3px solid #6b4a1e;
       background:
         radial-gradient(ellipse 50% 80% at 12% 50%, rgba(255,90,10,.30) 0%, transparent 55%),
@@ -2927,7 +2927,7 @@
     @keyframes fire-flicker { 0% { opacity:.8; transform:scaleX(.94); } 100% { opacity:1; transform:scaleX(1.06); } }
     .tavern-table { position: absolute; bottom: 42px; width: 80px; height: 18px; background: #5a3e28; border-radius: 4px; z-index: 1; }
     .tavern-table::after { content: '🍺'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 14px; }
-    .tavern-lane { position: absolute; width: 64px; height: 80px; z-index: 2; cursor: pointer; animation: tavern-hero var(--walk-dur, 9s) linear infinite; }
+    .tavern-lane { position: absolute; width: 84px; height: 104px; z-index: 2; cursor: pointer; animation: tavern-hero var(--walk-dur, 9s) linear infinite; }
     .tavern-lane.hero-mine { filter: drop-shadow(0 0 6px rgba(99,102,241,.75)); }
     @keyframes tavern-hero {
       0%   { left: 3%;  transform: scaleX(1)  translateY(0px);   }
@@ -2953,7 +2953,7 @@
     .hero-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(15,23,42,.9); }
     .tavern-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: rgba(255,255,255,.5); font-size: 13px; font-weight: 600; pointer-events: none; z-index: 4; }
     @media (max-width: 900px) { .heroes-wrap { grid-template-columns: 1fr; } .hero-panel { position: static; } }
-    @media (max-width: 560px) { .tavern-scene { height: 220px; } }
+    @media (max-width: 560px) { .tavern-scene { height: 320px; } }
     .cf-turnstile-box { margin: 10px 0 4px; min-height: 0; display: flex; justify-content: center; }
     .force-blame { margin: 4px 0 14px; padding: 10px 12px; border-radius: 10px; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #b91c1c; font-size: 12px; line-height: 1.5; font-weight: 600; text-align: center; }
     .force-blame-sub { display: inline-block; margin-top: 6px; font-weight: 500; opacity: .85; font-style: italic; }
@@ -12672,6 +12672,7 @@ function renderHeroesTab(wrap) {
   // wrap (#heroes-content) already has class heroes-wrap and the 2-column grid;
   // adding another heroes-wrap inside would squash the tavern to 0px
   const side = el('div', { className: 'hero-side' },
+    buildHeroInfoPanel(),
     heroesEditMode || !myHero ? buildHeroWizard() : buildHeroDisplay(),
     buildHeroEquipmentPanel()
   );
@@ -12679,6 +12680,19 @@ function renderHeroesTab(wrap) {
     side,
     buildTavernPanel()
   );
+}
+
+function buildHeroInfoPanel() {
+  const panel = el('div', { className: 'hero-equipment-panel' });
+  panel.appendChild(el('div', { className: 'hero-equip-title' }, 'Po co bohater?'));
+  panel.appendChild(el('div', { className: 'hero-equip-sub' },
+    'Bohater to Twój awatar — przesiaduje w karczmie razem z bohaterami innych graczy.'));
+  panel.appendChild(el('div', { className: 'hero-equip-sub' },
+    'Pierwszego stworzysz za darmo. Potem kupuj przedmioty w Sklepie i zakładaj je tutaj — każdy daje bonus działający po stronie serwera w grach (ruletka, sloty, poker, gry sezonowe, dzienny procent, ogród). Liczy się najsilniejszy przedmiot na grę, a założony ekwipunek widać na bohaterze w karczmie.'));
+  const shopBtn = el('button', { className: 'hero-mini-btn', type: 'button' }, 'Przejdź do sklepu');
+  shopBtn.addEventListener('click', () => switchTab('shop'));
+  panel.appendChild(shopBtn);
+  return panel;
 }
 
 function buildHeroDisplay() {
@@ -12925,8 +12939,6 @@ function buildTavernPanel() {
     ? [myHero, ...allHeroes.filter(h => h.user_id !== me.id)]
     : allHeroes;
   const bottoms  = ['58px', '72px', '60px', '76px', '54px'];
-  const lefts    = ['6%', '20%', '36%', '52%', '68%', '84%'];
-  const facings  = [1, -1, 1, -1, 1, -1];
   const lanes = [];
 
   if (!heroes.length) {
@@ -12940,15 +12952,15 @@ function buildTavernPanel() {
       const isMe = hero.user_id === me.id;
       const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
       lane.style.bottom = bottoms[i % bottoms.length];
-      lane.style.left = lefts[i % lefts.length];
-      lane.style.transform = `scaleX(${facings[i % facings.length]})`;
-      lane.style.animation = 'none';
-      lane.innerHTML = buildHeroSVG(hero, { size: 64, walking: false, gear: equipmentForHero(hero.user_id) });
+      // Slow, staggered walk: --walk-dur/--walk-delay drive the lane's tavern-hero
+      // keyframes and inherit to the name label's counter-rotation animation.
+      const dur = 20 + (i % 4) * 3; // 20–29s
+      lane.style.setProperty('--walk-dur', dur + 's');
+      lane.style.setProperty('--walk-delay', (-(dur * i / Math.max(heroes.length, 1))).toFixed(1) + 's');
+      lane.innerHTML = buildHeroSVG(hero, { size: 84, walking: true, gear: equipmentForHero(hero.user_id) });
       const gear = equipmentForHero(hero.user_id);
       visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
       const nameLabel = el('div', { className: 'tavern-hero-name' + (isMe ? ' is-mine' : '') }, hero.profiles?.nick || hero.nick || '?');
-      nameLabel.style.animation = 'none';
-      nameLabel.style.transform = `translateX(-50%) scaleX(${facings[i % facings.length]})`;
       lane.appendChild(nameLabel);
 
       const speech = el('div', { className: 'hero-speech' }, '');
@@ -12965,7 +12977,8 @@ function buildTavernPanel() {
           el('strong', null, hero.profiles?.nick || '?'),
           ...tipItems
         );
-        tip.style.transform = `translateX(-50%) scaleX(${facings[i % facings.length]})`;
+        const tm = new DOMMatrix(window.getComputedStyle(lane).transform);
+        tip.style.transform = `translateX(-50%) scaleX(${tm.a < 0 ? -1 : 1})`;
         lane.appendChild(tip);
         setTimeout(() => { if (tip) { tip.remove(); tip = null; } }, 3000);
       });
