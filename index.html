@@ -324,22 +324,25 @@
     .fb-status-done { color: var(--accent); border-color: var(--border-hi); }
     .fb-teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
     .fb-team { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
-    .fb-team img { width: 38px; height: 38px; object-fit: contain; }
-    .fb-team-name { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
-    .fb-vs { font-size: 13px; font-weight: 800; color: var(--dim); }
-    .fb-score { font-size: 18px; font-weight: 800; }
+    .fb-team img { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,.1)); }
+    .fb-team-name { font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
+    .fb-vs { font-size: 12px; font-weight: 800; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+    .fb-score { font-size: 24px; font-weight: 900; letter-spacing: 1px; }
     .fb-odds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .fb-odds-btn { display: flex; flex-direction: column; align-items: center; gap: 2px;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-      padding: 8px 4px; cursor: pointer; font-family: inherit; color: var(--text);
-      transition: border-color .15s, background .15s; min-height: 56px; }
-    .fb-odds-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--acc-dim); }
-    .fb-odds-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .fb-odds-btn { display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 4px; cursor: pointer; font-family: inherit; color: var(--text);
+      transition: border-color .15s, background .15s, transform .12s, box-shadow .15s; min-height: 60px; }
+    .fb-odds-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--acc-dim);
+      transform: translateY(-2px); box-shadow: 0 6px 16px -8px rgba(99,102,241,.5); }
+    .fb-odds-btn:active:not(:disabled) { transform: translateY(0); }
+    .fb-odds-btn:disabled { opacity: .5; cursor: not-allowed; }
     .fb-odds-btn.picked { border-color: var(--accent); background: var(--acc-dim); box-shadow: inset 0 0 0 1px var(--accent); }
-    .fb-odds-btn.win { border-color: var(--yes-line); background: var(--yes-dim); }
-    .fb-odds-label { font-size: 11px; font-weight: 700; color: var(--muted); }
-    .fb-odds-val { font-size: 16px; font-weight: 800; }
-    .fb-odds-prob { font-size: 10px; color: var(--dim); }
+    .fb-odds-btn.win { border-color: var(--yes-line); background: var(--yes-dim);
+      box-shadow: 0 0 0 1px var(--yes-line), 0 6px 18px -10px rgba(22,163,74,.7); }
+    .fb-odds-label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .fb-odds-val { font-size: 18px; font-weight: 900; }
+    .fb-odds-prob { font-size: 10px; color: var(--dim); font-weight: 600; }
     .fb-bet-badge { font-size: 12px; padding: 8px 10px; border-radius: 8px;
       background: var(--acc-dim); border: 1px solid var(--border); line-height: 1.5; }
     .fb-bet-badge.won { background: var(--yes-dim); border-color: var(--yes-line); }
@@ -369,14 +372,90 @@
     .fb-profit-neg { color: var(--no); font-weight: 700; }
     .fb-rank-row-me td { background: var(--acc-dim); }
     .fb-bonk-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
-    .fb-bonk-cell { background: var(--acc-dim); border: 1px solid var(--border-hi); border-radius: 8px;
-      padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .fb-bonk-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-    .fb-bonk-val { font-size: 17px; font-weight: 800; }
+    .fb-bonk-cell { background: var(--acc-dim); border: 1px solid var(--border-hi); border-radius: 10px;
+      padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .fb-bonk-cell:first-child {
+      background: linear-gradient(135deg, rgba(31,95,212,.14), rgba(18,161,80,.12));
+      border-color: rgba(31,95,212,.32);
+    }
+    .fb-bonk-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    .fb-bonk-val { font-size: 18px; font-weight: 900; }
     .fb-bonk-sub { font-size: 10px; color: var(--dim); font-weight: 600; }
     .fb-back-link { display: inline-block; font-size: 13px; font-weight: 700; color: var(--accent);
       background: none; border: none; cursor: pointer; font-family: inherit; padding: 0 0 12px; }
     .fb-back-link:hover { text-decoration: underline; }
+
+    /* ── MUNDIAL HERO (WC26) ── */
+    .fb-hero {
+      position: relative; overflow: hidden; border-radius: 18px; margin-bottom: 16px;
+      padding: 30px 28px; color: #fff; isolation: isolate;
+      background:
+        radial-gradient(120% 140% at 100% 0%, rgba(255,255,255,.18), transparent 45%),
+        linear-gradient(110deg, #e0142f 0%, #7a1fa2 38%, #1f5fd4 68%, #12a150 100%);
+      box-shadow: 0 14px 40px -16px rgba(31,95,212,.55);
+    }
+    .fb-hero-glow {
+      position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+      background:
+        radial-gradient(60% 80% at 12% 120%, rgba(255,255,255,.22), transparent 60%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 2px, transparent 2px 22px);
+    }
+    .fb-hero-main { position: relative; max-width: 760px; }
+    .fb-hero-flags { font-size: 22px; letter-spacing: 6px; margin-bottom: 8px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
+    .fb-hero-title {
+      font-size: clamp(34px, 7vw, 60px); font-weight: 900; line-height: .92; letter-spacing: -1.5px;
+      text-shadow: 0 2px 14px rgba(0,0,0,.22); margin: 0;
+    }
+    .fb-hero-26 {
+      background: linear-gradient(180deg, #fff 0%, #ffe9b0 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .fb-hero-sub { margin-top: 6px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; opacity: .92; }
+    .fb-hero-tagline { margin-top: 12px; font-size: 14.5px; line-height: 1.55; max-width: 620px; color: rgba(255,255,255,.95); }
+    .fb-hero-tagline strong { color: #fff; }
+    .fb-hero-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .fb-hero-pill {
+      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); backdrop-filter: blur(4px);
+      border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; color: #fff;
+    }
+    .fb-hero-pill strong { font-weight: 900; }
+    .fb-hero-trophy {
+      position: absolute; right: 18px; bottom: -14px; font-size: 150px; line-height: 1;
+      opacity: .16; transform: rotate(8deg); pointer-events: none; z-index: 0;
+    }
+    @media (max-width: 560px) {
+      .fb-hero { padding: 24px 20px; border-radius: 14px; }
+      .fb-hero-trophy { font-size: 110px; right: 4px; bottom: -10px; }
+    }
+
+    /* ── MUNDIAL — jak to działa ── */
+    .fb-how {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 18px; overflow: hidden;
+    }
+    .fb-how > summary {
+      list-style: none; cursor: pointer; padding: 13px 16px; display: flex; align-items: center;
+      gap: 10px; flex-wrap: wrap; font-size: 13.5px; font-weight: 700; user-select: none;
+    }
+    .fb-how > summary::-webkit-details-marker { display: none; }
+    .fb-how > summary::after { content: "▾"; margin-left: auto; color: var(--dim); transition: transform .2s; }
+    .fb-how[open] > summary::after { transform: rotate(180deg); }
+    .fb-how-hint { font-size: 11px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+    .fb-how-rules { padding: 2px 16px 16px; }
+
+    /* ── MUNDIAL card polish ── */
+    .fb-card { position: relative; }
+    .fb-card::before {
+      content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0;
+      background: linear-gradient(90deg, #e0142f, #7a1fa2, #1f5fd4, #12a150); opacity: .55;
+    }
+    .fb-card.fb-card-live::before { opacity: 1; }
+    .fb-status-live { display: inline-flex; align-items: center; gap: 5px; }
+    .fb-status-live::before {
+      content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--no);
+      animation: fb-live-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes fb-live-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,.5); opacity: 1; } 50% { box-shadow: 0 0 0 5px rgba(220,38,38,0); opacity: .55; } }
 
     .card-header {
       display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
@@ -3151,12 +3230,34 @@
 
   <div id="tab-football" class="hidden">
     <main>
-      <div class="markets-toolbar">
-        <div>
-          <h2>⚽ Mundial 2026</h2>
-          <p>Obstawiaj mecze Mistrzostw Świata realnymi kursami bukmacherskimi. Wygrana = stawka × kurs. Grasz przeciwko kasynu.</p>
+      <div class="fb-hero">
+        <div class="fb-hero-glow"></div>
+        <div class="fb-hero-main">
+          <div class="fb-hero-flags">🇨🇦 🇺🇸 🇲🇽</div>
+          <h1 class="fb-hero-title">MUNDIAL <span class="fb-hero-26">26</span></h1>
+          <div class="fb-hero-sub">Mistrzostwa Świata · USA · Kanada · Meksyk</div>
+          <p class="fb-hero-tagline">Obstawiaj mecze prawdziwymi kursami bukmacherskimi. Grasz przeciwko <strong>Bankowi</strong> 🏦 — trafisz, wygrywasz <strong>stawkę × kurs</strong>.</p>
+          <div class="fb-hero-stats">
+            <span class="fb-hero-pill"><strong id="fb-hero-matches">—</strong> meczów</span>
+            <span class="fb-hero-pill"><strong id="fb-hero-bets">—</strong> zakładów</span>
+            <span class="fb-hero-pill">🏦 Bank ma <strong id="fb-hero-bank">—</strong> 🪙</span>
+          </div>
         </div>
+        <div class="fb-hero-trophy" aria-hidden="true">🏆</div>
       </div>
+
+      <details class="fb-how">
+        <summary><span class="fb-how-q">ℹ️ Jak działa Mundial?</span> <span class="fb-how-hint">kursy · odświeżanie · wypłaty</span></summary>
+        <div class="info-rules fb-how-rules">
+          <span class="info-rule"><span class="info-rule-icon">📊</span><span class="info-rule-text">Kursy pochodzą z <strong>The Odds API</strong> — bierzemy <strong>konsensus (medianę)</strong> z ponad 20 bukmacherów i odejmujemy ich marżę, więc pokazana „szansa" jest uczciwa.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">🔄</span><span class="info-rule-text">Mecze, kursy i wyniki odświeżają się <strong>automatycznie co 6 godzin</strong>.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">🔒</span><span class="info-rule-text">Kurs jest <strong>zamrażany w chwili zakładu</strong> — późniejsze wahania kursów już go nie ruszają.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">🏆</span><span class="info-rule-text">Po meczu system pobiera wynik i <strong>automatycznie wypłaca wygrane</strong> (stawka × kurs, zaokrąglone w dół). Zwykle <strong>w ciągu kilku godzin</strong> od końcowego gwizdka.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">🏦</span><span class="info-rule-text">Grasz <strong>przeciwko Bankowi</strong>, nie przeciw innym graczom. Przegrana stawka przepada, wygraną dopłaca Bank.</span></span>
+          <span class="info-rule"><span class="info-rule-icon">↩️</span><span class="info-rule-text">Mecz <strong>odwołany lub przerwany</strong>? Stawka wraca na Twoje konto.</span></span>
+        </div>
+      </details>
+
       <div class="markets-grid" id="football-grid">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
@@ -9010,7 +9111,18 @@ async function loadFootball(showSpinner = true) {
   }
 }
 
+function updateFootballHero() {
+  const h = computeFootballHouseStats();
+  const m = document.getElementById('fb-hero-matches');
+  const b = document.getElementById('fb-hero-bets');
+  const k = document.getElementById('fb-hero-bank');
+  if (m) setText(m, footballMatches.length);
+  if (b) setText(b, h.betsTotal);
+  if (k) setText(k, h.cashOnHand);
+}
+
 function renderFootball() {
+  updateFootballHero();
   if (!footballMatches.length) {
     footballGrid.replaceChildren(el('p', { className: 'fb-no-odds' },
       'Brak meczów. Kursy i terminarz pojawią się po pierwszej synchronizacji z API.'));
@@ -9046,7 +9158,7 @@ function buildMatchCard(match, matchBets) {
   const voided = match.settled && match.result == null;
   const statusBadge = el('span', {
     className: 'fb-status-badge' + (live ? ' fb-status-live' : done ? ' fb-status-done' : ''),
-  }, live ? '🔴 NA ŻYWO' : voided ? '⚠️ ODWOŁANY' : done ? 'PO MECZU' : fbFormatKickoff(match.kickoff));
+  }, live ? 'NA ŻYWO' : voided ? '⚠️ ODWOŁANY' : done ? 'PO MECZU' : fbFormatKickoff(match.kickoff));
 
   const teamNode = (name, logo) => el('div', { className: 'fb-team' },
     logo ? el('img', { src: logo, alt: name, loading: 'lazy' }) : el('div', { className: 'fb-team-name' }, '⚽'),
@@ -9074,7 +9186,7 @@ function buildMatchCard(match, matchBets) {
     oddsRow.appendChild(btn);
   });
 
-  const card = el('div', { className: 'market-card fb-card', 'data-fb-match': match.id },
+  const card = el('div', { className: 'market-card fb-card' + (live ? ' fb-card-live' : ''), 'data-fb-match': match.id },
     el('div', { className: 'fb-card-head' }, statusBadge),
     el('div', { className: 'fb-teams' }, teamNode(match.home_team, match.home_logo), centre, teamNode(match.away_team, match.away_logo)),
   );
@@ -9216,7 +9328,7 @@ function buildFootballStatsPanel(stats) {
       rankBtn,
     ),
     el('div', { className: 'fb-bonk-strip' },
-      bonkCell('🏦 Bank ma', el('span', { className: 'fb-bonk-val' }, h.cashOnHand + ' 🪙'), 'kasa w kasynie'),
+      bonkCell('🏦 Bank ma', el('span', { className: 'fb-bonk-val' }, h.cashOnHand + ' 🪙'), 'kasa Banku'),
       bonkCell('📈 Zysk z graczy',
         el('span', { className: 'fb-bonk-val ' + profitCls }, (h.realizedProfit > 0 ? '+' : '') + h.realizedProfit + ' 🪙'),
         'z rozliczonych'),
