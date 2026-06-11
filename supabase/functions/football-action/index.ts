@@ -166,6 +166,8 @@ function mapMatch(row) {
 function mapBet(row) {
   return {
     id: row.id,
+    user_id: row.user_id,
+    nick: row.nick_snapshot,
     match_id: row.match_id,
     pick: row.pick,
     stake: asInt(row.stake),
@@ -189,18 +191,19 @@ async function loadState(userId) {
     limit 200
   `;
 
+  // All players' bets are public on the Mundial page (football_bets RLS is
+  // SELECT-to-all). The frontend marks the caller's own via user_id.
+  const bets = await db`
+    select *
+    from public.football_bets
+    order by created_at desc
+    limit 500
+  `;
+
   let profile = null;
-  let bets = [];
   if (userId) {
     const [p] = await db`select id, nick, coins from public.profiles where id = ${userId}`;
     if (p) profile = { id: p.id, nick: p.nick, coins: asInt(p.coins) };
-    bets = await db`
-      select *
-      from public.football_bets
-      where user_id = ${userId}
-      order by created_at desc
-      limit 100
-    `;
   }
 
   return {

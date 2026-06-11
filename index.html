@@ -344,6 +344,9 @@
       background: var(--acc-dim); border: 1px solid var(--border); line-height: 1.5; }
     .fb-bet-badge.won { background: var(--yes-dim); border-color: var(--yes-line); }
     .fb-bet-badge.lost { background: var(--no-dim); border-color: var(--no-line); }
+    .fb-bet-badge.mine { box-shadow: inset 0 0 0 1px var(--accent); border-color: var(--accent); }
+    .fb-bets-head { font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
     .fb-no-odds { font-size: 12px; color: var(--muted); text-align: center; padding: 6px; }
     .fb-pick-line { font-size: 14px; font-weight: 700; color: var(--accent); margin: 2px 0 4px; }
 
@@ -8978,11 +8981,12 @@ function renderFootball() {
   footballGrid.replaceChildren(...footballMatches.map(m => buildMatchCard(m, betsByMatch[m.id] || [])));
 }
 
-function buildMatchCard(match, myBets) {
+function buildMatchCard(match, matchBets) {
   const live = FB_LIVE_STATUSES.has(match.status);
   const done = match.settled || ['FT', 'AET', 'PEN'].includes(match.status);
   const bettable = fbIsBettable(match);
   const showScore = live || done;
+  const myBets = matchBets.filter(b => me && b.user_id === me.id);
 
   const statusBadge = el('span', {
     className: 'fb-status-badge' + (live ? ' fb-status-live' : done ? ' fb-status-done' : ''),
@@ -9025,23 +9029,40 @@ function buildMatchCard(match, myBets) {
     card.appendChild(oddsRow);
   }
 
-  myBets.forEach(b => {
-    const cls = b.status === 'won' ? ' won' : b.status === 'lost' ? ' lost' : '';
-    const badge = el('div', { className: 'fb-bet-badge' + cls });
-    const stakeLine = 'Postawiłeś ' + b.stake + ' 🪙 na ' + fbPickTeam(match, b.pick)
-      + ' (kurs ' + Number(b.locked_odds).toFixed(2) + ')';
-    if (b.status === 'won') badge.append(stakeLine + ' → wygrana ', el('strong', {}, b.potential_payout + ' 🪙 ✅'));
-    else if (b.status === 'lost') badge.append(stakeLine + ' → przegrana ❌');
-    else if (b.status === 'void') badge.append(stakeLine + ' → mecz odwołany, zwrot stawki ↩️');
-    else badge.append(stakeLine + '. Wygrana → ', el('strong', {}, '~' + b.potential_payout + ' 🪙'));
-    card.appendChild(badge);
+  // Everyone's bets on this match — own first (marked "Ty"), then by stake.
+  const sortedBets = matchBets.slice().sort((a, b) => {
+    const am = me && a.user_id === me.id ? 0 : 1;
+    const bm = me && b.user_id === me.id ? 0 : 1;
+    if (am !== bm) return am - bm;
+    return b.stake - a.stake;
   });
+  if (sortedBets.length) {
+    card.appendChild(el('div', { className: 'fb-bets-head' }, 'Zakłady graczy (' + sortedBets.length + ')'));
+    sortedBets.forEach(b => card.appendChild(buildFootballBetBadge(match, b)));
+  }
 
   if (me && me.coins < 1 && bettable && !myBets.length) {
     card.appendChild(el('div', { className: 'fb-no-odds' }, 'Brak coinów na zakład.'));
   }
 
   return card;
+}
+
+function buildFootballBetBadge(match, b) {
+  const mine = me && b.user_id === me.id;
+  const cls = 'fb-bet-badge'
+    + (b.status === 'won' ? ' won' : b.status === 'lost' ? ' lost' : '')
+    + (mine ? ' mine' : '');
+  const badge = el('div', { className: cls });
+  badge.append(
+    el('strong', {}, mine ? 'Ty' : (b.nick || '?')),
+    ': ' + b.stake + ' 🪙 → ' + fbPickTeam(match, b.pick) + ' · kurs ' + Number(b.locked_odds).toFixed(2),
+  );
+  if (b.status === 'won') badge.append(' → ', el('strong', {}, '+' + b.potential_payout + ' 🪙 ✅'));
+  else if (b.status === 'lost') badge.append(' ❌');
+  else if (b.status === 'void') badge.append(' → zwrot ↩️');
+  else badge.append(' · wygrana ~' + b.potential_payout + ' 🪙');
+  return badge;
 }
 
 function fbSetAmount(value) {
