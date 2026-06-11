@@ -314,6 +314,39 @@
     }
     .market-card:hover { border-color: var(--border-hi); box-shadow: 0 4px 16px rgba(0,0,0,.07); }
 
+    /* ── FOOTBALL (Mundial) ── */
+    .fb-card { gap: 12px; }
+    .fb-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .fb-kickoff { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .fb-status-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+    .fb-status-live { color: var(--no); border-color: var(--no-line); background: var(--no-dim); }
+    .fb-status-done { color: var(--accent); border-color: var(--border-hi); }
+    .fb-teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+    .fb-team { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
+    .fb-team img { width: 38px; height: 38px; object-fit: contain; }
+    .fb-team-name { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+    .fb-vs { font-size: 13px; font-weight: 800; color: var(--dim); }
+    .fb-score { font-size: 18px; font-weight: 800; }
+    .fb-odds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .fb-odds-btn { display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 4px; cursor: pointer; font-family: inherit; color: var(--text);
+      transition: border-color .15s, background .15s; min-height: 56px; }
+    .fb-odds-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--acc-dim); }
+    .fb-odds-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .fb-odds-btn.picked { border-color: var(--accent); background: var(--acc-dim); box-shadow: inset 0 0 0 1px var(--accent); }
+    .fb-odds-btn.win { border-color: var(--yes-line); background: var(--yes-dim); }
+    .fb-odds-label { font-size: 11px; font-weight: 700; color: var(--muted); }
+    .fb-odds-val { font-size: 16px; font-weight: 800; }
+    .fb-odds-prob { font-size: 10px; color: var(--dim); }
+    .fb-bet-badge { font-size: 12px; padding: 8px 10px; border-radius: 8px;
+      background: var(--acc-dim); border: 1px solid var(--border); line-height: 1.5; }
+    .fb-bet-badge.won { background: var(--yes-dim); border-color: var(--yes-line); }
+    .fb-bet-badge.lost { background: var(--no-dim); border-color: var(--no-line); }
+    .fb-no-odds { font-size: 12px; color: var(--muted); text-align: center; padding: 6px; }
+    .fb-pick-line { font-size: 14px; font-weight: 700; color: var(--accent); margin: 2px 0 4px; }
+
     .card-header {
       display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
     }
@@ -3026,6 +3059,7 @@
     </div>
 
     <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> 🕹️ Gra Sezonowa</button>
+    <button class="nav-tab" data-tab="football">⚽ Mundial</button>
 
     <div class="nav-group" data-group="shop">
       <button class="nav-group-btn">🛒 Sklep <span class="nav-hint-badge" aria-hidden="true">Nowe</span> <span class="nav-chevron">▾</span></button>
@@ -3077,6 +3111,20 @@
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
 
+    </main>
+  </div>
+
+  <div id="tab-football" class="hidden">
+    <main>
+      <div class="markets-toolbar">
+        <div>
+          <h2>⚽ Mundial 2026</h2>
+          <p>Obstawiaj mecze Mistrzostw Świata realnymi kursami bukmacherskimi. Wygrana = stawka × kurs. Grasz przeciwko kasynu.</p>
+        </div>
+      </div>
+      <div class="markets-grid" id="football-grid">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
     </main>
   </div>
 
@@ -3812,6 +3860,46 @@
     </div>
 
     <button class="btn-place btn-place-yes" id="btn-place">Postaw</button>
+  </div>
+</div>
+
+<!-- ── FOOTBALL BET MODAL ── -->
+<div id="fb-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Postaw zakład ⚽</span>
+      <button class="btn-close" id="fb-close">✕</button>
+    </div>
+    <p class="modal-market-name" id="fb-match-name"></p>
+    <p class="fb-pick-line" id="fb-pick-line"></p>
+
+    <div class="slider-section">
+      <div class="slider-label">
+        <span class="slider-label-text">Stawka</span>
+        <span class="slider-value amount-input-wrap">
+          <input class="amount-input" type="number" id="fb-amount" min="1" max="1000" step="1" value="10" inputmode="numeric" aria-label="Stawka zakładu">
+          <small>coinów</small>
+        </span>
+      </div>
+      <input type="range" id="fb-slider" min="1" max="1000" value="10">
+    </div>
+
+    <div class="preview-box">
+      <div class="preview-row">
+        <span class="prev-label">Kurs</span>
+        <span class="prev-val" id="fb-prev-odds">—</span>
+      </div>
+      <div class="preview-row">
+        <span class="prev-label">Szansa</span>
+        <span class="prev-val" id="fb-prev-prob">—</span>
+      </div>
+      <div class="preview-row">
+        <span class="prev-label">Możliwa wygrana</span>
+        <span class="prev-val" id="fb-prev-win">—</span>
+      </div>
+    </div>
+
+    <button class="btn-place btn-place-yes" id="fb-place">Postaw</button>
   </div>
 </div>
 
@@ -4647,8 +4735,10 @@ function switchTab(tab) {
   const tH = document.getElementById('tab-heroes');
   const tFp = document.getElementById('tab-flappy-test');
   const tBj = document.getElementById('tab-bug-jumper-test');
+  const tFb = document.getElementById('tab-football');
   hide(tFp);
   hide(tBj);
+  hide(tFb);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
@@ -4677,6 +4767,10 @@ function switchTab(tab) {
   } else if (tab === 'heroes') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); show(tH);
     loadHeroes();
+  } else if (tab === 'football') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    show(tFb);
+    loadFootball();
   } else if (tab === 'flappy-test') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     const panel = document.getElementById('seasonal-game-flappy-pants');
@@ -5657,6 +5751,13 @@ function setupRealtime() {
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'snake_weekly_awards' }, async () => {
       if (activeTab === 'whack-boss') loadSnakeState(false);
+      await refreshMeCoins();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'football_matches' }, () => {
+      if (activeTab === 'football') loadFootball(false);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'football_bets' }, async () => {
+      if (activeTab === 'football') loadFootball(false);
       await refreshMeCoins();
     })
     .subscribe();
@@ -8792,6 +8893,227 @@ async function invokeWhackBoss(payload) {
   if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Whack-a-Boss.');
   return data;
 }
+
+// ── Football / Mundial (fixed-odds vs house) ────────────────────────────────
+let footballMatches = [];
+let footballBets = [];
+let fbActiveMatch = null;
+let fbActivePick = null;
+let footballLoadSeq = 0;
+
+const footballGrid = document.getElementById('football-grid');
+const fbOverlay    = document.getElementById('fb-overlay');
+const fbMatchName  = document.getElementById('fb-match-name');
+const fbPickLine   = document.getElementById('fb-pick-line');
+const fbAmount     = document.getElementById('fb-amount');
+const fbSlider     = document.getElementById('fb-slider');
+const fbPrevOdds   = document.getElementById('fb-prev-odds');
+const fbPrevProb   = document.getElementById('fb-prev-prob');
+const fbPrevWin    = document.getElementById('fb-prev-win');
+const fbPlaceBtn   = document.getElementById('fb-place');
+
+const FB_PICK_LABELS = { '1': '1', 'X': 'X', '2': '2' };
+const FB_LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT', 'SUSP']);
+
+async function invokeFootball(payload) {
+  const { data, error } = await sb.functions.invoke('football-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z Mundial.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Mundial.');
+  return data;
+}
+
+function fbPickTeam(match, pick) {
+  return pick === '1' ? match.home_team : pick === '2' ? match.away_team : 'Remis';
+}
+
+function fbOddsFor(match, pick) {
+  return pick === '1' ? match.odds_home : pick === 'X' ? match.odds_draw : match.odds_away;
+}
+
+function fbProbFor(match, pick) {
+  return pick === '1' ? match.prob_home : pick === 'X' ? match.prob_draw : match.prob_away;
+}
+
+function fbIsBettable(match) {
+  return match.status === 'NS'
+    && new Date(match.kickoff).getTime() > Date.now()
+    && fbOddsFor(match, '1') && fbOddsFor(match, 'X') && fbOddsFor(match, '2');
+}
+
+function fbFormatKickoff(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('pl-PL', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+async function loadFootball(showSpinner = true) {
+  const seq = ++footballLoadSeq;
+  if (showSpinner && footballMatches.length === 0) footballGrid.replaceChildren(makeSpinner());
+  try {
+    const data = await invokeFootball({ action: 'state' });
+    if (seq !== footballLoadSeq) return;
+    footballMatches = data.matches || [];
+    footballBets = data.bets || [];
+    if (data.profile && typeof data.profile.coins === 'number') {
+      me.coins = data.profile.coins;
+      setText(headerCoins, me.coins);
+    }
+    renderFootball();
+  } catch (err) {
+    if (seq !== footballLoadSeq) return;
+    footballGrid.replaceChildren(el('p', { className: 'fb-no-odds' }, err.message || 'Nie udało się wczytać meczów.'));
+  }
+}
+
+function renderFootball() {
+  if (!footballMatches.length) {
+    footballGrid.replaceChildren(el('p', { className: 'fb-no-odds' },
+      'Brak meczów. Kursy i terminarz pojawią się po pierwszej synchronizacji z API.'));
+    return;
+  }
+  const betsByMatch = {};
+  footballBets.forEach(b => { (betsByMatch[b.match_id] ||= []).push(b); });
+  footballGrid.replaceChildren(...footballMatches.map(m => buildMatchCard(m, betsByMatch[m.id] || [])));
+}
+
+function buildMatchCard(match, myBets) {
+  const live = FB_LIVE_STATUSES.has(match.status);
+  const done = match.settled || ['FT', 'AET', 'PEN'].includes(match.status);
+  const bettable = fbIsBettable(match);
+  const showScore = live || done;
+
+  const statusBadge = el('span', {
+    className: 'fb-status-badge' + (live ? ' fb-status-live' : done ? ' fb-status-done' : ''),
+  }, live ? '🔴 NA ŻYWO' : done ? 'PO MECZU' : fbFormatKickoff(match.kickoff));
+
+  const teamNode = (name, logo) => el('div', { className: 'fb-team' },
+    logo ? el('img', { src: logo, alt: name, loading: 'lazy' }) : el('div', { className: 'fb-team-name' }, '⚽'),
+    el('div', { className: 'fb-team-name' }, name),
+  );
+
+  const centre = showScore && match.home_goals != null
+    ? el('div', { className: 'fb-score' }, match.home_goals + ' : ' + match.away_goals)
+    : el('div', { className: 'fb-vs' }, 'vs');
+
+  const oddsRow = el('div', { className: 'fb-odds' });
+  ['1', 'X', '2'].forEach(pick => {
+    const odds = fbOddsFor(match, pick);
+    const prob = fbProbFor(match, pick);
+    const btn = el('button', {
+      className: 'fb-odds-btn'
+        + (done && match.result === pick ? ' win' : ''),
+      disabled: !bettable || (me && me.coins < 1),
+    },
+      el('span', { className: 'fb-odds-label' }, FB_PICK_LABELS[pick]),
+      el('span', { className: 'fb-odds-val' }, odds ? Number(odds).toFixed(2) : '—'),
+      el('span', { className: 'fb-odds-prob' }, prob != null ? Math.round(prob * 100) + '%' : ''),
+    );
+    if (bettable) btn.addEventListener('click', () => openFootballBet(match.id, pick));
+    oddsRow.appendChild(btn);
+  });
+
+  const card = el('div', { className: 'market-card fb-card', 'data-fb-match': match.id },
+    el('div', { className: 'fb-card-head' }, statusBadge),
+    el('div', { className: 'fb-teams' }, teamNode(match.home_team, match.home_logo), centre, teamNode(match.away_team, match.away_logo)),
+  );
+
+  if (!bettable && !showScore) {
+    card.appendChild(el('div', { className: 'fb-no-odds' }, 'Kursy jeszcze niedostępne.'));
+  } else {
+    card.appendChild(oddsRow);
+  }
+
+  myBets.forEach(b => {
+    const cls = b.status === 'won' ? ' won' : b.status === 'lost' ? ' lost' : '';
+    const badge = el('div', { className: 'fb-bet-badge' + cls });
+    const stakeLine = 'Postawiłeś ' + b.stake + ' 🪙 na ' + fbPickTeam(match, b.pick)
+      + ' (kurs ' + Number(b.locked_odds).toFixed(2) + ')';
+    if (b.status === 'won') badge.append(stakeLine + ' → wygrana ', el('strong', {}, b.potential_payout + ' 🪙 ✅'));
+    else if (b.status === 'lost') badge.append(stakeLine + ' → przegrana ❌');
+    else if (b.status === 'void') badge.append(stakeLine + ' → mecz odwołany, zwrot stawki ↩️');
+    else badge.append(stakeLine + '. Wygrana → ', el('strong', {}, '~' + b.potential_payout + ' 🪙'));
+    card.appendChild(badge);
+  });
+
+  if (me && me.coins < 1 && bettable && !myBets.length) {
+    card.appendChild(el('div', { className: 'fb-no-odds' }, 'Brak coinów na zakład.'));
+  }
+
+  return card;
+}
+
+function fbSetAmount(value) {
+  let v = Math.floor(Number(value) || 0);
+  const max = Math.min(1000, me ? me.coins : 1000);
+  if (v < 1) v = 1;
+  if (v > max) v = max;
+  fbAmount.value = v;
+  fbSlider.max = Math.max(1, max);
+  fbSlider.value = v;
+  return v;
+}
+
+function openFootballBet(matchId, pick) {
+  if (!me || me.coins < 1) { showToast('❌ Brak coinów na zakład.'); return; }
+  fbActiveMatch = footballMatches.find(m => m.id === matchId);
+  if (!fbActiveMatch || !fbIsBettable(fbActiveMatch)) return;
+  fbActivePick = pick;
+  setText(fbMatchName, fbActiveMatch.home_team + ' — ' + fbActiveMatch.away_team);
+  setText(fbPickLine, 'Typ: ' + fbPickTeam(fbActiveMatch, pick) + ' · kurs ' + Number(fbOddsFor(fbActiveMatch, pick)).toFixed(2));
+  fbSetAmount(Math.min(10, me.coins));
+  refreshFootballModal();
+  show(fbOverlay);
+  document.body.style.overflow = 'hidden';
+}
+
+function refreshFootballModal() {
+  if (!fbActiveMatch) return;
+  const odds = Number(fbOddsFor(fbActiveMatch, fbActivePick));
+  const prob = fbProbFor(fbActiveMatch, fbActivePick);
+  const stake = fbSetAmount(fbAmount.value || fbSlider.value);
+  setText(fbPrevOdds, odds.toFixed(2));
+  setText(fbPrevProb, prob != null ? Math.round(prob * 100) + '%' : '—');
+  setText(fbPrevWin, '~' + Math.floor(stake * odds) + ' 🪙');
+  setText(fbPlaceBtn, 'Postaw ' + stake + ' 🪙 na ' + fbPickTeam(fbActiveMatch, fbActivePick));
+  fbPlaceBtn.disabled = stake < 1 || stake > me.coins;
+}
+
+function closeFootballModal() { hide(fbOverlay); document.body.style.overflow = ''; }
+
+fbSlider.addEventListener('input', () => { fbSetAmount(fbSlider.value); refreshFootballModal(); });
+fbAmount.addEventListener('input', () => { fbSetAmount(fbAmount.value); refreshFootballModal(); });
+fbAmount.addEventListener('blur', () => fbSetAmount(fbAmount.value));
+document.getElementById('fb-close').addEventListener('click', closeFootballModal);
+fbOverlay.addEventListener('click', e => { if (e.target === fbOverlay) closeFootballModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFootballModal(); });
+
+fbPlaceBtn.addEventListener('click', async () => {
+  if (!fbActiveMatch) return;
+  const stake = fbSetAmount(fbAmount.value || fbSlider.value);
+  if (!stake || stake > me.coins) return;
+  fbPlaceBtn.disabled = true;
+  setText(fbPlaceBtn, 'Wysyłam…');
+  try {
+    const data = await invokeFootball({
+      action: 'bet', matchId: Number(fbActiveMatch.id), pick: fbActivePick, stake,
+    });
+    footballMatches = data.matches || footballMatches;
+    footballBets = data.bets || footballBets;
+    if (data.profile && typeof data.profile.coins === 'number') {
+      me.coins = data.profile.coins;
+      setText(headerCoins, me.coins);
+    }
+    closeFootballModal();
+    renderFootball();
+    showToast('✅ Zakład przyjęty!');
+  } catch (err) {
+    fbPlaceBtn.disabled = false;
+    showToast('❌ ' + (err.message || 'Nie udało się postawić zakładu.'));
+    refreshFootballModal();
+  }
+});
 
 function whackBossDateOnly(value) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').slice(0, 10));

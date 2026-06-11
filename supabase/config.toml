@@ -12,3 +12,8 @@ verify_jwt = true
 
 [functions.snake-action]
 verify_jwt = true
+
+# verify_jwt is false so the hourly cron (x-cron-secret) and anonymous "state"
+# reads are allowed; the "bet" action validates the user JWT manually.
+[functions.football-action]
+verify_jwt = false
