@@ -3981,14 +3981,11 @@
             <div class="topup-card-title">📨 Nowe zgłoszenie</div>
             <ol class="topup-how">
               <li>Wpisz, ile coinów chcesz (= tyle samo Zappsów).</li>
-              <li>Podaj swój nick w Zappsach / kontakt, żeby admin wiedział od kogo.</li>
               <li>Przeka&#380; Zappsy adminowi i wy&#347;lij zg&#322;oszenie.</li>
               <li>Po zatwierdzeniu coiny pojawi&#261; si&#281; na koncie automatycznie. 🪙</li>
             </ol>
             <label class="field-label" for="topup-amount">Ile coinów (= Zappsów)</label>
             <input type="number" id="topup-amount" min="1" step="1" value="100" inputmode="numeric" autocomplete="off">
-            <label class="field-label" for="topup-contact">Twój nick w Zappsach / kontakt</label>
-            <input type="text" id="topup-contact" maxlength="200" placeholder="np. @mojnick" autocomplete="off">
             <button class="btn-primary" id="btn-topup-submit" style="margin-top:12px">Wyślij zgłoszenie</button>
           </div>
 
@@ -8471,20 +8468,16 @@ function buildTopupRow(r, adminView = false) {
 async function submitTopupRequest() {
   if (!me) { showToast('❌ Musisz być zalogowany.'); return; }
   const amountEl = document.getElementById('topup-amount');
-  const contactEl = document.getElementById('topup-contact');
   const btn = document.getElementById('btn-topup-submit');
   const amount = Math.floor(Number(amountEl.value) || 0);
   if (amount < 1) { showToast('❌ Podaj ile coinów (min. 1).'); amountEl.focus(); return; }
-  const contact = (contactEl.value || '').trim();
-  if (!contact) { showToast('❌ Podaj nick w Zappsach / kontakt.'); contactEl.focus(); return; }
 
   btn.disabled = true;
   const orig = btn.textContent;
   btn.textContent = 'Wysyłam…';
   try {
-    const { data, error } = await sb.rpc('request_coin_topup', { p_amount: amount, p_contact: contact });
+    const { data, error } = await sb.rpc('request_coin_topup', { p_amount: amount });
     if (error || !data?.ok) throw new Error(error?.message || 'rpc');
-    contactEl.value = '';
     showToast('✅ Zgłoszenie wysłane! Admin zatwierdzi je po przekazaniu Zappsów.');
     loadTopup();
   } catch (err) {
