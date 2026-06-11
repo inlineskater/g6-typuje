@@ -92,25 +92,51 @@ function deVig(oddsHome, oddsDraw, oddsAway) {
   return inv.map((v) => Math.round((v / sum) * 10000) / 10000);
 }
 
-// Extract decimal 1X2 odds from an event's bookmakers (prefer configured book).
+function median(nums) {
+  const s = [...nums].sort((a, b) => a - b);
+  const n = s.length;
+  if (!n) return null;
+  return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+}
+
+// Read one bookmaker's 1X2 (h2h) decimal prices, or null if incomplete.
+function readBookH2H(book, event) {
+  const market = (book.markets ?? []).find((m) => m.key === "h2h");
+  if (!market) return null;
+  let oHome = null, oDraw = null, oAway = null;
+  for (const o of market.outcomes ?? []) {
+    const price = asNum(o.price);
+    if (o.name === event.home_team) oHome = price;
+    else if (o.name === event.away_team) oAway = price;
+    else if (o.name === "Draw") oDraw = price;
+  }
+  return (oHome && oDraw && oAway) ? { oHome, oDraw, oAway } : null;
+}
+
+// Extract decimal 1X2 odds for an event. A single bookmaker can carry a stale or
+// erroneous line (e.g. Marathon Bet pricing a WC draw at 1.25), so by default we
+// take the MEDIAN across all bookmakers — robust to outliers. An explicit
+// ODDS_BOOKMAKER override is honored when that book has a complete h2h line.
 function extractH2H(event) {
   const books = event.bookmakers ?? [];
-  const ordered = PREFERRED_BOOKMAKER
-    ? [...books].sort((a, b) => (a.key === PREFERRED_BOOKMAKER ? -1 : b.key === PREFERRED_BOOKMAKER ? 1 : 0))
-    : books;
-  for (const book of ordered) {
-    const market = (book.markets ?? []).find((m) => m.key === "h2h");
-    if (!market) continue;
-    let oHome = null, oDraw = null, oAway = null;
-    for (const o of market.outcomes ?? []) {
-      const price = asNum(o.price);
-      if (o.name === event.home_team) oHome = price;
-      else if (o.name === event.away_team) oAway = price;
-      else if (o.name === "Draw") oDraw = price;
-    }
-    if (oHome && oDraw && oAway) return { oHome, oDraw, oAway, book: book.title ?? book.key };
+  if (PREFERRED_BOOKMAKER) {
+    const b = books.find((x) => x.key === PREFERRED_BOOKMAKER);
+    const t = b && readBookH2H(b, event);
+    if (t) return { ...t, book: b.title ?? b.key };
   }
-  return null;
+  const H = [], D = [], A = [];
+  for (const b of books) {
+    const t = readBookH2H(b, event);
+    if (!t) continue;
+    H.push(t.oHome); D.push(t.oDraw); A.push(t.oAway);
+  }
+  if (!H.length) return null;
+  return {
+    oHome: Math.round(median(H) * 1000) / 1000,
+    oDraw: Math.round(median(D) * 1000) / 1000,
+    oAway: Math.round(median(A) * 1000) / 1000,
+    book: `Konsensus (${H.length} bukm.)`,
+  };
 }
 
 // ── State (read) ─────────────────────────────────────────────────────────────
