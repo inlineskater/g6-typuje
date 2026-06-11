@@ -3170,7 +3170,7 @@
         <div class="ranking-card" data-detail="mundial">
           <div class="ranking-card-title">⚽ Mundial</div>
           <div class="ranking-card-body" id="mundial-preview-wrap">
-            <p class="lb-click-hint">Ranking typerów i bilans Bonka — kliknij, aby zobaczyć</p>
+            <p class="lb-click-hint">Ranking typerów i bilans Banku — kliknij, aby zobaczyć</p>
           </div>
         </div>
         <div class="ranking-card" data-detail="market-history">
@@ -9197,7 +9197,7 @@ function buildFootballStatsPanel(stats) {
       rankBtn,
     ),
     el('div', { className: 'fb-bonk-strip' },
-      bonkCell('🏦 Bonk ma', el('span', { className: 'fb-bonk-val' }, h.cashOnHand + ' 🪙'), 'kasa w kasynie'),
+      bonkCell('🏦 Bank ma', el('span', { className: 'fb-bonk-val' }, h.cashOnHand + ' 🪙'), 'kasa w kasynie'),
       bonkCell('📈 Zysk z graczy',
         el('span', { className: 'fb-bonk-val ' + profitCls }, (h.realizedProfit > 0 ? '+' : '') + h.realizedProfit + ' 🪙'),
         'z rozliczonych'),
@@ -9260,7 +9260,7 @@ async function renderMundialRankingDetail(body, closeModal) {
     el('span', { className: 'fb-bonk-val ' + (cls || '') }, valText),
   );
   const bonk = el('div', { className: 'fb-bonk-strip' },
-    bonkCell('🏦 Bonk ma', h.cashOnHand + ' 🪙'),
+    bonkCell('🏦 Bank ma', h.cashOnHand + ' 🪙'),
     bonkCell('📈 Zysk z graczy', (h.realizedProfit > 0 ? '+' : '') + h.realizedProfit + ' 🪙', profitCls),
     bonkCell('🎰 Obrót', h.totalWagered + ' 🪙'),
     bonkCell('⏳ W grze', h.openStake + ' 🪙'),
