@@ -1804,6 +1804,32 @@
     }
     .shop-section-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
     .shop-section-sub { font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+    /* ── Doładowanie (Zappsy → coiny) ── */
+    .topup-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; margin-top: 14px; }
+    .topup-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+    .topup-card-title { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+    .topup-how { margin: 0 0 12px 18px; padding: 0; font-size: 12px; color: var(--muted); line-height: 1.7; }
+    .topup-card .field-label { margin-top: 10px; }
+    .topup-card input { width: 100%; }
+    .topup-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between;
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: var(--surface); }
+    .topup-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .topup-row-amount { font-size: 15px; font-weight: 800; }
+    .topup-row-meta { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+    .topup-badge { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .topup-badge.pending  { color: var(--accent); background: var(--acc-dim); border: 1px solid var(--border-hi); }
+    .topup-badge.approved { color: var(--yes); background: var(--yes-dim); border: 1px solid var(--yes-line); }
+    .topup-badge.rejected { color: var(--no); background: var(--no-dim); border: 1px solid var(--no-line); }
+    .topup-actions { display: flex; gap: 6px; }
+    .topup-btn { font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; padding: 6px 12px;
+      border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); transition: opacity .15s, border-color .15s; }
+    .topup-btn:hover { opacity: .85; }
+    .topup-btn.approve { background: var(--yes); border-color: var(--yes); color: #fff; }
+    .topup-btn.reject  { background: var(--card); border-color: var(--no-line); color: var(--no); }
+    .topup-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .topup-admin { margin-top: 18px; border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px 18px; background: var(--acc-dim); }
+    .topup-empty { font-size: 12px; color: var(--muted); padding: 8px 2px; }
     .shop-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
@@ -3185,6 +3211,7 @@
         <button class="nav-tab" data-shop-target="shop-rewards-section">🎁 Nagrody</button>
         <button class="nav-tab" data-shop-target="hero-shop-section">🛡️ Herosi</button>
         <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ogródek</button>
+        <button class="nav-tab" data-shop-target="topup-section">💰 Doładowanie <span class="nav-hint-badge" aria-hidden="true">Nowe</span></button>
       </div>
     </div>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
@@ -3891,6 +3918,7 @@
         <button class="shop-category-filter" type="button" data-shop-target="hero-auctions-section">🔨 Aukcje</button>
         <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">🛡️ Herosi</button>
         <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🪴 Ogródek</button>
+        <button class="shop-category-filter" type="button" data-shop-target="topup-section">💰 Doładowanie</button>
       </div>
       <section class="shop-section" id="marketplace-section">
         <div class="shop-section-head">
@@ -3938,6 +3966,42 @@
         <div class="cosmetics-title">🪴 Ozdoby do ogródka</div>
         <div class="cosmetics-sub">Udekoruj swoją roślinkę — widoczne dla wszystkich w Zen Garden. Musisz mieć roślinę, żeby kupić.</div>
         <div class="cosmetics-grid" id="cosmetics-grid"></div>
+      </section>
+
+      <section class="shop-section" id="topup-section">
+        <div class="shop-section-head">
+          <div>
+            <div class="shop-section-title">💰 Doładowanie konta (Zappsy)</div>
+            <div class="shop-section-sub">Wymień <strong>Zappsy</strong> na coiny w grze — kurs stały <strong>1 zapps = 1 coin</strong>. Wypełnij zgłoszenie, ile coinów chcesz doładować, a admin po przekazaniu Zappsów ręcznie zatwierdzi i dopisze coiny na Twoje konto.</div>
+          </div>
+        </div>
+
+        <div class="topup-wrap">
+          <div class="topup-card">
+            <div class="topup-card-title">📨 Nowe zgłoszenie</div>
+            <ol class="topup-how">
+              <li>Wpisz, ile coinów chcesz (= tyle samo Zappsów).</li>
+              <li>Podaj swój nick w Zappsach / kontakt, żeby admin wiedział od kogo.</li>
+              <li>Przeka&#380; Zappsy adminowi i wy&#347;lij zg&#322;oszenie.</li>
+              <li>Po zatwierdzeniu coiny pojawi&#261; si&#281; na koncie automatycznie. 🪙</li>
+            </ol>
+            <label class="field-label" for="topup-amount">Ile coinów (= Zappsów)</label>
+            <input type="number" id="topup-amount" min="1" step="1" value="100" inputmode="numeric" autocomplete="off">
+            <label class="field-label" for="topup-contact">Twój nick w Zappsach / kontakt</label>
+            <input type="text" id="topup-contact" maxlength="200" placeholder="np. @mojnick" autocomplete="off">
+            <button class="btn-primary" id="btn-topup-submit" style="margin-top:12px">Wyślij zgłoszenie</button>
+          </div>
+
+          <div class="topup-card">
+            <div class="topup-card-title">📋 Twoje zgłoszenia</div>
+            <div id="topup-my-list"><div class="loading-center"><div class="spinner"></div></div></div>
+          </div>
+        </div>
+
+        <div id="topup-admin" class="topup-admin hidden">
+          <div class="topup-card-title">🛠️ Konsola admina — oczekujące zgłoszenia</div>
+          <div id="topup-admin-list"><div class="loading-center"><div class="spinner"></div></div></div>
+        </div>
       </section>
     </main>
   </div>
@@ -8017,6 +8081,7 @@ async function loadShop() {
   renderHeroAuctionAdmin();
   renderHeroAuctionGrid();
   renderMarketplaceGrid();
+  loadTopup();
 
   if (auctionTimerInterval) clearInterval(auctionTimerInterval);
   auctionTimerInterval = setInterval(() => {
@@ -8323,6 +8388,138 @@ function renderHeroAuctionGrid() {
 }
 
 // Shop realtime
+// ── Doładowanie (Zappsy → coiny) ────────────────────────────────────────────
+const TOPUP_STATUS = {
+  pending:  { cls: 'pending',  label: '⏳ Oczekuje' },
+  approved: { cls: 'approved', label: '✅ Zatwierdzone' },
+  rejected: { cls: 'rejected', label: '❌ Odrzucone' },
+};
+
+function fbTopupDate(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadTopup() {
+  const myList = document.getElementById('topup-my-list');
+  const adminBox = document.getElementById('topup-admin');
+  const adminList = document.getElementById('topup-admin-list');
+  if (!myList) return;
+  const isAdmin = me?.nick === 'admin';
+
+  const { data, error } = await sb
+    .from('coin_topup_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    myList.replaceChildren(el('p', { className: 'topup-empty' }, 'Nie udało się wczytać zgłoszeń.'));
+    return;
+  }
+  const rows = data || [];
+
+  // Player's own history (admin sees all rows, so filter to own here).
+  const mine = rows.filter(r => me && r.user_id === me.id);
+  if (!mine.length) {
+    myList.replaceChildren(el('p', { className: 'topup-empty' }, 'Nie masz jeszcze żadnych zgłoszeń.'));
+  } else {
+    myList.replaceChildren(...mine.map(buildTopupRow));
+  }
+
+  // Admin console — only admin can see other users' rows (RLS), and we gate UI too.
+  if (adminBox) adminBox.classList.toggle('hidden', !isAdmin);
+  if (isAdmin && adminList) {
+    const pending = rows.filter(r => r.status === 'pending')
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    if (!pending.length) {
+      adminList.replaceChildren(el('p', { className: 'topup-empty' }, 'Brak oczekujących zgłoszeń. 🎉'));
+    } else {
+      adminList.replaceChildren(...pending.map(r => buildTopupRow(r, true)));
+    }
+  }
+}
+
+function buildTopupRow(r, adminView = false) {
+  const st = TOPUP_STATUS[r.status] || TOPUP_STATUS.pending;
+  const meta = [];
+  if (adminView) meta.push('👤 ' + (r.nick_snapshot || '?'));
+  if (r.contact) meta.push('📇 ' + r.contact);
+  meta.push('🕒 ' + fbTopupDate(r.created_at));
+  if (r.status !== 'pending' && r.resolved_by) meta.push((r.status === 'approved' ? '✅' : '❌') + ' ' + r.resolved_by);
+  if (r.admin_note) meta.push('📝 ' + r.admin_note);
+
+  const row = el('div', { className: 'topup-row' },
+    el('div', { className: 'topup-row-main' },
+      el('span', { className: 'topup-row-amount' }, '+' + r.amount + ' 🪙'),
+      el('span', { className: 'topup-row-meta' }, meta.join(' · ')),
+    ),
+  );
+
+  if (adminView && r.status === 'pending') {
+    const approve = el('button', { className: 'topup-btn approve' }, 'Zatwierdź');
+    const reject = el('button', { className: 'topup-btn reject' }, 'Odrzuć');
+    approve.addEventListener('click', () => resolveTopup(r, true, [approve, reject]));
+    reject.addEventListener('click', () => resolveTopup(r, false, [approve, reject]));
+    row.appendChild(el('div', { className: 'topup-actions' }, approve, reject));
+  } else {
+    row.appendChild(el('span', { className: 'topup-badge ' + st.cls }, st.label));
+  }
+  return row;
+}
+
+async function submitTopupRequest() {
+  if (!me) { showToast('❌ Musisz być zalogowany.'); return; }
+  const amountEl = document.getElementById('topup-amount');
+  const contactEl = document.getElementById('topup-contact');
+  const btn = document.getElementById('btn-topup-submit');
+  const amount = Math.floor(Number(amountEl.value) || 0);
+  if (amount < 1) { showToast('❌ Podaj ile coinów (min. 1).'); amountEl.focus(); return; }
+  const contact = (contactEl.value || '').trim();
+  if (!contact) { showToast('❌ Podaj nick w Zappsach / kontakt.'); contactEl.focus(); return; }
+
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = 'Wysyłam…';
+  try {
+    const { data, error } = await sb.rpc('request_coin_topup', { p_amount: amount, p_contact: contact });
+    if (error || !data?.ok) throw new Error(error?.message || 'rpc');
+    contactEl.value = '';
+    showToast('✅ Zgłoszenie wysłane! Admin zatwierdzi je po przekazaniu Zappsów.');
+    loadTopup();
+  } catch (err) {
+    const msg = String(err.message || '');
+    showToast('❌ ' + (msg.includes('too_many_pending') ? 'Masz już 5 oczekujących zgłoszeń.'
+      : msg.includes('amount_too_big') ? 'Za duża kwota.'
+      : 'Nie udało się wysłać zgłoszenia.'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+async function resolveTopup(r, approve, btns) {
+  if (me?.nick !== 'admin') return;
+  let note = '';
+  if (!approve) note = (prompt('Powód odrzucenia (opcjonalnie):', '') || '').trim();
+  if (approve && !confirm('Zatwierdzić doładowanie +' + r.amount + ' 🪙 dla ' + (r.nick_snapshot || '?') + '?')) return;
+  btns.forEach(b => b.disabled = true);
+  try {
+    const { data, error } = await sb.rpc('resolve_coin_topup', { p_id: r.id, p_approve: approve, p_note: note });
+    if (error || !data?.ok) throw new Error(error?.message || 'rpc');
+    showToast(approve ? '✅ Zatwierdzono i dopisano coiny.' : '❌ Zgłoszenie odrzucone.');
+    refreshMeCoins();
+    loadTopup();
+  } catch (err) {
+    const msg = String(err.message || '');
+    showToast('❌ ' + (msg.includes('already_resolved') ? 'To zgłoszenie jest już rozliczone.' : 'Nie udało się rozliczyć.'));
+    btns.forEach(b => b.disabled = false);
+  }
+}
+
+const btnTopupSubmit = document.getElementById('btn-topup-submit');
+if (btnTopupSubmit) btnTopupSubmit.addEventListener('click', submitTopupRequest);
+
 function setupShopRealtime() {
   const reload = () => { if (activeTab === 'shop') loadShop(); };
   const ch = sb.channel('shop-db-changes')
@@ -8335,6 +8532,7 @@ function setupShopRealtime() {
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auction_bids' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_listings' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_bids' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'coin_topup_requests' }, reload)
     .subscribe();
   realtimeChannels.push(ch);
 }
