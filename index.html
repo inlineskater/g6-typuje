@@ -349,6 +349,25 @@
       text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
     .fb-no-odds { font-size: 12px; color: var(--muted); text-align: center; padding: 6px; }
     .fb-pick-line { font-size: 14px; font-weight: 700; color: var(--accent); margin: 2px 0 4px; }
+    .fb-stats { grid-column: 1 / -1; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    .fb-stats-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .fb-stats-title { font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .fb-stats-sub { font-size: 12px; color: var(--dim); font-weight: 600; margin-top: 2px; }
+    .fb-rank-link { font-size: 13px; font-weight: 700; color: var(--accent); background: none; border: none;
+      cursor: pointer; font-family: inherit; padding: 0; }
+    .fb-rank-link:hover { text-decoration: underline; }
+    .fb-stats-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+    .fb-stat-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .fb-stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    .fb-stat-nick { font-size: 13px; font-weight: 800; overflow-wrap: anywhere; }
+    .fb-stat-val { font-size: 11px; color: var(--dim); font-weight: 600; }
+    .fb-rank-wrap { overflow-x: auto; }
+    .fb-profit-pos { color: var(--yes); font-weight: 700; }
+    .fb-profit-neg { color: var(--no); font-weight: 700; }
+    .fb-rank-row-me td { background: var(--acc-dim); }
 
     .card-header {
       display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
@@ -3894,6 +3913,17 @@
     </div>
 
     <button class="btn-place btn-place-yes" id="fb-place">Postaw</button>
+  </div>
+</div>
+
+<!-- ── FOOTBALL RANKING MODAL ── -->
+<div id="fb-rank-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📊 Ranking Mundialu</span>
+      <button class="btn-close" id="fb-rank-close">✕</button>
+    </div>
+    <div class="fb-rank-wrap" id="fb-rank-body"></div>
   </div>
 </div>
 
@@ -8969,7 +8999,22 @@ function renderFootball() {
   }
   const betsByMatch = {};
   footballBets.forEach(b => { (betsByMatch[b.match_id] ||= []).push(b); });
-  footballGrid.replaceChildren(...footballMatches.map(m => buildMatchCard(m, betsByMatch[m.id] || [])));
+
+  // Upcoming/live first (kickoff asc, as loaded), finished at the bottom
+  // (most recent result first) behind a section divider.
+  const fbDone = m => m.settled || ['FT', 'AET', 'PEN'].includes(m.status);
+  const upcoming = footballMatches.filter(m => !fbDone(m));
+  const finished = footballMatches.filter(fbDone)
+    .sort((a, b) => new Date(b.kickoff) - new Date(a.kickoff));
+
+  const nodes = [];
+  if (footballBets.length) nodes.push(buildFootballStatsPanel(computeFootballPlayerStats()));
+  upcoming.forEach(m => nodes.push(buildMatchCard(m, betsByMatch[m.id] || [])));
+  if (finished.length) {
+    nodes.push(el('div', { className: 'markets-section-divider' }, 'Zakończone mecze'));
+    finished.forEach(m => nodes.push(buildMatchCard(m, betsByMatch[m.id] || [])));
+  }
+  footballGrid.replaceChildren(...nodes);
 }
 
 function buildMatchCard(match, matchBets) {
@@ -9057,6 +9102,101 @@ function buildFootballBetBadge(match, b) {
   return badge;
 }
 
+// ── Mundial stats + ranking ─────────────────────────────────────────────────
+function computeFootballPlayerStats() {
+  const byUser = new Map();
+  footballBets.forEach(b => {
+    let s = byUser.get(b.user_id);
+    if (!s) {
+      s = { user_id: b.user_id, nick: b.nick || '?', bets: 0, staked: 0,
+            wonPayout: 0, wonStake: 0, lostStake: 0, openStake: 0 };
+      byUser.set(b.user_id, s);
+    }
+    s.bets += 1;
+    s.staked += b.stake;
+    if (b.status === 'won') { s.wonPayout += b.potential_payout; s.wonStake += b.stake; }
+    else if (b.status === 'lost') s.lostStake += b.stake;
+    else if (b.status === 'open') s.openStake += b.stake;
+  });
+  const stats = [...byUser.values()];
+  stats.forEach(s => { s.profit = s.wonPayout - s.wonStake - s.lostStake; });
+  return stats;
+}
+
+function fbTopBy(stats, key) {
+  let best = null;
+  stats.forEach(s => { if (s[key] > 0 && (!best || s[key] > best[key])) best = s; });
+  return best;
+}
+
+function buildFootballStatsPanel(stats) {
+  const totalStaked = footballBets.reduce((a, b) => a + b.stake, 0);
+  const openStake = footballBets.reduce((a, b) => a + (b.status === 'open' ? b.stake : 0), 0);
+
+  const chip = (label, s, valText) => el('div', { className: 'fb-stat-chip' },
+    el('span', { className: 'fb-stat-label' }, label),
+    el('span', { className: 'fb-stat-nick' }, s ? s.nick : '—'),
+    el('span', { className: 'fb-stat-val' }, s ? valText(s) : 'jeszcze nikt'),
+  );
+
+  const rankBtn = el('button', { className: 'fb-rank-link' }, 'Pełny ranking →');
+  rankBtn.addEventListener('click', openFootballRanking);
+
+  return el('div', { className: 'fb-stats' },
+    el('div', { className: 'fb-stats-head' },
+      el('div', {},
+        el('div', { className: 'fb-stats-title' }, '📊 Statystyki Mundialu'),
+        el('div', { className: 'fb-stats-sub' },
+          footballBets.length + ' zakładów · ' + totalStaked + ' 🪙 postawione · ' + openStake + ' 🪙 w grze'),
+      ),
+      rankBtn,
+    ),
+    el('div', { className: 'fb-stats-chips' },
+      chip('🎯 Najwięcej typów', fbTopBy(stats, 'bets'), s => s.bets + ' zakładów'),
+      chip('💰 Najwięcej postawił', fbTopBy(stats, 'staked'), s => s.staked + ' 🪙'),
+      chip('🏆 Największy zysk', fbTopBy(stats, 'profit'), s => '+' + s.profit + ' 🪙'),
+      chip('💸 Najwięcej stracił', fbTopBy(stats, 'lostStake'), s => '−' + s.lostStake + ' 🪙'),
+    ),
+  );
+}
+
+const fbRankOverlay = document.getElementById('fb-rank-overlay');
+const fbRankBody = document.getElementById('fb-rank-body');
+
+function openFootballRanking() {
+  const stats = computeFootballPlayerStats()
+    .sort((a, b) => b.profit - a.profit || b.staked - a.staked || b.bets - a.bets);
+  if (!stats.length) {
+    fbRankBody.replaceChildren(el('p', { className: 'fb-no-odds' }, 'Brak zakładów.'));
+  } else {
+    const rows = stats.map((s, i) => el('tr', { className: me && s.user_id === me.id ? 'fb-rank-row-me' : '' },
+      el('td', {}, String(i + 1)),
+      el('td', {}, el('strong', {}, me && s.user_id === me.id ? s.nick + ' (Ty)' : s.nick)),
+      el('td', {}, String(s.bets)),
+      el('td', {}, s.staked + ' 🪙'),
+      el('td', {}, s.wonPayout + ' 🪙'),
+      el('td', {}, s.lostStake + ' 🪙'),
+      el('td', { className: s.profit > 0 ? 'fb-profit-pos' : s.profit < 0 ? 'fb-profit-neg' : '' },
+        (s.profit > 0 ? '+' : '') + s.profit + ' 🪙'),
+      el('td', {}, s.openStake + ' 🪙'),
+    ));
+    fbRankBody.replaceChildren(el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Gracz'), el('th', {}, 'Typy'),
+        el('th', {}, 'Postawione'), el('th', {}, 'Wygrane'), el('th', {}, 'Przegrane'),
+        el('th', {}, 'Bilans'), el('th', {}, 'Otwarte'),
+      )),
+      el('tbody', {}, ...rows),
+    ));
+  }
+  show(fbRankOverlay);
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFootballRanking() { hide(fbRankOverlay); document.body.style.overflow = ''; }
+document.getElementById('fb-rank-close').addEventListener('click', closeFootballRanking);
+fbRankOverlay.addEventListener('click', e => { if (e.target === fbRankOverlay) closeFootballRanking(); });
+
 function fbSetAmount(value) {
   let v = Math.floor(Number(value) || 0);
   const max = Math.min(1000, me ? me.coins : 1000);
@@ -9100,7 +9240,7 @@ fbAmount.addEventListener('input', () => { fbSetAmount(fbAmount.value); refreshF
 fbAmount.addEventListener('blur', () => fbSetAmount(fbAmount.value));
 document.getElementById('fb-close').addEventListener('click', closeFootballModal);
 fbOverlay.addEventListener('click', e => { if (e.target === fbOverlay) closeFootballModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFootballModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeFootballModal(); closeFootballRanking(); } });
 
 fbPlaceBtn.addEventListener('click', async () => {
   if (!fbActiveMatch) return;
