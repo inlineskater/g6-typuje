@@ -3930,7 +3930,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Najazd Faktur 📇</h2>
-                <p class="page-sub">Bronisz biura przed nawałą faktur. Stempel „ZAKSIĘGOWANO” strzela automatycznie — Ty tylko uciekaj i ustawiaj się tak, żeby księgować jak najwięcej.</p>
+                <p class="page-sub">Szybka, trudna runda 20 sekund. Stempel „ZAKSIĘGOWANO” strzela sam — Ty uciekasz przed rojem faktur, które gonią Cię prawie tak szybko jak biegniesz. Masz tylko 3 życia. Można zginąć!</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -3944,8 +3944,9 @@
               <ul>
                 <li><strong>Strzałki / WASD / swipe</strong> — biegaj księgowym 🧮 po biurze (8 kierunków).</li>
                 <li><strong>Stempel księguje sam</strong> najbliższą fakturę w zasięgu. <strong>+1 pkt</strong> za każdą zaksięgowaną fakturę 📄.</li>
-                <li>Masz <strong>5× Cierpliwość</strong>. Każda faktura, która Cię dopadnie, zabiera jedną — przy zerze runda się kończy.</li>
-                <li>Runda trwa 60 s. Najlepszy wynik tygodnia trafia do rankingu. Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
+                <li>Masz tylko <strong>3 życia ❤️</strong>. Każda faktura, która Cię dopadnie, zabiera jedno — przy zerze giniesz i runda się kończy.</li>
+                <li>„Faktury” pokazują, ile ich teraz goni Cię po ekranie. Pod koniec rundy roi się od nich — uważaj, żeby Cię nie osaczyły.</li>
+                <li>Runda trwa tylko <strong>20 s</strong>. Najlepszy wynik tygodnia trafia do rankingu. Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
               </ul>
             </div>
 
@@ -3955,16 +3956,16 @@
                 <div class="bj-stat-value" id="ih-score">0</div>
               </div>
               <div class="bj-stat">
-                <div class="bj-stat-label">Cierpliwość</div>
-                <div class="bj-stat-value" id="ih-hp">5</div>
+                <div class="bj-stat-label">Życie ❤️</div>
+                <div class="bj-stat-value" id="ih-hp">3</div>
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Czas</div>
-                <div class="bj-stat-value" id="ih-time">60.0</div>
+                <div class="bj-stat-value" id="ih-time">20.0</div>
               </div>
               <div class="bj-stat">
-                <div class="bj-stat-label">Ruchy</div>
-                <div class="bj-stat-value" id="ih-moves">0</div>
+                <div class="bj-stat-label">Faktury</div>
+                <div class="bj-stat-value" id="ih-threat">0</div>
               </div>
             </div>
 
@@ -4671,7 +4672,7 @@ const ihStatus        = document.getElementById('ih-status');
 const ihScoreEl       = document.getElementById('ih-score');
 const ihHpEl          = document.getElementById('ih-hp');
 const ihTimeEl        = document.getElementById('ih-time');
-const ihMovesEl       = document.getElementById('ih-moves');
+const ihThreatEl      = document.getElementById('ih-threat');
 const modalOverlay    = document.getElementById('modal-overlay');
 const modalMarketName = document.getElementById('modal-market-name');
 const sideYesBtn      = document.getElementById('side-yes-btn');
@@ -12134,20 +12135,20 @@ if (snArena) {
 // the invoice-horde-action Edge Function, so every constant below must match it.
 const IH_ARENA = 360;
 const IH_CS = IH_ARENA;
-const IH_TICK_MS = 100;
-const IH_DURATION_MS = 60000;
+const IH_TICK_MS = 80;
+const IH_DURATION_MS = 20000;
 const IH_MAX_TICKS = Math.floor(IH_DURATION_MS / IH_TICK_MS);
 const IH_MAX_DPR = 2;
-const IH_PLAYER_SPEED = 4;
+const IH_PLAYER_SPEED = 9;
 const IH_PLAYER_RADIUS = 10;
-const IH_ENEMY_SPEED = 2;
+const IH_ENEMY_SPEED = 8;
 const IH_ENEMY_RADIUS = 9;
 const IH_HIT_DIST2 = (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS) * (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS);
-const IH_FIRE_INTERVAL = 5;
-const IH_FIRE_RANGE = 90;
+const IH_FIRE_INTERVAL = 3;
+const IH_FIRE_RANGE = 84;
 const IH_FIRE_RANGE2 = IH_FIRE_RANGE * IH_FIRE_RANGE;
-const IH_START_HP = 5;
-const IH_MAX_SCORE = 80;
+const IH_START_HP = 3;
+const IH_MAX_SCORE = 60;
 const IH_DIRS = Object.freeze({
   U:  Object.freeze({ x: 0,  y: -1 }),
   D:  Object.freeze({ x: 0,  y: 1 }),
@@ -12166,7 +12167,7 @@ const ihKeys = { U: false, D: false, L: false, R: false };
 let ihStatScoreText = null;
 let ihStatHpText = null;
 let ihStatTimeText = null;
-let ihStatMovesText = null;
+let ihStatThreatText = null;
 
 function newInvoiceHordeRuntime() {
   return {
@@ -12220,8 +12221,8 @@ function ihClamp(v, lo, hi) {
 }
 
 function ihSpawnInterval(tick) {
-  // Must match spawnInterval() in invoice-horde-action; tunes the score ceiling.
-  return tick < 200 ? 18 : tick < 400 ? 13 : 10;
+  // Must match spawnInterval() in invoice-horde-action; tunes the difficulty.
+  return tick < 90 ? 9 : tick < 170 ? 6 : 4;
 }
 
 function ihSpawnEnemy(rng) {
@@ -12293,7 +12294,7 @@ function ihResetStatCache() {
   ihStatScoreText = null;
   ihStatHpText = null;
   ihStatTimeText = null;
-  ihStatMovesText = null;
+  ihStatThreatText = null;
 }
 
 function ihSetStats(force = false) {
@@ -12302,11 +12303,11 @@ function ihSetStats(force = false) {
   const scoreText = String(rt.score || 0);
   const hpText = String(Math.max(0, rt.hp || 0));
   const timeText = Math.max(0, remaining / 1000).toFixed(1);
-  const movesText = String(rt.moves || 0);
+  const threatText = String(rt.playing ? (rt.enemies?.length || 0) : 0);
   if (ihScoreEl && (force || scoreText !== ihStatScoreText)) { ihScoreEl.textContent = scoreText; ihStatScoreText = scoreText; }
   if (ihHpEl && (force || hpText !== ihStatHpText)) { ihHpEl.textContent = hpText; ihStatHpText = hpText; }
   if (ihTimeEl && (force || timeText !== ihStatTimeText)) { ihTimeEl.textContent = timeText; ihStatTimeText = timeText; }
-  if (ihMovesEl && (force || movesText !== ihStatMovesText)) { ihMovesEl.textContent = movesText; ihStatMovesText = movesText; }
+  if (ihThreatEl && (force || threatText !== ihStatThreatText)) { ihThreatEl.textContent = threatText; ihStatThreatText = threatText; }
 }
 
 function ihDurationText(ms) {

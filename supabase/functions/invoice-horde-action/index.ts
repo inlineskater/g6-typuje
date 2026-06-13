@@ -18,24 +18,24 @@ const db = databaseUrl
 
 // ── Simulation constants (must match the client in index.html) ──────────────
 const ARENA = 360;
-const TICK_MS = 100;
-const ROUND_DURATION_MS = 60_000;
-const ROUND_EXPIRES_SECONDS = 150;
-const MAX_TICKS = Math.floor(ROUND_DURATION_MS / TICK_MS); // 600
-const MAX_SCORE_PER_ROUND = 80; // anti-cheat ceiling; realistic top ~30-50
+const TICK_MS = 80;
+const ROUND_DURATION_MS = 20_000; // fast, hard 20-second round
+const ROUND_EXPIRES_SECONDS = 90;
+const MAX_TICKS = Math.floor(ROUND_DURATION_MS / TICK_MS); // 250
+const MAX_SCORE_PER_ROUND = 60; // anti-cheat ceiling; realistic top ~30-40
 const MAX_MOVES_PER_ROUND = 1200;
 const PRIZES = [100, 50, 25];
 
 const PLAYER_START = { x: 180, y: 180 };
-const PLAYER_SPEED = 4;
+const PLAYER_SPEED = 9;
 const PLAYER_RADIUS = 10;
-const ENEMY_SPEED = 2;
+const ENEMY_SPEED = 8; // nearly as fast as the player — you can be cornered
 const ENEMY_RADIUS = 9;
 const HIT_DIST2 = (PLAYER_RADIUS + ENEMY_RADIUS) * (PLAYER_RADIUS + ENEMY_RADIUS);
-const FIRE_INTERVAL = 5; // ticks between auto-fires
-const FIRE_RANGE = 90;
+const FIRE_INTERVAL = 3; // ticks between auto-fires
+const FIRE_RANGE = 84;
 const FIRE_RANGE2 = FIRE_RANGE * FIRE_RANGE;
-const START_HP = 5;
+const START_HP = 3;
 
 const DIRS = {
   U:  { x: 0,  y: -1 },
@@ -97,9 +97,9 @@ function clamp(v, lo, hi) {
 }
 
 function spawnInterval(tick) {
-  // Total spawns over a full round ≈ 46 → a perfect run tops out in the 40-50
-  // band, a typical run ~30-40 (the spec target). Mirrored in index.html.
-  return tick < 200 ? 18 : tick < 400 ? 13 : 10;
+  // Dense, ramping swarm over the 250-tick round; the final phase is the killer.
+  // Mirrored in index.html (ihSpawnInterval).
+  return tick < 90 ? 9 : tick < 170 ? 6 : 4;
 }
 
 function spawnEnemy(rng) {
