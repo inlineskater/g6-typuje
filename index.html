@@ -6899,7 +6899,23 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
 
   trades.forEach(t => {
     const title = t.markets?.title || 'Rynek';
-    events.push({ ts: new Date(t.created_at).getTime(), delta: -(+t.amount || 0), label: '📊 ' + title });
+    const amount = +t.amount || 0;
+    // Cash leaves but an open position of equal cost basis is acquired → net worth flat (lockDelta = +amount).
+    events.push({ ts: new Date(t.created_at).getTime(), delta: -amount, lockDelta: amount, label: '📊 ' + title });
+  });
+
+  // Release locked position value when a market the user bet on resolves AGAINST them:
+  // the cash already left at bet time, so resolution just zeroes the held position.
+  const resolvedLosing = {};
+  trades.forEach(t => {
+    if (!(t.markets?.resolved && t.markets?.resolution && t.side !== t.markets.resolution)) return;
+    const at = t.markets.resolved_at ? new Date(t.markets.resolved_at).getTime() : null;
+    if (!at) return;
+    const m = resolvedLosing[t.market_id] || (resolvedLosing[t.market_id] = { amount: 0, ts: at, title: t.markets.title || 'Rynek' });
+    m.amount += (+t.amount || 0);
+  });
+  Object.values(resolvedLosing).forEach(m => {
+    events.push({ ts: m.ts, delta: 0, lockDelta: -m.amount, label: '📉 ' + m.title + ' (przegrana)' });
   });
 
   // Inject per-market payout events at resolved_at time
@@ -6923,14 +6939,18 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
     const payout = Math.round(userWinningAmount + (totalWinningShares > 0 ? losingPot * userWinningShares / totalWinningShares : 0));
 
     if (payout > 0) {
-      events.push({ ts: resolvedAt, delta: payout, label: '💰 ' + market.title + ' (wypłata)' });
+      // Position liquidated (release the staked cost basis) and cash payout received;
+      // net worth changes by payout − stake (the realised P/L).
+      events.push({ ts: resolvedAt, delta: payout, lockDelta: -userWinningAmount, label: '💰 ' + market.title + ' (wypłata)' });
     }
   });
 
   games.forEach(g => {
     const bet = +g.bet || 0, won = +g.won || 0;
     const delta = g.game === 'poker_buy_in' ? -bet : g.game === 'poker_cashout' ? won : won - bet;
-    events.push({ ts: new Date(g.created_at).getTime(), delta, label: GAME_NAMES[g.game] || g.game });
+    // Poker buy-in/cash-out just moves cash to/from a held stack (net worth flat); slots/roulette are pure P/L.
+    const lockDelta = (g.game === 'poker_buy_in' || g.game === 'poker_cashout') ? -delta : 0;
+    events.push({ ts: new Date(g.created_at).getTime(), delta, lockDelta, label: GAME_NAMES[g.game] || g.game });
   });
   awards.forEach(a => {
     if (a.awarded_at) {
@@ -6940,6 +6960,13 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       events.push({ ts: new Date(a.awarded_at).getTime(), delta: +a.prize_coins || 0, label: (medals[a.rank - 1] || '') + ' Nagroda · ' + gameName });
     }
   });
+  // Value-neutral cash↔asset conversions (held items, garden accessories/certificate,
+  // auction escrow) keep net worth flat: lockDelta cancels the cash delta. Hero-item
+  // purchases, accessories & the garden certificate add to net_worth assets; auction
+  // reserve/refunds top up / release the escrow that becomes the won item (valued at the
+  // winning bid). Everything else (interest, awards, store redemptions, marketplace
+  // transfers, garden watering) is pure cash P/L that moves net worth.
+  const NEUTRAL = { hero_item_purchase: 1, garden_accessory: 1, garden_certificate: 1, hero_auction_bid_reserved: 1, hero_auction_outbid_refund: 1, hero_auction_edition_refund: 1 };
   coinTxs.forEach(t => {
     const label = t.reason === 'garden_water'
       ? '🌱 Podlewanie' + (t.meta?.streak > 1 ? ' (streak ' + t.meta.streak + ')' : '')
@@ -6958,7 +6985,8 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       : t.reason === 'garden_certificate'
       ? '📜 Certyfikat Drugiego Ogródka'
       : '🪙 ' + t.reason;
-    events.push({ ts: new Date(t.created_at).getTime(), delta: +t.delta, label });
+    const delta = +t.delta;
+    events.push({ ts: new Date(t.created_at).getTime(), delta, lockDelta: NEUTRAL[t.reason] ? -delta : 0, label });
   });
   // Mundial (football) bets live in football_bets, not coin_transactions: stake is
   // debited at bet time; a win credits potential_payout and a void refunds the stake.
@@ -6966,11 +6994,15 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
   footballBets.forEach(b => {
     const stake = +b.stake || 0;
     const pick = FB_PICK[b.pick] || b.pick || '';
-    events.push({ ts: new Date(b.created_at).getTime(), delta: -stake, label: '⚽ Mundial: zakład' + (pick ? ' (' + pick + ')' : '') });
+    // Open stake is a held position (net worth flat). Settlement releases the stake:
+    // win = +payout/−stake (P/L), void = stake refund (flat), loss = stake forfeited.
+    events.push({ ts: new Date(b.created_at).getTime(), delta: -stake, lockDelta: stake, label: '⚽ Mundial: zakład' + (pick ? ' (' + pick + ')' : '') });
     if (b.settled_at && b.status === 'won') {
-      events.push({ ts: new Date(b.settled_at).getTime(), delta: +b.potential_payout || 0, label: '⚽ Mundial: wygrana' });
+      events.push({ ts: new Date(b.settled_at).getTime(), delta: +b.potential_payout || 0, lockDelta: -stake, label: '⚽ Mundial: wygrana' });
     } else if (b.settled_at && b.status === 'void') {
-      events.push({ ts: new Date(b.settled_at).getTime(), delta: stake, label: '↩️ Mundial: zwrot' });
+      events.push({ ts: new Date(b.settled_at).getTime(), delta: stake, lockDelta: -stake, label: '↩️ Mundial: zwrot' });
+    } else if (b.settled_at && b.status === 'lost') {
+      events.push({ ts: new Date(b.settled_at).getTime(), delta: 0, lockDelta: -stake, label: '⚽ Mundial: przegrana' });
     }
   });
   // Residual = coins that moved before coin_transactions logging was introduced (pre-2026-05-21).
@@ -6981,11 +7013,14 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
   events.sort((a, b) => a.ts - b.ts);
 
   const startTs = createdAt ? new Date(createdAt).getTime() : (events[0]?.ts || Date.now());
-  const balancePoints = [{ ts: startTs, bal: 1000, label: 'Rejestracja', delta: null }];
-  let runBal = 1000;
+  // `bal` = cash over time; `lock` = value of held assets/positions over time (starts
+  // at 0). Net worth at any point = bal + lock, so it correctly starts at 1000 for all.
+  const balancePoints = [{ ts: startTs, bal: 1000, lock: 0, label: 'Rejestracja', delta: null }];
+  let runBal = 1000, runLock = 0;
   events.forEach(e => {
     runBal += e.delta;
-    balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, label: e.label, delta: e.delta, isGarden: e.isGarden });
+    runLock += (e.lockDelta || 0);
+    balancePoints.push({ ts: Math.max(e.ts, startTs + 1), bal: runBal, lock: Math.max(0, runLock), label: e.label, delta: e.delta, isGarden: e.isGarden });
   });
   const finalResidual = coins - runBal;
   if (finalResidual !== 0 && Math.abs(finalResidual) <= 5) {
@@ -7194,8 +7229,9 @@ async function loadCoinRace(seasonPromise) {
   const tradesByUser = byUser(allTrades), txByUser = byUser(coinTxRes.data), gamesByUser = byUser(gameRes.data);
   const footballByUser = byUser(footballRes.data);
   const awardsByUser = byUser(_seasonHistory || []);
-  // Per-user "poza gotówką" offset (net_worth − coins), added to the cash curve
-  // to approximate net worth over time (current holdings treated as constant).
+  // Per-user current "poza gotówką" offset (net_worth − coins). Used only to pin the
+  // net-worth curve's endpoint to the live leaderboard value; the rest of the curve
+  // uses the time-varying `lock` track reconstructed in buildBalancePoints.
   const offsetByUser = {};
   (lbRes.data || []).forEach(r => { offsetByUser[r.id] = Math.max(0, Math.round((+r.net_worth || 0) - (+r.coins || 0))); });
 
@@ -7209,8 +7245,13 @@ async function loadCoinRace(seasonPromise) {
       footballBets: footballByUser[p.id] || [],
     });
     if (points.length < 2) return;
-    const off = offsetByUser[p.id] || 0;
-    points.forEach(pt => { pt.balCash = pt.bal; pt.balNet = pt.bal + off; });
+    points.forEach(pt => { pt.balCash = pt.bal; pt.balNet = pt.bal + (pt.lock || 0); });
+    // Pin the final net-worth point to the live leaderboard value: the reconstructed
+    // lock values open positions at cost basis, while net_worth marks them to market,
+    // so the present-moment snapshot may differ slightly. Earlier points keep the
+    // time-varying reconstruction (net worth starts at 1000, no constant offset).
+    const last = points[points.length - 1];
+    last.balNet = last.balCash + (offsetByUser[p.id] || 0);
     series.push({ userId: p.id, nick: p.nick, color: `hsl(${Math.round(i * 360 / Math.max(1, n))}, 70%, 55%)`, points });
   });
 
