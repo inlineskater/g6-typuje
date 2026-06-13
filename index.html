@@ -12142,6 +12142,13 @@ const IH_FIRE_RANGE2 = IH_FIRE_RANGE * IH_FIRE_RANGE;
 const IH_START_HP = 1;
 const IH_ENEMY_CAP = 70;
 const IH_MAX_SCORE = 200;
+// „CF" mini-boss: multi-hit ticket, slower than the swarm but soaks several hits.
+const IH_BOSS_INTERVAL = 125; // ticks between boss spawns (~10s)
+const IH_BOSS_HP = 5;
+const IH_BOSS_SPEED = 4;
+const IH_BOSS_RADIUS = 16;
+const IH_BOSS_HIT_DIST2 = (IH_PLAYER_RADIUS + IH_BOSS_RADIUS) * (IH_PLAYER_RADIUS + IH_BOSS_RADIUS);
+const IH_BOSS_SCORE = 5;
 const IH_DIRS = Object.freeze({
   U:  Object.freeze({ x: 0,  y: -1 }),
   D:  Object.freeze({ x: 0,  y: 1 }),
@@ -12229,6 +12236,19 @@ function ihSpawnEnemy(rng) {
   else { x = IH_ARENA; y = t; }
   // pri is a cosmetic priority tint (Math.random, NOT the sim rng — no desync)
   return { x, y, px: x, py: y, pri: (Math.random() * 3) | 0 };
+}
+
+function ihSpawnBoss(rng) {
+  // Same two rng draws and edge mapping as ihSpawnEnemy — must match the
+  // spawnBoss() in invoice-horde-action.
+  const edge = Math.floor(rng() * 4);
+  const t = Math.floor(rng() * (IH_ARENA + 1));
+  let x, y;
+  if (edge === 0) { x = t; y = 0; }
+  else if (edge === 1) { x = t; y = IH_ARENA; }
+  else if (edge === 2) { x = 0; y = t; }
+  else { x = IH_ARENA; y = t; }
+  return { x, y, px: x, py: y, boss: true, hp: IH_BOSS_HP };
 }
 
 function ihDirCode(x, y) {
@@ -12421,6 +12441,32 @@ function ihDraw(now = performance.now()) {
     for (const e of rt.enemies) {
       const ex = e.px + (e.x - e.px) * alpha;
       const ey = e.py + (e.y - e.py) * alpha;
+      if (e.boss) {
+        // „CF" mini-boss — oversized red ticket with 👔, label and HP bar.
+        const bs = IH_BOSS_RADIUS * pulse;
+        ctx.save();
+        ctx.shadowColor = 'rgba(185,28,28,.7)'; ctx.shadowBlur = 12;
+        ihRoundRect(ctx, ex - bs, ey - bs * 0.82, bs * 2, bs * 1.64, 3.5);
+        ctx.fillStyle = '#7f1d1d'; ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 1.5; ctx.strokeStyle = '#fca5a5';
+        ihRoundRect(ctx, ex - bs, ey - bs * 0.82, bs * 2, bs * 1.64, 3.5); ctx.stroke();
+        // 👔 above
+        ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('👔', ex, ey - bs * 0.82 - 6);
+        // bold CF label
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 12px monospace';
+        ctx.fillText('CF', ex, ey + 1);
+        // HP bar under the ticket
+        const hpw = bs * 2;
+        const hpFrac = ihClamp(e.hp / IH_BOSS_HP, 0, 1);
+        ctx.fillStyle = 'rgba(0,0,0,.45)';
+        ctx.fillRect(ex - bs, ey + bs * 0.82 + 3, hpw, 3);
+        ctx.fillStyle = '#f87171';
+        ctx.fillRect(ex - bs, ey + bs * 0.82 + 3, hpw * hpFrac, 3);
+        ctx.restore();
+        continue;
+      }
       const s = IH_ENEMY_RADIUS * pulse;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
@@ -12671,6 +12717,9 @@ function ihStep() {
   if (nextTick % ihSpawnInterval(nextTick) === 0 && rt.enemies.length < IH_ENEMY_CAP) {
     rt.enemies.push(ihSpawnEnemy(rt.rng));
   }
+  if (nextTick % IH_BOSS_INTERVAL === 0 && rt.enemies.length < IH_ENEMY_CAP) {
+    rt.enemies.push(ihSpawnBoss(rt.rng));
+  }
 
   // 4. move enemies toward player
   for (const e of rt.enemies) {
@@ -12679,8 +12728,9 @@ function ihStep() {
     const dy = p.y - e.y;
     const d = ihIsqrt(dx * dx + dy * dy);
     if (d > 0) {
-      e.x += Math.trunc((dx * IH_ENEMY_SPEED) / d);
-      e.y += Math.trunc((dy * IH_ENEMY_SPEED) / d);
+      const sp = e.boss ? IH_BOSS_SPEED : IH_ENEMY_SPEED;
+      e.x += Math.trunc((dx * sp) / d);
+      e.y += Math.trunc((dy * sp) / d);
     }
   }
 
@@ -12690,7 +12740,8 @@ function ihStep() {
   for (const e of rt.enemies) {
     const dx = p.x - e.x;
     const dy = p.y - e.y;
-    if (dx * dx + dy * dy <= IH_HIT_DIST2) {
+    const hd2 = e.boss ? IH_BOSS_HIT_DIST2 : IH_HIT_DIST2;
+    if (dx * dx + dy * dy <= hd2) {
       rt.hp -= 1;
       if (rt.hp <= 0) { died = true; break; }
     } else {
@@ -12720,9 +12771,18 @@ function ihStep() {
     if (bestIdx >= 0) {
       const target = rt.enemies[bestIdx];
       rt.shotFx = { fx: p.x, fy: p.y, tx: target.x, ty: target.y, at: performance.now() };
-      ihBurst(rt, target.x, target.y);
-      rt.enemies.splice(bestIdx, 1);
-      rt.score = Math.min(IH_MAX_SCORE, rt.score + 1);
+      if (target.boss) {
+        target.hp -= 1;
+        ihBurst(rt, target.x, target.y);
+        if (target.hp <= 0) {
+          rt.enemies.splice(bestIdx, 1);
+          rt.score = Math.min(IH_MAX_SCORE, rt.score + IH_BOSS_SCORE);
+        }
+      } else {
+        ihBurst(rt, target.x, target.y);
+        rt.enemies.splice(bestIdx, 1);
+        rt.score = Math.min(IH_MAX_SCORE, rt.score + 1);
+      }
     }
   }
 

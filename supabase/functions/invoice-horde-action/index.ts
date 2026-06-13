@@ -40,6 +40,14 @@ const FIRE_RANGE = 66; // modest — a camper can't hold a full ring; you must k
 const FIRE_RANGE2 = FIRE_RANGE * FIRE_RANGE;
 const START_HP = 1; // one hit = over
 const ENEMY_CAP = 70; // bound the swarm (replay cost + difficulty ceiling)
+// „CF" mini-boss: a multi-hit ticket that appears periodically. Slower than the
+// swarm (kiteable) but soaks several script hits; killing it pays BOSS_SCORE.
+const BOSS_INTERVAL = 125; // ticks between boss spawns (~10s)
+const BOSS_HP = 5; // script hits to kill
+const BOSS_SPEED = 4; // slower than the swarm (ENEMY_SPEED)
+const BOSS_RADIUS = 16; // bigger hitbox
+const BOSS_HIT_DIST2 = (PLAYER_RADIUS + BOSS_RADIUS) * (PLAYER_RADIUS + BOSS_RADIUS);
+const BOSS_SCORE = 5; // points awarded on boss kill
 
 const DIRS = {
   U:  { x: 0,  y: -1 },
@@ -116,6 +124,18 @@ function spawnEnemy(rng) {
   return { x: ARENA, y: t };
 }
 
+function spawnBoss(rng) {
+  // Same two rng draws and edge mapping as spawnEnemy — must match index.html.
+  const edge = Math.floor(rng() * 4);
+  const t = Math.floor(rng() * (ARENA + 1));
+  let x, y;
+  if (edge === 0) { x = t; y = 0; }
+  else if (edge === 1) { x = t; y = ARENA; }
+  else if (edge === 2) { x = 0; y = t; }
+  else { x = ARENA; y = t; }
+  return { x, y, boss: true, hp: BOSS_HP };
+}
+
 function parseMoves(value) {
   if (!Array.isArray(value)) throw gameError("Brak zapisu ruchów rundy.");
   if (value.length > MAX_MOVES_PER_ROUND) throw gameError("Za dużo ruchów w rundzie.");
@@ -162,6 +182,9 @@ function replayInvoiceHorde(seed, moves, untilTick) {
     if (tick % spawnInterval(tick) === 0 && enemies.length < ENEMY_CAP) {
       enemies.push(spawnEnemy(rng));
     }
+    if (tick % BOSS_INTERVAL === 0 && enemies.length < ENEMY_CAP) {
+      enemies.push(spawnBoss(rng));
+    }
 
     // 4. move enemies toward player
     for (const e of enemies) {
@@ -169,8 +192,9 @@ function replayInvoiceHorde(seed, moves, untilTick) {
       const dy = player.y - e.y;
       const d = isqrt(dx * dx + dy * dy);
       if (d > 0) {
-        e.x += Math.trunc((dx * ENEMY_SPEED) / d);
-        e.y += Math.trunc((dy * ENEMY_SPEED) / d);
+        const sp = e.boss ? BOSS_SPEED : ENEMY_SPEED;
+        e.x += Math.trunc((dx * sp) / d);
+        e.y += Math.trunc((dy * sp) / d);
       }
     }
 
@@ -179,7 +203,8 @@ function replayInvoiceHorde(seed, moves, untilTick) {
     for (const e of enemies) {
       const dx = player.x - e.x;
       const dy = player.y - e.y;
-      if (dx * dx + dy * dy <= HIT_DIST2) {
+      const hd2 = e.boss ? BOSS_HIT_DIST2 : HIT_DIST2;
+      if (dx * dx + dy * dy <= hd2) {
         hp -= 1;
         if (hp <= 0) { diedAtTick = tick; break; }
       } else {
@@ -189,7 +214,7 @@ function replayInvoiceHorde(seed, moves, untilTick) {
     enemies = survivors;
     if (diedAtTick != null) break;
 
-    // 6. auto-fire: nearest enemy in range is booked (+1)
+    // 6. auto-fire: nearest enemy in range is booked (+1; boss soaks BOSS_HP hits)
     if (tick % FIRE_INTERVAL === 0 && enemies.length) {
       let bestIdx = -1;
       let bestD2 = FIRE_RANGE2 + 1;
@@ -200,8 +225,17 @@ function replayInvoiceHorde(seed, moves, untilTick) {
         if (d2 <= FIRE_RANGE2 && d2 < bestD2) { bestD2 = d2; bestIdx = i; }
       }
       if (bestIdx >= 0) {
-        enemies.splice(bestIdx, 1);
-        kills = Math.min(MAX_SCORE_PER_ROUND, kills + 1);
+        const target = enemies[bestIdx];
+        if (target.boss) {
+          target.hp -= 1;
+          if (target.hp <= 0) {
+            enemies.splice(bestIdx, 1);
+            kills = Math.min(MAX_SCORE_PER_ROUND, kills + BOSS_SCORE);
+          }
+        } else {
+          enemies.splice(bestIdx, 1);
+          kills = Math.min(MAX_SCORE_PER_ROUND, kills + 1);
+        }
       }
     }
   }
