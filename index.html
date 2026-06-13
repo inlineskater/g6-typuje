@@ -368,6 +368,16 @@
     .fb-stat-nick { font-size: 13px; font-weight: 800; overflow-wrap: anywhere; }
     .fb-stat-val { font-size: 11px; color: var(--dim); font-weight: 600; }
     .fb-rank-wrap { overflow-x: auto; }
+    .fb-legend { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+    .fb-legend summary { cursor: pointer; padding: 9px 12px; font-size: 12px; font-weight: 700; color: var(--muted); list-style: none; user-select: none; }
+    .fb-legend summary::-webkit-details-marker { display: none; }
+    .fb-legend summary::before { content: '▸ '; }
+    .fb-legend[open] summary::before { content: '▾ '; }
+    .fb-legend[open] summary { border-bottom: 1px solid var(--border); }
+    .fb-legend-body { padding: 10px 12px; }
+    .fb-legend-body p { font-size: 12px; color: var(--muted); margin: 0 0 7px; line-height: 1.5; }
+    .fb-legend-body p:last-child { margin-bottom: 0; }
+    .fb-legend-body strong { color: var(--text); font-weight: 700; }
     .fb-profit-pos { color: var(--yes); font-weight: 700; }
     .fb-profit-neg { color: var(--no); font-weight: 700; }
     .fb-rank-row-me td { background: var(--acc-dim); }
@@ -9568,6 +9578,10 @@ function buildMatchCard(match, matchBets) {
       className: 'fb-odds-btn'
         + (done && match.result === pick ? ' win' : ''),
       disabled: !bettable || (me && me.coins < 1),
+      title: odds
+        ? 'Kurs ' + Number(odds).toFixed(2) + ' — trafisz, dostajesz stawka × ' + Number(odds).toFixed(2)
+            + (prob != null ? '. ' + Math.round(prob * 100) + '% to szansa (uczciwa, po odjęciu marży bukmachera).' : '')
+        : 'Kurs jeszcze niedostępny',
     },
       el('span', { className: 'fb-odds-label' }, FB_PICK_LABELS[pick]),
       el('span', { className: 'fb-odds-val' }, odds ? Number(odds).toFixed(2) : '—'),
@@ -9684,6 +9698,31 @@ function fbBestWonBet(field) {
   return best;
 }
 
+// Plain-language explanations for the Mundial KPIs (users kept asking).
+const fbBankLegendRows = () => [
+  ['🏦 Bank ma', 'ile coinów Bank trzyma teraz z Mundialu — suma wszystkich postawionych stawek minus wypłacone wygrane. Bank bije i pali coiny: przegrane stawki przepadają, a wygrane są dopłacane.'],
+  ['📈 Zysk z graczy', 'wynik Banku z już rozliczonych meczów: przegrane stawki graczy minus wypłacone wygrane. Dodatni = Bank na plusie, ujemny = gracze wygrywają z Bankiem.'],
+  ['🎰 Obrót', 'łączna kwota postawiona we wszystkich zakładach (otwartych i rozliczonych razem).'],
+  ['⏳ W grze', 'suma stawek w meczach, które jeszcze się nie rozliczyły. „Ryzyko wypłaty" to ile Bank musiałby wypłacić, gdyby wszystkie te zakłady trafiły.'],
+];
+const fbTableLegendRows = () => [
+  ['Typy', 'liczba postawionych zakładów.'],
+  ['Trafione', 'trafione ÷ rozliczone (np. 3/5 = 3 wygrane z 5 zakończonych meczów).'],
+  ['Trafność', 'procent trafionych spośród rozliczonych zakładów.'],
+  ['ROI', 'zwrot z postawionej kasy: zysk ÷ postawione. +50% znaczy, że z każdych 100 🪙 zysk wyniósł 50 🪙.'],
+  ['Bilans', 'łączny zysk lub strata z rozliczonych zakładów.'],
+  ['Postawione', 'łączna postawiona kwota.'],
+  ['W grze', 'stawki w meczach, które jeszcze nie zostały rozliczone.'],
+];
+function fbLegendDetails(rows) {
+  return el('details', { className: 'fb-legend' },
+    el('summary', {}, 'ℹ️ Co oznaczają te liczby?'),
+    el('div', { className: 'fb-legend-body' },
+      ...rows.map(([term, desc]) => el('p', {}, el('strong', {}, term), ' — ' + desc))
+    )
+  );
+}
+
 function buildFootballStatsPanel(stats) {
   const h = computeFootballHouseStats();
 
@@ -9735,6 +9774,7 @@ function buildFootballStatsPanel(stats) {
       chip('🔥 Największa wygrana', bigWin ? { nick: bigWin.nick } : null, () => '+' + bigWin.potential_payout + ' 🪙'),
       chip('🍀 Najszczęśliwszy kurs', luckyOdds ? { nick: luckyOdds.nick } : null, () => 'kurs ' + Number(luckyOdds.locked_odds).toFixed(2)),
     ),
+    fbLegendDetails(fbBankLegendRows()),
   );
 }
 
@@ -9768,11 +9808,14 @@ function buildFootballRankingTable(stats, sortKey = 'profit') {
   ));
   return el('table', { className: 'lb-table-compact' },
     el('thead', {}, el('tr', {},
-      el('th', {}, '#'), el('th', {}, 'Gracz'), el('th', {}, 'Typy'),
+      el('th', {}, '#'), el('th', {}, 'Gracz'),
+      el('th', { title: 'Liczba postawionych zakładów' }, 'Typy'),
       el('th', { title: 'Trafione / rozliczone' }, 'Trafione'),
-      el('th', { title: 'Skuteczność typera' }, 'Trafność'),
-      el('th', { title: 'Zwrot z postawionej kasy' }, 'ROI'),
-      el('th', {}, 'Bilans'), el('th', {}, 'Postawione'), el('th', {}, 'W grze'),
+      el('th', { title: 'Procent trafionych z rozliczonych' }, 'Trafność'),
+      el('th', { title: 'Zwrot z postawionej kasy: zysk ÷ postawione' }, 'ROI'),
+      el('th', { title: 'Łączny zysk/strata z rozliczonych zakładów' }, 'Bilans'),
+      el('th', { title: 'Łączna postawiona kwota' }, 'Postawione'),
+      el('th', { title: 'Stawki w nierozliczonych meczach' }, 'W grze'),
     )),
     el('tbody', {}, ...rows),
   );
@@ -9834,7 +9877,7 @@ async function renderMundialRankingCard() {
   const goBet = el('button', { className: 'fb-back-link' }, '⚽ Obstawiaj w Mundialu →');
   goBet.addEventListener('click', () => switchTab('football'));
 
-  wrap.replaceChildren(bonk, sortBar, tableWrap, goBet);
+  wrap.replaceChildren(bonk, sortBar, tableWrap, fbLegendDetails([...fbBankLegendRows(), ...fbTableLegendRows()]), goBet);
 }
 
 function fbSetAmount(value) {
