@@ -12223,7 +12223,7 @@ function ihClamp(v, lo, hi) {
 
 function ihSpawnInterval(tick) {
   // Must match spawnInterval() in invoice-horde-action; tunes the difficulty.
-  return tick < 100 ? 10 : tick < 220 ? 7 : tick < 360 ? 5 : tick < 520 ? 3 : 2;
+  return tick < 150 ? 10 : tick < 320 ? 7 : tick < 500 ? 5 : tick < 680 ? 3 : 2;
 }
 
 function ihSpawnEnemy(rng) {
