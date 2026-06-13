@@ -25,9 +25,10 @@ AS $$
     -- SEASONAL_OVERRIDES
     WHEN '2026-06-08' THEN 'bug_jumper'  -- Bug Jumper: Hard Course
     WHEN '2026-06-15' THEN 'snake'
+    WHEN '2026-06-22' THEN 'invoice_horde'  -- Najazd Faktur debut
     -- SEASONAL_ROTATION from SEASONAL_ANCHOR_WEEK_START (2026-05-18, a Monday)
-    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake'])[
-      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 4) + 1
+    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde'])[
+      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 5) + 1
     ]
   END;
 $$;
@@ -62,5 +63,13 @@ SELECT cron.schedule(
   '5 0 * * 1',
   $$SELECT CASE WHEN public.seasonal_game_for_week(public.snake_week_start(now() - interval '7 days')) = 'snake'
       THEN public.award_snake_week(public.snake_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+SELECT cron.schedule(
+  'invoice_horde_weekly_awards',
+  '5 0 * * 1',
+  $$SELECT CASE WHEN public.seasonal_game_for_week(public.invoice_horde_week_start(now() - interval '7 days')) = 'invoice_horde'
+      THEN public.award_invoice_horde_week(public.invoice_horde_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
