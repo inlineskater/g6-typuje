@@ -6483,11 +6483,11 @@ function buildCalibrationByUser(allTrades, marketsData) {
 }
 
 function lbCoinsCell(row) {
-  // "w grze" = money not in cash (open market positions + open Mundial stakes + poker stack)
+  // Wealth held outside free cash: open market/Mundial bets + poker stack + owned items/certificates.
   const locked = Math.max(0, Math.round((+row.net_worth || 0) - (+row.coins || 0)));
   return el('td', { className: 'lb-coins' },
     el('span', {}, fmtNum(row.coins) + ' 🪙'),
-    locked >= 1 ? el('span', { className: 'lb-locked' }, '+' + fmtNum(locked) + ' w grze') : null
+    locked >= 1 ? el('span', { className: 'lb-locked' }, '+' + fmtNum(locked) + ' poza gotówką') : null
   );
 }
 
@@ -7265,8 +7265,8 @@ function renderCoinRaceDetail(container) {
       ),
       el('div', { className: 'lb-legend' },
         el('p', {}, el('strong', {}, '🪙 Gotówka'), ' — wolne coiny, którymi możesz teraz obracać.'),
-        el('p', {}, el('strong', {}, '💎 Net Worth'), ' — cały majątek: gotówka + coiny zamrożone w otwartych zakładach (Mundial, rynki) i stacku pokera.'),
-        el('p', {}, el('strong', {}, '„w grze"'), ' — różnica między nimi: ile masz aktualnie postawione. To nie są stracone coiny.')
+        el('p', {}, el('strong', {}, '💎 Net Worth'), ' — cały majątek: gotówka + coiny w otwartych zakładach (Mundial, rynki), stack w pokerze oraz wartość Twoich przedmiotów i certyfikatów.'),
+        el('p', {}, el('strong', {}, '„poza gotówką"'), ' — różnica między nimi: postawione coiny plus wartość przedmiotów. To nie są stracone coiny.')
       ),
       el('p', { className: 'lb-click-hint' }, '👆 Kliknij gracza, aby zobaczyć historię coinów')
     );
@@ -7335,7 +7335,7 @@ function renderCoinRaceDetail(container) {
       body.append(el('div', { className: 'user-profile-stats' },
         el('div', { className: 'user-profile-stat' }, el('strong', {}, fmtNum(coins) + ' 🪙'), el('span', {}, 'Gotówka')),
         lbRow ? el('div', { className: 'user-profile-stat' }, el('strong', {}, fmtNum(lbRow.net_worth) + ' 🪙'), el('span', {}, 'Net Worth')) : null,
-        locked >= 1 ? el('div', { className: 'user-profile-stat' }, el('strong', { style: { color: 'var(--accent)' } }, '+' + fmtNum(locked) + ' 🪙'), el('span', {}, 'W grze')) : null,
+        locked >= 1 ? el('div', { className: 'user-profile-stat' }, el('strong', { style: { color: 'var(--accent)' } }, '+' + fmtNum(locked) + ' 🪙'), el('span', {}, 'Poza gotówką')) : null,
         el('div', { className: 'user-profile-stat' }, el('strong', { style: { color: gamePL >= 0 ? 'var(--yes)' : 'var(--no)' } }, (gamePL >= 0 ? '+' : '') + gamePL + ' 🪙'), el('span', {}, 'Gry P&L')),
         el('div', { className: 'user-profile-stat' }, el('strong', {}, '+' + awardsTotal + ' 🪙'), el('span', {}, 'Nagrody')),
         el('div', { className: 'user-profile-stat' }, el('strong', {}, String(trades.length)), el('span', {}, 'Zakładów'))
