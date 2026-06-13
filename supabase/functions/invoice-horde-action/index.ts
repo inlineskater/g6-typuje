@@ -19,23 +19,27 @@ const db = databaseUrl
 // ── Simulation constants (must match the client in index.html) ──────────────
 const ARENA = 360;
 const TICK_MS = 80;
-const ROUND_DURATION_MS = 20_000; // fast, hard 20-second round
-const ROUND_EXPIRES_SECONDS = 90;
-const MAX_TICKS = Math.floor(ROUND_DURATION_MS / TICK_MS); // 250
-const MAX_SCORE_PER_ROUND = 60; // anti-cheat ceiling; realistic top ~30-40
-const MAX_MOVES_PER_ROUND = 1200;
+// Survival mode (Devil-Daggers style): no fixed round length — you play until a
+// single invoice touches you. ROUND_DURATION_MS is just a hard safety cap for the
+// replay bound; in practice the swarm overwhelms you long before it.
+const ROUND_DURATION_MS = 60_000;
+const ROUND_EXPIRES_SECONDS = 120;
+const MAX_TICKS = Math.floor(ROUND_DURATION_MS / TICK_MS); // 750
+const MAX_SCORE_PER_ROUND = 200; // anti-cheat ceiling
+const MAX_MOVES_PER_ROUND = 2000;
 const PRIZES = [100, 50, 25];
 
 const PLAYER_START = { x: 180, y: 180 };
 const PLAYER_SPEED = 9;
 const PLAYER_RADIUS = 10;
-const ENEMY_SPEED = 8; // nearly as fast as the player — you can be cornered
+const ENEMY_SPEED = 7; // slower than you, so kiting buys time; still catches campers
 const ENEMY_RADIUS = 9;
 const HIT_DIST2 = (PLAYER_RADIUS + ENEMY_RADIUS) * (PLAYER_RADIUS + ENEMY_RADIUS);
-const FIRE_INTERVAL = 3; // ticks between auto-fires
-const FIRE_RANGE = 84;
+const FIRE_INTERVAL = 4; // ticks between auto-fires
+const FIRE_RANGE = 66; // modest — a camper can't hold a full ring; you must kite
 const FIRE_RANGE2 = FIRE_RANGE * FIRE_RANGE;
-const START_HP = 3;
+const START_HP = 1; // one hit = over
+const ENEMY_CAP = 70; // bound the swarm (replay cost + difficulty ceiling)
 
 const DIRS = {
   U:  { x: 0,  y: -1 },
@@ -97,9 +101,10 @@ function clamp(v, lo, hi) {
 }
 
 function spawnInterval(tick) {
-  // Dense, ramping swarm over the 250-tick round; the final phase is the killer.
+  // Ramps up relentlessly: sparse at first (learnable), then the spawn rate
+  // crosses the stamp's clear rate so a stationary player gets surrounded.
   // Mirrored in index.html (ihSpawnInterval).
-  return tick < 90 ? 9 : tick < 170 ? 6 : 4;
+  return tick < 60 ? 6 : tick < 140 ? 4 : tick < 240 ? 3 : 2;
 }
 
 function spawnEnemy(rng) {
@@ -153,8 +158,8 @@ function replayInvoiceHorde(seed, moves, untilTick) {
     player.x = clamp(player.x + pv.x * PLAYER_SPEED, 0, ARENA);
     player.y = clamp(player.y + pv.y * PLAYER_SPEED, 0, ARENA);
 
-    // 3. spawn
-    if (tick % spawnInterval(tick) === 0) {
+    // 3. spawn (capped — rng is only consumed when a spawn actually happens)
+    if (tick % spawnInterval(tick) === 0 && enemies.length < ENEMY_CAP) {
       enemies.push(spawnEnemy(rng));
     }
 
