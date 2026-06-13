@@ -3947,7 +3947,7 @@
                 <li><strong>Skrypt zamyka sam</strong> najbliższy ticket w zasięgu. <strong>+1 pkt</strong> za każde rozwiązane zgłoszenie 🎫.</li>
                 <li><strong>Jedno życie</strong> — wystarczy, że jeden ticket Cię dotknie i koniec. Nie da się przeżyć w nieskończoność: chodzi o to, ile zamkniesz, zanim zginiesz.</li>
                 <li>Sztuczka: <strong>uciekaj i ciągnij rój za sobą</strong> — wtedy skrypt kosi zgłoszenia z tyłu, a Ty masz czysto z przodu. Stanie w miejscu = osaczenie.</li>
-                <li>„Czas” liczy, ile przeżyłeś; „Tickety” — ile ich teraz Cię goni. Ranking: najwięcej rozwiązanych (przy remisie dłuższe przeżycie). Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
+                <li>„Tickety” pokazują, ile zgłoszeń teraz Cię goni. Liczy się tylko <strong>liczba rozwiązanych ticketów</strong> przed śmiercią. Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
               </ul>
             </div>
 
@@ -3955,10 +3955,6 @@
               <div class="bj-stat">
                 <div class="bj-stat-label">Rozwiązane</div>
                 <div class="bj-stat-value" id="ih-score">0</div>
-              </div>
-              <div class="bj-stat">
-                <div class="bj-stat-label">Czas (s)</div>
-                <div class="bj-stat-value" id="ih-time">0.0</div>
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Tickety</div>
@@ -4667,7 +4663,6 @@ const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
 const ihScoreEl       = document.getElementById('ih-score');
-const ihTimeEl        = document.getElementById('ih-time');
 const ihThreatEl      = document.getElementById('ih-threat');
 const modalOverlay    = document.getElementById('modal-overlay');
 const modalMarketName = document.getElementById('modal-market-name');
@@ -6504,7 +6499,7 @@ async function loadSeasonHistory() {
   try {
     const current = getCurrentSeasonalEntry();
     const currentDbWeekStart = current.weekStart; // DB now also Monday-start
-    const usesDuration = current.gameType === 'snake' || current.gameType === 'invoice_horde';
+    const usesDuration = current.gameType === 'snake';
     const liveScoreColumns = current.gameType === 'bug_jumper'
       ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
       : usesDuration
@@ -6519,9 +6514,9 @@ async function loadSeasonHistory() {
         .eq('course_id', BUG_JUMPER_HARD_COURSE_ID)
         .order('completion_ms', { ascending: true, nullsFirst: false });
     } else if (usesDuration) {
-      // snake: shorter time breaks ties; invoice_horde (survival): longer time wins
+      // snake: shorter time breaks score ties
       liveScoresQuery = liveScoresQuery
-        .order('duration_ms', { ascending: current.gameType !== 'invoice_horde' });
+        .order('duration_ms', { ascending: true });
     }
     if (!usesDuration) {
       liveScoresQuery = liveScoresQuery
@@ -12163,7 +12158,6 @@ let ihCtx = null;
 let ihRafId = null;
 const ihKeys = { U: false, D: false, L: false, R: false };
 let ihStatScoreText = null;
-let ihStatTimeText = null;
 let ihStatThreatText = null;
 
 function newInvoiceHordeRuntime() {
@@ -12311,19 +12305,14 @@ function ihElapsed(now = performance.now()) {
 
 function ihResetStatCache() {
   ihStatScoreText = null;
-  ihStatTimeText = null;
   ihStatThreatText = null;
 }
 
 function ihSetStats(force = false) {
   const rt = invoiceHordeRuntime || newInvoiceHordeRuntime();
-  // count up = survival time; freezes at the final value after death (tick > 0)
-  const elapsedMs = rt.playing ? ihElapsed() : (rt.tick ? rt.tick * IH_TICK_MS : 0);
   const scoreText = String(rt.score || 0);
-  const timeText = Math.max(0, elapsedMs / 1000).toFixed(1);
   const threatText = String(rt.playing ? (rt.enemies?.length || 0) : 0);
   if (ihScoreEl && (force || scoreText !== ihStatScoreText)) { ihScoreEl.textContent = scoreText; ihStatScoreText = scoreText; }
-  if (ihTimeEl && (force || timeText !== ihStatTimeText)) { ihTimeEl.textContent = timeText; ihStatTimeText = timeText; }
   if (ihThreatEl && (force || threatText !== ihStatThreatText)) { ihThreatEl.textContent = threatText; ihStatThreatText = threatText; }
 }
 
@@ -12573,12 +12562,11 @@ function renderInvoiceHordeTable(wrap, rows, mode) {
   const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
     el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
-    lbScoreCell(row),
-    el('td', { className: 'lb-net', title: 'Czas rundy' }, ihDurationText(row.duration_ms))
+    lbScoreCell(row)
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik' }, 'Wynik'), el('th', {}, 'Czas'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Rozwiązane tickety' }, 'Wynik'))),
       el('tbody', {}, ...bodyRows)
     )
   );
@@ -12839,7 +12827,7 @@ async function finishInvoiceHordeRound() {
     showToast('✅ Wynik zapisany: ' + data.score.score);
     if (ihStatus) {
       const reason = rt.endedReason ? ' · ' + rt.endedReason : '';
-      ihStatus.textContent = 'Ostatni wynik: ' + data.score.score + ' · ' + ihDurationText(data.score.duration_ms) + reason + '.';
+      ihStatus.textContent = 'Rozwiązane tickety: ' + data.score.score + reason + '.';
     }
   } catch (err) {
     showToast('❌ ' + err.message);
