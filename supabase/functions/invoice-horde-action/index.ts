@@ -32,10 +32,10 @@ const PRIZES = [100, 50, 25];
 const PLAYER_START = { x: 180, y: 180 };
 const PLAYER_SPEED = 9;
 const PLAYER_RADIUS = 10;
-const ENEMY_SPEED = 7; // slower than you, so kiting buys time; still catches campers
+const ENEMY_SPEED = 6; // slower than you, so kiting buys time; still catches campers
 const ENEMY_RADIUS = 9;
 const HIT_DIST2 = (PLAYER_RADIUS + ENEMY_RADIUS) * (PLAYER_RADIUS + ENEMY_RADIUS);
-const FIRE_INTERVAL = 4; // ticks between auto-fires
+const FIRE_INTERVAL = 3; // ticks between auto-fires
 const FIRE_RANGE = 66; // modest — a camper can't hold a full ring; you must kite
 const FIRE_RANGE2 = FIRE_RANGE * FIRE_RANGE;
 const START_HP = 1; // one hit = over
@@ -112,7 +112,7 @@ function spawnInterval(tick) {
   // Ramps up relentlessly: sparse at first (learnable), then the spawn rate
   // crosses the stamp's clear rate so a stationary player gets surrounded.
   // Mirrored in index.html (ihSpawnInterval).
-  return tick < 100 ? 8 : tick < 220 ? 6 : tick < 360 ? 4 : tick < 520 ? 3 : 2;
+  return tick < 100 ? 10 : tick < 220 ? 7 : tick < 360 ? 5 : tick < 520 ? 3 : 2;
 }
 
 function spawnEnemy(rng) {

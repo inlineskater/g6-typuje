@@ -22,9 +22,9 @@ const DIRS = {
 // ── CLIENT side (from index.html) ────────────────────────────────────────────
 const IH_ARENA = 360, IH_TICK_MS = 80, IH_DURATION_MS = 60000;
 const IH_MAX_TICKS = Math.floor(IH_DURATION_MS / IH_TICK_MS);
-const IH_PLAYER_SPEED = 9, IH_PLAYER_RADIUS = 10, IH_ENEMY_SPEED = 7, IH_ENEMY_RADIUS = 9;
+const IH_PLAYER_SPEED = 9, IH_PLAYER_RADIUS = 10, IH_ENEMY_SPEED = 6, IH_ENEMY_RADIUS = 9;
 const IH_HIT_DIST2 = (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS) * (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS);
-const IH_FIRE_INTERVAL = 4, IH_FIRE_RANGE = 66, IH_FIRE_RANGE2 = IH_FIRE_RANGE * IH_FIRE_RANGE;
+const IH_FIRE_INTERVAL = 3, IH_FIRE_RANGE = 66, IH_FIRE_RANGE2 = IH_FIRE_RANGE * IH_FIRE_RANGE;
 const IH_START_HP = 1, IH_ENEMY_CAP = 70, IH_MAX_SCORE = 200;
 const IH_BOSS_INTERVAL = 125, IH_BOSS_HP = 5, IH_BOSS_SPEED = 4, IH_BOSS_RADIUS = 16;
 const IH_BOSS_HIT_DIST2 = (IH_PLAYER_RADIUS + IH_BOSS_RADIUS) * (IH_PLAYER_RADIUS + IH_BOSS_RADIUS);
@@ -33,7 +33,7 @@ function ihMakeRng(seed) {
   let state = Number(seed || 1) >>> 0;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
-function ihSpawnInterval(tick) { return tick < 100 ? 8 : tick < 220 ? 6 : tick < 360 ? 4 : tick < 520 ? 3 : 2; }
+function ihSpawnInterval(tick) { return tick < 100 ? 10 : tick < 220 ? 7 : tick < 360 ? 5 : tick < 520 ? 3 : 2; }
 function ihSpawnEnemy(rng) {
   const edge = Math.floor(rng() * 4); const t = Math.floor(rng() * (IH_ARENA + 1));
   let x, y;
@@ -93,9 +93,9 @@ function clientReplay(seed, moves, untilTick) {
 const ARENA = 360, TICK_MS = 80, ROUND_DURATION_MS = 60000;
 const MAX_TICKS = Math.floor(ROUND_DURATION_MS / TICK_MS), MAX_SCORE_PER_ROUND = 200;
 const PLAYER_START = { x: 180, y: 180 }, PLAYER_SPEED = 9, PLAYER_RADIUS = 10;
-const ENEMY_SPEED = 7, ENEMY_RADIUS = 9;
+const ENEMY_SPEED = 6, ENEMY_RADIUS = 9;
 const HIT_DIST2 = (PLAYER_RADIUS + ENEMY_RADIUS) * (PLAYER_RADIUS + ENEMY_RADIUS);
-const FIRE_INTERVAL = 4, FIRE_RANGE = 66, FIRE_RANGE2 = FIRE_RANGE * FIRE_RANGE;
+const FIRE_INTERVAL = 3, FIRE_RANGE = 66, FIRE_RANGE2 = FIRE_RANGE * FIRE_RANGE;
 const START_HP = 1, ENEMY_CAP = 70;
 const BOSS_INTERVAL = 125, BOSS_HP = 5, BOSS_SPEED = 4, BOSS_RADIUS = 16;
 const BOSS_HIT_DIST2 = (PLAYER_RADIUS + BOSS_RADIUS) * (PLAYER_RADIUS + BOSS_RADIUS);
@@ -104,7 +104,7 @@ function makeRng(seed) {
   let state = seed >>> 0;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
-function spawnInterval(tick) { return tick < 100 ? 8 : tick < 220 ? 6 : tick < 360 ? 4 : tick < 520 ? 3 : 2; }
+function spawnInterval(tick) { return tick < 100 ? 10 : tick < 220 ? 7 : tick < 360 ? 5 : tick < 520 ? 3 : 2; }
 function spawnEnemy(rng) {
   const edge = Math.floor(rng() * 4); const t = Math.floor(rng() * (ARENA + 1));
   if (edge === 0) return { x: t, y: 0 };

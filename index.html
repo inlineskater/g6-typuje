@@ -12133,10 +12133,10 @@ const IH_MAX_TICKS = Math.floor(IH_DURATION_MS / IH_TICK_MS);
 const IH_MAX_DPR = 2;
 const IH_PLAYER_SPEED = 9;
 const IH_PLAYER_RADIUS = 10;
-const IH_ENEMY_SPEED = 7;
+const IH_ENEMY_SPEED = 6;
 const IH_ENEMY_RADIUS = 9;
 const IH_HIT_DIST2 = (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS) * (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS);
-const IH_FIRE_INTERVAL = 4;
+const IH_FIRE_INTERVAL = 3;
 const IH_FIRE_RANGE = 66;
 const IH_FIRE_RANGE2 = IH_FIRE_RANGE * IH_FIRE_RANGE;
 const IH_START_HP = 1;
@@ -12223,7 +12223,7 @@ function ihClamp(v, lo, hi) {
 
 function ihSpawnInterval(tick) {
   // Must match spawnInterval() in invoice-horde-action; tunes the difficulty.
-  return tick < 100 ? 8 : tick < 220 ? 6 : tick < 360 ? 4 : tick < 520 ? 3 : 2;
+  return tick < 100 ? 10 : tick < 220 ? 7 : tick < 360 ? 5 : tick < 520 ? 3 : 2;
 }
 
 function ihSpawnEnemy(rng) {
