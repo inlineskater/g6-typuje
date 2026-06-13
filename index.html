@@ -598,6 +598,7 @@
     .lb-nick { font-weight: 600; }
     .lb-nick.me { color: var(--accent); }
     .lb-coins { color: var(--muted); font-size: 13px; }
+    .lb-locked { display: block; font-size: 11px; color: var(--muted); opacity: 0.75; margin-top: 2px; }
     .lb-net { font-weight: 700; color: var(--yes); }
     .lb-bonus { color: #ffcf5a; font-weight: 700; font-size: 0.85em; margin-left: 1px; }
     .history-section { margin-top: 28px; }
@@ -6477,6 +6478,15 @@ function buildCalibrationByUser(allTrades, marketsData) {
   return result;
 }
 
+function lbCoinsCell(row) {
+  // "w grze" = money not in cash (open market positions + open Mundial stakes + poker stack)
+  const locked = Math.max(0, Math.round((+row.net_worth || 0) - (+row.coins || 0)));
+  return el('td', { className: 'lb-coins' },
+    el('span', {}, fmtNum(row.coins) + ' 🪙'),
+    locked >= 1 ? el('span', { className: 'lb-locked' }, '+' + fmtNum(locked) + ' w grze') : null
+  );
+}
+
 function renderLeaderboardTable(wrap, data, calibByUser = {}) {
   _lbData = data; _lbCalib = calibByUser;
   if (!data || data.length === 0) {
@@ -6486,7 +6496,7 @@ function renderLeaderboardTable(wrap, data, calibByUser = {}) {
   const rows = data.map((row, i) => el('tr', {},
     el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
     el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-    el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙'),
+    lbCoinsCell(row),
     el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
   ));
   wrap.replaceChildren(
@@ -7222,7 +7232,7 @@ function renderCoinRaceDetail(container) {
       const tr = el('tr', { className: 'lb-row-clickable' },
         el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
         el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-        el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙'),
+        lbCoinsCell(row),
         el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
       );
       tr.addEventListener('click', () => openUserProfile(row.id, row.nick, row.coins));
