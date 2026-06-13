@@ -6830,7 +6830,7 @@ function drawCoinChart(canvas, points) {
 // `trades` rows must include a nested `markets(title,resolved,resolution,resolved_at)`;
 // `allMarketTrades` holds every trade (any user) for the resolved markets this user won,
 // needed for the pro-rata payout math.
-function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [], coinTxs = [], awards = [], allMarketTrades = [] }) {
+function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [], coinTxs = [], awards = [], allMarketTrades = [], footballBets = [] }) {
   const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
   const resolvedWinningMarketIds = [...new Set(
     trades.filter(t => t.markets?.resolved && t.side === t.markets?.resolution).map(t => t.market_id)
@@ -6900,6 +6900,19 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       ? '📜 Certyfikat Drugiego Ogródka'
       : '🪙 ' + t.reason;
     events.push({ ts: new Date(t.created_at).getTime(), delta: +t.delta, label });
+  });
+  // Mundial (football) bets live in football_bets, not coin_transactions: stake is
+  // debited at bet time; a win credits potential_payout and a void refunds the stake.
+  const FB_PICK = { '1': 'gospodarze', 'X': 'remis', '2': 'goście' };
+  footballBets.forEach(b => {
+    const stake = +b.stake || 0;
+    const pick = FB_PICK[b.pick] || b.pick || '';
+    events.push({ ts: new Date(b.created_at).getTime(), delta: -stake, label: '⚽ Mundial: zakład' + (pick ? ' (' + pick + ')' : '') });
+    if (b.settled_at && b.status === 'won') {
+      events.push({ ts: new Date(b.settled_at).getTime(), delta: +b.potential_payout || 0, label: '⚽ Mundial: wygrana' });
+    } else if (b.settled_at && b.status === 'void') {
+      events.push({ ts: new Date(b.settled_at).getTime(), delta: stake, label: '↩️ Mundial: zwrot' });
+    }
   });
   // Residual = coins that moved before coin_transactions logging was introduced (pre-2026-05-21).
   const residual = coins - (1000 + events.reduce((s, e) => s + e.delta, 0));
@@ -7107,17 +7120,19 @@ async function loadCoinRace(seasonPromise) {
   if (!wrap) return;
   try { await (seasonPromise || loadSeasonHistory()); } catch {}
 
-  const [profRes, tradesRes, coinTxRes, gameRes] = await Promise.all([
+  const [profRes, tradesRes, coinTxRes, gameRes, footballRes] = await Promise.all([
     sb.from('profiles').select('id,nick,coins,created_at').neq('nick', 'admin'),
     sb.from('trades').select('user_id,created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').order('created_at', { ascending: true }).limit(10000),
     sb.from('coin_transactions').select('user_id,created_at,delta,reason,meta').order('created_at', { ascending: true }).limit(10000),
     sb.from('game_transactions').select('user_id,created_at,game,bet,won').neq('nick_snapshot', 'admin').order('created_at', { ascending: true }).limit(10000),
+    sb.from('football_bets').select('user_id,created_at,settled_at,pick,stake,potential_payout,status').order('created_at', { ascending: true }).limit(10000),
   ]);
 
   const profiles = profRes.data || [];
   const allTrades = tradesRes.data || [];
   const byUser = arr => { const m = {}; (arr || []).forEach(r => { (m[r.user_id] = m[r.user_id] || []).push(r); }); return m; };
   const tradesByUser = byUser(allTrades), txByUser = byUser(coinTxRes.data), gamesByUser = byUser(gameRes.data);
+  const footballByUser = byUser(footballRes.data);
   const awardsByUser = byUser(_seasonHistory || []);
 
   const n = profiles.length;
@@ -7127,6 +7142,7 @@ async function loadCoinRace(seasonPromise) {
       userId: p.id, coins: p.coins, createdAt: p.created_at,
       trades: tradesByUser[p.id] || [], games: gamesByUser[p.id] || [],
       coinTxs: txByUser[p.id] || [], awards: awardsByUser[p.id] || [], allMarketTrades: allTrades,
+      footballBets: footballByUser[p.id] || [],
     });
     if (points.length < 2) return;
     series.push({ userId: p.id, nick: p.nick, color: `hsl(${Math.round(i * 360 / Math.max(1, n))}, 70%, 55%)`, points });
@@ -7262,15 +7278,17 @@ function renderCoinRaceDetail(container) {
     body.append(backBtn, makeSpinner());
 
     try {
-      const [gamesRes, tradesRes, profileRes, coinTxRes] = await Promise.all([
+      const [gamesRes, tradesRes, profileRes, coinTxRes, footballRes] = await Promise.all([
         sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('trades').select('created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('profiles').select('created_at').eq('id', userId).single(),
         sb.from('coin_transactions').select('created_at,delta,reason,meta').eq('user_id', userId).order('created_at', { ascending: true }),
+        sb.from('football_bets').select('created_at,settled_at,pick,stake,potential_payout,status').eq('user_id', userId).order('created_at', { ascending: true }),
       ]);
       const games = gamesRes.data || [];
       const trades = tradesRes.data || [];
       const coinTxs = coinTxRes.data || [];
+      const footballBets = footballRes.data || [];
       const userAwards = (_seasonHistory || []).filter(a => a.user_id === userId);
       const profileCreatedAt = profileRes.data?.created_at;
 
@@ -7290,7 +7308,7 @@ function renderCoinRaceDetail(container) {
       // Replay every coin-affecting event into a running balance (shared helper).
       const balancePoints = buildBalancePoints({
         userId, coins, createdAt: profileCreatedAt,
-        trades, games, coinTxs, awards: userAwards, allMarketTrades,
+        trades, games, coinTxs, awards: userAwards, allMarketTrades, footballBets,
       });
 
       // Stats
