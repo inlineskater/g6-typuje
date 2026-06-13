@@ -33,7 +33,7 @@ function ihMakeRng(seed) {
   let state = Number(seed || 1) >>> 0;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
-function ihSpawnInterval(tick) { return tick < 80 ? 7 : tick < 180 ? 5 : tick < 300 ? 4 : tick < 440 ? 3 : 2; }
+function ihSpawnInterval(tick) { return tick < 100 ? 8 : tick < 220 ? 6 : tick < 360 ? 4 : tick < 520 ? 3 : 2; }
 function ihSpawnEnemy(rng) {
   const edge = Math.floor(rng() * 4); const t = Math.floor(rng() * (IH_ARENA + 1));
   let x, y;
@@ -104,7 +104,7 @@ function makeRng(seed) {
   let state = seed >>> 0;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
-function spawnInterval(tick) { return tick < 80 ? 7 : tick < 180 ? 5 : tick < 300 ? 4 : tick < 440 ? 3 : 2; }
+function spawnInterval(tick) { return tick < 100 ? 8 : tick < 220 ? 6 : tick < 360 ? 4 : tick < 520 ? 3 : 2; }
 function spawnEnemy(rng) {
   const edge = Math.floor(rng() * 4); const t = Math.floor(rng() * (ARENA + 1));
   if (edge === 0) return { x: t, y: 0 };

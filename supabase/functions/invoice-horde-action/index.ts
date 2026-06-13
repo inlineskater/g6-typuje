@@ -112,7 +112,7 @@ function spawnInterval(tick) {
   // Ramps up relentlessly: sparse at first (learnable), then the spawn rate
   // crosses the stamp's clear rate so a stationary player gets surrounded.
   // Mirrored in index.html (ihSpawnInterval).
-  return tick < 80 ? 7 : tick < 180 ? 5 : tick < 300 ? 4 : tick < 440 ? 3 : 2;
+  return tick < 100 ? 8 : tick < 220 ? 6 : tick < 360 ? 4 : tick < 520 ? 3 : 2;
 }
 
 function spawnEnemy(rng) {
