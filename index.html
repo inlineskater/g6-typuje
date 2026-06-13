@@ -722,6 +722,13 @@
     .lb-legend p { font-size: 12px; color: var(--muted); margin: 0 0 4px; line-height: 1.45; }
     .lb-legend p:last-child { margin-bottom: 0; }
     .lb-legend strong { color: var(--text); font-weight: 700; }
+    .nw-breakdown { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+    .nw-breakdown td { padding: 5px 6px; border-bottom: 1px solid var(--border); }
+    .nw-breakdown .nw-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+    .nw-breakdown .nw-subrow td { border-bottom: none; padding: 1px 6px 1px 20px; color: var(--muted); font-size: 12px; }
+    .nw-breakdown .nw-subval { text-align: right; font-variant-numeric: tabular-nums; }
+    .nw-breakdown .nw-total td { border-top: 2px solid var(--border-hi); border-bottom: none; font-weight: 800; font-size: 14px; padding-top: 8px; }
+    .nw-breakdown .nw-total .nw-val { color: var(--accent); }
     .season-history-section { padding: 10px 0; border-bottom: 1px solid var(--border); }
     .season-history-section:last-child { border-bottom: none; padding-bottom: 0; }
     .season-history-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -6491,6 +6498,42 @@ function lbCoinsCell(row) {
   );
 }
 
+// Renders the "Bilans Net Worth" breakdown from user_net_worth_breakdown() RPC:
+// every component that sums into net_worth, with the owned hero items itemized.
+function renderNetWorthBreakdown(container, b) {
+  const fmt = n => fmtNum(n) + ' 🪙';
+  const parts = [
+    ['🪙', 'Gotówka', b.cash, true],
+    ['📊', 'Pozycje na rynkach', b.market_positions, false],
+    ['⚽', 'Zakłady Mundial (otwarte)', b.football_open, false],
+    ['🃏', 'Stack w pokerze', b.poker_stack, false],
+    ['🎒', 'Przedmioty i certyfikaty', b.hero_items, false],
+    ['🌿', 'Akcesoria ogrodowe', b.accessories, false],
+  ];
+  const rows = [];
+  parts.forEach(([icon, label, val, always]) => {
+    if (!always && !val) return;
+    rows.push(el('tr', { className: 'nw-row' },
+      el('td', { className: 'nw-label' }, icon + ' ' + label),
+      el('td', { className: 'nw-val' }, fmt(+val || 0))
+    ));
+    if (label.startsWith('Przedmioty') && Array.isArray(b.items)) {
+      b.items.forEach(it => rows.push(el('tr', { className: 'nw-subrow' },
+        el('td', { className: 'nw-sublabel' }, '· ' + it.name + (it.source === 'auction' ? ' (aukcja)' : '')),
+        el('td', { className: 'nw-subval' }, fmt(+it.value || 0))
+      )));
+    }
+  });
+  rows.push(el('tr', { className: 'nw-total' },
+    el('td', {}, '💎 Net Worth'),
+    el('td', { className: 'nw-val' }, fmt(+b.total || 0))
+  ));
+  container.append(
+    el('div', { className: 'user-profile-section-title' }, 'Bilans Net Worth'),
+    el('table', { className: 'nw-breakdown' }, el('tbody', {}, ...rows))
+  );
+}
+
 function renderLeaderboardTable(wrap, data, calibByUser = {}) {
   _lbData = data; _lbCalib = calibByUser;
   if (!data || data.length === 0) {
@@ -7287,17 +7330,19 @@ function renderCoinRaceDetail(container) {
     body.append(backBtn, makeSpinner());
 
     try {
-      const [gamesRes, tradesRes, profileRes, coinTxRes, footballRes] = await Promise.all([
+      const [gamesRes, tradesRes, profileRes, coinTxRes, footballRes, breakdownRes] = await Promise.all([
         sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('trades').select('created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('profiles').select('created_at').eq('id', userId).single(),
         sb.from('coin_transactions').select('created_at,delta,reason,meta').eq('user_id', userId).order('created_at', { ascending: true }),
         sb.from('football_bets').select('created_at,settled_at,pick,stake,potential_payout,status').eq('user_id', userId).order('created_at', { ascending: true }),
+        sb.rpc('user_net_worth_breakdown', { p_uid: userId }),
       ]);
       const games = gamesRes.data || [];
       const trades = tradesRes.data || [];
       const coinTxs = coinTxRes.data || [];
       const footballBets = footballRes.data || [];
+      const breakdown = breakdownRes && !breakdownRes.error ? breakdownRes.data : null;
       const userAwards = (_seasonHistory || []).filter(a => a.user_id === userId);
       const profileCreatedAt = profileRes.data?.created_at;
 
@@ -7340,6 +7385,9 @@ function renderCoinRaceDetail(container) {
         el('div', { className: 'user-profile-stat' }, el('strong', {}, '+' + awardsTotal + ' 🪙'), el('span', {}, 'Nagrody')),
         el('div', { className: 'user-profile-stat' }, el('strong', {}, String(trades.length)), el('span', {}, 'Zakładów'))
       ));
+
+      // Net Worth breakdown — what counts toward this player's net worth
+      if (breakdown) renderNetWorthBreakdown(body, breakdown);
 
       // Chart — append first so offsetWidth resolves, then draw
       if (balancePoints.length >= 2) {
