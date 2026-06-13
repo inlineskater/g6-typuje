@@ -4305,7 +4305,9 @@ let hazardHistoryRows = [];
 let showAllTransactions = false;
 let showAllHazard = false;
 let _lbData = [], _lbCalib = {}, _hazardistaData = [];
+let _lbSort = 'net_worth';
 let _coinRaceSeries = [], _coinRaceBounds = null, _coinRaceRAF = new WeakMap();
+let _coinRaceRaw = [], _coinRaceMode = 'coins';
 let activeTab = 'markets';
 let pokerState = null;
 let pokerRealtimeReady = false;
@@ -7167,12 +7169,13 @@ async function loadCoinRace(seasonPromise) {
   if (!wrap) return;
   try { await (seasonPromise || loadSeasonHistory()); } catch {}
 
-  const [profRes, tradesRes, coinTxRes, gameRes, footballRes] = await Promise.all([
+  const [profRes, tradesRes, coinTxRes, gameRes, footballRes, lbRes] = await Promise.all([
     sb.from('profiles').select('id,nick,coins,created_at').neq('nick', 'admin'),
     sb.from('trades').select('user_id,created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').order('created_at', { ascending: true }).limit(10000),
     sb.from('coin_transactions').select('user_id,created_at,delta,reason,meta').order('created_at', { ascending: true }).limit(10000),
     sb.from('game_transactions').select('user_id,created_at,game,bet,won').neq('nick_snapshot', 'admin').order('created_at', { ascending: true }).limit(10000),
     sb.from('football_bets').select('user_id,created_at,settled_at,pick,stake,potential_payout,status').order('created_at', { ascending: true }).limit(10000),
+    sb.from('leaderboard').select('id,coins,net_worth'),
   ]);
 
   const profiles = profRes.data || [];
@@ -7181,6 +7184,10 @@ async function loadCoinRace(seasonPromise) {
   const tradesByUser = byUser(allTrades), txByUser = byUser(coinTxRes.data), gamesByUser = byUser(gameRes.data);
   const footballByUser = byUser(footballRes.data);
   const awardsByUser = byUser(_seasonHistory || []);
+  // Per-user "poza gotówką" offset (net_worth − coins), added to the cash curve
+  // to approximate net worth over time (current holdings treated as constant).
+  const offsetByUser = {};
+  (lbRes.data || []).forEach(r => { offsetByUser[r.id] = Math.max(0, Math.round((+r.net_worth || 0) - (+r.coins || 0))); });
 
   const n = profiles.length;
   const series = [];
@@ -7192,19 +7199,13 @@ async function loadCoinRace(seasonPromise) {
       footballBets: footballByUser[p.id] || [],
     });
     if (points.length < 2) return;
+    const off = offsetByUser[p.id] || 0;
+    points.forEach(pt => { pt.balCash = pt.bal; pt.balNet = pt.bal + off; });
     series.push({ userId: p.id, nick: p.nick, color: `hsl(${Math.round(i * 360 / Math.max(1, n))}, 70%, 55%)`, points });
   });
 
-  let tMin = Infinity, balMin = Infinity, balMax = -Infinity;
-  series.forEach(s => {
-    tMin = Math.min(tMin, s.points[0].ts);
-    s.points.forEach(p => { balMin = Math.min(balMin, p.bal); balMax = Math.max(balMax, p.bal); });
-  });
-  const tMax = Date.now();
-  if (!isFinite(tMin)) tMin = tMax - 86400000;
-  const padV = Math.max(50, (balMax - balMin) * 0.08);
-  _coinRaceSeries = series;
-  _coinRaceBounds = { tMin, tMax, yLo: balMin - padV, yHi: balMax + padV };
+  _coinRaceRaw = series;
+  applyCoinRaceMode(_coinRaceMode);
 
   let canvas = wrap.querySelector('.coin-race-canvas');
   if (!series.length) {
@@ -7215,10 +7216,30 @@ async function loadCoinRace(seasonPromise) {
   playCoinRace(canvas, { showLabels: true });
 }
 
+// Switch the coin-race between cash ('coins') and net worth ('net') by pointing
+// each series' active `bal` at balCash/balNet, then recomputing bounds.
+function applyCoinRaceMode(mode) {
+  _coinRaceMode = mode;
+  const series = _coinRaceRaw || [];
+  let tMin = Infinity, balMin = Infinity, balMax = -Infinity;
+  series.forEach(s => {
+    tMin = Math.min(tMin, s.points[0].ts);
+    s.points.forEach(p => {
+      p.bal = mode === 'net' ? p.balNet : p.balCash;
+      balMin = Math.min(balMin, p.bal); balMax = Math.max(balMax, p.bal);
+    });
+  });
+  const tMax = Date.now();
+  if (!isFinite(tMin)) tMin = tMax - 86400000;
+  const padV = Math.max(50, (balMax - balMin) * 0.08);
+  _coinRaceSeries = series;
+  _coinRaceBounds = { tMin, tMax, yLo: balMin - padV, yHi: balMax + padV };
+}
+
 // Larger coin-race view for the ranking detail modal: big chart, replay button,
 // and a legend sorted by current balance.
 function renderCoinRaceDetail(container) {
-  if (!_coinRaceSeries.length || !_coinRaceBounds) {
+  if (!_coinRaceRaw.length) {
     container.append(el('p', { style: { color: 'var(--muted)' } }, 'Brak danych.'));
     return;
   }
@@ -7226,15 +7247,35 @@ function renderCoinRaceDetail(container) {
   const replayBtn = el('button', { className: 'btn-ghost' }, '▶ Odtwórz ponownie');
   replayBtn.addEventListener('click', () => animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, { showLabels: true }));
 
-  const ranked = [..._coinRaceSeries].sort((a, b) => b.points[b.points.length - 1].bal - a.points[a.points.length - 1].bal);
-  const legend = el('div', { className: 'coin-race-legend' },
-    ...ranked.map(s => el('div', { className: 'coin-race-legend-item' },
+  const legend = el('div', { className: 'coin-race-legend' });
+  const renderLegend = () => {
+    const ranked = [..._coinRaceSeries].sort((a, b) => b.points[b.points.length - 1].bal - a.points[a.points.length - 1].bal);
+    legend.replaceChildren(...ranked.map(s => el('div', { className: 'coin-race-legend-item' },
       el('span', { className: 'coin-race-legend-swatch', style: { background: s.color } }),
       s.nick + ' · ' + fmtNum(Math.round(s.points[s.points.length - 1].bal)) + ' 🪙'
-    ))
+    )));
+  };
+
+  const modeBtn = (key, label) => {
+    const b = el('button', { className: 'fb-sort-btn' + (_coinRaceMode === key ? ' active' : '') }, label);
+    b.addEventListener('click', () => {
+      if (_coinRaceMode === key) return;
+      applyCoinRaceMode(key);
+      modeBar.querySelectorAll('.fb-sort-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      renderLegend();
+      animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, { showLabels: true });
+    });
+    return b;
+  };
+  const modeBar = el('div', { className: 'fb-sort-bar' },
+    el('span', { className: 'fb-sort-label' }, 'Pokaż:'),
+    modeBtn('coins', '🪙 Gotówka'),
+    modeBtn('net', '💎 Net Worth')
   );
 
-  container.append(replayBtn, canvas, legend);
+  renderLegend();
+  container.append(modeBar, replayBtn, canvas, legend);
   playCoinRace(canvas, { showLabels: true });
 }
 
@@ -7248,7 +7289,7 @@ function renderCoinRaceDetail(container) {
   function openModal(detail) {
     body.replaceChildren();
     if (detail === 'ranking') {
-      title.textContent = '🪙 Gotówka — Ranking';
+      title.textContent = '🏆 Ranking graczy';
       renderFullLeaderboard(body);
     } else if (detail === 'hazardista') {
       title.textContent = '🎰 Hazardista';
@@ -7291,7 +7332,8 @@ function renderCoinRaceDetail(container) {
   function renderFullLeaderboard(container) {
     const data = _lbData;
     if (!data || !data.length) { container.append(el('p', {}, 'Brak graczy.')); return; }
-    const rows = data.map((row, i) => {
+    const sorted = [...data].sort((a, b) => (+b[_lbSort] || 0) - (+a[_lbSort] || 0));
+    const rows = sorted.map((row, i) => {
       const tr = el('tr', { className: 'lb-row-clickable' },
         el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
         el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
@@ -7301,7 +7343,17 @@ function renderCoinRaceDetail(container) {
       tr.addEventListener('click', () => openUserProfile(row.id, row.nick, row.coins));
       return tr;
     });
+    const sortBtn = (key, label) => {
+      const b = el('button', { className: 'fb-sort-btn' + (_lbSort === key ? ' active' : '') }, label);
+      b.addEventListener('click', () => { if (_lbSort === key) return; _lbSort = key; container.replaceChildren(); renderFullLeaderboard(container); });
+      return b;
+    };
     container.append(
+      el('div', { className: 'fb-sort-bar' },
+        el('span', { className: 'fb-sort-label' }, 'Sortuj:'),
+        sortBtn('net_worth', '💎 Net Worth'),
+        sortBtn('coins', '🪙 Gotówka')
+      ),
       el('table', { className: 'lb-table' },
         el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, '🪙 Gotówka'), el('th', {}, '💎 Net Worth'))),
         el('tbody', {}, ...rows)
@@ -7325,7 +7377,7 @@ function renderCoinRaceDetail(container) {
     if (opts.wallet) {
       backBtn.addEventListener('click', closeModal);
     } else {
-      backBtn.addEventListener('click', () => { body.replaceChildren(); title.textContent = '🪙 Gotówka — Ranking'; renderFullLeaderboard(body); });
+      backBtn.addEventListener('click', () => { body.replaceChildren(); title.textContent = '🏆 Ranking graczy'; renderFullLeaderboard(body); });
     }
     body.append(backBtn, makeSpinner());
 
@@ -7389,15 +7441,28 @@ function renderCoinRaceDetail(container) {
       // Net Worth breakdown — what counts toward this player's net worth
       if (breakdown) renderNetWorthBreakdown(body, breakdown);
 
-      // Chart — append first so offsetWidth resolves, then draw
+      // Chart — append first so offsetWidth resolves, then draw.
+      // A toggle switches between cash and net worth (cash curve + current
+      // "poza gotówką" offset, i.e. holdings treated as constant over time).
       if (balancePoints.length >= 2) {
+        const nwTotal = breakdown ? (+breakdown.total || 0) : (lbRow ? Math.round(+lbRow.net_worth || 0) : null);
+        const offset = nwTotal != null ? Math.max(0, nwTotal - Math.round(+coins || 0)) : 0;
         const chartCanvas = el('canvas', { className: 'user-profile-chart' });
-        body.append(
-          el('div', { className: 'user-profile-section-title' }, 'Stan coinów w czasie'),
-          chartCanvas,
-          el('p', { className: 'user-profile-chart-label' }, '— — — poziom startowy 1 000 🪙')
-        );
-        drawCoinChart(chartCanvas, balancePoints);
+        let chartMode = 'coins';
+        const drawMode = () => drawCoinChart(chartCanvas,
+          chartMode === 'net' ? balancePoints.map(p => ({ ...p, bal: p.bal + offset })) : balancePoints);
+        const cBtn = (key, label) => {
+          const b = el('button', { className: 'fb-sort-btn' + (key === chartMode ? ' active' : '') }, label);
+          b.addEventListener('click', () => { if (chartMode === key) return; chartMode = key; bar.querySelectorAll('.fb-sort-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); drawMode(); });
+          return b;
+        };
+        const bar = offset > 0
+          ? el('div', { className: 'fb-sort-bar' }, el('span', { className: 'fb-sort-label' }, 'Pokaż:'), cBtn('coins', '🪙 Gotówka'), cBtn('net', '💎 Net Worth'))
+          : null;
+        body.append(el('div', { className: 'user-profile-section-title' }, 'Stan coinów w czasie'));
+        if (bar) body.append(bar);
+        body.append(chartCanvas, el('p', { className: 'user-profile-chart-label' }, '— — — poziom startowy 1 000 🪙'));
+        drawMode();
       }
 
       // Transaction history table (all events, newest first)
