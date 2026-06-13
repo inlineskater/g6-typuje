@@ -124,7 +124,9 @@ AS $$
       SELECT json_agg(it ORDER BY (it->>'value')::int DESC)
         FROM (
           SELECT json_build_object(
-                   'name',  d.emoji || ' ' || d.name,
+                   -- some defs already prefix the emoji in name (e.g. the certificate)
+                   'name',  CASE WHEN d.emoji IS NOT NULL AND d.name LIKE d.emoji || '%'
+                                 THEN d.name ELSE COALESCE(d.emoji || ' ', '') || d.name END,
                    'value', COALESCE(
                               (SELECT a.winning_bid FROM public.hero_item_auctions a
                                 WHERE a.item_instance_id = i.id AND a.status = 'settled' LIMIT 1),
