@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS invoice_horde_rounds_expires_idx
   WHERE submitted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS invoice_horde_scores_week_rank_idx
-  ON public.invoice_horde_scores(week_start, score DESC, duration_ms ASC, submitted_at ASC);
+  ON public.invoice_horde_scores(week_start, score DESC, duration_ms DESC, submitted_at ASC);
 
 CREATE INDEX IF NOT EXISTS invoice_horde_scores_user_time_idx
   ON public.invoice_horde_scores(user_id, submitted_at DESC);
@@ -116,10 +116,10 @@ user_best AS (
   FROM public.invoice_horde_scores s
   JOIN current_week cw ON cw.week_start = s.week_start
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id AND rc.week_start = s.week_start
-  ORDER BY s.user_id, s.score DESC, s.duration_ms ASC, s.submitted_at ASC
+  ORDER BY s.user_id, s.score DESC, s.duration_ms DESC, s.submitted_at ASC
 )
 SELECT
-  (ROW_NUMBER() OVER (ORDER BY score DESC, duration_ms ASC, submitted_at ASC))::integer AS rank,
+  (ROW_NUMBER() OVER (ORDER BY score DESC, duration_ms DESC, submitted_at ASC))::integer AS rank,
   user_id,
   nick,
   week_start,
@@ -157,10 +157,10 @@ user_best AS (
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.invoice_horde_scores s
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id
-  ORDER BY s.user_id, s.score DESC, s.duration_ms ASC, s.submitted_at ASC
+  ORDER BY s.user_id, s.score DESC, s.duration_ms DESC, s.submitted_at ASC
 )
 SELECT
-  (ROW_NUMBER() OVER (ORDER BY score DESC, duration_ms ASC, submitted_at ASC))::integer AS rank,
+  (ROW_NUMBER() OVER (ORDER BY score DESC, duration_ms DESC, submitted_at ASC))::integer AS rank,
   user_id,
   nick,
   best_week_start,
@@ -235,7 +235,7 @@ BEGIN
       s.submitted_at
     FROM public.invoice_horde_scores s
     WHERE s.week_start = p_week_start
-    ORDER BY s.user_id, s.score DESC, s.duration_ms ASC, s.submitted_at ASC
+    ORDER BY s.user_id, s.score DESC, s.duration_ms DESC, s.submitted_at ASC
   ),
   ranked AS (
     SELECT
@@ -243,7 +243,7 @@ BEGIN
       nick_snapshot,
       score,
       duration_ms,
-      (ROW_NUMBER() OVER (ORDER BY score DESC, duration_ms ASC, submitted_at ASC))::integer AS rank
+      (ROW_NUMBER() OVER (ORDER BY score DESC, duration_ms DESC, submitted_at ASC))::integer AS rank
     FROM user_best
   ),
   winners AS (

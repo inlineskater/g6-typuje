@@ -3930,7 +3930,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Najazd Faktur 📇</h2>
-                <p class="page-sub">Szybka, trudna runda 20 sekund. Stempel „ZAKSIĘGOWANO” strzela sam — Ty uciekasz przed rojem faktur, które gonią Cię prawie tak szybko jak biegniesz. Masz tylko 3 życia. Można zginąć!</p>
+                <p class="page-sub">Survival: przeżyj jak najdłużej. Stempel „ZAKSIĘGOWANO” strzela sam, ale fala faktur rośnie bez końca — w końcu i tak Cię dopadną. Masz <strong>jedno życie</strong>: jeden dotyk i koniec. Stanie w miejscu = śmierć. Trzeba uciekać i prowadzić rój za sobą.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -3944,9 +3944,9 @@
               <ul>
                 <li><strong>Strzałki / WASD / swipe</strong> — biegaj księgowym 🧮 po biurze (8 kierunków).</li>
                 <li><strong>Stempel księguje sam</strong> najbliższą fakturę w zasięgu. <strong>+1 pkt</strong> za każdą zaksięgowaną fakturę 📄.</li>
-                <li>Masz tylko <strong>3 życia ❤️</strong>. Każda faktura, która Cię dopadnie, zabiera jedno — przy zerze giniesz i runda się kończy.</li>
-                <li>„Faktury” pokazują, ile ich teraz goni Cię po ekranie. Pod koniec rundy roi się od nich — uważaj, żeby Cię nie osaczyły.</li>
-                <li>Runda trwa tylko <strong>20 s</strong>. Najlepszy wynik tygodnia trafia do rankingu. Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
+                <li><strong>Jedno życie</strong> — wystarczy, że jedna faktura Cię dotknie i koniec. Nie da się przeżyć w nieskończoność: chodzi o to, ile zaksięgujesz, zanim zginiesz.</li>
+                <li>Sztuczka: <strong>uciekaj i ciągnij rój za sobą</strong> — wtedy stempel kosi je z tyłu, a Ty masz czysto z przodu. Stanie w miejscu = osaczenie.</li>
+                <li>„Czas” liczy, ile przeżyłeś; „Faktury” — ile ich teraz Cię goni. Ranking: najwięcej zaksięgowanych (przy remisie dłuższe przeżycie). Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
               </ul>
             </div>
 
@@ -3956,12 +3956,8 @@
                 <div class="bj-stat-value" id="ih-score">0</div>
               </div>
               <div class="bj-stat">
-                <div class="bj-stat-label">Życie ❤️</div>
-                <div class="bj-stat-value" id="ih-hp">3</div>
-              </div>
-              <div class="bj-stat">
-                <div class="bj-stat-label">Czas</div>
-                <div class="bj-stat-value" id="ih-time">20.0</div>
+                <div class="bj-stat-label">Czas (s)</div>
+                <div class="bj-stat-value" id="ih-time">0.0</div>
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Faktury</div>
@@ -4670,7 +4666,6 @@ const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
 const ihScoreEl       = document.getElementById('ih-score');
-const ihHpEl          = document.getElementById('ih-hp');
 const ihTimeEl        = document.getElementById('ih-time');
 const ihThreatEl      = document.getElementById('ih-threat');
 const modalOverlay    = document.getElementById('modal-overlay');
@@ -6523,8 +6518,9 @@ async function loadSeasonHistory() {
         .eq('course_id', BUG_JUMPER_HARD_COURSE_ID)
         .order('completion_ms', { ascending: true, nullsFirst: false });
     } else if (usesDuration) {
+      // snake: shorter time breaks ties; invoice_horde (survival): longer time wins
       liveScoresQuery = liveScoresQuery
-        .order('duration_ms', { ascending: true });
+        .order('duration_ms', { ascending: current.gameType !== 'invoice_horde' });
     }
     if (!usesDuration) {
       liveScoresQuery = liveScoresQuery
@@ -12136,19 +12132,20 @@ if (snArena) {
 const IH_ARENA = 360;
 const IH_CS = IH_ARENA;
 const IH_TICK_MS = 80;
-const IH_DURATION_MS = 20000;
+const IH_DURATION_MS = 60000; // hard safety cap only — survival ends on first hit
 const IH_MAX_TICKS = Math.floor(IH_DURATION_MS / IH_TICK_MS);
 const IH_MAX_DPR = 2;
 const IH_PLAYER_SPEED = 9;
 const IH_PLAYER_RADIUS = 10;
-const IH_ENEMY_SPEED = 8;
+const IH_ENEMY_SPEED = 7;
 const IH_ENEMY_RADIUS = 9;
 const IH_HIT_DIST2 = (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS) * (IH_PLAYER_RADIUS + IH_ENEMY_RADIUS);
-const IH_FIRE_INTERVAL = 3;
-const IH_FIRE_RANGE = 84;
+const IH_FIRE_INTERVAL = 4;
+const IH_FIRE_RANGE = 66;
 const IH_FIRE_RANGE2 = IH_FIRE_RANGE * IH_FIRE_RANGE;
-const IH_START_HP = 3;
-const IH_MAX_SCORE = 60;
+const IH_START_HP = 1;
+const IH_ENEMY_CAP = 70;
+const IH_MAX_SCORE = 200;
 const IH_DIRS = Object.freeze({
   U:  Object.freeze({ x: 0,  y: -1 }),
   D:  Object.freeze({ x: 0,  y: 1 }),
@@ -12165,7 +12162,6 @@ let ihCtx = null;
 let ihRafId = null;
 const ihKeys = { U: false, D: false, L: false, R: false };
 let ihStatScoreText = null;
-let ihStatHpText = null;
 let ihStatTimeText = null;
 let ihStatThreatText = null;
 
@@ -12222,7 +12218,7 @@ function ihClamp(v, lo, hi) {
 
 function ihSpawnInterval(tick) {
   // Must match spawnInterval() in invoice-horde-action; tunes the difficulty.
-  return tick < 90 ? 9 : tick < 170 ? 6 : 4;
+  return tick < 60 ? 6 : tick < 140 ? 4 : tick < 240 ? 3 : 2;
 }
 
 function ihSpawnEnemy(rng) {
@@ -12292,20 +12288,18 @@ function ihElapsed(now = performance.now()) {
 
 function ihResetStatCache() {
   ihStatScoreText = null;
-  ihStatHpText = null;
   ihStatTimeText = null;
   ihStatThreatText = null;
 }
 
 function ihSetStats(force = false) {
   const rt = invoiceHordeRuntime || newInvoiceHordeRuntime();
-  const remaining = rt.playing ? Math.max(0, rt.durationMs - ihElapsed()) : IH_DURATION_MS;
+  // count up = survival time; freezes at the final value after death (tick > 0)
+  const elapsedMs = rt.playing ? ihElapsed() : (rt.tick ? rt.tick * IH_TICK_MS : 0);
   const scoreText = String(rt.score || 0);
-  const hpText = String(Math.max(0, rt.hp || 0));
-  const timeText = Math.max(0, remaining / 1000).toFixed(1);
+  const timeText = Math.max(0, elapsedMs / 1000).toFixed(1);
   const threatText = String(rt.playing ? (rt.enemies?.length || 0) : 0);
   if (ihScoreEl && (force || scoreText !== ihStatScoreText)) { ihScoreEl.textContent = scoreText; ihStatScoreText = scoreText; }
-  if (ihHpEl && (force || hpText !== ihStatHpText)) { ihHpEl.textContent = hpText; ihStatHpText = hpText; }
   if (ihTimeEl && (force || timeText !== ihStatTimeText)) { ihTimeEl.textContent = timeText; ihStatTimeText = timeText; }
   if (ihThreatEl && (force || threatText !== ihStatThreatText)) { ihThreatEl.textContent = threatText; ihStatThreatText = threatText; }
 }
@@ -12578,8 +12572,8 @@ function ihStep() {
   p.x = ihClamp(p.x + pv.x * IH_PLAYER_SPEED, 0, IH_ARENA);
   p.y = ihClamp(p.y + pv.y * IH_PLAYER_SPEED, 0, IH_ARENA);
 
-  // 3. spawn
-  if (nextTick % ihSpawnInterval(nextTick) === 0) {
+  // 3. spawn (capped — rng only consumed when a spawn actually happens)
+  if (nextTick % ihSpawnInterval(nextTick) === 0 && rt.enemies.length < IH_ENEMY_CAP) {
     rt.enemies.push(ihSpawnEnemy(rt.rng));
   }
 
@@ -12611,7 +12605,7 @@ function ihStep() {
   rt.enemies = survivors;
   if (died) {
     rt.hp = 0;
-    rt.endedReason = 'cierpliwość';
+    rt.endedReason = 'faktura Cię dopadła';
     ihSetStats(true);
     finishInvoiceHordeRound();
     return;
@@ -12638,7 +12632,7 @@ function ihStep() {
   rt.lastStepPerf = performance.now();
 
   if (rt.tick >= IH_MAX_TICKS) {
-    rt.endedReason = 'czas';
+    rt.endedReason = 'przeżyłeś do końca!';
     finishInvoiceHordeRound();
     return;
   }
@@ -12649,7 +12643,7 @@ function ihTick() {
   const rt = invoiceHordeRuntime;
   if (!rt?.playing) return;
   if (ihElapsed() >= rt.durationMs) {
-    rt.endedReason = 'czas';
+    rt.endedReason = 'przeżyłeś do końca!';
     finishInvoiceHordeRound();
     return;
   }
@@ -12728,7 +12722,7 @@ async function finishInvoiceHordeRound() {
       action: 'submit',
       roundId: rt.roundId,
       seed: rt.seed,
-      moves: rt.moveLog.slice(0, 1200),
+      moves: rt.moveLog.slice(0, 2000),
       elapsedTicks: rt.tick,
       score: rt.score,
     });
