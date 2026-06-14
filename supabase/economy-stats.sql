@@ -126,7 +126,55 @@ AS $$
           FROM public.hero_item_auction_bids b
           JOIN public.hero_item_auctions a ON a.id = b.auction_id
          WHERE b.status = 'leading' AND a.status = 'open'
-      ), 0::bigint)::numeric AS hero_auction_escrow
+      ), 0::bigint)::numeric AS hero_auction_escrow,
+
+      -- ── coin flow: minting ──────────────────────────────────────────────
+      -- coins minted via garden harvest, admin grants, top-ups, daily interest
+      COALESCE((
+        SELECT sum(ct.delta)
+          FROM public.coin_transactions ct
+         WHERE ct.delta > 0
+           AND ct.reason IN ('garden_water','admin_grant','zapps_topup','daily_interest')
+      ), 0::numeric) AS ledger_minted,
+
+      -- weekly game prize payouts (100/50/25 per rank per season)
+      COALESCE((
+        SELECT sum(prize_coins) FROM (
+          SELECT prize_coins FROM public.whack_boss_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.bug_jumper_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.flappy_pants_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.snake_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.invoice_horde_weekly_awards
+        ) _awards
+      ), 0::bigint)::numeric AS prizes_minted,
+
+      -- ── coin flow: burning ──────────────────────────────────────────────
+      -- coins destroyed at shops, item purchases, and misc fees
+      COALESCE((
+        SELECT sum(-ct.delta)
+          FROM public.coin_transactions ct
+         WHERE ct.delta < 0
+           AND ct.reason IN ('garden_accessory','hero_item_purchase','store_purchase',
+                             'garden_certificate','arcade_entry','hero_appearance_change')
+      ), 0::numeric) AS shop_burned,
+
+      -- ── house (bank) P&L ────────────────────────────────────────────────
+      -- football/Mundial: lost_stakes − paid_payouts (positive = house net burned)
+      COALESCE((
+        SELECT sum(CASE WHEN status='lost' THEN stake ELSE 0 END)
+             - sum(CASE WHEN status='won'  THEN potential_payout ELSE 0 END)
+          FROM public.football_bets
+         WHERE status IN ('won','lost')
+      ), 0::bigint)::numeric AS football_house_net,
+
+      -- slots + roulette: total_bet − total_won (positive = house net burned)
+      COALESCE((SELECT sum(10 - total_won) FROM public.slots_spins), 0::bigint)::numeric
+        + COALESCE((SELECT sum(total_bet - total_won) FROM public.roulette_spins), 0::bigint)::numeric
+        AS hazard_house_net
   )
   SELECT json_build_object(
     -- head counts
@@ -144,6 +192,17 @@ AS $$
     'total_supply',        round(b.total_cash + b.market_positions + b.football_open
                                  + b.poker_stacks + b.hero_items + b.accessories
                                  + b.marketplace_escrow + b.hero_auction_escrow)::bigint,
+
+    -- coin flow: minting
+    'ledger_minted',       round(b.ledger_minted)::bigint,
+    'prizes_minted',       round(b.prizes_minted)::bigint,
+    'total_minted',        round(b.ledger_minted + b.prizes_minted)::bigint,
+
+    -- coin flow: burning
+    'shop_burned',         round(b.shop_burned)::bigint,
+    'football_house_net',  round(b.football_house_net)::bigint,
+    'hazard_house_net',    round(b.hazard_house_net)::bigint,
+    'total_house_net',     round(b.football_house_net + b.hazard_house_net)::bigint,
 
     -- per-player net_worth array for distribution stats (sorted desc, no ids/nicks)
     'holdings',            (SELECT json_agg(round(net_worth)::bigint ORDER BY net_worth DESC)

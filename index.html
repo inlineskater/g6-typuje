@@ -6972,11 +6972,17 @@ function renderEconomyPreview(wrap, s) {
     el('span', { style: { fontWeight: 700 } }, fmtNum(val) + ' 🪙' + (pct !== undefined ? ' (' + pct + '%)' : ''))
   );
 
+  const bankNet = (s.total_house_net || 0);
+  const bankLabel = bankNet >= 0 ? '📈 Bank zarobił' : '📉 Bank stracił';
+
   wrap.replaceChildren(
     row('Łączna podaż', s.total_supply),
     barWrap,
     row('W obiegu (gotówka)', s.total_cash, cashPct),
     row('Zablokowane (w grze)', locked, lockedPct),
+    row('📈 Wyemitowano (łącznie)', s.total_minted || 0),
+    row('🔥 Spalono w sklepach', s.shop_burned || 0),
+    row(bankLabel + ' (net)', Math.abs(bankNet)),
     el('div', { style: { fontSize: '11px', color: 'var(--dim)', marginTop: '8px', fontWeight: 600 } },
       'Graczy: ' + s.players + ' · śr. ' + fmtNum(Math.round(s.total_supply / (s.players || 1))) + ' · Kliknij po szczegóły →')
   );
@@ -7129,6 +7135,29 @@ function _buildEconomyDetailContent(container, s) {
     );
   }
 
+  // ── 5. Coin flow: emission, spending, bank balance ────────────────────────
+  const bankNet = s.football_house_net + s.hazard_house_net;
+  const bankCls = bankNet >= 0 ? 'fb-profit-pos' : 'fb-profit-neg';
+  const bankSign = bankNet >= 0 ? '+' : '';
+
+  const flowChips = el('div', { className: 'fb-stats-chips' },
+    chipRow('🌿', 'Aktywności (ogrody, admin)', s.ledger_minted),
+    chipRow('🏆', 'Nagrody gier sezonowych', s.prizes_minted),
+    chipRow('🛒', 'Wydano w sklepach i na przedmiotach', s.shop_burned),
+    el('div', { className: 'fb-stat-chip' },
+      el('span', { className: 'fb-stat-label' }, '⚽ Bank — Mundial (net)'),
+      el('span', { className: 'fb-stat-nick ' + (s.football_house_net >= 0 ? 'fb-profit-pos' : 'fb-profit-neg') },
+        (s.football_house_net >= 0 ? '+' : '') + fmtNum(s.football_house_net) + ' 🪙'),
+      el('span', { className: 'fb-stat-val' }, s.football_house_net >= 0 ? 'spalone przez bank' : 'wyemitowane przez bank')
+    ),
+    el('div', { className: 'fb-stat-chip' },
+      el('span', { className: 'fb-stat-label' }, '🎰 Bank — Hazard (net)'),
+      el('span', { className: 'fb-stat-nick ' + (s.hazard_house_net >= 0 ? 'fb-profit-pos' : 'fb-profit-neg') },
+        (s.hazard_house_net >= 0 ? '+' : '') + fmtNum(s.hazard_house_net) + ' 🪙'),
+      el('span', { className: 'fb-stat-val' }, s.hazard_house_net >= 0 ? 'spalone przez bank' : 'wyemitowane przez bank')
+    )
+  );
+
   container.replaceChildren(
     section('📦 Podaż pieniądza'),
     el('div', { className: 'fb-bonk-strip' },
@@ -7140,6 +7169,17 @@ function _buildEconomyDetailContent(container, s) {
     barLegend,
     section('📊 Gdzie są coiny'),
     chips,
+    section('💸 Emisja, spalanie i bank'),
+    el('div', { className: 'fb-bonk-strip' },
+      bonkCell('📈 Wyemitowano', fmtNum(s.total_minted) + ' 🪙', 'nagrody + aktywności'),
+      bonkCell('🔥 Spalono (sklepy)', fmtNum(s.shop_burned) + ' 🪙', 'zakupy, przedmioty, opłaty'),
+      el('div', { className: 'fb-bonk-cell' },
+        el('span', { className: 'fb-bonk-label' }, '🏦 Bank — zarobek netto'),
+        el('span', { className: 'fb-bonk-val ' + bankCls }, bankSign + fmtNum(bankNet) + ' 🪙'),
+        el('span', { className: 'fb-bonk-sub' }, bankNet >= 0 ? 'bank spalił więcej niż wyemitował' : 'bank wyemitował więcej niż spalił')
+      )
+    ),
+    flowChips,
     section('💎 Koncentracja majątku'),
     concentrationSection || el('p', { style: { fontSize: '12px', color: 'var(--dim)' } }, 'Brak danych.'),
     section('📈 Rozkład majątku'),
