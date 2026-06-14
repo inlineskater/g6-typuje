@@ -15,11 +15,14 @@ const db = databaseUrl
 
 const GRID_SIZE = 20;
 const TICK_MS = 120;
-const ROUND_DURATION_MS = 120_000;
-const ROUND_EXPIRES_SECONDS = 180;
-const MAX_TICKS = Math.floor(ROUND_DURATION_MS / TICK_MS);
-const MAX_SCORE_PER_ROUND = 300;
-const MAX_MOVES_PER_ROUND = 1200;
+const MIN_TICK_MS = 80;
+const SPEEDUP_EVERY_TICKS = 250;
+const SPEEDUP_STEP_MS = 2;
+const LEGACY_ROUND_DURATION_MS = 120_000;
+const ROUND_EXPIRES_SECONDS = 7200;
+const MAX_TICKS = 100_000;
+const MAX_SCORE_PER_ROUND = 500;
+const MAX_MOVES_PER_ROUND = 100_000;
 const PRIZES = [100, 50, 25];
 const DIRS = {
   U: { x: 0, y: -1 },
@@ -54,6 +57,24 @@ function asNumber(value, fallback = 0) {
 function opposite(a, b) {
   if (!DIRS[a] || !DIRS[b]) return false;
   return DIRS[a].x + DIRS[b].x === 0 && DIRS[a].y + DIRS[b].y === 0;
+}
+
+function tickDelayMs(tick) {
+  const stage = Math.floor(Math.max(0, asInt(tick, 1) - 1) / SPEEDUP_EVERY_TICKS);
+  return Math.max(MIN_TICK_MS, TICK_MS - stage * SPEEDUP_STEP_MS);
+}
+
+function tickCapForElapsed(elapsedMs) {
+  let total = 0;
+  let tick = 0;
+  const budget = Math.max(0, asInt(elapsedMs, 0));
+  while (tick < MAX_TICKS) {
+    const nextDelay = tickDelayMs(tick + 1);
+    if (total + nextDelay > budget) break;
+    total += nextDelay;
+    tick += 1;
+  }
+  return tick;
 }
 
 function makeRng(seed) {
@@ -106,9 +127,7 @@ function parseMoves(value) {
   return value.map((move) => {
     const tick = asInt(move?.tick, NaN);
     const dir = String(move?.dir ?? "");
-    if (!Number.isFinite(tick) || tick < 1 || tick > MAX_TICKS) {
-      throw gameError("Nieprawidłowy czas ruchu.");
-    }
+    if (!Number.isFinite(tick) || tick < 1 || tick > MAX_TICKS) throw gameError("Nieprawidłowy ruch.");
     if (!DIRS[dir]) throw gameError("Nieprawidłowy kierunek ruchu.");
     if (tick <= previousTick) throw gameError("Ruchy nie są uporządkowane.");
     previousTick = tick;
@@ -125,6 +144,7 @@ function replaySnake(seed, moves, untilTick) {
   let score = 0;
   let ate = 0;
   let diedAtTick = null;
+  let completed = false;
   const cappedUntil = Math.max(0, Math.min(MAX_TICKS, untilTick));
 
   for (let tick = 1; tick <= cappedUntil; tick += 1) {
@@ -157,7 +177,7 @@ function replaySnake(seed, moves, untilTick) {
       score = Math.min(MAX_SCORE_PER_ROUND, score + 1);
       food = spawnFood(snake, rng);
       if (!food) {
-        diedAtTick = tick;
+        completed = true;
         break;
       }
     } else {
@@ -171,8 +191,7 @@ function replaySnake(seed, moves, untilTick) {
     moves: moves.length,
     endTick: diedAtTick ?? cappedUntil,
     died: diedAtTick != null,
-    completed: cappedUntil >= MAX_TICKS,
-    durationMs: (diedAtTick ?? cappedUntil) * TICK_MS,
+    completed,
   };
 }
 
@@ -290,7 +309,6 @@ async function loadState(userId) {
     weekStart: weekRow?.week_start,
     gridSize: GRID_SIZE,
     tickMs: TICK_MS,
-    roundDurationMs: ROUND_DURATION_MS,
     prizes: PRIZES,
     weekly: mapRows(weekly),
     allTime: mapRows(allTime),
@@ -315,7 +333,7 @@ async function startRound(userId) {
     insert into public.snake_rounds
       (user_id, nick_snapshot, seed, duration_ms, expires_at)
     values
-      (${userId}, ${profile.nick}, ${seed}, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
+      (${userId}, ${profile.nick}, ${seed}, ${LEGACY_ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
     returning id, seed, duration_ms, started_at, expires_at
   `;
 
@@ -324,9 +342,13 @@ async function startRound(userId) {
     round: {
       id: round.id,
       seed: asInt(round.seed),
-      durationMs: asInt(round.duration_ms, ROUND_DURATION_MS),
       tickMs: TICK_MS,
       gridSize: GRID_SIZE,
+      speedup: {
+        minTickMs: MIN_TICK_MS,
+        everyTicks: SPEEDUP_EVERY_TICKS,
+        stepMs: SPEEDUP_STEP_MS,
+      },
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
       expiresAt: round.expires_at,
@@ -340,6 +362,7 @@ async function submitRound(userId, body) {
   if (!roundId) throw gameError("Brak rundy do zapisania.");
   const moves = parseMoves(body.moves);
   const requestedTick = asInt(body.elapsedTicks, 0);
+  if (requestedTick < 1 || requestedTick > MAX_TICKS) throw gameError("Nieprawidłowy koniec rundy.");
 
   const effect = await getStrongestHeroEffect(db, userId, "snake");
 
@@ -357,18 +380,14 @@ async function submitRound(userId, body) {
     if (new Date(round.expires_at).getTime() < Date.now()) throw gameError("Runda wygasła.");
 
     const actualElapsed = Date.now() - new Date(round.started_at).getTime();
-    const actualTickCap = Math.min(MAX_TICKS, Math.max(0, Math.ceil((actualElapsed + 1000) / TICK_MS)));
-    const endTick = Math.max(0, Math.min(MAX_TICKS, requestedTick || actualTickCap));
+    const actualTickCap = tickCapForElapsed(actualElapsed + 1000);
+    const endTick = requestedTick;
+    if (moves.some((move) => move.tick > endTick)) throw gameError("Ruch po końcu rundy.");
     if (endTick > actualTickCap) throw gameError("Runda jeszcze trwa.");
 
     const replay = replaySnake(asInt(round.seed), moves, endTick);
-    const minSubmitAt = new Date(round.started_at).getTime() + asInt(round.duration_ms, ROUND_DURATION_MS) - 750;
-    if (!replay.died && replay.endTick < MAX_TICKS && Date.now() < minSubmitAt) {
-      throw gameError("Runda jeszcze trwa.");
-    }
-    if (replay.died && replay.durationMs > actualElapsed + 1000) {
-      throw gameError("Runda jeszcze trwa.");
-    }
+    if (replay.endTick !== endTick) throw gameError("Runda zakończyła się wcześniej.");
+    if (!replay.died && !replay.completed) throw gameError("Runda jeszcze trwa.");
 
     const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.score));
     const bonus = effect?.effect_type === "score_bonus"
@@ -402,7 +421,7 @@ async function submitRound(userId, body) {
           ${scoreValue},
           ${replay.apples},
           ${replay.moves},
-          ${replay.durationMs},
+          ${0},
           ${accuracy},
           ${JSON.stringify({
             seed: asInt(round.seed),
@@ -411,6 +430,7 @@ async function submitRound(userId, body) {
             client_score: asInt(body.score, 0),
             server_validated: true,
             died: replay.died,
+            completed: replay.completed,
             base_score: baseScore,
             item_effect: itemEffect,
           })}::jsonb
@@ -428,7 +448,6 @@ async function submitRound(userId, body) {
       score: asInt(score.inserted.score),
       apples: asInt(score.inserted.apples),
       moves: asInt(score.inserted.moves),
-      duration_ms: asInt(score.inserted.duration_ms),
       submitted_at: score.inserted.submitted_at,
       itemEffect: score.itemEffect,
     },

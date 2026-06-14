@@ -3956,7 +3956,7 @@
               <ul>
                 <li><strong>Strzałki / WASD / swipe</strong> — steruj wężem po planszy.</li>
                 <li><strong>+1 pkt</strong> za każde jabłko. Zawrót o 180° jest blokowany.</li>
-                <li>Ściana albo własny ogon kończą rundę. Najlepszy wynik tygodnia trafia do rankingu.</li>
+                <li>Ściana albo własny ogon kończą rundę. Im dłużej grasz, tym lekko szybszy robi się wąż.</li>
                 <li>Nagrody po zamknięciu tygodnia: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
               </ul>
             </div>
@@ -3969,10 +3969,6 @@
               <div class="bj-stat">
                 <div class="bj-stat-label">Długość</div>
                 <div class="bj-stat-value" id="sn-length">3</div>
-              </div>
-              <div class="bj-stat">
-                <div class="bj-stat-label">Czas</div>
-                <div class="bj-stat-value" id="sn-time">120.0</div>
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Ruchy</div>
@@ -4842,7 +4838,6 @@ const snStartBtn      = document.getElementById('sn-start-btn');
 const snStatus        = document.getElementById('sn-status');
 const snScoreEl       = document.getElementById('sn-score');
 const snLengthEl      = document.getElementById('sn-length');
-const snTimeEl        = document.getElementById('sn-time');
 const snMovesEl       = document.getElementById('sn-moves');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
@@ -6816,11 +6811,8 @@ async function loadSeasonHistory() {
   try {
     const current = getCurrentSeasonalEntry();
     const currentDbWeekStart = current.weekStart; // DB now also Monday-start
-    const usesDuration = current.gameType === 'snake';
     const liveScoreColumns = current.gameType === 'bug_jumper'
       ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
-      : usesDuration
-      ? 'user_id,nick_snapshot,score,duration_ms,submitted_at,client_meta'
       : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
     let liveScoresQuery = sb.from(current.gameType + '_scores')
       .select(liveScoreColumns)
@@ -6830,12 +6822,8 @@ async function loadSeasonHistory() {
       liveScoresQuery = liveScoresQuery
         .eq('course_id', BUG_JUMPER_HARD_COURSE_ID)
         .order('completion_ms', { ascending: true, nullsFirst: false });
-    } else if (usesDuration) {
-      // snake: shorter time breaks score ties
-      liveScoresQuery = liveScoresQuery
-        .order('duration_ms', { ascending: true });
     }
-    if (!usesDuration) {
+    if (current.gameType !== 'bug_jumper') {
       liveScoresQuery = liveScoresQuery
         .order('accuracy', { ascending: false });
     }
@@ -12246,8 +12234,9 @@ const SN_GRID = 20;
 const SN_CELL = 20;
 const SN_CS = SN_GRID * SN_CELL;
 const SN_TICK_MS = 120;
-const SN_DURATION_MS = 120000;
-const SN_MAX_TICKS = Math.floor(SN_DURATION_MS / SN_TICK_MS);
+const SN_MIN_TICK_MS = 80;
+const SN_SPEEDUP_EVERY_TICKS = 250;
+const SN_SPEEDUP_STEP_MS = 2;
 const SN_MAX_DPR = 2;
 const SN_DIRS = Object.freeze({
   U: Object.freeze({ x: 0, y: -1 }),
@@ -12261,9 +12250,7 @@ function newSnakeRuntime() {
     playing: false, submitting: false, archiveMode: false,
     roundId: null,
     seed: 1,
-    durationMs: SN_DURATION_MS,
     tickMs: SN_TICK_MS,
-    startPerf: 0,
     timer: null,
     tick: 0,
     dir: 'R',
@@ -12283,7 +12270,6 @@ function newSnakeRuntime() {
 let snCtx = null;
 let snStatScoreText = null;
 let snStatLengthText = null;
-let snStatTimeText = null;
 let snStatMovesText = null;
 
 function snakeInitialBody() {
@@ -12365,25 +12351,28 @@ function snakeOpposite(a, b) {
   return !!da && !!db && da.x + db.x === 0 && da.y + db.y === 0;
 }
 
-function snakeElapsed(now = performance.now()) {
-  const rt = snakeRuntime;
-  if (!rt?.startPerf) return rt?.tick ? rt.tick * SN_TICK_MS : 0;
-  return Math.max(0, Math.min(rt.durationMs, now - rt.startPerf));
+function snakeTickDelay(tick) {
+  const stage = Math.floor(Math.max(0, Number(tick || 1) - 1) / SN_SPEEDUP_EVERY_TICKS);
+  return Math.max(SN_MIN_TICK_MS, SN_TICK_MS - stage * SN_SPEEDUP_STEP_MS);
+}
+
+function snakeScheduleTick(rt = snakeRuntime) {
+  if (!rt?.playing) return;
+  if (rt.timer) clearTimeout(rt.timer);
+  rt.tickMs = snakeTickDelay((rt.tick || 0) + 1);
+  rt.timer = setTimeout(snakeTick, rt.tickMs);
 }
 
 function snakeResetStatCache() {
   snStatScoreText = null;
   snStatLengthText = null;
-  snStatTimeText = null;
   snStatMovesText = null;
 }
 
 function snakeSetStats(force = false) {
   const rt = snakeRuntime || newSnakeRuntime();
-  const remaining = rt.playing ? Math.max(0, rt.durationMs - snakeElapsed()) : SN_DURATION_MS;
   const scoreText = String(rt.score || 0);
   const lengthText = String(rt.snake?.length || 3);
-  const timeText = Math.max(0, remaining / 1000).toFixed(1);
   const movesText = String(rt.moves || 0);
   if (snScoreEl && (force || scoreText !== snStatScoreText)) {
     snScoreEl.textContent = scoreText;
@@ -12393,19 +12382,10 @@ function snakeSetStats(force = false) {
     snLengthEl.textContent = lengthText;
     snStatLengthText = lengthText;
   }
-  if (snTimeEl && (force || timeText !== snStatTimeText)) {
-    snTimeEl.textContent = timeText;
-    snStatTimeText = timeText;
-  }
   if (snMovesEl && (force || movesText !== snStatMovesText)) {
     snMovesEl.textContent = movesText;
     snStatMovesText = movesText;
   }
-}
-
-function snakeDurationText(ms) {
-  const n = Math.max(0, Number(ms) || 0);
-  return (n / 1000).toFixed(1) + 's';
 }
 
 function snakeDraw(now = performance.now()) {
@@ -12539,12 +12519,11 @@ function renderSnakeTable(wrap, rows, mode) {
   const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
     el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
-    lbScoreCell(row),
-    el('td', { className: 'lb-net', title: 'Czas rundy' }, snakeDurationText(row.duration_ms))
+    lbScoreCell(row)
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik' }, 'Wynik'), el('th', {}, 'Czas'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik' }, 'Wynik'))),
       el('tbody', {}, ...bodyRows)
     )
   );
@@ -12567,7 +12546,7 @@ function renderSnakeAwards(wrap, awards) {
 
 function stopSnakeRound() {
   const rt = snakeRuntime;
-  if (rt?.timer) clearInterval(rt.timer);
+  if (rt?.timer) clearTimeout(rt.timer);
   snakeRuntime = newSnakeRuntime();
   snakeResetBoard(snakeRuntime.seed || 1);
   snakeRuntime.playing = false;
@@ -12587,12 +12566,7 @@ function beginSnakeRound(round, options = {}) {
   rt.playing = true;
   rt.archiveMode = !!options.archiveMode;
   rt.roundId = round.id;
-  rt.durationMs = Number(round.durationMs || round.duration_ms || SN_DURATION_MS) || SN_DURATION_MS;
   rt.tickMs = Number(round.tickMs || SN_TICK_MS) || SN_TICK_MS;
-  const serverElapsed = round.startedAt && round.serverNow
-    ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
-    : 0;
-  rt.startPerf = performance.now() - serverElapsed;
   if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Runda trwa'; }
   if (snStatus) {
     snStatus.textContent = rt.archiveMode
@@ -12606,7 +12580,7 @@ function beginSnakeRound(round, options = {}) {
   snakeResetStatCache();
   snakeSetStats(true);
   snakeDraw(performance.now());
-  rt.timer = setInterval(snakeTick, rt.tickMs);
+  snakeScheduleTick(rt);
 }
 
 function snakeQueueDir(dir) {
@@ -12665,11 +12639,6 @@ function snakeStep() {
     rt.snake.pop();
   }
 
-  if (rt.tick >= SN_MAX_TICKS) {
-    rt.endedReason = 'czas';
-    finishSnakeRound();
-    return;
-  }
   snakeSetStats();
   snakeDraw(performance.now());
 }
@@ -12677,12 +12646,8 @@ function snakeStep() {
 function snakeTick() {
   const rt = snakeRuntime;
   if (!rt?.playing) return;
-  if (snakeElapsed() >= rt.durationMs) {
-    rt.endedReason = 'czas';
-    finishSnakeRound();
-    return;
-  }
   snakeStep();
+  if (rt.playing) snakeScheduleTick(rt);
 }
 
 async function startSnakeRound() {
@@ -12709,7 +12674,7 @@ async function finishSnakeRound() {
   if (!rt || rt.submitting) return;
   rt.playing = false;
   rt.submitting = true;
-  if (rt.timer) clearInterval(rt.timer);
+  if (rt.timer) clearTimeout(rt.timer);
   snakeSetStats(true);
   snakeDraw(performance.now());
 
@@ -12735,7 +12700,7 @@ async function finishSnakeRound() {
       action: 'submit',
       roundId: rt.roundId,
       seed: rt.seed,
-      moves: rt.moveLog.slice(0, 1200),
+      moves: rt.moveLog,
       elapsedTicks: rt.tick,
       score: rt.score,
     });
@@ -12743,7 +12708,7 @@ async function finishSnakeRound() {
     showToast('✅ Wynik zapisany: ' + data.score.score);
     if (snStatus) {
       const reason = rt.endedReason ? ' · ' + rt.endedReason : '';
-      snStatus.textContent = 'Ostatni wynik: ' + data.score.score + ' · ' + snakeDurationText(data.score.duration_ms) + reason + '.';
+      snStatus.textContent = 'Ostatni wynik: ' + data.score.score + reason + '.';
     }
   } catch (err) {
     showToast('❌ ' + err.message);
