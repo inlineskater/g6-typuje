@@ -1868,6 +1868,14 @@
     .ag-score-date { font-size: 11px; color: var(--dim); }
     .ag-empty      { font-size: 12px; color: var(--dim); padding: 6px 0; }
 
+    /* ── Hide seasonal sidebar / prizes when panels are in arcade (ag-game-slot) ── */
+    #ag-game-slot .wb-board-panel,
+    #ag-game-slot .bj-board-panel { display: none; }
+    #ag-game-slot .wb-prizes,
+    #ag-game-slot .bj-prizes      { display: none; }
+    #ag-game-slot .wb-layout,
+    #ag-game-slot .bj-layout      { grid-template-columns: 1fr; }
+
     /* ── Shop ── */
     input[type="number"], textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
