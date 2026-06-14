@@ -5288,8 +5288,8 @@ function selectAllGame(gameType) {
   loadArcadeScores(gameType);
 }
 
-async function payArcadeEntry() {
-  const { data, error } = await sb.rpc('pay_arcade_entry');
+async function payArcadeEntry(gameType) {
+  const { data, error } = await sb.rpc('pay_arcade_entry', { p_game_type: gameType });
   if (error) throw error;
   me.coins = data;
   setText(headerCoins, me.coins);
@@ -7432,6 +7432,8 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       ? '↩️ Aukcja: zwrot'
       : t.reason === 'garden_certificate'
       ? '📜 Certyfikat Drugiego Ogródka'
+      : t.reason === 'arcade_entry'
+      ? '🎮 Arcade: ' + (t.meta?.game_type || '?')
       : '🪙 ' + t.reason;
     const delta = +t.delta;
     events.push({ ts: new Date(t.created_at).getTime(), delta, lockDelta: NEUTRAL[t.reason] ? -delta : 0, label });
@@ -10684,7 +10686,7 @@ function beginWhackBossRound(round) {
 async function startWhackBossRound() {
   if (whackBossRuntime?.playing || whackBossRuntime?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
   }
   if (wbStartBtn) {
     wbStartBtn.disabled = true;
@@ -11481,7 +11483,7 @@ async function startBugJumperRound() {
     return;
   }
   if (allGamesMode) {
-    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
   }
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Ładuję...'; }
   if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę...';
@@ -11897,7 +11899,7 @@ async function startFlappyPantsRound() {
   const rt = flappyPantsRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
   }
   if (fpStartBtn) { fpStartBtn.disabled = true; fpStartBtn.textContent = 'Ładuję...'; }
   if (fpStatus) fpStatus.textContent = 'Przygotowuję rundę...';
@@ -12424,7 +12426,7 @@ async function startSnakeRound() {
   const rt = snakeRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
   }
   if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Ładuję...'; }
   if (snStatus) snStatus.textContent = 'Przygotowuję rundę...';
@@ -13246,7 +13248,7 @@ async function startInvoiceHordeRound() {
     return;
   }
   if (allGamesMode) {
-    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
   }
   if (ihStartBtn) { ihStartBtn.disabled = true; ihStartBtn.textContent = 'Ładuję...'; }
   if (ihStatus) ihStatus.textContent = 'Przygotowuję rundę...';
