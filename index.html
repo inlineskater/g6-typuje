@@ -1803,6 +1803,33 @@
       box-shadow: 0 0 22px rgba(56,189,248,0.32), inset 0 0 14px rgba(56,189,248,0.10);
     }
 
+    /* ── Wszystkie Gry (All Games picker) ── */
+    #tab-all-games { padding: 18px 16px; }
+    .ag-info {
+      font-size: 13px; color: var(--muted); margin-bottom: 16px;
+    }
+    .ag-info strong { color: var(--text); }
+    .ag-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .ag-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      color: var(--text); font-size: 14px; font-weight: 600;
+      padding: 18px 12px; cursor: pointer; text-align: center;
+      transition: border-color .15s, transform .1s;
+    }
+    .ag-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .ag-card:active { transform: translateY(0); }
+    #ag-back {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      color: var(--muted); font-size: 13px; padding: 7px 14px; cursor: pointer;
+      margin-bottom: 16px; transition: color .15s, border-color .15s;
+    }
+    #ag-back:hover { color: var(--text); border-color: var(--accent); }
+
     /* ── Shop ── */
     input[type="number"], textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
@@ -3232,6 +3259,7 @@
     </div>
 
     <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> 🕹️ Gra Sezonowa</button>
+    <button class="nav-tab" data-tab="all-games">🎮 Wszystkie Gry</button>
     <button class="nav-tab" data-tab="football">⚽ Mundial</button>
 
     <div class="nav-group" data-group="shop">
@@ -4000,9 +4028,25 @@
     </main>
   </div>
 
-  <div id="tab-flappy-test" class="hidden">
-    <main id="flappy-test-main">
-      <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy — „3 Pary Spodni” dostępne dla wszystkich, niezależnie od sezonu.</p>
+  <div id=”tab-all-games” class=”hidden”>
+    <div id=”ag-picker”>
+      <p class=”ag-info”>Zagraj w dowolną grę kiedy chcesz. Każda runda kosztuje <strong>1 monetę</strong> — wyniki nie są zapisywane do rankingu.</p>
+      <div class=”ag-grid”>
+        <button class=”ag-card” data-game=”whack_boss”>🪲<br>Whack-a-Boss</button>
+        <button class=”ag-card” data-game=”bug_jumper”>🐛<br>Bug Jumper</button>
+        <button class=”ag-card” data-game=”flappy_pants”>👖<br>3 Pary Spodni</button>
+        <button class=”ag-card” data-game=”snake”>🐍<br>Snake</button>
+        <button class=”ag-card” data-game=”invoice_horde”>🎫<br>Najazd Ticketów</button>
+      </div>
+    </div>
+    <div id=”ag-game-slot” class=”hidden”>
+      <button id=”ag-back”>← Wróć do wyboru gry</button>
+    </div>
+  </div>
+
+  <div id=”tab-flappy-test” class=”hidden”>
+    <main id=”flappy-test-main”>
+      <p class=”page-sub” style=”margin-bottom:14px”>🧪 Tryb testowy — „3 Pary Spodni” dostępne dla wszystkich, niezależnie od sezonu.</p>
     </main>
   </div>
 
@@ -4422,6 +4466,8 @@ let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
 let snakeRuntime = null;
 let invoiceHordeRuntime = null;
+let allGamesMode = false;
+let allGamesSelectedGame = null;
 const lwCharts = new Map();
 const HERO_STYLE_CHANGE_PRICE = 1;
 const HERO_APPEARANCE_FIELDS = [
@@ -5066,11 +5112,83 @@ function restoreInvoiceHordePanelHome() {
   }
 }
 
+const AG_PANEL_IDS = {
+  whack_boss:    'seasonal-game-whack-boss',
+  bug_jumper:    'seasonal-game-bug-jumper',
+  flappy_pants:  'seasonal-game-flappy-pants',
+  snake:         'seasonal-game-snake',
+  invoice_horde: 'seasonal-game-invoice-horde',
+};
+let agPanelHome = {};
+
+function returnAgPanelHome(gameType) {
+  const panel = document.getElementById(AG_PANEL_IDS[gameType]);
+  const home  = agPanelHome[gameType];
+  const slot  = document.getElementById('ag-game-slot');
+  if (panel && home && slot.contains(panel)) {
+    hide(panel);
+    home.appendChild(panel);
+  }
+}
+
+function loadAllGamesTab() {
+  show(document.getElementById('ag-picker'));
+  hide(document.getElementById('ag-game-slot'));
+}
+
+function leaveAllGamesTab() {
+  stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
+  stopSnakeRound(); stopInvoiceHordeRound();
+  if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
+  allGamesMode = false;
+  allGamesSelectedGame = null;
+}
+
+function selectAllGame(gameType) {
+  if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
+  stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
+  stopSnakeRound(); stopInvoiceHordeRound();
+
+  allGamesSelectedGame = gameType;
+  allGamesMode = true;
+
+  const panel = document.getElementById(AG_PANEL_IDS[gameType]);
+  const slot  = document.getElementById('ag-game-slot');
+  if (panel) {
+    if (!agPanelHome[gameType]) agPanelHome[gameType] = panel.parentElement;
+    slot.appendChild(panel);
+    show(panel);
+  }
+  hide(document.getElementById('ag-picker'));
+  show(slot);
+}
+
+async function payArcadeEntry() {
+  const { data, error } = await sb.rpc('pay_arcade_entry');
+  if (error) throw error;
+  me.coins = data;
+  setText(headerCoins, me.coins);
+}
+
+document.querySelectorAll('.ag-card').forEach(btn => {
+  btn.addEventListener('click', () => selectAllGame(btn.dataset.game));
+});
+document.getElementById('ag-back').addEventListener('click', () => {
+  stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
+  stopSnakeRound(); stopInvoiceHordeRound();
+  if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
+  allGamesSelectedGame = null;
+  allGamesMode = false;
+  show(document.getElementById('ag-picker'));
+  hide(document.getElementById('ag-game-slot'));
+});
+
 function switchTab(tab) {
   if (tab === 'bug-jumper-test' && !isAdmin()) tab = 'markets';
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   const previousTab = activeTab;
   if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); }
+  if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
   if (previousTab === 'invoice-horde-test' && tab !== 'invoice-horde-test') { stopInvoiceHordeRound(); restoreInvoiceHordePanelHome(); }
@@ -5091,10 +5209,12 @@ function switchTab(tab) {
   const tS = document.getElementById('tab-shop');
   const tG = document.getElementById('tab-garden');
   const tH = document.getElementById('tab-heroes');
+  const tAg = document.getElementById('tab-all-games');
   const tFp = document.getElementById('tab-flappy-test');
   const tBj = document.getElementById('tab-bug-jumper-test');
   const tIh = document.getElementById('tab-invoice-horde-test');
   const tFb = document.getElementById('tab-football');
+  hide(tAg);
   hide(tFp);
   hide(tBj);
   hide(tIh);
@@ -5118,6 +5238,10 @@ function switchTab(tab) {
   } else if (tab === 'whack-boss') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG); hide(tH);
     loadSeasonalTab();
+  } else if (tab === 'all-games') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    show(tAg);
+    loadAllGamesTab();
   } else if (tab === 'shop') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); show(tS); hide(tG); hide(tH);
     loadShop();
@@ -10386,6 +10510,9 @@ function beginWhackBossRound(round) {
 
 async function startWhackBossRound() {
   if (whackBossRuntime?.playing || whackBossRuntime?.submitting) return;
+  if (allGamesMode) {
+    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
   if (wbStartBtn) {
     wbStartBtn.disabled = true;
     wbStartBtn.textContent = 'Ładuję...';
@@ -10396,6 +10523,7 @@ async function startWhackBossRound() {
     const data = await invokeWhackBoss({ action: 'start' });
     renderWhackBossState(data);
     beginWhackBossRound(data.round);
+    if (allGamesMode) whackBossRuntime.archiveMode = true;
   } catch (err) {
     showToast('❌ ' + err.message);
     if (wbStatus) wbStatus.textContent = 'Nie udało się wystartować rundy.';
@@ -11171,12 +11299,15 @@ async function startBugJumperRound() {
     }, BJ_COURSE, { archiveMode: true });
     return;
   }
+  if (allGamesMode) {
+    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Ładuję...'; }
   if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę...';
   try {
     const data = await invokeBugJumper({ action: 'start' });
     renderBugJumperState(data);
-    beginBugJumperRound(data.round, data.course);
+    beginBugJumperRound(data.round, data.course, allGamesMode ? { archiveMode: true } : {});
   } catch (err) {
     showToast('❌ ' + err.message);
     if (bjStatus) bjStatus.textContent = 'Nie udało się wystartować rundy.';
@@ -11576,12 +11707,16 @@ function beginFlappyPantsRound(round) {
 async function startFlappyPantsRound() {
   const rt = flappyPantsRuntime;
   if (rt?.playing || rt?.submitting) return;
+  if (allGamesMode) {
+    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
   if (fpStartBtn) { fpStartBtn.disabled = true; fpStartBtn.textContent = 'Ładuję...'; }
   if (fpStatus) fpStatus.textContent = 'Przygotowuję rundę...';
   try {
     const data = await invokeFlappyPants({ action: 'start' });
     renderFlappyPantsState(data);
     beginFlappyPantsRound(data.round);
+    if (allGamesMode && flappyPantsRuntime) flappyPantsRuntime.archiveMode = true;
   } catch (err) {
     showToast('❌ ' + err.message);
     if (fpStatus) fpStatus.textContent = 'Nie udało się wystartować rundy.';
@@ -12091,12 +12226,15 @@ function snakeTick() {
 async function startSnakeRound() {
   const rt = snakeRuntime;
   if (rt?.playing || rt?.submitting) return;
+  if (allGamesMode) {
+    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
   if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Ładuję...'; }
   if (snStatus) snStatus.textContent = 'Przygotowuję rundę...';
   try {
     const data = await invokeSnake({ action: 'start' });
     renderSnakeState(data);
-    beginSnakeRound(data.round);
+    beginSnakeRound(data.round, allGamesMode ? { archiveMode: true } : {});
   } catch (err) {
     showToast('❌ ' + err.message);
     if (snStatus) snStatus.textContent = 'Nie udało się wystartować rundy.';
@@ -12902,12 +13040,15 @@ async function startInvoiceHordeRound() {
     }, { archiveMode: true });
     return;
   }
+  if (allGamesMode) {
+    try { await payArcadeEntry(); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
   if (ihStartBtn) { ihStartBtn.disabled = true; ihStartBtn.textContent = 'Ładuję...'; }
   if (ihStatus) ihStatus.textContent = 'Przygotowuję rundę...';
   try {
     const data = await invokeInvoiceHorde({ action: 'start' });
     renderInvoiceHordeState(data);
-    beginInvoiceHordeRound(data.round);
+    beginInvoiceHordeRound(data.round, allGamesMode ? { archiveMode: true } : {});
   } catch (err) {
     showToast('❌ ' + err.message);
     if (ihStatus) ihStatus.textContent = 'Nie udało się wystartować rundy.';
