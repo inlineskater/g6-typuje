@@ -1805,30 +1805,68 @@
 
     /* ── Wszystkie Gry (All Games picker) ── */
     #tab-all-games { padding: 18px 16px; }
-    .ag-info {
-      font-size: 13px; color: var(--muted); margin-bottom: 16px;
-    }
+    .ag-header { margin-bottom: 18px; }
+    .ag-header h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .ag-info { font-size: 13px; color: var(--muted); }
     .ag-info strong { color: var(--text); }
+
+    /* ── Game picker (Steam/Xbox style) ── */
     .ag-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
     }
     .ag-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      color: var(--text); font-size: 14px; font-weight: 600;
-      padding: 18px 12px; cursor: pointer; text-align: center;
-      transition: border-color .15s, transform .1s;
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      color: var(--text); cursor: pointer; text-align: left;
+      transition: border-color .15s, box-shadow .15s, transform .1s;
+      overflow: hidden; display: flex; flex-direction: column;
     }
-    .ag-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-    .ag-card:active { transform: translateY(0); }
+    .ag-card:hover { border-color: var(--accent); box-shadow: 0 4px 18px rgba(99,102,241,.18); transform: translateY(-2px); }
+    .ag-card:active { transform: translateY(0); box-shadow: none; }
+    .ag-card-banner {
+      height: 90px; display: flex; align-items: center; justify-content: center;
+      font-size: 42px; background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
+    }
+    .ag-card-body { padding: 10px 12px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .ag-card-name { font-size: 13px; font-weight: 700; }
+    .ag-card-desc { font-size: 11px; color: var(--muted); line-height: 1.45; flex: 1; }
+    .ag-card-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);
+    }
+    .ag-card-cost { font-size: 11px; font-weight: 700; color: var(--accent); }
+    .ag-card-tag  { font-size: 10px; color: var(--dim); font-weight: 500; letter-spacing: .3px; }
+
+    /* ── Back button ── */
     #ag-back {
       background: none; border: 1px solid var(--border); border-radius: 8px;
       color: var(--muted); font-size: 13px; padding: 7px 14px; cursor: pointer;
-      margin-bottom: 16px; transition: color .15s, border-color .15s;
+      margin-bottom: 14px; transition: color .15s, border-color .15s; display: inline-block;
     }
     #ag-back:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Arcade scoreboard ── */
+    #ag-scores-panel { margin-top: 20px; }
+    .ag-scores-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 540px) { .ag-scores-cols { grid-template-columns: 1fr; } }
+    .ag-scores-box {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .ag-scores-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .ag-score-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .ag-score-row:last-child { border-bottom: none; }
+    .ag-score-rank { color: var(--dim); font-size: 11px; width: 18px; flex-shrink: 0; }
+    .ag-score-nick { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ag-score-val  { font-weight: 700; color: var(--accent); }
+    .ag-score-coin { font-size: 10px; color: var(--dim); }
+    .ag-score-date { font-size: 11px; color: var(--dim); }
+    .ag-empty      { font-size: 12px; color: var(--dim); padding: 6px 0; }
 
     /* ── Shop ── */
     input[type="number"], textarea {
@@ -4030,17 +4068,82 @@
 
   <div id="tab-all-games" class="hidden">
     <div id="ag-picker">
-      <p class="ag-info">Zagraj w dowolną grę kiedy chcesz. Każda runda kosztuje <strong>1 monetę</strong> — wyniki nie są zapisywane do rankingu.</p>
+      <div class="ag-header">
+        <h2>🎮 Wszystkie Gry</h2>
+        <p class="ag-info">Zagraj w dowolną grę — <strong>1 moneta</strong> za rundę. Wyniki trafiają do oddzielnego rankingu arcade (bez nagród sezonowych).</p>
+      </div>
       <div class="ag-grid">
-        <button class="ag-card" data-game="whack_boss">🪲<br>Whack-a-Boss</button>
-        <button class="ag-card" data-game="bug_jumper">🐛<br>Bug Jumper</button>
-        <button class="ag-card" data-game="flappy_pants">👖<br>3 Pary Spodni</button>
-        <button class="ag-card" data-game="snake">🐍<br>Snake</button>
-        <button class="ag-card" data-game="invoice_horde">🎫<br>Najazd Ticketów</button>
+        <button class="ag-card" data-game="whack_boss">
+          <div class="ag-card-banner">🪲</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">Whack-a-Boss</div>
+            <div class="ag-card-desc">18 sekund intensywnego klikania. Kliknij bossa kiedy jest widoczny — nie klikaj gdy znika. Łańcuchy trafień budują combo.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">ZRĘCZNOŚCIOWA</span>
+            </div>
+          </div>
+        </button>
+        <button class="ag-card" data-game="bug_jumper">
+          <div class="ag-card-banner">🐛</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">Bug Jumper</div>
+            <div class="ag-card-desc">30 trudnych linii, stała plansza dla wszystkich. Przeskakuj przeszkody strzałkami i dotrzyj jak najwyżej.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">PLATFORMÓWKA</span>
+            </div>
+          </div>
+        </button>
+        <button class="ag-card" data-game="flappy_pants">
+          <div class="ag-card-banner">👖</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">3 Pary Spodni</div>
+            <div class="ag-card-desc">Flappy Bird z parami spodni. Masz 3 życia — każde zderzenie kosztuje jedną parę. Wynik = liczba ominętych rur.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">ARCADE</span>
+            </div>
+          </div>
+        </button>
+        <button class="ag-card" data-game="snake">
+          <div class="ag-card-banner">🐍</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">Snake</div>
+            <div class="ag-card-desc">Klasyczny wąż na siatce 20×20. Zbieraj jabłka, unikaj ścian i własnego ogona. Masz 120 sekund.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">KLASYCZNA</span>
+            </div>
+          </div>
+        </button>
+        <button class="ag-card" data-game="invoice_horde">
+          <div class="ag-card-banner">🎫</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">Najazd Ticketów</div>
+            <div class="ag-card-desc">Survival: jesteś informatykiem otoczonym ticketami. Uciekaj, prowadź rój za sobą i zamykaj zgłoszenia — boss CF soakuje 5 trafień.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">SURVIVAL</span>
+            </div>
+          </div>
+        </button>
       </div>
     </div>
     <div id="ag-game-slot" class="hidden">
-      <button id="ag-back">← Wróć do wyboru gry</button>
+      <button id="ag-back">← Wróć do wyboru gier</button>
+      <div id="ag-scores-panel" class="hidden">
+        <div class="ag-scores-cols">
+          <div class="ag-scores-box">
+            <div class="ag-scores-title">🏆 Top 10 — arcade</div>
+            <div id="ag-top-scores"></div>
+          </div>
+          <div class="ag-scores-box">
+            <div class="ag-scores-title">Twoje ostatnie rundy</div>
+            <div id="ag-my-scores"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -5161,6 +5264,8 @@ function selectAllGame(gameType) {
   }
   hide(document.getElementById('ag-picker'));
   show(slot);
+  hide(document.getElementById('ag-scores-panel'));
+  loadArcadeScores(gameType);
 }
 
 async function payArcadeEntry() {
@@ -5168,6 +5273,54 @@ async function payArcadeEntry() {
   if (error) throw error;
   me.coins = data;
   setText(headerCoins, me.coins);
+}
+
+async function loadArcadeScores(gameType) {
+  const panel = document.getElementById('ag-scores-panel');
+  if (!panel) return;
+  const [topRes, myRes] = await Promise.all([
+    sb.from('arcade_leaderboard').select('score, nick, coins_paid, created_at')
+      .eq('game_type', gameType).order('score', { ascending: false }).limit(10),
+    sb.from('arcade_scores').select('score, coins_paid, created_at')
+      .eq('game_type', gameType).eq('user_id', me.id)
+      .order('created_at', { ascending: false }).limit(5),
+  ]);
+  const top  = topRes.data  || [];
+  const mine = myRes.data   || [];
+  const topEl = document.getElementById('ag-top-scores');
+  const myEl  = document.getElementById('ag-my-scores');
+  if (topEl) {
+    if (top.length === 0) {
+      topEl.replaceChildren(el('p', { className: 'ag-empty' }, 'Brak wyników — bądź pierwszy!'));
+    } else {
+      topEl.replaceChildren(...top.map((row, i) => {
+        const d = el('div', { className: 'ag-score-row' });
+        d.append(
+          el('span', { className: 'ag-score-rank' }, (i + 1) + '.'),
+          el('span', { className: 'ag-score-nick' }, row.nick),
+          el('span', { className: 'ag-score-val'  }, String(row.score)),
+          el('span', { className: 'ag-score-coin' }, row.coins_paid + ' 🪙')
+        );
+        return d;
+      }));
+    }
+  }
+  if (myEl) {
+    if (mine.length === 0) {
+      myEl.replaceChildren(el('p', { className: 'ag-empty' }, 'Jeszcze nie grałeś w tej grze.'));
+    } else {
+      myEl.replaceChildren(...mine.map(row => {
+        const d = el('div', { className: 'ag-score-row' });
+        d.append(
+          el('span', { className: 'ag-score-val'  }, String(row.score)),
+          el('span', { className: 'ag-score-coin' }, row.coins_paid + ' 🪙'),
+          el('span', { className: 'ag-score-date' }, new Date(row.created_at).toLocaleDateString('pl-PL'))
+        );
+        return d;
+      }));
+    }
+  }
+  show(panel);
 }
 
 document.querySelectorAll('.ag-card').forEach(btn => {
@@ -10552,8 +10705,16 @@ async function finishWhackBossRound() {
   if (rt.archiveMode) {
     rt.submitting = false;
     if (wbReady) show(wbReady);
-    if (wbStatus) wbStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
     if (wbStartBtn) { wbStartBtn.disabled = false; wbStartBtn.textContent = 'Zagraj ponownie'; }
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'whack_boss', p_score: rt.score });
+        if (wbStatus) wbStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('whack_boss');
+      } catch(e) { if (wbStatus) wbStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
+    } else {
+      if (wbStatus) wbStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
+    }
     return;
   }
 
@@ -11329,8 +11490,16 @@ async function finishBugJumperRound() {
 
   if (rt.archiveMode) {
     rt.submitting = false;
-    if (bjStatus) bjStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
     if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Zagraj ponownie'; }
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'bug_jumper', p_score: rt.score });
+        if (bjStatus) bjStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('bug_jumper');
+      } catch(e) { if (bjStatus) bjStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
+    } else {
+      if (bjStatus) bjStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
+    }
     return;
   }
 
@@ -11736,8 +11905,16 @@ async function finishFlappyPantsRound() {
 
   if (rt.archiveMode) {
     rt.submitting = false;
-    if (fpStatus) fpStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
     if (fpStartBtn) { fpStartBtn.disabled = false; fpStartBtn.textContent = 'Zagraj ponownie'; }
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'flappy_pants', p_score: rt.score });
+        if (fpStatus) fpStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('flappy_pants');
+      } catch(e) { if (fpStatus) fpStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
+    } else {
+      if (fpStatus) fpStatus.textContent = 'Tryb archiwum — wynik: ' + rt.score + ' (nie zapisano).';
+    }
     return;
   }
 
@@ -12253,8 +12430,16 @@ async function finishSnakeRound() {
 
   if (rt.archiveMode) {
     rt.submitting = false;
-    if (snStatus) snStatus.textContent = 'Demo — wynik: ' + rt.score + ' (nie zapisano).';
     if (snStartBtn) { snStartBtn.disabled = false; snStartBtn.textContent = 'Zagraj ponownie'; }
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'snake', p_score: rt.score });
+        if (snStatus) snStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('snake');
+      } catch(e) { if (snStatus) snStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
+    } else {
+      if (snStatus) snStatus.textContent = 'Demo — wynik: ' + rt.score + ' (nie zapisano).';
+    }
     return;
   }
 
@@ -13068,8 +13253,16 @@ async function finishInvoiceHordeRound() {
 
   if (rt.archiveMode) {
     rt.submitting = false;
-    if (ihStatus) ihStatus.textContent = 'Demo — wynik: ' + rt.score + ' (nie zapisano).';
     if (ihStartBtn) { ihStartBtn.disabled = false; ihStartBtn.textContent = 'Zagraj ponownie'; }
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'invoice_horde', p_score: rt.score });
+        if (ihStatus) ihStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('invoice_horde');
+      } catch(e) { if (ihStatus) ihStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
+    } else {
+      if (ihStatus) ihStatus.textContent = 'Demo — wynik: ' + rt.score + ' (nie zapisano).';
+    }
     return;
   }
 
