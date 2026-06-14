@@ -3338,7 +3338,7 @@
     </div>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
     <button class="nav-tab" data-tab="garden">🌱 Ogródek</button>
-    <button class="nav-tab" data-tab="leaderboard">🏆 Ranking</button>
+    <button class="nav-tab" data-tab="leaderboard">📊 Statystyki</button>
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
   </nav>
@@ -3417,12 +3417,18 @@
 
   <div id="tab-leaderboard" class="hidden">
     <main>
-      <h2 class="page-title">Ranking graczy 🏆</h2>
+      <h2 class="page-title">Statystyki 📊</h2>
       <p class="page-sub">Kliknij dowolną sekcję, aby zobaczyć szczegóły.</p>
       <div class="ranking-grid">
         <div class="ranking-card ranking-card-wide">
           <div class="ranking-card-title">⚽ Mundial 2026 — typerzy i bilans Banku</div>
           <div class="ranking-card-body" id="mundial-preview-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card ranking-card-wide" data-detail="economy">
+          <div class="ranking-card-title">🏦 Skarbiec G6 — podaż coinów</div>
+          <div class="ranking-card-body" id="economy-preview-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
@@ -6927,7 +6933,221 @@ async function loadLeaderboard() {
   renderHazardHistory(hazardHistWrap, getFilteredHazardRows());
 
   renderMundialRankingCard();
+  loadEconomyStats();
 }
+
+// ── Skarbiec G6 — server-wide economy stats ───────────────────────────────
+
+let _economyStats = null;
+
+async function loadEconomyStats() {
+  const wrap = document.getElementById('economy-preview-wrap');
+  if (!wrap) return;
+  try {
+    const { data, error } = await sb.rpc('economy_stats');
+    if (error || !data) {
+      wrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '13px', padding: '12px' } }, 'Błąd ładowania danych.'));
+      return;
+    }
+    _economyStats = data;
+    renderEconomyPreview(wrap, data);
+  } catch {
+    wrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '13px', padding: '12px' } }, 'Błąd ładowania danych.'));
+  }
+}
+
+function renderEconomyPreview(wrap, s) {
+  const locked = s.total_supply - s.total_cash;
+  const cashPct = s.total_supply > 0 ? Math.round(s.total_cash / s.total_supply * 100) : 0;
+  const lockedPct = 100 - cashPct;
+
+  // Two-segment supply bar
+  const barWrap = el('div', { style: { display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', margin: '8px 0 14px', background: 'var(--border)' } },
+    el('div', { style: { width: cashPct + '%', background: 'var(--yes)', transition: 'width .4s' } }),
+    el('div', { style: { width: lockedPct + '%', background: 'var(--accent)', transition: 'width .4s' } })
+  );
+
+  const row = (label, val, pct) => el('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '1px 0' } },
+    el('span', { style: { color: 'var(--muted)', fontWeight: 600 } }, label),
+    el('span', { style: { fontWeight: 700 } }, fmtNum(val) + ' 🪙' + (pct !== undefined ? ' (' + pct + '%)' : ''))
+  );
+
+  wrap.replaceChildren(
+    row('Łączna podaż', s.total_supply),
+    barWrap,
+    row('W obiegu (gotówka)', s.total_cash, cashPct),
+    row('Zablokowane (w grze)', locked, lockedPct),
+    el('div', { style: { fontSize: '11px', color: 'var(--dim)', marginTop: '8px', fontWeight: 600 } },
+      'Graczy: ' + s.players + ' · śr. ' + fmtNum(Math.round(s.total_supply / (s.players || 1))) + ' · Kliknij po szczegóły →')
+  );
+}
+
+function renderEconomyDetail(container) {
+  if (_economyStats) {
+    _buildEconomyDetailContent(container, _economyStats);
+    return;
+  }
+  container.replaceChildren(makeSpinner());
+  sb.rpc('economy_stats').then(({ data, error }) => {
+    if (error || !data) { container.replaceChildren(el('p', {}, 'Błąd ładowania danych.')); return; }
+    _economyStats = data;
+    container.replaceChildren();
+    _buildEconomyDetailContent(container, data);
+  });
+}
+
+function _buildEconomyDetailContent(container, s) {
+  const locked = s.total_supply - s.total_cash;
+  const pct = v => s.total_supply > 0 ? (v / s.total_supply * 100).toFixed(1) + '%' : '0%';
+
+  // ── Section helper ─────────────────────────────────────────────────────
+  const section = (title) => {
+    const h = el('div', { style: { fontSize: '11px', fontWeight: 800, textTransform: 'uppercase',
+      letterSpacing: '.05em', color: 'var(--muted)', margin: '20px 0 8px' } }, title);
+    return h;
+  };
+
+  // ── 1. Podaż pieniądza ─────────────────────────────────────────────────
+  const cashPct = s.total_supply > 0 ? Math.round(s.total_cash / s.total_supply * 100) : 0;
+  const lockedPct = 100 - cashPct;
+
+  const bonkCell = (label, valText, sub, cls) => el('div', { className: 'fb-bonk-cell' },
+    el('span', { className: 'fb-bonk-label' }, label),
+    el('span', { className: 'fb-bonk-val ' + (cls || '') }, valText),
+    sub ? el('span', { className: 'fb-bonk-sub' }, sub) : ''
+  );
+
+  const supplyBar = el('div', { style: { display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden',
+    margin: '12px 0 4px', background: 'var(--border)' } },
+    el('div', { style: { width: cashPct + '%', background: 'var(--yes)', transition: 'width .4s' } }),
+    el('div', { style: { width: lockedPct + '%', background: 'var(--accent)', transition: 'width .4s' } })
+  );
+  const barLegend = el('div', { style: { display: 'flex', gap: '14px', fontSize: '11px', color: 'var(--dim)', marginBottom: '4px' } },
+    el('span', {}, '🟢 Gotówka ' + cashPct + '%'),
+    el('span', {}, '🔵 W grze ' + lockedPct + '%')
+  );
+
+  // ── 2. Breakdown chips ─────────────────────────────────────────────────
+  const chipRow = (icon, label, val) => el('div', { className: 'fb-stat-chip' },
+    el('span', { className: 'fb-stat-label' }, icon + ' ' + label),
+    el('span', { className: 'fb-stat-nick' }, fmtNum(val) + ' 🪙'),
+    el('span', { className: 'fb-stat-val' }, pct(val) + ' podaży')
+  );
+
+  const chips = el('div', { className: 'fb-stats-chips' },
+    chipRow('📈', 'Rynki (pozycje)', s.market_positions),
+    chipRow('⚽', 'Mundial (zakłady)', s.football_open),
+    chipRow('🃏', 'Poker (stosy)', s.poker_stacks),
+    chipRow('🦸', 'Przedmioty', s.hero_items),
+    chipRow('🌱', 'Akcesoria', s.accessories),
+    chipRow('🏷️', 'Aukcje+Targowisko', s.marketplace_escrow + s.hero_auction_escrow)
+  );
+
+  // ── 3. Koncentracja majątku ────────────────────────────────────────────
+  const holdings = (s.holdings || []).map(Number).filter(v => !isNaN(v) && v >= 0);
+  const totalNW = holdings.reduce((a, b) => a + b, 0);
+  let concentrationSection = '';
+  if (holdings.length > 0) {
+    const richestPct = totalNW > 0 ? (holdings[0] / totalNW * 100).toFixed(1) : '0';
+    const top3 = holdings.slice(0, 3).reduce((a, b) => a + b, 0);
+    const top3Pct = totalNW > 0 ? (top3 / totalNW * 100).toFixed(1) : '0';
+
+    // Gini coefficient
+    const sorted = [...holdings].sort((a, b) => a - b);
+    const n = sorted.length;
+    let giniNum = 0;
+    sorted.forEach((v, i) => { giniNum += (2 * (i + 1) - n - 1) * v; });
+    const gini = n > 1 ? (giniNum / (n * sorted.reduce((a, b) => a + b, 0))).toFixed(2) : '0';
+
+    concentrationSection = el('div', { className: 'fb-stats-chips' },
+      el('div', { className: 'fb-stat-chip' },
+        el('span', { className: 'fb-stat-label' }, '🥇 Najbogatszy'),
+        el('span', { className: 'fb-stat-nick' }, s.richest ? s.richest.nick : '—'),
+        el('span', { className: 'fb-stat-val' }, fmtNum(holdings[0]) + ' 🪙 · ' + richestPct + '% majątku')
+      ),
+      el('div', { className: 'fb-stat-chip' },
+        el('span', { className: 'fb-stat-label' }, '🏅 Top-3 gracze'),
+        el('span', { className: 'fb-stat-nick' }, top3Pct + '%'),
+        el('span', { className: 'fb-stat-val' }, 'majątku w rękach top 3')
+      ),
+      el('div', { className: 'fb-stat-chip' },
+        el('span', { className: 'fb-stat-label' }, '📐 Współczynnik Giniego'),
+        el('span', { className: 'fb-stat-nick' }, gini),
+        el('span', { className: 'fb-stat-val' }, '0 = pełna równość · 1 = max nierówność')
+      )
+    );
+  }
+
+  // ── 4. Rozkład (distribution) ──────────────────────────────────────────
+  let distributionSection = '';
+  if (holdings.length > 0) {
+    const avg = Math.round(totalNW / holdings.length);
+    const mid = Math.floor(holdings.length / 2);
+    const median = holdings.length % 2 === 0
+      ? Math.round((holdings[mid - 1] + holdings[mid]) / 2)
+      : holdings[mid];
+    const minV = holdings[holdings.length - 1];
+    const maxV = holdings[0];
+
+    // Histogram: 5 brackets
+    const brackets = [];
+    const step = Math.ceil((maxV - minV + 1) / 5) || 1;
+    for (let i = 0; i < 5; i++) {
+      const lo = minV + i * step, hi = lo + step - 1;
+      const count = holdings.filter(v => v >= lo && v <= hi).length;
+      brackets.push({ lo, hi, count });
+    }
+    const maxCount = Math.max(...brackets.map(b => b.count)) || 1;
+
+    const histBars = brackets.map(b => {
+      const barH = Math.max(4, Math.round(b.count / maxCount * 48));
+      return el('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', flex: 1 } },
+        el('span', { style: { fontSize: '10px', fontWeight: 700, color: 'var(--text)' } }, String(b.count)),
+        el('div', { style: { width: '100%', height: barH + 'px', background: 'var(--accent)', borderRadius: '3px 3px 0 0', opacity: .75 } }),
+        el('span', { style: { fontSize: '9px', color: 'var(--dim)', textAlign: 'center', lineHeight: 1.2 } },
+          fmtNum(b.lo) + '–' + fmtNum(b.hi))
+      );
+    });
+
+    const histogram = el('div', { style: { display: 'flex', alignItems: 'flex-end', gap: '4px', height: '72px',
+      padding: '8px 0 0', margin: '8px 0 0' } }, ...histBars);
+
+    const statRow = (label, val) => el('div', { style: { display: 'flex', justifyContent: 'space-between',
+      fontSize: '12px', padding: '2px 0' } },
+      el('span', { style: { color: 'var(--muted)', fontWeight: 600 } }, label),
+      el('span', { style: { fontWeight: 700 } }, fmtNum(val) + ' 🪙')
+    );
+
+    distributionSection = el('div', { style: { background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: '10px', padding: '12px 14px' } },
+      statRow('Graczy', holdings.length),
+      statRow('Średnia (net worth)', avg),
+      statRow('Mediana', median),
+      statRow('Minimum', minV),
+      statRow('Maksimum', maxV),
+      histogram
+    );
+  }
+
+  container.replaceChildren(
+    section('📦 Podaż pieniądza'),
+    el('div', { className: 'fb-bonk-strip' },
+      bonkCell('💰 Łączna podaż', fmtNum(s.total_supply) + ' 🪙', 'graczy: ' + s.players),
+      bonkCell('💵 Gotówka', fmtNum(s.total_cash) + ' 🪙', cashPct + '% podaży — w portfelach'),
+      bonkCell('🔒 W grze', fmtNum(locked) + ' 🪙', lockedPct + '% podaży — zablokowane')
+    ),
+    supplyBar,
+    barLegend,
+    section('📊 Gdzie są coiny'),
+    chips,
+    section('💎 Koncentracja majątku'),
+    concentrationSection || el('p', { style: { fontSize: '12px', color: 'var(--dim)' } }, 'Brak danych.'),
+    section('📈 Rozkład majątku'),
+    distributionSection || el('p', { style: { fontSize: '12px', color: 'var(--dim)' } }, 'Brak danych.')
+  );
+}
+
+// ── end Skarbiec G6 ───────────────────────────────────────────────────────
 
 function buildCalibrationByUser(allTrades, marketsData) {
   const resolvedMarkets = {};
@@ -7807,6 +8027,9 @@ function renderCoinRaceDetail(container) {
     } else if (detail === 'coin-race') {
       title.textContent = '📈 Wyścig coinów — stan gotówki w czasie';
       renderCoinRaceDetail(body);
+    } else if (detail === 'economy') {
+      title.textContent = '🏦 Skarbiec G6 — bank coinów';
+      renderEconomyDetail(body);
     }
     overlay.classList.remove('hidden');
   }
