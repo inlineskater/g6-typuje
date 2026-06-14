@@ -7,6 +7,7 @@
 CREATE TABLE public.profiles (
   id         uuid PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   nick       text UNIQUE NOT NULL,
+  is_admin   boolean NOT NULL DEFAULT false,
   coins      integer NOT NULL DEFAULT 1000,
   created_at timestamptz DEFAULT now()
 );
@@ -63,7 +64,8 @@ SELECT p.id,
          FROM public.trades t
          JOIN public.markets m ON m.id = t.market_id
          WHERE t.user_id = p.id AND m.resolved = false
-       ), 0) AS net_worth
+       ), 0) AS net_worth,
+       p.is_admin
 FROM public.profiles p;
 
 -- ── Trigger: create profile on signup ─────────────────────────────────────
@@ -166,7 +168,8 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.markets  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trades   ENABLE ROW LEVEL SECURITY;
 
--- profiles: anyone can read, nobody can write directly (trigger + RPC only)
+-- profiles: readable so the login screen can show the nick dropdown; nobody can
+-- write directly (trigger + RPC only).
 CREATE POLICY "profiles_select" ON public.profiles FOR SELECT USING (true);
 
 -- markets: anyone can read, nobody can INSERT/UPDATE/DELETE directly
@@ -176,8 +179,11 @@ CREATE POLICY "markets_select"  ON public.markets FOR SELECT USING (true);
 CREATE POLICY "trades_select"   ON public.trades  FOR SELECT USING (true);
 
 -- Data API privileges: expose only the read surface and authenticated RPCs.
-GRANT SELECT ON public.profiles, public.markets, public.trades, public.positions, public.leaderboard
-  TO anon, authenticated;
+REVOKE SELECT ON public.profiles FROM anon;
+GRANT SELECT (nick) ON public.profiles TO anon;
+GRANT SELECT ON public.profiles TO authenticated;
+GRANT SELECT ON public.markets, public.trades, public.positions, public.leaderboard
+  TO authenticated;
 
 -- ── Realtime: enable publications ─────────────────────────────────────────
 
@@ -192,10 +198,10 @@ ALTER TABLE public.markets
 
 CREATE INDEX IF NOT EXISTS markets_resolved_by_idx ON public.markets(resolved_by);
 
--- Returns true if the calling user has the admin nick
+-- Returns true if the calling user has explicit admin privileges.
 CREATE OR REPLACE FUNCTION public.is_admin(p_user uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_user AND nick = 'admin');
+  SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_user AND is_admin);
 $$;
 
 -- Resolve a market: creator or admin picks YES/NO; winners split the coin pot by shares

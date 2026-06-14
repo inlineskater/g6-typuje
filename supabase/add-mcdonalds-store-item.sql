@@ -12,7 +12,7 @@ SELECT
   'Nagroda z aplikacji McDonald''s o wartości 250 coinów — np. sos Big Mac lub sos śmietanowy. Admin poda Ci kod, gdy będziesz na miejscu w McDonald''s.',
   250,
   1,
-  (SELECT id FROM public.profiles WHERE nick = 'admin' LIMIT 1),
+  (SELECT id FROM public.profiles WHERE is_admin LIMIT 1),
   COALESCE(
     (SELECT created_at - interval '1 second'
        FROM public.store_items

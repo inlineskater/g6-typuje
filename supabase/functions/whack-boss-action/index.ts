@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://inlineskater.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -16,6 +16,7 @@ const db = databaseUrl
 const ROUND_DURATION_MS = 18_000;
 const ROUND_EXPIRES_SECONDS = 120;
 const MAX_HITS_PER_ROUND = 60;
+const TARGET_HIT_RADIUS = 12;
 const PRIZES = [100, 50, 25];
 
 function json(body, status = 200) {
@@ -39,6 +40,94 @@ function asInt(value, fallback = 0) {
 function asNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function randInt(min, max) {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return min + (buf[0] % (max - min + 1));
+}
+
+function whackDuration(difficulty) {
+  return Math.max(320, Math.round(900 - difficulty * 25));
+}
+
+function whackGap(difficulty) {
+  return Math.max(70, Math.round(130 - difficulty * 4));
+}
+
+function buildSchedule() {
+  const schedule = [];
+  let elapsed = 620;
+  let difficulty = 0;
+  while (elapsed + 250 < ROUND_DURATION_MS && schedule.length < MAX_HITS_PER_ROUND) {
+    const durationMs = whackDuration(difficulty);
+    schedule.push({
+      index: schedule.length,
+      startMs: Math.round(elapsed),
+      durationMs,
+      x: randInt(12, 88),
+      y: randInt(16, 84),
+    });
+    difficulty += 0.75;
+    elapsed += durationMs + whackGap(difficulty);
+  }
+  return schedule;
+}
+
+function parseHitEvents(value) {
+  if (!Array.isArray(value)) throw gameError("Brak zapisu kliknięć rundy.");
+  if (value.length > MAX_HITS_PER_ROUND * 2) throw gameError("Za dużo kliknięć w rundzie.");
+  return value.map((event) => ({
+    targetIndex: asInt(event?.targetIndex, -1),
+    atMs: asNumber(event?.atMs, NaN),
+    x: asNumber(event?.x, NaN),
+    y: asNumber(event?.y, NaN),
+  }));
+}
+
+function parseMissEvents(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 999).map((event) => ({
+    atMs: asNumber(event?.atMs, NaN),
+    x: asNumber(event?.x, NaN),
+    y: asNumber(event?.y, NaN),
+  })).filter((event) =>
+    Number.isFinite(event.atMs) &&
+    event.atMs >= 0 &&
+    event.atMs <= ROUND_DURATION_MS + 1000 &&
+    Number.isFinite(event.x) &&
+    Number.isFinite(event.y)
+  );
+}
+
+function validateHits(schedule, hitEvents) {
+  const byIndex = new Map(schedule.map((target) => [asInt(target.index), target]));
+  const accepted = [];
+  const hitIndexes = new Set();
+  for (const event of hitEvents) {
+    const target = byIndex.get(event.targetIndex);
+    if (!target || hitIndexes.has(event.targetIndex)) continue;
+    if (!Number.isFinite(event.atMs) || !Number.isFinite(event.x) || !Number.isFinite(event.y)) continue;
+    const start = asNumber(target.startMs);
+    const end = start + asNumber(target.durationMs);
+    if (event.atMs < start - 120 || event.atMs > end + 120) continue;
+    const dx = event.x - asNumber(target.x);
+    const dy = event.y - asNumber(target.y);
+    if (Math.sqrt(dx * dx + dy * dy) > TARGET_HIT_RADIUS) continue;
+    hitIndexes.add(event.targetIndex);
+    accepted.push({ ...event, target });
+  }
+  accepted.sort((a, b) => a.atMs - b.atMs || a.targetIndex - b.targetIndex);
+  let combo = 0;
+  let maxCombo = 0;
+  let lastIndex = -2;
+  for (const hit of accepted) {
+    combo = hit.targetIndex === lastIndex + 1 ? combo + 1 : 1;
+    maxCombo = Math.max(maxCombo, combo);
+    lastIndex = hit.targetIndex;
+  }
+  return { accepted, hitIndexes, maxCombo };
 }
 
 async function requireUser(req) {
@@ -175,8 +264,8 @@ async function startRound(userId) {
     insert into public.whack_boss_rounds
       (user_id, nick_snapshot, schedule, duration_ms, expires_at)
     values
-      (${userId}, ${profile.nick}, '[]'::jsonb, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
-    returning id, started_at, expires_at
+      (${userId}, ${profile.nick}, ${JSON.stringify(buildSchedule())}::jsonb, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
+    returning id, schedule, started_at, expires_at
   `;
 
   return {
@@ -184,6 +273,7 @@ async function startRound(userId) {
     round: {
       id: round.id,
       durationMs: ROUND_DURATION_MS,
+      schedule: round.schedule,
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
       expiresAt: round.expires_at,
@@ -217,9 +307,14 @@ async function submitRound(userId, body) {
     const minSubmitAt = new Date(round.started_at).getTime() + asInt(round.duration_ms, ROUND_DURATION_MS) - 750;
     if (Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
 
-    const hits = Math.max(0, Math.min(MAX_HITS_PER_ROUND, asInt(body.hits, 0)));
-    const misses = normalizeMisses(body.misses);
-    const maxCombo = Math.max(0, Math.min(hits, asInt(body.maxCombo, 0)));
+    const schedule = Array.isArray(round.schedule) ? round.schedule : [];
+    const hitEvents = parseHitEvents(body.hitEvents);
+    const missEvents = parseMissEvents(body.missEvents);
+    const validated = validateHits(schedule, hitEvents);
+    const hits = Math.max(0, Math.min(MAX_HITS_PER_ROUND, validated.accepted.length));
+    const missedTargets = schedule.filter((target) => !validated.hitIndexes.has(asInt(target.index))).length;
+    const misses = normalizeMisses(missedTargets + missEvents.length);
+    const maxCombo = Math.max(0, Math.min(hits, validated.maxCombo));
     const bonus = effect?.effect_type === "score_bonus"
       ? Math.max(0, asInt(effect.effect_value, 0))
       : 0;
@@ -236,7 +331,13 @@ async function submitRound(userId, body) {
 
     await tx`
       update public.whack_boss_rounds
-         set submitted_at = now()
+         set submitted_at = now(),
+             hit_events = ${JSON.stringify({ hitEvents, missEvents, accepted: validated.accepted.map((event) => ({
+               targetIndex: event.targetIndex,
+               atMs: Math.round(event.atMs),
+               x: Math.round(event.x * 100) / 100,
+               y: Math.round(event.y * 100) / 100,
+             })) })}::jsonb
        where id = ${round.id}
     `;
 
@@ -255,7 +356,14 @@ async function submitRound(userId, body) {
           ${accuracy},
           ${maxCombo},
           ${asInt(round.duration_ms, ROUND_DURATION_MS)},
-          ${JSON.stringify({ event_count: hits + misses, server_validated: false, base_score: hits, item_effect: itemEffect })}::jsonb
+          ${JSON.stringify({
+            event_count: hits + misses,
+            submitted_hit_count: hitEvents.length,
+            accepted_hit_count: hits,
+            server_validated: true,
+            base_score: hits,
+            item_effect: itemEffect,
+          })}::jsonb
         )
       returning *
     `;

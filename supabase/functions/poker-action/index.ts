@@ -7,7 +7,7 @@ const Hand = pokersolver.Hand ?? pokersolver.default?.Hand;
 if (!Hand) throw new Error("pokersolver Hand export is unavailable.");
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://inlineskater.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -681,7 +681,7 @@ async function advanceGame(tx, table, seats, hand, afterSeatNo) {
 async function stateResponse(tx, userId) {
   const table = await ensureMainTable(tx);
   const profileRows = await tx`
-    select id, nick, coins
+    select id, nick, coins, is_admin
     from public.profiles
     where id = ${userId}
   `;
@@ -742,7 +742,7 @@ async function stateResponse(tx, userId) {
 
   // Win-probability hint via Monte Carlo — for admin and poker-glasses owners.
   let adminHint = null;
-  if ((profile.nick === "admin" || hasPokerGlasses) && mySeat && mySeat.in_hand && !mySeat.folded && visibleCards[mySeat.seat_no]) {
+  if ((profile.is_admin || hasPokerGlasses) && mySeat && mySeat.in_hand && !mySeat.folded && visibleCards[mySeat.seat_no]) {
     const myCards = visibleCards[mySeat.seat_no];
     const board = table.board ?? [];
     const opponents = seats.filter((s) => s.seat_no !== mySeat.seat_no && isLive(s)).length;

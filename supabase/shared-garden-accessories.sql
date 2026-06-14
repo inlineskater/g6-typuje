@@ -53,7 +53,7 @@ BEGIN
   END;
   IF v_price IS NULL THEN RAISE EXCEPTION 'invalid_accessory'; END IF;
 
-  SELECT nick = 'admin' INTO v_is_admin FROM public.profiles WHERE id = v_user;
+  SELECT public.is_admin(v_user) INTO v_is_admin;
   IF v_is_admin THEN v_price := 0; END IF;
 
   SELECT * INTO v_garden

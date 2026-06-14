@@ -245,7 +245,7 @@ BEGIN
   END;
   IF v_price IS NULL THEN RAISE EXCEPTION 'invalid_accessory'; END IF;
 
-  SELECT nick = 'admin' INTO v_is_admin FROM public.profiles WHERE id = v_user;
+  SELECT public.is_admin(v_user) INTO v_is_admin;
   IF v_is_admin THEN v_price := 0; END IF;
 
   SELECT * INTO v_garden
@@ -452,9 +452,10 @@ DECLARE
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
-  SELECT second_garden_unlocked, nick = 'admin'
-    INTO v_unlocked, v_is_admin
+  SELECT second_garden_unlocked
+    INTO v_unlocked
   FROM public.profiles WHERE id = v_user;
+  SELECT public.is_admin(v_user) INTO v_is_admin;
 
   IF v_unlocked IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF v_unlocked             THEN RAISE EXCEPTION 'already_unlocked'; END IF;

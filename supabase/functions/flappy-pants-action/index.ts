@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://inlineskater.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -17,6 +17,18 @@ const ROUND_EXPIRES_SECONDS = 120;
 const MIN_PLAY_MS = 1_500;
 const MAX_SCORE_PER_ROUND = 200;
 const MAX_LIVES = 3;
+const MAX_FLAPS_PER_ROUND = 1000;
+const REPLAY_TICK_MS = 16;
+const FP_CS_W = 384;
+const FP_CS_H = 384;
+const FP_PLAYER_X = 112;
+const FP_PLAYER_R = 16;
+const FP_GRAVITY = 1350;
+const FP_FLAP_V = -360;
+const FP_PIPE_SPEED = 130;
+const FP_PIPE_W = 54;
+const FP_GAP = 124;
+const FP_PIPE_SPACING = 210;
 const PRIZES = [100, 50, 25];
 
 function json(body, status = 200) {
@@ -35,6 +47,124 @@ function gameError(message) {
 function asInt(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+function asNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function makeRng(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function nextGapY(rng) {
+  const min = FP_GAP / 2 + 30;
+  const max = FP_CS_H - FP_GAP / 2 - 30;
+  return min + rng() * (max - min);
+}
+
+function parseFlapEvents(value) {
+  if (!Array.isArray(value)) throw gameError("Brak zapisu ruchów rundy.");
+  if (value.length > MAX_FLAPS_PER_ROUND) throw gameError("Za dużo ruchów w rundzie.");
+  let previous = -1;
+  return value.map((event) => {
+    const atMs = asNumber(event?.atMs, NaN);
+    if (!Number.isFinite(atMs) || atMs < 0 || atMs > ROUND_EXPIRES_SECONDS * 1000) {
+      throw gameError("Nieprawidłowy czas ruchu.");
+    }
+    if (atMs < previous) throw gameError("Ruchy nie są uporządkowane.");
+    previous = atMs;
+    return { atMs: Math.round(atMs) };
+  });
+}
+
+function replayFlappy(seed, flapEvents, untilMs) {
+  const rng = makeRng(seed);
+  const obstacles = [];
+  let flapIndex = 0;
+  let elapsed = 0;
+  let y = FP_CS_H / 2;
+  let vy = 0;
+  let lives = MAX_LIVES;
+  let score = 0;
+  let pipes = 0;
+  let spawnHold = 0;
+  let invincible = false;
+  let invincEnd = 0;
+  let diedAtMs = null;
+  const cappedUntil = Math.max(0, Math.min(ROUND_EXPIRES_SECONDS * 1000, untilMs));
+
+  while (elapsed < cappedUntil && lives > 0) {
+    while (flapIndex < flapEvents.length && flapEvents[flapIndex].atMs <= elapsed + REPLAY_TICK_MS) {
+      vy = FP_FLAP_V;
+      flapIndex += 1;
+    }
+
+    const dt = Math.min(REPLAY_TICK_MS, cappedUntil - elapsed) / 1000;
+    elapsed += dt * 1000;
+    const elapsedSec = elapsed / 1000;
+    const speedMult = Math.min(2.6, 1 + elapsedSec * 0.05);
+
+    vy += FP_GRAVITY * dt;
+    y += vy * dt;
+
+    for (const obstacle of obstacles) obstacle.x -= FP_PIPE_SPEED * speedMult * dt;
+    while (obstacles.length && obstacles[0].x + FP_PIPE_W <= -4) obstacles.shift();
+    const last = obstacles[obstacles.length - 1];
+    if ((!last || last.x <= FP_CS_W - FP_PIPE_SPACING) && elapsed >= spawnHold) {
+      obstacles.push({ x: FP_CS_W, gapY: nextGapY(rng), scored: false });
+    }
+
+    if (invincible && elapsed >= invincEnd) invincible = false;
+
+    for (const obstacle of obstacles) {
+      if (!obstacle.scored && obstacle.x + FP_PIPE_W < FP_PLAYER_X) {
+        obstacle.scored = true;
+        pipes += 1;
+        score = Math.min(MAX_SCORE_PER_ROUND, score + 1);
+      }
+    }
+
+    let collision = y - FP_PLAYER_R < 0 || y + FP_PLAYER_R > FP_CS_H;
+    if (!collision) {
+      const left = FP_PLAYER_X - FP_PLAYER_R;
+      const right = FP_PLAYER_X + FP_PLAYER_R;
+      collision = obstacles.some((obstacle) => {
+        if (obstacle.x + FP_PIPE_W < left || obstacle.x > right) return false;
+        const gapTop = obstacle.gapY - FP_GAP / 2;
+        const gapBottom = obstacle.gapY + FP_GAP / 2;
+        return y - FP_PLAYER_R < gapTop || y + FP_PLAYER_R > gapBottom;
+      });
+    }
+
+    if (!invincible && collision) {
+      lives -= 1;
+      if (lives <= 0) {
+        diedAtMs = Math.round(elapsed);
+        break;
+      }
+      invincible = true;
+      invincEnd = elapsed + 1300;
+      y = FP_CS_H / 2;
+      vy = 0;
+      obstacles.length = 0;
+      spawnHold = elapsed + 900;
+    }
+  }
+
+  return {
+    score,
+    pipes,
+    livesUsed: MAX_LIVES - lives,
+    durationMs: diedAtMs ?? Math.round(cappedUntil),
+    died: diedAtMs != null,
+    flapCount: flapEvents.length,
+  };
 }
 
 async function requireUser(req) {
@@ -163,18 +293,20 @@ async function startRound(userId) {
   `;
   if (!profile) throw gameError("Profil nie istnieje.");
 
+  const seed = Math.floor(Math.random() * 2147483647) + 1;
   const [round] = await db`
     insert into public.flappy_pants_rounds
-      (user_id, nick_snapshot, expires_at)
+      (user_id, nick_snapshot, seed, expires_at)
     values
-      (${userId}, ${profile.nick}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
-    returning id, started_at, expires_at
+      (${userId}, ${profile.nick}, ${seed}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
+    returning id, seed, started_at, expires_at
   `;
 
   return {
     ...(await loadState(userId)),
     round: {
       id: round.id,
+      seed: asInt(round.seed),
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
       expiresAt: round.expires_at,
@@ -186,6 +318,7 @@ async function submitRound(userId, body) {
   if (!db) throw new Error("Database is not configured.");
   const roundId = String(body.roundId ?? "");
   if (!roundId) throw gameError("Brak rundy do zapisania.");
+  const flapEvents = parseFlapEvents(body.flapEvents);
   const effect = await getStrongestHeroEffect(db, userId, "flappy_pants");
 
   const score = await db.begin(async (tx) => {
@@ -200,13 +333,17 @@ async function submitRound(userId, body) {
     if (!round) throw gameError("Runda nie istnieje.");
     if (round.submitted_at) throw gameError("Ta runda została już zapisana.");
     if (new Date(round.expires_at).getTime() < Date.now()) throw gameError("Runda wygasła.");
+    const actualElapsed = Date.now() - new Date(round.started_at).getTime();
+    const requestedElapsed = Math.max(0, Math.min(ROUND_EXPIRES_SECONDS * 1000, asInt(body.elapsedMs, actualElapsed)));
+    if (requestedElapsed > actualElapsed + 1000) throw gameError("Runda jeszcze trwa.");
     if (Date.now() < new Date(round.started_at).getTime() + MIN_PLAY_MS) {
       throw gameError("Runda jeszcze trwa.");
     }
 
-    const pipes = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.pipes, 0)));
-    const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, asInt(body.score, pipes)));
-    const livesUsed = Math.max(0, Math.min(MAX_LIVES, asInt(body.livesUsed, MAX_LIVES)));
+    const replay = replayFlappy(asInt(round.seed, 1), flapEvents, requestedElapsed);
+    const pipes = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.pipes));
+    const baseScore = Math.max(0, Math.min(MAX_SCORE_PER_ROUND, replay.score));
+    const livesUsed = Math.max(0, Math.min(MAX_LIVES, replay.livesUsed));
     const bonus = effect?.effect_type === "score_bonus"
       ? Math.max(0, asInt(effect.effect_value, 0))
       : 0;
@@ -221,7 +358,14 @@ async function submitRound(userId, body) {
 
     await tx`
       update public.flappy_pants_rounds
-         set submitted_at = now()
+         set submitted_at = now(),
+             input_events = ${JSON.stringify({
+               flapEvents,
+               requestedElapsed,
+               client_score: asInt(body.score, 0),
+               client_pipes: asInt(body.pipes, 0),
+               replay,
+             })}::jsonb
        where id = ${round.id}
     `;
 
@@ -237,7 +381,16 @@ async function submitRound(userId, body) {
           ${scoreValue},
           ${pipes},
           ${livesUsed},
-          ${JSON.stringify({ server_validated: false, base_score: baseScore, item_effect: itemEffect })}::jsonb
+          ${JSON.stringify({
+            seed: asInt(round.seed, 1),
+            flap_count: replay.flapCount,
+            duration_ms: replay.durationMs,
+            client_score: asInt(body.score, 0),
+            client_pipes: asInt(body.pipes, 0),
+            server_validated: true,
+            base_score: baseScore,
+            item_effect: itemEffect,
+          })}::jsonb
         )
       returning *
     `;

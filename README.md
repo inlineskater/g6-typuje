@@ -28,7 +28,7 @@ Fresh database setup:
 6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
 7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
 
-Existing database hardening: paste and run `supabase/prod-hardening.sql` in Supabase SQL Editor.
+Existing database hardening: paste and run `supabase/prod-hardening.sql` in Supabase SQL Editor. Then re-run the installed ranking view SQL (`supabase/hazard-views.sql` and, if hero items are installed, `supabase/leaderboard-net-worth-items.sql`) so admin/test accounts can be filtered via `is_admin`. After the Whack-a-Boss / 3 Pary Spodni server-validation changes, also re-run `supabase/whack-boss.sql` and `supabase/flappy-pants.sql` before deploying the updated Edge Functions.
 
 Existing project poker rollout:
 
@@ -55,11 +55,11 @@ Existing project Bug Jumper hard-course rollout:
 
 ## How It Works
 
-- Auth: nick + 4-digit PIN. First login creates the account.
+- Auth: nick + 5-digit PIN, with a forced migration path for legacy 4-digit PIN accounts.
 - Starting balance: 1000 virtual coins.
 - Markets: authenticated users can create prediction markets.
 - Betting: CPMM pricing; users can only add to one side per market.
-- Resolution: market creator or `admin` nick can resolve a market.
+- Resolution: market creator or an `is_admin` profile can resolve a market.
 - Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
 - Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
 - Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, and Snake). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`. Each pays the weekly top 3 100/50/25 coins.
@@ -67,4 +67,4 @@ Existing project Bug Jumper hard-course rollout:
 
 ## Security Note
 
-This uses weak PIN auth and virtual coins only. Do not use it for real money or sensitive data.
+This uses PIN auth and virtual coins only. Keep Supabase CAPTCHA/rate limits enabled, revoke leaked personal access tokens immediately, enable leaked-password protection after moving to a Supabase Pro plan, and do not use it for real money or sensitive data.

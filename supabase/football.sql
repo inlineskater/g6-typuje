@@ -104,7 +104,8 @@ SELECT p.id,
              SELECT SUM(b.stake)
              FROM public.football_bets b
              WHERE b.user_id = p.id AND b.status = 'open'
-           ), 0) AS net_worth
+           ), 0) AS net_worth,
+       p.is_admin
 FROM public.profiles p;
 
 -- ── Realtime ───────────────────────────────────────────────────────────────────

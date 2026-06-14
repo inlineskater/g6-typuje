@@ -32,7 +32,7 @@ SELECT
   now(),
   '2026-06-11T13:00:00Z'
 FROM public.hero_item_defs hid
-CROSS JOIN (SELECT id FROM public.profiles WHERE nick = 'admin' LIMIT 1) p
+CROSS JOIN (SELECT id FROM public.profiles WHERE is_admin LIMIT 1) p
 WHERE hid.slug = 'combat_colander'
   AND NOT EXISTS (
     SELECT 1 FROM public.hero_item_auctions a

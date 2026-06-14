@@ -61,7 +61,7 @@ FROM (VALUES
   ('poker_glasses', 1)
 ) AS v(slug, start_price)
 JOIN public.hero_item_defs hid ON hid.slug = v.slug
-CROSS JOIN (SELECT id FROM public.profiles WHERE nick = 'admin' LIMIT 1) p
+CROSS JOIN (SELECT id FROM public.profiles WHERE is_admin LIMIT 1) p
 WHERE NOT EXISTS (
   SELECT 1 FROM public.hero_item_auctions a
   WHERE a.item_def_id = hid.id AND a.status = 'open'

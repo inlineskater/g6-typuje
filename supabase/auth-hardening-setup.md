@@ -1,12 +1,22 @@
-# Auth hardening — manual setup
+# Auth hardening
 
 Background: a user brute-forced 4-digit PINs (including `admin`) with a browser
 script hitting the auth endpoint directly. The code changes (5-digit PIN +
-Turnstile widgets + migration form) are in `index.html`, but two controls are
-**dashboard settings** and one optional step is SQL. Do these to actually close
-the hole — a script that bypasses the page is only stopped by server-side checks.
+Turnstile widgets + migration form) are in `index.html`. A script that bypasses
+the page is only stopped by server-side checks, so Supabase Auth settings matter.
 
-## 1. Cloudflare Turnstile CAPTCHA (required for the captcha to do anything)
+Production status after the June 14, 2026 hardening pass:
+
+- Turnstile CAPTCHA is enabled in Supabase Auth, and `index.html` has a real
+  Turnstile site key.
+- Auth URL configuration points at `https://inlineskater.github.io/rynek-proroctw-g6/`.
+- Auth rate limits for anonymous users, token requests, verify, and OTP are set
+  to `10`.
+- Password minimum length is `9`, matching `pin-` plus a 5-digit PIN.
+- Leaked-password protection is still disabled because Supabase rejected that
+  setting on the current plan; it requires Pro or higher.
+
+## 1. Cloudflare Turnstile CAPTCHA
 
 1. Cloudflare dashboard → **Turnstile** → add a widget for the site domain
    (`inlineskater.github.io`). Copy the **Site key** and **Secret key**.
@@ -20,42 +30,39 @@ After this, Supabase rejects any `signInWithPassword` / `signUp` that arrives
 without a valid captcha token — including a bypass script that calls the auth
 API directly. This is the control that actually stops the brute force.
 
-## 2. Lower the auth rate limits (defense-in-depth)
+## 2. Auth rate limits
 
-Supabase Dashboard → **Authentication → Rate Limits** → lower the sign-in /
-token rate (e.g. ~10 per hour per IP). No code change.
+Supabase Dashboard → **Authentication → Rate Limits** should show the hardened
+limits above. If a future reset raises them, lower the sign-in/token/verify/OTP
+limits again.
+
+Leaked-password protection should be enabled after upgrading the Supabase
+project to Pro or higher.
 
 ## 3. Rotate the leaked access token
 
-The `sbp_…` personal access token shared during this work should be revoked:
+The `sbp_…` personal access token shared during this work is compromised and
+must not be used again:
 Supabase → **Account → Access Tokens** → revoke / regenerate.
 
-## 4. (Optional) Decouple admin from the `admin` nick
+## 4. Apply database hardening SQL
 
-Admin power currently keys off `nick = 'admin'` — a known, single-account target.
-To make admin independent of any guessable login, switch to an explicit flag:
+Run `supabase/prod-hardening.sql`. It adds `profiles.is_admin`, preserves the
+current `admin` account only if no admin flag exists yet, and makes
+`public.is_admin()` read the flag instead of the nick.
+
+If you need to promote a different account manually:
 
 ```sql
--- Run in Supabase SQL Editor.
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
-
--- Promote the real admin account (replace with the actual nick):
-UPDATE public.profiles SET is_admin = true WHERE nick = 'admin';
-
--- Make the server-side check read the flag instead of the nick:
-CREATE OR REPLACE FUNCTION public.is_admin(p_user uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_user AND is_admin);
-$$;
-
+UPDATE public.profiles SET is_admin = true WHERE nick = '<real admin nick>';
 NOTIFY pgrst, 'reload schema';
 ```
 
-If you do this, also update the inline `nick = 'admin'` checks
-(`garden-accessories.sql:55`, `second-garden-slot.sql:248,438`,
-`functions/poker-action/index.ts:745`) and the client-side `me.nick === 'admin'`
-reads in `index.html` to use the flag. Note this is **defense-in-depth** — with
-the captcha in place the admin login is already protected.
+Also re-run `supabase/hazard-views.sql` and the installed leaderboard view SQL
+(usually `supabase/leaderboard-net-worth-items.sql`), then re-run
+`supabase/whack-boss.sql` and `supabase/flappy-pants.sql`. Deploy
+`whack-boss-action` and `flappy-pants-action` after those SQL changes so only
+server-validated seasonal scores are competitive.
 
 ## Migrating existing users to 5-digit PINs
 

@@ -104,7 +104,8 @@ SELECT p.id,
          SELECT SUM(ps.stack)
          FROM public.poker_seats ps
          WHERE ps.user_id = p.id
-       ), 0) AS net_worth
+       ), 0) AS net_worth,
+       p.is_admin
 FROM public.profiles p;
 
 -- ── Row-Level Security ─────────────────────────────────────────────────────
@@ -138,7 +139,7 @@ REVOKE ALL ON public.poker_tables, public.poker_seats, public.poker_events,
 GRANT SELECT ON public.poker_tables, public.poker_seats, public.poker_events
   TO authenticated;
 
-GRANT SELECT ON public.leaderboard TO anon, authenticated;
+GRANT SELECT ON public.leaderboard TO authenticated;
 
 DO $$
 BEGIN

@@ -15,11 +15,17 @@ CREATE TABLE IF NOT EXISTS public.flappy_pants_rounds (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   nick_snapshot text NOT NULL,
+  seed          integer NOT NULL DEFAULT 1,
+  input_events  jsonb NOT NULL DEFAULT '{}'::jsonb,
   started_at    timestamptz NOT NULL DEFAULT now(),
   expires_at    timestamptz NOT NULL DEFAULT (now() + interval '2 minutes'),
   submitted_at  timestamptz,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.flappy_pants_rounds
+  ADD COLUMN IF NOT EXISTS seed integer NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS input_events jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS public.flappy_pants_scores (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,6 +97,7 @@ WITH current_week AS (
 round_counts AS (
   SELECT user_id, week_start, COUNT(*)::integer AS rounds_played
   FROM public.flappy_pants_scores
+  WHERE client_meta @> '{"server_validated": true}'::jsonb
   GROUP BY user_id, week_start
 ),
 user_best AS (
@@ -108,6 +115,7 @@ user_best AS (
   FROM public.flappy_pants_scores s
   JOIN current_week cw ON cw.week_start = s.week_start
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id AND rc.week_start = s.week_start
+  WHERE s.client_meta @> '{"server_validated": true}'::jsonb
   ORDER BY s.user_id, s.score DESC, s.submitted_at ASC
 )
 SELECT
@@ -129,6 +137,7 @@ CREATE OR REPLACE VIEW public.flappy_pants_all_time WITH (security_invoker = tru
 WITH round_counts AS (
   SELECT user_id, COUNT(*)::integer AS rounds_played
   FROM public.flappy_pants_scores
+  WHERE client_meta @> '{"server_validated": true}'::jsonb
   GROUP BY user_id
 ),
 user_best AS (
@@ -145,6 +154,7 @@ user_best AS (
     COALESCE(rc.rounds_played, 1) AS rounds_played
   FROM public.flappy_pants_scores s
   LEFT JOIN round_counts rc ON rc.user_id = s.user_id
+  WHERE s.client_meta @> '{"server_validated": true}'::jsonb
   ORDER BY s.user_id, s.score DESC, s.submitted_at ASC
 )
 SELECT
@@ -219,6 +229,7 @@ BEGIN
       s.submitted_at
     FROM public.flappy_pants_scores s
     WHERE s.week_start = p_week_start
+      AND s.client_meta @> '{"server_validated": true}'::jsonb
     ORDER BY s.user_id, s.score DESC, s.submitted_at ASC
   ),
   ranked AS (

@@ -11,7 +11,7 @@ SELECT
   'Żappsy z aplikacji Żappka o wartości 100 coinów. Po zakupie admin zrobi Ci przelew Żappsów na Twój numer telefonu.',
   100,
   2,
-  (SELECT id FROM public.profiles WHERE nick = 'admin' LIMIT 1),
+  (SELECT id FROM public.profiles WHERE is_admin LIMIT 1),
   COALESCE(
     (SELECT created_at - interval '1 second'
        FROM public.store_items

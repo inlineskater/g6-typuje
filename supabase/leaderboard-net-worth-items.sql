@@ -72,7 +72,8 @@ SELECT p.id,
              FROM public.poker_seats ps
              WHERE ps.user_id = p.id
            ), 0::bigint)::numeric
-         + public.user_assets_value(p.id) AS net_worth
+         + public.user_assets_value(p.id) AS net_worth,
+       p.is_admin
 FROM public.profiles p;
 
 -- ── Per-user Net Worth breakdown (for the player profile modal) ──────────────

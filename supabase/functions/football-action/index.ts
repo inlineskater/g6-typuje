@@ -13,7 +13,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://inlineskater.github.io",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -418,8 +418,8 @@ async function voidMatch(userId, body) {
   const matchId = String(body.matchId ?? "");
   if (!matchId) throw gameError("Brak meczu.");
 
-  const [profile] = await db`select nick from public.profiles where id = ${userId}`;
-  if (!profile || profile.nick !== "admin") throw gameError("Tylko admin.");
+  const [profile] = await db`select public.is_admin(${userId}) as is_admin`;
+  if (!profile?.is_admin) throw gameError("Tylko admin.");
 
   const refunded = await db.begin((tx) => voidMatchTx(tx, matchId));
   if (refunded == null) throw gameError("Mecz już rozliczony lub nie istnieje.");

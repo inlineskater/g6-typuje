@@ -6,6 +6,7 @@
   <title>Rynek Proroctw G6</title>
   <meta name="description" content="Firmowy rynek predykcji z wirtualnymi coinami.">
   <meta name="theme-color" content="#f8fafc">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://rjovhmepanwbdgdkvylr.supabase.co wss://rjovhmepanwbdgdkvylr.supabase.co https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'none'; object-src 'none'; form-action 'self'">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%236366f1'/%3E%3Ccircle cx='22' cy='22' r='5' fill='white'/%3E%3Ccircle cx='32' cy='32' r='5' fill='white'/%3E%3Ccircle cx='42' cy='42' r='5' fill='white'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -4610,6 +4611,16 @@ function svgEl(tag, attrs) {
   return node;
 }
 
+function escapeHtmlText(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[ch]);
+}
+
 function setText(node, v) { node.textContent = v; }
 function show(node) { node.classList.remove('hidden'); }
 function hide(node) { node.classList.add('hidden'); }
@@ -4678,8 +4689,12 @@ const nmOverlay       = document.getElementById('nm-overlay');
 const rmOverlay       = document.getElementById('rm-overlay');
 
 // ── Auth helpers ──────────────────────────────────────────────────────────
+function isAdmin() {
+  return !!me?.is_admin;
+}
+
 function isResolver(m) {
-  return me && (m.created_by === me.id || me.nick === 'admin');
+  return me && (m.created_by === me.id || isAdmin());
 }
 
 function getLockedSide(marketId) {
@@ -4704,7 +4719,7 @@ function buildPositionMap(rows) {
 }
 
 async function loadNickList() {
-  const { data, error } = await sb.from('profiles').select('id, nick').order('nick');
+  const { data, error } = await sb.from('profiles').select('nick').order('nick');
   if (error) {
     loginError.textContent = DB_ERROR_MESSAGE;
     return;
@@ -4984,9 +4999,9 @@ function showApp() {
 
 function updateAdminTestTabs() {
   const bugTestNav = document.getElementById('nav-bug-jumper-test');
-  if (bugTestNav) bugTestNav.style.display = me?.nick === 'admin' ? '' : 'none';
+  if (bugTestNav) bugTestNav.style.display = isAdmin() ? '' : 'none';
   const ihTestNav = document.getElementById('nav-invoice-horde-test');
-  if (ihTestNav) ihTestNav.style.display = me?.nick === 'admin' ? '' : 'none';
+  if (ihTestNav) ihTestNav.style.display = isAdmin() ? '' : 'none';
 }
 
 document.querySelectorAll('.nav-tab').forEach(btn =>
@@ -5052,8 +5067,8 @@ function restoreInvoiceHordePanelHome() {
 }
 
 function switchTab(tab) {
-  if (tab === 'bug-jumper-test' && me?.nick !== 'admin') tab = 'markets';
-  if (tab === 'invoice-horde-test' && me?.nick !== 'admin') tab = 'markets';
+  if (tab === 'bug-jumper-test' && !isAdmin()) tab = 'markets';
+  if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   const previousTab = activeTab;
   if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); }
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
@@ -6587,12 +6602,12 @@ async function loadLeaderboard() {
   loadCoinRace(seasonPromise);
 
   const [leaderboardRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes] = await Promise.all([
-    sb.from('leaderboard').select('*').neq('nick', 'admin').order('coins', { ascending: false }).limit(20),
+    sb.from('leaderboard').select('*').neq('is_admin', true).order('coins', { ascending: false }).limit(20),
     sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, shares, p_yes_after').order('created_at', { ascending: false }).limit(500),
     sb.from('markets').select('id, icon, title, resolved, resolution, yes_shares, no_shares'),
     sb.from('trades').select('market_id, user_id, side, amount, shares').limit(5000),
-    sb.from('game_transactions').select('*').neq('nick_snapshot', 'admin').order('created_at', { ascending: false }).limit(500),
-    sb.from('hazard_stats').select('*').neq('nick', 'admin').order('total_pl', { ascending: false }),
+    sb.from('game_transactions').select('*').neq('is_admin', true).order('created_at', { ascending: false }).limit(500),
+    sb.from('hazard_stats').select('*').neq('is_admin', true).order('total_pl', { ascending: false }),
   ]);
 
   if (leaderboardRes.error) {
@@ -7351,10 +7366,10 @@ async function loadCoinRace(seasonPromise) {
   try { await (seasonPromise || loadSeasonHistory()); } catch {}
 
   const [profRes, tradesRes, coinTxRes, gameRes, footballRes, lbRes] = await Promise.all([
-    sb.from('profiles').select('id,nick,coins,created_at').neq('nick', 'admin'),
+    sb.from('profiles').select('id,nick,is_admin,coins,created_at').neq('is_admin', true),
     sb.from('trades').select('user_id,created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').order('created_at', { ascending: true }).limit(10000),
     sb.from('coin_transactions').select('user_id,created_at,delta,reason,meta').order('created_at', { ascending: true }).limit(10000),
-    sb.from('game_transactions').select('user_id,created_at,game,bet,won').neq('nick_snapshot', 'admin').order('created_at', { ascending: true }).limit(10000),
+    sb.from('game_transactions').select('user_id,created_at,game,bet,won,is_admin').neq('is_admin', true).order('created_at', { ascending: true }).limit(10000),
     sb.from('football_bets').select('user_id,created_at,settled_at,pick,stake,potential_payout,status').order('created_at', { ascending: true }).limit(10000),
     sb.from('leaderboard').select('id,coins,net_worth'),
   ]);
@@ -8252,7 +8267,7 @@ function buildMarketplaceCard(listing) {
 
   // Seller or admin may cancel an open listing. Cancelling an auction with bids
   // refunds the current leader (handled server-side in cancel_marketplace_listing).
-  const canCancel = isOpen && (isSeller || me?.nick === 'admin');
+  const canCancel = isOpen && (isSeller || isAdmin());
   function addCancelBtn(label, refundWarning) {
     const cancelBtn = el('button', { className: 'btn-ghost shop-card-btn', style: { marginTop: '8px', fontSize: '12px' } }, label);
     cancelBtn.addEventListener('click', () => {
@@ -8386,7 +8401,7 @@ async function loadShop() {
   grid.replaceChildren(makeSpinner());
 
   const btnNew = document.getElementById('btn-new-item');
-  btnNew.style.display = me?.nick === 'admin' ? '' : 'none';
+  btnNew.style.display = isAdmin() ? '' : 'none';
 
   const [{ data: items, error }] = await Promise.all([
     sb
@@ -8600,7 +8615,7 @@ function renderHeroAuctionAdmin() {
   const wrap = document.getElementById('hero-auction-admin');
   if (!wrap) return;
   wrap.replaceChildren();
-  if (me?.nick !== 'admin') return;
+  if (!isAdmin()) return;
 
   if (!heroAuctionItemDefs.length) {
     wrap.appendChild(el('div', { className: 'shop-card-meta', style: { marginTop: '12px' } },
@@ -8745,7 +8760,7 @@ async function loadTopup() {
   const adminBox = document.getElementById('topup-admin');
   const adminList = document.getElementById('topup-admin-list');
   if (!myList) return;
-  const isAdmin = me?.nick === 'admin';
+  const canAdmin = isAdmin();
 
   const { data, error } = await sb
     .from('coin_topup_requests')
@@ -8768,8 +8783,8 @@ async function loadTopup() {
   }
 
   // Admin console — only admin can see other users' rows (RLS), and we gate UI too.
-  if (adminBox) adminBox.classList.toggle('hidden', !isAdmin);
-  if (isAdmin && adminList) {
+  if (adminBox) adminBox.classList.toggle('hidden', !canAdmin);
+  if (canAdmin && adminList) {
     const pending = rows.filter(r => r.status === 'pending')
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     if (!pending.length) {
@@ -9009,15 +9024,15 @@ function renderCosmeticsGrid() {
       btn.addEventListener('click', () => switchTab('garden'));
       card.appendChild(btn);
     } else {
-      const isAdmin = me.nick === 'admin';
-      const canAfford = isAdmin || (me?.coins || 0) >= item.price;
-      card.appendChild(el('div', { className: 'cosmetic-price' }, isAdmin ? 'Darmowe' : item.price + ' 🪙'));
+      const canAdmin = isAdmin();
+      const canAfford = canAdmin || (me?.coins || 0) >= item.price;
+      card.appendChild(el('div', { className: 'cosmetic-price' }, canAdmin ? 'Darmowe' : item.price + ' 🪙'));
       const btn = el('button', {
         className: hasGarden ? 'btn-primary cosmetic-btn' : 'btn-ghost cosmetic-btn',
         disabled: hasGarden && !canAfford,
         title: hasGarden && !canAfford ? 'Za mało coinów' : '',
-      }, hasGarden ? (isAdmin ? 'Weź' : (canAfford ? 'Kup' : 'Za mało coinów')) : 'Zasadź roślinę');
-      btn.dataset.readyText = hasGarden ? (isAdmin ? 'Weź' : 'Kup') : 'Zasadź roślinę';
+      }, hasGarden ? (canAdmin ? 'Weź' : (canAfford ? 'Kup' : 'Za mało coinów')) : 'Zasadź roślinę');
+      btn.dataset.readyText = hasGarden ? (canAdmin ? 'Weź' : 'Kup') : 'Zasadź roślinę';
       btn.addEventListener('click', () => {
         if (!hasGarden) { switchTab('garden'); return; }
         buyCosmetic(item, btn);
@@ -9030,7 +9045,7 @@ function renderCosmeticsGrid() {
 
 async function buyCosmetic(item, btn) {
   btn.disabled = true; btn.textContent = '...';
-  const price = me.nick === 'admin' ? 0 : item.price;
+  const price = isAdmin() ? 0 : item.price;
   const targetGarden = myGarden || myGarden2;
   const { data, error } = await sb.rpc('purchase_accessory', {
     p_accessory_id: item.id,
@@ -9493,6 +9508,8 @@ function newWhackBossRuntime() {
     currentIndex: -1,
     hitTargets: new Set(),
     missedTargets: new Set(),
+    hitEvents: [],
+    missEvents: [],
     score: 0,
     misses: 0,
     combo: 0,
@@ -10308,30 +10325,31 @@ function tickWhackBossRound() {
     return;
   }
 
-  const last = rt.schedule.length ? rt.schedule[rt.schedule.length - 1] : null;
-  const lastAlive = last
-    && !rt.hitTargets.has(last.index)
-    && !rt.missedTargets.has(last.index)
-    && elapsed <= last.startMs + last.durationMs;
+  const active = rt.schedule.find(target =>
+    !rt.hitTargets.has(target.index) &&
+    !rt.missedTargets.has(target.index) &&
+    elapsed >= target.startMs &&
+    elapsed <= target.startMs + target.durationMs
+  );
 
-  if (lastAlive) {
-    if (rt.currentIndex !== last.index) showWhackBossTarget(last);
+  if (active) {
+    if (rt.currentIndex !== active.index) showWhackBossTarget(active);
     return;
   }
 
-  if (last && !rt.hitTargets.has(last.index) && !rt.missedTargets.has(last.index)) {
-    rt.missedTargets.add(last.index);
-    rt.misses += 1;
-    rt.combo = 0;
-    rt.difficulty = Math.max(0, rt.difficulty - 0.5);
-    rt.nextSpawnAt = elapsed + whackBossNextGap(rt.difficulty);
-  }
+  rt.schedule.forEach(target => {
+    if (
+      !rt.hitTargets.has(target.index) &&
+      !rt.missedTargets.has(target.index) &&
+      elapsed > target.startMs + target.durationMs
+    ) {
+      rt.missedTargets.add(target.index);
+      rt.misses += 1;
+      rt.combo = 0;
+    }
+  });
 
   hideWhackBossTarget();
-
-  if (elapsed >= rt.nextSpawnAt && elapsed + 250 < rt.durationMs) {
-    spawnWhackBossTarget(elapsed);
-  }
 }
 
 function beginWhackBossRound(round) {
@@ -10340,6 +10358,13 @@ function beginWhackBossRound(round) {
   whackBossRuntime.playing = true;
   whackBossRuntime.roundId = round.id;
   whackBossRuntime.durationMs = round.durationMs || 18000;
+  whackBossRuntime.schedule = Array.isArray(round.schedule) ? round.schedule.map((target, index) => ({
+    index: Number.isInteger(target.index) ? target.index : index,
+    startMs: Number(target.startMs) || 0,
+    durationMs: Number(target.durationMs) || 0,
+    x: Number(target.x) || 50,
+    y: Number(target.y) || 50,
+  })) : [];
   const serverElapsed = round.startedAt && round.serverNow
     ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
     : 0;
@@ -10408,9 +10433,8 @@ async function finishWhackBossRound() {
     const data = await invokeWhackBoss({
       action: 'submit',
       roundId: rt.roundId,
-      hits: rt.score,
-      misses: rt.misses,
-      maxCombo: rt.maxCombo,
+      hitEvents: rt.hitEvents,
+      missEvents: rt.missEvents,
     });
     renderWhackBossState(data);
     showToast('✅ Wynik zapisany: ' + data.score.score);
@@ -10443,7 +10467,14 @@ if (wbTarget) {
     if (!Number.isInteger(targetIndex) || rt.hitTargets.has(targetIndex)) return;
 
     const coords = whackBossCoords(evt);
+    const atMs = whackBossElapsed();
     rt.hitTargets.add(targetIndex);
+    rt.hitEvents.push({
+      targetIndex,
+      atMs: Math.round(atMs),
+      x: Math.round(coords.x * 100) / 100,
+      y: Math.round(coords.y * 100) / 100,
+    });
     wbTarget.classList.add('whacked');
     rt.score += 1;
     rt.combo = targetIndex === rt.lastHitIndex + 1 ? rt.combo + 1 : 1;
@@ -10455,7 +10486,7 @@ if (wbTarget) {
     const fastBonus = reactionMs < 350 ? 0.5 : 0;
     rt.difficulty += 1 + fastBonus;
 
-    const elapsed = whackBossElapsed();
+    const elapsed = atMs;
     rt.nextSpawnAt = elapsed + whackBossNextGap(rt.difficulty);
 
     showWhackBossFloat('+1', coords.x, coords.y);
@@ -10474,6 +10505,11 @@ if (wbArena) {
     if (evt.target.closest('#wb-target')) return;
     const coords = whackBossCoords(evt);
     const atMs = whackBossElapsed();
+    rt.missEvents.push({
+      atMs: Math.round(atMs),
+      x: Math.round(coords.x * 100) / 100,
+      y: Math.round(coords.y * 100) / 100,
+    });
     rt.misses += 1;
     rt.combo = 0;
     showWhackBossFloat('pudło', coords.x, coords.y, true);
@@ -11221,6 +11257,9 @@ function newFlappyPantsRuntime() {
   return {
     playing: false, submitting: false, archiveMode: false,
     roundId: null,
+    seed: 1,
+    rng: null,
+    startPerf: 0,
     score: 0, pipes: 0,
     lives: FP_MAX_LIVES,
     player: { y: FP_CS_H / 2, vy: 0 },
@@ -11231,6 +11270,7 @@ function newFlappyPantsRuntime() {
     rafId: null,
     invincible: false, invincEnd: 0,
     hitFlash: 0,
+    flapEvents: [],
     toasts: [],
   };
 }
@@ -11254,13 +11294,24 @@ function fpInitCanvas() {
 function fpSpawnObstacle(rt) {
   const min = FP_GAP / 2 + 30;
   const max = FP_CS_H - FP_GAP / 2 - 30;
-  rt.obstacles.push({ x: FP_CS_W, gapY: min + Math.random() * (max - min), scored: false });
+  const rng = rt.rng || Math.random;
+  rt.obstacles.push({ x: FP_CS_W, gapY: min + rng() * (max - min), scored: false });
 }
 
 function fpFlap() {
   const rt = flappyPantsRuntime;
   if (!rt?.playing) return;
   rt.player.vy = FP_FLAP_V;
+  const atMs = rt.startPerf ? Math.max(0, performance.now() - rt.startPerf) : rt.elapsed * 1000;
+  rt.flapEvents.push({ atMs: Math.round(atMs) });
+}
+
+function fpMakeRng(seed) {
+  let state = Number(seed || 1) >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
 }
 
 function fpCheckCollision(rt) {
@@ -11511,6 +11562,12 @@ function beginFlappyPantsRound(round) {
   const rt = flappyPantsRuntime;
   rt.playing = true;
   rt.roundId = round.id;
+  rt.seed = Number(round.seed) || 1;
+  rt.rng = fpMakeRng(rt.seed);
+  const serverElapsed = round.startedAt && round.serverNow
+    ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
+    : 0;
+  rt.startPerf = performance.now() - serverElapsed;
   if (fpStartBtn) { fpStartBtn.disabled = true; fpStartBtn.textContent = 'Runda trwa'; }
   if (fpStatus) fpStatus.textContent = 'Trzepocz — spacja / klik / ↑. Powodzenia!';
   rt.rafId = requestAnimationFrame(fpTick);
@@ -11552,7 +11609,11 @@ async function finishFlappyPantsRound() {
   try {
     const data = await invokeFlappyPants({
       action: 'submit', roundId: rt.roundId,
-      score: rt.score, pipes: rt.pipes, livesUsed: FP_MAX_LIVES - rt.lives,
+      score: rt.score,
+      pipes: rt.pipes,
+      livesUsed: FP_MAX_LIVES - rt.lives,
+      elapsedMs: Math.round(rt.startPerf ? Math.max(0, performance.now() - rt.startPerf) : rt.elapsed * 1000),
+      flapEvents: rt.flapEvents,
     });
     renderFlappyPantsState(data);
     showToast('✅ Wynik zapisany: ' + data.score.score);
@@ -13378,7 +13439,7 @@ async function loadGarden() {
   const wrap = document.getElementById('garden-content');
   if (!wrap.children.length || !wrap.querySelector('.garden-shelf')) wrap.replaceChildren(makeSpinner());
 
-  const { data: gardens, error: gErr } = await sb.from('gardens').select('*, profiles(nick)');
+  const { data: gardens, error: gErr } = await sb.from('gardens').select('*, profiles(nick,is_admin)');
 
   if (gErr) {
     wrap.replaceChildren(el('div', { style: { color: 'var(--muted)', textAlign: 'center', padding: '32px' } }, DB_ERROR_MESSAGE));
@@ -13437,18 +13498,18 @@ function renderZenGarden() {
     const watersToday = (garden.last_water_date === today) ? (garden.waters_today || 0) : 0;
     const streak = garden.streak_days || 0;
     const emoji = getPlantEmoji(garden.plant_type, garden.stage);
-    board.innerHTML = `<h3>${label}</h3>
-<div class="my-plant-preview">${emoji}</div>
+    board.innerHTML = `<h3>${escapeHtmlText(label)}</h3>
+<div class="my-plant-preview">${escapeHtmlText(emoji)}</div>
 <div class="my-plant-details">
-<div class="my-plant-name">${garden.plant_name}</div>
-<div class="my-plant-type">${PLANT_LABELS[canonicalPlantType(garden.plant_type)] || ''}</div>
+<div class="my-plant-name">${escapeHtmlText(garden.plant_name)}</div>
+<div class="my-plant-type">${escapeHtmlText(PLANT_LABELS[canonicalPlantType(garden.plant_type)] || '')}</div>
 </div>
 <div class="my-summary">
-<div>🔥 Seria: <b>${streak} ${streak === 1 ? 'dzień' : 'dni'} z rzędu</b></div>
-<div>💧 Podlano łącznie: <b>${garden.total_waters || 0}×</b></div>
-<div>⭐ Etap: <b>${garden.stage}/6</b></div>
-<div>💧 Dziś: <b>${watersToday}/3</b></div>
-<div>💰 Nagroda: <b>${nextRewardCoins(streak)} 🪙</b></div>
+<div>🔥 Seria: <b>${Number(streak) || 0} ${streak === 1 ? 'dzień' : 'dni'} z rzędu</b></div>
+<div>💧 Podlano łącznie: <b>${Number(garden.total_waters) || 0}×</b></div>
+<div>⭐ Etap: <b>${Number(garden.stage) || 0}/6</b></div>
+<div>💧 Dziś: <b>${Number(watersToday) || 0}/3</b></div>
+<div>💰 Nagroda: <b>${Number(nextRewardCoins(streak)) || 0} 🪙</b></div>
 </div>`;
     board.appendChild(buildPlantTypeChanger(garden));
     board.appendChild(el('div', { className: 'sign-nails' }));
@@ -13490,7 +13551,7 @@ function renderZenGarden() {
 
   if (myGarden) {
     sign.appendChild(buildDecorateCard(myGarden));
-    if (me.nick === 'admin') sign.appendChild(buildGardenAdminPanel());
+    if (isAdmin()) sign.appendChild(buildGardenAdminPanel());
   }
   if (myGarden2) sign.appendChild(buildDecorateCard(myGarden2));
 
@@ -13509,7 +13570,7 @@ function renderZenGarden() {
   const shelf = el('div', { className: 'garden-shelf' });
   const TOTAL_SPOTS = 15;
   allGardens.forEach(g => {
-    if (g.profiles?.nick === 'admin' && me.nick !== 'admin') return;
+    if (g.profiles?.is_admin && !isAdmin()) return;
     const isMine = g.user_id === me.id;
     shelf.appendChild(buildPot(g, isMine));
   });
@@ -14440,7 +14501,7 @@ function buildHeroSVG(hero, { size = 64, walking = false, gear = [] } = {}) {
     const pos = SLOT_BADGE_POS[item.slot];
     if (!pos || !item.emoji) return '';
     return `<circle cx="${pos.x}" cy="${pos.y}" r="6.5" fill="rgba(0,0,0,.55)" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>` +
-           `<text x="${pos.x}" y="${pos.y}" font-size="9" text-anchor="middle" dominant-baseline="middle">${item.emoji}</text>`;
+           `<text x="${pos.x}" y="${pos.y}" font-size="9" text-anchor="middle" dominant-baseline="middle">${escapeHtmlText(item.emoji)}</text>`;
   }).join('');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}" role="img">
