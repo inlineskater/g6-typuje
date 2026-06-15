@@ -8199,10 +8199,13 @@ function renderCoinRaceDetail(container) {
       if (balancePoints.length >= 2) {
         const nwTotal = breakdown ? (+breakdown.total || 0) : (lbRow ? Math.round(+lbRow.net_worth || 0) : null);
         const offset = nwTotal != null ? Math.max(0, nwTotal - Math.round(+coins || 0)) : 0;
+        // Build net-worth points: time-varying bal+lock (same as wyścig coinów),
+        // with the final point pinned to the live leaderboard value.
+        const netPoints = balancePoints.map(p => ({ ...p, bal: p.bal + (p.lock || 0) }));
+        if (netPoints.length > 0) netPoints[netPoints.length - 1].bal = balancePoints[balancePoints.length - 1].bal + offset;
         const chartCanvas = el('canvas', { className: 'user-profile-chart' });
         let chartMode = 'coins';
-        const drawMode = () => drawCoinChart(chartCanvas,
-          chartMode === 'net' ? balancePoints.map(p => ({ ...p, bal: p.bal + offset })) : balancePoints);
+        const drawMode = () => drawCoinChart(chartCanvas, chartMode === 'net' ? netPoints : balancePoints);
         const cBtn = (key, label) => {
           const b = el('button', { className: 'fb-sort-btn' + (key === chartMode ? ' active' : '') }, label);
           b.addEventListener('click', () => { if (chartMode === key) return; chartMode = key; bar.querySelectorAll('.fb-sort-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); drawMode(); });
