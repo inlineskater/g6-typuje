@@ -171,6 +171,7 @@ function mapBet(row) {
     match_id: row.match_id,
     home_team: row.match_home ?? null,
     away_team: row.match_away ?? null,
+    kickoff: row.match_kickoff ?? null,
     pick: row.pick,
     stake: asInt(row.stake),
     locked_odds: asNum(row.locked_odds),
@@ -198,7 +199,7 @@ async function loadState(userId) {
   // are joined in so bets on older finished matches (no longer in `matches`
   // above) still render as "Home — Away" instead of the raw hex event id.
   const bets = await db`
-    select b.*, m.home_team as match_home, m.away_team as match_away
+    select b.*, m.home_team as match_home, m.away_team as match_away, m.kickoff as match_kickoff
     from public.football_bets b
     left join public.football_matches m on m.id = b.match_id
     order by b.created_at desc
