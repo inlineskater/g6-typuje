@@ -400,10 +400,12 @@
       padding: 5px 12px; border-radius: 8px; border: 1px solid var(--accent);
       background: var(--acc-dim); color: var(--accent); }
     .fb-action-btn:hover { background: var(--accent); color: #fff; }
-    .fb-modal-wide { max-width: min(1120px, 96vw); padding: 20px; }
+    .modal.fb-modal-wide { max-width: min(1120px, 96vw); padding: 20px; }
     .fb-th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
     .fb-th-sort:hover { color: var(--accent); }
     .fb-th-sort.active { color: var(--accent); }
+    .fb-bets-stats { margin-bottom: 12px; }
+    .fb-bets-stats:empty { display: none; }
     .fb-bets-summary { font-size: 12.5px; color: var(--muted); font-weight: 600; margin: -2px 0 12px; }
     .fb-bets-summary strong { color: var(--text); font-weight: 800; }
     .fb-filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
@@ -4494,8 +4496,9 @@
       <span class="modal-title">📋 Zakłady w Mundialu</span>
       <button class="btn-close" id="fb-bets-close">✕</button>
     </div>
-    <div id="fb-bets-summary" class="fb-bets-summary"></div>
     <div id="fb-bets-filter-bar" class="fb-filter-bar"></div>
+    <div id="fb-bets-stats" class="fbx-kpi-grid fb-bets-stats"></div>
+    <div id="fb-bets-summary" class="fb-bets-summary"></div>
     <div id="fb-bets-table-wrap" class="fb-bets-tbl-wrap"></div>
   </div>
 </div>
@@ -10281,6 +10284,7 @@ const fbPrevWin    = document.getElementById('fb-prev-win');
 const fbPlaceBtn   = document.getElementById('fb-place');
 
 const fbBetsOverlay   = document.getElementById('fb-bets-overlay');
+const fbBetsStats     = document.getElementById('fb-bets-stats');
 const fbBetsSummary   = document.getElementById('fb-bets-summary');
 const fbBetsFilterBar = document.getElementById('fb-bets-filter-bar');
 const fbBetsTableWrap = document.getElementById('fb-bets-table-wrap');
@@ -10952,28 +10956,58 @@ function renderBetsDetailModal() {
     ? footballBets.filter(b => b.user_id === fbBetsFilterUser)
     : footballBets;
 
-  // Summary line for the current filter (count, staked, settled profit, in-play).
-  let sStake = 0, sProfit = 0, sOpen = 0, sWon = 0, sSettled = 0;
+  // Detailed stats for the current filter (all players or one).
+  let sStake = 0, sProfit = 0, sOpen = 0, sOpenPot = 0, sWon = 0, sLost = 0, sSettled = 0;
+  let sOddsSum = 0, sBestWin = null, sWorstLoss = null;
   filtered.forEach(b => {
     sStake += b.stake;
-    if (b.status === 'won') { sProfit += b.potential_payout - b.stake; sWon++; sSettled++; }
-    else if (b.status === 'lost') { sProfit -= b.stake; sSettled++; }
-    else if (b.status === 'open') sOpen += b.stake;
+    sOddsSum += Number(b.locked_odds);
+    if (b.status === 'won') {
+      sProfit += b.potential_payout - b.stake; sWon++; sSettled++;
+      if (!sBestWin || b.potential_payout > sBestWin.potential_payout) sBestWin = b;
+    } else if (b.status === 'lost') {
+      sProfit -= b.stake; sLost++; sSettled++;
+      if (!sWorstLoss || b.stake > sWorstLoss.stake) sWorstLoss = b;
+    } else if (b.status === 'open') { sOpen += b.stake; sOpenPot += b.potential_payout; }
   });
   const profitClsS = sProfit > 0 ? 'fb-profit-pos' : sProfit < 0 ? 'fb-profit-neg' : '';
+  const hitRate = sSettled ? Math.round(sWon / sSettled * 100) : null;
+  const avgOdds = filtered.length ? (sOddsSum / filtered.length) : null;
+  const roi = (sWon + sLost) ? sProfit / (filtered.filter(b => b.status === 'won' || b.status === 'lost').reduce((a, b) => a + b.stake, 0)) : null;
+
+  const kpiCard = (icon, label, valNode, sub) => el('div', { className: 'fbx-kpi' },
+    el('div', { className: 'fbx-kpi-label' }, icon + ' ' + label),
+    valNode,
+    sub ? el('div', { className: 'fbx-kpi-sub' }, sub) : '',
+  );
+  const kpiV = (text, cls) => el('div', { className: 'fbx-kpi-val ' + (cls || '') }, text);
+  fbBetsStats.replaceChildren(
+    kpiCard('🎫', 'Zakłady', kpiV(String(filtered.length)),
+      sOpen ? sOpen + ' 🪙 jeszcze w grze' : 'wszystkie rozliczone'),
+    kpiCard('💵', 'Postawione', kpiV(sStake + ' 🪙'),
+      avgOdds != null ? 'średni kurs ' + avgOdds.toFixed(2) : ''),
+    kpiCard('💰', 'Bilans', kpiV(sSettled ? (sProfit > 0 ? '+' : '') + sProfit + ' 🪙' : '—', profitClsS),
+      sSettled ? 'z rozliczonych' : 'brak rozliczonych'),
+    kpiCard('🎯', 'Trafność', kpiV(hitRate != null ? hitRate + '%' : '—'),
+      sSettled ? sWon + '/' + sSettled + ' trafione' : '—'),
+    kpiCard('📈', 'ROI', kpiV(roi != null ? (roi >= 0 ? '+' : '') + Math.round(roi * 100) + '%' : '—', roi != null ? (roi >= 0 ? 'fb-profit-pos' : 'fb-profit-neg') : ''),
+      'zwrot z postawionej kasy'),
+    kpiCard('⏳', 'W grze', kpiV(sOpen + ' 🪙'),
+      sOpenPot ? 'możliwa wypłata ' + sOpenPot + ' 🪙' : 'brak otwartych'),
+  );
+
   fbBetsSummary.replaceChildren();
-  fbBetsSummary.append(
-    el('strong', {}, String(filtered.length)), ' zakładów · ',
-    el('strong', {}, sStake + ' 🪙'), ' postawione',
-    sSettled ? ' · bilans ' : '',
-  );
-  if (sSettled) fbBetsSummary.append(
-    el('strong', { className: profitClsS }, (sProfit > 0 ? '+' : '') + sProfit + ' 🪙'),
-    ' (' + sWon + '/' + sSettled + ' trafione)',
-  );
-  if (sOpen) fbBetsSummary.append(' · ' + sOpen + ' 🪙 w grze');
+  if (sBestWin) fbBetsSummary.append('🔥 Największa wygrana: ',
+    el('strong', { className: 'fb-profit-pos' }, '+' + sBestWin.potential_payout + ' 🪙'),
+    ' (' + fbBetPickLabel(sBestWin) + ', kurs ' + Number(sBestWin.locked_odds).toFixed(2) + ')');
+  if (sBestWin && sWorstLoss) fbBetsSummary.append(' · ');
+  if (sWorstLoss) fbBetsSummary.append('📉 Największa strata: ',
+    el('strong', { className: 'fb-profit-neg' }, '−' + sWorstLoss.stake + ' 🪙'),
+    ' (' + fbBetPickLabel(sWorstLoss) + ', kurs ' + Number(sWorstLoss.locked_odds).toFixed(2) + ')');
 
   if (!filtered.length) {
+    fbBetsStats.replaceChildren();
+    fbBetsSummary.replaceChildren();
     fbBetsTableWrap.replaceChildren(el('p', { className: 'fb-no-odds' }, 'Brak zakładów.'));
     return;
   }
