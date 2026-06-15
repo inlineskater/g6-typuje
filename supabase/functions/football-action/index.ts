@@ -231,6 +231,13 @@ async function placeBet(userId, body) {
     if (match.status !== "NS") throw gameError("Mecz już się rozpoczął — zakłady zamknięte.");
     if (new Date(match.kickoff).getTime() <= Date.now()) throw gameError("Zakłady na ten mecz są zamknięte.");
 
+    const [existing] = await tx`
+      select id from public.football_bets
+      where user_id = ${userId} and match_id = ${matchId}
+      limit 1
+    `;
+    if (existing) throw gameError("Masz już zakład na ten mecz.");
+
     const odds = pick === "1" ? match.odds_home : pick === "X" ? match.odds_draw : match.odds_away;
     const lockedOdds = asNum(odds);
     if (!lockedOdds || lockedOdds <= 1) throw gameError("Brak kursów dla tego meczu.");

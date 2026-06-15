@@ -10332,7 +10332,7 @@ function buildMatchCard(match, matchBets) {
     const btn = el('button', {
       className: 'fb-odds-btn'
         + (done && match.result === pick ? ' win' : ''),
-      disabled: !bettable || (me && me.coins < 1),
+      disabled: !bettable || (me && me.coins < 1) || myBets.length > 0,
       title: odds
         ? 'Kurs ' + Number(odds).toFixed(2) + ' — trafisz, dostajesz stawka × ' + Number(odds).toFixed(2)
             + (prob != null ? '. ' + Math.round(prob * 100) + '% to szansa (uczciwa, po odjęciu marży bukmachera).' : '')
@@ -10342,7 +10342,7 @@ function buildMatchCard(match, matchBets) {
       el('span', { className: 'fb-odds-val' }, odds ? Number(odds).toFixed(2) : '—'),
       el('span', { className: 'fb-odds-prob' }, prob != null ? Math.round(prob * 100) + '%' : ''),
     );
-    if (bettable) btn.addEventListener('click', () => openFootballBet(match.id, pick));
+    if (bettable && !myBets.length) btn.addEventListener('click', () => openFootballBet(match.id, pick));
     oddsRow.appendChild(btn);
   });
 
@@ -10369,7 +10369,9 @@ function buildMatchCard(match, matchBets) {
     sortedBets.forEach(b => card.appendChild(buildFootballBetBadge(match, b)));
   }
 
-  if (me && me.coins < 1 && bettable && !myBets.length) {
+  if (me && myBets.length > 0 && bettable) {
+    card.appendChild(el('div', { className: 'fb-no-odds' }, 'Masz już zakład na ten mecz.'));
+  } else if (me && me.coins < 1 && bettable) {
     card.appendChild(el('div', { className: 'fb-no-odds' }, 'Brak coinów na zakład.'));
   }
 
@@ -10637,7 +10639,7 @@ async function renderMundialRankingCard() {
 
 function fbSetAmount(value) {
   let v = Math.floor(Number(value) || 0);
-  const max = Math.min(1000, me ? me.coins : 1000);
+  const max = me ? me.coins : 1000;
   if (v < 1) v = 1;
   if (v > max) v = max;
   fbAmount.value = v;
@@ -10648,6 +10650,8 @@ function fbSetAmount(value) {
 
 function openFootballBet(matchId, pick) {
   if (!me || me.coins < 1) { showToast('❌ Brak coinów na zakład.'); return; }
+  const hasBet = footballBets.some(b => me && b.user_id === me.id && b.match_id === matchId);
+  if (hasBet) { showToast('❌ Masz już zakład na ten mecz.'); return; }
   fbActiveMatch = footballMatches.find(m => m.id === matchId);
   if (!fbActiveMatch || !fbIsBettable(fbActiveMatch)) return;
   fbActivePick = pick;
