@@ -395,6 +395,32 @@
     .fb-back-link { display: inline-block; font-size: 13px; font-weight: 700; color: var(--accent);
       background: none; border: none; cursor: pointer; font-family: inherit; padding: 0 0 12px; }
     .fb-back-link:hover { text-decoration: underline; }
+    .fb-stats-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .fb-action-btn { font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer;
+      padding: 5px 12px; border-radius: 8px; border: 1px solid var(--accent);
+      background: var(--acc-dim); color: var(--accent); }
+    .fb-action-btn:hover { background: var(--accent); color: #fff; }
+    .fb-modal-wide { max-width: 680px; }
+    .fb-filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .fb-filter-btn { font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+      padding: 4px 11px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); }
+    .fb-filter-btn:hover { border-color: var(--accent); }
+    .fb-filter-btn.active { border-color: var(--accent); background: var(--acc-dim); color: var(--accent); font-weight: 800; }
+    .fb-bets-tbl { width: 100%; border-collapse: collapse; }
+    .fb-bets-tbl th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--muted); text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .fb-bets-tbl td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
+    .fb-bets-tbl tr:last-child td { border-bottom: none; }
+    .fb-bets-tbl tr.fb-bet-won td { background: var(--yes-dim); }
+    .fb-bets-tbl tr.fb-bet-lost td { background: var(--no-dim); opacity: .85; }
+    .fb-bets-tbl tr.fb-bet-void td { opacity: .5; }
+    .fb-nick-btn { background: none; border: none; font-size: 12px; font-weight: 800;
+      color: var(--accent); cursor: pointer; font-family: inherit; padding: 0; text-align: left; }
+    .fb-nick-btn:hover { text-decoration: underline; }
+    .fb-stats-mini { margin-top: 4px; }
+    .fb-stats-mini .lb-table-compact th { white-space: nowrap; }
+    .fb-stats-mini .lb-table-compact td { white-space: nowrap; }
 
     /* ── MUNDIAL HERO (WC26) ── */
     .fb-hero {
@@ -4390,6 +4416,18 @@
     </div>
 
     <button class="btn-place btn-place-yes" id="fb-place">Postaw</button>
+  </div>
+</div>
+
+<!-- ── MUNDIAL BETS DETAIL MODAL ── -->
+<div id="fb-bets-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal fb-modal-wide">
+    <div class="modal-header">
+      <span class="modal-title">📋 Zakłady w Mundialu</span>
+      <button class="btn-close" id="fb-bets-close">✕</button>
+    </div>
+    <div id="fb-bets-filter-bar" class="fb-filter-bar"></div>
+    <div id="fb-bets-table-wrap" style="overflow-x:auto;max-height:65vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -10173,6 +10211,11 @@ const fbPrevProb   = document.getElementById('fb-prev-prob');
 const fbPrevWin    = document.getElementById('fb-prev-win');
 const fbPlaceBtn   = document.getElementById('fb-place');
 
+const fbBetsOverlay   = document.getElementById('fb-bets-overlay');
+const fbBetsFilterBar = document.getElementById('fb-bets-filter-bar');
+const fbBetsTableWrap = document.getElementById('fb-bets-table-wrap');
+let fbBetsFilterUser  = null;
+
 const FB_PICK_LABELS = { '1': '1', 'X': 'X', '2': '2' };
 const FB_LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT', 'SUSP']);
 
@@ -10505,6 +10548,35 @@ function buildFootballStatsPanel(stats) {
     setTimeout(() => document.querySelector('.ranking-card-wide')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
   });
 
+  const betsBtn = el('button', { className: 'fb-action-btn' }, '📋 Zakłady graczy');
+  betsBtn.addEventListener('click', () => openBetsDetail(null));
+
+  const pct = v => v == null ? '—' : Math.round(v * 100) + '%';
+  const plCls = v => v > 0 ? 'fb-profit-pos' : v < 0 ? 'fb-profit-neg' : '';
+  const miniRows = stats.slice().sort((a, b) => b.profit - a.profit || b.staked - a.staked).map((s, i) => {
+    const nickBtn = el('button', { className: 'fb-nick-btn' }, me && s.user_id === me.id ? s.nick + ' (Ty)' : s.nick);
+    nickBtn.addEventListener('click', () => openBetsDetail(s.user_id));
+    return el('tr', { className: me && s.user_id === me.id ? 'fb-rank-row-me' : '' },
+      el('td', {}, String(i + 1)),
+      el('td', {}, nickBtn),
+      el('td', {}, s.bets + (s.openStake ? ' (' + s.openStake + ' 🪙 w grze)' : '')),
+      el('td', { className: s.winRate != null ? plCls(s.winRate - 0.5) : '' }, s.settled ? s.wins + '/' + s.settled + ' · ' + pct(s.winRate) : '—'),
+      el('td', { className: s.roi != null ? plCls(s.roi) : '' }, s.roi != null ? (s.roi >= 0 ? '+' : '') + Math.round(s.roi * 100) + '%' : '—'),
+      el('td', { className: plCls(s.profit) }, (s.profit > 0 ? '+' : '') + s.profit + ' 🪙'),
+    );
+  });
+  const miniTable = el('div', { className: 'fb-stats-mini fb-rank-wrap' },
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Gracz'), el('th', {}, 'Typy'),
+        el('th', { title: 'Trafione / rozliczone · trafność' }, 'Trafność'),
+        el('th', { title: 'Zwrot z postawionej kasy' }, 'ROI'),
+        el('th', {}, 'Bilans'),
+      )),
+      el('tbody', {}, ...miniRows),
+    ),
+  );
+
   return el('div', { className: 'fb-stats' },
     el('div', { className: 'fb-stats-head' },
       el('div', {},
@@ -10512,7 +10584,7 @@ function buildFootballStatsPanel(stats) {
         el('div', { className: 'fb-stats-sub' },
           h.betsTotal + ' zakładów · ' + h.settledCount + ' rozliczonych · ' + h.wonCount + ' wygranych'),
       ),
-      rankBtn,
+      el('div', { className: 'fb-stats-actions' }, betsBtn, rankBtn),
     ),
     el('div', { className: 'fb-bonk-strip' },
       bonkCell('🏦 Bank ma', el('span', { className: 'fb-bonk-val' }, h.cashOnHand + ' 🪙'), 'kasa Banku'),
@@ -10531,6 +10603,7 @@ function buildFootballStatsPanel(stats) {
       chip('🔥 Największa wygrana', bigWin ? { nick: bigWin.nick } : null, () => '+' + bigWin.potential_payout + ' 🪙'),
       chip('🍀 Najszczęśliwszy kurs', luckyOdds ? { nick: luckyOdds.nick } : null, () => 'kurs ' + Number(luckyOdds.locked_odds).toFixed(2)),
     ),
+    miniTable,
     fbLegendDetails(fbBankLegendRows()),
   );
 }
@@ -10552,9 +10625,12 @@ function buildFootballRankingTable(stats, sortKey = 'profit') {
   const signed = (v, suffix) => (v > 0 ? '+' : '') + v + suffix;
   const plCls = v => v > 0 ? 'fb-profit-pos' : v < 0 ? 'fb-profit-neg' : '';
 
-  const rows = sorted.map((s, i) => el('tr', { className: me && s.user_id === me.id ? 'fb-rank-row-me' : '' },
+  const rows = sorted.map((s, i) => {
+    const nickBtn = el('button', { className: 'fb-nick-btn' }, me && s.user_id === me.id ? s.nick + ' (Ty)' : s.nick);
+    nickBtn.addEventListener('click', () => openBetsDetail(s.user_id));
+    return el('tr', { className: me && s.user_id === me.id ? 'fb-rank-row-me' : '' },
     el('td', {}, String(i + 1)),
-    el('td', {}, el('strong', {}, me && s.user_id === me.id ? s.nick + ' (Ty)' : s.nick)),
+    el('td', {}, nickBtn),
     el('td', {}, String(s.bets)),
     el('td', {}, s.settled ? s.wins + '/' + s.settled : '—'),
     el('td', { className: s.winRate != null ? plCls(s.winRate - 0.5) : '' }, pct(s.winRate)),
@@ -10562,7 +10638,7 @@ function buildFootballRankingTable(stats, sortKey = 'profit') {
     el('td', { className: plCls(s.profit) }, signed(s.profit, ' 🪙')),
     el('td', {}, s.staked + ' 🪙'),
     el('td', {}, s.openStake + ' 🪙'),
-  ));
+  ); });
   return el('table', { className: 'lb-table-compact' },
     el('thead', {}, el('tr', {},
       el('th', {}, '#'), el('th', {}, 'Gracz'),
@@ -10634,7 +10710,10 @@ async function renderMundialRankingCard() {
   const goBet = el('button', { className: 'fb-back-link' }, '⚽ Obstawiaj w Mundialu →');
   goBet.addEventListener('click', () => switchTab('football'));
 
-  wrap.replaceChildren(bonk, sortBar, tableWrap, fbLegendDetails([...fbBankLegendRows(), ...fbTableLegendRows()]), goBet);
+  const betsBtn2 = el('button', { className: 'fb-action-btn', style: { marginBottom: '12px' } }, '📋 Wszystkie zakłady graczy');
+  betsBtn2.addEventListener('click', () => openBetsDetail(null));
+
+  wrap.replaceChildren(bonk, sortBar, tableWrap, betsBtn2, fbLegendDetails([...fbBankLegendRows(), ...fbTableLegendRows()]), goBet);
 }
 
 function fbSetAmount(value) {
@@ -10677,12 +10756,89 @@ function refreshFootballModal() {
 
 function closeFootballModal() { hide(fbOverlay); document.body.style.overflow = ''; }
 
+function closeBetsDetail() { hide(fbBetsOverlay); document.body.style.overflow = ''; }
+
+function openBetsDetail(userId) {
+  fbBetsFilterUser = userId || null;
+  renderBetsDetailModal();
+  show(fbBetsOverlay);
+  document.body.style.overflow = 'hidden';
+}
+
+function renderBetsDetailModal() {
+  const users = [...new Map(footballBets.map(b => [b.user_id, b.nick])).entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]));
+
+  const allBtn = el('button', { className: 'fb-filter-btn' + (!fbBetsFilterUser ? ' active' : '') }, 'Wszyscy');
+  allBtn.addEventListener('click', () => { fbBetsFilterUser = null; renderBetsDetailModal(); });
+  const userBtns = users.map(([uid, nick]) => {
+    const btn = el('button', {
+      className: 'fb-filter-btn' + (fbBetsFilterUser === uid ? ' active' : ''),
+    }, nick + (me && uid === me.id ? ' (Ty)' : ''));
+    btn.addEventListener('click', () => { fbBetsFilterUser = uid; renderBetsDetailModal(); });
+    return btn;
+  });
+  fbBetsFilterBar.replaceChildren(allBtn, ...userBtns);
+
+  const filtered = fbBetsFilterUser
+    ? footballBets.filter(b => b.user_id === fbBetsFilterUser)
+    : footballBets;
+  const sorted = filtered.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  if (!sorted.length) {
+    fbBetsTableWrap.replaceChildren(el('p', { className: 'fb-no-odds' }, 'Brak zakładów.'));
+    return;
+  }
+
+  const statusLabel = s =>
+    s === 'won' ? '✅ Wygrana' : s === 'lost' ? '❌ Przegrana' : s === 'void' ? '↩️ Zwrot' : '⏳ Oczekuje';
+
+  const rows = sorted.map(b => {
+    const match = footballMatches.find(m => m.id === b.match_id);
+    const matchLabel = match ? match.home_team + ' — ' + match.away_team : b.match_id;
+    const pickLabel  = b.pick === '1'
+      ? (match ? match.home_team : '1')
+      : b.pick === '2' ? (match ? match.away_team : '2') : 'Remis';
+    const isMine = me && b.user_id === me.id;
+    const profit = b.status === 'won' ? b.potential_payout - b.stake : b.status === 'lost' ? -b.stake : null;
+    const profitText = profit === null
+      ? '~' + b.potential_payout + ' 🪙'
+      : (profit >= 0 ? '+' : '') + profit + ' 🪙';
+    const profitCls = profit === null ? '' : profit >= 0 ? 'fb-profit-pos' : 'fb-profit-neg';
+    const rowCls = b.status === 'won' ? 'fb-bet-won' : b.status === 'lost' ? 'fb-bet-lost' : b.status === 'void' ? 'fb-bet-void' : '';
+    const nickBtn = el('button', { className: 'fb-nick-btn' }, isMine ? b.nick + ' (Ty)' : b.nick);
+    nickBtn.addEventListener('click', () => { fbBetsFilterUser = b.user_id; renderBetsDetailModal(); });
+    return el('tr', { className: rowCls },
+      el('td', {}, nickBtn),
+      el('td', {}, matchLabel),
+      el('td', { style: { whiteSpace: 'nowrap' } }, pickLabel + ' (' + b.pick + ')'),
+      el('td', { style: { fontWeight: 700 } }, Number(b.locked_odds).toFixed(2)),
+      el('td', {}, b.stake + ' 🪙'),
+      el('td', { className: profitCls, style: { fontWeight: 700 } }, profitText),
+      el('td', {}, statusLabel(b.status)),
+    );
+  });
+
+  fbBetsTableWrap.replaceChildren(
+    el('table', { className: 'fb-bets-tbl' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Gracz'), el('th', {}, 'Mecz'), el('th', {}, 'Typ'),
+        el('th', {}, 'Kurs'), el('th', {}, 'Stawka'), el('th', {}, 'Zysk/Strata'), el('th', {}, 'Status'),
+      )),
+      el('tbody', {}, ...rows),
+    ),
+  );
+}
+
+document.getElementById('fb-bets-close').addEventListener('click', closeBetsDetail);
+fbBetsOverlay.addEventListener('click', e => { if (e.target === fbBetsOverlay) closeBetsDetail(); });
+
 fbSlider.addEventListener('input', () => { fbSetAmount(fbSlider.value); refreshFootballModal(); });
 fbAmount.addEventListener('input', () => { fbSetAmount(fbAmount.value); refreshFootballModal(); });
 fbAmount.addEventListener('blur', () => fbSetAmount(fbAmount.value));
 document.getElementById('fb-close').addEventListener('click', closeFootballModal);
 fbOverlay.addEventListener('click', e => { if (e.target === fbOverlay) closeFootballModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFootballModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeFootballModal(); closeBetsDetail(); } });
 
 fbPlaceBtn.addEventListener('click', async () => {
   if (!fbActiveMatch) return;
