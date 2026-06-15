@@ -169,6 +169,8 @@ function mapBet(row) {
     user_id: row.user_id,
     nick: row.nick_snapshot,
     match_id: row.match_id,
+    home_team: row.match_home ?? null,
+    away_team: row.match_away ?? null,
     pick: row.pick,
     stake: asInt(row.stake),
     locked_odds: asNum(row.locked_odds),
@@ -192,11 +194,14 @@ async function loadState(userId) {
   `;
 
   // All players' bets are public on the Mundial page (football_bets RLS is
-  // SELECT-to-all). The frontend marks the caller's own via user_id.
+  // SELECT-to-all). The frontend marks the caller's own via user_id. Team names
+  // are joined in so bets on older finished matches (no longer in `matches`
+  // above) still render as "Home — Away" instead of the raw hex event id.
   const bets = await db`
-    select *
-    from public.football_bets
-    order by created_at desc
+    select b.*, m.home_team as match_home, m.away_team as match_away
+    from public.football_bets b
+    left join public.football_matches m on m.id = b.match_id
+    order by b.created_at desc
     limit 500
   `;
 

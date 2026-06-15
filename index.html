@@ -10587,13 +10587,23 @@ function computeFootballInsights() {
   };
 }
 
-function fbBetMatchLabel(b) {
+// Resolve a bet's teams from the loaded matches first, then the team-name
+// snapshot the server joins onto each bet (so older finished matches that are
+// no longer in `footballMatches` still show names, not the raw hex id).
+function fbBetTeams(b) {
   const m = footballMatches.find(x => x.id === b.match_id);
-  return m ? m.home_team + ' — ' + m.away_team : '—';
+  return {
+    home: (m && m.home_team) || b.home_team || null,
+    away: (m && m.away_team) || b.away_team || null,
+  };
+}
+function fbBetMatchLabel(b) {
+  const t = fbBetTeams(b);
+  return (t.home || t.away) ? (t.home || '?') + ' — ' + (t.away || '?') : b.match_id;
 }
 function fbBetPickLabel(b) {
-  const m = footballMatches.find(x => x.id === b.match_id);
-  return b.pick === '1' ? (m ? m.home_team : '1') : b.pick === '2' ? (m ? m.away_team : '2') : 'Remis';
+  const t = fbBetTeams(b);
+  return b.pick === '1' ? (t.home || '1') : b.pick === '2' ? (t.away || '2') : 'Remis';
 }
 
 // Plain-language explanations for the Mundial KPIs (users kept asking).
@@ -11013,7 +11023,6 @@ function renderBetsDetailModal() {
   }
 
   const statusText = { won: '✅ Wygrana', lost: '❌ Przegrana', void: '↩️ Zwrot', open: '⏳ Oczekuje' };
-  const matchOf = b => footballMatches.find(m => m.id === b.match_id);
   const profitOf = b => b.status === 'won' ? b.potential_payout - b.stake
     : b.status === 'lost' ? -b.stake : b.potential_payout - b.stake; // open: potential
   const statusRank = { won: 0, open: 1, lost: 2, void: 3 };
@@ -11021,7 +11030,7 @@ function renderBetsDetailModal() {
   // Sortable column metadata for the bets table.
   const cols = [
     { key: 'nick',   label: 'Gracz',       numeric: false, val: b => (b.nick || '').toLowerCase() },
-    { key: 'match',  label: 'Mecz',        numeric: false, val: b => { const m = matchOf(b); return m ? (m.home_team + ' ' + m.away_team).toLowerCase() : b.match_id; } },
+    { key: 'match',  label: 'Mecz',        numeric: false, val: b => fbBetMatchLabel(b).toLowerCase() },
     { key: 'pick',   label: 'Typ',         numeric: false, val: b => b.pick },
     { key: 'odds',   label: 'Kurs',        numeric: true,  val: b => Number(b.locked_odds) },
     { key: 'stake',  label: 'Stawka',      numeric: true,  val: b => b.stake },
@@ -11040,11 +11049,8 @@ function renderBetsDetailModal() {
   const fmtDate = iso => new Date(iso).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
   const rows = sorted.map(b => {
-    const match = matchOf(b);
-    const matchLabel = match ? match.home_team + ' — ' + match.away_team : b.match_id;
-    const pickLabel  = b.pick === '1'
-      ? (match ? match.home_team : '1')
-      : b.pick === '2' ? (match ? match.away_team : '2') : 'Remis';
+    const matchLabel = fbBetMatchLabel(b);
+    const pickLabel = fbBetPickLabel(b);
     const isMine = me && b.user_id === me.id;
     const profit = b.status === 'won' ? b.potential_payout - b.stake : b.status === 'lost' ? -b.stake : null;
     const profitText = profit === null
