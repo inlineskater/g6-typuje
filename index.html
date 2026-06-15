@@ -442,6 +442,54 @@
       color: var(--accent); cursor: pointer; font-family: inherit; padding: 0; text-align: left; }
     .fb-nick-btn:hover { text-decoration: underline; }
 
+    /* ── MUNDIAL STATS (shadcn/Notion-style) ── */
+    .fbx { display: flex; flex-direction: column; gap: 22px; }
+    .fbx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .fbx-title { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+    .fbx-sub { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+    .fbx-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); margin-bottom: 11px; display: flex; align-items: center; gap: 7px; }
+    .fbx-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 11px; }
+    .fbx-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 15px 16px; display: flex; flex-direction: column; gap: 5px;
+      box-shadow: 0 1px 2px rgba(15,23,42,.04); transition: box-shadow .16s ease, transform .16s ease; }
+    .fbx-kpi:hover { box-shadow: 0 10px 28px -16px rgba(15,23,42,.28); transform: translateY(-1px); }
+    .fbx-kpi-label { font-size: 11px; font-weight: 600; color: var(--muted);
+      display: flex; align-items: center; gap: 6px; }
+    .fbx-kpi-val { font-size: 23px; font-weight: 800; letter-spacing: -.025em; line-height: 1.05;
+      font-variant-numeric: tabular-nums; }
+    .fbx-kpi-sub { font-size: 11px; color: var(--dim); font-weight: 500; }
+    .fbx-hl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 11px; }
+    .fbx-hl { position: relative; background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 16px 14px 19px; display: flex; flex-direction: column; gap: 7px;
+      box-shadow: 0 1px 2px rgba(15,23,42,.04); overflow: hidden;
+      transition: box-shadow .16s ease, transform .16s ease; }
+    .fbx-hl:hover { box-shadow: 0 10px 28px -16px rgba(15,23,42,.28); transform: translateY(-1px); }
+    .fbx-hl::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--accent); }
+    .fbx-hl.good::before { background: var(--yes); }
+    .fbx-hl.bad::before  { background: var(--no); }
+    .fbx-hl.warn::before { background: #f59e0b; }
+    .fbx-hl-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .fbx-hl-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .fbx-hl-metric { font-size: 19px; font-weight: 800; letter-spacing: -.02em;
+      font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .fbx-hl-player { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+    .fbx-hl-cap { font-size: 11.5px; color: var(--dim); font-weight: 500; line-height: 1.45; }
+    .fbx-hl-empty { color: var(--dim); font-size: 12px; font-style: italic; }
+    .fbx-dist-wrap { display: flex; flex-direction: column; gap: 8px; }
+    .fbx-dist { display: flex; height: 12px; border-radius: 999px; overflow: hidden;
+      border: 1px solid var(--border); background: var(--surface); }
+    .fbx-dist > span { display: block; height: 100%; }
+    .fbx-dist-1 { background: var(--accent); }
+    .fbx-dist-X { background: #94a3b8; }
+    .fbx-dist-2 { background: #f59e0b; }
+    .fbx-dist-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+    .fbx-dist-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .fbx-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+    .fbx-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
     /* ── MUNDIAL HERO (WC26) ── */
     .fb-hero {
       position: relative; overflow: hidden; border-radius: 18px; margin-bottom: 16px;
@@ -10506,6 +10554,44 @@ function computeFootballHouseStats() {
   };
 }
 
+// Notable single bets + aggregate KPIs across all Mundial bets.
+function computeFootballInsights() {
+  let best = null, biggestWin = null, biggestLoss = null, longShot = null, biggestStake = null, surest = null;
+  let oddsSum = 0, oddsN = 0, stakeSum = 0, settledWins = 0, settledTotal = 0;
+  const picks = { '1': 0, 'X': 0, '2': 0 };
+  footballBets.forEach(b => {
+    const odds = Number(b.locked_odds);
+    oddsSum += odds; oddsN += 1; stakeSum += b.stake;
+    if (picks[b.pick] != null) picks[b.pick] += 1;
+    if (b.status === 'won' || b.status === 'lost') settledTotal += 1;
+    if (b.status === 'won') {
+      settledWins += 1;
+      if (!best || odds > Number(best.locked_odds)) best = b;                       // highest winning odds
+      if (!biggestWin || b.potential_payout > biggestWin.potential_payout) biggestWin = b;
+    }
+    if (b.status === 'lost' && (!biggestLoss || b.stake > biggestLoss.stake)) biggestLoss = b;
+    if (!longShot || odds > Number(longShot.locked_odds)) longShot = b;             // longest odds, any status
+    if (!biggestStake || b.stake > biggestStake.stake) biggestStake = b;           // biggest single stake
+    if (!surest || odds < Number(surest.locked_odds)) surest = b;                  // lowest odds = favourite
+  });
+  return {
+    best, biggestWin, biggestLoss, longShot, biggestStake, surest, picks,
+    avgOdds: oddsN ? oddsSum / oddsN : null,
+    avgStake: oddsN ? stakeSum / oddsN : null,
+    hitRate: settledTotal ? settledWins / settledTotal : null,
+    settledWins, settledTotal,
+  };
+}
+
+function fbBetMatchLabel(b) {
+  const m = footballMatches.find(x => x.id === b.match_id);
+  return m ? m.home_team + ' — ' + m.away_team : '—';
+}
+function fbBetPickLabel(b) {
+  const m = footballMatches.find(x => x.id === b.match_id);
+  return b.pick === '1' ? (m ? m.home_team : '1') : b.pick === '2' ? (m ? m.away_team : '2') : 'Remis';
+}
+
 // Plain-language explanations for the Mundial KPIs (users kept asking).
 const fbBankLegendRows = () => [
   ['🏦 Bank ma', 'ile coinów Bank trzyma teraz z Mundialu — suma wszystkich postawionych stawek minus wypłacone wygrane. Bank bije i pali coiny: przegrane stawki przepadają, a wygrane są dopłacane.'],
@@ -10643,17 +10729,94 @@ async function renderMundialRankingCard() {
 
   const h = computeFootballHouseStats();
   const stats = computeFootballPlayerStats();
+  const ins = computeFootballInsights();
 
-  const profitCls = h.realizedProfit > 0 ? 'fb-profit-pos' : h.realizedProfit < 0 ? 'fb-profit-neg' : '';
-  const bonkCell = (label, valText, cls) => el('div', { className: 'fb-bonk-cell' },
-    el('span', { className: 'fb-bonk-label' }, label),
-    el('span', { className: 'fb-bonk-val ' + (cls || '') }, valText),
+  const fmtSigned = v => (v > 0 ? '+' : '') + v + ' 🪙';
+  const plCls = v => v > 0 ? 'fb-profit-pos' : v < 0 ? 'fb-profit-neg' : '';
+
+  // ── KPI card helper ──
+  const kpi = (icon, label, valNode, sub) => el('div', { className: 'fbx-kpi' },
+    el('div', { className: 'fbx-kpi-label' }, icon + ' ' + label),
+    valNode,
+    sub ? el('div', { className: 'fbx-kpi-sub' }, sub) : '',
   );
-  const bonk = el('div', { className: 'fb-bonk-strip' },
-    bonkCell('🏦 Bank ma', h.cashOnHand + ' 🪙'),
-    bonkCell('📈 Zysk z graczy', (h.realizedProfit > 0 ? '+' : '') + h.realizedProfit + ' 🪙', profitCls),
-    bonkCell('🎰 Obrót', h.totalWagered + ' 🪙'),
-    bonkCell('⏳ W grze', h.openStake + ' 🪙'),
+  const kpiVal = (text, cls) => el('div', { className: 'fbx-kpi-val ' + (cls || '') }, text);
+
+  // ── Bank / economy KPIs ──
+  const bankGrid = el('div', { className: 'fbx-kpi-grid' },
+    kpi('🏦', 'Bank ma', kpiVal(h.cashOnHand + ' 🪙'), 'kasa Banku teraz'),
+    kpi('📈', 'Zysk z graczy', kpiVal(fmtSigned(h.realizedProfit), plCls(h.realizedProfit)), 'z rozliczonych meczów'),
+    kpi('🎰', 'Obrót', kpiVal(h.totalWagered + ' 🪙'), 'łącznie postawione'),
+    kpi('⏳', 'W grze', kpiVal(h.openStake + ' 🪙'), 'ryzyko wypłaty ' + h.openLiability + ' 🪙'),
+  );
+
+  // ── Notable bets (highlight cards) ──
+  const hl = (icon, title, variant, bet, metricNode, capText) => {
+    if (!bet) return el('div', { className: 'fbx-hl' },
+      el('div', { className: 'fbx-hl-title' }, icon + ' ' + title),
+      el('div', { className: 'fbx-hl-empty' }, 'jeszcze brak'),
+    );
+    const player = el('button', { className: 'fb-nick-btn fbx-hl-player' },
+      bet.nick + (me && bet.user_id === me.id ? ' (Ty)' : ''));
+    player.addEventListener('click', () => openBetsDetail(bet.user_id));
+    return el('div', { className: 'fbx-hl ' + variant },
+      el('div', { className: 'fbx-hl-top' },
+        el('div', { className: 'fbx-hl-title' }, icon + ' ' + title),
+        metricNode,
+      ),
+      player,
+      el('div', { className: 'fbx-hl-cap' }, capText),
+    );
+  };
+  const metric = (text, cls) => el('div', { className: 'fbx-hl-metric ' + (cls || '') }, text);
+  const betCap = b => fbBetPickLabel(b) + ' · ' + fbBetMatchLabel(b) + ' · stawka ' + b.stake + ' 🪙';
+
+  const hlGrid = el('div', { className: 'fbx-hl-grid' },
+    hl('🎯', 'Najskuteczniejszy', 'good', ins.best,
+      ins.best && metric('kurs ' + Number(ins.best.locked_odds).toFixed(2), 'fb-profit-pos'),
+      ins.best && (betCap(ins.best) + ' → +' + ins.best.potential_payout + ' 🪙')),
+    hl('💥', 'Największa wygrana', 'good', ins.biggestWin,
+      ins.biggestWin && metric('+' + ins.biggestWin.potential_payout + ' 🪙', 'fb-profit-pos'),
+      ins.biggestWin && (betCap(ins.biggestWin) + ' · kurs ' + Number(ins.biggestWin.locked_odds).toFixed(2))),
+    hl('📉', 'Największa strata', 'bad', ins.biggestLoss,
+      ins.biggestLoss && metric('−' + ins.biggestLoss.stake + ' 🪙', 'fb-profit-neg'),
+      ins.biggestLoss && (betCap(ins.biggestLoss) + ' · kurs ' + Number(ins.biggestLoss.locked_odds).toFixed(2))),
+    hl('🎲', 'Największe ryzyko', 'warn', ins.longShot,
+      ins.longShot && metric('kurs ' + Number(ins.longShot.locked_odds).toFixed(2)),
+      ins.longShot && (betCap(ins.longShot) + ' · ' + (ins.longShot.status === 'won' ? 'trafiony ✅' : ins.longShot.status === 'lost' ? 'pudło ❌' : ins.longShot.status === 'open' ? 'w grze ⏳' : 'zwrot ↩️'))),
+    hl('💰', 'Najwyższa stawka', 'warn', ins.biggestStake,
+      ins.biggestStake && metric(ins.biggestStake.stake + ' 🪙'),
+      ins.biggestStake && (fbBetPickLabel(ins.biggestStake) + ' · ' + fbBetMatchLabel(ins.biggestStake) + ' · kurs ' + Number(ins.biggestStake.locked_odds).toFixed(2))),
+    hl('🛡️', 'Największy pewniak', '', ins.surest,
+      ins.surest && metric('kurs ' + Number(ins.surest.locked_odds).toFixed(2)),
+      ins.surest && betCap(ins.surest)),
+  );
+
+  // ── Aggregate KPIs + pick distribution ──
+  const aggGrid = el('div', { className: 'fbx-kpi-grid' },
+    kpi('🎯', 'Trafność ogólna', kpiVal(ins.hitRate != null ? Math.round(ins.hitRate * 100) + '%' : '—'),
+      ins.settledTotal ? ins.settledWins + '/' + ins.settledTotal + ' rozliczonych' : 'brak rozliczonych'),
+    kpi('📊', 'Średni kurs', kpiVal(ins.avgOdds != null ? ins.avgOdds.toFixed(2) : '—'), 'wszystkich zakładów'),
+    kpi('💵', 'Średnia stawka', kpiVal(ins.avgStake != null ? Math.round(ins.avgStake) + ' 🪙' : '—'), 'na zakład'),
+    kpi('👥', 'Typerów', kpiVal(String(stats.length)), h.betsTotal + ' zakładów łącznie'),
+  );
+
+  const pickTotal = ins.picks['1'] + ins.picks['X'] + ins.picks['2'];
+  const pickPct = k => pickTotal ? (ins.picks[k] / pickTotal * 100) : 0;
+  const distBar = el('div', { className: 'fbx-dist' },
+    el('span', { className: 'fbx-dist-1', style: { width: pickPct('1') + '%' } }),
+    el('span', { className: 'fbx-dist-X', style: { width: pickPct('X') + '%' } }),
+    el('span', { className: 'fbx-dist-2', style: { width: pickPct('2') + '%' } }),
+  );
+  const legendItem = (cls, label, k) => el('span', {},
+    el('span', { className: 'fbx-dot ' + cls }), label + ' ' + ins.picks[k] + ' (' + Math.round(pickPct(k)) + '%)');
+  const distWrap = el('div', { className: 'fbx-dist-wrap' },
+    distBar,
+    el('div', { className: 'fbx-dist-legend' },
+      legendItem('fbx-dist-1', '1 gospodarz', '1'),
+      legendItem('fbx-dist-X', 'X remis', 'X'),
+      legendItem('fbx-dist-2', '2 gość', '2'),
+    ),
   );
 
   const tableWrap = el('div', { className: 'fb-rank-wrap', style: { marginTop: '12px' } });
@@ -10686,13 +10849,36 @@ async function renderMundialRankingCard() {
   };
   renderTable();
 
-  const goBet = el('button', { className: 'fb-back-link' }, '⚽ Obstawiaj w Mundialu →');
+  const goBet = el('button', { className: 'fb-action-btn' }, '⚽ Obstawiaj w Mundialu →');
   goBet.addEventListener('click', () => switchTab('football'));
 
-  const betsBtn2 = el('button', { className: 'fb-action-btn', style: { marginBottom: '12px' } }, '📋 Wszystkie zakłady graczy');
+  const betsBtn2 = el('button', { className: 'fb-action-btn' }, '📋 Wszystkie zakłady graczy');
   betsBtn2.addEventListener('click', () => openBetsDetail(null));
 
-  wrap.replaceChildren(bonk, sortBar, tableWrap, betsBtn2, fbLegendDetails([...fbBankLegendRows(), ...fbTableLegendRows()]), goBet);
+  // ── Section helper + final assembly ──
+  const section = (label, ...children) => el('div', {},
+    el('div', { className: 'fbx-section-label' }, label),
+    ...children,
+  );
+  const head = el('div', { className: 'fbx-head' },
+    el('div', {},
+      el('div', { className: 'fbx-title' }, '⚽ Mundial 2026 — statystyki'),
+      el('div', { className: 'fbx-sub' },
+        h.betsTotal + ' zakładów · ' + h.settledCount + ' rozliczonych · ' + h.wonCount + ' wygranych · ' + stats.length + ' typerów'),
+    ),
+    el('div', { className: 'fbx-actions' }, betsBtn2, goBet),
+  );
+
+  wrap.replaceChildren(
+    el('div', { className: 'fbx' },
+      head,
+      section('🏦 Bank i ekonomia', bankGrid),
+      section('🏅 Najciekawsze zakłady', hlGrid),
+      section('📊 Statystyki ogólne', aggGrid, el('div', { style: { marginTop: '11px' } }, distWrap)),
+      section('🏆 Ranking typerów', sortBar, tableWrap),
+      fbLegendDetails([...fbBankLegendRows(), ...fbTableLegendRows()]),
+    ),
+  );
 }
 
 function fbSetAmount(value) {
