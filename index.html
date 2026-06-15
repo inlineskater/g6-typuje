@@ -3307,6 +3307,24 @@
     .cf-turnstile-box { margin: 10px 0 4px; min-height: 0; display: flex; justify-content: center; }
     .force-blame { margin: 4px 0 14px; padding: 10px 12px; border-radius: 10px; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #b91c1c; font-size: 12px; line-height: 1.5; font-weight: 600; text-align: center; }
     .force-blame-sub { display: inline-block; margin-top: 6px; font-weight: 500; opacity: .85; font-style: italic; }
+    /* ── Wspólne Płótno (collaborative canvas) ── */
+    .cv-wrap { display: flex; flex-direction: column; height: calc(100dvh - 150px); min-height: 440px; gap: 10px; padding: 10px 14px 14px; box-sizing: border-box; }
+    .cv-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; }
+    .cv-bar-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 240px; }
+    .cv-title { font-weight: 800; font-size: 15px; }
+    .cv-hint { font-size: 11px; opacity: .72; line-height: 1.35; }
+    .cv-palette { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+    .cv-swatch { width: 24px; height: 24px; border-radius: 6px; border: 2px solid rgba(255,255,255,.18); cursor: pointer; padding: 0; transition: transform .08s ease, border-color .08s ease; }
+    .cv-swatch:hover { transform: scale(1.12); }
+    .cv-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(99,102,241,.9); transform: scale(1.12); }
+    .cv-bar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .cv-status { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: rgba(34,197,94,.14); color: #4ade80; white-space: nowrap; }
+    .cv-status.cv-status-cooldown { background: rgba(234,179,8,.14); color: #facc15; }
+    .cv-ctrl { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .cv-ctrl:hover { background: rgba(255,255,255,.12); }
+    .cv-stage { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid rgba(255,255,255,.08); background: #0d1117; touch-action: none; }
+    #cv-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+    @media (max-width: 640px) { .cv-wrap { height: calc(100dvh - 130px); padding: 8px; } .cv-hint { display: none; } .cv-bar-actions { margin-left: 0; } }
   </style>
 </head>
 <body>
@@ -3419,6 +3437,7 @@
       </div>
     </div>
     <button class="nav-tab" data-tab="football">⚽ Mundial</button>
+    <button class="nav-tab" data-tab="canvas">🎨 Wspólne Płótno</button>
 
     <div class="nav-group" data-group="shop">
       <button class="nav-group-btn">🛒 Sklep <span class="nav-hint-badge" aria-hidden="true">Nowe</span> <span class="nav-chevron">▾</span></button>
@@ -3508,6 +3527,27 @@
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
     </main>
+  </div>
+
+  <div id="tab-canvas" class="hidden">
+    <div class="cv-wrap">
+      <div class="cv-bar">
+        <div class="cv-bar-info">
+          <span class="cv-title">🎨 Wspólne Płótno</span>
+          <span class="cv-hint">Klikaj, by malować • <strong>1 darmowy piksel co 2 h</strong>, potem <strong>1 🪙/piksel</strong> • przeciągnij = przesuń, kółko / szczypta = zoom</span>
+        </div>
+        <div class="cv-palette" id="cv-palette"></div>
+        <div class="cv-bar-actions">
+          <span class="cv-status" id="cv-status">…</span>
+          <button class="cv-ctrl" id="cv-zoom-out" title="Oddal" aria-label="Oddal">−</button>
+          <button class="cv-ctrl" id="cv-zoom-in" title="Przybliż" aria-label="Przybliż">+</button>
+          <button class="cv-ctrl" id="cv-fit" title="Dopasuj do ekranu" aria-label="Dopasuj">⤢</button>
+        </div>
+      </div>
+      <div class="cv-stage">
+        <canvas id="cv-canvas"></canvas>
+      </div>
+    </div>
   </div>
 
   <div id="tab-leaderboard" class="hidden">
@@ -5476,6 +5516,7 @@ function switchTab(tab) {
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
   if (previousTab === 'invoice-horde-test' && tab !== 'invoice-horde-test') { stopInvoiceHordeRound(); restoreInvoiceHordePanelHome(); }
   if (previousTab === 'football' && tab !== 'football') stopFootballCountdown();
+  if (previousTab === 'canvas' && tab !== 'canvas') stopCanvasCountdown();
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
@@ -5497,11 +5538,13 @@ function switchTab(tab) {
   const tBj = document.getElementById('tab-bug-jumper-test');
   const tIh = document.getElementById('tab-invoice-horde-test');
   const tFb = document.getElementById('tab-football');
+  const tCv = document.getElementById('tab-canvas');
   hide(tAg);
   hide(tFp);
   hide(tBj);
   hide(tIh);
   hide(tFb);
+  hide(tCv);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
@@ -5539,6 +5582,11 @@ function switchTab(tab) {
     show(tFb);
     loadFootball();
     startFootballCountdown();
+  } else if (tab === 'canvas') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    show(tCv);
+    loadCanvas();
+    startCanvasCountdown();
   } else if (tab === 'flappy-test') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     const panel = document.getElementById('seasonal-game-flappy-pants');
@@ -6545,6 +6593,9 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'football_bets' }, async () => {
       if (activeTab === 'football') loadFootball(false);
       await refreshMeCoins();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'canvas_pixels' }, (payload) => {
+      applyCanvasPixelChange(payload.new);
     })
     .subscribe();
 
@@ -10343,6 +10394,327 @@ async function loadFootball(showSpinner = true) {
     if (seq !== footballLoadSeq) return;
     footballGrid.replaceChildren(el('p', { className: 'fb-no-odds' }, err.message || 'Nie udało się wczytać meczów.'));
   }
+}
+
+// ── Wspólne Płótno (collaborative pixel canvas) ─────────────────────────────
+// Grid bounds mirror supabase/canvas.sql (CANVAS_W/CANVAS_H) — keep in sync.
+const CANVAS_W = 192, CANVAS_H = 108;
+const CANVAS_COOLDOWN_MS = 2 * 60 * 60 * 1000; // display only; server is source of truth
+const CANVAS_PALETTE = [
+  '#000000', '#3b3f46', '#787f8c', '#ffffff',
+  '#e4002b', '#ff8a00', '#ffd400', '#7bc043',
+  '#1e8a3c', '#00b6d6', '#1d6fe0', '#2b2bbf',
+  '#8e44ad', '#ff6ea9', '#9c6b3f', '#f4c8a0',
+];
+const CANVAS_ERR = {
+  not_authenticated: 'Musisz być zalogowany.',
+  bad_coords: 'Piksel poza planszą.',
+  bad_color: 'Niedozwolony kolor.',
+  insufficient_coins: 'Za mało coinów — w trakcie cooldownu piksel kosztuje 1 🪙.',
+  no_profile: 'Brak profilu.',
+};
+
+let cvPixels = new Map();          // "x,y" -> color
+let cvNextFreeAt = 0;              // ms epoch of next free pixel
+let cvSelColor = CANVAS_PALETTE[4];
+let cvView = { scale: 1, offsetX: 0, offsetY: 0 };
+let cvHover = null;                // {x,y} or null
+let cvCtx = null;
+let cvLoadSeq = 0;
+let cvCountdownTimer = null;
+let cvSetupDone = false;
+
+function cvEl() { return document.getElementById('cv-canvas'); }
+
+async function placePixelRpc(x, y, color) {
+  const { data, error } = await sb.rpc('place_pixel', { p_x: x, p_y: y, p_color: color });
+  if (error) {
+    const msg = (error.message || '').trim();
+    const slug = msg.match(/[a-z_]+/)?.[0] || '';
+    throw new Error(CANVAS_ERR[msg] || CANVAS_ERR[slug] || 'Nie udało się postawić piksela.');
+  }
+  return data;
+}
+
+async function loadCanvas() {
+  cvSetup();
+  renderCanvasPalette();
+  const seq = ++cvLoadSeq;
+  try {
+    const [pixRes, cdRes] = await Promise.all([
+      sb.from('canvas_pixels').select('x,y,color'),
+      me ? sb.from('canvas_cooldowns').select('last_free_at').eq('user_id', me.id).maybeSingle()
+         : Promise.resolve({ data: null }),
+    ]);
+    if (seq !== cvLoadSeq) return;
+    cvPixels = new Map();
+    (pixRes.data || []).forEach(p => cvPixels.set(p.x + ',' + p.y, p.color));
+    const lastFree = cdRes && cdRes.data && cdRes.data.last_free_at;
+    cvNextFreeAt = lastFree ? new Date(lastFree).getTime() + CANVAS_COOLDOWN_MS : 0;
+    fitCanvasView();
+    drawCanvas();
+    updateCanvasStatus();
+  } catch (e) {
+    console.error('loadCanvas', e);
+  }
+}
+
+function applyCanvasPixelChange(row) {
+  if (!row || row.x == null || row.y == null) return;
+  cvPixels.set(row.x + ',' + row.y, row.color);
+  if (activeTab === 'canvas') drawCanvas();
+}
+
+// ── View / rendering ────────────────────────────────────────────────────────
+function cvBackingSetup() {
+  const c = cvEl();
+  if (!c) return null;
+  const rect = c.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return null;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(1, Math.round(rect.width * dpr));
+  const h = Math.max(1, Math.round(rect.height * dpr));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  cvCtx = c.getContext('2d');
+  cvCtx.imageSmoothingEnabled = false;
+  return { rect, dpr };
+}
+
+function fitCanvasView() {
+  const c = cvEl();
+  if (!c) return;
+  const rect = c.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const s = Math.min(rect.width / CANVAS_W, rect.height / CANVAS_H);
+  cvView.scale = s;
+  cvView.offsetX = (rect.width - CANVAS_W * s) / 2;
+  cvView.offsetY = (rect.height - CANVAS_H * s) / 2;
+}
+
+function drawCanvas() {
+  const info = cvBackingSetup();
+  if (!info) return;
+  const { rect, dpr } = info;
+  const ctx = cvCtx;
+  const { scale, offsetX, offsetY } = cvView;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, rect.width, rect.height);
+  // board background (unpainted cells)
+  ctx.fillStyle = '#1b212b';
+  ctx.fillRect(offsetX, offsetY, CANVAS_W * scale, CANVAS_H * scale);
+  // painted pixels
+  cvPixels.forEach((color, key) => {
+    const ci = key.indexOf(',');
+    const x = +key.slice(0, ci), y = +key.slice(ci + 1);
+    ctx.fillStyle = color;
+    ctx.fillRect(offsetX + x * scale, offsetY + y * scale, scale + 0.6, scale + 0.6);
+  });
+  // grid lines once zoomed in
+  if (scale >= 7) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let gx = 0; gx <= CANVAS_W; gx++) {
+      const px = Math.round(offsetX + gx * scale) + 0.5;
+      ctx.moveTo(px, offsetY); ctx.lineTo(px, offsetY + CANVAS_H * scale);
+    }
+    for (let gy = 0; gy <= CANVAS_H; gy++) {
+      const py = Math.round(offsetY + gy * scale) + 0.5;
+      ctx.moveTo(offsetX, py); ctx.lineTo(offsetX + CANVAS_W * scale, py);
+    }
+    ctx.stroke();
+  }
+  // hover cell highlight
+  if (cvHover) {
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(offsetX + cvHover.x * scale + 1, offsetY + cvHover.y * scale + 1,
+                   Math.max(2, scale - 2), Math.max(2, scale - 2));
+  }
+  // board border
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(offsetX + 0.5, offsetY + 0.5, CANVAS_W * scale, CANVAS_H * scale);
+}
+
+function cvCellAt(clientX, clientY) {
+  const c = cvEl();
+  if (!c) return null;
+  const rect = c.getBoundingClientRect();
+  const x = Math.floor((clientX - rect.left - cvView.offsetX) / cvView.scale);
+  const y = Math.floor((clientY - rect.top - cvView.offsetY) / cvView.scale);
+  if (x < 0 || x >= CANVAS_W || y < 0 || y >= CANVAS_H) return null;
+  return { x, y };
+}
+
+function cvZoomAt(clientX, clientY, factor) {
+  const c = cvEl();
+  if (!c) return;
+  const rect = c.getBoundingClientRect();
+  const lx = clientX - rect.left, ly = clientY - rect.top;
+  const minScale = Math.min(rect.width / CANVAS_W, rect.height / CANVAS_H) * 0.7;
+  const maxScale = 44;
+  const newScale = Math.max(minScale, Math.min(maxScale, cvView.scale * factor));
+  const k = newScale / cvView.scale;
+  cvView.offsetX = lx - (lx - cvView.offsetX) * k;
+  cvView.offsetY = ly - (ly - cvView.offsetY) * k;
+  cvView.scale = newScale;
+  cvClampView();
+  drawCanvas();
+}
+
+function cvClampView() {
+  const c = cvEl();
+  if (!c) return;
+  const rect = c.getBoundingClientRect();
+  const bw = CANVAS_W * cvView.scale, bh = CANVAS_H * cvView.scale;
+  const margin = 60;
+  cvView.offsetX = Math.min(rect.width - margin, Math.max(margin - bw, cvView.offsetX));
+  cvView.offsetY = Math.min(rect.height - margin, Math.max(margin - bh, cvView.offsetY));
+}
+
+// ── Input ───────────────────────────────────────────────────────────────────
+function cvSetup() {
+  if (cvSetupDone) return;
+  const c = cvEl();
+  if (!c) return;
+  cvSetupDone = true;
+
+  const pointers = new Map();
+  let dragging = false, moved = false, lastX = 0, lastY = 0, downX = 0, downY = 0, pinchDist = 0;
+
+  c.addEventListener('pointerdown', e => {
+    c.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) { dragging = true; moved = false; lastX = downX = e.clientX; lastY = downY = e.clientY; }
+    else if (pointers.size === 2) {
+      const p = [...pointers.values()];
+      pinchDist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+    }
+  });
+
+  c.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) {
+      const cell = cvCellAt(e.clientX, e.clientY);
+      const changed = (cell && (!cvHover || cell.x !== cvHover.x || cell.y !== cvHover.y)) || (!cell && cvHover);
+      if (changed) { cvHover = cell; drawCanvas(); }
+      return;
+    }
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {
+      const p = [...pointers.values()];
+      const dist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+      const mid = { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2 };
+      if (pinchDist > 0) cvZoomAt(mid.x, mid.y, dist / pinchDist);
+      pinchDist = dist; moved = true;
+      return;
+    }
+    if (dragging) {
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) moved = true;
+      cvView.offsetX += dx; cvView.offsetY += dy;
+      cvClampView(); drawCanvas();
+    }
+  });
+
+  const up = e => {
+    if (pointers.has(e.pointerId)) {
+      if (pointers.size === 1 && !moved) {
+        const cell = cvCellAt(e.clientX, e.clientY);
+        if (cell) onCanvasTap(cell);
+      }
+      pointers.delete(e.pointerId);
+    }
+    if (pointers.size < 2) pinchDist = 0;
+    if (pointers.size === 0) dragging = false;
+  };
+  c.addEventListener('pointerup', up);
+  c.addEventListener('pointercancel', up);
+  c.addEventListener('pointerleave', () => { if (cvHover) { cvHover = null; drawCanvas(); } });
+  c.addEventListener('wheel', e => {
+    e.preventDefault();
+    cvZoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+  }, { passive: false });
+
+  const zin = document.getElementById('cv-zoom-in');
+  const zout = document.getElementById('cv-zoom-out');
+  const fit = document.getElementById('cv-fit');
+  const center = () => { const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  if (zin) zin.addEventListener('click', () => { const m = center(); cvZoomAt(m.x, m.y, 1.3); });
+  if (zout) zout.addEventListener('click', () => { const m = center(); cvZoomAt(m.x, m.y, 1 / 1.3); });
+  if (fit) fit.addEventListener('click', () => { fitCanvasView(); drawCanvas(); });
+
+  window.addEventListener('resize', () => {
+    if (activeTab !== 'canvas') return;
+    cvClampView(); drawCanvas();
+  });
+}
+
+function renderCanvasPalette() {
+  const wrap = document.getElementById('cv-palette');
+  if (!wrap || wrap.childElementCount) return;
+  CANVAS_PALETTE.forEach(col => {
+    const b = el('button', { className: 'cv-swatch', style: { background: col }, title: col });
+    if (col === cvSelColor) b.classList.add('active');
+    b.addEventListener('click', () => {
+      cvSelColor = col;
+      wrap.querySelectorAll('.cv-swatch').forEach(s => s.classList.remove('active'));
+      b.classList.add('active');
+    });
+    wrap.appendChild(b);
+  });
+}
+
+async function onCanvasTap(cell) {
+  if (!me) { showToast('Musisz być zalogowany.'); return; }
+  const onCooldown = cvNextFreeAt > Date.now();
+  if (onCooldown && (me.coins || 0) < 1) {
+    showToast('⏳ Cooldown trwa, a nie masz coinów na płatny piksel.');
+    return;
+  }
+  try {
+    const res = await placePixelRpc(cell.x, cell.y, cvSelColor);
+    cvPixels.set(cell.x + ',' + cell.y, cvSelColor);
+    if (res && res.next_free_at) cvNextFreeAt = new Date(res.next_free_at).getTime();
+    if (res && typeof res.coins === 'number') { me.coins = res.coins; setText(headerCoins, me.coins); }
+    if (res && res.paid) showToast('🎨 Piksel za 1 🪙 — cooldown wciąż trwa.');
+    drawCanvas();
+    updateCanvasStatus();
+  } catch (e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+// ── Cooldown status / countdown ─────────────────────────────────────────────
+function cvFmtDur(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  return (h ? h + 'h ' : '') + (h || m ? m + 'm ' : '') + ss + 's';
+}
+
+function updateCanvasStatus() {
+  const badge = document.getElementById('cv-status');
+  if (!badge) return;
+  const now = Date.now();
+  if (cvNextFreeAt > now) {
+    badge.textContent = '⏳ Darmowy piksel za ' + cvFmtDur(cvNextFreeAt - now) + ' · teraz 1 🪙/piksel';
+    badge.classList.add('cv-status-cooldown');
+  } else {
+    badge.textContent = '✅ Darmowy piksel gotowy — kliknij planszę!';
+    badge.classList.remove('cv-status-cooldown');
+  }
+}
+
+function startCanvasCountdown() {
+  stopCanvasCountdown();
+  cvCountdownTimer = setInterval(updateCanvasStatus, 1000);
+  updateCanvasStatus();
+}
+
+function stopCanvasCountdown() {
+  if (cvCountdownTimer) { clearInterval(cvCountdownTimer); cvCountdownTimer = null; }
 }
 
 function updateFootballHero() {
