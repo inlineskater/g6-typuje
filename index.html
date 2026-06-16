@@ -8027,6 +8027,8 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       ? '🎮 Arcade: ' + (t.meta?.game_type || '?')
       : t.reason === 'canvas_pixel'
       ? '🎨 Wspólne Płótno: pixel (' + (t.meta?.x ?? '?') + ',' + (t.meta?.y ?? '?') + ')'
+      : t.reason === 'canvas_pixel_adjustment'
+      ? '🎨 Wspólne Płótno: rekord uzupełniający'
       : '🪙 ' + t.reason;
     const delta = +t.delta;
     events.push({ ts: new Date(t.created_at).getTime(), delta, lockDelta: NEUTRAL[t.reason] ? -delta : 0, label });
@@ -8051,7 +8053,7 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
   // Residual = coins that moved before coin_transactions logging was introduced (pre-2026-05-21).
   const residual = coins - (1000 + events.reduce((s, e) => s + e.delta, 0));
   if (Math.abs(residual) > 5) {
-    events.push({ ts: new Date('2026-05-21T12:00:00+02:00').getTime(), delta: residual, label: '🌱 Wyrównanie — wcześniej nie zapisywałem logów dat podlania i kupowania akcesoriów', isGarden: true });
+    events.push({ ts: new Date('2026-05-21T12:00:00+02:00').getTime(), delta: residual, label: '🧾 Wyrównanie — historyczne operacje bez pełnych logów transakcji', isGarden: true });
   }
   events.sort((a, b) => a.ts - b.ts);
 
