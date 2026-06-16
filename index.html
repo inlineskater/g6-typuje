@@ -730,6 +730,8 @@
     }
     .history-wrap { overflow-x: auto; }
     .history-wrap .lb-table { min-width: 900px; }
+    .coin-inflow-table-wrap .lb-table { min-width: 1180px; }
+    .coin-inflow-table td { white-space: nowrap; }
     .tx-time, .tx-amount, .tx-prob { color: var(--muted); white-space: nowrap; font-size: 13px; }
     .tx-pl { white-space: nowrap; font-size: 13px; font-weight: 800; }
     .tx-pl-profit { color: var(--yes); }
@@ -3573,6 +3575,12 @@
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
+        <div class="ranking-card" data-detail="coin-inflows">
+          <div class="ranking-card-title">💸 Łączne wpływy coinów</div>
+          <div class="ranking-card-body" id="coin-inflows-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
         <div class="ranking-card" data-detail="market-history">
           <div class="ranking-card-title">📈 Historia — Rynki</div>
           <div class="ranking-card-body" id="transaction-history-wrap">
@@ -4725,8 +4733,10 @@ let marketHistoryRows = [];
 let hazardHistoryRows = [];
 let showAllTransactions = false;
 let showAllHazard = false;
-let _lbData = [], _lbCalib = {}, _hazardistaData = [];
+let _lbData = [], _lbCalib = {}, _hazardistaData = [], _coinInflowStats = [];
+let _coinInflowLoaded = false, _coinInflowError = '';
 let _lbSort = 'net_worth';
+let _coinInflowSort = 'total_inflow';
 let _coinRaceSeries = [], _coinRaceBounds = null, _coinRaceRAF = new WeakMap();
 let _coinRaceRaw = [], _coinRaceMode = 'coins';
 let activeTab = 'markets';
@@ -7080,6 +7090,7 @@ async function loadLeaderboard() {
   hazardHistoryRows = buildHazardHistoryRows(gameRes.data || []);
   renderHazardHistory(hazardHistWrap, getFilteredHazardRows());
 
+  loadCoinInflowStats();
   renderMundialRankingCard();
   loadEconomyStats();
 }
@@ -7583,6 +7594,178 @@ function renderHazardista(wrap, data) {
       el('tbody', {}, ...rows)
     )
   );
+}
+
+function normalizeCoinInflowRow(row) {
+  const n = key => Math.round(+(row?.[key] || 0));
+  return {
+    user_id: row?.user_id,
+    nick: row?.nick || '?',
+    total_inflow: n('total_inflow'),
+    garden: n('garden'),
+    markets: n('markets'),
+    football: n('football'),
+    hazard: n('hazard'),
+    seasonal_games: n('seasonal_games'),
+    marketplace: n('marketplace'),
+    passive: n('passive'),
+    topups: n('topups'),
+    returns_cashouts: n('returns_cashouts'),
+    other: n('other'),
+    inflow_count: n('inflow_count'),
+    last_inflow_at: row?.last_inflow_at || null,
+  };
+}
+
+async function loadCoinInflowStats() {
+  const wrap = document.getElementById('coin-inflows-wrap');
+  if (wrap) wrap.replaceChildren(makeSpinner());
+  try {
+    const { data, error } = await sb.rpc('coin_inflow_stats');
+    _coinInflowLoaded = true;
+    if (error) {
+      _coinInflowError = error.message || 'Błąd ładowania danych.';
+      if (wrap) wrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '12px', padding: '12px' } },
+        'Brak funkcji coin_inflow_stats w bazie.'));
+      return;
+    }
+    _coinInflowError = '';
+    _coinInflowStats = (data || []).map(normalizeCoinInflowRow);
+    if (wrap) renderCoinInflowPreview(wrap, _coinInflowStats);
+  } catch (err) {
+    _coinInflowLoaded = true;
+    _coinInflowError = err?.message || 'Błąd ładowania danych.';
+    if (wrap) wrap.replaceChildren(el('p', { style: { color: 'var(--no)', fontSize: '12px', padding: '12px' } }, 'Błąd ładowania danych.'));
+  }
+}
+
+function renderCoinInflowPreview(wrap, data) {
+  const ranked = (data || [])
+    .filter(row => row.total_inflow > 0)
+    .sort((a, b) => b.total_inflow - a.total_inflow || a.nick.localeCompare(b.nick, 'pl'));
+  if (!ranked.length) {
+    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak dodatnich wpływów po rejestracji.'));
+    return;
+  }
+
+  const rows = ranked.slice(0, 5).map((row, i) => el('tr', {},
+    el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-net' }, fmtNum(row.total_inflow) + ' 🪙'),
+    el('td', { className: 'lb-coins' }, fmtNum(row.returns_cashouts) + ' zwrotów')
+  ));
+
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Wpływy'), el('th', {}, 'Zwroty')
+      )),
+      el('tbody', {}, ...rows)
+    ),
+    el('p', { className: 'lb-click-hint' }, 'Bez startowych 1000 🪙 · kliknij po rozbicie →')
+  );
+}
+
+const COIN_INFLOW_SORTS = [
+  ['total_inflow', 'Suma'],
+  ['garden', 'Podlewanie'],
+  ['markets', 'Rynki'],
+  ['football', 'Mundial'],
+  ['hazard', 'Hazard'],
+  ['seasonal_games', 'Sezony'],
+  ['returns_cashouts', 'Zwroty'],
+];
+
+function renderCoinInflowDetail(container) {
+  if (!_coinInflowLoaded) {
+    container.replaceChildren(makeSpinner());
+    loadCoinInflowStats().then(() => {
+      container.replaceChildren();
+      renderCoinInflowDetail(container);
+    });
+    return;
+  }
+  if (_coinInflowError) {
+    container.append(el('p', { style: { color: 'var(--no)' } },
+      'Nie udało się załadować statystyki. Uruchom w bazie supabase/coin-inflow-stats.sql i odśwież stronę.'));
+    return;
+  }
+  if (!_coinInflowStats.length) {
+    container.append(el('p', { style: { color: 'var(--muted)' } }, 'Brak graczy.'));
+    return;
+  }
+
+  const sortBar = el('div', { className: 'fb-sort-bar' },
+    el('span', { className: 'fb-sort-label' }, 'Sortuj:')
+  );
+  const tableWrap = el('div', { className: 'history-wrap coin-inflow-table-wrap' });
+
+  const sortBtn = (key, label) => {
+    const b = el('button', { className: 'fb-sort-btn' + (_coinInflowSort === key ? ' active' : '') }, label);
+    b.addEventListener('click', () => {
+      if (_coinInflowSort === key) return;
+      _coinInflowSort = key;
+      sortBar.querySelectorAll('.fb-sort-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      renderTable();
+    });
+    return b;
+  };
+  COIN_INFLOW_SORTS.forEach(([key, label]) => sortBar.append(sortBtn(key, label)));
+
+  const moneyCell = value => fmtNum(value) + ' 🪙';
+  function renderTable() {
+    const rowsData = [..._coinInflowStats]
+      .sort((a, b) => (b[_coinInflowSort] || 0) - (a[_coinInflowSort] || 0) || b.total_inflow - a.total_inflow || a.nick.localeCompare(b.nick, 'pl'));
+    const rows = rowsData.map((row, i) => el('tr', {},
+      el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+      el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+      el('td', { className: 'lb-net' }, moneyCell(row.total_inflow)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.garden)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.markets)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.football)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.hazard)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.seasonal_games)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.marketplace)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.passive)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.topups)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.returns_cashouts)),
+      el('td', { className: 'tx-amount' }, moneyCell(row.other)),
+      el('td', { className: 'tx-prob' }, String(row.inflow_count)),
+      el('td', { className: 'tx-time' }, row.last_inflow_at ? fmtDateTime(row.last_inflow_at) : '—')
+    ));
+
+    tableWrap.replaceChildren(el('table', { className: 'lb-table coin-inflow-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'),
+        el('th', {}, 'Nick'),
+        el('th', {}, 'Suma'),
+        el('th', {}, 'Podlewanie'),
+        el('th', {}, 'Rynki'),
+        el('th', {}, 'Mundial'),
+        el('th', {}, 'Hazard'),
+        el('th', {}, 'Sezony'),
+        el('th', {}, 'Targowisko'),
+        el('th', {}, 'Pasywne'),
+        el('th', {}, 'Doładowania'),
+        el('th', {}, 'Zwroty/cashout'),
+        el('th', {}, 'Inne'),
+        el('th', {}, 'Zdarzeń'),
+        el('th', {}, 'Ostatni wpływ')
+      )),
+      el('tbody', {}, ...rows)
+    ));
+  }
+
+  container.append(
+    el('div', { className: 'lb-legend' },
+      el('p', {}, el('strong', {}, 'Co liczymy:'), ' dodatnie wpływy na konto po rejestracji, bez startowych 1000 coinów.'),
+      el('p', {}, el('strong', {}, 'Zwroty/cashout:'), ' techniczne powroty coinów, np. void Mundialu, poker cashout oraz zwroty z aukcji.')
+    ),
+    sortBar,
+    tableWrap
+  );
+  renderTable();
 }
 
 function renderMarketHistory(wrap, rowsData) {
@@ -8203,6 +8386,9 @@ function renderCoinRaceDetail(container) {
     } else if (detail === 'hazardista') {
       title.textContent = '🎰 Hazardista';
       renderFullHazardista(body);
+    } else if (detail === 'coin-inflows') {
+      title.textContent = '💸 Łączne wpływy coinów';
+      renderCoinInflowDetail(body);
     } else if (detail === 'market-history') {
       title.textContent = '📈 Historia — Rynki';
       renderFullMarketHistory(body);

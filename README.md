@@ -23,7 +23,7 @@ Fresh database setup:
 1. Create a Supabase project.
 2. In SQL Editor, run `supabase/schema.sql`.
 3. In SQL Editor, run `supabase/poker.sql`.
-4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), and `supabase/snake.sql` (Snake).
+4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), and `supabase/snake.sql` (Snake). Run `supabase/coin-inflow-stats.sql` after the economy/game SQL files to enable the gross coin inflow card on the Statistics page.
 5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, and `supabase/functions/snake-action`.
 6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
 7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
