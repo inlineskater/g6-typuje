@@ -159,7 +159,8 @@ AS $$
           FROM public.coin_transactions ct
          WHERE ct.delta < 0
            AND ct.reason IN ('garden_accessory','hero_item_purchase','store_purchase',
-                             'garden_certificate','arcade_entry','hero_appearance_change')
+                             'garden_certificate','arcade_entry','hero_appearance_change',
+                             'canvas_pixel')
       ), 0::numeric) AS shop_burned,
 
       -- ── house (bank) P&L ────────────────────────────────────────────────

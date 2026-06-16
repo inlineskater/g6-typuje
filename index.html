@@ -7140,7 +7140,7 @@ function renderEconomyPreview(wrap, s) {
     row('W obiegu (gotówka)', s.total_cash, cashPct),
     row('Zablokowane (w grze)', locked, lockedPct),
     row('📈 Wyemitowano (łącznie)', s.total_minted || 0),
-    row('🔥 Spalono w sklepach', s.shop_burned || 0),
+    row('🔥 Spalono w sklepach i opłatach', s.shop_burned || 0),
     row(bankLabel + ' (net)', Math.abs(bankNet)),
     el('div', { style: { fontSize: '11px', color: 'var(--dim)', marginTop: '8px', fontWeight: 600 } },
       'Graczy: ' + s.players + ' · śr. ' + fmtNum(Math.round(s.total_supply / (s.players || 1))) + ' · Kliknij po szczegóły →')
@@ -7302,7 +7302,7 @@ function _buildEconomyDetailContent(container, s) {
   const flowChips = el('div', { className: 'fb-stats-chips' },
     chipRow('🌿', 'Aktywności (ogrody, admin)', s.ledger_minted),
     chipRow('🏆', 'Nagrody gier sezonowych', s.prizes_minted),
-    chipRow('🛒', 'Wydano w sklepach i na przedmiotach', s.shop_burned),
+    chipRow('🛒', 'Wydano w sklepach, opłatach i pixelach', s.shop_burned),
     el('div', { className: 'fb-stat-chip' },
       el('span', { className: 'fb-stat-label' }, '⚽ Bank — Mundial (net)'),
       el('span', { className: 'fb-stat-nick ' + (s.football_house_net >= 0 ? 'fb-profit-pos' : 'fb-profit-neg') },
@@ -7331,7 +7331,7 @@ function _buildEconomyDetailContent(container, s) {
     section('💸 Emisja, spalanie i bank'),
     el('div', { className: 'fb-bonk-strip' },
       bonkCell('📈 Wyemitowano', fmtNum(s.total_minted) + ' 🪙', 'nagrody + aktywności'),
-      bonkCell('🔥 Spalono (sklepy)', fmtNum(s.shop_burned) + ' 🪙', 'zakupy, przedmioty, opłaty'),
+      bonkCell('🔥 Spalono (sklepy i opłaty)', fmtNum(s.shop_burned) + ' 🪙', 'zakupy, przedmioty, pixele'),
       el('div', { className: 'fb-bonk-cell' },
         el('span', { className: 'fb-bonk-label' }, '🏦 Bank — zarobek netto'),
         el('span', { className: 'fb-bonk-val ' + bankCls }, bankSign + fmtNum(bankNet) + ' 🪙'),
@@ -8025,6 +8025,8 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       ? '📜 Certyfikat Drugiego Ogródka'
       : t.reason === 'arcade_entry'
       ? '🎮 Arcade: ' + (t.meta?.game_type || '?')
+      : t.reason === 'canvas_pixel'
+      ? '🎨 Wspólne Płótno: pixel (' + (t.meta?.x ?? '?') + ',' + (t.meta?.y ?? '?') + ')'
       : '🪙 ' + t.reason;
     const delta = +t.delta;
     events.push({ ts: new Date(t.created_at).getTime(), delta, lockDelta: NEUTRAL[t.reason] ? -delta : 0, label });

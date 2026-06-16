@@ -33,8 +33,11 @@ ALTER TABLE public.canvas_pixels    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.canvas_cooldowns ENABLE ROW LEVEL SECURITY;
 
 -- Board is public read; cooldown row is readable only by its owner.
+DROP POLICY IF EXISTS "canvas_pixels_select" ON public.canvas_pixels;
 CREATE POLICY "canvas_pixels_select" ON public.canvas_pixels
   FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "canvas_cooldowns_select_own" ON public.canvas_cooldowns;
 CREATE POLICY "canvas_cooldowns_select_own" ON public.canvas_cooldowns
   FOR SELECT TO authenticated USING (user_id = auth.uid());
 
@@ -100,6 +103,15 @@ BEGIN
     SELECT coins INTO v_coins FROM public.profiles WHERE id = v_user FOR UPDATE;
     IF v_coins < 1 THEN RAISE EXCEPTION 'insufficient_coins'; END IF;
     UPDATE public.profiles SET coins = coins - 1 WHERE id = v_user;
+    IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+      INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+      VALUES (
+        v_user,
+        -1,
+        'canvas_pixel',
+        jsonb_build_object('x', p_x, 'y', p_y, 'color', p_color)
+      );
+    END IF;
   END IF;
 
   INSERT INTO public.canvas_pixels (x, y, color, last_user_id, last_nick, updated_at)
