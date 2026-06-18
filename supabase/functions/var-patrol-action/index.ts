@@ -21,7 +21,7 @@ const db = databaseUrl
 
 const VAR_MAX_SCENARIOS = 120;
 const VAR_MAX_SCORE = 100;
-const VAR_ROUND_MS = 20_000;
+const VAR_ROUND_MS = 60_000;
 const VAR_REACTION_FLOOR_MS = 120;
 const VAR_REACTION_TOL_MS = 220;
 const ROUND_EXPIRES_SECONDS = 600;

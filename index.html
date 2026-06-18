@@ -4398,7 +4398,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">VAR Patrol 📺</h2>
-                <p class="page-sub">Jesteś w pokoju VAR. Masz <strong>20 sekund</strong> na jak najwięcej decyzji: <strong>spalony czy gra</strong>. Błędne decyzje liczą się do celności, ale nie kończą rundy.</p>
+                <p class="page-sub">Jesteś w pokoju VAR. Masz <strong>60 sekund</strong> na jak najwięcej decyzji: <strong>spalony czy gra</strong>. Błędne decyzje liczą się do celności, ale nie kończą rundy.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -4428,7 +4428,7 @@
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Czas</div>
-                <div class="bj-stat-value" id="vp-time">20s</div>
+                <div class="bj-stat-value" id="vp-time">60s</div>
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Celność</div>
@@ -4548,7 +4548,7 @@
           <div class="ag-card-banner">📺</div>
           <div class="ag-card-body">
             <div class="ag-card-name">VAR Patrol</div>
-            <div class="ag-card-desc">Pokój VAR: 20 sekund decyzji tylko o spalonym. Oglądaj stop-klatkę, wybierz GRA albo SPALONY, buduj serię.</div>
+            <div class="ag-card-desc">Pokój VAR: 60 sekund decyzji tylko o spalonym. Oglądaj stop-klatkę, wybierz GRA albo SPALONY, buduj serię.</div>
             <div class="ag-card-meta">
               <span class="ag-card-cost">1 🪙 / runda</span>
               <span class="ag-card-tag">REFLEKS</span>
@@ -12891,7 +12891,7 @@ if (wbArena) {
 // timing/correctness on submit. Local stats are cosmetic; the server score wins.
 const VP_REACTION_FLOOR_MS = 120; // mirror VAR_REACTION_FLOOR_MS in var-patrol-action
 const VP_REACTION_TOL_MS = 220;   // mirror VAR_REACTION_TOL_MS in var-patrol-action
-const VP_ROUND_MS = 20000;
+const VP_ROUND_MS = 60000;
 const VP_CLIP_MS = 850;
 const VP_FEEDBACK_MS = 650;
 
@@ -13605,7 +13605,7 @@ function renderVarPatrolState(data) {
     if (status) {
       status.textContent = data.myWeekly
         ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
-        : 'Masz 20 sekund na jak najwięcej decyzji. Wyniki zapisują się automatycznie po rundzie.';
+        : 'Masz 60 sekund na jak najwięcej decyzji. Wyniki zapisują się automatycznie po rundzie.';
     }
   }
 }
@@ -13839,7 +13839,7 @@ function beginVarPatrolRound(round) {
   rt.schedule = Array.isArray(round.schedule) ? round.schedule : [];
   vpUpdateStats();
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = '20 sekund: ← GRA, → SPALONY.';
+  if (status) status.textContent = '60 sekund: ← GRA, → SPALONY.';
   const startBtn = document.getElementById('vp-start-btn');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Runda trwa'; }
   rt.timer = setInterval(vpTick, 33);
