@@ -3507,6 +3507,7 @@
     <div class="logo">Rynek Proroctw <span>G6</span></div>
     <div class="user-info">
       <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
+      <button class="btn-ghost" id="activity-btn">📋 Aktywność</button>
       <button class="btn-ghost" id="wallet-btn">💼 Portfel</button>
       <span class="header-nick" id="header-nick"></span>
       <button class="btn-ghost" id="logout-btn">Wyloguj</button>
@@ -6478,40 +6479,122 @@ function buildCardStats(marketId) {
 }
 
 // ── Activity feed ─────────────────────────────────────────────────────────
-function buildActivityFeed() {
+// Maps for the cross-source feed.
+const ACT_GAME_LABELS = {
+  roulette: '🎡 Ruletka', slots: '🎰 Sloty', poker: '🃏 Poker',
+  whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
+  flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
+  invoice_horde: '🎫 Najazd Ticketów', arcade: '🕹️ Arkada',
+};
+const ACT_COIN_REASONS = {
+  garden_water:               '💧 podlał roślinę',
+  garden_accessory:           '🪴 kupił akcesorium do ogrodu',
+  garden_certificate:         '📜 odebrał certyfikat ogrodu',
+  activate_garden_certificate:'📜 aktywował certyfikat ogrodu',
+  second_garden_unlocked:     '🌱 odblokował drugi ogród',
+  extra_garden_slot:          '🌱 rozbudował ogród',
+  marketplace_sale:           '🛍️ sprzedał coś na Targowisku',
+  zapps_topup:                '💰 doładował konto',
+  // daily_interest intentionally omitted — too noisy for the feed
+};
+const ACT_FB_PICK = { '1': 'gospodarzy', 'X': 'remis', '2': 'gości' };
+
+// Builds a feed row from a normalized { nick, desc(string|array of nodes/strings), ts } entry.
+function activityRow(entry) {
+  const desc = el('div', { className: 'activity-desc' });
+  if (typeof entry.desc === 'string') desc.append(entry.desc);
+  else desc.append(...entry.desc);
+  return el('div', { className: 'activity-item' },
+    el('span', { className: 'activity-nick' }, entry.nick || 'Gracz'),
+    desc,
+    el('span', { className: 'activity-time' }, relTime(entry.ts))
+  );
+}
+
+// Comprehensive cross-source activity feed: market bets, casino/arcade/seasonal
+// games, Mundial bets, and garden/marketplace coin transactions, newest first.
+async function buildActivityFeed() {
   const feed = document.getElementById('activity-feed');
   if (!feed) return;
 
-  const allTrades = [];
-  Object.entries(tradesByMarket).forEach(([marketId, trades]) => {
-    const market = markets.find(m => m.id === marketId);
-    if (!market) return;
-    trades.forEach(t => allTrades.push({ ...t, marketTitle: market.title, marketIcon: market.icon }));
+  const scoreSel = 'user_id,nick_snapshot,score,submitted_at';
+  const [
+    profRes, tradesRes, gameRes, footballRes, coinTxRes,
+    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, arcadeRes,
+  ] = await Promise.all([
+    sb.from('profiles').select('id,nick'),
+    sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at').order('created_at', { ascending: false }).limit(25),
+    sb.from('game_transactions').select('nick_snapshot,game,bet,won,created_at').neq('is_admin', true).order('created_at', { ascending: false }).limit(25),
+    sb.from('football_bets').select('nick_snapshot,pick,stake,created_at').order('created_at', { ascending: false }).limit(25),
+    sb.from('coin_transactions').select('user_id,delta,reason,created_at').order('created_at', { ascending: false }).limit(40),
+    sb.from('whack_boss_scores').select('user_id,nick_snapshot,score,submitted_at').order('submitted_at', { ascending: false }).limit(15),
+    sb.from('snake_scores').select(scoreSel).order('submitted_at', { ascending: false }).limit(15),
+    sb.from('flappy_pants_scores').select(scoreSel).order('submitted_at', { ascending: false }).limit(15),
+    sb.from('bug_jumper_scores').select(scoreSel).order('submitted_at', { ascending: false }).limit(15),
+    sb.from('invoice_horde_scores').select(scoreSel).order('submitted_at', { ascending: false }).limit(15),
+    sb.from('arcade_scores').select('user_id,game_type,score,created_at').order('created_at', { ascending: false }).limit(15),
+  ]);
+
+  const profilesById = {};
+  (profRes.data || []).forEach(p => { profilesById[p.id] = p.nick; });
+  const nickOf = r => r.nick_snapshot || profilesById[r.user_id] || 'Gracz';
+  const marketsById = {};
+  markets.forEach(m => { marketsById[m.id] = m; });
+
+  const entries = [];
+
+  (tradesRes.data || []).forEach(t => {
+    const isYes = t.side === 'YES';
+    const m = marketsById[t.market_id];
+    const sideEl = el('span', {
+      className: 'tx-side ' + (isYes ? 'tx-side-yes' : 'tx-side-no'),
+      style: { fontSize: '10px', padding: '1px 6px' },
+    }, isYes ? 'TAK' : 'NIE');
+    const tail = m ? (m.icon || '🎲') + ' ' + m.title : 'rynek';
+    entries.push({ nick: nickOf(t), ts: t.created_at,
+      desc: ['postawił ' + t.amount + ' 🪙 na ', sideEl, ' ' + tail] });
   });
-  allTrades.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const recent = allTrades.slice(0, 20);
+
+  (gameRes.data || []).forEach(g => {
+    const label = ACT_GAME_LABELS[g.game] || ('🎲 ' + g.game);
+    const won = +g.won || 0;
+    const tail = won > 0 ? 'wygrał ' + won + ' 🪙' : 'postawił ' + (+g.bet || 0) + ' 🪙';
+    entries.push({ nick: nickOf(g), ts: g.created_at, desc: label + ' — ' + tail });
+  });
+
+  (footballRes.data || []).forEach(b => {
+    entries.push({ nick: nickOf(b), ts: b.created_at,
+      desc: '⚽ Mundial — obstawił ' + (ACT_FB_PICK[b.pick] || b.pick) + ' za ' + b.stake + ' 🪙' });
+  });
+
+  (coinTxRes.data || []).forEach(c => {
+    const label = ACT_COIN_REASONS[c.reason];
+    if (!label) return;
+    entries.push({ nick: nickOf(c), ts: c.created_at, desc: label });
+  });
+
+  const pushScores = (rows, game) => (rows || []).forEach(s => {
+    entries.push({ nick: nickOf(s), ts: s.created_at || s.submitted_at,
+      desc: (ACT_GAME_LABELS[game] || '🕹️ ' + game) + ' — wynik ' + s.score });
+  });
+  pushScores(whackRes.data, 'whack_boss');
+  pushScores(snakeRes.data, 'snake');
+  pushScores(flappyRes.data, 'flappy_pants');
+  pushScores(bugRes.data, 'bug_jumper');
+  pushScores(invoiceRes.data, 'invoice_horde');
+  (arcadeRes.data || []).forEach(s => {
+    entries.push({ nick: nickOf(s), ts: s.created_at,
+      desc: (ACT_GAME_LABELS[s.game_type] || '🕹️ ' + s.game_type) + ' — wynik ' + s.score });
+  });
+
+  entries.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  const recent = entries.slice(0, 40);
 
   if (recent.length === 0) {
     feed.replaceChildren(el('div', { className: 'activity-empty' }, 'Brak aktywności — postaw pierwszy zakład!'));
     return;
   }
-
-  const items = recent.map(t => {
-    const isYes = t.side === 'YES';
-    const sideEl = el('span', {
-      className: 'tx-side ' + (isYes ? 'tx-side-yes' : 'tx-side-no'),
-      style: { fontSize: '10px', padding: '1px 6px' },
-    }, isYes ? 'TAK' : 'NIE');
-    const desc = el('div', { className: 'activity-desc' });
-    desc.append('postawił ' + t.amount + ' 🪙 na ', sideEl, ' ' + (t.marketIcon || '🎲') + ' ' + (t.marketTitle || ''));
-    return el('div', { className: 'activity-item' },
-      el('span', { className: 'activity-nick' }, t.nick_snapshot || 'Gracz'),
-      desc,
-      el('span', { className: 'activity-time' }, relTime(t.created_at))
-    );
-  });
-
-  feed.replaceChildren(...items);
+  feed.replaceChildren(...recent.map(activityRow));
 }
 
 // ── Inline probability chart ──────────────────────────────────────────────
@@ -6932,12 +7015,15 @@ let mlListingType = 'fixed';
 const afOverlay = document.getElementById('af-overlay');
 
 function openActivityModal() {
-  buildActivityFeed();
   show(afOverlay);
   document.body.style.overflow = 'hidden';
+  const feed = document.getElementById('activity-feed');
+  if (feed) feed.replaceChildren(makeSpinner());
+  buildActivityFeed();
 }
 function closeActivityModal() { hide(afOverlay); document.body.style.overflow = ''; }
 
+document.getElementById('activity-btn').addEventListener('click', openActivityModal);
 document.getElementById('btn-activity-all').addEventListener('click', openActivityModal);
 document.getElementById('af-close').addEventListener('click', closeActivityModal);
 afOverlay.addEventListener('click', e => { if (e.target === afOverlay) closeActivityModal(); });
