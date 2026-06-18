@@ -1442,13 +1442,18 @@
     .roulette-chips { display: flex; gap: 6px; }
     .roulette-bet-total { font-size: 13px; color: var(--muted); font-weight: 600; }
 
-    /* Wheel */
-    .roulette-wheel-wrap {
-      display: flex; align-items: center; justify-content: center; gap: 24px;
+    /* Casino layout: wheel sits to the side of the betting board */
+    .roulette-layout {
+      display: flex; gap: 24px; align-items: flex-start; justify-content: center;
       flex-wrap: wrap; margin-bottom: 12px;
     }
+    /* Wheel */
+    .roulette-wheel-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      flex: 0 0 auto;
+    }
     .roulette-wheel-container {
-      position: relative; width: 220px; height: 220px; flex-shrink: 0;
+      position: relative; width: min(320px, 82vw); height: min(320px, 82vw); flex-shrink: 0;
     }
     .roulette-wheel {
       position: relative;
@@ -1477,11 +1482,11 @@
     }
     .roulette-wheel-center {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 44px; height: 44px; border-radius: 50%; background: #1e293b;
+      width: 60px; height: 60px; border-radius: 50%; background: #1e293b;
       border: 3px solid #b8860b; display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 800; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); z-index: 3;
+      font-size: 22px; font-weight: 800; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); z-index: 3;
     }
-    .roulette-wheel-result { font-size: 18px; font-weight: 800; color: #fff; }
+    .roulette-wheel-result { font-size: 22px; font-weight: 800; color: #fff; }
 
     /* Spin button */
     .roulette-spin-wrap { text-align: center; }
@@ -1499,7 +1504,7 @@
     @keyframes pulse-spin { 0%,100% { box-shadow: 0 6px 24px rgba(22,163,74,.35); } 50% { box-shadow: 0 6px 32px rgba(22,163,74,.6); } }
 
     /* Table/board */
-    .roulette-table-wrap { margin-bottom: 10px; overflow-x: auto; }
+    .roulette-table-wrap { flex: 1 1 520px; min-width: 0; margin-bottom: 0; overflow-x: auto; }
     .roulette-board { background: #0d5016; border-radius: 10px; padding: 10px; border: 3px solid #1a7028; box-shadow: inset 0 2px 12px rgba(0,0,0,.3); }
     .roulette-grid {
       display: grid; grid-template-columns: auto repeat(12, 1fr) auto; gap: 2px; margin-bottom: 8px; min-width: 560px;
@@ -3786,23 +3791,24 @@
         <button class="btn-ghost" id="roulette-double-btn" type="button">×2 Podwój</button>
       </div>
 
-      <div class="roulette-wheel-wrap">
-        <div class="roulette-wheel-container">
-          <div class="roulette-wheel-pointer"></div>
-          <div class="roulette-wheel" id="roulette-wheel"></div>
-          <div class="roulette-ball-track" id="roulette-ball-track"><div class="roulette-ball"></div></div>
-          <div class="roulette-wheel-center"><span class="roulette-wheel-result" id="roulette-wheel-num">?</span></div>
+      <div class="roulette-layout">
+        <div class="roulette-wheel-wrap">
+          <div class="roulette-wheel-container">
+            <div class="roulette-wheel-pointer"></div>
+            <div class="roulette-wheel" id="roulette-wheel"></div>
+            <div class="roulette-ball-track" id="roulette-ball-track"><div class="roulette-ball"></div></div>
+            <div class="roulette-wheel-center"><span class="roulette-wheel-result" id="roulette-wheel-num">?</span></div>
+          </div>
+          <div class="roulette-spin-wrap">
+            <button class="roulette-spin-btn" id="roulette-spin-btn" disabled>ZAKRĘĆ</button>
+            <div style="margin-top:10px"><button class="btn-ghost" id="roulette-clear-btn">Wyczyść zakłady</button></div>
+          </div>
         </div>
-        <div class="roulette-spin-wrap">
-          <button class="roulette-spin-btn" id="roulette-spin-btn" disabled>ZAKRĘĆ</button>
-          <div style="margin-top:10px"><button class="btn-ghost" id="roulette-clear-btn">Wyczyść zakłady</button></div>
-        </div>
-      </div>
 
-      <div class="roulette-table-wrap">
-        <div class="roulette-board">
-          <div class="roulette-grid" id="roulette-grid"></div>
-          <div class="roulette-outside" id="roulette-outside">
+        <div class="roulette-table-wrap">
+          <div class="roulette-board">
+            <div class="roulette-grid" id="roulette-grid"></div>
+            <div class="roulette-outside" id="roulette-outside">
             <button class="roulette-out-btn roulette-out-red" data-bet="red">🔴 Czerwony</button>
             <button class="roulette-out-btn roulette-out-black" data-bet="black">⚫ Czarny</button>
             <button class="roulette-out-btn" data-bet="odd">Nieparzyste</button>
@@ -3814,6 +3820,7 @@
             <button class="roulette-out-btn" data-bet="dozen" data-value="3">3. tuzin (25-36)</button>
           </div>
         </div>
+      </div>
       </div>
 
       <div id="roulette-result" class="roulette-result hidden"></div>
