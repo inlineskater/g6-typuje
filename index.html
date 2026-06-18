@@ -1994,6 +1994,34 @@
       box-shadow: 0 0 22px rgba(56,189,248,0.32), inset 0 0 14px rgba(56,189,248,0.10);
     }
 
+    /* ── VAR Patrol ── */
+    .vp-arena {
+      max-width: 720px;
+      aspect-ratio: 16 / 9;
+      border-color: #0f172a;
+      background: #050816;
+      cursor: default;
+      box-shadow: 0 0 24px rgba(14,165,233,.22), inset 0 0 18px rgba(15,23,42,.7);
+    }
+    .vp-arena canvas {
+      image-rendering: auto;
+    }
+    .vp-verdicts {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .vp-verdict {
+      min-height: 48px;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .03em;
+    }
+    @media (max-width: 620px) {
+      .vp-verdicts { flex-direction: column; }
+      .vp-verdict { width: 100%; min-height: 44px; }
+    }
+
     /* ── Wszystkie Gry (All Games picker) ── */
     #tab-all-games { padding: 18px 16px; }
     .ag-header { margin-bottom: 18px; }
@@ -4354,7 +4382,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">VAR Patrol 📺</h2>
-                <p class="page-sub">Jesteś w pokoju VAR. Błyskawicznie oceniaj sytuacje — <strong>spalony, faul, ręka, gol</strong> — zanim skończy się czas na decyzję. Tempo rośnie z każdą decyzją. Masz <strong>3 życia</strong>: trzy błędne (lub spóźnione) decyzje i koniec.</p>
+                <p class="page-sub">Jesteś w pokoju VAR. Obejrzyj krótką powtórkę, poczekaj na stop-klatkę i wydaj werdykt: <strong>spalony, faul, ręka, gol</strong>. Tempo rośnie z każdą decyzją. Masz <strong>3 życia</strong>: trzy błędne lub spóźnione decyzje i koniec.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -4366,9 +4394,9 @@
             <div class="bj-rules">
               <div class="bj-rules-title">Jak grać</div>
               <ul>
-                <li>Po starcie pojawiają się powtórki VAR jedna po drugiej. <strong>Kliknij właściwy werdykt</strong> z dwóch przycisków zanim pasek czasu się wyczerpie.</li>
+                <li>Każda akcja ma krótką powtórkę i stop-klatkę. <strong>Timer rusza dopiero przy decyzji</strong>.</li>
                 <li><strong>Spalony?</strong> SPALONY / GRA · <strong>Faul?</strong> FAUL / GRA · <strong>Ręka?</strong> RĘKA / CZYSTO · <strong>Gol?</strong> GOL / NIE GOL.</li>
-                <li>Dobra decyzja = <strong>+1 pkt</strong> i seria rośnie. Okno decyzji <strong>kurczy się</strong> z każdą powtórką.</li>
+                <li>Dobra decyzja = <strong>+1 pkt</strong> i seria rośnie. Po werdykcie zobaczysz zaznaczony dowód.</li>
                 <li><strong>3 życia</strong> — błędny werdykt albo spóźniona decyzja kosztuje jedno. Po trzecim błędzie runda się kończy.</li>
                 <li>Liczy się <strong>liczba trafnych decyzji</strong> (remis rozstrzyga celność). Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
               </ul>
@@ -4400,7 +4428,7 @@
               </div>
             </div>
 
-            <div class="vp-verdicts" id="vp-verdicts" style="display:flex;gap:10px;margin-top:10px">
+            <div class="vp-verdicts" id="vp-verdicts">
               <button class="btn-primary vp-verdict" id="vp-verdict-0" data-answer="0" style="flex:1" disabled>—</button>
               <button class="btn-primary vp-verdict" id="vp-verdict-1" data-answer="1" style="flex:1" disabled>—</button>
             </div>
@@ -12850,6 +12878,8 @@ if (wbArena) {
 // the server is authoritative for the stored score.
 const VP_REACTION_FLOOR_MS = 120; // mirror VAR_REACTION_FLOOR_MS in var-patrol-action
 const VP_REACTION_TOL_MS = 220;   // mirror VAR_REACTION_TOL_MS in var-patrol-action
+const VP_CLIP_MS = 760;
+const VP_FEEDBACK_MS = 880;
 
 function newVarPatrolRuntime() {
   return {
@@ -12870,6 +12900,9 @@ function newVarPatrolRuntime() {
     answers: [],
     timer: null,
     locked: false,
+    phase: 'idle',
+    phaseStartedAt: 0,
+    feedback: null,
   };
 }
 
@@ -12894,6 +12927,7 @@ function vpCorrectAnswer(scenario) {
 }
 
 const VP_TITLES = { offside: 'SPALONY?', foul: 'FAUL?', handball: 'RĘKA?', goalline: 'GOL?' };
+const VP_PHASE_LABELS = { clip: 'POWTÓRKA', decision: 'STOP-KLATKA', feedback: 'WERDYKT' };
 
 let vpCtx = null;
 function vpInitCanvas() {
@@ -12911,98 +12945,408 @@ function vpInitCanvas() {
   return vpCtx;
 }
 
-function vpDrawPitch(ctx, w, h) {
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
+function vpClamp(v, lo, hi) {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+function vpLerp(a, b, t) {
+  return a + (b - a) * vpClamp(t, 0, 1);
+}
+
+function vpRoundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+function vpFitText(ctx, text, x, y, maxWidth, size, weight = 700) {
+  let fontSize = size;
+  do {
+    ctx.font = `${weight} ${Math.round(fontSize)}px sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth || fontSize <= 10) break;
+    fontSize -= 1;
+  } while (fontSize > 10);
+  ctx.fillText(text, x, y);
+}
+
+function vpDrawPitch(ctx, x, y, w, h) {
+  const grad = ctx.createLinearGradient(0, y, 0, y + h);
   grad.addColorStop(0, '#1f8a3b');
   grad.addColorStop(1, '#14642a');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(x, y, w, h);
   ctx.strokeStyle = 'rgba(255,255,255,.25)';
   ctx.lineWidth = Math.max(1, h * 0.006);
   for (let i = 1; i < 6; i++) {
-    const x = (w / 6) * i;
+    const lx = x + (w / 6) * i;
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
+    ctx.moveTo(lx, y);
+    ctx.lineTo(lx, y + h);
     ctx.stroke();
   }
+  ctx.strokeStyle = 'rgba(255,255,255,.32)';
+  ctx.lineWidth = Math.max(1, h * 0.004);
+  ctx.strokeRect(x + w * 0.04, y + h * 0.2, w * 0.16, h * 0.6);
+  ctx.strokeRect(x + w * 0.8, y + h * 0.2, w * 0.16, h * 0.6);
+  ctx.beginPath();
+  ctx.arc(x + w * 0.5, y + h * 0.5, h * 0.15, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function vpDrawBall(ctx, x, y, r) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.35)';
+  ctx.shadowBlur = r * 0.8;
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = Math.max(1, r * 0.16);
+  ctx.stroke();
+  ctx.fillStyle = '#111827';
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function vpDrawPlayer(ctx, x, y, color, label, pose = 'run') {
+  const s = Math.max(13, ctx.canvas.height * 0.045);
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = Math.max(2, s * 0.12);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y - s * 1.05, s * 0.35, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffd2a6';
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = color;
+  vpRoundRect(ctx, x - s * 0.42, y - s * 0.72, s * 0.84, s * 0.88, s * 0.14);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(3, s * 0.16);
+  const armLift = pose === 'handball' ? -s * 0.78 : pose === 'appeal' ? -s * 0.5 : s * 0.08;
+  ctx.beginPath();
+  ctx.moveTo(x - s * 0.38, y - s * 0.48);
+  ctx.lineTo(x - s * 0.9, y - s * 0.34 + armLift);
+  ctx.moveTo(x + s * 0.38, y - s * 0.48);
+  ctx.lineTo(x + s * 0.9, y - s * 0.34 + armLift * 0.85);
+  ctx.stroke();
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.beginPath();
+  ctx.moveTo(x - s * 0.2, y + s * 0.12);
+  ctx.lineTo(x - s * 0.62, y + s * 0.92);
+  ctx.moveTo(x + s * 0.2, y + s * 0.12);
+  ctx.lineTo(x + (pose === 'tackle' ? s * 1.08 : s * 0.62), y + s * 0.92);
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = `700 ${Math.round(s * 0.38)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x, y - s * 0.28);
+  ctx.restore();
+}
+
+function vpEvidenceText(scenario) {
+  const s = scenario?.scene || {};
+  switch (scenario?.type) {
+    case 'offside':
+      return s.attackerX > s.defenderX ? 'napastnik za linią ostatniego obrońcy' : 'napastnik przed linią obrony';
+    case 'foul':
+      return s.foul ? 'kontakt z nogą, brak gry w piłkę' : 'najpierw piłka, kontakt czysty';
+    case 'handball':
+      return s.handball ? 'ręka poza sylwetką zatrzymuje piłkę' : 'piłka nie trafia w rękę';
+    case 'goalline':
+      return s.goal ? 'piłka całym obwodem za linią' : 'piłka nadal na linii';
+    default:
+      return 'dowód z powtórki';
+  }
+}
+
+function vpDrawEvidenceTag(ctx, box, text, tone = 'neutral') {
+  const color = tone === 'good' ? '#22c55e' : tone === 'bad' ? '#ef4444' : '#38bdf8';
+  const x = box.x + box.w * 0.04;
+  const y = box.y + box.h - Math.max(34, box.h * 0.13);
+  const w = box.w * 0.92;
+  const h = Math.max(25, box.h * 0.09);
+  ctx.save();
+  ctx.fillStyle = 'rgba(2,6,23,.72)';
+  vpRoundRect(ctx, x, y, w, h, 7);
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#e5e7eb';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  vpFitText(ctx, text, x + w / 2, y + h / 2, w - 16, h * 0.43, 700);
+  ctx.restore();
+}
+
+function vpDrawMonitor(ctx, scenario, phase, progress) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const pad = Math.max(12, w * 0.026);
+  ctx.fillStyle = '#050816';
+  ctx.fillRect(0, 0, w, h);
+  const glow = ctx.createRadialGradient(w * 0.5, h * 0.35, h * 0.1, w * 0.5, h * 0.35, h * 0.8);
+  glow.addColorStop(0, 'rgba(14,165,233,.22)');
+  glow.addColorStop(1, 'rgba(14,165,233,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+
+  const topH = Math.max(34, h * 0.13);
+  const screen = {
+    x: pad,
+    y: topH,
+    w: w - pad * 2,
+    h: h - topH - Math.max(25, h * 0.08),
+  };
+  ctx.fillStyle = '#020617';
+  vpRoundRect(ctx, pad * 0.55, pad * 0.55, w - pad * 1.1, h - pad * 1.1, 12);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(56,189,248,.35)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = `900 ${Math.round(topH * 0.33)}px sans-serif`;
+  ctx.fillText('VAR REVIEW', pad * 1.1, topH * 0.48);
+  ctx.font = `800 ${Math.round(topH * 0.28)}px sans-serif`;
+  ctx.fillStyle = '#38bdf8';
+  ctx.textAlign = 'right';
+  ctx.fillText(VP_PHASE_LABELS[phase] || 'POWTÓRKA', w - pad * 1.1, topH * 0.48);
+
+  ctx.fillStyle = 'rgba(15,23,42,.84)';
+  vpRoundRect(ctx, screen.x, screen.y, screen.w, screen.h, 8);
+  ctx.fill();
+  vpDrawPitch(ctx, screen.x + 6, screen.y + 6, screen.w - 12, screen.h - 12);
+
+  const field = { x: screen.x + 6, y: screen.y + 6, w: screen.w - 12, h: screen.h - 12 };
+  ctx.save();
+  ctx.beginPath();
+  vpRoundRect(ctx, field.x, field.y, field.w, field.h, 7);
+  ctx.clip();
+  vpDrawScenarioScene(ctx, field, scenario, phase, progress);
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(226,232,240,.2)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(screen.x + 6, screen.y + 6, screen.w - 12, screen.h - 12);
+  ctx.fillStyle = 'rgba(15,23,42,.78)';
+  const qh = Math.max(26, h * 0.07);
+  vpRoundRect(ctx, screen.x + screen.w * 0.28, screen.y + 10, screen.w * 0.44, qh, 999);
+  ctx.fill();
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = `900 ${Math.round(qh * 0.46)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(VP_TITLES[scenario?.type] || 'VAR', screen.x + screen.w * 0.5, screen.y + 10 + qh / 2);
+  ctx.restore();
+
+  return field;
 }
 
 function vpDrawIdle() {
   const ctx = vpInitCanvas();
   if (!ctx) return;
   const w = ctx.canvas.width, h = ctx.canvas.height;
-  vpDrawPitch(ctx, w, h);
-  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.fillStyle = '#050816';
   ctx.fillRect(0, 0, w, h);
+  const box = { x: w * 0.09, y: h * 0.18, w: w * 0.82, h: h * 0.56 };
+  ctx.fillStyle = '#020617';
+  vpRoundRect(ctx, box.x, box.y, box.w, box.h, 12);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(56,189,248,.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  vpDrawPitch(ctx, box.x + 8, box.y + 8, box.w - 16, box.h - 16);
+  ctx.fillStyle = 'rgba(2,6,23,.5)';
+  ctx.fillRect(box.x + 8, box.y + 8, box.w - 16, box.h - 16);
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = `${Math.round(h * 0.16)}px sans-serif`;
   ctx.fillText('📺 VAR', w / 2, h * 0.42);
   ctx.font = `${Math.round(h * 0.07)}px sans-serif`;
-  ctx.fillText('Naciśnij „Start rundy"', w / 2, h * 0.62);
+  ctx.fillText('Powtórka, stop-klatka, werdykt', w / 2, h * 0.62);
 }
 
-function vpDrawScenario(scenario) {
-  const ctx = vpInitCanvas();
-  if (!ctx || !scenario) return;
-  const w = ctx.canvas.width, h = ctx.canvas.height;
+function vpDrawScenarioScene(ctx, box, scenario, phase, progress) {
+  if (!scenario) return;
   const s = scenario.scene || {};
-  vpDrawPitch(ctx, w, h);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  // Question label
-  ctx.fillStyle = 'rgba(0,0,0,.45)';
-  const labelH = h * 0.18;
-  ctx.fillRect(0, 0, w, labelH);
-  ctx.fillStyle = '#fff';
-  ctx.font = `700 ${Math.round(h * 0.1)}px sans-serif`;
-  ctx.fillText(VP_TITLES[scenario.type] || 'VAR', w / 2, labelH / 2);
-
-  const cy = h * 0.58;
-  const emoji = (txt, x, y, size) => {
-    ctx.font = `${Math.round(size)}px sans-serif`;
-    ctx.fillText(txt, x, y);
-  };
+  const fx = pct => box.x + box.w * (pct / 100);
+  const fy = pct => box.y + box.h * (pct / 100);
+  const p = vpClamp(progress, 0, 1);
+  const reveal = phase !== 'clip';
+  const feedback = varPatrolRuntime?.feedback;
+  const good = feedback?.isCorrect;
+  const tone = feedback ? (good ? 'good' : 'bad') : 'neutral';
 
   if (scenario.type === 'offside') {
-    // Goal on the right; last-defender line; attacker dot. Beyond line = offside.
-    const lineX = w * (s.defenderX / 100);
-    const ax = w * (s.attackerX / 100);
-    const ay = labelH + (h - labelH) * (s.attackerY / 100);
-    ctx.strokeStyle = '#ffd84d';
-    ctx.lineWidth = Math.max(2, h * 0.012);
-    ctx.setLineDash([h * 0.04, h * 0.03]);
-    ctx.beginPath();
-    ctx.moveTo(lineX, labelH);
-    ctx.lineTo(lineX, h);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    emoji('🧤', w * 0.96, cy, h * 0.14); // keeper near goal (right)
-    emoji('🏃', ax, ay, h * 0.16);
-    emoji('⚽', w * 0.18, cy, h * 0.1);
+    const defenderX = fx(s.defenderX);
+    const ay = fy(30 + (s.attackerY || 52) * 0.58);
+    const attackerX = vpLerp(fx(Math.max(8, s.attackerX - 20)), fx(s.attackerX), p);
+    const ballX = vpLerp(fx(15), fx(36), p);
+    vpDrawPlayer(ctx, defenderX, ay + box.h * 0.08, '#2563eb', 'D');
+    vpDrawPlayer(ctx, attackerX, ay, '#dc2626', 'A');
+    vpDrawPlayer(ctx, fx(93), fy(55), '#f59e0b', 'G', 'appeal');
+    vpDrawBall(ctx, ballX, fy(64), Math.max(7, box.h * 0.035));
+    if (reveal) {
+      ctx.save();
+      ctx.strokeStyle = s.attackerX > s.defenderX ? '#ef4444' : '#22c55e';
+      ctx.lineWidth = Math.max(3, box.h * 0.012);
+      ctx.setLineDash([box.h * 0.045, box.h * 0.025]);
+      ctx.beginPath();
+      ctx.moveTo(defenderX, box.y);
+      ctx.lineTo(defenderX, box.y + box.h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(2,6,23,.76)';
+    ctx.textAlign = 'center';
+    vpFitText(ctx, 'linia obrońcy', defenderX, box.y + box.h * 0.11, box.w * 0.22, box.h * 0.045, 800);
+      ctx.restore();
+      if (phase === 'feedback') vpDrawEvidenceTag(ctx, box, vpEvidenceText(scenario), tone);
+    }
   } else if (scenario.type === 'foul') {
-    const x = w * (s.x / 100);
-    emoji('🏃', x - w * 0.06, cy, h * 0.16);
-    emoji(s.foul ? '🤕' : '⚽', x + w * 0.06, cy, h * 0.16);
-    emoji('🦵', x, cy + h * 0.04, h * 0.12);
+    const x = fx(s.x || 50);
+    const y = fy(s.y || 54);
+    const runnerX = vpLerp(x - box.w * 0.18, x - box.w * 0.035, p);
+    const tacklerX = vpLerp(x + box.w * 0.2, x + box.w * (s.foul ? 0.025 : 0.075), p);
+    const ballX = x + box.w * (s.foul ? -0.02 : 0.1);
+    vpDrawBall(ctx, ballX, y + box.h * 0.11, Math.max(7, box.h * 0.034));
+    vpDrawPlayer(ctx, runnerX, y, '#dc2626', '9');
+    vpDrawPlayer(ctx, tacklerX, y + box.h * 0.02, '#2563eb', '5', 'tackle');
+    if (reveal) {
+      ctx.save();
+      ctx.strokeStyle = s.foul ? '#ef4444' : '#22c55e';
+      ctx.lineWidth = Math.max(3, box.h * 0.012);
+      ctx.beginPath();
+      ctx.arc(x + box.w * (s.foul ? 0.01 : 0.1), y + box.h * 0.12, box.h * 0.1, 0, Math.PI * 2);
+      ctx.stroke();
+      if (s.foul) {
+        ctx.strokeStyle = '#fca5a5';
+        ctx.beginPath();
+        ctx.moveTo(x - box.w * 0.04, y + box.h * 0.05);
+        ctx.lineTo(x + box.w * 0.08, y + box.h * 0.17);
+        ctx.moveTo(x + box.w * 0.08, y + box.h * 0.05);
+        ctx.lineTo(x - box.w * 0.04, y + box.h * 0.17);
+        ctx.stroke();
+      }
+      ctx.restore();
+      if (phase === 'feedback') vpDrawEvidenceTag(ctx, box, vpEvidenceText(scenario), tone);
+    }
   } else if (scenario.type === 'handball') {
-    const x = w * (s.x / 100);
-    emoji(s.handball ? '🙌' : '🧍', x, cy, h * 0.2);
-    emoji('⚽', x + w * 0.1 * (s.side ? 1 : -1), cy - h * 0.08, h * 0.1);
-  } else { // goalline
-    const goalX = w * 0.82;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = Math.max(2, h * 0.012);
+    const x = fx(s.x || 50);
+    const y = fy(s.y || 46);
+    const dir = s.side ? 1 : -1;
+    const targetX = x + box.w * dir * (s.handball ? 0.12 : 0.015);
+    const targetY = y + box.h * (s.handball ? -0.14 : 0.02);
+    const ballX = vpLerp(x - box.w * dir * 0.34, targetX, p);
+    const ballY = vpLerp(y - box.h * 0.18, targetY, p);
+    vpDrawPlayer(ctx, x, y + box.h * 0.14, s.handball ? '#dc2626' : '#2563eb', '4', s.handball ? 'handball' : 'run');
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.42)';
+    ctx.setLineDash([7, 7]);
+    ctx.lineWidth = Math.max(1, box.h * 0.007);
     ctx.beginPath();
-    ctx.moveTo(goalX, labelH);
-    ctx.lineTo(goalX, h);
+    ctx.moveTo(x - box.w * dir * 0.34, y - box.h * 0.18);
+    ctx.lineTo(targetX, targetY);
     ctx.stroke();
-    emoji('🥅', w * 0.93, cy, h * 0.18);
-    const ballX = goalX + w * (s.ballX / 100);
-    emoji('⚽', ballX, cy, h * 0.12);
+    ctx.restore();
+    vpDrawBall(ctx, ballX, ballY, Math.max(7, box.h * 0.034));
+    if (reveal) {
+      ctx.save();
+      ctx.strokeStyle = s.handball ? '#ef4444' : '#22c55e';
+      ctx.lineWidth = Math.max(3, box.h * 0.012);
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, box.h * 0.09, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      if (phase === 'feedback') vpDrawEvidenceTag(ctx, box, vpEvidenceText(scenario), tone);
+    }
+  } else {
+    const lineX = fx(76);
+    const y = fy(56);
+    const ballR = Math.max(8, box.h * 0.04);
+    const finalX = s.goal ? lineX + ballR * 1.8 : lineX - ballR * 0.7;
+    const ballX = vpLerp(fx(42), finalX, p);
+    ctx.save();
+    ctx.fillStyle = 'rgba(15,23,42,.55)';
+    ctx.fillRect(lineX, fy(25), box.w * 0.18, box.h * 0.5);
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = Math.max(3, box.h * 0.012);
+    ctx.beginPath();
+    ctx.moveTo(lineX, fy(22));
+    ctx.lineTo(lineX, fy(78));
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.28)';
+    for (let i = 1; i < 5; i++) {
+      const nx = lineX + (box.w * 0.18 / 5) * i;
+      ctx.beginPath();
+      ctx.moveTo(nx, fy(25));
+      ctx.lineTo(nx, fy(75));
+      ctx.stroke();
+    }
+    ctx.restore();
+    vpDrawPlayer(ctx, fx(88), y + box.h * 0.06, '#f59e0b', 'G', 'appeal');
+    vpDrawBall(ctx, ballX, y, ballR);
+    if (reveal) {
+      ctx.save();
+      ctx.strokeStyle = s.goal ? '#22c55e' : '#ef4444';
+      ctx.lineWidth = Math.max(3, box.h * 0.012);
+      ctx.beginPath();
+      ctx.arc(finalX, y, ballR * 1.35, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      if (phase === 'feedback') vpDrawEvidenceTag(ctx, box, vpEvidenceText(scenario), tone);
+    }
+  }
+}
+
+function vpDrawScenario(scenario, now = performance.now()) {
+  const ctx = vpInitCanvas();
+  if (!ctx || !scenario) return;
+  const rt = varPatrolRuntime;
+  const phase = rt?.phase || 'decision';
+  const progress = phase === 'clip'
+    ? vpClamp((now - rt.phaseStartedAt) / VP_CLIP_MS, 0, 1)
+    : 1;
+  vpDrawMonitor(ctx, scenario, phase, progress);
+  if (phase === 'feedback' && rt?.feedback) {
+    const w = ctx.canvas.width, h = ctx.canvas.height;
+    const ok = rt.feedback.isCorrect;
+    const panelW = Math.min(w * 0.74, 520);
+    const panelH = Math.max(70, h * 0.22);
+    const x = (w - panelW) / 2;
+    const y = h * 0.38;
+    ctx.save();
+    ctx.fillStyle = ok ? 'rgba(20,83,45,.9)' : 'rgba(127,29,29,.9)';
+    vpRoundRect(ctx, x, y, panelW, panelH, 12);
+    ctx.fill();
+    ctx.strokeStyle = ok ? '#86efac' : '#fca5a5';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `900 ${Math.round(panelH * 0.32)}px sans-serif`;
+    ctx.fillText(ok ? 'DOBRA DECYZJA' : 'ZŁY WERDYKT', w / 2, y + panelH * 0.34);
+    vpFitText(ctx, rt.feedback.message, w / 2, y + panelH * 0.68, panelW - 24, panelH * 0.2, 800);
+    ctx.restore();
   }
 }
 
@@ -13027,6 +13371,7 @@ function vpSetVerdictButtons(scenario, enabled) {
     btn.textContent = scenario ? scenario.verdicts[i] : '—';
     btn.disabled = !enabled;
     btn.style.background = '';
+    btn.style.borderColor = '';
   }
 }
 
@@ -13133,19 +13478,101 @@ function stopVarPatrolRound() {
   if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Start rundy'; }
 }
 
+function vpFeedbackMessage(scenario, answer, correctIdx, timedOut) {
+  if (timedOut) return 'Czas: ' + scenario.verdicts[correctIdx];
+  return 'Werdykt: ' + scenario.verdicts[correctIdx];
+}
+
+function vpMarkVerdictButtons(answer, correctIdx, isCorrect) {
+  for (let i = 0; i < 2; i++) {
+    const btn = document.getElementById('vp-verdict-' + i);
+    if (!btn) continue;
+    btn.disabled = true;
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    if (i === correctIdx) {
+      btn.style.background = '#15803d';
+      btn.style.borderColor = '#86efac';
+    }
+    if (i === answer && !isCorrect) {
+      btn.style.background = '#b91c1c';
+      btn.style.borderColor = '#fca5a5';
+    }
+  }
+}
+
+function vpApplyVerdict(scenario, answer, isCorrect, timedOut = false) {
+  const rt = varPatrolRuntime;
+  if (!rt?.playing) return;
+  const correctIdx = vpCorrectAnswer(scenario);
+  rt.locked = true;
+  if (isCorrect) {
+    rt.correct += 1;
+    rt.streak += 1;
+    rt.maxStreak = Math.max(rt.maxStreak, rt.streak);
+  } else {
+    rt.wrong += 1;
+    rt.streak = 0;
+    rt.lives -= 1;
+  }
+  rt.phase = 'feedback';
+  rt.phaseStartedAt = performance.now();
+  rt.feedback = {
+    answer,
+    correctIdx,
+    isCorrect,
+    timedOut,
+    message: vpFeedbackMessage(scenario, answer, correctIdx, timedOut),
+  };
+  vpMarkVerdictButtons(answer, correctIdx, isCorrect);
+  vpUpdateTimerBar(0);
+  vpUpdateStats();
+  const status = document.getElementById('vp-status');
+  if (status) {
+    status.textContent = (isCorrect ? 'Dobra decyzja: ' : timedOut ? 'Spóźniona decyzja: ' : 'Prawidłowo było: ')
+      + scenario.verdicts[correctIdx] + ' · ' + vpEvidenceText(scenario) + '.';
+  }
+  vpDrawScenario(scenario);
+}
+
+function vpBeginDecision() {
+  const rt = varPatrolRuntime;
+  if (!rt?.playing) return;
+  const scenario = rt.schedule[rt.idx];
+  if (!scenario) { finishVarPatrolRound(); return; }
+  const now = performance.now();
+  rt.phase = 'decision';
+  rt.phaseStartedAt = now;
+  rt.locked = false;
+  rt.feedback = null;
+  rt.scenarioShownAt = now;
+  rt.deadlineAt = now + rt.windowMs;
+  vpSetVerdictButtons(scenario, true);
+  vpUpdateTimerBar(1);
+  const status = document.getElementById('vp-status');
+  if (status) status.textContent = 'Stop-klatka: wybierz werdykt.';
+  vpDrawScenario(scenario, now);
+}
+
 function vpShowScenario(i) {
   const rt = varPatrolRuntime;
   if (!rt?.playing) return;
   const scenario = rt.schedule[i];
   if (!scenario) { finishVarPatrolRound(); return; }
+  const now = performance.now();
   rt.idx = i;
-  rt.locked = false;
+  rt.locked = true;
   rt.windowMs = scenario.windowMs;
-  rt.scenarioShownAt = performance.now();
-  rt.deadlineAt = rt.scenarioShownAt + scenario.windowMs;
-  vpDrawScenario(scenario);
-  vpSetVerdictButtons(scenario, true);
+  rt.scenarioShownAt = 0;
+  rt.deadlineAt = 0;
+  rt.phase = 'clip';
+  rt.phaseStartedAt = now;
+  rt.feedback = null;
+  vpSetVerdictButtons(scenario, false);
   vpUpdateTimerBar(1);
+  const status = document.getElementById('vp-status');
+  if (status) status.textContent = 'Analiza powtórki...';
+  vpDrawScenario(scenario, now);
 }
 
 function vpAdvance() {
@@ -13160,7 +13587,7 @@ function vpAdvance() {
 
 function vpAnswer(answer) {
   const rt = varPatrolRuntime;
-  if (!rt?.playing || rt.locked || rt.idx < 0) return;
+  if (!rt?.playing || rt.locked || rt.phase !== 'decision' || rt.idx < 0) return;
   const scenario = rt.schedule[rt.idx];
   if (!scenario) return;
   rt.locked = true;
@@ -13170,51 +13597,37 @@ function vpAnswer(answer) {
   const isCorrect = answer === correctIdx &&
     reactionMs >= VP_REACTION_FLOOR_MS &&
     reactionMs <= scenario.windowMs + VP_REACTION_TOL_MS;
-  if (isCorrect) {
-    rt.correct += 1;
-    rt.streak += 1;
-    rt.maxStreak = Math.max(rt.maxStreak, rt.streak);
-  } else {
-    rt.wrong += 1;
-    rt.streak = 0;
-    rt.lives -= 1;
-  }
-  // brief cosmetic flash on the picked + correct buttons
-  const picked = document.getElementById('vp-verdict-' + answer);
-  if (picked) picked.style.background = isCorrect ? '#2faa52' : '#e5484d';
-  if (!isCorrect) {
-    const right = document.getElementById('vp-verdict-' + correctIdx);
-    if (right) right.style.background = '#2faa52';
-  }
-  vpSetVerdictButtonsDisabled(true);
-  vpUpdateStats();
-  setTimeout(() => { if (varPatrolRuntime === rt && rt.playing) vpAdvance(); }, 150);
-}
-
-function vpSetVerdictButtonsDisabled(disabled) {
-  for (let i = 0; i < 2; i++) {
-    const btn = document.getElementById('vp-verdict-' + i);
-    if (btn) btn.disabled = disabled;
-  }
+  vpApplyVerdict(scenario, answer, isCorrect, false);
 }
 
 function vpTick() {
   const rt = varPatrolRuntime;
-  if (!rt?.playing || rt.locked || rt.idx < 0) return;
+  if (!rt?.playing || rt.idx < 0) return;
   const now = performance.now();
+  const scenario = rt.schedule[rt.idx];
+  if (!scenario) { finishVarPatrolRound(); return; }
+
+  if (rt.phase === 'clip') {
+    vpDrawScenario(scenario, now);
+    if (now - rt.phaseStartedAt >= VP_CLIP_MS) vpBeginDecision();
+    return;
+  }
+
+  if (rt.phase === 'feedback') {
+    vpDrawScenario(scenario, now);
+    if (now - rt.phaseStartedAt >= VP_FEEDBACK_MS) vpAdvance();
+    return;
+  }
+
+  if (rt.phase !== 'decision' || rt.locked) return;
   const remaining = rt.deadlineAt - now;
   vpUpdateTimerBar(remaining / rt.windowMs);
+  vpDrawScenario(scenario, now);
   if (remaining <= 0) {
     // Timeout = a missed decision (mistake).
     rt.locked = true;
-    const scenario = rt.schedule[rt.idx];
     rt.answers.push({ index: scenario.index, answer: -1, reactionMs: Math.round(rt.windowMs) + 1 });
-    rt.wrong += 1;
-    rt.streak = 0;
-    rt.lives -= 1;
-    vpSetVerdictButtonsDisabled(true);
-    vpUpdateStats();
-    setTimeout(() => { if (varPatrolRuntime === rt && rt.playing) vpAdvance(); }, 150);
+    vpApplyVerdict(scenario, -1, false, true);
   }
 }
 
@@ -13228,10 +13641,10 @@ function beginVarPatrolRound(round) {
   rt.schedule = Array.isArray(round.schedule) ? round.schedule : [];
   vpUpdateStats();
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = 'Oceniaj szybko — masz ' + rt.lives + ' życia!';
+  if (status) status.textContent = 'Analiza powtórki — masz ' + rt.lives + ' życia.';
   const startBtn = document.getElementById('vp-start-btn');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Runda trwa'; }
-  rt.timer = setInterval(vpTick, 40);
+  rt.timer = setInterval(vpTick, 33);
   vpShowScenario(0);
 }
 
