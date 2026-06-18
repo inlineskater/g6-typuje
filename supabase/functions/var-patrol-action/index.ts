@@ -5,8 +5,8 @@ import postgres from "npm:postgres@3.4.5";
 // VAR Patrol — offside-only football-officiating judgement/reaction seasonal game.
 // Mirrors whack-boss-action: the server issues a round schedule of scenarios and
 // validates submitted answer timing + correctness on submit. Anti-cheat is the
-// reaction-time floor + per-scenario decision window + score cap (the displayed
-// scene encodes the correct verdict, exactly like Whack-a-Boss's visible target).
+// reaction-time floor + total round clock + score cap (the displayed scene
+// encodes the correct verdict, exactly like Whack-a-Boss's visible target).
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://inlineskater.github.io",
@@ -21,7 +21,7 @@ const db = databaseUrl
 
 const VAR_MAX_SCENARIOS = 120;
 const VAR_MAX_SCORE = 100;
-const VAR_LIVES = 3;
+const VAR_ROUND_MS = 20_000;
 const VAR_REACTION_FLOOR_MS = 120;
 const VAR_REACTION_TOL_MS = 220;
 const ROUND_EXPIRES_SECONDS = 600;
@@ -65,24 +65,59 @@ function randChance(percent) {
   return randInt(1, 100) <= percent;
 }
 
-// Decision window shrinks as the run progresses — must mirror the client display curve.
+// Cosmetic per-scenario pace hint for the client; the authoritative limit is VAR_ROUND_MS.
 function varWindow(index) {
-  return Math.max(1800, 4200 - index * 12);
+  return Math.max(1500, 2800 - index * 8);
 }
 
 // Build one scenario. The scene encodes the correct verdict (the player reads it);
 // `correct` is the authoritative answer index validated on submit.
 function makeScenario(index, difficulty) {
   const type = "offside";
-  const gap = Math.max(12, 28 - Math.round(difficulty));
+  const tight = index > 2 ? randChance(72) : randChance(38);
+  const gap = tight
+    ? randInt(2, Math.max(4, 9 - Math.round(difficulty / 9)))
+    : randInt(10, Math.max(12, 20 - Math.round(difficulty / 5)));
   const offside = randChance(50);
-  const defenderX = offside ? randInt(32, 60) : randInt(40, 68);
+  const defenderX = randInt(42, 66);
   const attackerX = offside ? defenderX + gap : defenderX - gap;
+  const attackerY = randInt(32, 70);
+  const defenderY = Math.max(26, Math.min(76, attackerY + randInt(-10, 10)));
+  const defenders = [
+    { x: defenderX, y: defenderY, label: "D", main: true },
+  ];
+  const attackers = [
+    { x: attackerX, y: attackerY, label: "A", main: true },
+  ];
+
+  const defenderCount = randInt(3, 5);
+  for (let i = 0; i < defenderCount; i++) {
+    defenders.push({
+      x: Math.max(18, defenderX - randInt(5, 28)),
+      y: randInt(28, 76),
+      label: String((i % 4) + 2),
+    });
+  }
+
+  const attackerCount = randInt(2, 4);
+  for (let i = 0; i < attackerCount; i++) {
+    attackers.push({
+      x: Math.max(18, Math.min(82, defenderX + randInt(-22, 14))),
+      y: randInt(28, 76),
+      label: String((i % 3) + 7),
+    });
+  }
+
   const scene = {
     attackerX,
     defenderX,
-    attackerY: randInt(44, 58),
+    attackerY,
+    defenderY,
     attackDirection: "right",
+    tight,
+    passer: { x: randInt(15, 24), y: randInt(58, 78) },
+    defenders,
+    attackers,
   };
   const correct = attackerX > defenderX ? 0 : 1; // beyond last defender = SPALONY
   return {
@@ -121,12 +156,13 @@ function parseAnswers(value) {
     index: asInt(a?.index, -1),
     answer: asInt(a?.answer, -1),
     reactionMs: asNumber(a?.reactionMs, NaN),
+    elapsedMs: asNumber(a?.elapsedMs ?? a?.atMs, NaN),
   }));
 }
 
-// Replay answers against the schedule in order: a wrong verdict, a timeout, or a
-// reaction outside the legal window is a mistake; VAR_LIVES mistakes end the run.
-function scoreAnswers(schedule, answers) {
+// Replay answers against the schedule in order. The round is a fixed-time sprint:
+// wrong answers only hurt accuracy/combo, they no longer end the run.
+function scoreAnswers(schedule, answers, submittedDurationMs) {
   const byIndex = new Map(schedule.map((s) => [asInt(s.index), s]));
   const sorted = answers
     .filter((a) => byIndex.has(a.index))
@@ -139,12 +175,15 @@ function scoreAnswers(schedule, answers) {
   let expected = 0;
   for (const a of sorted) {
     if (a.index !== expected) break; // must be sequential, no skipping
-    expected += 1;
     const scenario = byIndex.get(a.index);
-    const window = asInt(scenario.windowMs);
-    const reaction = Number.isFinite(a.reactionMs) ? a.reactionMs : window + 1;
-    durationMs += Math.max(0, Math.min(window + VAR_REACTION_TOL_MS, reaction));
-    const inWindow = reaction >= VAR_REACTION_FLOOR_MS && reaction <= window + VAR_REACTION_TOL_MS;
+    const reaction = Number.isFinite(a.reactionMs) ? a.reactionMs : NaN;
+    const elapsed = Number.isFinite(a.elapsedMs)
+      ? Math.max(0, a.elapsedMs)
+      : durationMs + (Number.isFinite(reaction) ? Math.max(0, reaction) : 0);
+    if (elapsed > VAR_ROUND_MS + VAR_REACTION_TOL_MS) break;
+    expected += 1;
+    durationMs = Math.max(durationMs, Math.min(VAR_ROUND_MS, elapsed));
+    const inWindow = reaction >= VAR_REACTION_FLOOR_MS;
     const isCorrect = inWindow && a.answer === asInt(scenario.correct);
     if (isCorrect) {
       correct += 1;
@@ -153,8 +192,10 @@ function scoreAnswers(schedule, answers) {
     } else {
       wrong += 1;
       combo = 0;
-      if (wrong >= VAR_LIVES) break;
     }
+  }
+  if (Number.isFinite(submittedDurationMs)) {
+    durationMs = Math.max(durationMs, Math.min(VAR_ROUND_MS, Math.max(0, submittedDurationMs)));
   }
   return { correct, wrong, maxCombo, durationMs: Math.round(durationMs) };
 }
@@ -262,7 +303,7 @@ async function loadState(userId) {
   return {
     profile: { id: profile.id, nick: profile.nick, coins: asInt(profile.coins) },
     weekStart: weekRow?.week_start,
-    lives: VAR_LIVES,
+    roundMs: VAR_ROUND_MS,
     maxScore: VAR_MAX_SCORE,
     prizes: PRIZES,
     weekly: mapRows(weekly),
@@ -296,7 +337,7 @@ async function startRound(userId) {
     ...(await loadState(userId)),
     round: {
       id: round.id,
-      lives: VAR_LIVES,
+      roundMs: VAR_ROUND_MS,
       schedule: clientSchedule(schedule),
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
@@ -326,7 +367,8 @@ async function submitRound(userId, body) {
 
     const schedule = Array.isArray(round.schedule) ? round.schedule : [];
     const answers = parseAnswers(body.answers);
-    const result = scoreAnswers(schedule, answers);
+    const submittedDurationMs = asNumber(body.roundDurationMs, NaN);
+    const result = scoreAnswers(schedule, answers, submittedDurationMs);
     const correct = Math.max(0, Math.min(VAR_MAX_SCORE, result.correct));
     const misses = Math.max(0, result.wrong);
     const maxCombo = Math.max(0, Math.min(correct, result.maxCombo));
@@ -351,6 +393,7 @@ async function submitRound(userId, body) {
                index: a.index,
                answer: a.answer,
                reactionMs: Number.isFinite(a.reactionMs) ? Math.round(a.reactionMs) : null,
+               elapsedMs: Number.isFinite(a.elapsedMs) ? Math.round(a.elapsedMs) : null,
              })))}::jsonb,
              duration_ms = ${result.durationMs}
        where id = ${round.id}

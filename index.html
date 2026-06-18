@@ -4398,7 +4398,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">VAR Patrol 📺</h2>
-                <p class="page-sub">Jesteś w pokoju VAR. Obejrzyj wolniejszą powtórkę, poczekaj na stop-klatkę i zdecyduj tylko jedno: <strong>spalony czy gra</strong>. Masz <strong>3 życia</strong>: trzy błędne lub spóźnione decyzje i koniec.</p>
+                <p class="page-sub">Jesteś w pokoju VAR. Masz <strong>20 sekund</strong> na jak najwięcej decyzji: <strong>spalony czy gra</strong>. Błędne decyzje liczą się do celności, ale nie kończą rundy.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -4412,8 +4412,8 @@
               <ul>
                 <li>Atak idzie <strong>w prawo</strong>. Patrz tylko na czerwonego napastnika <strong>A</strong> i żółtą linię obrońcy.</li>
                 <li>Jeśli <strong>A jest po prawej stronie linii</strong> — kliknij <strong>SPALONY</strong>. Jeśli jest po lewej — kliknij <strong>GRA</strong>.</li>
-                <li>Timer rusza dopiero na stop-klatce. Dobra decyzja = <strong>+1 pkt</strong>.</li>
-                <li>Masz <strong>3 życia</strong>. Trzy pomyłki albo spóźnienia kończą rundę.</li>
+                <li>Możesz też używać klawiszy: <strong>← = GRA</strong>, <strong>→ = SPALONY</strong>.</li>
+                <li>Dobra decyzja = <strong>+1 pkt</strong>. Runda kończy się dopiero, gdy minie czas.</li>
               </ul>
             </div>
 
@@ -4427,8 +4427,8 @@
                 <div class="bj-stat-value" id="vp-streak">0</div>
               </div>
               <div class="bj-stat">
-                <div class="bj-stat-label">Życia</div>
-                <div class="bj-stat-value" id="vp-lives">📺📺📺</div>
+                <div class="bj-stat-label">Czas</div>
+                <div class="bj-stat-value" id="vp-time">20s</div>
               </div>
               <div class="bj-stat">
                 <div class="bj-stat-label">Celność</div>
@@ -4444,8 +4444,8 @@
             </div>
 
             <div class="vp-verdicts" id="vp-verdicts">
-              <button class="btn-primary vp-verdict" id="vp-verdict-0" data-answer="0" style="flex:1" disabled>—</button>
               <button class="btn-primary vp-verdict" id="vp-verdict-1" data-answer="1" style="flex:1" disabled>—</button>
+              <button class="btn-primary vp-verdict" id="vp-verdict-0" data-answer="0" style="flex:1" disabled>—</button>
             </div>
 
             <div class="bj-actions">
@@ -4548,7 +4548,7 @@
           <div class="ag-card-banner">📺</div>
           <div class="ag-card-body">
             <div class="ag-card-name">VAR Patrol</div>
-            <div class="ag-card-desc">Pokój VAR: spokojniejsza gra tylko o spalonym. Oglądaj stop-klatkę, wybierz SPALONY albo GRA. 3 błędy i koniec.</div>
+            <div class="ag-card-desc">Pokój VAR: 20 sekund decyzji tylko o spalonym. Oglądaj stop-klatkę, wybierz GRA albo SPALONY, buduj serię.</div>
             <div class="ag-card-meta">
               <span class="ag-card-cost">1 🪙 / runda</span>
               <span class="ag-card-tag">REFLEKS</span>
@@ -12891,8 +12891,9 @@ if (wbArena) {
 // timing/correctness on submit. Local stats are cosmetic; the server score wins.
 const VP_REACTION_FLOOR_MS = 120; // mirror VAR_REACTION_FLOOR_MS in var-patrol-action
 const VP_REACTION_TOL_MS = 220;   // mirror VAR_REACTION_TOL_MS in var-patrol-action
-const VP_CLIP_MS = 1150;
-const VP_FEEDBACK_MS = 1100;
+const VP_ROUND_MS = 20000;
+const VP_CLIP_MS = 850;
+const VP_FEEDBACK_MS = 650;
 
 function newVarPatrolRuntime() {
   return {
@@ -12902,13 +12903,14 @@ function newVarPatrolRuntime() {
     roundId: null,
     schedule: [],
     idx: -1,
-    lives: 3,
+    durationMs: VP_ROUND_MS,
+    roundStartedAt: 0,
+    timeRemainingMs: VP_ROUND_MS,
     correct: 0,
     wrong: 0,
     streak: 0,
     maxStreak: 0,
     scenarioShownAt: 0,
-    deadlineAt: 0,
     windowMs: 0,
     answers: [],
     timer: null,
@@ -12989,26 +12991,49 @@ function vpFitText(ctx, text, x, y, maxWidth, size, weight = 700) {
 
 function vpDrawPitch(ctx, x, y, w, h) {
   const grad = ctx.createLinearGradient(0, y, 0, y + h);
-  grad.addColorStop(0, '#1f8a3b');
-  grad.addColorStop(1, '#14642a');
+  grad.addColorStop(0, '#237a3b');
+  grad.addColorStop(1, '#155f2c');
   ctx.fillStyle = grad;
   ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = 'rgba(255,255,255,.25)';
-  ctx.lineWidth = Math.max(1, h * 0.006);
-  for (let i = 1; i < 6; i++) {
-    const lx = x + (w / 6) * i;
-    ctx.beginPath();
-    ctx.moveTo(lx, y);
-    ctx.lineTo(lx, y + h);
-    ctx.stroke();
+
+  for (let i = 0; i < 10; i++) {
+    ctx.fillStyle = i % 2 ? 'rgba(255,255,255,.045)' : 'rgba(0,0,0,.045)';
+    ctx.fillRect(x + (w / 10) * i, y, w / 10, h);
   }
-  ctx.strokeStyle = 'rgba(255,255,255,.32)';
-  ctx.lineWidth = Math.max(1, h * 0.004);
-  ctx.strokeRect(x + w * 0.04, y + h * 0.2, w * 0.16, h * 0.6);
-  ctx.strokeRect(x + w * 0.8, y + h * 0.2, w * 0.16, h * 0.6);
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.58)';
+  ctx.lineWidth = Math.max(1.5, h * 0.008);
+  ctx.strokeRect(x + w * 0.018, y + h * 0.045, w * 0.964, h * 0.91);
   ctx.beginPath();
-  ctx.arc(x + w * 0.5, y + h * 0.5, h * 0.15, 0, Math.PI * 2);
+  ctx.moveTo(x + w * 0.5, y + h * 0.045);
+  ctx.lineTo(x + w * 0.5, y + h * 0.955);
   ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x + w * 0.5, y + h * 0.5, h * 0.16, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.lineWidth = Math.max(1, h * 0.006);
+  ctx.strokeRect(x + w * 0.018, y + h * 0.22, w * 0.17, h * 0.56);
+  ctx.strokeRect(x + w * 0.812, y + h * 0.22, w * 0.17, h * 0.56);
+  ctx.strokeRect(x + w * 0.018, y + h * 0.36, w * 0.07, h * 0.28);
+  ctx.strokeRect(x + w * 0.912, y + h * 0.36, w * 0.07, h * 0.28);
+
+  ctx.strokeStyle = 'rgba(255,255,255,.42)';
+  ctx.beginPath();
+  ctx.arc(x + w * 0.188, y + h * 0.5, h * 0.105, -Math.PI / 2, Math.PI / 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x + w * 0.812, y + h * 0.5, h * 0.105, Math.PI / 2, Math.PI * 1.5);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(15,23,42,.6)';
+  ctx.fillRect(x - w * 0.012, y + h * 0.42, w * 0.018, h * 0.16);
+  ctx.fillRect(x + w * 0.994, y + h * 0.42, w * 0.018, h * 0.16);
+  ctx.strokeStyle = 'rgba(255,255,255,.48)';
+  ctx.strokeRect(x - w * 0.012, y + h * 0.42, w * 0.018, h * 0.16);
+  ctx.strokeRect(x + w * 0.994, y + h * 0.42, w * 0.018, h * 0.16);
+  ctx.restore();
 }
 
 function vpDrawBall(ctx, x, y, r) {
@@ -13233,18 +13258,24 @@ function vpDrawScenarioScene(ctx, box, scenario, phase, progress) {
   if (scenario.type === 'offside') {
     const isOffside = s.attackerX > s.defenderX;
     const defenderX = fx(s.defenderX);
-    const ay = fy(30 + (s.attackerY || 52) * 0.58);
     const finalAttackerX = fx(s.attackerX);
-    const attackerX = vpLerp(fx(Math.max(8, s.attackerX - 10)), finalAttackerX, p);
-    const passStartX = fx(17);
-    const passStartY = fy(70);
+    const finalAttackerY = fy(s.attackerY || 52);
+    const passer = s.passer || { x: 18, y: 70 };
+    const passStartX = fx(passer.x);
+    const passStartY = fy(passer.y);
     const passEndX = finalAttackerX - box.w * 0.035;
-    const passEndY = ay + box.h * 0.02;
+    const passEndY = finalAttackerY + box.h * 0.02;
     const ballX = vpLerp(passStartX, passEndX, p);
     const ballY = vpLerp(passStartY, passEndY, p);
     const labelY = box.y + box.h * 0.23;
+    const defenders = Array.isArray(s.defenders) && s.defenders.length
+      ? s.defenders
+      : [{ x: s.defenderX, y: s.defenderY || 56, label: 'D', main: true }];
+    const attackers = Array.isArray(s.attackers) && s.attackers.length
+      ? s.attackers
+      : [{ x: s.attackerX, y: s.attackerY || 52, label: 'A', main: true }];
 
-    if (reveal) {
+    if (phase === 'feedback') {
       const safeW = Math.max(0, defenderX - box.x);
       const offsideW = Math.max(0, box.x + box.w - defenderX);
       const drawZoneLabel = (text, cx, color, maxW) => {
@@ -13287,9 +13318,34 @@ function vpDrawScenarioScene(ctx, box, scenario, phase, progress) {
     vpDrawArrow(ctx, passStartX, passStartY, passEndX, passEndY, '#f8fafc', Math.max(2, box.h * 0.008));
     ctx.restore();
 
-    vpDrawPlayer(ctx, defenderX, ay + box.h * 0.08, '#2563eb', 'D');
-    vpDrawPlayer(ctx, attackerX, ay, '#dc2626', 'A');
-    vpDrawPlayer(ctx, fx(93), fy(55), '#f59e0b', 'G', 'appeal');
+    const players = [];
+    defenders.forEach(player => {
+      players.push({
+        x: fx(player.x),
+        y: fy(player.y),
+        color: player.main ? '#2563eb' : '#1d4ed8',
+        label: player.label || '',
+        pose: player.main ? 'appeal' : 'run',
+        main: !!player.main,
+      });
+    });
+    attackers.forEach(player => {
+      const px = player.main
+        ? vpLerp(fx(Math.max(8, player.x - 9)), fx(player.x), p)
+        : fx(player.x);
+      players.push({
+        x: px,
+        y: fy(player.y),
+        color: player.main ? '#dc2626' : '#b91c1c',
+        label: player.label || '',
+        pose: 'run',
+        main: !!player.main,
+      });
+    });
+    players.push({ x: passStartX, y: passStartY, color: '#b91c1c', label: '10', pose: 'run', main: false });
+    players.push({ x: fx(93), y: fy(55), color: '#f59e0b', label: 'G', pose: 'appeal', main: false });
+    players.sort((a, b) => a.y - b.y);
+    players.forEach(player => vpDrawPlayer(ctx, player.x, player.y, player.color, player.label, player.pose));
     vpDrawBall(ctx, ballX, ballY, Math.max(7, box.h * 0.035));
 
     if (reveal) {
@@ -13311,8 +13367,17 @@ function vpDrawScenarioScene(ctx, box, scenario, phase, progress) {
         : '#ffd84d';
       ctx.lineWidth = Math.max(3, box.h * 0.014);
       ctx.beginPath();
-      ctx.arc(finalAttackerX, ay - box.h * 0.03, Math.max(20, box.h * 0.12), 0, Math.PI * 2);
+      ctx.arc(finalAttackerX, finalAttackerY - box.h * 0.03, Math.max(20, box.h * 0.12), 0, Math.PI * 2);
       ctx.stroke();
+      if (phase === 'feedback') {
+        ctx.strokeStyle = 'rgba(248,250,252,.72)';
+        ctx.lineWidth = Math.max(1.5, box.h * 0.006);
+        ctx.setLineDash([box.h * 0.02, box.h * 0.018]);
+        ctx.beginPath();
+        ctx.moveTo(finalAttackerX, box.y + box.h * 0.08);
+        ctx.lineTo(finalAttackerX, box.y + box.h * 0.92);
+        ctx.stroke();
+      }
       ctx.restore();
       if (phase === 'feedback') vpDrawEvidenceTag(ctx, box, vpEvidenceText(scenario), tone);
     }
@@ -13445,17 +13510,31 @@ function vpDrawScenario(scenario, now = performance.now()) {
   }
 }
 
+function vpRoundElapsedMs(rt, now = performance.now()) {
+  if (!rt?.roundStartedAt) return 0;
+  return Math.max(0, now - rt.roundStartedAt);
+}
+
+function vpRoundRemainingMs(rt, now = performance.now()) {
+  const duration = rt?.durationMs || VP_ROUND_MS;
+  return Math.max(0, duration - vpRoundElapsedMs(rt, now));
+}
+
+function vpFormatTime(ms) {
+  return Math.max(0, Math.ceil(ms / 1000)) + 's';
+}
+
 function vpUpdateStats() {
   const rt = varPatrolRuntime || newVarPatrolRuntime();
   const attempts = rt.correct + rt.wrong;
   const accuracy = attempts ? Math.round((rt.correct / attempts) * 100) : 0;
   const scoreEl = document.getElementById('vp-score');
   const streakEl = document.getElementById('vp-streak');
-  const livesEl = document.getElementById('vp-lives');
+  const timeEl = document.getElementById('vp-time');
   const accEl = document.getElementById('vp-accuracy');
   if (scoreEl) scoreEl.textContent = String(rt.correct);
   if (streakEl) streakEl.textContent = String(rt.streak);
-  if (livesEl) livesEl.textContent = rt.lives > 0 ? '📺'.repeat(rt.lives) : '—';
+  if (timeEl) timeEl.textContent = vpFormatTime(rt.playing ? vpRoundRemainingMs(rt) : rt.timeRemainingMs);
   if (accEl) accEl.textContent = accuracy + '%';
 }
 
@@ -13463,18 +13542,22 @@ function vpSetVerdictButtons(scenario, enabled) {
   for (let i = 0; i < 2; i++) {
     const btn = document.getElementById('vp-verdict-' + i);
     if (!btn) continue;
-    btn.textContent = scenario ? scenario.verdicts[i] : '—';
+    btn.textContent = scenario
+      ? (i === 1 ? '← ' + scenario.verdicts[i] : scenario.verdicts[i] + ' →')
+      : '—';
     btn.disabled = !enabled;
     btn.style.background = '';
     btn.style.borderColor = '';
+    btn.style.boxShadow = '';
   }
 }
 
 function vpUpdateTimerBar(ratio) {
   const bar = document.getElementById('vp-timer-bar');
   if (!bar) return;
-  bar.style.width = Math.max(0, Math.min(1, ratio)) * 100 + '%';
-  bar.style.background = ratio < 0.3 ? 'var(--danger, #e5484d)' : 'var(--accent)';
+  const clamped = Math.max(0, Math.min(1, ratio));
+  bar.style.width = clamped * 100 + '%';
+  bar.style.background = clamped < 0.25 ? '#ef4444' : clamped < 0.55 ? '#f59e0b' : '#22c55e';
 }
 
 async function loadVarPatrolState(showSpinner = true) {
@@ -13516,11 +13599,13 @@ function renderVarPatrolState(data) {
   if (!varPatrolRuntime?.playing) {
     vpDrawIdle();
     vpSetVerdictButtons(null, false);
-    vpUpdateTimerBar(1);
+    const idleRt = varPatrolRuntime;
+    vpUpdateTimerBar(idleRt ? idleRt.timeRemainingMs / (idleRt.durationMs || VP_ROUND_MS) : 1);
+    vpUpdateStats();
     if (status) {
       status.textContent = data.myWeekly
         ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
-        : 'Najlepsze wyniki zapisują się automatycznie po rundzie.';
+        : 'Masz 20 sekund na jak najwięcej decyzji. Wyniki zapisują się automatycznie po rundzie.';
     }
   }
 }
@@ -13573,8 +13658,7 @@ function stopVarPatrolRound() {
   if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Start rundy'; }
 }
 
-function vpFeedbackMessage(scenario, answer, correctIdx, timedOut) {
-  if (timedOut) return 'Czas: ' + scenario.verdicts[correctIdx];
+function vpFeedbackMessage(scenario, answer, correctIdx) {
   return 'Werdykt: ' + scenario.verdicts[correctIdx];
 }
 
@@ -13585,18 +13669,19 @@ function vpMarkVerdictButtons(answer, correctIdx, isCorrect) {
     btn.disabled = true;
     btn.style.background = '';
     btn.style.borderColor = '';
+    btn.style.boxShadow = '';
     if (i === correctIdx) {
-      btn.style.background = '#15803d';
-      btn.style.borderColor = '#86efac';
+      btn.style.borderColor = '#f8fafc';
+      btn.style.boxShadow = '0 0 0 2px rgba(248,250,252,.65), 0 0 18px rgba(248,250,252,.22)';
     }
     if (i === answer && !isCorrect) {
-      btn.style.background = '#b91c1c';
+      btn.style.background = '#7f1d1d';
       btn.style.borderColor = '#fca5a5';
     }
   }
 }
 
-function vpApplyVerdict(scenario, answer, isCorrect, timedOut = false) {
+function vpApplyVerdict(scenario, answer, isCorrect) {
   const rt = varPatrolRuntime;
   if (!rt?.playing) return;
   const correctIdx = vpCorrectAnswer(scenario);
@@ -13608,23 +13693,22 @@ function vpApplyVerdict(scenario, answer, isCorrect, timedOut = false) {
   } else {
     rt.wrong += 1;
     rt.streak = 0;
-    rt.lives -= 1;
   }
+  rt.timeRemainingMs = vpRoundRemainingMs(rt);
   rt.phase = 'feedback';
   rt.phaseStartedAt = performance.now();
   rt.feedback = {
     answer,
     correctIdx,
     isCorrect,
-    timedOut,
-    message: vpFeedbackMessage(scenario, answer, correctIdx, timedOut),
+    message: vpFeedbackMessage(scenario, answer, correctIdx),
   };
   vpMarkVerdictButtons(answer, correctIdx, isCorrect);
-  vpUpdateTimerBar(0);
+  vpUpdateTimerBar(rt.timeRemainingMs / (rt.durationMs || VP_ROUND_MS));
   vpUpdateStats();
   const status = document.getElementById('vp-status');
   if (status) {
-    status.textContent = (isCorrect ? 'Dobra decyzja: ' : timedOut ? 'Spóźniona decyzja: ' : 'Prawidłowo było: ')
+    status.textContent = (isCorrect ? 'Dobra decyzja: ' : 'Prawidłowo było: ')
       + scenario.verdicts[correctIdx] + ' · ' + vpEvidenceText(scenario) + '.';
   }
   vpDrawScenario(scenario);
@@ -13641,11 +13725,11 @@ function vpBeginDecision() {
   rt.locked = false;
   rt.feedback = null;
   rt.scenarioShownAt = now;
-  rt.deadlineAt = now + rt.windowMs;
   vpSetVerdictButtons(scenario, true);
-  vpUpdateTimerBar(1);
+  rt.timeRemainingMs = vpRoundRemainingMs(rt, now);
+  vpUpdateTimerBar(rt.timeRemainingMs / (rt.durationMs || VP_ROUND_MS));
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = 'Stop-klatka: atak idzie w prawo. A po prawej stronie żółtej linii = SPALONY.';
+  if (status) status.textContent = '← GRA · → SPALONY. A po prawej stronie żółtej linii = SPALONY.';
   vpDrawScenario(scenario, now);
 }
 
@@ -13659,12 +13743,12 @@ function vpShowScenario(i) {
   rt.locked = true;
   rt.windowMs = scenario.windowMs;
   rt.scenarioShownAt = 0;
-  rt.deadlineAt = 0;
   rt.phase = 'clip';
   rt.phaseStartedAt = now;
   rt.feedback = null;
   vpSetVerdictButtons(scenario, false);
-  vpUpdateTimerBar(1);
+  rt.timeRemainingMs = vpRoundRemainingMs(rt, now);
+  vpUpdateTimerBar(rt.timeRemainingMs / (rt.durationMs || VP_ROUND_MS));
   const status = document.getElementById('vp-status');
   if (status) status.textContent = 'Analiza linii spalonego...';
   vpDrawScenario(scenario, now);
@@ -13673,7 +13757,7 @@ function vpShowScenario(i) {
 function vpAdvance() {
   const rt = varPatrolRuntime;
   if (!rt?.playing) return;
-  if (rt.lives <= 0 || rt.idx + 1 >= rt.schedule.length) {
+  if (vpRoundRemainingMs(rt) <= 0 || rt.idx + 1 >= rt.schedule.length) {
     finishVarPatrolRound();
     return;
   }
@@ -13685,14 +13769,20 @@ function vpAnswer(answer) {
   if (!rt?.playing || rt.locked || rt.phase !== 'decision' || rt.idx < 0) return;
   const scenario = rt.schedule[rt.idx];
   if (!scenario) return;
+  const now = performance.now();
+  if (vpRoundRemainingMs(rt, now) <= 0) { finishVarPatrolRound(); return; }
   rt.locked = true;
-  const reactionMs = performance.now() - rt.scenarioShownAt;
-  rt.answers.push({ index: scenario.index, answer, reactionMs: Math.round(reactionMs) });
+  const reactionMs = now - rt.scenarioShownAt;
+  const elapsedMs = vpRoundElapsedMs(rt, now);
+  rt.answers.push({
+    index: scenario.index,
+    answer,
+    reactionMs: Math.round(reactionMs),
+    elapsedMs: Math.round(elapsedMs),
+  });
   const correctIdx = vpCorrectAnswer(scenario);
-  const isCorrect = answer === correctIdx &&
-    reactionMs >= VP_REACTION_FLOOR_MS &&
-    reactionMs <= scenario.windowMs + VP_REACTION_TOL_MS;
-  vpApplyVerdict(scenario, answer, isCorrect, false);
+  const isCorrect = answer === correctIdx && reactionMs >= VP_REACTION_FLOOR_MS;
+  vpApplyVerdict(scenario, answer, isCorrect);
 }
 
 function vpTick() {
@@ -13701,6 +13791,13 @@ function vpTick() {
   const now = performance.now();
   const scenario = rt.schedule[rt.idx];
   if (!scenario) { finishVarPatrolRound(); return; }
+  rt.timeRemainingMs = vpRoundRemainingMs(rt, now);
+  vpUpdateTimerBar(rt.timeRemainingMs / (rt.durationMs || VP_ROUND_MS));
+  vpUpdateStats();
+  if (rt.timeRemainingMs <= 0) {
+    finishVarPatrolRound();
+    return;
+  }
 
   if (rt.phase === 'clip') {
     vpDrawScenario(scenario, now);
@@ -13715,15 +13812,7 @@ function vpTick() {
   }
 
   if (rt.phase !== 'decision' || rt.locked) return;
-  const remaining = rt.deadlineAt - now;
-  vpUpdateTimerBar(remaining / rt.windowMs);
   vpDrawScenario(scenario, now);
-  if (remaining <= 0) {
-    // Timeout = a missed decision (mistake).
-    rt.locked = true;
-    rt.answers.push({ index: scenario.index, answer: -1, reactionMs: Math.round(rt.windowMs) + 1 });
-    vpApplyVerdict(scenario, -1, false, true);
-  }
 }
 
 function beginVarPatrolRound(round) {
@@ -13732,11 +13821,13 @@ function beginVarPatrolRound(round) {
   const rt = varPatrolRuntime;
   rt.playing = true;
   rt.roundId = round.id;
-  rt.lives = round.lives || 3;
+  rt.durationMs = round.roundMs || VP_ROUND_MS;
+  rt.timeRemainingMs = rt.durationMs;
+  rt.roundStartedAt = performance.now();
   rt.schedule = Array.isArray(round.schedule) ? round.schedule : [];
   vpUpdateStats();
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = 'Analiza spalonego — masz ' + rt.lives + ' życia.';
+  if (status) status.textContent = '20 sekund: ← GRA, → SPALONY.';
   const startBtn = document.getElementById('vp-start-btn');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Runda trwa'; }
   rt.timer = setInterval(vpTick, 33);
@@ -13767,11 +13858,14 @@ async function startVarPatrolRound() {
 async function finishVarPatrolRound() {
   const rt = varPatrolRuntime;
   if (!rt || rt.submitting) return;
+  const roundDurationMs = Math.round(Math.min(rt.durationMs || VP_ROUND_MS, vpRoundElapsedMs(rt)));
+  rt.timeRemainingMs = Math.max(0, (rt.durationMs || VP_ROUND_MS) - roundDurationMs);
   rt.playing = false;
   rt.submitting = true;
   if (rt.timer) clearInterval(rt.timer);
   vpSetVerdictButtons(null, false);
-  vpUpdateTimerBar(0);
+  vpUpdateTimerBar(rt.timeRemainingMs / (rt.durationMs || VP_ROUND_MS));
+  vpUpdateStats();
   vpDrawIdle();
   const status = document.getElementById('vp-status');
   const startBtn = document.getElementById('vp-start-btn');
@@ -13784,20 +13878,25 @@ async function finishVarPatrolRound() {
     if (allGamesMode) {
       try {
         await sb.rpc('record_arcade_score', { p_game_type: 'var_patrol', p_score: rt.correct });
-        if (status) status.textContent = 'Wynik: ' + rt.correct + ' · zapisano w rankingu arcade!';
+        if (status) status.textContent = 'Wynik: ' + rt.correct + ' · błędy: ' + rt.wrong + ' · zapisano w rankingu arcade!';
         loadArcadeScores('var_patrol');
-      } catch (e) { if (status) status.textContent = 'Wynik: ' + rt.correct + ' (błąd zapisu).'; }
+      } catch (e) { if (status) status.textContent = 'Wynik: ' + rt.correct + ' · błędy: ' + rt.wrong + ' (błąd zapisu).'; }
     } else {
-      if (status) status.textContent = 'Tryb archiwum — wynik: ' + rt.correct + ' (nie zapisano).';
+      if (status) status.textContent = 'Tryb archiwum — wynik: ' + rt.correct + ' · błędy: ' + rt.wrong + ' (nie zapisano).';
     }
     return;
   }
 
   try {
-    const data = await invokeVarPatrol({ action: 'submit', roundId: rt.roundId, answers: rt.answers });
+    const data = await invokeVarPatrol({
+      action: 'submit',
+      roundId: rt.roundId,
+      answers: rt.answers,
+      roundDurationMs,
+    });
     renderVarPatrolState(data);
     showToast('✅ Wynik zapisany: ' + data.score.score);
-    if (status) status.textContent = 'Ostatni wynik: ' + data.score.score + ' trafnych decyzji.';
+    if (status) status.textContent = 'Ostatni wynik: ' + data.score.score + ' trafnych decyzji · błędy: ' + data.score.misses + '.';
   } catch (err) {
     showToast('❌ ' + err.message);
     if (status) status.textContent = 'Nie udało się zapisać wyniku.';
@@ -13807,6 +13906,11 @@ async function finishVarPatrolRound() {
   }
 }
 
+function vpIsTypingTarget(target) {
+  const tag = target?.tagName?.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
+}
+
 (function wireVarPatrol() {
   const startBtn = document.getElementById('vp-start-btn');
   if (startBtn) startBtn.addEventListener('click', startVarPatrolRound);
@@ -13814,6 +13918,18 @@ async function finishVarPatrolRound() {
     const btn = document.getElementById('vp-verdict-' + i);
     if (btn) btn.addEventListener('click', () => vpAnswer(i));
   }
+  document.addEventListener('keydown', evt => {
+    if (vpIsTypingTarget(evt.target) || evt.repeat) return;
+    if (!varPatrolRuntime?.playing || varPatrolRuntime.phase !== 'decision') return;
+    const key = evt.key.toLowerCase();
+    if (evt.key === 'ArrowLeft' || key === 'a') {
+      evt.preventDefault();
+      vpAnswer(1); // left side of the line = GRA
+    } else if (evt.key === 'ArrowRight' || key === 'd') {
+      evt.preventDefault();
+      vpAnswer(0); // right side of the line = SPALONY
+    }
+  });
 })();
 
 // ── Bug Jumper (canvas) ───────────────────────────────────────────────────
