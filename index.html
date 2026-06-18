@@ -3183,7 +3183,8 @@
       border-radius: var(--radius); overflow: hidden;
       max-height: 300px; overflow-y: auto;
     }
-    .af-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .af-filter-bar { margin: 0 0 8px; }
+    .af-filter-bar:last-of-type { margin-bottom: 12px; }
     .activity-item {
       display: grid; grid-template-columns: auto 1fr auto auto;
       gap: 4px 10px; align-items: baseline;
@@ -3195,7 +3196,6 @@
     .activity-desc  { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .activity-time  { color: var(--dim); font-size: 10px; white-space: nowrap; text-align: right; }
     .activity-time-abs { color: var(--dim); opacity: .8; }
-    @media (max-width: 480px) { .af-filters { grid-template-columns: 1fr; } }
     .activity-empty { color: var(--dim); font-size: 12px; text-align: center; padding: 20px 16px; }
 
     /* ── CALIBRATION ── */
@@ -4800,20 +4800,20 @@
       <button class="fb-sort-btn" data-range="604800000">7 dni</button>
       <button class="fb-sort-btn" data-range="0">Wszystko</button>
     </div>
-    <div class="af-filters">
-      <select id="af-user-filter" class="history-filter-select">
-        <option value="">Wszyscy gracze</option>
-      </select>
-      <select id="af-cat-filter" class="history-filter-select">
-        <option value="">Wszystkie typy</option>
-        <option value="bet">🎲 Zakłady</option>
-        <option value="casino">🎰 Kasyno</option>
-        <option value="football">⚽ Mundial</option>
-        <option value="game">🕹️ Gry</option>
-        <option value="garden">🌱 Ogród</option>
-        <option value="market">🛍️ Targowisko</option>
-        <option value="other">💰 Inne</option>
-      </select>
+    <div class="fb-sort-bar af-filter-bar" id="af-cat-bar">
+      <span class="fb-sort-label">Typ:</span>
+      <button class="fb-sort-btn active" data-cat="">Wszystko</button>
+      <button class="fb-sort-btn" data-cat="bet">🎲 Zakłady</button>
+      <button class="fb-sort-btn" data-cat="casino">🎰 Kasyno</button>
+      <button class="fb-sort-btn" data-cat="football">⚽ Mundial</button>
+      <button class="fb-sort-btn" data-cat="game">🕹️ Gry</button>
+      <button class="fb-sort-btn" data-cat="garden">🌱 Ogród</button>
+      <button class="fb-sort-btn" data-cat="market">🛍️ Targowisko</button>
+      <button class="fb-sort-btn" data-cat="other">💰 Inne</button>
+    </div>
+    <div class="fb-sort-bar af-filter-bar" id="af-user-bar">
+      <span class="fb-sort-label">Gracz:</span>
+      <button class="fb-sort-btn active" data-user="">Wszyscy</button>
     </div>
     <div id="activity-feed" class="activity-feed" style="max-height:60vh">
       <div class="loading-center"><div class="spinner"></div></div>
@@ -6626,8 +6626,8 @@ async function buildActivityFeed() {
 
   entries.sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
-  // Refresh the user dropdown with everyone who has activity in this window.
-  syncActivityUserOptions([...new Set(entries.map(e => e.nick))].sort((a, b) => a.localeCompare(b, 'pl')));
+  // Refresh the player buttons with everyone who has activity in this window.
+  renderActivityUserButtons([...new Set(entries.map(e => e.nick))].sort((a, b) => a.localeCompare(b, 'pl')));
 
   // Apply the user + activity-type filters.
   let filtered = entries;
@@ -6645,19 +6645,29 @@ async function buildActivityFeed() {
   feed.replaceChildren(...recent.map(activityRow));
 }
 
-// Rebuild the user-filter <option> list (preserving selection) when the set changes.
-function syncActivityUserOptions(nicks) {
-  const sel = document.getElementById('af-user-filter');
-  if (!sel) return;
-  const sig = nicks.join('');
-  if (sel.dataset.sig === sig) return;
-  sel.dataset.sig = sig;
-  const current = activityUserFilter;
-  sel.replaceChildren(
-    el('option', { value: '' }, 'Wszyscy gracze'),
-    ...nicks.map(n => el('option', { value: n }, n))
-  );
-  sel.value = nicks.includes(current) ? current : '';
+// Rebuild the player-filter buttons (only when the set of players changes).
+function renderActivityUserButtons(nicks) {
+  const bar = document.getElementById('af-user-bar');
+  if (!bar) return;
+  if (activityUserFilter && !nicks.includes(activityUserFilter)) activityUserFilter = '';
+  const sig = nicks.join('|');
+  if (bar.dataset.sig !== sig) {
+    bar.dataset.sig = sig;
+    bar.replaceChildren(
+      el('span', { className: 'fb-sort-label' }, 'Gracz:'),
+      el('button', { className: 'fb-sort-btn', 'data-user': '' }, 'Wszyscy'),
+      ...nicks.map(n => el('button', { className: 'fb-sort-btn', 'data-user': n }, n))
+    );
+  }
+  syncActivityUserButtons();
+}
+function syncActivityUserButtons() {
+  document.querySelectorAll('#af-user-bar .fb-sort-btn').forEach(b =>
+    b.classList.toggle('active', (b.dataset.user || '') === activityUserFilter));
+}
+function syncActivityCatButtons() {
+  document.querySelectorAll('#af-cat-bar .fb-sort-btn').forEach(b =>
+    b.classList.toggle('active', (b.dataset.cat || '') === activityCatFilter));
 }
 
 // ── Inline probability chart ──────────────────────────────────────────────
@@ -7126,6 +7136,8 @@ function openActivityModal() {
   show(afOverlay);
   document.body.style.overflow = 'hidden';
   syncActivityRangeButtons();
+  syncActivityCatButtons();
+  syncActivityUserButtons();
   const feed = document.getElementById('activity-feed');
   if (feed) feed.replaceChildren(makeSpinner());
   buildActivityFeed();
@@ -7146,12 +7158,18 @@ document.getElementById('af-range-bar').addEventListener('click', e => {
   if (feed) feed.replaceChildren(makeSpinner());
   buildActivityFeed();
 });
-document.getElementById('af-user-filter').addEventListener('change', e => {
-  activityUserFilter = e.target.value;
+document.getElementById('af-cat-bar').addEventListener('click', e => {
+  const btn = e.target.closest('[data-cat]');
+  if (!btn) return;
+  activityCatFilter = btn.dataset.cat;
+  syncActivityCatButtons();
   buildActivityFeed();
 });
-document.getElementById('af-cat-filter').addEventListener('change', e => {
-  activityCatFilter = e.target.value;
+document.getElementById('af-user-bar').addEventListener('click', e => {
+  const btn = e.target.closest('[data-user]');
+  if (!btn) return;
+  activityUserFilter = btn.dataset.user;
+  syncActivityUserButtons();
   buildActivityFeed();
 });
 
