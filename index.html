@@ -826,6 +826,20 @@
     .tx-history-table .tx-delta-zero { color: var(--muted); text-align: right; }
     .tx-history-table .tx-start { color: var(--muted); font-style: italic; }
     .user-profile-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+    .inv-card { background: linear-gradient(180deg, var(--acc-dim), transparent), var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+    .inv-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .inv-archetype { font-size: 15px; font-weight: 800; }
+    .inv-score { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .inv-score-bar { height: 7px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); margin: 8px 0 6px; overflow: hidden; }
+    .inv-score-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+    .inv-score-class { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .inv-metrics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .inv-metric { flex: 1; min-width: 70px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+    .inv-metric strong { display: block; font-size: 13px; margin-bottom: 2px; text-transform: capitalize; }
+    .inv-metric span { font-size: 10px; color: var(--muted); }
+    .inv-body { font-size: 13px; line-height: 1.5; margin: 0 0 8px; }
+    .inv-reco { font-size: 13px; margin: 0 0 8px; }
+    .inv-disclaimer { font-size: 10px; color: var(--muted); font-style: italic; margin: 0; }
     .lb-click-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; font-style: italic; }
     .lb-legend { margin-top: 12px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
     .lb-legend p { font-size: 12px; color: var(--muted); margin: 0 0 4px; line-height: 1.45; }
@@ -8583,6 +8597,156 @@ function renderCoinRaceDetail(container) {
     );
   }
 
+  // ── „Profil inwestora" — sarkastyczna analiza finansowa zbudowana z realnych
+  // danych gracza. Deterministyczna (seed z userId): dla danego gracza stabilna,
+  // ale różni się między graczami. To nie LLM — to G6 Capital Advisory™.
+  function buildInvestorProfileCard(p) {
+    const { nick, userId, coins, netWorth, locked, gamePL, awardsTotal, trades, games, footballBets, coinTxs, balancePoints } = p;
+    const fN = fmtNum;
+
+    // seeded PRNG (FNV-1a hash → mulberry32) — stałe brzmienie per gracz
+    let h = 2166136261;
+    const sid = String(userId || nick || '');
+    for (let i = 0; i < sid.length; i++) { h ^= sid.charCodeAt(i); h = Math.imul(h, 16777619); }
+    let a = h >>> 0;
+    const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const pick = arr => arr[Math.floor(rnd() * arr.length)];
+
+    // realne metryki
+    const nw = Math.round(netWorth);
+    const cash = Math.round(coins);
+    const liquidityPct = nw > 0 ? Math.max(0, Math.min(100, Math.round(cash / nw * 100))) : 100;
+    const gamesCount = games.length;
+    const totalWagered = games.reduce((s, g) => s + (+g.bet || 0), 0);
+    const fbCount = footballBets.length;
+    const sources = [
+      trades.length > 0,
+      gamesCount > 0,
+      fbCount > 0,
+      coinTxs.some(t => t.reason === 'garden_water' || t.reason === 'garden_accessory' || t.reason === 'garden_certificate'),
+      coinTxs.some(t => t.reason && t.reason.indexOf('canvas') === 0),
+      awardsTotal > 0,
+    ].filter(Boolean).length;
+    // zmienność = maks. obsunięcie kapitału (szczyt → dołek po szczycie)
+    let peak = -Infinity, drawdown = 0;
+    balancePoints.forEach(pt => { const b = pt.bal + (pt.lock || 0); if (b > peak) peak = b; if (peak > 0) drawdown = Math.max(drawdown, (peak - b) / peak); });
+    const drawdownPct = Math.round(drawdown * 100);
+
+    // scoring kredytowy 300–850
+    let score = 500;
+    score += Math.max(-160, Math.min(220, Math.round((nw - 1000) / 28)));
+    score += Math.max(-130, Math.min(70, Math.round(gamePL / 18)));
+    score += Math.min(75, sources * 16);
+    score += Math.max(-60, Math.min(45, trades.length * 4));
+    score -= Math.min(90, Math.round(drawdownPct * 0.8));
+    if (liquidityPct < 8 && nw > 1200) score -= 25;
+    if (cash === 0) score -= 40;
+    score = Math.max(300, Math.min(850, Math.round(score)));
+
+    const cls =
+      score >= 800 ? { t: 'elitarny', c: 'var(--yes)', e: '🏛️' } :
+      score >= 740 ? { t: 'bardzo dobry', c: 'var(--yes)', e: '💎' } :
+      score >= 670 ? { t: 'dobry', c: 'var(--accent)', e: '📈' } :
+      score >= 580 ? { t: 'umiarkowany', c: 'var(--accent)', e: '⚖️' } :
+      score >= 450 ? { t: 'ryzykowny', c: 'var(--no)', e: '🎲' } :
+                     { t: 'wysokie ryzyko', c: 'var(--no)', e: '☠️' };
+
+    // archetyp
+    let arch;
+    if (nw < 500 || cash === 0) arch = 'bankrut';
+    else if (gamePL <= -150 || (gamesCount >= 12 && gamePL < 0)) arch = 'hazardzista';
+    else if (gamePL >= 200) arch = 'szczesciarz';
+    else if (trades.length >= 8) arch = 'spekulant';
+    else if (fbCount >= 5) arch = 'bukmacher';
+    else if (nw >= 3000) arch = 'rekin';
+    else if (liquidityPct >= 88 && trades.length <= 2 && gamesCount <= 3) arch = 'materac';
+    else arch = 'niedzielny';
+
+    const TITLES = {
+      bankrut:    ['Inwestor w restrukturyzacji', 'Kapitał w fazie zaniku', 'Wirtuoz ujemnej płynności'],
+      hazardzista:['Degenerat rynkowy', 'Etatowy klient kasyna', 'Człowiek, który pokonał statystykę (statystyka wygrała)'],
+      szczesciarz:['Ulubieniec fortuny', 'Statystyczna anomalia', 'Inwestor pod opieką św. Hazardu'],
+      spekulant:  ['Spekulant pełną gębą', 'Snajper rynków predykcji', 'Day-trader na pełen etat'],
+      bukmacher:  ['Bukmacherski wizjoner', 'Analityk darmowych typów', 'Ekspert od cudzych meczów'],
+      rekin:      ['Rekin finansjery G6', 'Lokalny Warren Buffett (edycja budżetowa)', 'Posiadacz ziemski'],
+      materac:    ['Materac inwestycyjny', 'Strateg „leżę i nie ruszam"', 'Mistrz gotówki pod poduszką'],
+      niedzielny: ['Inwestor niedzielny', 'Turysta rynkowy', 'Hobbysta kapitałowy'],
+    };
+    const BODY = {
+      bankrut: [
+        `Saldo ${fN(cash)} 🪙 to nie strategia — to wołanie o pomoc. Majątek ${fN(nw)} 🪙 sugeruje, że „dywersyfikacja" oznaczała tu rozdanie coinów po równo między pecha a brak planu.`,
+        `Portfel o sile nabywczej znaczka pocztowego. Przy ${fN(cash)} 🪙 gotówki rekomendujemy strategię „nie wydawać niczego, łącznie z energią".`,
+      ],
+      hazardzista: [
+        `Bilans gier: ${gamePL} 🪙 przy ${fN(totalWagered)} 🪙 obstawionych w ${gamesCount} rundach. To nie inwestowanie, to abonament za adrenalinę.`,
+        `Każda wizyta w kasynie to dobrowolny przelew na rzecz domu. ${gamePL} 🪙 P&L mówi, że dom dziękuje za lojalność.`,
+      ],
+      szczesciarz: [
+        `Gry P&L na poziomie ${gamePL} 🪙 — albo geniusz, albo fortuna, która lada moment wystawi rachunek. Stawiamy na to drugie.`,
+        `Wygrana ${gamePL} 🪙 w grach losowych. Statystycznie nie do utrzymania. Korzystaj, póki RNG śpi.`,
+      ],
+      spekulant: [
+        `${trades.length} zakładów na rynkach predykcji. Wolumen godny funduszu hedgingowego, wyniki — godne loterii. Przynajmniej jest płynność.`,
+        `Aktywny gracz rynkowy: ${trades.length} pozycji. Przekonanie, że „tym razem rynek się myli", wpisane tu w model biznesowy.`,
+      ],
+      bukmacher: [
+        `${fbCount} zakładów w Mundialu. Ekspert od piłki, której nie kopie — oparty na odwadze i kursach bukmachera, który zawsze wygrywa.`,
+        `Portfolio na ${fbCount} typach piłkarskich. Strategia „znam się na futbolu" historycznie kosztowna.`,
+      ],
+      rekin: [
+        `Majątek ${fN(nw)} 🪙 — w skali biura status oligarchy. Rekomendacja: zatrudnić ochronę i nie chwalić się w kuchni.`,
+        `${fN(nw)} 🪙 net worth. Albo żyła złota, albo ktoś tu po prostu nie gra w ruletkę. Podejrzanie rozsądne.`,
+      ],
+      materac: [
+        `${liquidityPct}% majątku leży w gotówce. Zero ryzyka, zero odsetek, zero emocji — portfel w stanie hibernacji. Bezpiecznie jak nuda.`,
+        `Strategia „trzymam ${fN(cash)} 🪙 i patrzę". Inflacja G6 dziękuje za nieoprocentowaną pożyczkę.`,
+      ],
+      niedzielny: [
+        `Umiarkowana aktywność, ${fN(nw)} 🪙 majątku, brak wyraźnej strategii poza „zobaczymy". Klasyczny inwestor weekendowy.`,
+        `Portfel bez wyrazu: trochę tu, trochę tam, ${fN(nw)} 🪙 razem. Rynek ledwie zauważył obecność.`,
+      ],
+    };
+    const RECO = {
+      bankrut:    ['Nie pożyczać. Nawet długopisa.', 'Zdolność kredytowa: ujemna. Wniosek odrzucony automatycznie.', 'Rekomendowany produkt: skarbonka. Bez dna.'],
+      hazardzista:['Odciąć dostęp do kasyna. Dla dobra wszystkich.', 'Limit kredytowy: 0 🪙. Powód: znamy się.', 'Polecany fundusz: konto oszczędnościowe pod nadzorem.'],
+      szczesciarz:['Wypłacić wygrane, zanim fortuna się obudzi.', 'Krótkoterminowo: kupować. Długoterminowo: uciekać.', 'Ryzyko: regresja do średniej. Bardzo blisko.'],
+      spekulant:  ['Rozważyć indeks zamiast intuicji.', 'Zdywersyfikować — najlepiej poza własnymi przeczuciami.', 'Limit kredytowy: warunkowy, jak Twoje typy.'],
+      bukmacher:  ['Przestać typować, zacząć oglądać.', 'Rekomendacja: zakład o to, że przestaniesz. Kurs 1.01.', 'Produkt: depozyt zablokowany do końca sezonu.'],
+      rekin:      ['Status premium. Doradca osobisty (czyli ten tekst).', 'Zdolność kredytowa: nieograniczona, ale po co Ci kredyt.', 'Rekomendacja: dywidenda dla mniej zdolnych kolegów.'],
+      materac:    ['Zainwestować cokolwiek. Naprawdę, cokolwiek.', 'Produkt: kurs „ryzyko dla początkujących".', 'Limit kredytowy wysoki — szkoda, że nieużywany.'],
+      niedzielny: ['Wybrać strategię. Jakąkolwiek.', 'Więcej zaangażowania albo mniej udawania.', 'Zdolność kredytowa: przeciętna, jak wszystko tutaj.'],
+    };
+
+    const titleTxt = pick(TITLES[arch]);
+    const para = pick(BODY[arch]);
+    const reco = pick(RECO[arch]);
+    const hazardIdx = gamesCount === 0 ? 'zerowy' : (totalWagered >= 300 || gamePL <= -150 ? 'wysoki' : 'umiarkowany');
+    const volTxt = drawdownPct >= 60 ? 'ekstremalna' : drawdownPct >= 30 ? 'umiarkowana' : 'spokojna';
+
+    const chip = (label, value, color) => el('div', { className: 'inv-metric' },
+      el('strong', color ? { style: { color } } : {}, value), el('span', {}, label));
+
+    return el('div', { className: 'inv-card' },
+      el('div', { className: 'inv-head' },
+        el('span', { className: 'inv-archetype' }, cls.e + ' ' + titleTxt),
+        el('span', { className: 'inv-score', style: { color: cls.c } }, fN(score) + ' / 850')
+      ),
+      el('div', { className: 'inv-score-bar' },
+        el('div', { className: 'inv-score-fill', style: { width: Math.round((score - 300) / 550 * 100) + '%', background: cls.c } })
+      ),
+      el('div', { className: 'inv-score-class' }, 'Scoring kredytowy — klasa: ', el('strong', { style: { color: cls.c } }, cls.t)),
+      el('div', { className: 'inv-metrics' },
+        chip('Płynność', liquidityPct + '%'),
+        chip('Indeks hazardu', hazardIdx),
+        chip('Dywersyfikacja', sources + '/6'),
+        chip('Zmienność', volTxt)
+      ),
+      el('p', { className: 'inv-body' }, para),
+      el('p', { className: 'inv-reco' }, '📌 Rekomendacja: ', el('strong', {}, reco)),
+      el('p', { className: 'inv-disclaimer' }, 'Analiza wygenerowana przez G6 Capital Advisory™ na podstawie realnych danych. Nie stanowi porady inwestycyjnej (ani żadnej innej rozsądnej).')
+    );
+  }
+
   async function openUserProfile(userId, nick, coins, opts = {}) {
     title.textContent = opts.wallet ? '💼 Portfel — ' + nick : '👤 ' + nick;
     body.replaceChildren();
@@ -8653,6 +8817,14 @@ function renderCoinRaceDetail(container) {
         el('div', { className: 'user-profile-stat' }, el('strong', {}, '+' + awardsTotal + ' 🪙'), el('span', {}, 'Nagrody')),
         el('div', { className: 'user-profile-stat' }, el('strong', {}, String(trades.length)), el('span', {}, 'Zakładów'))
       ));
+
+      // „Profil inwestora" — sarkastyczna analiza finansowa z realnych danych gracza
+      const nwForProfile = lbRow ? Math.round(+lbRow.net_worth || 0) : Math.round((+coins || 0) + locked);
+      body.append(el('div', { className: 'user-profile-section-title' }, 'Profil inwestora'));
+      body.append(buildInvestorProfileCard({
+        nick, userId, coins: +coins || 0, netWorth: nwForProfile, locked,
+        gamePL, awardsTotal, trades, games, footballBets, coinTxs, balancePoints,
+      }));
 
       // Net Worth breakdown — what counts toward this player's net worth
       if (breakdown) renderNetWorthBreakdown(body, breakdown);
