@@ -1398,21 +1398,21 @@
     }
     /* Reusable 3D chip (roulette chips, slot stake, poker bets) */
     .casino-chip {
-      width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
-      border: 3px dashed rgba(255,255,255,.85);
-      background: radial-gradient(circle at 50% 38%, #fff 0 38%, var(--chip-face, #6b7280) 40% 100%);
-      color: #111; font-weight: 800; font-size: 12px;
+      width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+      border: 3px dashed rgba(255,255,255,.8);
+      background: var(--chip-face, #6b7280);
+      color: #fff; font-weight: 900; font-size: 13px;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 -3px 6px rgba(0,0,0,.25);
+      box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 0 0 3px rgba(255,255,255,.16), inset 0 -3px 6px rgba(0,0,0,.3);
+      text-shadow: 0 1px 2px rgba(0,0,0,.85), 0 0 3px rgba(0,0,0,.6);
       transition: transform .15s, box-shadow .15s; user-select: none;
     }
     .casino-chip:hover { transform: translateY(-2px); }
-    .casino-chip.active { outline: 3px solid var(--gold-hi); outline-offset: 1px; transform: scale(1.08); }
-    .casino-chip-5    { --chip-face: #ef4444; }
-    .casino-chip-10   { --chip-face: #3b82f6; }
-    .casino-chip-25   { --chip-face: #16a34a; }
-    .casino-chip-100  { --chip-face: #111827; color: #fff; }
-    .casino-chip-100.active, .casino-chip-100:hover { color: #fff; }
+    .casino-chip.active { outline: 3px solid var(--gold-hi); outline-offset: 2px; transform: scale(1.08); }
+    .casino-chip-5    { --chip-face: #dc2626; }
+    .casino-chip-10   { --chip-face: #2563eb; }
+    .casino-chip-25   { --chip-face: #15803d; }
+    .casino-chip-100  { --chip-face: #0f172a; }
     /* Celebration keyframes (generalized from the old slots animations) */
     @keyframes casino-coinburst {
       0%   { transform: translateY(-50px) rotate(0deg); opacity: 1; }
@@ -1442,10 +1442,16 @@
     .roulette-chips { display: flex; gap: 6px; }
     .roulette-bet-total { font-size: 13px; color: var(--muted); font-weight: 600; }
 
-    /* Casino layout: wheel sits to the side of the betting board */
+    /* Casino layout: wheel + felt board on one continuous table, wooden rail */
     .roulette-layout {
-      display: flex; gap: 24px; align-items: flex-start; justify-content: center;
-      flex-wrap: wrap; margin-bottom: 12px;
+      display: flex; gap: 32px; align-items: center; justify-content: center;
+      flex-wrap: wrap;
+      width: fit-content; max-width: 100%; margin: 0 auto 14px;
+      padding: 28px 34px;
+      background: radial-gradient(ellipse 120% 100% at 50% 0%, #1f7a44 0%, #0d5a30 45%, #073d20 100%);
+      border: 5px solid #5a3a1a;
+      border-radius: 22px;
+      box-shadow: inset 0 2px 26px rgba(0,0,0,.45), inset 0 0 0 3px rgba(184,134,11,.4), 0 12px 34px rgba(0,0,0,.3);
     }
     /* Wheel */
     .roulette-wheel-wrap {
@@ -1463,7 +1469,7 @@
       transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
     }
     .roulette-wheel svg { display: block; width: 100%; height: 100%; }
-    .roulette-wheel-num-text { font: 700 9px/1 system-ui, sans-serif; fill: #fff; }
+    .roulette-wheel-num-text { font: 700 4.2px/1 system-ui, sans-serif; fill: #fff; }
     /* Ball orbits in a counter-rotating track and settles at the top pointer */
     .roulette-ball-track {
       position: absolute; inset: 0; pointer-events: none; z-index: 4;
@@ -1504,8 +1510,9 @@
     @keyframes pulse-spin { 0%,100% { box-shadow: 0 6px 24px rgba(22,163,74,.35); } 50% { box-shadow: 0 6px 32px rgba(22,163,74,.6); } }
 
     /* Table/board */
-    .roulette-table-wrap { flex: 1 1 520px; min-width: 0; margin-bottom: 0; overflow-x: auto; }
-    .roulette-board { background: #0d5016; border-radius: 10px; padding: 10px; border: 3px solid #1a7028; box-shadow: inset 0 2px 12px rgba(0,0,0,.3); }
+    .roulette-table-wrap { flex: 0 1 auto; min-width: 0; max-width: 620px; margin-bottom: 0; overflow-x: auto; }
+    /* board blends into the shared felt of .roulette-layout */
+    .roulette-board { background: transparent; border: none; padding: 0; box-shadow: none; }
     .roulette-grid {
       display: grid; grid-template-columns: auto repeat(12, 1fr) auto; gap: 2px; margin-bottom: 8px; min-width: 560px;
     }
