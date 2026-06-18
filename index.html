@@ -2015,7 +2015,23 @@
       min-height: 48px;
       font-size: 14px;
       font-weight: 900;
-      letter-spacing: .03em;
+      letter-spacing: 0;
+    }
+    #vp-verdict-0 {
+      background: #991b1b;
+      border-color: #ef4444;
+    }
+    #vp-verdict-0:not(:disabled):hover {
+      background: #b91c1c;
+      border-color: #fecaca;
+    }
+    #vp-verdict-1 {
+      background: #166534;
+      border-color: #22c55e;
+    }
+    #vp-verdict-1:not(:disabled):hover {
+      background: #15803d;
+      border-color: #bbf7d0;
     }
     @media (max-width: 620px) {
       .vp-verdicts { flex-direction: column; }
@@ -4382,7 +4398,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">VAR Patrol 📺</h2>
-                <p class="page-sub">Jesteś w pokoju VAR. Obejrzyj spokojniejszą powtórkę, poczekaj na stop-klatkę i zdecyduj tylko jedno: <strong>spalony czy gra</strong>. Masz <strong>3 życia</strong>: trzy błędne lub spóźnione decyzje i koniec.</p>
+                <p class="page-sub">Jesteś w pokoju VAR. Obejrzyj wolniejszą powtórkę, poczekaj na stop-klatkę i zdecyduj tylko jedno: <strong>spalony czy gra</strong>. Masz <strong>3 życia</strong>: trzy błędne lub spóźnione decyzje i koniec.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -4394,8 +4410,8 @@
             <div class="bj-rules">
               <div class="bj-rules-title">Jak grać</div>
               <ul>
-                <li>Patrz na czerwonego napastnika <strong>A</strong> i żółtą linię ostatniego obrońcy.</li>
-                <li>Jeśli <strong>A jest za linią</strong> — kliknij <strong>SPALONY</strong>. Jeśli jest przed linią — kliknij <strong>GRA</strong>.</li>
+                <li>Atak idzie <strong>w prawo</strong>. Patrz tylko na czerwonego napastnika <strong>A</strong> i żółtą linię obrońcy.</li>
+                <li>Jeśli <strong>A jest po prawej stronie linii</strong> — kliknij <strong>SPALONY</strong>. Jeśli jest po lewej — kliknij <strong>GRA</strong>.</li>
                 <li>Timer rusza dopiero na stop-klatce. Dobra decyzja = <strong>+1 pkt</strong>.</li>
                 <li>Masz <strong>3 życia</strong>. Trzy pomyłki albo spóźnienia kończą rundę.</li>
               </ul>
@@ -12923,7 +12939,7 @@ function vpCorrectAnswer(scenario) {
   }
 }
 
-const VP_TITLES = { offside: 'SPALONY?', foul: 'FAUL?', handball: 'RĘKA?', goalline: 'GOL?' };
+const VP_TITLES = { offside: 'A PO PRAWEJ?', foul: 'FAUL?', handball: 'RĘKA?', goalline: 'GOL?' };
 const VP_PHASE_LABELS = { clip: 'POWTÓRKA', decision: 'STOP-KLATKA', feedback: 'WERDYKT' };
 
 let vpCtx = null;
@@ -13013,6 +13029,27 @@ function vpDrawBall(ctx, x, y, r) {
   ctx.restore();
 }
 
+function vpDrawArrow(ctx, x1, y1, x2, y2, color, width) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const head = Math.max(8, width * 4);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - Math.cos(angle - Math.PI / 6) * head, y2 - Math.sin(angle - Math.PI / 6) * head);
+  ctx.lineTo(x2 - Math.cos(angle + Math.PI / 6) * head, y2 - Math.sin(angle + Math.PI / 6) * head);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 function vpDrawPlayer(ctx, x, y, color, label, pose = 'run') {
   const s = Math.max(13, ctx.canvas.height * 0.045);
   ctx.save();
@@ -13058,7 +13095,7 @@ function vpEvidenceText(scenario) {
   const s = scenario?.scene || {};
   switch (scenario?.type) {
     case 'offside':
-      return s.attackerX > s.defenderX ? 'napastnik za linią ostatniego obrońcy' : 'napastnik przed linią obrony';
+      return s.attackerX > s.defenderX ? 'A po prawej stronie linii: spalony' : 'A po lewej stronie linii: gra';
     case 'foul':
       return s.foul ? 'kontakt z nogą, brak gry w piłkę' : 'najpierw piłka, kontakt czysty';
     case 'handball':
@@ -13194,19 +13231,70 @@ function vpDrawScenarioScene(ctx, box, scenario, phase, progress) {
   const tone = feedback ? (good ? 'good' : 'bad') : 'neutral';
 
   if (scenario.type === 'offside') {
+    const isOffside = s.attackerX > s.defenderX;
     const defenderX = fx(s.defenderX);
     const ay = fy(30 + (s.attackerY || 52) * 0.58);
-    const attackerX = vpLerp(fx(Math.max(8, s.attackerX - 20)), fx(s.attackerX), p);
-    const ballX = vpLerp(fx(15), fx(36), p);
+    const finalAttackerX = fx(s.attackerX);
+    const attackerX = vpLerp(fx(Math.max(8, s.attackerX - 10)), finalAttackerX, p);
+    const passStartX = fx(17);
+    const passStartY = fy(70);
+    const passEndX = finalAttackerX - box.w * 0.035;
+    const passEndY = ay + box.h * 0.02;
+    const ballX = vpLerp(passStartX, passEndX, p);
+    const ballY = vpLerp(passStartY, passEndY, p);
+    const labelY = box.y + box.h * 0.23;
+
+    if (reveal) {
+      const safeW = Math.max(0, defenderX - box.x);
+      const offsideW = Math.max(0, box.x + box.w - defenderX);
+      const drawZoneLabel = (text, cx, color, maxW) => {
+        const w = Math.max(46, Math.min(maxW - 12, box.w * 0.18));
+        const h = Math.max(22, box.h * 0.085);
+        ctx.fillStyle = 'rgba(2,6,23,.72)';
+        vpRoundRect(ctx, cx - w / 2, labelY - h / 2, w, h, 7);
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        vpFitText(ctx, text, cx, labelY, w - 10, h * 0.42, 900);
+      };
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(22,101,52,.28)';
+      ctx.fillRect(box.x, box.y, safeW, box.h);
+      ctx.fillStyle = 'rgba(153,27,27,.3)';
+      ctx.fillRect(defenderX, box.y, offsideW, box.h);
+      drawZoneLabel('GRA', box.x + safeW / 2, '#22c55e', safeW);
+      drawZoneLabel('SPALONY', defenderX + offsideW / 2, '#ef4444', offsideW);
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.88;
+    vpDrawArrow(ctx, fx(7), fy(88), fx(29), fy(88), '#e0f2fe', Math.max(2, box.h * 0.01));
+    ctx.fillStyle = '#e0f2fe';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    vpFitText(ctx, 'ATAK W PRAWO', fx(18), fy(84), box.w * 0.24, box.h * 0.05, 900);
+    ctx.restore();
+
+    ctx.save();
+    ctx.setLineDash([6, 7]);
+    ctx.globalAlpha = 0.72;
+    vpDrawArrow(ctx, passStartX, passStartY, passEndX, passEndY, '#f8fafc', Math.max(2, box.h * 0.008));
+    ctx.restore();
+
     vpDrawPlayer(ctx, defenderX, ay + box.h * 0.08, '#2563eb', 'D');
     vpDrawPlayer(ctx, attackerX, ay, '#dc2626', 'A');
     vpDrawPlayer(ctx, fx(93), fy(55), '#f59e0b', 'G', 'appeal');
-    vpDrawBall(ctx, ballX, fy(64), Math.max(7, box.h * 0.035));
+    vpDrawBall(ctx, ballX, ballY, Math.max(7, box.h * 0.035));
+
     if (reveal) {
       ctx.save();
-      ctx.strokeStyle = phase === 'feedback'
-        ? (s.attackerX > s.defenderX ? '#ef4444' : '#22c55e')
-        : '#ffd84d';
+      ctx.strokeStyle = '#ffd84d';
       ctx.lineWidth = Math.max(3, box.h * 0.012);
       ctx.setLineDash([box.h * 0.045, box.h * 0.025]);
       ctx.beginPath();
@@ -13214,9 +13302,17 @@ function vpDrawScenarioScene(ctx, box, scenario, phase, progress) {
       ctx.lineTo(defenderX, box.y + box.h);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(2,6,23,.76)';
-    ctx.textAlign = 'center';
-    vpFitText(ctx, 'linia obrońcy', defenderX, box.y + box.h * 0.11, box.w * 0.22, box.h * 0.045, 800);
+      ctx.fillStyle = 'rgba(2,6,23,.78)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      vpFitText(ctx, 'linia D', defenderX, box.y + box.h * 0.12, box.w * 0.16, box.h * 0.05, 900);
+      ctx.strokeStyle = phase === 'feedback'
+        ? (isOffside ? '#ef4444' : '#22c55e')
+        : '#ffd84d';
+      ctx.lineWidth = Math.max(3, box.h * 0.014);
+      ctx.beginPath();
+      ctx.arc(finalAttackerX, ay - box.h * 0.03, Math.max(20, box.h * 0.12), 0, Math.PI * 2);
+      ctx.stroke();
       ctx.restore();
       if (phase === 'feedback') vpDrawEvidenceTag(ctx, box, vpEvidenceText(scenario), tone);
     }
@@ -13549,7 +13645,7 @@ function vpBeginDecision() {
   vpSetVerdictButtons(scenario, true);
   vpUpdateTimerBar(1);
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = 'Stop-klatka: spalony czy gra?';
+  if (status) status.textContent = 'Stop-klatka: atak idzie w prawo. A po prawej stronie żółtej linii = SPALONY.';
   vpDrawScenario(scenario, now);
 }
 

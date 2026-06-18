@@ -30,11 +30,7 @@ const PRIZES = [100, 50, 25];
 // Scenario verdict labels (Polish). Correct answer index (0/1) is stored server-side.
 const VERDICTS = {
   offside: ["SPALONY", "GRA"],
-  foul: ["FAUL", "GRA"],
-  handball: ["RĘKA", "CZYSTO"],
-  goalline: ["GOL", "NIE GOL"],
 };
-const SCENARIO_TYPES = ["offside"];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -71,37 +67,24 @@ function randChance(percent) {
 
 // Decision window shrinks as the run progresses — must mirror the client display curve.
 function varWindow(index) {
-  return Math.max(1500, 3600 - index * 14);
+  return Math.max(1800, 4200 - index * 12);
 }
 
 // Build one scenario. The scene encodes the correct verdict (the player reads it);
 // `correct` is the authoritative answer index validated on submit.
 function makeScenario(index, difficulty) {
-  const type = SCENARIO_TYPES[randInt(0, SCENARIO_TYPES.length - 1)];
-  let scene;
-  let correct;
-  if (type === "offside") {
-    const gap = Math.max(8, 24 - Math.round(difficulty));
-    const attackerX = randInt(12, 88);
-    const offside = randChance(50);
-    let defenderX = offside ? attackerX - gap : attackerX + gap;
-    defenderX = Math.max(5, Math.min(95, defenderX));
-    scene = { attackerX, defenderX, attackerY: randInt(28, 72) };
-    correct = attackerX > defenderX ? 0 : 1; // beyond last defender = SPALONY
-  } else if (type === "foul") {
-    const foul = randChance(50);
-    scene = { foul, x: randInt(28, 72), y: randInt(34, 66), angle: randInt(-40, 40) };
-    correct = foul ? 0 : 1;
-  } else if (type === "handball") {
-    const handball = randChance(50);
-    scene = { handball, x: randInt(28, 72), y: randInt(30, 60), side: randInt(0, 1) };
-    correct = handball ? 0 : 1;
-  } else {
-    const goal = randChance(50);
-    const margin = Math.max(2, 10 - Math.round(difficulty / 2));
-    scene = { goal, ballX: goal ? -margin : margin };
-    correct = goal ? 0 : 1;
-  }
+  const type = "offside";
+  const gap = Math.max(12, 28 - Math.round(difficulty));
+  const offside = randChance(50);
+  const defenderX = offside ? randInt(32, 60) : randInt(40, 68);
+  const attackerX = offside ? defenderX + gap : defenderX - gap;
+  const scene = {
+    attackerX,
+    defenderX,
+    attackerY: randInt(44, 58),
+    attackDirection: "right",
+  };
+  const correct = attackerX > defenderX ? 0 : 1; // beyond last defender = SPALONY
   return {
     index,
     type,
@@ -115,7 +98,7 @@ function makeScenario(index, difficulty) {
 function buildSchedule() {
   const schedule = [];
   for (let i = 0; i < VAR_MAX_SCENARIOS; i++) {
-    schedule.push(makeScenario(i, i * 0.12));
+    schedule.push(makeScenario(i, i * 0.08));
   }
   return schedule;
 }
