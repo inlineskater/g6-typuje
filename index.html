@@ -13658,8 +13658,20 @@ function stopVarPatrolRound() {
   if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Start rundy'; }
 }
 
+// Plain-language reason for the offside verdict, derived purely from the scene
+// geometry (attack goes right, so A beyond the last defender D = offside).
+function vpReasonText(scenario) {
+  const s = scenario?.scene || {};
+  if (scenario?.type === 'offside') {
+    return s.attackerX > s.defenderX
+      ? 'napastnik (A) wyprzedził ostatniego obrońcę (D) w chwili podania'
+      : 'napastnik (A) był równo lub za ostatnim obrońcą (D) przy podaniu';
+  }
+  return vpEvidenceText(scenario);
+}
+
 function vpFeedbackMessage(scenario, answer, correctIdx) {
-  return 'Werdykt: ' + scenario.verdicts[correctIdx];
+  return scenario.verdicts[correctIdx] + ' — ' + vpReasonText(scenario);
 }
 
 function vpMarkVerdictButtons(answer, correctIdx, isCorrect) {
@@ -13708,8 +13720,8 @@ function vpApplyVerdict(scenario, answer, isCorrect) {
   vpUpdateStats();
   const status = document.getElementById('vp-status');
   if (status) {
-    status.textContent = (isCorrect ? 'Dobra decyzja: ' : 'Prawidłowo było: ')
-      + scenario.verdicts[correctIdx] + ' · ' + vpEvidenceText(scenario) + '.';
+    status.textContent = (isCorrect ? 'Dobra decyzja! Werdykt: ' : 'Błąd. Prawidłowo: ')
+      + scenario.verdicts[correctIdx] + ' — bo ' + vpReasonText(scenario) + '.';
   }
   vpDrawScenario(scenario);
 }
