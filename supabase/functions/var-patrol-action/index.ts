@@ -2,7 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
-// VAR Patrol — football-officiating judgement/reaction seasonal game.
+// VAR Patrol — offside-only football-officiating judgement/reaction seasonal game.
 // Mirrors whack-boss-action: the server issues a round schedule of scenarios and
 // validates submitted answer timing + correctness on submit. Anti-cheat is the
 // reaction-time floor + per-scenario decision window + score cap (the displayed
@@ -34,7 +34,7 @@ const VERDICTS = {
   handball: ["RĘKA", "CZYSTO"],
   goalline: ["GOL", "NIE GOL"],
 };
-const SCENARIO_TYPES = ["offside", "foul", "handball", "goalline"];
+const SCENARIO_TYPES = ["offside"];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -71,7 +71,7 @@ function randChance(percent) {
 
 // Decision window shrinks as the run progresses — must mirror the client display curve.
 function varWindow(index) {
-  return Math.max(700, 2200 - index * 18);
+  return Math.max(1500, 3600 - index * 14);
 }
 
 // Build one scenario. The scene encodes the correct verdict (the player reads it);
@@ -81,7 +81,7 @@ function makeScenario(index, difficulty) {
   let scene;
   let correct;
   if (type === "offside") {
-    const gap = Math.max(3, 16 - Math.round(difficulty));
+    const gap = Math.max(8, 24 - Math.round(difficulty));
     const attackerX = randInt(12, 88);
     const offside = randChance(50);
     let defenderX = offside ? attackerX - gap : attackerX + gap;
@@ -115,7 +115,7 @@ function makeScenario(index, difficulty) {
 function buildSchedule() {
   const schedule = [];
   for (let i = 0; i < VAR_MAX_SCENARIOS; i++) {
-    schedule.push(makeScenario(i, i * 0.18));
+    schedule.push(makeScenario(i, i * 0.12));
   }
   return schedule;
 }

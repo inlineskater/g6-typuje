@@ -4382,7 +4382,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">VAR Patrol 📺</h2>
-                <p class="page-sub">Jesteś w pokoju VAR. Obejrzyj krótką powtórkę, poczekaj na stop-klatkę i wydaj werdykt: <strong>spalony, faul, ręka, gol</strong>. Tempo rośnie z każdą decyzją. Masz <strong>3 życia</strong>: trzy błędne lub spóźnione decyzje i koniec.</p>
+                <p class="page-sub">Jesteś w pokoju VAR. Obejrzyj spokojniejszą powtórkę, poczekaj na stop-klatkę i zdecyduj tylko jedno: <strong>spalony czy gra</strong>. Masz <strong>3 życia</strong>: trzy błędne lub spóźnione decyzje i koniec.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 100 🪙</span>
@@ -4394,11 +4394,10 @@
             <div class="bj-rules">
               <div class="bj-rules-title">Jak grać</div>
               <ul>
-                <li>Każda akcja ma krótką powtórkę i stop-klatkę. <strong>Timer rusza dopiero przy decyzji</strong>.</li>
-                <li><strong>Spalony?</strong> SPALONY / GRA · <strong>Faul?</strong> FAUL / GRA · <strong>Ręka?</strong> RĘKA / CZYSTO · <strong>Gol?</strong> GOL / NIE GOL.</li>
-                <li>Dobra decyzja = <strong>+1 pkt</strong> i seria rośnie. Po werdykcie zobaczysz zaznaczony dowód.</li>
-                <li><strong>3 życia</strong> — błędny werdykt albo spóźniona decyzja kosztuje jedno. Po trzecim błędzie runda się kończy.</li>
-                <li>Liczy się <strong>liczba trafnych decyzji</strong> (remis rozstrzyga celność). Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
+                <li>Patrz na czerwonego napastnika <strong>A</strong> i żółtą linię ostatniego obrońcy.</li>
+                <li>Jeśli <strong>A jest za linią</strong> — kliknij <strong>SPALONY</strong>. Jeśli jest przed linią — kliknij <strong>GRA</strong>.</li>
+                <li>Timer rusza dopiero na stop-klatce. Dobra decyzja = <strong>+1 pkt</strong>.</li>
+                <li>Masz <strong>3 życia</strong>. Trzy pomyłki albo spóźnienia kończą rundę.</li>
               </ul>
             </div>
 
@@ -4533,7 +4532,7 @@
           <div class="ag-card-banner">📺</div>
           <div class="ag-card-body">
             <div class="ag-card-name">VAR Patrol</div>
-            <div class="ag-card-desc">Pokój VAR: oceniaj błyskawicznie spalony, faul, rękę i gol zanim skończy się czas. 3 błędy i koniec — liczy się liczba trafnych decyzji.</div>
+            <div class="ag-card-desc">Pokój VAR: spokojniejsza gra tylko o spalonym. Oglądaj stop-klatkę, wybierz SPALONY albo GRA. 3 błędy i koniec.</div>
             <div class="ag-card-meta">
               <span class="ag-card-cost">1 🪙 / runda</span>
               <span class="ag-card-tag">REFLEKS</span>
@@ -12871,15 +12870,13 @@ if (wbArena) {
   });
 }
 
-// ── VAR Patrol (football-officiating judgement; canvas + verdict buttons) ───
-// Reaction game on the Whack-a-Boss model: the server issues a scenario schedule
-// and validates answer timing/correctness on submit. The displayed scene encodes
-// the correct verdict (the player reads it); the local stats below are cosmetic —
-// the server is authoritative for the stored score.
+// ── VAR Patrol (offside judgement; canvas + verdict buttons) ───
+// The server issues an offside-only scenario schedule and validates answer
+// timing/correctness on submit. Local stats are cosmetic; the server score wins.
 const VP_REACTION_FLOOR_MS = 120; // mirror VAR_REACTION_FLOOR_MS in var-patrol-action
 const VP_REACTION_TOL_MS = 220;   // mirror VAR_REACTION_TOL_MS in var-patrol-action
-const VP_CLIP_MS = 760;
-const VP_FEEDBACK_MS = 880;
+const VP_CLIP_MS = 1150;
+const VP_FEEDBACK_MS = 1100;
 
 function newVarPatrolRuntime() {
   return {
@@ -13207,7 +13204,9 @@ function vpDrawScenarioScene(ctx, box, scenario, phase, progress) {
     vpDrawBall(ctx, ballX, fy(64), Math.max(7, box.h * 0.035));
     if (reveal) {
       ctx.save();
-      ctx.strokeStyle = s.attackerX > s.defenderX ? '#ef4444' : '#22c55e';
+      ctx.strokeStyle = phase === 'feedback'
+        ? (s.attackerX > s.defenderX ? '#ef4444' : '#22c55e')
+        : '#ffd84d';
       ctx.lineWidth = Math.max(3, box.h * 0.012);
       ctx.setLineDash([box.h * 0.045, box.h * 0.025]);
       ctx.beginPath();
@@ -13550,7 +13549,7 @@ function vpBeginDecision() {
   vpSetVerdictButtons(scenario, true);
   vpUpdateTimerBar(1);
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = 'Stop-klatka: wybierz werdykt.';
+  if (status) status.textContent = 'Stop-klatka: spalony czy gra?';
   vpDrawScenario(scenario, now);
 }
 
@@ -13571,7 +13570,7 @@ function vpShowScenario(i) {
   vpSetVerdictButtons(scenario, false);
   vpUpdateTimerBar(1);
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = 'Analiza powtórki...';
+  if (status) status.textContent = 'Analiza linii spalonego...';
   vpDrawScenario(scenario, now);
 }
 
@@ -13641,7 +13640,7 @@ function beginVarPatrolRound(round) {
   rt.schedule = Array.isArray(round.schedule) ? round.schedule : [];
   vpUpdateStats();
   const status = document.getElementById('vp-status');
-  if (status) status.textContent = 'Analiza powtórki — masz ' + rt.lives + ' życia.';
+  if (status) status.textContent = 'Analiza spalonego — masz ' + rt.lives + ' życia.';
   const startBtn = document.getElementById('vp-start-btn');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Runda trwa'; }
   rt.timer = setInterval(vpTick, 33);
