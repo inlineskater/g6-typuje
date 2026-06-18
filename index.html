@@ -1596,6 +1596,8 @@
     /* ── Slots (Jednoręki Bandyta) ── */
     .slots-machine { text-align: center; }
     .slots-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+    .slots-note { font-size: 11px; line-height: 1.5; color: var(--muted); max-width: 300px; margin: 8px auto 0; text-align: center; }
+    .slots-note b { color: var(--text); }
     .slots-stake { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
     .slots-stake-label { font-size: 13px; font-weight: 700; color: var(--muted); }
     .slots-chips { display: flex; gap: 6px; }
@@ -3890,6 +3892,7 @@
           <span>☕ ☕ ☕</span><span>×2</span><span></span>
           <span>_ G6 G6 (2 na linii)</span><span>×6</span><span></span>
         </div>
+        <p class="slots-note">×N = <b>całkowity zwrot</b> względem stawki (stawka jest w nim wliczona). Przy stawce 10: ×2 → dostajesz 20 (zysk +10), ×11 → dostajesz 110 (zysk +100).</p>
 
         <h3 class="section-title" style="margin-top:14px">Linie wygrywające (5 linii)</h3>
         <div class="slots-paylines">
@@ -3899,6 +3902,7 @@
           <div class="slots-payline"><span class="pl-label">Linia 4</span><div class="pl-grid"><span class="pl-dot on"></span><span class="pl-dot"></span><span class="pl-dot"></span><span class="pl-dot"></span><span class="pl-dot on"></span><span class="pl-dot"></span><span class="pl-dot"></span><span class="pl-dot"></span><span class="pl-dot on"></span></div><span class="pl-desc">Przekątna ↘</span></div>
           <div class="slots-payline"><span class="pl-label">Linia 5</span><div class="pl-grid"><span class="pl-dot"></span><span class="pl-dot"></span><span class="pl-dot on"></span><span class="pl-dot"></span><span class="pl-dot on"></span><span class="pl-dot"></span><span class="pl-dot on"></span><span class="pl-dot"></span><span class="pl-dot"></span></div><span class="pl-desc">Przekątna ↗</span></div>
         </div>
+        <p class="slots-note">Wygrywają tylko <b>3 jednakowe symbole w jednej linii</b> (poziomo lub po skosie). Pionowe kolumny i rozrzucone symbole — choćby cała plansza była w kawie — <b>nie liczą się</b>.</p>
 
         <h3 class="section-title">Ostatnie wyniki</h3>
         <div id="slots-history" class="slots-history"></div>
@@ -10611,7 +10615,7 @@ document.getElementById('slots-spin-btn').addEventListener('click', async () => 
       if (net > 0) {
         const msg = SLOTS_WIN_MSGS[Math.floor(Math.random() * SLOTS_WIN_MSGS.length)];
         resultEl.className = 'slots-result win';
-        resultEl.textContent = `+${net} coinów! ${msg}${effectText}`;
+        resultEl.textContent = `+${net} coinów (zwrot ${data.totalWon})! ${msg}${effectText}`;
         slotsWinAnimation(data.totalWon);
       } else {
         const msg = SLOTS_LOSE_MSGS[Math.floor(Math.random() * SLOTS_LOSE_MSGS.length)];
