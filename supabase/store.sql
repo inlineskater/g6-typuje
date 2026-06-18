@@ -24,6 +24,19 @@ CREATE TABLE IF NOT EXISTS public.store_purchases (
   UNIQUE (item_id, buyer_id)
 );
 
+-- Self-heal older deployments whose store_purchases predates price_paid:
+-- CREATE TABLE IF NOT EXISTS above is a no-op when the table already exists,
+-- so backfill the column out-of-band and re-enforce its constraint.
+ALTER TABLE public.store_purchases ADD COLUMN IF NOT EXISTS price_paid integer;
+UPDATE public.store_purchases sp
+   SET price_paid = COALESCE(si.price, 1)
+  FROM public.store_items si
+ WHERE sp.item_id = si.id AND sp.price_paid IS NULL;
+UPDATE public.store_purchases SET price_paid = 1 WHERE price_paid IS NULL;
+ALTER TABLE public.store_purchases ALTER COLUMN price_paid SET NOT NULL;
+ALTER TABLE public.store_purchases DROP CONSTRAINT IF EXISTS store_purchases_price_paid_check;
+ALTER TABLE public.store_purchases ADD CONSTRAINT store_purchases_price_paid_check CHECK (price_paid > 0);
+
 CREATE INDEX IF NOT EXISTS store_items_active_created_idx
   ON public.store_items(is_active, created_at DESC);
 
