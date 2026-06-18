@@ -1,6 +1,6 @@
 -- Season-gate the weekly award cron jobs.
 --
--- Problem: all four award_*_week() pg_cron jobs fire every Monday, regardless
+-- Problem: all seasonal award_*_week() pg_cron jobs fire every Monday, regardless
 -- of which game was actually in season that week. The Edge Functions accept
 -- rounds for any game in any week, so a few off-season rounds (e.g. someone
 -- opening Whack-a-Boss during a Bug Jumper week) would trigger a full
@@ -25,10 +25,10 @@ AS $$
     -- SEASONAL_OVERRIDES
     WHEN '2026-06-08' THEN 'bug_jumper'  -- Bug Jumper: Hard Course
     WHEN '2026-06-15' THEN 'snake'
-    WHEN '2026-06-22' THEN 'invoice_horde'  -- Najazd Faktur debut
+    WHEN '2026-06-22' THEN 'var_patrol'  -- VAR Patrol debut
     -- SEASONAL_ROTATION from SEASONAL_ANCHOR_WEEK_START (2026-05-18, a Monday)
-    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde'])[
-      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 5) + 1
+    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol'])[
+      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 6) + 1
     ]
   END;
 $$;
@@ -71,5 +71,13 @@ SELECT cron.schedule(
   '5 0 * * 1',
   $$SELECT CASE WHEN public.seasonal_game_for_week(public.invoice_horde_week_start(now() - interval '7 days')) = 'invoice_horde'
       THEN public.award_invoice_horde_week(public.invoice_horde_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+SELECT cron.schedule(
+  'var_patrol_weekly_awards',
+  '5 0 * * 1',
+  $$SELECT CASE WHEN public.seasonal_game_for_week(public.var_patrol_week_start(now() - interval '7 days')) = 'var_patrol'
+      THEN public.award_var_patrol_week(public.var_patrol_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );

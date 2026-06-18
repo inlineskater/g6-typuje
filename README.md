@@ -23,8 +23,8 @@ Fresh database setup:
 1. Create a Supabase project.
 2. In SQL Editor, run `supabase/schema.sql`.
 3. In SQL Editor, run `supabase/poker.sql`.
-4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), and `supabase/snake.sql` (Snake). Run `supabase/coin-inflow-stats.sql` after the economy/game SQL files to enable the gross coin inflow card on the Statistics page.
-5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, and `supabase/functions/snake-action`.
+4. In SQL Editor, run the optional game/shop/garden/hero SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, and `supabase/hero-items.sql` for equipable hero items. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), `supabase/snake.sql` (Snake), `supabase/invoice-horde.sql` („Najazd Ticketów"), and `supabase/var-patrol.sql` (VAR Patrol). Run `supabase/coin-inflow-stats.sql` after the economy/game SQL files to enable the gross coin inflow card on the Statistics page.
+5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, `supabase/functions/snake-action`, `supabase/functions/invoice-horde-action`, and `supabase/functions/var-patrol-action`.
 6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
 7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
 
@@ -41,11 +41,12 @@ Existing project Whack-a-Boss rollout:
 2. Deploy `supabase/functions/whack-boss-action` with Supabase CLI or from the Supabase dashboard.
 3. Confirm the `pg_cron` schedule exists if weekly prizes should pay automatically after the week closes.
 
-Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni", Snake):
+Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni", Snake, „Najazd Ticketów", VAR Patrol):
 
-1. Paste and run `supabase/bug-jumper.sql`, `supabase/flappy-pants.sql`, and `supabase/snake.sql` in Supabase SQL Editor.
-2. Deploy `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, and `supabase/functions/snake-action` with Supabase CLI or from the Supabase dashboard.
-3. Confirm each game's `pg_cron` weekly-award job exists (`bug_jumper_weekly_awards`, `flappy_pants_weekly_awards`, `snake_weekly_awards`) so the weekly top 3 are paid automatically.
+1. Paste and run `supabase/bug-jumper.sql`, `supabase/flappy-pants.sql`, `supabase/snake.sql`, `supabase/invoice-horde.sql`, and `supabase/var-patrol.sql` in Supabase SQL Editor.
+2. Re-run `supabase/hero-items.sql`, `supabase/season-award-gating.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql` after adding a seasonal game.
+3. Deploy `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, `supabase/functions/snake-action`, `supabase/functions/invoice-horde-action`, and `supabase/functions/var-patrol-action` with Supabase CLI or from the Supabase dashboard.
+4. Confirm each game's `pg_cron` weekly-award job exists (`bug_jumper_weekly_awards`, `flappy_pants_weekly_awards`, `snake_weekly_awards`, `invoice_horde_weekly_awards`, `var_patrol_weekly_awards`) so the weekly top 3 are paid automatically.
 
 Existing project Bug Jumper hard-course rollout:
 
@@ -62,7 +63,7 @@ Existing project Bug Jumper hard-course rollout:
 - Resolution: market creator or an `is_admin` profile can resolve a market.
 - Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
 - Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
-- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, and Snake). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`. Each pays the weekly top 3 100/50/25 coins.
+- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, Snake, „Najazd Ticketów", and VAR Patrol). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`; VAR Patrol debuts in the week starting June 22, 2026. Each pays the weekly top 3 100/50/25 coins.
 - Leaderboard: cash plus open position value.
 
 ## Security Note

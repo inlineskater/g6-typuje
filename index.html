@@ -4346,6 +4346,96 @@
           </aside>
         </div>
       </div>
+
+      <!-- VAR Patrol panel (football-officiating judgement season; gameType var_patrol) -->
+      <div id="seasonal-game-var-patrol" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">VAR Patrol 📺</h2>
+                <p class="page-sub">Jesteś w pokoju VAR. Błyskawicznie oceniaj sytuacje — <strong>spalony, faul, ręka, gol</strong> — zanim skończy się czas na decyzję. Tempo rośnie z każdą decyzją. Masz <strong>3 życia</strong>: trzy błędne (lub spóźnione) decyzje i koniec.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 100 🪙</span>
+                <span class="bj-prize">🥈 50 🪙</span>
+                <span class="bj-prize">🥉 25 🪙</span>
+              </div>
+            </div>
+
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać</div>
+              <ul>
+                <li>Po starcie pojawiają się powtórki VAR jedna po drugiej. <strong>Kliknij właściwy werdykt</strong> z dwóch przycisków zanim pasek czasu się wyczerpie.</li>
+                <li><strong>Spalony?</strong> SPALONY / GRA · <strong>Faul?</strong> FAUL / GRA · <strong>Ręka?</strong> RĘKA / CZYSTO · <strong>Gol?</strong> GOL / NIE GOL.</li>
+                <li>Dobra decyzja = <strong>+1 pkt</strong> i seria rośnie. Okno decyzji <strong>kurczy się</strong> z każdą powtórką.</li>
+                <li><strong>3 życia</strong> — błędny werdykt albo spóźniona decyzja kosztuje jedno. Po trzecim błędzie runda się kończy.</li>
+                <li>Liczy się <strong>liczba trafnych decyzji</strong> (remis rozstrzyga celność). Nagrody: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
+              </ul>
+            </div>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Decyzje OK</div>
+                <div class="bj-stat-value" id="vp-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Seria</div>
+                <div class="bj-stat-value" id="vp-streak">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Życia</div>
+                <div class="bj-stat-value" id="vp-lives">📺📺📺</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Celność</div>
+                <div class="bj-stat-value" id="vp-accuracy">0%</div>
+              </div>
+            </div>
+
+            <div class="sn-arena vp-arena" id="vp-arena" style="position:relative">
+              <canvas id="vp-canvas"></canvas>
+              <div id="vp-timer-track" style="position:absolute;left:0;right:0;bottom:0;height:8px;background:rgba(0,0,0,.25)">
+                <div id="vp-timer-bar" style="height:100%;width:100%;background:var(--accent);transition:width .08s linear"></div>
+              </div>
+            </div>
+
+            <div class="vp-verdicts" id="vp-verdicts" style="display:flex;gap:10px;margin-top:10px">
+              <button class="btn-primary vp-verdict" id="vp-verdict-0" data-answer="0" style="flex:1" disabled>—</button>
+              <button class="btn-primary vp-verdict" id="vp-verdict-1" data-answer="1" style="flex:1" disabled>—</button>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="vp-start-btn">Start rundy</button>
+              <div class="bj-status" id="vp-status">Oceń każdą powtórkę zanim skończy się czas. Wyniki zapisują się po rundzie.</div>
+            </div>
+          </section>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="vp-week-label"></span>
+              </div>
+              <div id="vp-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="vp-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
+              </div>
+              <div class="bj-awards" id="vp-awards"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -4408,6 +4498,17 @@
             <div class="ag-card-meta">
               <span class="ag-card-cost">1 🪙 / runda</span>
               <span class="ag-card-tag">SURVIVAL</span>
+            </div>
+          </div>
+        </button>
+        <button class="ag-card" data-game="var_patrol">
+          <div class="ag-card-banner">📺</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">VAR Patrol</div>
+            <div class="ag-card-desc">Pokój VAR: oceniaj błyskawicznie spalony, faul, rękę i gol zanim skończy się czas. 3 błędy i koniec — liczy się liczba trafnych decyzji.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">REFLEKS</span>
             </div>
           </div>
         </button>
@@ -4890,6 +4991,7 @@ let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
 let snakeRuntime = null;
 let invoiceHordeRuntime = null;
+let varPatrolRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 const lwCharts = new Map();
@@ -4908,7 +5010,7 @@ const HERO_ITEM_SLOTS = [
   { id: 'weapon', label: 'Broń' },
 ];
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
-const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake']);
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol']);
 let heroItemDefs = [];
 let myHeroInventory = [];
 let publicHeroEquipment = [];
@@ -5541,6 +5643,7 @@ const AG_PANEL_IDS = {
   flappy_pants:  'seasonal-game-flappy-pants',
   snake:         'seasonal-game-snake',
   invoice_horde: 'seasonal-game-invoice-horde',
+  var_patrol:    'seasonal-game-var-patrol',
 };
 let agPanelHome = {};
 
@@ -5561,7 +5664,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
   allGamesSelectedGame = null;
@@ -5570,7 +5673,7 @@ function leaveAllGamesTab() {
 function selectAllGame(gameType) {
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound();
 
   allGamesSelectedGame = gameType;
   allGamesMode = true;
@@ -5585,6 +5688,12 @@ function selectAllGame(gameType) {
   hide(document.getElementById('ag-picker'));
   show(slot);
   hide(document.getElementById('ag-scores-panel'));
+  if (gameType === 'var_patrol') {
+    vpUpdateStats();
+    vpSetVerdictButtons(null, false);
+    vpUpdateTimerBar(1);
+    requestAnimationFrame(() => vpDrawIdle());
+  }
   loadArcadeScores(gameType);
 }
 
@@ -5648,7 +5757,7 @@ document.querySelectorAll('.ag-card').forEach(btn => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -5660,7 +5769,7 @@ function switchTab(tab) {
   if (tab === 'bug-jumper-test' && !isAdmin()) tab = 'markets';
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -6509,7 +6618,7 @@ const ACT_GAME_LABELS = {
   roulette: '🎡 Ruletka', slots: '🎰 Sloty', poker: '🃏 Poker',
   whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
-  invoice_horde: '🎫 Najazd Ticketów', arcade: '🕹️ Arkada',
+  invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol', arcade: '🕹️ Arkada',
 };
 const ACT_COIN_REASONS = {
   garden_water:               '💧 podlał roślinę',
@@ -6554,7 +6663,7 @@ async function buildActivityFeed() {
   const scoreSel = 'user_id,nick_snapshot,score,submitted_at';
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
-    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, arcadeRes,
+    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, arcadeRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -6566,6 +6675,7 @@ async function buildActivityFeed() {
     ranged(sb.from('flappy_pants_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('bug_jumper_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('invoice_horde_scores').select(scoreSel), 'submitted_at'),
+    ranged(sb.from('var_patrol_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
   ]);
 
@@ -6619,6 +6729,7 @@ async function buildActivityFeed() {
   pushScores(flappyRes.data, 'flappy_pants');
   pushScores(bugRes.data, 'bug_jumper');
   pushScores(invoiceRes.data, 'invoice_horde');
+  pushScores(varPatrolRes.data, 'var_patrol');
   (arcadeRes.data || []).forEach(s => {
     entries.push({ nick: nickOf(s), ts: s.created_at, cat: 'game',
       desc: (ACT_GAME_LABELS[s.game_type] || '🕹️ ' + s.game_type) + ' — wynik ' + s.score });
@@ -6903,6 +7014,13 @@ function setupRealtime() {
       if (activeTab === 'whack-boss') loadInvoiceHordeState(false);
       await refreshMeCoins();
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_scores' }, () => {
+      if (activeTab === 'whack-boss') loadVarPatrolState(false);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') loadVarPatrolState(false);
+      await refreshMeCoins();
+    })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'football_matches' }, () => {
       if (activeTab === 'football') loadFootball(false);
     })
@@ -7116,6 +7234,7 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'flappy_pants_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bug_jumper_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, scheduleActivityRebuild)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
     .subscribe();
@@ -7382,12 +7501,13 @@ async function loadSeasonHistory() {
       .order('submitted_at', { ascending: true })
       .limit(20);
 
-    const [wbRes, bjRes, fpRes, snRes, ihRes, liveRes] = await Promise.all([
+    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_weekly_awards').select('week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('snake_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('invoice_horde_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from('var_patrol_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       liveScoresQuery,
     ]);
 
@@ -7418,6 +7538,7 @@ async function loadSeasonHistory() {
       ...mapSeasonAwardRows(fpRes.data, 'flappy_pants'),
       ...mapSeasonAwardRows(snRes.data, 'snake'),
       ...mapSeasonAwardRows(ihRes.data, 'invoice_horde'),
+      ...mapSeasonAwardRows(vpRes.data, 'var_patrol'),
       ...pendingEntries,
     ];
     if (wrap) {
@@ -10910,11 +11031,12 @@ const SEASONAL_ROTATION = [
   { gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },
   { gameType: 'snake', displayName: 'Snake 🐍' },
   { gameType: 'invoice_horde', displayName: 'Najazd Ticketów 🎫' },
+  { gameType: 'var_patrol', displayName: 'VAR Patrol 📺' },
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
   '2026-06-15': { gameType: 'snake', displayName: 'Snake 🐍' },
-  '2026-06-22': { gameType: 'invoice_horde', displayName: 'Najazd Ticketów 🎫' },
+  '2026-06-22': { gameType: 'var_patrol', displayName: 'VAR Patrol 📺' },
 };
 
 function parseWeekStartDate(weekStartStr) {
@@ -11013,6 +11135,7 @@ function loadSeasonalTab(showSpinner = true) {
   const fpPanel       = document.getElementById('seasonal-game-flappy-pants');
   const snPanel       = document.getElementById('seasonal-game-snake');
   const ihPanel       = document.getElementById('seasonal-game-invoice-horde');
+  const vpPanel       = document.getElementById('seasonal-game-var-patrol');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -11020,27 +11143,32 @@ function loadSeasonalTab(showSpinner = true) {
   const isFP = current.gameType === 'flappy_pants';
   const isSN = current.gameType === 'snake';
   const isIH = current.gameType === 'invoice_horde';
+  const isVP = current.gameType === 'var_patrol';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
   if (snPanel) { if (isSN) show(snPanel); else hide(snPanel); }
   if (ihPanel) { if (isIH) show(ihPanel); else hide(ihPanel); }
+  if (vpPanel) { if (isVP) show(vpPanel); else hide(vpPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
   if (!isFP && flappyPantsRuntime?.playing) stopFlappyPantsRound();
   if (!isSN && snakeRuntime?.playing) stopSnakeRound();
   if (!isIH && invoiceHordeRuntime?.playing) stopInvoiceHordeRound();
+  if (!isVP && varPatrolRuntime?.playing) stopVarPatrolRound();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
   if (snakeRuntime) snakeRuntime.archiveMode = false;
   if (invoiceHordeRuntime) invoiceHordeRuntime.archiveMode = false;
+  if (varPatrolRuntime) varPatrolRuntime.archiveMode = false;
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) loadBugJumperState(showSpinner);
   if (isFP) loadFlappyPantsState(showSpinner);
   if (isSN) loadSnakeState(showSpinner);
   if (isIH) loadInvoiceHordeState(showSpinner);
+  if (isVP) loadVarPatrolState(showSpinner);
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
@@ -12714,6 +12842,471 @@ if (wbArena) {
     updateWhackBossStats(rt.durationMs - atMs);
   });
 }
+
+// ── VAR Patrol (football-officiating judgement; canvas + verdict buttons) ───
+// Reaction game on the Whack-a-Boss model: the server issues a scenario schedule
+// and validates answer timing/correctness on submit. The displayed scene encodes
+// the correct verdict (the player reads it); the local stats below are cosmetic —
+// the server is authoritative for the stored score.
+const VP_REACTION_FLOOR_MS = 120; // mirror VAR_REACTION_FLOOR_MS in var-patrol-action
+const VP_REACTION_TOL_MS = 220;   // mirror VAR_REACTION_TOL_MS in var-patrol-action
+
+function newVarPatrolRuntime() {
+  return {
+    playing: false,
+    submitting: false,
+    archiveMode: false,
+    roundId: null,
+    schedule: [],
+    idx: -1,
+    lives: 3,
+    correct: 0,
+    wrong: 0,
+    streak: 0,
+    maxStreak: 0,
+    scenarioShownAt: 0,
+    deadlineAt: 0,
+    windowMs: 0,
+    answers: [],
+    timer: null,
+    locked: false,
+  };
+}
+
+async function invokeVarPatrol(payload) {
+  const { data, error } = await sb.functions.invoke('var-patrol-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z VAR Patrol.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd VAR Patrol.');
+  return data;
+}
+
+// Correct verdict index (0/1) derived from the scene — must mirror makeScenario()
+// in var-patrol-action. Used only for cosmetic feedback + live stats.
+function vpCorrectAnswer(scenario) {
+  const s = scenario.scene || {};
+  switch (scenario.type) {
+    case 'offside':  return s.attackerX > s.defenderX ? 0 : 1;
+    case 'foul':     return s.foul ? 0 : 1;
+    case 'handball': return s.handball ? 0 : 1;
+    case 'goalline': return s.goal ? 0 : 1;
+    default:         return 0;
+  }
+}
+
+const VP_TITLES = { offside: 'SPALONY?', foul: 'FAUL?', handball: 'RĘKA?', goalline: 'GOL?' };
+
+let vpCtx = null;
+function vpInitCanvas() {
+  const canvas = document.getElementById('vp-canvas');
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round((rect.width || 480) * DPR);
+  const h = Math.round((rect.height || 270) * DPR);
+  if (canvas.width !== w || canvas.height !== h || !vpCtx) {
+    canvas.width = w;
+    canvas.height = h;
+    vpCtx = canvas.getContext('2d');
+  }
+  return vpCtx;
+}
+
+function vpDrawPitch(ctx, w, h) {
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, '#1f8a3b');
+  grad.addColorStop(1, '#14642a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(255,255,255,.25)';
+  ctx.lineWidth = Math.max(1, h * 0.006);
+  for (let i = 1; i < 6; i++) {
+    const x = (w / 6) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+}
+
+function vpDrawIdle() {
+  const ctx = vpInitCanvas();
+  if (!ctx) return;
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  vpDrawPitch(ctx, w, h);
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${Math.round(h * 0.16)}px sans-serif`;
+  ctx.fillText('📺 VAR', w / 2, h * 0.42);
+  ctx.font = `${Math.round(h * 0.07)}px sans-serif`;
+  ctx.fillText('Naciśnij „Start rundy"', w / 2, h * 0.62);
+}
+
+function vpDrawScenario(scenario) {
+  const ctx = vpInitCanvas();
+  if (!ctx || !scenario) return;
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  const s = scenario.scene || {};
+  vpDrawPitch(ctx, w, h);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Question label
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
+  const labelH = h * 0.18;
+  ctx.fillRect(0, 0, w, labelH);
+  ctx.fillStyle = '#fff';
+  ctx.font = `700 ${Math.round(h * 0.1)}px sans-serif`;
+  ctx.fillText(VP_TITLES[scenario.type] || 'VAR', w / 2, labelH / 2);
+
+  const cy = h * 0.58;
+  const emoji = (txt, x, y, size) => {
+    ctx.font = `${Math.round(size)}px sans-serif`;
+    ctx.fillText(txt, x, y);
+  };
+
+  if (scenario.type === 'offside') {
+    // Goal on the right; last-defender line; attacker dot. Beyond line = offside.
+    const lineX = w * (s.defenderX / 100);
+    const ax = w * (s.attackerX / 100);
+    const ay = labelH + (h - labelH) * (s.attackerY / 100);
+    ctx.strokeStyle = '#ffd84d';
+    ctx.lineWidth = Math.max(2, h * 0.012);
+    ctx.setLineDash([h * 0.04, h * 0.03]);
+    ctx.beginPath();
+    ctx.moveTo(lineX, labelH);
+    ctx.lineTo(lineX, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    emoji('🧤', w * 0.96, cy, h * 0.14); // keeper near goal (right)
+    emoji('🏃', ax, ay, h * 0.16);
+    emoji('⚽', w * 0.18, cy, h * 0.1);
+  } else if (scenario.type === 'foul') {
+    const x = w * (s.x / 100);
+    emoji('🏃', x - w * 0.06, cy, h * 0.16);
+    emoji(s.foul ? '🤕' : '⚽', x + w * 0.06, cy, h * 0.16);
+    emoji('🦵', x, cy + h * 0.04, h * 0.12);
+  } else if (scenario.type === 'handball') {
+    const x = w * (s.x / 100);
+    emoji(s.handball ? '🙌' : '🧍', x, cy, h * 0.2);
+    emoji('⚽', x + w * 0.1 * (s.side ? 1 : -1), cy - h * 0.08, h * 0.1);
+  } else { // goalline
+    const goalX = w * 0.82;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = Math.max(2, h * 0.012);
+    ctx.beginPath();
+    ctx.moveTo(goalX, labelH);
+    ctx.lineTo(goalX, h);
+    ctx.stroke();
+    emoji('🥅', w * 0.93, cy, h * 0.18);
+    const ballX = goalX + w * (s.ballX / 100);
+    emoji('⚽', ballX, cy, h * 0.12);
+  }
+}
+
+function vpUpdateStats() {
+  const rt = varPatrolRuntime || newVarPatrolRuntime();
+  const attempts = rt.correct + rt.wrong;
+  const accuracy = attempts ? Math.round((rt.correct / attempts) * 100) : 0;
+  const scoreEl = document.getElementById('vp-score');
+  const streakEl = document.getElementById('vp-streak');
+  const livesEl = document.getElementById('vp-lives');
+  const accEl = document.getElementById('vp-accuracy');
+  if (scoreEl) scoreEl.textContent = String(rt.correct);
+  if (streakEl) streakEl.textContent = String(rt.streak);
+  if (livesEl) livesEl.textContent = rt.lives > 0 ? '📺'.repeat(rt.lives) : '—';
+  if (accEl) accEl.textContent = accuracy + '%';
+}
+
+function vpSetVerdictButtons(scenario, enabled) {
+  for (let i = 0; i < 2; i++) {
+    const btn = document.getElementById('vp-verdict-' + i);
+    if (!btn) continue;
+    btn.textContent = scenario ? scenario.verdicts[i] : '—';
+    btn.disabled = !enabled;
+    btn.style.background = '';
+  }
+}
+
+function vpUpdateTimerBar(ratio) {
+  const bar = document.getElementById('vp-timer-bar');
+  if (!bar) return;
+  bar.style.width = Math.max(0, Math.min(1, ratio)) * 100 + '%';
+  bar.style.background = ratio < 0.3 ? 'var(--danger, #e5484d)' : 'var(--accent)';
+}
+
+async function loadVarPatrolState(showSpinner = true) {
+  const weeklyWrap = document.getElementById('vp-weekly-board');
+  const allTimeWrap = document.getElementById('vp-alltime-board');
+  const awardsWrap = document.getElementById('vp-awards');
+  if (showSpinner && weeklyWrap) {
+    weeklyWrap.replaceChildren(makeSpinner());
+    allTimeWrap.replaceChildren(makeSpinner());
+    awardsWrap.replaceChildren(makeSpinner());
+  }
+  try {
+    const data = await invokeVarPatrol({ action: 'state' });
+    renderVarPatrolState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać gry.';
+    if (weeklyWrap) weeklyWrap.replaceChildren(el('p', { className: 'wb-empty' }, msg));
+    if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'wb-empty' }, 'Brak danych.'));
+    if (awardsWrap) awardsWrap.replaceChildren(el('p', { className: 'wb-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+    const status = document.getElementById('vp-status');
+    if (status) status.textContent = 'VAR Patrol nie jest jeszcze aktywny.';
+  }
+}
+
+function renderVarPatrolState(data) {
+  if (data.profile) {
+    me.coins = data.profile.coins;
+    setText(headerCoins, me.coins);
+  }
+  const weekLabel = document.getElementById('vp-week-label');
+  const weekRange = whackBossWeekRange(data.weekStart);
+  if (weekLabel) weekLabel.textContent = weekRange ? weekRange.short : '';
+
+  renderVarPatrolTable(document.getElementById('vp-weekly-board'), data.weekly || [], 'weekly');
+  renderVarPatrolTable(document.getElementById('vp-alltime-board'), data.allTime || [], 'allTime');
+  renderVarPatrolAwards(document.getElementById('vp-awards'), data.awards || []);
+
+  const status = document.getElementById('vp-status');
+  if (!varPatrolRuntime?.playing) {
+    vpDrawIdle();
+    vpSetVerdictButtons(null, false);
+    vpUpdateTimerBar(1);
+    if (status) {
+      status.textContent = data.myWeekly
+        ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
+        : 'Najlepsze wyniki zapisują się automatycznie po rundzie.';
+    }
+  }
+}
+
+function renderVarPatrolTable(wrap, rows, mode) {
+  if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'wb-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+  const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
+    el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    lbScoreCell(row)
+  ));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwięcej trafnych decyzji w rundzie' }, 'Wynik'))),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderVarPatrolAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'wb-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  const rows = awards.slice(0, 6).map(row => {
+    const range = whackBossWeekRange(row.week_start);
+    const label = range?.short || '';
+    return el('div', { className: 'wb-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  });
+  wrap.replaceChildren(...rows);
+}
+
+function stopVarPatrolRound() {
+  if (varPatrolRuntime?.timer) clearInterval(varPatrolRuntime.timer);
+  varPatrolRuntime = newVarPatrolRuntime();
+  vpSetVerdictButtons(null, false);
+  vpUpdateTimerBar(1);
+  vpUpdateStats();
+  vpDrawIdle();
+  const startBtn = document.getElementById('vp-start-btn');
+  if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Start rundy'; }
+}
+
+function vpShowScenario(i) {
+  const rt = varPatrolRuntime;
+  if (!rt?.playing) return;
+  const scenario = rt.schedule[i];
+  if (!scenario) { finishVarPatrolRound(); return; }
+  rt.idx = i;
+  rt.locked = false;
+  rt.windowMs = scenario.windowMs;
+  rt.scenarioShownAt = performance.now();
+  rt.deadlineAt = rt.scenarioShownAt + scenario.windowMs;
+  vpDrawScenario(scenario);
+  vpSetVerdictButtons(scenario, true);
+  vpUpdateTimerBar(1);
+}
+
+function vpAdvance() {
+  const rt = varPatrolRuntime;
+  if (!rt?.playing) return;
+  if (rt.lives <= 0 || rt.idx + 1 >= rt.schedule.length) {
+    finishVarPatrolRound();
+    return;
+  }
+  vpShowScenario(rt.idx + 1);
+}
+
+function vpAnswer(answer) {
+  const rt = varPatrolRuntime;
+  if (!rt?.playing || rt.locked || rt.idx < 0) return;
+  const scenario = rt.schedule[rt.idx];
+  if (!scenario) return;
+  rt.locked = true;
+  const reactionMs = performance.now() - rt.scenarioShownAt;
+  rt.answers.push({ index: scenario.index, answer, reactionMs: Math.round(reactionMs) });
+  const correctIdx = vpCorrectAnswer(scenario);
+  const isCorrect = answer === correctIdx &&
+    reactionMs >= VP_REACTION_FLOOR_MS &&
+    reactionMs <= scenario.windowMs + VP_REACTION_TOL_MS;
+  if (isCorrect) {
+    rt.correct += 1;
+    rt.streak += 1;
+    rt.maxStreak = Math.max(rt.maxStreak, rt.streak);
+  } else {
+    rt.wrong += 1;
+    rt.streak = 0;
+    rt.lives -= 1;
+  }
+  // brief cosmetic flash on the picked + correct buttons
+  const picked = document.getElementById('vp-verdict-' + answer);
+  if (picked) picked.style.background = isCorrect ? '#2faa52' : '#e5484d';
+  if (!isCorrect) {
+    const right = document.getElementById('vp-verdict-' + correctIdx);
+    if (right) right.style.background = '#2faa52';
+  }
+  vpSetVerdictButtonsDisabled(true);
+  vpUpdateStats();
+  setTimeout(() => { if (varPatrolRuntime === rt && rt.playing) vpAdvance(); }, 150);
+}
+
+function vpSetVerdictButtonsDisabled(disabled) {
+  for (let i = 0; i < 2; i++) {
+    const btn = document.getElementById('vp-verdict-' + i);
+    if (btn) btn.disabled = disabled;
+  }
+}
+
+function vpTick() {
+  const rt = varPatrolRuntime;
+  if (!rt?.playing || rt.locked || rt.idx < 0) return;
+  const now = performance.now();
+  const remaining = rt.deadlineAt - now;
+  vpUpdateTimerBar(remaining / rt.windowMs);
+  if (remaining <= 0) {
+    // Timeout = a missed decision (mistake).
+    rt.locked = true;
+    const scenario = rt.schedule[rt.idx];
+    rt.answers.push({ index: scenario.index, answer: -1, reactionMs: Math.round(rt.windowMs) + 1 });
+    rt.wrong += 1;
+    rt.streak = 0;
+    rt.lives -= 1;
+    vpSetVerdictButtonsDisabled(true);
+    vpUpdateStats();
+    setTimeout(() => { if (varPatrolRuntime === rt && rt.playing) vpAdvance(); }, 150);
+  }
+}
+
+function beginVarPatrolRound(round) {
+  stopVarPatrolRound();
+  varPatrolRuntime = newVarPatrolRuntime();
+  const rt = varPatrolRuntime;
+  rt.playing = true;
+  rt.roundId = round.id;
+  rt.lives = round.lives || 3;
+  rt.schedule = Array.isArray(round.schedule) ? round.schedule : [];
+  vpUpdateStats();
+  const status = document.getElementById('vp-status');
+  if (status) status.textContent = 'Oceniaj szybko — masz ' + rt.lives + ' życia!';
+  const startBtn = document.getElementById('vp-start-btn');
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Runda trwa'; }
+  rt.timer = setInterval(vpTick, 40);
+  vpShowScenario(0);
+}
+
+async function startVarPatrolRound() {
+  if (varPatrolRuntime?.playing || varPatrolRuntime?.submitting) return;
+  if (allGamesMode) {
+    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
+  const startBtn = document.getElementById('vp-start-btn');
+  const status = document.getElementById('vp-status');
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Ładuję...'; }
+  if (status) status.textContent = 'Przygotowuję rundę.';
+  try {
+    const data = await invokeVarPatrol({ action: 'start' });
+    renderVarPatrolState(data);
+    beginVarPatrolRound(data.round);
+    if (allGamesMode) varPatrolRuntime.archiveMode = true;
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (status) status.textContent = 'Nie udało się wystartować rundy.';
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Start rundy'; }
+  }
+}
+
+async function finishVarPatrolRound() {
+  const rt = varPatrolRuntime;
+  if (!rt || rt.submitting) return;
+  rt.playing = false;
+  rt.submitting = true;
+  if (rt.timer) clearInterval(rt.timer);
+  vpSetVerdictButtons(null, false);
+  vpUpdateTimerBar(0);
+  vpDrawIdle();
+  const status = document.getElementById('vp-status');
+  const startBtn = document.getElementById('vp-start-btn');
+  if (status) status.textContent = 'Zapisuję wynik...';
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Zapisuję...'; }
+
+  if (rt.archiveMode) {
+    rt.submitting = false;
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Zagraj ponownie'; }
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'var_patrol', p_score: rt.correct });
+        if (status) status.textContent = 'Wynik: ' + rt.correct + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('var_patrol');
+      } catch (e) { if (status) status.textContent = 'Wynik: ' + rt.correct + ' (błąd zapisu).'; }
+    } else {
+      if (status) status.textContent = 'Tryb archiwum — wynik: ' + rt.correct + ' (nie zapisano).';
+    }
+    return;
+  }
+
+  try {
+    const data = await invokeVarPatrol({ action: 'submit', roundId: rt.roundId, answers: rt.answers });
+    renderVarPatrolState(data);
+    showToast('✅ Wynik zapisany: ' + data.score.score);
+    if (status) status.textContent = 'Ostatni wynik: ' + data.score.score + ' trafnych decyzji.';
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (status) status.textContent = 'Nie udało się zapisać wyniku.';
+  } finally {
+    rt.submitting = false;
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Zagraj ponownie'; }
+  }
+}
+
+(function wireVarPatrol() {
+  const startBtn = document.getElementById('vp-start-btn');
+  if (startBtn) startBtn.addEventListener('click', startVarPatrolRound);
+  for (let i = 0; i < 2; i++) {
+    const btn = document.getElementById('vp-verdict-' + i);
+    if (btn) btn.addEventListener('click', () => vpAnswer(i));
+  }
+})();
 
 // ── Bug Jumper (canvas) ───────────────────────────────────────────────────
 

@@ -149,6 +149,8 @@ AS $$
           SELECT prize_coins FROM public.snake_weekly_awards
           UNION ALL
           SELECT prize_coins FROM public.invoice_horde_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.var_patrol_weekly_awards
         ) _awards
       ), 0::bigint)::numeric AS prizes_minted,
 
