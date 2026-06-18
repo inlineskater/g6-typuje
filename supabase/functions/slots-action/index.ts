@@ -12,8 +12,12 @@ const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, 
 
 const SYMBOLS = ["coffee", "calculator", "clipboard", "chart", "briefcase", "office", "g6"];
 const WEIGHTS = [30, 25, 18, 12, 8, 5, 2]; // sum=100
-const MULTIPLIERS = { g6: 50, office: 20, briefcase: 10, chart: 5, clipboard: 3, calculator: 2, coffee: 1 };
-const BET = 10;
+// Multipliers tuned for ~89% RTP across the 5 paylines (with the g6x2 partial below).
+// RTP = 5 * (Σ p_s^3 · mult_s + 3·p_g6^2·(1−p_g6)·6). With these weights ≈ 89.1%.
+const MULTIPLIERS = { g6: 100, office: 42, briefcase: 20, chart: 11, clipboard: 6, calculator: 3, coffee: 2 };
+const G6X2_MULTIPLIER = 6;
+const STAKES = [5, 10, 25, 50, 100];
+const DEFAULT_BET = 10;
 
 const PAYLINES = [
   [[0,0],[0,1],[0,2]],
@@ -51,7 +55,7 @@ function checkPaylines(grid) {
     } else {
       const g6Count = syms.filter(s => s === "g6").length;
       if (g6Count === 2) {
-        winningLines.push({ line: i, symbol: "g6x2", multiplier: 3 });
+        winningLines.push({ line: i, symbol: "g6x2", multiplier: G6X2_MULTIPLIER });
       }
     }
   }
@@ -121,25 +125,32 @@ function weightsForEffect(effect) {
   };
 }
 
-async function spin(userId) {
+function validateBet(raw) {
+  const bet = Math.trunc(Number(raw));
+  if (!STAKES.includes(bet)) throw Object.assign(new Error("Nieprawidłowa stawka."), { isGame: true });
+  return bet;
+}
+
+async function spin(userId, rawBet) {
+  const bet = validateBet(rawBet ?? DEFAULT_BET);
   const effect = await getStrongestHeroEffect(db, userId, "slots");
 
   return await db.begin(async (tx) => {
     const [profile] = await tx`select coins from public.profiles where id = ${userId} for update`;
     if (!profile) throw Object.assign(new Error("Profil nie istnieje."), { isGame: true });
-    if (profile.coins < BET) throw Object.assign(new Error("Za mało coinów!"), { isGame: true });
+    if (profile.coins < bet) throw Object.assign(new Error("Za mało coinów!"), { isGame: true });
 
     const { weights, itemEffect } = weightsForEffect(effect);
     const grid = generateGrid(weights);
     const winningLines = checkPaylines(grid);
-    const totalWon = winningLines.reduce((s, w) => s + BET * w.multiplier, 0);
-    const newBalance = profile.coins - BET + totalWon;
+    const totalWon = winningLines.reduce((s, w) => s + bet * w.multiplier, 0);
+    const newBalance = profile.coins - bet + totalWon;
 
     await tx`update public.profiles set coins = ${newBalance} where id = ${userId}`;
     await tx`insert into public.slots_spins (user_id, grid, winning_lines, total_won)
              values (${userId}, ${JSON.stringify(grid)}, ${JSON.stringify(winningLines)}, ${totalWon})`;
 
-    return { grid, winningLines, totalWon, balance: newBalance, itemEffect };
+    return { grid, winningLines, totalWon, balance: newBalance, bet, itemEffect };
   });
 }
 
@@ -164,7 +175,7 @@ Deno.serve(async (req) => {
     const action = String(body.action ?? "history");
 
     let result;
-    if (action === "spin") result = await spin(user.id);
+    if (action === "spin") result = await spin(user.id, body.bet);
     else if (action === "history") result = await history(user.id);
     else throw Object.assign(new Error("Nieznana akcja."), { isGame: true });
 

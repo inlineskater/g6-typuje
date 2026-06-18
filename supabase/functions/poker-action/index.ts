@@ -529,6 +529,23 @@ function ratePostflopHand(holeCards, board) {
   } catch { return 0.3; }
 }
 
+// Live opponents that act after this seat this street (button acts last postflop).
+// Fewer players behind = later position = the bot can play a touch wider/stronger.
+function livePlayersBehind(table, seats, botSeat) {
+  const maxSeats = asInt(table.max_seats, 6);
+  const dealer = table.dealer_seat;
+  if (dealer == null) return 0;
+  let count = 0;
+  let s = (botSeat.seat_no + 1) % maxSeats;
+  for (let i = 0; i < maxSeats; i += 1) {
+    const seat = seats.find((x) => x.seat_no === s);
+    if (seat && seat.seat_no !== botSeat.seat_no && canAct(seat)) count += 1;
+    if (s === dealer) break;
+    s = (s + 1) % maxSeats;
+  }
+  return count;
+}
+
 function applyBotMove(table, seats, botSeat, botCards, board) {
   const toCall = Math.max(0, table.current_bet - botSeat.round_bet);
   const pot = tablePot(seats);
@@ -536,10 +553,14 @@ function applyBotMove(table, seats, botSeat, botCards, board) {
   const isPreflop = !board || board.length === 0;
 
   let strength = isPreflop ? ratePreflopHand(botCards) : ratePostflopHand(botCards, board);
-  // personality variance per seat
-  strength += ((botSeat.seat_no % 4) - 1.5) * 0.03;
-  // randomness
-  strength += (Math.random() - 0.5) * 0.1;
+  // Position: scale by how many live opponents still act behind this bot.
+  const behind = livePlayersBehind(table, seats, botSeat);
+  const liveOpps = Math.max(1, seats.filter((s) => s.seat_no !== botSeat.seat_no && isLive(s)).length);
+  const positionFactor = 1 - behind / liveOpps; // 1 = last to act (best), 0 = first
+  strength += (positionFactor - 0.5) * 0.10;     // ±0.05 by position
+  // small per-bot personality + randomness
+  strength += ((botSeat.seat_no % 4) - 1.5) * 0.02;
+  strength += (Math.random() - 0.5) * 0.08;
   strength = Math.max(0, Math.min(1, strength));
 
   const minRaiseTo = table.current_bet + Math.max(table.min_raise, table.big_blind);
@@ -809,8 +830,27 @@ async function stateResponse(tx, userId) {
   };
 }
 
+// Force-acts for any human whose action deadline has passed, so the hand keeps
+// moving even when nobody has the timed-out player's tab open. Runs on every
+// state read, so any other player's poll (or realtime reload) advances the game.
+async function enforceTimeouts(tx) {
+  for (let guard = 0; guard < 8; guard += 1) {
+    const { table, seats, hand } = await loadLockedGame(tx);
+    if (!hand || table.phase === "waiting" || table.current_seat == null) return;
+    if (!table.action_deadline || new Date(table.action_deadline).getTime() > Date.now()) return;
+    const actor = seats.find((seat) => seat.seat_no === table.current_seat);
+    if (!actor || !needsAction(table, actor)) return;
+    if (actor.is_bot) return; // bots are advanced inline by advanceGame
+    applyPlayerMove(table, seats, actor, {}, true);
+    await advanceGame(tx, table, seats, hand, actor.seat_no);
+  }
+}
+
 async function getState(userId) {
-  return await db.begin(async (tx) => stateResponse(tx, userId));
+  return await db.begin(async (tx) => {
+    await enforceTimeouts(tx);
+    return stateResponse(tx, userId);
+  });
 }
 
 async function sit(userId) {

@@ -11,7 +11,7 @@ const corsHeaders = {
 const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, idle_timeout: 20 });
 
 const REDS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-const VALID_TYPES = new Set(["straight","red","black","odd","even","high","low","dozen"]);
+const VALID_TYPES = new Set(["straight","red","black","odd","even","high","low","dozen","column"]);
 
 function numberColor(n) {
   if (n === 0) return "green";
@@ -31,13 +31,17 @@ function betWins(bet, number) {
     case "dozen":
       if (number === 0) return false;
       return Math.ceil(number / 12) === bet.value;
+    case "column":
+      if (number === 0) return false;
+      // column 1 -> 1,4,...,34 ; column 2 -> 2,5,...,35 ; column 3 -> 3,6,...,36
+      return ((number - 1) % 3) + 1 === bet.value;
     default: return false;
   }
 }
 
 function betMultiplier(type) {
   if (type === "straight") return 36;
-  if (type === "dozen") return 3;
+  if (type === "dozen" || type === "column") return 3;
   return 2; // red/black/odd/even/high/low
 }
 
@@ -77,6 +81,10 @@ function validateBets(bets) {
     } else if (b.type === "dozen") {
       const v = Math.trunc(Number(b.value));
       if (v < 1 || v > 3) throw Object.assign(new Error("Tuzin musi być 1, 2 lub 3."), { isGame: true });
+      b.value = v;
+    } else if (b.type === "column") {
+      const v = Math.trunc(Number(b.value));
+      if (v < 1 || v > 3) throw Object.assign(new Error("Kolumna musi być 1, 2 lub 3."), { isGame: true });
       b.value = v;
     }
     total += b.amount;
@@ -124,22 +132,6 @@ async function getStrongestHeroEffect(tx, userId, game) {
     console.warn("Hero item effects unavailable:", err?.message ?? err);
     return null;
   }
-}
-
-function riggedNumber(bets) {
-  // 85% chance: pick a number that loses all bets
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  if ((buf[0] % 100) < 85) {
-    // Try up to 50 times to find a losing number
-    for (let i = 0; i < 50; i++) {
-      const candidate = randomNumber();
-      const anyWin = bets.some(b => betWins(b, candidate));
-      if (!anyWin) return candidate;
-    }
-  }
-  // 15% chance (or fallback): fair spin
-  return randomNumber();
 }
 
 async function spin(userId, bets) {
