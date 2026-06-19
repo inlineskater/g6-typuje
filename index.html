@@ -490,6 +490,39 @@
     .fbx-dist-legend span { display: inline-flex; align-items: center; gap: 5px; }
     .fbx-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
     .fbx-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .fb-rewards { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px 15px; display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+    .fb-rewards-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .fb-rewards-title { font-size: 14px; font-weight: 900; letter-spacing: -.01em; }
+    .fb-rewards-sub { font-size: 12px; color: var(--muted); font-weight: 600; line-height: 1.45; margin-top: 3px; max-width: 760px; }
+    .fb-rewards-prizes { font-size: 11px; color: var(--accent); background: var(--acc-dim);
+      border: 1px solid var(--border-hi); border-radius: 999px; padding: 6px 10px; font-weight: 800;
+      white-space: normal; text-align: right; }
+    .fb-rewards-now { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: -2px; }
+    .fb-podium-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+    .fb-podium { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; min-width: 0; }
+    .fb-podium-title { font-size: 12px; font-weight: 900; color: var(--text); margin-bottom: 8px; }
+    .fb-podium-list { display: flex; flex-direction: column; gap: 6px; }
+    .fb-podium-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+      min-height: 34px; background: var(--card); border: 1px solid rgba(148,163,184,.22); border-radius: 8px; padding: 6px 8px; }
+    .fb-podium-rank { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 999px; background: var(--acc-dim); color: var(--accent); font-size: 12px; font-weight: 900; }
+    .fb-podium-name { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .fb-podium-name .fb-nick-btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fb-podium-detail { font-size: 10.5px; color: var(--dim); font-weight: 600; line-height: 1.25; }
+    .fb-podium-metric { text-align: right; white-space: nowrap; font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .fb-podium-prize { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 800; }
+    .fb-podium-empty { color: var(--dim); font-size: 12px; font-style: italic; }
+    .fb-lottery-note { background: var(--acc-dim); border: 1px solid var(--border-hi); border-radius: 10px;
+      padding: 10px 12px; font-size: 12px; color: var(--muted); font-weight: 650; line-height: 1.45; }
+    .fb-lottery-note strong { font-weight: 900; }
+    @media (max-width: 560px) {
+      .fb-rewards-prizes { border-radius: 8px; text-align: left; }
+      .fb-podium-row { grid-template-columns: 30px minmax(0, 1fr); }
+      .fb-podium-metric { grid-column: 2; text-align: left; }
+    }
 
     /* ── MUNDIAL HERO (WC26) ── */
     .fb-hero {
@@ -11777,8 +11810,11 @@ function stopFootballCountdown() {
 function renderFootball() {
   updateFootballHero();
   if (!footballMatches.length) {
-    footballGrid.replaceChildren(el('p', { className: 'fb-no-odds' },
-      'Brak meczów. Kursy i terminarz pojawią się po pierwszej synchronizacji z API.'));
+    footballGrid.replaceChildren(
+      buildFootballStatsPanel(),
+      el('p', { className: 'fb-no-odds' },
+        'Brak meczów. Kursy i terminarz pojawią się po pierwszej synchronizacji z API.'),
+    );
     return;
   }
   const betsByMatch = {};
@@ -11792,7 +11828,7 @@ function renderFootball() {
     .sort((a, b) => new Date(b.kickoff) - new Date(a.kickoff));
 
   const nodes = [];
-  if (footballBets.length) nodes.push(buildFootballStatsPanel());
+  nodes.push(buildFootballStatsPanel());
   upcoming.forEach(m => nodes.push(buildMatchCard(m, betsByMatch[m.id] || [])));
   if (finished.length) {
     nodes.push(el('div', { className: 'markets-section-divider' }, 'Zakończone mecze'));
@@ -11937,6 +11973,143 @@ function computeFootballHouseStats() {
   };
 }
 
+const FB_MUNDIAL_REWARD_PRIZES = [1000, 500, 250];
+const FB_MUNDIAL_REWARD_MIN_SETTLED = 1;
+
+function fbRewardDesc(a, b, getVal) {
+  const av = getVal(a), bv = getVal(b);
+  return (bv == null ? -Infinity : bv) - (av == null ? -Infinity : av);
+}
+function fbRewardNickCompare(a, b) {
+  return String(a.nick || '').localeCompare(String(b.nick || ''), 'pl', { sensitivity: 'base' });
+}
+function fbRewardPlCls(v) {
+  return v > 0 ? 'fb-profit-pos' : v < 0 ? 'fb-profit-neg' : '';
+}
+function fbRewardPct(v) {
+  return v == null ? '—' : Math.round(v * 100) + '%';
+}
+function fbRewardSignedPct(v) {
+  if (v == null) return '—';
+  const pct = Math.round(v * 100);
+  return (pct > 0 ? '+' : '') + pct + '%';
+}
+function fbRewardSignedCoins(v) {
+  const n = Math.round(+v || 0);
+  return (n > 0 ? '+' : '') + fmtNum(n) + ' 🪙';
+}
+
+const FB_MUNDIAL_REWARD_CATEGORIES = [
+  {
+    key: 'winRate',
+    icon: '🎯',
+    title: 'Trafność',
+    metric: s => fbRewardPct(s.winRate),
+    metricClass: s => fbRewardPlCls(s.winRate - 0.5),
+    detail: s => s.wins + '/' + s.settled + ' trafione',
+    compare: (a, b) => fbRewardDesc(a, b, s => s.winRate)
+      || fbRewardDesc(a, b, s => s.settled)
+      || fbRewardDesc(a, b, s => s.profit)
+      || fbRewardNickCompare(a, b),
+  },
+  {
+    key: 'roi',
+    icon: '📈',
+    title: 'ROI',
+    metric: s => fbRewardSignedPct(s.roi),
+    metricClass: s => fbRewardPlCls(s.roi),
+    detail: s => 'z ' + s.settledStake + ' 🪙 rozliczonych',
+    compare: (a, b) => fbRewardDesc(a, b, s => s.roi)
+      || fbRewardDesc(a, b, s => s.profit)
+      || fbRewardDesc(a, b, s => s.settledStake)
+      || fbRewardNickCompare(a, b),
+  },
+  {
+    key: 'profit',
+    icon: '💰',
+    title: 'Bilans',
+    metric: s => fbRewardSignedCoins(s.profit),
+    metricClass: s => fbRewardPlCls(s.profit),
+    detail: s => s.wins + '/' + s.settled + ' trafione',
+    compare: (a, b) => fbRewardDesc(a, b, s => s.profit)
+      || fbRewardDesc(a, b, s => s.roi)
+      || fbRewardDesc(a, b, s => s.settled)
+      || fbRewardNickCompare(a, b),
+  },
+];
+
+function computeFootballRewardPodiums(stats) {
+  const qualified = (stats || []).filter(s => s.settled >= FB_MUNDIAL_REWARD_MIN_SETTLED);
+  return FB_MUNDIAL_REWARD_CATEGORIES.map(cat => ({
+    ...cat,
+    leaders: qualified.slice().sort(cat.compare).slice(0, FB_MUNDIAL_REWARD_PRIZES.length),
+  }));
+}
+
+function fbRewardNickButton(s) {
+  const btn = el('button', { className: 'fb-nick-btn' },
+    me && s.user_id === me.id ? s.nick + ' (Ty)' : s.nick);
+  btn.addEventListener('click', () => openBetsDetail(s.user_id));
+  return btn;
+}
+
+function buildFootballRewardPodium(cat) {
+  return el('div', { className: 'fb-podium' },
+    el('div', { className: 'fb-podium-title' }, cat.icon + ' ' + cat.title),
+    el('div', { className: 'fb-podium-list' },
+      ...FB_MUNDIAL_REWARD_PRIZES.map((prize, i) => {
+        const s = cat.leaders[i];
+        if (!s) {
+          return el('div', { className: 'fb-podium-row' },
+            el('span', { className: 'fb-podium-rank' }, String(i + 1)),
+            el('div', { className: 'fb-podium-name' },
+              el('span', { className: 'fb-podium-empty' }, 'brak kwalifikacji')),
+            el('div', { className: 'fb-podium-metric' },
+              el('span', { className: 'fb-podium-prize' }, '+' + fmtNum(prize) + ' 🪙')),
+          );
+        }
+        return el('div', { className: 'fb-podium-row' },
+          el('span', { className: 'fb-podium-rank' }, String(i + 1)),
+          el('div', { className: 'fb-podium-name' },
+            fbRewardNickButton(s),
+            el('span', { className: 'fb-podium-detail' }, cat.detail(s))),
+          el('div', { className: 'fb-podium-metric ' + cat.metricClass(s) },
+            cat.metric(s),
+            el('span', { className: 'fb-podium-prize' }, '+' + fmtNum(prize) + ' 🪙')),
+        );
+      }),
+    ),
+  );
+}
+
+function buildFootballRewardsPanel(stats, houseStats) {
+  const h = houseStats || computeFootballHouseStats();
+  const bankProfit = Math.round(+h.realizedProfit || 0);
+  const bankCls = bankProfit >= 0 ? 'fb-profit-pos' : 'fb-profit-neg';
+  const podiums = computeFootballRewardPodiums(stats || computeFootballPlayerStats());
+  const prizeText = FB_MUNDIAL_REWARD_PRIZES
+    .map((p, i) => (i + 1) + '. miejsce ' + fmtNum(p) + ' 🪙')
+    .join(' · ');
+  const lotteryCopy = bankProfit >= 0
+    ? ['Cały dodatni wynik Banku z rozliczonych zakładów Mundialu trafi do loterii w lipcu-sierpniu. Aktualna pula: ', fbRewardSignedCoins(bankProfit), '. Szczegóły zostaną ogłoszone później.']
+    : ['Jeśli Bank skończy Mundial na plusie, dodatni wynik trafi do loterii w lipcu-sierpniu. Aktualny wynik Banku: ', fbRewardSignedCoins(bankProfit), '. Szczegóły zostaną ogłoszone później.'];
+
+  return el('div', { className: 'fb-rewards' },
+    el('div', { className: 'fb-rewards-head' },
+      el('div', {},
+        el('div', { className: 'fb-rewards-title' }, '🏆 Nagrody po Mundialu'),
+        el('div', { className: 'fb-rewards-sub' },
+          'Po zakończeniu Mundialu trzy osobne rankingi wypłacą nagrody: Trafność, ROI i Bilans. Ta sama osoba może wygrać w kilku kategoriach.'),
+      ),
+      el('div', { className: 'fb-rewards-prizes' }, prizeText),
+    ),
+    el('div', { className: 'fb-rewards-now' }, 'Gdyby Mundial skończył się teraz'),
+    el('div', { className: 'fb-podium-grid' }, ...podiums.map(buildFootballRewardPodium)),
+    el('div', { className: 'fb-lottery-note' },
+      '🎟️ ', lotteryCopy[0], el('strong', { className: bankCls }, lotteryCopy[1]), lotteryCopy[2]),
+  );
+}
+
 // Notable single bets + aggregate KPIs across all Mundial bets.
 function computeFootballInsights() {
   let best = null, biggestWin = null, biggestLoss = null, longShot = null, biggestStake = null, surest = null;
@@ -12019,6 +12192,7 @@ function fbLegendDetails(rows) {
 // Statystyki page (renderMundialRankingCard) and the bets detail modal.
 function buildFootballStatsPanel() {
   const h = computeFootballHouseStats();
+  const stats = computeFootballPlayerStats();
 
   const statsBtn = el('button', { className: 'fb-action-btn' }, '📊 Pełne statystyki Mundialu →');
   statsBtn.addEventListener('click', () => {
@@ -12037,6 +12211,7 @@ function buildFootballStatsPanel() {
           h.betsTotal + ' zakładów · ' + h.settledCount + ' rozliczonych · ' + h.wonCount + ' wygranych'),
       ),
     ),
+    buildFootballRewardsPanel(stats, h),
     el('div', { className: 'fb-stats-actions' }, statsBtn, betsBtn),
   );
 }
@@ -12121,7 +12296,12 @@ async function renderMundialRankingCard() {
   if (activeTab !== 'leaderboard') return; // user navigated away while loading
 
   if (!footballBets.length) {
-    wrap.replaceChildren(el('p', { className: 'fb-no-odds' }, 'Brak zakładów w Mundialu.'));
+    wrap.replaceChildren(
+      el('div', { className: 'fbx' },
+        buildFootballRewardsPanel([], computeFootballHouseStats()),
+        el('p', { className: 'fb-no-odds' }, 'Brak zakładów w Mundialu.'),
+      ),
+    );
     return;
   }
 
@@ -12269,6 +12449,7 @@ async function renderMundialRankingCard() {
       section('🏦 Bank i ekonomia', bankGrid),
       section('🏅 Najciekawsze zakłady', hlGrid),
       section('📊 Statystyki ogólne', aggGrid, el('div', { style: { marginTop: '11px' } }, distWrap)),
+      section('🏆 Nagrody po Mundialu', buildFootballRewardsPanel(stats, h)),
       section('🏆 Ranking typerów', sortBar, tableWrap),
       fbLegendDetails([...fbBankLegendRows(), ...fbTableLegendRows()]),
     ),
