@@ -10930,8 +10930,6 @@ document.getElementById('roulette-spin-btn').addEventListener('click', async () 
     // Show result and settle the balance when the wheel stops under the pointer
     onWheelSettle(() => {
       wheel.classList.remove('spinning');
-      me.coins = data.balance;
-      setText(headerCoins, me.coins);
       wheelNum.textContent = data.number;
       if (wheelCenter) {
         wheelCenter.classList.remove('reveal');
@@ -10953,6 +10951,12 @@ document.getElementById('roulette-spin-btn').addEventListener('click', async () 
       show(resultDiv);
 
       if (net > 0) rouletteWinAnimation(net);
+
+      // Let the result land first, then update the coin balance a beat later
+      setTimeout(() => {
+        me.coins = data.balance;
+        setText(headerCoins, me.coins);
+      }, 900);
 
       const histEl = document.getElementById('roulette-history');
       histEl.insertBefore(el('div', { className: `roulette-history-dot ${data.color}` }, String(data.number)), histEl.firstChild);
