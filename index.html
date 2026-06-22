@@ -1488,6 +1488,54 @@
     .roulette-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
     .roulette-chips { display: flex; gap: 6px; }
     .roulette-bet-total { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .roulette-table-status {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: var(--card);
+      border: 1px solid var(--border); color: var(--muted); font-size: 13px; line-height: 1.45;
+    }
+    .roulette-table-status strong { color: var(--text); }
+    .roulette-table-status .roulette-seat-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .roulette-seat-btn { min-height: 34px; padding: 7px 12px; white-space: nowrap; }
+    .roulette-shared-panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); gap: 12px; margin: 12px 0; }
+    .roulette-panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+      min-width: 0;
+    }
+    .roulette-panel-title {
+      font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase;
+      letter-spacing: .04em; margin-bottom: 8px;
+    }
+    .roulette-seats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .roulette-seat {
+      min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 9px;
+      background: var(--surface); display: grid; gap: 5px;
+    }
+    .roulette-seat.me { border-color: var(--accent); background: var(--acc-dim); }
+    .roulette-seat.ready { border-color: var(--yes); box-shadow: inset 0 0 0 1px rgba(22,163,74,.25); }
+    .roulette-seat.empty { color: var(--dim); align-content: center; min-height: 92px; }
+    .roulette-seat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+    .roulette-seat-nick { font-size: 13px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .roulette-seat-pill {
+      flex: 0 0 auto; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 800;
+      background: var(--border); color: var(--muted);
+    }
+    .roulette-seat-pill.ready { background: var(--yes-dim); color: var(--yes); }
+    .roulette-seat-stats { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: 11px; color: var(--muted); }
+    .roulette-seat-stats strong { color: var(--text); font-variant-numeric: tabular-nums; }
+    .roulette-pl-pos { color: var(--yes) !important; }
+    .roulette-pl-neg { color: var(--no) !important; }
+    .roulette-bet-list { display: grid; gap: 6px; max-height: 222px; overflow-y: auto; padding-right: 2px; }
+    .roulette-bet-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center;
+      padding: 7px 8px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .roulette-bet-row.me { border-color: var(--accent); background: var(--acc-dim); }
+    .roulette-bet-row strong { color: var(--text); }
+    .roulette-bet-row span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .roulette-result-players { display: grid; gap: 5px; margin-top: 8px; }
+    .roulette-result-player { font-size: 12px; color: var(--muted); }
+    .roulette-result-player strong { color: var(--text); }
 
     /* Casino layout: wheel + felt board on one continuous table, wooden rail */
     .roulette-layout {
@@ -1632,6 +1680,13 @@
     .roulette-history-dot.green { background: #16a34a; }
     .roulette-history-dot.red { background: #dc2626; }
     .roulette-history-dot.black { background: #1e293b; }
+    @media (max-width: 760px) {
+      .roulette-shared-panels { grid-template-columns: 1fr; }
+      .roulette-seats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+      .roulette-seats-grid { grid-template-columns: 1fr; }
+    }
 
     /* ── Slots (Jednoręki Bandyta) ── */
     .slots-machine { text-align: center; }
@@ -3920,6 +3975,11 @@
         <button class="btn-ghost" id="roulette-double-btn" type="button">×2 Podwój</button>
       </div>
 
+      <div class="roulette-table-status" id="roulette-table-status">
+        <div class="roulette-seat-main"><strong>Wspólny stół</strong><span>Usiądź, żeby obstawiać.</span></div>
+        <button class="btn-primary roulette-seat-btn" id="roulette-seat-btn" type="button">Usiądź</button>
+      </div>
+
       <div class="roulette-layout">
         <div class="roulette-wheel-wrap">
           <div class="roulette-wheel-container">
@@ -3950,6 +4010,17 @@
           </div>
         </div>
       </div>
+      </div>
+
+      <div class="roulette-shared-panels">
+        <section class="roulette-panel">
+          <div class="roulette-panel-title">Miejsca przy stole</div>
+          <div class="roulette-seats-grid" id="roulette-seats"></div>
+        </section>
+        <section class="roulette-panel">
+          <div class="roulette-panel-title">Zakłady na tę rundę</div>
+          <div class="roulette-bet-list" id="roulette-bets-list"></div>
+        </section>
       </div>
 
       <div id="roulette-result" class="roulette-result hidden"></div>
@@ -5069,6 +5140,10 @@ let pokerRealtimeReady = false;
 let pokerClockTimer = null;
 let pokerTimeoutClaiming = false;
 let lastPokerStateMs = 0;
+let rouletteState = null;
+let rouletteRealtimeReady = false;
+let rouletteLastStateMs = 0;
+let rouletteLastResultId = null;
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
@@ -5600,6 +5675,7 @@ async function doLogout() {
   await sb.auth.signOut();
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
+  rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null;
   stopWhackBossRound();
   stopSnakeRound();
   stopInvoiceHordeRound();
@@ -5899,7 +5975,8 @@ function switchTab(tab) {
     loadPokerState();
   } else if (tab === 'roulette') {
     hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
-    loadRouletteHistory();
+    setupRouletteRealtime();
+    loadRouletteState();
   } else if (tab === 'slots') {
     hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     loadSlotsHistory();
@@ -10724,11 +10801,11 @@ function rouletteColor(n) { return n === 0 ? 'green' : ROULETTE_REDS.has(n) ? 'r
 // European wheel order (clockwise from 0)
 const WHEEL_ORDER = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
 
-let rouletteBets = [];
 let lastRouletteBets = [];
 let activeChip = 10;
 let wheelRotation = 0;
 let ballRotation = 0;
+let rouletteActionBusy = false;
 
 // Build number grid
 (function buildRouletteGrid() {
@@ -10791,20 +10868,113 @@ document.querySelectorAll('.roulette-chips .casino-chip').forEach(btn => {
   });
 });
 
-// Bet placement
-function addRouletteBet(type, value) {
-  rouletteBets.push({ type, value: value != null ? Number(value) : undefined, amount: activeChip });
+function setupRouletteRealtime() {
+  if (rouletteRealtimeReady) return;
+  rouletteRealtimeReady = true;
+  const reload = () => {
+    if (activeTab !== 'roulette') return;
+    if (Date.now() - rouletteLastStateMs < 900) return;
+    loadRouletteState(false);
+  };
+  const ch = sb.channel('roulette-db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'roulette_tables' }, reload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'roulette_rounds' }, reload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'roulette_seats' }, reload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'roulette_bets' }, reload)
+    .subscribe();
+  realtimeChannels.push(ch);
+}
+
+async function invokeRoulette(payload) {
+  const { data, error } = await sb.functions.invoke('roulette-action', { body: payload });
+  if (error) throw new Error(error.message || 'Błąd połączenia z ruletką.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd ruletki.');
+  return data;
+}
+
+async function loadRouletteState(showSpinner = true) {
+  if (showSpinner && !rouletteState) {
+    document.getElementById('roulette-seats')?.replaceChildren(makeSpinner());
+    document.getElementById('roulette-bets-list')?.replaceChildren(makeSpinner());
+  }
+  try {
+    const data = await invokeRoulette({ action: 'state' });
+    applyRouletteState(data);
+  } catch (err) {
+    showToast('❌ ' + err.message);
+  }
+}
+
+async function rouletteAction(payload, opts = {}) {
+  if (rouletteActionBusy) return;
+  rouletteActionBusy = true;
   updateRouletteBetUI();
+  const spinBtn = document.getElementById('roulette-spin-btn');
+  if (opts.spin && spinBtn) spinBtn.classList.add('spinning');
+  try {
+    const data = await invokeRoulette(payload);
+    applyRouletteState(data);
+    if (data.notice) showToast('⚠️ ' + data.notice);
+  } catch (err) {
+    showToast('❌ ' + err.message);
+  } finally {
+    rouletteActionBusy = false;
+    if (spinBtn) spinBtn.classList.remove('spinning');
+    updateRouletteBetUI();
+  }
+}
+
+function currentRouletteBets() {
+  return (rouletteState?.bets || [])
+    .filter(b => b.isMe)
+    .map(b => ({
+      type: b.type,
+      value: b.value == null ? undefined : Number(b.value),
+      amount: Number(b.amount) || 0,
+    }));
+}
+
+function addRouletteBet(type, value) {
+  if (!rouletteState?.me?.seated) { showToast('Najpierw usiądź przy stole.'); return; }
+  if (!rouletteState.me.canBet) { showToast('Cofnij gotowość, żeby zmienić zakład.'); return; }
+  rouletteAction({
+    action: 'add_bet',
+    bet: { type, value: value != null ? Number(value) : undefined, amount: activeChip },
+  });
+}
+
+function rouletteBetKey(b) {
+  return b.type + (b.value != null ? '-' + b.value : '');
+}
+
+function rouletteBetLabel(b) {
+  if (b.type === 'straight') return 'Numer ' + b.value;
+  if (b.type === 'dozen') return b.value + '. tuzin';
+  if (b.type === 'column') return b.value + '. kolumna';
+  const labels = {
+    red: 'Czerwony',
+    black: 'Czarny',
+    odd: 'Nieparzyste',
+    even: 'Parzyste',
+    low: '1-18',
+    high: '19-36',
+  };
+  return labels[b.type] || b.type;
+}
+
+function roulettePlNode(value) {
+  const n = Number(value) || 0;
+  const cls = n > 0 ? 'roulette-pl-pos' : n < 0 ? 'roulette-pl-neg' : '';
+  return el('strong', { className: cls }, (n > 0 ? '+' : '') + fmtNum(n) + ' 🪙');
 }
 
 function updateRouletteBetUI() {
   document.querySelectorAll('#roulette-grid .bet-badge, #roulette-outside .bet-badge').forEach(b => b.remove());
   const totals = {};
-  let grandTotal = 0;
-  for (const b of rouletteBets) {
-    const key = b.type + (b.value != null ? '-' + b.value : '');
+  let grandTotal = rouletteState?.me?.currentBet || 0;
+  for (const b of (rouletteState?.bets || [])) {
+    const key = rouletteBetKey(b);
     totals[key] = (totals[key] || 0) + b.amount;
-    grandTotal += b.amount;
   }
   document.querySelectorAll('#roulette-grid .roulette-cell').forEach(cell => {
     const key = cell.dataset.bet + '-' + cell.dataset.value;
@@ -10815,7 +10985,25 @@ function updateRouletteBetUI() {
     if (totals[key]) btn.appendChild(el('span', { className: 'bet-badge' }, String(totals[key])));
   });
   setText(document.getElementById('roulette-total'), grandTotal);
-  document.getElementById('roulette-spin-btn').disabled = grandTotal === 0;
+  const spinBtn = document.getElementById('roulette-spin-btn');
+  if (!spinBtn) return;
+  const meState = rouletteState?.me || {};
+  if (!meState.seated) {
+    spinBtn.textContent = 'USIĄDŹ';
+    spinBtn.disabled = true;
+  } else if (meState.canCancelReady) {
+    spinBtn.textContent = 'COFNIJ';
+    spinBtn.disabled = rouletteActionBusy;
+  } else if (meState.canSpin) {
+    spinBtn.textContent = 'ZAKRĘĆ';
+    spinBtn.disabled = rouletteActionBusy;
+  } else if (grandTotal > 0) {
+    spinBtn.textContent = 'GOTOWY';
+    spinBtn.disabled = rouletteActionBusy;
+  } else {
+    spinBtn.textContent = 'ZAKŁAD';
+    spinBtn.disabled = true;
+  }
 }
 
 document.getElementById('roulette-grid').addEventListener('click', e => {
@@ -10829,29 +11017,22 @@ document.getElementById('roulette-outside').addEventListener('click', e => {
 });
 
 document.getElementById('roulette-clear-btn').addEventListener('click', () => {
-  rouletteBets = [];
-  updateRouletteBetUI();
+  if (!rouletteState?.me?.seated) return;
+  rouletteAction({ action: 'clear_bets' });
   hide(document.getElementById('roulette-result'));
 });
 
 document.getElementById('roulette-rebet-btn').addEventListener('click', () => {
   if (!lastRouletteBets.length) { showToast('Brak poprzedniego zakładu.'); return; }
-  rouletteBets = lastRouletteBets.map(b => ({ ...b }));
-  updateRouletteBetUI();
+  if (!rouletteState?.me?.seated) { showToast('Najpierw usiądź przy stole.'); return; }
+  rouletteAction({ action: 'set_bets', bets: lastRouletteBets.map(b => ({ ...b })) });
 });
 
 document.getElementById('roulette-double-btn').addEventListener('click', () => {
-  if (!rouletteBets.length) return;
-  rouletteBets = [...rouletteBets, ...rouletteBets.map(b => ({ ...b }))];
-  updateRouletteBetUI();
+  const mine = currentRouletteBets();
+  if (!mine.length) return;
+  rouletteAction({ action: 'set_bets', bets: [...mine, ...mine.map(b => ({ ...b }))] });
 });
-
-async function invokeRoulette(payload) {
-  const { data, error } = await sb.functions.invoke('roulette-action', { body: payload });
-  if (error) throw new Error(error.message || 'Błąd połączenia z ruletką.');
-  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd ruletki.');
-  return data;
-}
 
 // Wheel spin animation — lands the winning pocket under the fixed top pointer every spin.
 function spinWheel(number) {
@@ -10904,87 +11085,197 @@ function rouletteWinAnimation(netWon) {
   setTimeout(() => { container.remove(); document.body.style.animation = ''; }, 3500);
 }
 
-// Spin handler
-document.getElementById('roulette-spin-btn').addEventListener('click', async () => {
+function animateRouletteResult(result) {
   const spinBtn = document.getElementById('roulette-spin-btn');
   const wheelNum = document.getElementById('roulette-wheel-num');
-  spinBtn.disabled = true;
-  spinBtn.classList.add('spinning');
-  spinBtn.textContent = '...';
-  wheelNum.textContent = '?';
-  const resultDiv = document.getElementById('roulette-result');
-  hide(resultDiv);
-
   const wheel = document.getElementById('roulette-wheel');
   const wheelCenter = document.querySelector('.roulette-wheel-center');
-
-  const placedBets = rouletteBets.map(b => ({ ...b }));
-  try {
-    const data = await invokeRoulette({ action: 'spin', bets: rouletteBets });
-
-    // Spin the wheel (balance stays unchanged until it settles)
-    wheel.classList.add('spinning');
-    spinWheel(data.number);
-    lastRouletteBets = placedBets;
-
-    // Show result and settle the balance when the wheel stops under the pointer
-    onWheelSettle(() => {
-      wheel.classList.remove('spinning');
-      wheelNum.textContent = data.number;
-      if (wheelCenter) {
-        wheelCenter.classList.remove('reveal');
-        void wheelCenter.offsetWidth; // restart the glow animation
-        wheelCenter.classList.add('reveal');
-      }
-      const numEl = el('div', { className: `roulette-result-number ${data.color}` }, String(data.number));
-      const totalBet = placedBets.reduce((s, b) => s + b.amount, 0);
-      const net = data.totalWon - totalBet;
-      const msgClass = net > 0 ? 'win' : 'lose';
-      const msgText = net > 0 ? `+${net} coinów! 🎉` : net === 0 ? 'Zwrot stawki' : `${net} coinów`;
-      const msgEl = el('div', { className: `roulette-result-msg ${msgClass}` }, msgText);
-      const resultChildren = [numEl, msgEl];
-      if (data.itemEffect) {
-        const bonusText = data.itemEffect.bonus ? ` (+${data.itemEffect.bonus} 🪙)` : '';
-        resultChildren.push(el('div', { className: 'roulette-result-msg win' }, `${data.itemEffect.name}${bonusText}`));
-      }
-      resultDiv.replaceChildren(...resultChildren);
-      show(resultDiv);
-
-      if (net > 0) rouletteWinAnimation(net);
-
-      // Let the result land first, then update the coin balance a beat later
-      setTimeout(() => {
-        me.coins = data.balance;
-        setText(headerCoins, me.coins);
-      }, 900);
-
-      const histEl = document.getElementById('roulette-history');
-      histEl.insertBefore(el('div', { className: `roulette-history-dot ${data.color}` }, String(data.number)), histEl.firstChild);
-      while (histEl.children.length > 20) histEl.removeChild(histEl.lastChild);
-
-      rouletteBets = [];
-      updateRouletteBetUI();
-      spinBtn.classList.remove('spinning');
-      spinBtn.textContent = 'ZAKRĘĆ';
-      spinBtn.disabled = true; // no bets after clear
-    });
-  } catch (err) {
-    showToast('❌ ' + err.message);
+  spinBtn.classList.add('spinning');
+  wheelNum.textContent = '?';
+  if (wheel) wheel.classList.add('spinning');
+  spinWheel(result.number);
+  onWheelSettle(() => {
+    if (wheel) wheel.classList.remove('spinning');
+    wheelNum.textContent = result.number;
+    if (wheelCenter) {
+      wheelCenter.classList.remove('reveal');
+      void wheelCenter.offsetWidth;
+      wheelCenter.classList.add('reveal');
+    }
+    const mine = (result.players || []).find(p => p.isMe);
+    if (mine?.net > 0) rouletteWinAnimation(mine.net);
     spinBtn.classList.remove('spinning');
-    spinBtn.textContent = 'ZAKRĘĆ';
-    spinBtn.disabled = rouletteBets.length === 0;
+    updateRouletteBetUI();
+  });
+}
+
+function renderRouletteStatus() {
+  const statusEl = document.getElementById('roulette-table-status');
+  const seatBtn = document.getElementById('roulette-seat-btn');
+  if (!statusEl || !seatBtn) return;
+  const state = rouletteState;
+  if (!state) {
+    statusEl.querySelector('.roulette-seat-main')?.replaceChildren(el('strong', {}, 'Wspólny stół'), el('span', {}, 'Ładuję...'));
+    seatBtn.disabled = true;
+    return;
   }
+  const meState = state.me || {};
+  const seatCount = state.seats?.length || 0;
+  let text;
+  if (!meState.seated) text = 'Usiądź, żeby obstawiać przy wspólnym stole.';
+  else if (seatCount <= 1) text = 'Grasz solo: postaw zakład i zakręć od razu.';
+  else if (meState.ready) text = 'Jesteś gotowy. Spin ruszy, gdy pozostali obstawiający też będą gotowi.';
+  else if (state.table.activeBettors > 0) text = `Gotowi: ${state.table.readyBettors}/${state.table.activeBettors} obstawiających.`;
+  else text = 'Postaw zakład. Osoby bez zakładów tylko obserwują i nie blokują spinu.';
+
+  statusEl.querySelector('.roulette-seat-main')?.replaceChildren(
+    el('strong', {}, 'Wspólny stół'),
+    el('span', {}, text)
+  );
+  seatBtn.textContent = meState.seated ? 'Odejdź od stołu' : 'Usiądź';
+  seatBtn.className = meState.seated ? 'btn-ghost roulette-seat-btn' : 'btn-primary roulette-seat-btn';
+  seatBtn.disabled = rouletteActionBusy || (!meState.seated && !meState.canSit);
+}
+
+function renderRouletteSeats() {
+  const box = document.getElementById('roulette-seats');
+  if (!box || !rouletteState?.table) return;
+  const nodes = [];
+  for (let seatNo = 0; seatNo < rouletteState.table.maxSeats; seatNo += 1) {
+    const seat = rouletteState.seats.find(s => s.seatNo === seatNo);
+    if (!seat) {
+      nodes.push(el('div', { className: 'roulette-seat empty' },
+        el('div', { className: 'roulette-seat-nick' }, 'Miejsce ' + (seatNo + 1)),
+        el('div', { className: 'poker-note' }, 'wolne')
+      ));
+      continue;
+    }
+    const pill = seat.ready ? 'gotowy' : seat.currentBet > 0 ? 'obstawia' : 'patrzy';
+    nodes.push(el('div', {
+      className: 'roulette-seat' + (seat.isMe ? ' me' : '') + (seat.ready ? ' ready' : ''),
+    },
+      el('div', { className: 'roulette-seat-top' },
+        el('span', { className: 'roulette-seat-nick', title: seat.nick }, seat.nick + (seat.isMe ? ' (Ty)' : '')),
+        el('span', { className: 'roulette-seat-pill' + (seat.ready ? ' ready' : '') }, pill)
+      ),
+      el('div', { className: 'roulette-seat-stats' },
+        el('span', {}, 'Zakład'), el('strong', {}, seat.currentBet + ' 🪙'),
+        el('span', {}, 'Sesja'), roulettePlNode(seat.sessionNet),
+        el('span', {}, 'Overall'), roulettePlNode(seat.overallNet)
+      )
+    ));
+  }
+  box.replaceChildren(...nodes);
+}
+
+function renderRouletteBetsList() {
+  const box = document.getElementById('roulette-bets-list');
+  if (!box) return;
+  const bets = rouletteState?.bets || [];
+  if (!bets.length) {
+    box.replaceChildren(el('div', { className: 'poker-note' }, 'Brak zakładów w tej rundzie.'));
+    return;
+  }
+  box.replaceChildren(...bets.map(b => el('div', { className: 'roulette-bet-row' + (b.isMe ? ' me' : '') },
+    el('span', {}, el('strong', {}, b.nick), ' · ' + rouletteBetLabel(b)),
+    el('strong', {}, b.amount + ' 🪙')
+  )));
+}
+
+function renderRouletteResult() {
+  const resultDiv = document.getElementById('roulette-result');
+  const result = rouletteState?.lastResult;
+  if (!resultDiv || !result) { if (resultDiv) hide(resultDiv); return; }
+  const mine = (result.players || []).find(p => p.isMe);
+  const resultChildren = [
+    el('div', { className: `roulette-result-number ${result.color}` }, String(result.number)),
+  ];
+  if (mine) {
+    const net = mine.net;
+    const msgClass = net > 0 ? 'win' : 'lose';
+    const msgText = net > 0 ? `+${net} coinów!` : net === 0 ? 'Zwrot stawki' : `${net} coinów`;
+    resultChildren.push(el('div', { className: `roulette-result-msg ${msgClass}` }, msgText));
+    if (mine.itemEffect) {
+      const effect = mine.itemEffect;
+      const bonusText = effect.bonus ? ` (+${effect.bonus} 🪙)` : effect.rescuedNumber != null ? ` (ratunek: ${effect.rescuedNumber})` : '';
+      resultChildren.push(el('div', { className: 'roulette-result-msg win' }, `${effect.name}${bonusText}`));
+    }
+  } else {
+    resultChildren.push(el('div', { className: 'roulette-result-msg' }, 'Ostatni wspólny spin'));
+  }
+  if ((result.players || []).length) {
+    resultChildren.push(el('div', { className: 'roulette-result-players' },
+      ...result.players.map(p => el('div', { className: 'roulette-result-player' },
+        el('strong', {}, p.nick),
+        ' · zakład ' + p.totalBet + ' 🪙 · ',
+        roulettePlNode(p.net)
+      ))
+    ));
+  }
+  resultDiv.replaceChildren(...resultChildren);
+  show(resultDiv);
+}
+
+function renderRouletteHistory() {
+  const histEl = document.getElementById('roulette-history');
+  if (!histEl) return;
+  histEl.replaceChildren();
+  for (const spin of (rouletteState?.history || [])) {
+    histEl.appendChild(el('div', { className: `roulette-history-dot ${spin.result_color}` }, String(spin.result_number)));
+  }
+  if (!histEl.children.length) {
+    histEl.appendChild(el('div', { style: { color: 'var(--muted)', fontSize: '12px' } }, 'Brak wspólnych spinów.'));
+  }
+}
+
+function renderRoulette() {
+  renderRouletteStatus();
+  renderRouletteSeats();
+  renderRouletteBetsList();
+  renderRouletteResult();
+  renderRouletteHistory();
+  updateRouletteBetUI();
+}
+
+function applyRouletteState(data) {
+  const hadState = !!rouletteState;
+  const previousResultId = rouletteLastResultId;
+  rouletteLastStateMs = Date.now();
+  rouletteState = data;
+  if (data.profile) {
+    me.coins = data.profile.coins;
+    setText(headerCoins, me.coins);
+  }
+  const result = data.lastResult;
+  if (result?.id) {
+    const mine = (result.players || []).find(p => p.isMe);
+    if (mine?.bets?.length) lastRouletteBets = mine.bets.map(b => ({ ...b }));
+    if (hadState && result.id !== previousResultId && activeTab === 'roulette') {
+      animateRouletteResult(result);
+    } else {
+      const wheelNum = document.getElementById('roulette-wheel-num');
+      if (wheelNum) wheelNum.textContent = result.number;
+    }
+    rouletteLastResultId = result.id;
+  }
+  renderRoulette();
+}
+
+document.getElementById('roulette-seat-btn').addEventListener('click', () => {
+  if (rouletteState?.me?.seated) rouletteAction({ action: 'leave' });
+  else rouletteAction({ action: 'sit' });
+});
+
+document.getElementById('roulette-spin-btn').addEventListener('click', () => {
+  const meState = rouletteState?.me;
+  if (!meState?.seated) { showToast('Najpierw usiądź przy stole.'); return; }
+  if (meState.canSpin) rouletteAction({ action: 'spin_now' }, { spin: true });
+  else if (meState.canCancelReady) rouletteAction({ action: 'set_ready', ready: false });
+  else if (meState.currentBet > 0) rouletteAction({ action: 'set_ready', ready: true }, { spin: true });
 });
 
 async function loadRouletteHistory() {
-  try {
-    const data = await invokeRoulette({ action: 'history' });
-    const histEl = document.getElementById('roulette-history');
-    histEl.replaceChildren();
-    for (const spin of (data.spins || [])) {
-      histEl.appendChild(el('div', { className: `roulette-history-dot ${spin.result_color}` }, String(spin.result_number)));
-    }
-  } catch (err) { /* silent */ }
+  return loadRouletteState();
 }
 
 // ── Slots (Jednoręki Bandyta) ──────────────────────────────────────────────
