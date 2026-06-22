@@ -1496,7 +1496,7 @@
     .roulette-table-status strong { color: var(--text); }
     .roulette-table-status .roulette-seat-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .roulette-seat-btn { min-height: 34px; padding: 7px 12px; white-space: nowrap; }
-    .roulette-shared-panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); gap: 12px; margin: 12px 0; }
+    .roulette-shared-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 12px 0; }
     .roulette-panel {
       background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
       min-width: 0;
@@ -1505,14 +1505,6 @@
       font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase;
       letter-spacing: .04em; margin-bottom: 8px;
     }
-    .roulette-seats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-    .roulette-seat {
-      min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 9px;
-      background: var(--surface); display: grid; gap: 5px;
-    }
-    .roulette-seat.me { border-color: var(--accent); background: var(--acc-dim); }
-    .roulette-seat.ready { border-color: var(--yes); box-shadow: inset 0 0 0 1px rgba(22,163,74,.25); }
-    .roulette-seat.empty { color: var(--dim); align-content: center; min-height: 92px; }
     .roulette-seat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
     .roulette-seat-nick { font-size: 13px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .roulette-seat-pill {
@@ -1541,8 +1533,8 @@
     .roulette-layout {
       display: flex; gap: 32px; align-items: center; justify-content: center;
       flex-wrap: wrap;
-      width: min(1180px, 100%); max-width: 100%; min-height: 520px; margin: 0 auto 14px;
-      padding: 78px 62px 74px;
+      width: min(1040px, calc(100% - 128px)); max-width: 100%; min-height: 520px; margin: 44px auto 32px;
+      padding: 88px 70px 84px;
       background:
         radial-gradient(ellipse 72% 58% at 50% 50%, rgba(36,137,77,.9) 0%, rgba(19,100,54,.96) 54%, rgba(7,61,32,1) 100%);
       border: 14px solid #5a3a1a;
@@ -1569,10 +1561,12 @@
     .roulette-live-seat {
       position: absolute; width: 154px; min-height: 78px; transform: translate(-50%, -50%);
       pointer-events: auto; display: grid; gap: 4px; padding: 10px 11px 9px;
+      appearance: none; font: inherit; text-align: left; cursor: default;
       border-radius: 10px; border: 2px solid #6b4422;
       background: linear-gradient(180deg, #fff7ed, #f6d9ad 48%, #c58548 100%);
       box-shadow: 0 8px 16px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.65);
       color: #3b220d;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, opacity .16s ease;
     }
     .roulette-live-seat::before {
       content: '';
@@ -1585,21 +1579,28 @@
     .roulette-live-seat.empty {
       opacity: .58; background: linear-gradient(180deg, #e9d6bd, #b88954);
     }
+    button.roulette-live-seat.can-sit { cursor: pointer; opacity: .86; }
+    button.roulette-live-seat.can-sit:hover {
+      transform: translate(-50%, -50%) translateY(-3px);
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245,158,11,.22), 0 12px 22px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.7);
+    }
+    button.roulette-live-seat:disabled { cursor: default; }
     .roulette-live-seat.me { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.24), 0 8px 16px rgba(0,0,0,.32); }
     .roulette-live-seat.ready { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.24), 0 8px 16px rgba(0,0,0,.32); }
-    .roulette-live-seat.seat-pos-0 { left: 50%; top: 4%; }
-    .roulette-live-seat.seat-pos-1 { left: 87%; top: 24%; }
-    .roulette-live-seat.seat-pos-2 { left: 87%; top: 76%; }
-    .roulette-live-seat.seat-pos-3 { left: 50%; top: 96%; }
-    .roulette-live-seat.seat-pos-4 { left: 13%; top: 76%; }
-    .roulette-live-seat.seat-pos-5 { left: 13%; top: 24%; }
+    .roulette-live-seat.seat-pos-0 { left: 50%; top: -20px; }
+    .roulette-live-seat.seat-pos-1 { left: calc(100% + 46px); top: 27%; }
+    .roulette-live-seat.seat-pos-2 { left: calc(100% + 46px); top: 73%; }
+    .roulette-live-seat.seat-pos-3 { left: 50%; top: calc(100% + 20px); }
+    .roulette-live-seat.seat-pos-4 { left: -46px; top: 73%; }
+    .roulette-live-seat.seat-pos-5 { left: -46px; top: 27%; }
     .roulette-live-seat .roulette-seat-nick { color: #2b1708; font-size: 12px; }
     .roulette-live-seat .roulette-seat-pill { justify-self: start; background: rgba(59,34,13,.13); color: #5a3214; }
     .roulette-live-seat .roulette-seat-pill.ready { background: rgba(22,163,74,.18); color: #166534; }
     .roulette-live-seat .roulette-seat-stats { color: #69431e; font-size: 10.5px; }
     .roulette-live-seat .roulette-seat-stats strong { color: #2b1708; }
     .roulette-live-seat-empty-text { font-size: 11px; font-weight: 800; color: rgba(43,23,8,.72); }
-    }
+    .roulette-live-seat-empty-action { font-size: 10px; font-weight: 800; color: rgba(21,82,44,.9); text-transform: uppercase; }
     /* Wheel */
     .roulette-wheel-wrap {
       display: flex; flex-direction: column; align-items: center; gap: 16px;
@@ -1733,19 +1734,16 @@
     .roulette-history-dot.red { background: #dc2626; }
     .roulette-history-dot.black { background: #1e293b; }
     @media (max-width: 940px) {
-      .roulette-layout { min-height: 0; padding: 18px; border-radius: 28px; border-width: 8px; }
+      .roulette-layout { width: 100%; min-height: 0; margin: 0 auto 14px; padding: 18px; border-radius: 28px; border-width: 8px; }
       .roulette-live-seats {
         position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px; order: 3; width: 100%; pointer-events: auto;
       }
-      .roulette-live-seat { position: relative; left: auto !important; top: auto !important; transform: none; width: auto; min-height: 74px; }
+      .roulette-live-seat,
+      button.roulette-live-seat.can-sit:hover { position: relative; left: auto !important; top: auto !important; transform: none; width: auto; min-height: 74px; }
     }
     @media (max-width: 760px) {
       .roulette-shared-panels { grid-template-columns: 1fr; }
-      .roulette-seats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 520px) {
-      .roulette-seats-grid { grid-template-columns: 1fr; }
     }
 
     /* ── Slots (Jednoręki Bandyta) ── */
@@ -4074,10 +4072,6 @@
       </div>
 
       <div class="roulette-shared-panels">
-        <section class="roulette-panel">
-          <div class="roulette-panel-title">Miejsca przy stole</div>
-          <div class="roulette-seats-grid" id="roulette-seats"></div>
-        </section>
         <section class="roulette-panel">
           <div class="roulette-panel-title">Zakłady na tę rundę</div>
           <div class="roulette-bet-list" id="roulette-bets-list"></div>
@@ -10955,7 +10949,6 @@ async function invokeRoulette(payload) {
 
 async function loadRouletteState(showSpinner = true) {
   if (showSpinner && !rouletteState) {
-    document.getElementById('roulette-seats')?.replaceChildren(makeSpinner());
     document.getElementById('roulette-bets-list')?.replaceChildren(makeSpinner());
   }
   try {
@@ -10970,6 +10963,7 @@ async function rouletteAction(payload, opts = {}) {
   if (rouletteActionBusy) return;
   rouletteActionBusy = true;
   updateRouletteBetUI();
+  renderRouletteLiveSeats();
   const spinBtn = document.getElementById('roulette-spin-btn');
   if (opts.spin && spinBtn) spinBtn.classList.add('spinning');
   try {
@@ -10981,6 +10975,7 @@ async function rouletteAction(payload, opts = {}) {
   } finally {
     rouletteActionBusy = false;
     if (spinBtn) spinBtn.classList.remove('spinning');
+    renderRouletteLiveSeats();
     updateRouletteBetUI();
   }
 }
@@ -11198,37 +11193,6 @@ function renderRouletteStatus() {
   seatBtn.disabled = rouletteActionBusy || (!meState.seated && !meState.canSit);
 }
 
-function renderRouletteSeats() {
-  const box = document.getElementById('roulette-seats');
-  if (!box || !rouletteState?.table) return;
-  const nodes = [];
-  for (let seatNo = 0; seatNo < rouletteState.table.maxSeats; seatNo += 1) {
-    const seat = rouletteState.seats.find(s => s.seatNo === seatNo);
-    if (!seat) {
-      nodes.push(el('div', { className: 'roulette-seat empty' },
-        el('div', { className: 'roulette-seat-nick' }, 'Miejsce ' + (seatNo + 1)),
-        el('div', { className: 'poker-note' }, 'wolne')
-      ));
-      continue;
-    }
-    const pill = seat.ready ? 'gotowy' : seat.currentBet > 0 ? 'obstawia' : 'patrzy';
-    nodes.push(el('div', {
-      className: 'roulette-seat' + (seat.isMe ? ' me' : '') + (seat.ready ? ' ready' : ''),
-    },
-      el('div', { className: 'roulette-seat-top' },
-        el('span', { className: 'roulette-seat-nick', title: seat.nick }, seat.nick + (seat.isMe ? ' (Ty)' : '')),
-        el('span', { className: 'roulette-seat-pill' + (seat.ready ? ' ready' : '') }, pill)
-      ),
-      el('div', { className: 'roulette-seat-stats' },
-        el('span', {}, 'Zakład'), el('strong', {}, seat.currentBet + ' 🪙'),
-        el('span', {}, 'Sesja'), roulettePlNode(seat.sessionNet),
-        el('span', {}, 'Overall'), roulettePlNode(seat.overallNet)
-      )
-    ));
-  }
-  box.replaceChildren(...nodes);
-}
-
 function renderRouletteLiveSeats() {
   const box = document.getElementById('roulette-live-seats');
   if (!box || !rouletteState?.table) return;
@@ -11236,11 +11200,21 @@ function renderRouletteLiveSeats() {
   for (let seatNo = 0; seatNo < rouletteState.table.maxSeats; seatNo += 1) {
     const seat = rouletteState.seats.find(s => s.seatNo === seatNo);
     if (!seat) {
-      nodes.push(el('div', { className: 'roulette-live-seat empty seat-pos-' + seatNo },
+      const canSit = !!rouletteState.me?.canSit && !rouletteActionBusy;
+      const attrs = {
+        className: 'roulette-live-seat empty seat-pos-' + seatNo + (canSit ? ' can-sit' : ''),
+        type: 'button',
+        disabled: !canSit,
+        title: canSit ? 'Usiądź przy stole' : 'Wolne miejsce',
+        'aria-label': canSit ? 'Usiądź przy stole' : 'Wolne miejsce',
+      };
+      if (canSit) attrs.onclick = () => rouletteAction({ action: 'sit' });
+      nodes.push(el('button', attrs,
         el('div', { className: 'roulette-seat-top' },
           el('span', { className: 'roulette-seat-nick' }, 'Miejsce ' + (seatNo + 1))
         ),
-        el('div', { className: 'roulette-live-seat-empty-text' }, 'wolne')
+        el('div', { className: 'roulette-live-seat-empty-text' }, 'wolne'),
+        canSit ? el('div', { className: 'roulette-live-seat-empty-action' }, 'usiądź') : null
       ));
       continue;
     }
@@ -11325,7 +11299,6 @@ function renderRouletteHistory() {
 function renderRoulette() {
   renderRouletteStatus();
   renderRouletteLiveSeats();
-  renderRouletteSeats();
   renderRouletteBetsList();
   renderRouletteResult();
   renderRouletteHistory();
