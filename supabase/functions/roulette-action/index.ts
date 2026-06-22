@@ -103,6 +103,13 @@ function normalizeBets(bets) {
   return bets.map(normalizeBet);
 }
 
+function normalizeSeatNo(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const seatNo = asInt(value, -1);
+  if (seatNo < 0 || seatNo > 5) throw gameError("Nieprawidłowe miejsce.");
+  return seatNo;
+}
+
 function sumBets(bets) {
   return bets.reduce((sum, bet) => sum + asInt(bet.amount), 0);
 }
@@ -514,11 +521,12 @@ async function getState(userId) {
   return await db.begin((tx) => stateResponse(tx, userId));
 }
 
-async function sit(userId) {
+async function sit(userId, requestedSeatNo = null) {
   return await db.begin(async (tx) => {
     const { table, seats } = await loadLockedGame(tx);
     if (seats.some((seat) => seat.user_id === userId)) throw gameError("Już siedzisz przy stole.");
-    if (seats.length >= asInt(table.max_seats, 6)) throw gameError("Brak wolnych miejsc.");
+    const maxSeats = asInt(table.max_seats, 6);
+    if (seats.length >= maxSeats) throw gameError("Brak wolnych miejsc.");
 
     const profileRows = await tx`
       select id, nick
@@ -529,8 +537,15 @@ async function sit(userId) {
     if (!profile) throw gameError("Nie znaleziono profilu.");
 
     const occupied = seats.map((seat) => asInt(seat.seat_no));
-    let seatNo = 0;
-    while (occupied.includes(seatNo)) seatNo += 1;
+    const normalizedSeatNo = normalizeSeatNo(requestedSeatNo);
+    let seatNo = normalizedSeatNo;
+    if (seatNo !== null) {
+      if (seatNo >= maxSeats) throw gameError("Nieprawidłowe miejsce.");
+      if (occupied.includes(seatNo)) throw gameError("To miejsce jest już zajęte.");
+    } else {
+      seatNo = 0;
+      while (occupied.includes(seatNo)) seatNo += 1;
+    }
 
     await tx`
       insert into public.roulette_seats (table_id, seat_no, user_id, nick_snapshot)
@@ -682,7 +697,7 @@ Deno.serve(async (req) => {
 
     let result;
     if (action === "state" || action === "history") result = await getState(user.id);
-    else if (action === "sit") result = await sit(user.id);
+    else if (action === "sit") result = await sit(user.id, body.seatNo ?? body.seat_no);
     else if (action === "leave") result = await leave(user.id);
     else if (action === "add_bet") result = await addBet(user.id, body.bet);
     else if (action === "set_bets") result = await setBets(user.id, body.bets);

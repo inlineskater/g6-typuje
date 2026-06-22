@@ -10861,6 +10861,7 @@ let activeChip = 10;
 let wheelRotation = 0;
 let ballRotation = 0;
 let rouletteActionBusy = false;
+let roulettePendingAction = null;
 
 // Build number grid
 (function buildRouletteGrid() {
@@ -10962,7 +10963,9 @@ async function loadRouletteState(showSpinner = true) {
 async function rouletteAction(payload, opts = {}) {
   if (rouletteActionBusy) return;
   rouletteActionBusy = true;
+  roulettePendingAction = String(payload?.action || '');
   updateRouletteBetUI();
+  renderRouletteStatus();
   renderRouletteLiveSeats();
   const spinBtn = document.getElementById('roulette-spin-btn');
   if (opts.spin && spinBtn) spinBtn.classList.add('spinning');
@@ -10974,7 +10977,9 @@ async function rouletteAction(payload, opts = {}) {
     showToast('❌ ' + err.message);
   } finally {
     rouletteActionBusy = false;
+    roulettePendingAction = null;
     if (spinBtn) spinBtn.classList.remove('spinning');
+    renderRouletteStatus();
     renderRouletteLiveSeats();
     updateRouletteBetUI();
   }
@@ -11172,13 +11177,14 @@ function renderRouletteStatus() {
   const state = rouletteState;
   if (!state) {
     statusEl.querySelector('.roulette-seat-main')?.replaceChildren(el('strong', {}, 'Wspólny stół'), el('span', {}, 'Ładuję...'));
+    seatBtn.hidden = true;
     seatBtn.disabled = true;
     return;
   }
   const meState = state.me || {};
   const seatCount = state.seats?.length || 0;
   let text;
-  if (!meState.seated) text = 'Usiądź, żeby obstawiać przy wspólnym stole.';
+  if (!meState.seated) text = meState.canSit ? 'Wybierz wolne krzesło wokół stołu.' : 'Brak wolnych miejsc przy stole.';
   else if (seatCount <= 1) text = 'Grasz solo: postaw zakład i zakręć od razu.';
   else if (meState.ready) text = 'Jesteś gotowy. Spin ruszy, gdy pozostali obstawiający też będą gotowi.';
   else if (state.table.activeBettors > 0) text = `Gotowi: ${state.table.readyBettors}/${state.table.activeBettors} obstawiających.`;
@@ -11188,9 +11194,10 @@ function renderRouletteStatus() {
     el('strong', {}, 'Wspólny stół'),
     el('span', {}, text)
   );
-  seatBtn.textContent = meState.seated ? 'Odejdź od stołu' : 'Usiądź';
-  seatBtn.className = meState.seated ? 'btn-ghost roulette-seat-btn' : 'btn-primary roulette-seat-btn';
-  seatBtn.disabled = rouletteActionBusy || (!meState.seated && !meState.canSit);
+  seatBtn.hidden = !meState.seated;
+  seatBtn.textContent = roulettePendingAction === 'leave' ? 'Odchodzę...' : 'Odejdź od stołu';
+  seatBtn.className = 'btn-ghost roulette-seat-btn';
+  seatBtn.disabled = rouletteActionBusy;
 }
 
 function renderRouletteLiveSeats() {
@@ -11208,7 +11215,7 @@ function renderRouletteLiveSeats() {
         title: canSit ? 'Usiądź przy stole' : 'Wolne miejsce',
         'aria-label': canSit ? 'Usiądź przy stole' : 'Wolne miejsce',
       };
-      if (canSit) attrs.onclick = () => rouletteAction({ action: 'sit' });
+      if (canSit) attrs.onclick = () => rouletteAction({ action: 'sit', seatNo });
       nodes.push(el('button', attrs,
         el('div', { className: 'roulette-seat-top' },
           el('span', { className: 'roulette-seat-nick' }, 'Miejsce ' + (seatNo + 1))
@@ -11330,8 +11337,8 @@ function applyRouletteState(data) {
 }
 
 document.getElementById('roulette-seat-btn').addEventListener('click', () => {
-  if (rouletteState?.me?.seated) rouletteAction({ action: 'leave' });
-  else rouletteAction({ action: 'sit' });
+  if (!rouletteState?.me?.seated || rouletteActionBusy) return;
+  rouletteAction({ action: 'leave' });
 });
 
 document.getElementById('roulette-spin-btn').addEventListener('click', () => {
