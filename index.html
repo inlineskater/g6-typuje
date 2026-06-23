@@ -1325,6 +1325,28 @@
       font-size: 12px; color: var(--muted); line-height: 1.8;
     }
     .info-banner strong { color: var(--text); }
+    .gift-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 14px; background: linear-gradient(135deg, rgba(22,163,74,.12), rgba(234,179,8,.10)), var(--card);
+      border-color: rgba(22,163,74,.24); color: var(--text);
+    }
+    .gift-banner-main {
+      display: flex; align-items: center; gap: 11px; min-width: 0;
+    }
+    .gift-banner-icon {
+      width: 38px; height: 38px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(22,163,74,.14); border: 1px solid rgba(22,163,74,.22);
+      font-size: 20px; flex: 0 0 auto;
+    }
+    .gift-banner-title { font-size: 14px; font-weight: 900; line-height: 1.25; }
+    .gift-banner-copy { color: var(--muted); line-height: 1.45; margin-top: 2px; }
+    .gift-banner-action {
+      flex: 0 0 auto; min-height: 36px; border: none; border-radius: 8px;
+      background: var(--yes); color: #fff; cursor: pointer; font: inherit;
+      font-size: 12px; font-weight: 800; padding: 8px 14px;
+    }
+    .gift-banner-action:hover { filter: brightness(.96); }
     .info-rules {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
@@ -1359,6 +1381,8 @@
       .btn-new-market { width: 100%; min-height: 44px; }
 
       .info-banner { padding: 13px 14px; }
+      .gift-banner { align-items: stretch; flex-direction: column; }
+      .gift-banner-action { width: 100%; }
       .info-rules { grid-template-columns: 1fr; gap: 9px; }
 
       .markets-section-divider { margin-top: 48px; }
@@ -4233,7 +4257,7 @@
       </div>
     </div>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
-    <button class="nav-tab" data-tab="farm">🌱 Ogródek</button>
+    <button class="nav-tab has-nav-hint" data-tab="farm">🌱 Ogródek <span class="nav-hint-badge" aria-hidden="true">NOWE</span></button>
     <button class="nav-tab" data-tab="leaderboard">📊 Statystyki</button>
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
@@ -4247,6 +4271,17 @@
           <p>Każdy dostaje 1000 coinów na start — typuj mądrze i zostań liderem rankingu!</p>
         </div>
         <button class="btn-new-market" id="btn-new-market">+ Nowy rynek</button>
+      </div>
+
+      <div class="info-banner gift-banner hidden" id="farm-starter-banner">
+        <div class="gift-banner-main">
+          <span class="gift-banner-icon" aria-hidden="true">🎁</span>
+          <div>
+            <div class="gift-banner-title">Prezent od serwera: darmowe skrzynki w Ogródku</div>
+            <div class="gift-banner-copy">Otwórz skrzynki z nasionami za 0 🪙 i zgarnij karty roślin na start.</div>
+          </div>
+        </div>
+        <button class="gift-banner-action" id="farm-starter-btn" type="button">Otwórz prezent</button>
       </div>
 
       <div class="info-banner">
@@ -5963,6 +5998,8 @@ const logoutBtn       = document.getElementById('logout-btn');
 const headerCoins     = document.getElementById('header-coins');
 const headerNick      = document.getElementById('header-nick');
 const marketsGrid     = document.getElementById('markets-grid');
+const farmStarterBanner = document.getElementById('farm-starter-banner');
+const farmStarterBtn    = document.getElementById('farm-starter-btn');
 const pokerWrap       = document.getElementById('poker-wrap');
 const pokerBuyIn      = document.getElementById('poker-buy-in');
 const pokerBlinds     = document.getElementById('poker-blinds');
@@ -6330,6 +6367,35 @@ function updateAdminTestTabs() {
   if (ihTestNav) ihTestNav.style.display = isAdmin() ? '' : 'none';
 }
 
+let farmStarterBannerSeq = 0;
+async function refreshFarmStarterBanner() {
+  if (!farmStarterBanner) return;
+  const seq = ++farmStarterBannerSeq;
+  hide(farmStarterBanner);
+  if (!me?.id) return;
+  try {
+    const { data, error } = await sb.from('farm_user_state')
+      .select('boxes,starter_granted,starter_opens_left')
+      .eq('user_id', me.id)
+      .maybeSingle();
+    if (seq !== farmStarterBannerSeq) return;
+    if (error) { console.error('farm starter banner', error); return; }
+    const hasUnopenedStarter = data
+      ? (!data.starter_granted || (Number(data.starter_opens_left || 0) > 0 && Number(data.boxes || 0) > 0))
+      : true;
+    if (hasUnopenedStarter) show(farmStarterBanner);
+  } catch (e) {
+    console.error('farm starter banner', e);
+  }
+}
+
+if (farmStarterBtn) {
+  farmStarterBtn.addEventListener('click', () => {
+    pendingFarmHubOpen = 'inventory';
+    switchTab('farm');
+  });
+}
+
 document.querySelectorAll('.nav-tab').forEach(btn =>
   btn.addEventListener('click', () => {
     if (btn.dataset.shopTarget) { openShopSection(btn.dataset.shopTarget); return; }
@@ -6565,6 +6631,7 @@ function switchTab(tab) {
   hide(tFa);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    refreshFarmStarterBanner();
     if (markets.length === 0) loadMarkets();
   } else if (tab === 'leaderboard') {
     hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
@@ -18114,6 +18181,7 @@ let fmNft = [];                 // all farm_nft_instances: [{species,serial_no,e
 let fmBoxes = 0;                // owned sealed (unopened) seed boxes
 let fmVouchers = 0;             // owned free-tile vouchers
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
+let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
 let fmRealtimeReady = false, fmTimer = null;
 
@@ -18230,6 +18298,11 @@ async function loadFarm() {
     (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, { base_price: +m.base_price, cur_price: +m.cur_price, last_decay_at: m.last_decay_at }));
     renderFarmPanels();
     renderFarmBoard();
+    if (pendingFarmHubOpen && activeTab === 'farm') {
+      const hubTab = pendingFarmHubOpen;
+      pendingFarmHubOpen = null;
+      openFarmHub(hubTab);
+    }
   } catch (e) {
     console.error('loadFarm', e);
   }
@@ -19771,6 +19844,7 @@ async function openFarmLootbox(btn) {
   playFarmPackOpening(cards);
   renderFarmCollection(); renderFarmSelection();
   if (farmModalEl) refreshFarmHub();
+  refreshFarmStarterBanner();
   if (data.got_voucher) showToast('🎁 Trafiła Ci się darmowa działka! Postaw ją na pustym polu farmy.');
 }
 
