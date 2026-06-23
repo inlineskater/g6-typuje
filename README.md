@@ -63,7 +63,7 @@ Existing project Bug Jumper hard-course rollout:
 - Resolution: market creator or an `is_admin` profile can resolve a market.
 - Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
 - Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
-- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, Snake, „Najazd Ticketów", and VAR Patrol). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`; VAR Patrol debuts in the week starting June 22, 2026. Each pays the weekly top 3 100/50/25 coins.
+- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, Snake, „Najazd Ticketów", and VAR Patrol). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`; VAR Patrol debuts in the week starting June 22, 2026; Najazd Ticketów is forced for the week starting June 29, 2026. Each pays the weekly top 3 100/50/25 coins.
 - Farma: shared 10x4 farm grid with purchasable plots, seed lootboxes, plant cards, crop harvesting, dynamic NPC crop prices, and migrated Ogródek plants. Details and odds are documented in [docs/farma.md](docs/farma.md).
 - Leaderboard: cash plus open position value.
 

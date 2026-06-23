@@ -9,7 +9,7 @@ ALTER TABLE public.hero_item_defs ALTER COLUMN effect_game DROP NOT NULL;
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_effect_game_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_effect_game_check
-  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','poker','tavern','global'));
+  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','poker','tavern','global'));
 
 
 -- ── 1. Item definitions ─────────────────────────────────────────────

@@ -26,6 +26,7 @@ AS $$
     WHEN '2026-06-08' THEN 'bug_jumper'  -- Bug Jumper: Hard Course
     WHEN '2026-06-15' THEN 'snake'
     WHEN '2026-06-22' THEN 'var_patrol'  -- VAR Patrol debut
+    WHEN '2026-06-29' THEN 'invoice_horde'  -- Najazd Ticketów
     -- SEASONAL_ROTATION from SEASONAL_ANCHOR_WEEK_START (2026-05-18, a Monday)
     ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol'])[
       (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 6) + 1

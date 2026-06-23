@@ -265,8 +265,10 @@ async function getStrongestHeroEffect(tx, userId, game) {
         and (
           d.effect_game = ${game}
           or (
+            ${game} in ('whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol')
+            and
             d.effect_type = 'score_bonus'
-            and d.effect_game in ('whack_boss', 'bug_jumper', 'flappy_pants', 'snake')
+            and d.effect_game in ('whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol')
           )
         )
       order by d.effect_value desc, d.price desc, d.slug
