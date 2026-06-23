@@ -6362,7 +6362,7 @@ let farmStarterBannerSeq = 0;
 function setFarmStarterBannerVisible(state) {
   if (!farmStarterBanner) return;
   const hasUnopenedStarter = state
-    ? (!state.starter_granted || (Number(state.starter_opens_left || 0) > 0 && Number(state.boxes || 0) > 0))
+    ? (!state.starter_granted || Number(state.boxes || 0) > 0)
     : true;
   farmStarterBanner.classList.toggle('hidden', !hasUnopenedStarter);
 }
