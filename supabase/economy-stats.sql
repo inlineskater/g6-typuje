@@ -9,6 +9,7 @@
 --              + poker_stacks    (chips on active seats)
 --              + hero_items      (owned items at settled auction bid or shop price)
 --              + accessories     (garden accessory spend, from coin ledger)
+--              + farm_assets     (farm land + card-level spend + crop inventory at market + plant cards by rarity + NFT cards by scarcity + sealed boxes + tile vouchers)
 --              + marketplace_escrow  (leading bids on open Targowisko auctions)
 --              + hero_auction_escrow (leading bids on open hero-item auctions)
 --
@@ -112,6 +113,39 @@ AS $$
            AND ct.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric) AS accessories,
 
+      -- farm: land + card-level investment (coin cost paid) + crop inventory at market
+      -- + plant cards held (by rarity) + serialized NFT cards (scarcity value)
+      COALESCE((
+        SELECT sum(-ct.delta)
+          FROM public.coin_transactions ct
+         WHERE ct.reason IN ('farm_tile_buy','card_levelup')
+           AND ct.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+      ), 0::numeric)
+      + COALESCE((
+        SELECT sum(fi.qty * fm.cur_price)
+          FROM public.farm_inventory fi
+          JOIN public.farm_market fm ON fm.crop_type = fi.crop_type
+         WHERE fi.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+      ), 0::numeric)
+      + COALESCE((
+        SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
+          FROM public.farm_collection fc
+          JOIN public.farm_card_defs d ON d.species = fc.species
+         WHERE d.edition_size IS NULL
+           AND fc.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+      ), 0::numeric)
+      + COALESCE((
+        SELECT sum(round(20000.0 / ni.edition_size))
+          FROM public.farm_nft_instances ni
+         WHERE ni.owner_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+      ), 0::numeric)
+      -- sealed (unopened) seed boxes at cost (100) + free-tile vouchers at base tile price (350)
+      + COALESCE((
+        SELECT sum(fus.boxes * 100 + fus.tile_vouchers * 350)
+          FROM public.farm_user_state fus
+         WHERE fus.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+      ), 0::numeric) AS farm_assets,
+
       -- leading bids on open Targowisko (marketplace) auctions
       COALESCE((
         SELECT sum(b.amount)
@@ -129,12 +163,12 @@ AS $$
       ), 0::bigint)::numeric AS hero_auction_escrow,
 
       -- ── coin flow: minting ──────────────────────────────────────────────
-      -- coins minted via garden harvest, admin grants, top-ups, daily interest
+      -- coins minted via garden harvest, admin grants, top-ups, daily interest, farm crop sales
       COALESCE((
         SELECT sum(ct.delta)
           FROM public.coin_transactions ct
          WHERE ct.delta > 0
-           AND ct.reason IN ('garden_water','admin_grant','zapps_topup','daily_interest')
+           AND ct.reason IN ('garden_water','admin_grant','zapps_topup','daily_interest','farm_crop_sale')
       ), 0::numeric) AS ledger_minted,
 
       -- weekly game prize payouts (100/50/25 per rank per season)
@@ -162,7 +196,8 @@ AS $$
          WHERE ct.delta < 0
            AND ct.reason IN ('garden_accessory','hero_item_purchase','store_purchase',
                              'garden_certificate','arcade_entry','hero_appearance_change',
-                             'canvas_pixel','canvas_pixel_adjustment')
+                             'canvas_pixel','canvas_pixel_adjustment',
+                             'farm_tile_buy','farm_box_buy','lootbox_open','card_levelup')
       ), 0::numeric) AS shop_burned,
 
       -- ── house (bank) P&L ────────────────────────────────────────────────
@@ -190,10 +225,11 @@ AS $$
     'poker_stacks',        round(b.poker_stacks)::bigint,
     'hero_items',          round(b.hero_items)::bigint,
     'accessories',         round(b.accessories)::bigint,
+    'farm_assets',         round(b.farm_assets)::bigint,
     'marketplace_escrow',  round(b.marketplace_escrow)::bigint,
     'hero_auction_escrow', round(b.hero_auction_escrow)::bigint,
     'total_supply',        round(b.total_cash + b.market_positions + b.football_open
-                                 + b.poker_stacks + b.hero_items + b.accessories
+                                 + b.poker_stacks + b.hero_items + b.accessories + b.farm_assets
                                  + b.marketplace_escrow + b.hero_auction_escrow)::bigint,
 
     -- coin flow: minting

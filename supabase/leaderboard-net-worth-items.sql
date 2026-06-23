@@ -41,6 +41,37 @@ AS $$
              FROM public.coin_transactions ct
             WHERE ct.user_id = p_uid
               AND ct.reason = 'garden_accessory'
+         ), 0)
+       -- Farm: land + card-level investment (coins spent) + crop inventory at market price
+       -- + plant cards held (by rarity) + serialized NFT cards (scarcity value).
+       + COALESCE((
+           SELECT sum(-ct.delta)
+             FROM public.coin_transactions ct
+            WHERE ct.user_id = p_uid
+              AND ct.reason IN ('farm_tile_buy','card_levelup')
+         ), 0)
+       + COALESCE((
+           SELECT sum(fi.qty * fm.cur_price)
+             FROM public.farm_inventory fi
+             JOIN public.farm_market fm ON fm.crop_type = fi.crop_type
+            WHERE fi.user_id = p_uid
+         ), 0)
+       + COALESCE((
+           SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
+             FROM public.farm_collection fc
+             JOIN public.farm_card_defs d ON d.species = fc.species
+            WHERE fc.user_id = p_uid AND d.edition_size IS NULL
+         ), 0)
+       + COALESCE((
+           SELECT sum(round(20000.0 / ni.edition_size))
+             FROM public.farm_nft_instances ni
+            WHERE ni.owner_id = p_uid
+         ), 0)
+       -- sealed (unopened) seed boxes (100 each) + free-tile vouchers (350 each)
+       + COALESCE((
+           SELECT fus.boxes * 100 + fus.tile_vouchers * 350
+             FROM public.farm_user_state fus
+            WHERE fus.user_id = p_uid
          ), 0);
 $$;
 
@@ -111,7 +142,26 @@ AS $$
           JOIN public.hero_item_defs d ON d.id = i.item_def_id
          WHERE i.owner_id = p_uid), 0) AS hero_items,
       COALESCE((SELECT sum(-ct.delta) FROM public.coin_transactions ct
-                 WHERE ct.user_id = p_uid AND ct.reason = 'garden_accessory'), 0) AS accessories
+                 WHERE ct.user_id = p_uid AND ct.reason = 'garden_accessory'), 0) AS accessories,
+      -- ── Ogródek (Farma), split into sub-components ──
+      COALESCE((SELECT sum(-ct.delta) FROM public.coin_transactions ct
+                 WHERE ct.user_id = p_uid AND ct.reason = 'farm_tile_buy'), 0) AS farm_land,
+      COALESCE((SELECT sum(-ct.delta) FROM public.coin_transactions ct
+                 WHERE ct.user_id = p_uid AND ct.reason = 'card_levelup'), 0)
+      + COALESCE((SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
+                    FROM public.farm_collection fc
+                    JOIN public.farm_card_defs d ON d.species = fc.species
+                   WHERE fc.user_id = p_uid AND d.edition_size IS NULL), 0) AS farm_cards,
+      COALESCE((SELECT sum(round(20000.0 / ni.edition_size))
+                  FROM public.farm_nft_instances ni
+                 WHERE ni.owner_id = p_uid), 0) AS farm_nft,
+      COALESCE((SELECT sum(fi.qty * fm.cur_price)
+                  FROM public.farm_inventory fi
+                  JOIN public.farm_market fm ON fm.crop_type = fi.crop_type
+                 WHERE fi.user_id = p_uid), 0) AS farm_crops,
+      COALESCE((SELECT fus.boxes * 100 + fus.tile_vouchers * 350
+                  FROM public.farm_user_state fus
+                 WHERE fus.user_id = p_uid), 0) AS farm_boxes
   )
   SELECT json_build_object(
     'cash',             round(cash)::int,
@@ -120,7 +170,15 @@ AS $$
     'poker_stack',      round(poker_stack)::int,
     'hero_items',       round(hero_items)::int,
     'accessories',      round(accessories)::int,
-    'total',            round(cash + market_positions + football_open + poker_stack + hero_items + accessories)::int,
+    'farm',             round(farm_land + farm_cards + farm_nft + farm_crops + farm_boxes)::int,
+    'farm_parts',       json_build_object(
+                          'land',   round(farm_land)::int,
+                          'cards',  round(farm_cards)::int,
+                          'nft',    round(farm_nft)::int,
+                          'crops',  round(farm_crops)::int,
+                          'boxes',  round(farm_boxes)::int),
+    'total',            round(cash + market_positions + football_open + poker_stack + hero_items + accessories
+                              + farm_land + farm_cards + farm_nft + farm_crops + farm_boxes)::int,
     'items', COALESCE((
       SELECT json_agg(it ORDER BY (it->>'value')::int DESC)
         FROM (
