@@ -95,7 +95,7 @@ Otwarcie skrzynki:
 - dodaje wylosowane karty do kolekcji gracza,
 - jeśli gracz ma już daną kartę, zwiększa jej licznik duplikatów (`count`) o 1.
 
-Liczba kart na skrzynkę to stała `v_draws` (=3) w `open_farm_lootbox()`, mirror `FARM_BOX_DRAWS` w `index.html`. Otwarcie skrzynki uruchamia animowane „rozpakowanie" w stylu Hearthstone/Clash Royale (`playFarmPackOpening` — karty wlatują rewersem do góry i odkrywają się po kolei, z poświatą zależną od rzadkości; można też kliknąć kartę, by odkryć ją wcześniej).
+Liczba kart na skrzynkę to stała `v_draws` (=3) w `open_farm_lootbox()`, mirror `FARM_BOX_DRAWS` w `index.html`. Otwarcie skrzynki uruchamia animowane, teatralne „rozpakowanie" (`playFarmPackOpening` — karty wlatują rewersem do góry i odkrywają się po kolei, z poświatą zależną od rzadkości; można też kliknąć kartę, by odkryć ją wcześniej).
 
 ## Szanse w skrzynce
 

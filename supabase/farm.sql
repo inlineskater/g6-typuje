@@ -1,4 +1,4 @@
--- Farma — Stardew/Happy-Farm + Clash-Royale card economy (Phase 1)
+-- Farma — Stardew/Happy-Farm + collectible plant-card economy (Phase 1)
 -- Run in Supabase SQL Editor (Dashboard → SQL Editor → New query → paste → Run).
 -- Idempotent: CREATE ... IF NOT EXISTS / CREATE OR REPLACE / guarded blocks — safe to re-run.
 --
@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS farm_tiles_owner_idx ON public.farm_tiles(owner_id);
 -- plant, so owners with two Ogródek plants get two migration tiles).
 ALTER TABLE public.farm_tiles ADD COLUMN IF NOT EXISTS zen_garden_id uuid;
 
--- Clash-Royale per-user card pile: duplicate count + level per species.
+-- Per-user plant-card pile: duplicate count + level per species.
 CREATE TABLE IF NOT EXISTS public.farm_collection (
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   species text NOT NULL REFERENCES public.farm_card_defs(species),

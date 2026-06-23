@@ -3860,7 +3860,7 @@
     .farm-help-list { margin: 4px 0 8px; padding-left: 20px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
     .farm-help-list li { margin-bottom: 3px; }
     .farm-help-list strong { color: var(--text); }
-    /* Pack opening (Hearthstone / Clash-Royale style) */
+    /* Pack opening (theatrical card reveal) */
     .farm-pack-overlay { align-items: center; justify-content: center; background: radial-gradient(circle at 50% 38%, rgba(40,55,90,.55), rgba(6,8,16,.9)); }
     .farm-pack-stage { text-align: center; padding: 24px 16px; max-width: 760px; width: 100%; }
     .farm-pack-title { font-size: 21px; font-weight: 900; color: #fff; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
@@ -3922,11 +3922,11 @@
     .farm-v2-body .farm-card-row, .farm-v2-body .farm-market-row { padding: 9px 2px; }
     .farm-v2-body .farm-card-name { color: var(--text); }
     .farm-v2-body .farm-card-sub { color: var(--muted); }
-    /* ── Ogródek farm overhaul: Twemoji icons + Clash cards + wood theme ── */
+    /* ── Ogródek farm overhaul: Twemoji icons + collectible cards + wood theme ── */
     /* Crisp Twemoji SVG plant icons (sized to the container's font-size; emoji fallback) */
     .farm-ico { width: 1em; height: 1em; vertical-align: -0.15em; object-fit: contain; display: inline-block; }
     .farm-ico-emoji { display: inline-block; line-height: 1; }
-    /* Clash-Royale-style plant cards (Ekwipunek grid + side collection) */
+    /* Collectible plant cards (Ekwipunek grid + side collection) */
     .fcc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; margin: 4px 0 8px; }
     .fcc { position: relative; border-radius: 14px; padding: 3px; background: linear-gradient(160deg, #cbd5e1, #94a3b8); box-shadow: 0 4px 12px rgba(0,0,0,.18); }
     .fcc.rar-rare { background: linear-gradient(160deg, #93c5fd, #3b82f6); }
@@ -5298,7 +5298,7 @@
         <div class="shop-section-head">
           <div>
             <div class="shop-section-title">📦 Skrzynki z nasionami <span class="nav-hint-badge">NOWE</span></div>
-            <div class="shop-section-sub">Skrzynki do <strong>🌱 Ogródka</strong>. Każda daje 3 losowe karty roślin — zbieraj duplikaty, ulepszaj karty (jak w Clash Royale), sadź je na działkach i sprzedawaj plony. Czasem trafi się 🎁 darmowa działka lub 💎 karta NFT.</div>
+            <div class="shop-section-sub">Skrzynki do <strong>🌱 Ogródka</strong>. Każda daje 3 losowe karty roślin — zbieraj duplikaty, ulepszaj karty, sadź je na działkach i sprzedawaj plony. Czasem trafi się 🎁 darmowa działka lub 💎 karta NFT.</div>
           </div>
         </div>
         <div id="farm-lootbox-content"><div class="loading-center"><div class="spinner"></div></div></div>
@@ -18141,7 +18141,7 @@ function setupGardenRealtime() {
   realtimeChannels.push(ch);
 }
 
-// ── Farma (farm grid + Clash-Royale card economy) ───────────────────────────
+// ── Farma (farm grid + collectible plant-card economy) ──────────────────────
 // Grid bounds mirror supabase/farm.sql (FARM_W/FARM_H) — keep in sync.
 const FARM_W = 10, FARM_H = 4;
 const FARM_BOX_PRICE = 100;
@@ -18760,7 +18760,7 @@ function renderFarmSelectionBody() {
   }
 }
 
-// Clash-Royale-style plant card: rarity frame + level gem + a duplicate-progress
+// Collectible plant card: rarity frame + level gem + a duplicate-progress
 // bar toward the next level. In the default ('inventory') mode it has an inline
 // upgrade button (opts.afterLevel re-renders the host). In 'pick' mode the whole
 // card is clickable to plant (opts.onPick) and the footer shows a 🌱 Zasadź button.
@@ -19639,7 +19639,7 @@ function renderFarmHelpInto(bodyEl) {
 
     farmHelpSection('🃏 3. Karty i łączenie (poziomy)',
       P('Karta to ', b('przepis na roślinę'), ' — sadzisz ją ile chcesz, ', b('nie znika'), ' po posadzeniu. Powtórki tej samej karty (np. drugą Marchewkę) nazywamy ', b('duplikatami'), '.'),
-      P(b('Łączenie'), ' (jak w Clash Royale): gdy uzbierasz dość duplikatów, w ', b('🎒 Ekwipunku'), ' klikasz ', b('⬆ Ulepsz'), '. Karta zużywa duplikaty + coiny i wskakuje na ', b('wyższy poziom'), '. Sama karta zostaje — znika tylko nadmiar duplikatów.'),
+      P(b('Łączenie'), ': gdy uzbierasz dość duplikatów, w ', b('🎒 Ekwipunku'), ' klikasz ', b('⬆ Ulepsz'), '. Karta zużywa duplikaty + coiny i wskakuje na ', b('wyższy poziom'), '. Sama karta zostaje — znika tylko nadmiar duplikatów.'),
       el('div', { className: 'farm-merge-info' },
         el('span', { className: 'farm-merge-cards' }, '🃏 🃏'),
         el('span', { className: 'farm-merge-plus' }, '+'),
@@ -19844,7 +19844,7 @@ async function openFarmLootbox(btn) {
   if (data.got_voucher) showToast('🎁 Trafiła Ci się darmowa działka! Postaw ją na pustym polu farmy.');
 }
 
-// ── Pack opening (Hearthstone / Clash-Royale style theatrical reveal) ────────
+// ── Pack opening (theatrical card reveal) ───────────────────────────────────
 let farmPackEl = null, farmPackEsc = null;
 function closeFarmPack() {
   if (farmPackEsc) { window.removeEventListener('keydown', farmPackEsc); farmPackEsc = null; }
