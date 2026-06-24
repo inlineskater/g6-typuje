@@ -3702,7 +3702,7 @@
     @media (max-width: 520px) { .farm-cell-name { font-size: 7px; } }
     .farm-cell-owner { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; text-align: center; font-size: 9px; font-weight: 800; color: #ffd97a; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     @media (max-width: 520px) { .farm-cell-owner { font-size: 7px; } }
-    .farm-cell.crop .farm-cell-name { bottom: 12px; }
+    .farm-cell.crop .farm-cell-name, .farm-plant-cell .farm-cell-name { bottom: 12px; }
     .farm-cell-bar { position: absolute; left: 8%; right: 8%; bottom: 23px; height: 4px; background: rgba(0,0,0,.22); border-radius: 3px; overflow: hidden; }
     .farm-cell-bar-fill { height: 100%; background: #f59e0b; transition: width .3s linear; }
     .farm-cell-bar.ready .farm-cell-bar-fill { background: #16a34a; }
@@ -3721,7 +3721,7 @@
     .farm-plant-cell .garden-pot > .gp-acc-1 { top: 2px; right: 10px; }
     .farm-plant-cell .garden-pot > .gp-acc-2 { bottom: 22px; left: 10px; }
     .farm-plant-cell .garden-pot > .gp-acc-3 { bottom: 22px; right: 10px; }
-    .farm-plant-water-line { position: absolute; left: 18%; right: 18%; bottom: 14px; z-index: 7; height: 4px; border-radius: 999px; overflow: hidden; background: rgba(3,105,161,.16); box-shadow: inset 0 0 0 1px rgba(3,105,161,.12); pointer-events: none; }
+    .farm-plant-water-line { position: absolute; left: 18%; right: 18%; bottom: 23px; z-index: 7; height: 4px; border-radius: 999px; overflow: hidden; background: rgba(3,105,161,.16); box-shadow: inset 0 0 0 1px rgba(3,105,161,.12); pointer-events: none; }
     .farm-plant-water-line-fill { display: block; height: 100%; width: 0%; border-radius: inherit; background: #0ea5e9; transition: width .35s linear, background .15s; }
     .farm-plant-water-line.ready .farm-plant-water-line-fill { background: #0284c7; }
     .farm-plant-cell.can-water { cursor: pointer; }
@@ -18506,6 +18506,7 @@ function renderFarmBoard() {
         cell.style.gridRow = (y + 1);
         // Keep farm cells visual-first; detailed watering controls stay in the side panel.
         cell.appendChild(el('span', { className: 'farm-cell-name' }, g.plant_name || 'Roślina'));
+        cell.appendChild(el('span', { className: 'farm-cell-owner' }, g.profiles?.nick || g.nick || '?'));
         cell.appendChild(buildPot(g, false));
         const waterLine = farmPlantWaterLine(g);
         if (waterLine) cell.appendChild(waterLine);
