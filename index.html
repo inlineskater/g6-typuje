@@ -3700,7 +3700,10 @@
     .farm-cell-emoji { font-size: clamp(16px, 4vmin, 30px); line-height: 1; }
     .farm-cell-name { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; text-align: center; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     @media (max-width: 520px) { .farm-cell-name { font-size: 7px; } }
-    .farm-cell-bar { position: absolute; left: 8%; right: 8%; bottom: 14px; height: 4px; background: rgba(0,0,0,.22); border-radius: 3px; overflow: hidden; }
+    .farm-cell-owner { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; text-align: center; font-size: 9px; font-weight: 800; color: #ffd97a; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+    @media (max-width: 520px) { .farm-cell-owner { font-size: 7px; } }
+    .farm-cell.crop .farm-cell-name { bottom: 12px; }
+    .farm-cell-bar { position: absolute; left: 8%; right: 8%; bottom: 23px; height: 4px; background: rgba(0,0,0,.22); border-radius: 3px; overflow: hidden; }
     .farm-cell-bar-fill { height: 100%; background: #f59e0b; transition: width .3s linear; }
     .farm-cell-bar.ready .farm-cell-bar-fill { background: #16a34a; }
     .farm-cell-ready { position: absolute; top: 2px; right: 4px; color: #16a34a; font-weight: 800; font-size: 13px; }
@@ -18528,6 +18531,7 @@ function renderFarmBoard() {
           cell.classList.add('crop');
           const def = fmDefs.get(tile.planted_species);
           cell.appendChild(el('span', { className: 'farm-cell-name' }, def ? def.name : tile.planted_species));
+          cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.nick || '?'));
           cell.appendChild(el('span', { className: 'farm-cell-emoji' }, farmIcon(def ? def.emoji : '🌱')));
           const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
           if (tile.planted_at && tile.ready_at) {
