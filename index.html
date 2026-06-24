@@ -3752,6 +3752,8 @@
     .farm-rar-epic { color: #9333ea; } .farm-rar-legendary { color: #d97706; }
     .farm-trend { margin-left: 6px; font-weight: 800; font-size: 11px; white-space: nowrap; }
     .farm-trend.up { color: #16a34a; } .farm-trend.down { color: #dc2626; } .farm-trend.flat { color: var(--muted); }
+    .farm-rot { margin-left: 6px; font-weight: 800; font-size: 11px; white-space: nowrap; color: #b45309; }
+    .farm-rot.urgent { color: #dc2626; }
     .farm-sell-controls { display: flex; gap: 5px; flex: 0 0 auto; }
     .farm-mini-btn { flex: 0 0 auto; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
     .farm-mini-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
@@ -4086,6 +4088,13 @@
     .farm-chart-dot { fill: var(--accent); }
     .farm-price-foot { margin-top: 6px; font-size: 10.5px; color: var(--muted); }
     .farm-price-empty { font-size: 12px; color: var(--muted); padding: 22px 0; text-align: center; }
+    .farm-sales-feed { margin-top: 18px; }
+    .farm-sales-title { font-weight: 800; font-size: 13px; margin-bottom: 8px; }
+    .farm-sales-row { font-size: 12px; padding: 5px 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; flex-wrap: wrap; }
+    .farm-sales-row:last-child { border-bottom: none; }
+    .farm-sales-who { font-weight: 700; }
+    .farm-sales-coins { font-weight: 800; color: var(--accent); }
+    .farm-sales-time { color: var(--muted); margin-left: auto; }
     /* Voucher reveal card in the pack opening */
     .farm-pack-card.voucher .farm-pack-front { background: linear-gradient(160deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
     .farm-pack-card.voucher .farm-pack-glow { background: radial-gradient(circle, #22c55e, transparent 70%); }
@@ -18176,8 +18185,9 @@ let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, planted_sp
 let fmDefs = new Map();         // species -> def row
 let fmZen = new Map();          // owner_id -> { type, stage, name } (existing Ogródek plant shown on the home tile)
 let fmCollection = [];          // [{species,count,level}]
-let fmInventory = new Map();    // crop_type -> qty
-let fmMarket = new Map();       // crop_type -> { base_price, cur_price }
+let fmInventory = new Map();    // crop_type -> qty (sum of non-expired lots)
+let fmInventoryExp = new Map(); // crop_type -> soonest expires_at (ISO) of its lots (rot countdown)
+let fmMarket = new Map();       // crop_type -> { base_price, anchor_price, cur_price, last_decay_at }
 let fmNft = [];                 // all farm_nft_instances: [{species,serial_no,edition_size,owner_id}]
 let fmBoxes = 0;                // owned sealed (unopened) seed boxes
 let fmVouchers = 0;             // owned free-tile vouchers
@@ -18188,9 +18198,31 @@ let fmRealtimeReady = false, fmTimer = null;
 
 function resetFarmState() {
   stopFarmTimer();
-  fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmMarket = new Map();
+  fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmMarket = new Map();
   fmBoxes = 0; fmVouchers = 0; fmStarterClaimed = false;
   fmSel = null;
+}
+
+function normalizeFarmMarket(m) {
+  return { base_price: +m.base_price,
+    anchor_price: m.anchor_price != null ? +m.anchor_price : +m.base_price,
+    cur_price: +m.cur_price, last_decay_at: m.last_decay_at };
+}
+
+// Crops are stored as per-harvest lots (rot 5d). Sum non-expired qty per crop into
+// fmInventory and track the soonest expires_at per crop into fmInventoryExp.
+function buildFarmInventory(rows) {
+  fmInventory = new Map();
+  fmInventoryExp = new Map();
+  const now = Date.now();
+  (rows || []).forEach(r => {
+    if (r.expires_at && new Date(r.expires_at).getTime() <= now) return;  // rotted
+    fmInventory.set(r.crop_type, (fmInventory.get(r.crop_type) || 0) + r.qty);
+    if (r.expires_at) {
+      const prev = fmInventoryExp.get(r.crop_type);
+      if (!prev || r.expires_at < prev) fmInventoryExp.set(r.crop_type, r.expires_at);
+    }
+  });
 }
 
 // ── Twemoji SVG plant icons ─────────────────────────────────────────────────
@@ -18276,8 +18308,8 @@ async function loadFarm() {
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
-      sb.from('farm_inventory').select('crop_type,qty').eq('user_id', me.id),
-      sb.from('farm_market').select('crop_type,base_price,cur_price,last_decay_at'),
+      sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id),
+      sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('gardens').select('*, profiles(nick)'),
       sb.from('farm_nft_instances').select('species,serial_no,edition_size,owner_id,nft_name'),
       sb.from('farm_user_state').select('boxes,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
@@ -18294,10 +18326,9 @@ async function loadFarm() {
     fmDefs = new Map();
     (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
     fmCollection = colRes.data || [];
-    fmInventory = new Map();
-    (invRes.data || []).forEach(r => fmInventory.set(r.crop_type, r.qty));
+    buildFarmInventory(invRes.data || []);
     fmMarket = new Map();
-    (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, { base_price: +m.base_price, cur_price: +m.cur_price, last_decay_at: m.last_decay_at }));
+    (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, normalizeFarmMarket(m)));
     renderFarmPanels();
     renderFarmBoard();
     if (pendingFarmHubOpen && activeTab === 'farm') {
@@ -18875,31 +18906,34 @@ function farmTrendChip(crop) {
   const mkt = fmMarket.get(crop);
   if (!mkt) return el('span', { className: 'farm-trend flat' }, '');
   const cur = +mkt.cur_price, base = +mkt.base_price;
-  const pct = base > 0 ? Math.round((cur - base) / base * 100) : 0;
+  // pct of the catalog MAX the NPC pays right now (0–100%). ▲ = near max (sell!), ▼ = low.
+  const pct = base > 0 ? Math.round(cur / base * 100) : 0;
   let cls = 'flat', arrow = '≈';
-  if (pct >= 2) { cls = 'up'; arrow = '▲'; }
-  else if (pct <= -2) { cls = 'down'; arrow = '▼'; }
-  const txt = pct === 0 ? 'w cenie' : (pct > 0 ? '+' : '') + pct + '%';
-  return el('span', { className: 'farm-trend ' + cls, title: 'Cena bieżąca ' + cur.toFixed(1) + ' 🪙 vs bazowa ' + base + ' 🪙 — sprzedaż obniża cenę, z czasem wraca w górę' }, arrow + ' ' + txt);
+  if (pct >= 80) { cls = 'up'; arrow = '▲'; }
+  else if (pct <= 50) { cls = 'down'; arrow = '▼'; }
+  return el('span', { className: 'farm-trend ' + cls, title: 'NPC płaci ' + cur.toFixed(1) + ' 🪙 = ' + pct + '% ceny maks. (' + base + ' 🪙). Cena zmienia się 2×/dobę (00:00 i 12:00), a sprzedaż chwilowo ją obniża.' }, arrow + ' ' + pct + '% maks.');
 }
 
-// Client-side replica of sell_crop_to_npc's pricing (farm.sql): time mean-reversion
-// toward base, then a per-unit drop within the batch (floor 30% of base). Lets us
-// preview exactly what a sale pays and how far it moves the price before confirming.
+// Client-side replica of sell_crop_to_npc's pricing (farm.sql): recover cur_price
+// toward the day's anchor at 12%/hr, then ONE per-transaction drop scaled by size
+// (0.5%/unit, capped 40%); the batch is charged the average of pre/post (floor 30%
+// of base). Lets us preview exactly what a sale pays and how far it dips the price.
 function farmSellQuote(crop, qty) {
   const mkt = fmMarket.get(crop);
   if (!mkt) return null;
   const base = +mkt.base_price;
-  const floor = base * 0.30, drop = base * 0.002;
+  const anchor = mkt.anchor_price != null ? +mkt.anchor_price : base;
+  const floor = base * 0.30;
   const hours = mkt.last_decay_at ? Math.max(0, (Date.now() - new Date(mkt.last_decay_at).getTime()) / 3600000) : 0;
-  let price = (+mkt.cur_price) + (base - (+mkt.cur_price)) * Math.min(1, hours * 0.10);
-  if (price < floor) price = floor;
-  const startPrice = price;
-  let proceeds = 0;
-  for (let i = 0; i < qty; i++) { proceeds += price; price = Math.max(floor, price - drop); }
-  return { base, startPrice, endPrice: price, proceeds: Math.round(proceeds),
-    startDevPct: Math.round((startPrice - base) / base * 100),
-    endDevPct: Math.round((price - base) / base * 100) };
+  let curEff = (+mkt.cur_price) + (anchor - (+mkt.cur_price)) * Math.min(1, hours * 0.12);
+  if (curEff < floor) curEff = floor;
+  const dropFrac = Math.min(0.40, 0.005 * qty);
+  const startPrice = curEff;
+  const endPrice = Math.max(floor, curEff * (1 - dropFrac));
+  const proceeds = Math.round(qty * curEff * (1 - dropFrac / 2));
+  return { base, startPrice, endPrice, proceeds, dropPct: Math.round(dropFrac * 100),
+    startMaxPct: Math.round(startPrice / base * 100),
+    endMaxPct: Math.round(endPrice / base * 100) };
 }
 
 // Confirm sale with a full price-impact preview, then sell + re-render the host.
@@ -18908,7 +18942,6 @@ function farmSellConfirm(crop, qty, afterSell) {
   const q = farmSellQuote(crop, qty);
   if (!q) { sellCrop(crop, qty).then(() => afterSell && afterSell()); return; }
   const fmt = n => n.toFixed(1).replace('.', ',');
-  const dev = p => (p > 0 ? '+' : '') + p + '%';
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
@@ -18923,8 +18956,8 @@ function farmSellConfirm(crop, qty, afterSell) {
       qline('Sprzedajesz', el('b', {}, farmIcon(def?.emoji || '🧺'), ' ' + (def?.name || crop) + ' ×' + qty)),
       qline('Cena/szt', el('b', {}, fmt(q.startPrice) + ' → ' + fmt(q.endPrice) + ' 🪙')),
       qline('Dostaniesz', el('b', { style: { color: 'var(--accent)' } }, '~' + q.proceeds + ' 🪙')),
-      qline('Po sprzedaży vs baza', el('b', {}, dev(q.endDevPct) + ' (baza ' + q.base + ' 🪙)')),
-      el('div', { className: 'farm-sell-note' }, '📉 Sprzedaż obniża cenę; z czasem wraca w górę — nie opłaca się wyrzucać wszystkiego naraz.')),
+      qline('Cena po sprzedaży', el('b', {}, q.endMaxPct + '% ceny maks. (' + q.base + ' 🪙)')),
+      el('div', { className: 'farm-sell-note' }, '📉 Ta sprzedaż obniży cenę o ~' + q.dropPct + '% (im więcej naraz, tym mocniej). Cena wraca do dziennego poziomu z czasem i resetuje się o 00:00 i 12:00.')),
     confirmBtn);
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
@@ -18932,8 +18965,20 @@ function farmSellConfirm(crop, qty, afterSell) {
   document.body.append(overlay);
 }
 
-// One crop row (emoji · name×qty · price + trend · ½/all sell controls). Shared by
-// the on-farm market panel and the Ekwipunek; `afterSell` re-renders the host view.
+// Rot countdown chip: how long until this crop's soonest lot rots (5 days from
+// harvest). Reads fmInventoryExp (soonest expires_at per crop). Red when < 24h.
+function farmRotChip(crop) {
+  const iso = fmInventoryExp.get(crop);
+  if (!iso) return '';
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return el('span', { className: 'farm-rot urgent', title: 'Zgniłe — zostaną usunięte' }, '🥀 zgniłe');
+  const h = Math.floor(ms / 3600000), d = Math.floor(h / 24);
+  const label = d >= 1 ? d + ' d ' + (h % 24) + ' h' : h + ' h';
+  return el('span', { className: 'farm-rot' + (ms < 86400000 ? ' urgent' : ''), title: 'Najbliższa partia zgnije za ' + label + ' — sprzedaj wcześniej' }, '🥀 ' + label);
+}
+
+// One crop row (emoji · name×qty · price + trend + rot · ½/all sell controls). Shared
+// by the on-farm market panel and the Ekwipunek; `afterSell` re-renders the host view.
 function farmCropRow(crop, qty, afterSell) {
   const mkt = fmMarket.get(crop);
   const price = mkt ? mkt.cur_price : 0;
@@ -18942,7 +18987,7 @@ function farmCropRow(crop, qty, afterSell) {
     el('div', { className: 'farm-card-emoji' }, def?.emoji || '🧺'),
     el('div', { className: 'farm-card-meta' },
       el('div', { className: 'farm-card-name' }, (def?.name || crop) + ' ×' + qty),
-      el('div', { className: 'farm-card-sub' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙', farmTrendChip(crop))));
+      el('div', { className: 'farm-card-sub' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙', farmTrendChip(crop), farmRotChip(crop))));
   const sell = (n) => farmSellConfirm(crop, n, afterSell);
   const controls = el('div', { className: 'farm-sell-controls' });
   if (qty > 1) {
@@ -19004,15 +19049,15 @@ async function ensureFarmData() {
     const [defsRes, colRes, invRes, mktRes, nftRes, stateRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      me ? sb.from('farm_inventory').select('crop_type,qty').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      sb.from('farm_market').select('crop_type,base_price,cur_price,last_decay_at'),
+      me ? sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
+      sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('farm_nft_instances').select('species,serial_no,edition_size,owner_id,nft_name'),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     fmDefs = new Map(); (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
     fmCollection = colRes.data || [];
-    fmInventory = new Map(); (invRes.data || []).forEach(r => fmInventory.set(r.crop_type, r.qty));
-    fmMarket = new Map(); (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, { base_price: +m.base_price, cur_price: +m.cur_price, last_decay_at: m.last_decay_at }));
+    buildFarmInventory(invRes.data || []);
+    fmMarket = new Map(); (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, normalizeFarmMarket(m)));
     fmNft = nftRes.data || [];
     applyFarmUserState(stateRes.data);
   } catch (e) { console.error('ensureFarmData', e); }
@@ -19115,9 +19160,9 @@ function farmCardLevelTable(d, price) {
     el('table', { className: 'farm-cat-lvl-table' },
       el('thead', {}, el('tr', {},
         el('th', {}, 'Poziom'), el('th', {}, 'Plon'), el('th', {}, 'Wzrost'),
-        el('th', {}, '≈ Zysk/doba'), el('th', {}, 'Koszt ulepszenia'))),
+        el('th', {}, '≈ Zysk/doba (maks.)'), el('th', {}, 'Koszt ulepszenia'))),
       body),
-    el('div', { className: 'farm-cat-lvl-note' }, 'Plon ×(1 + 0,5·(poziom−1)) • wzrost ×0,92 na poziom (min. 24 h) • poziom „zapisuje się" przy sadzeniu.'));
+    el('div', { className: 'farm-cat-lvl-note' }, 'Plon ×(1 + 0,5·(poziom−1)) • wzrost ×0,92 na poziom (min. 24 h) • poziom „zapisuje się" przy sadzeniu • zysk liczony przy cenie maks.'));
 }
 
 // Generic (card-independent) level ladder for the Help tab — multipliers + the
@@ -19189,8 +19234,9 @@ function farmCatalogTable(mdl) {
     el('table', { className: 'farm-cat-table' },
       el('thead', {}, el('tr', {},
         el('th', {}, 'Roślina'), el('th', {}, 'Szansa'), el('th', {}, 'Wzrost'),
-        el('th', {}, 'Plon'), el('th', {}, 'Cena'),
-        el('th', { title: 'Przybliżony przychód na dobę przy poziomie 1: plon × cena ÷ dni wzrostu' }, '≈ Zysk/doba'),
+        el('th', {}, 'Plon'),
+        el('th', { title: 'Cena maksymalna (pułap). NPC płaci 30–100% tej kwoty; cena zmienia się 2×/dobę.' }, 'Cena maks.'),
+        el('th', { title: 'Maksymalny przychód na dobę (poz. 1) przy cenie maks.: plon × cena maks. ÷ dni wzrostu. W praktyce zwykle mniej.' }, '≈ Zysk/doba (maks.)'),
         el('th', {}, 'Stan'))),
       tbody));
 }
@@ -19229,14 +19275,14 @@ async function buildFarmMarketBody(bodyEl) {
   await ensureFarmData();
   const hist = {};
   try {
-    const since = new Date(Date.now() - 60 * 864e5).toISOString();
+    const since = new Date(Date.now() - 7 * 864e5).toISOString();   // last 7 days
     const { data } = await sb.from('farm_price_history').select('crop_type,price,recorded_at').gte('recorded_at', since).order('recorded_at');
     (data || []).forEach(r => { (hist[r.crop_type] ||= []).push({ t: new Date(r.recorded_at).getTime(), p: +r.price }); });
   } catch (e) { console.error('price history', e); }
   bodyEl.replaceChildren();
   bodyEl.append(el('div', { className: 'farm-cat-head' }, el('div', { className: 'farm-cat-head-txt' },
     el('div', { className: 'farm-cat-head-title' }, '📈 Ceny plonów u NPC'),
-    el('div', { className: 'farm-cat-head-sub' }, 'Aktualna cena skupu i jej historia. Sprzedaż obniża cenę; z czasem wraca do bazy (linia przerywana).'))));
+    el('div', { className: 'farm-cat-head-sub' }, 'Cena skupu waha się 2×/dobę (00:00 i 12:00) między 30% a 100% ceny maks. (linia przerywana). Sprzedaż chwilowo ją obniża, potem wraca do dziennego poziomu — sprzedawaj, gdy jest wysoko! Historia z 7 dni.'))));
   const defs = [...fmDefs.values()].sort((a, b) => (FARM_RARITY_ORDER[a.rarity] - FARM_RARITY_ORDER[b.rarity]) || ((b.draw_weight || 0) - (a.draw_weight || 0)));
   const grid = el('div', { className: 'farm-price-grid' });
   defs.forEach(d => {
@@ -19253,10 +19299,53 @@ async function buildFarmMarketBody(bodyEl) {
           el('div', { className: 'farm-price-now' }, cur.toFixed(1).replace('.', ',') + ' 🪙', farmTrendChip(d.crop_type)))));
     if (pts.length >= 2) card.append(farmPriceChart(pts, +mkt.base_price));
     else card.append(el('div', { className: 'farm-price-empty' }, 'Historia zbiera się od teraz — wróć później.'));
-    card.append(el('div', { className: 'farm-price-foot' }, 'Cena bazowa: ' + (+mkt.base_price) + ' 🪙 · ' + (pts.length - 1) + ' pkt historii'));
+    card.append(el('div', { className: 'farm-price-foot' }, 'Cena maks.: ' + (+mkt.base_price) + ' 🪙 · ' + (pts.length - 1) + ' pkt historii (7 dni)'));
     grid.append(card);
   });
   bodyEl.append(grid);
+  // Public feed of everyone's crop sales.
+  const feed = el('div', { className: 'farm-sales-feed' });
+  bodyEl.append(feed);
+  loadFarmSalesFeed(feed);
+}
+
+// „🧾 Ostatnie sprzedaże plonów": public feed of every player's crop sale, read
+// from the coin ledger (reason farm_crop_sale; authenticated SELECT). Visible to all.
+async function loadFarmSalesFeed(host) {
+  host.replaceChildren(el('div', { className: 'farm-sales-title' }, '🧾 Ostatnie sprzedaże plonów'),
+    el('div', { className: 'farm-price-empty' }, 'Wczytuję…'));
+  try {
+    const { data } = await sb.from('coin_transactions')
+      .select('user_id,delta,meta,created_at, profiles(nick)')
+      .eq('reason', 'farm_crop_sale').order('created_at', { ascending: false }).limit(20);
+    const rows = data || [];
+    host.replaceChildren(el('div', { className: 'farm-sales-title' }, '🧾 Ostatnie sprzedaże plonów'));
+    if (!rows.length) { host.append(el('div', { className: 'farm-price-empty' }, 'Jeszcze nikt nic nie sprzedał.')); return; }
+    rows.forEach(r => {
+      const ct = r.meta?.crop_type, def = ct ? [...fmDefs.values()].find(d => d.crop_type === ct) : null;
+      const qty = r.meta?.qty ?? '?';
+      const nick = r.profiles?.nick || '???';
+      host.append(el('div', { className: 'farm-sales-row' },
+        el('span', { className: 'farm-sales-who' }, nick),
+        el('span', {}, ' sprzedał ' + qty + '× '),
+        el('span', {}, farmIcon(def?.emoji || '🧺')),
+        el('span', { className: 'farm-sales-coins' }, ' ' + r.delta + ' 🪙'),
+        el('span', { className: 'farm-sales-time' }, ' · ' + farmTimeAgo(r.created_at))));
+    });
+  } catch (e) {
+    console.error('sales feed', e);
+    host.replaceChildren(el('div', { className: 'farm-sales-title' }, '🧾 Ostatnie sprzedaże plonów'),
+      el('div', { className: 'farm-price-empty' }, 'Nie udało się wczytać.'));
+  }
+}
+
+// Short relative-time label (pl) for the sales feed.
+function farmTimeAgo(iso) {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return 'teraz';
+  const m = Math.floor(s / 60); if (m < 60) return m + ' min temu';
+  const h = Math.floor(m / 60); if (h < 24) return h + ' godz temu';
+  return Math.floor(h / 24) + ' dni temu';
 }
 
 function buildFarmCatalogBody(bodyEl) {
@@ -19278,8 +19367,9 @@ function buildFarmCatalogBody(bodyEl) {
     el('strong', {}, '❓ Jak to działa'), '.'));
 
   bodyEl.append(el('div', { className: 'farm-cat-legend' },
-    'Kolumny: Szansa = trafienie w skrzynce • Wzrost = czas do zbioru (min. 24 h) • Plon = sztuk z jednego zbioru • Cena = bazowa cena NPC za sztukę • ',
-    el('strong', {}, '≈ Zysk/doba'), ' = ile mniej więcej zarobisz dziennie z jednego pola (plon × cena ÷ dni wzrostu, poziom 1) — wprost porównuje opłacalność roślin.'));
+    'Kolumny: Szansa = trafienie w skrzynce • Wzrost = czas do zbioru (min. 24 h) • Plon = sztuk z jednego zbioru • ',
+    el('strong', {}, 'Cena maks.'), ' = górny pułap; NPC płaci od ~30% do 100% tej kwoty, a cena zmienia się 2×/dobę (00:00 i 12:00) • ',
+    el('strong', {}, '≈ Zysk/doba (maks.)'), ' = maksymalny dzienny zysk z pola przy cenie maks. (plon × cena maks. ÷ dni wzrostu, poziom 1) — w praktyce zwykle mniej. Plony psują się 5 dni po zbiorze.'));
 
   bodyEl.append(farmCatalogTable(mdl));
 }
@@ -19401,8 +19491,8 @@ function openFarmCardModal(card) {
         stat('Duplikaty', card.count + ' / ' + dupesNeeded),
         stat('Plon (teraz)', yieldNow + ' szt.'),
         stat('Czas wzrostu', farmGrowLabel(Math.round(growNow))),
-        stat('Cena NPC', price != null ? (price + ' 🪙/szt') : '—'),
-        stat('≈ Zysk/doba', perDayNow != null ? (perDayNow + ' 🪙') : '—')),
+        stat('Cena maks.', price != null ? (price + ' 🪙/szt') : '—'),
+        stat('≈ Zysk/doba (maks.)', perDayNow != null ? (perDayNow + ' 🪙') : '—')),
       farmCardLevelTable(def, price)));
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
@@ -19626,7 +19716,7 @@ function renderFarmHelpInto(bodyEl) {
 
   bodyEl.append(
     el('p', { className: 'farm-help-intro' },
-      'W skrócie: ', b('kup pole → otwórz skrzynkę z kartami → posadź roślinę → poczekaj → zbierz plon → sprzedaj za coiny.')),
+      'W skrócie: ', b('kup pole → otwórz skrzynkę z kartami → posadź roślinę → poczekaj → zbierz plon → sprzedaj za coiny, gdy cena jest wysoka.')),
 
     farmHelpSection('🚀 Pierwsze kroki',
       el('ol', { className: 'farm-help-steps' },
@@ -19662,11 +19752,15 @@ function renderFarmHelpInto(bodyEl) {
     farmHelpSection('🌱 4. Sadzenie i zbiór',
       P('Klikasz swoje puste pole i sadzisz wybraną kartę. Roślina rośnie w ', b('prawdziwym czasie'), ' (zegarowym): zwykłe ', b(growRange('common')), ', rzadkie ', b(growRange('rare')), ', epickie ', b(growRange('epic')), '.'),
       P('To są ', b('pełne dni, nie minuty'), ' — uprawa dojrzewa powoli. Czas leci ', b('nawet gdy zamkniesz grę'), ' albo przełączysz kartę: gdy wrócisz, roślina będzie o tyle starsza. Pasek pod doniczką i licznik „Dojrzeje za…" pokazują ile zostało.'),
-      P('Wyższy poziom karty skraca wzrost o ', b('≈ 8% na poziom'), ', ale ', b('nigdy poniżej 24 h'), ' — daną roślinę zbierzesz najwyżej ', b('raz dziennie'), '. Gdy dojrzeje, klikasz „Zbierz" i plon trafia do ', b('🎒 Ekwipunku'), '; pole znów jest wolne.')),
+      P('Wyższy poziom karty skraca wzrost o ', b('≈ 8% na poziom'), ', ale ', b('nigdy poniżej 24 h'), ' — daną roślinę zbierzesz najwyżej ', b('raz dziennie'), '. Gdy dojrzeje, klikasz „Zbierz" i plon trafia do ', b('🎒 Ekwipunku'), '; pole znów jest wolne.'),
+      P('⏳ ', b('Plony psują się!'), ' Każdy zbiór ', b('zgnije 5 dni po zebraniu'), ' — w Ekwipunku widzisz licznik „🥀 zgnije za…". Nie zbieraj na zapas: zgniłe plony znikają bez coinów.')),
 
-    farmHelpSection('🧺 5. Sprzedaż plonów',
+    farmHelpSection('🧺 5. Sprzedaż plonów (giełda jak w Animal Crossing)',
       P('Zebrane plony sprzedajesz automatowi (NPC) za coiny — w ekwipunku albo w panelu farmy.'),
-      P('Uwaga: ', b('im więcej sprzedasz naraz, tym niższa cena'), ' (jak na prawdziwym rynku — cena spada za każdą sprzedaną sztukę, do minimum 30% ceny bazowej). Cena z czasem ', b('sama wraca w górę'), ', więc nie opłaca się wszystkiego wyrzucać od razu.')),
+      P(b('Cena się waha.'), ' Cena w katalogu to ', b('cena MAKSYMALNA'), ' (pułap). NPC płaci ', b('od 30% do 100%'), ' tej kwoty, a poziom zmienia się ', b('2 razy na dobę: o 00:00 i 12:00'), ' (czas polski). Czasem trafi się ', b('wysoka stawka'), ' — to wtedy warto sprzedawać.'),
+      P(b('Śledź wykres.'), ' W zakładce ', b('📈 Ceny'), ' masz historię z 7 dni dla każdej rośliny (linia przerywana = cena maks.). Zgadnij dobry moment i sprzedaj, gdy słupek jest wysoko.'),
+      P(b('Sprzedaż obniża cenę.'), ' Każda transakcja chwilowo zbija cenę — ', b('im więcej sprzedasz naraz, tym mocniejszy spadek'), ' (do 40% przy dużej partii, minimum 30% ceny maks.). Cena ', b('wraca do dziennego poziomu'), ' z czasem, więc dzielenie wielkiej sprzedaży na kawałki nie pomaga.'),
+      P(b('Wszyscy widzą sprzedaże.'), ' Lista ', b('🧾 Ostatnie sprzedaże plonów'), ' (zakładka 📈 Ceny) pokazuje, kto co i za ile sprzedał.')),
 
     farmHelpSection('💎 Kolekcja NFT — pełny przewodnik',
       P('NFT to ', b('limitowane, numerowane'), ' karty roślin — najrzadsze i najcenniejsze w grze. Każda edycja ma ', b('z góry ustaloną liczbę sztuk'), ' na całym serwerze.'),
@@ -19953,9 +20047,19 @@ async function harvestCrop(x, y, btn) {
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   const tile = fmTiles.get(x + ',' + y);
   if (tile) { tile.planted_species = null; tile.planted_level = null; tile.planted_at = null; tile.ready_at = null; }
-  fmInventory.set(data.crop_type, data.inventory_qty);
+  await reloadFarmInventory();   // rebuild qty + rot expiries from lots
   showToast('🧺 Zebrano ' + data.harvested + '× ' + (fmDefs.get(data.crop_type)?.name || data.crop_type) + '!');
   renderFarmBoard(); renderFarmSelection(); renderFarmMarket();
+}
+
+// Re-read the player's crop lots and rebuild fmInventory/fmInventoryExp (lots are
+// created on harvest and consumed FIFO on sale, so qty + soonest-expiry can shift).
+async function reloadFarmInventory() {
+  if (!me) return;
+  try {
+    const { data } = await sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id);
+    buildFarmInventory(data || []);
+  } catch (e) { console.error('reloadFarmInventory', e); }
 }
 
 async function sellCrop(crop, qty, btn) {
@@ -19963,8 +20067,8 @@ async function sellCrop(crop, qty, btn) {
   const { data, error } = await sb.rpc('sell_crop_to_npc', { p_crop_type: crop, p_qty: qty });
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
-  fmInventory.set(crop, data.inventory_qty);
   const mkt = fmMarket.get(crop); if (mkt) mkt.cur_price = +data.cur_price;
+  await reloadFarmInventory();   // FIFO lot consumption may have emptied the soonest lot
   showToast('💰 Sprzedano ' + data.sold + '× za ' + data.proceeds + ' 🪙!');
   renderFarmMarket();
 }
@@ -19980,7 +20084,7 @@ function setupFarmRealtime() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_market' }, payload => {
       const r = payload.new; if (!r) return;
-      fmMarket.set(r.crop_type, { base_price: +r.base_price, cur_price: +r.cur_price, last_decay_at: r.last_decay_at });
+      fmMarket.set(r.crop_type, normalizeFarmMarket(r));
       if (activeTab === 'farm') renderFarmMarket();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_user_state' }, payload => {

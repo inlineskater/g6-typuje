@@ -126,6 +126,7 @@ AS $$
           FROM public.farm_inventory fi
           JOIN public.farm_market fm ON fm.crop_type = fi.crop_type
          WHERE fi.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+           AND fi.expires_at > now()   -- exclude rotted crop lots
       ), 0::numeric)
       + COALESCE((
         SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))

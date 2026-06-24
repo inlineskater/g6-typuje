@@ -54,7 +54,7 @@ AS $$
            SELECT sum(fi.qty * fm.cur_price)
              FROM public.farm_inventory fi
              JOIN public.farm_market fm ON fm.crop_type = fi.crop_type
-            WHERE fi.user_id = p_uid
+            WHERE fi.user_id = p_uid AND fi.expires_at > now()   -- exclude rotted crop lots
          ), 0)
        + COALESCE((
            SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
@@ -158,7 +158,7 @@ AS $$
       COALESCE((SELECT sum(fi.qty * fm.cur_price)
                   FROM public.farm_inventory fi
                   JOIN public.farm_market fm ON fm.crop_type = fi.crop_type
-                 WHERE fi.user_id = p_uid), 0) AS farm_crops,
+                 WHERE fi.user_id = p_uid AND fi.expires_at > now()), 0) AS farm_crops,
       COALESCE((SELECT fus.boxes * 100 + fus.tile_vouchers * 350
                   FROM public.farm_user_state fus
                  WHERE fus.user_id = p_uid), 0) AS farm_boxes

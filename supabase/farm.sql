@@ -65,19 +65,28 @@ CREATE TABLE IF NOT EXISTS public.farm_collection (
   PRIMARY KEY (user_id, species)
 );
 
--- Harvested crops (fungible, per crop_type).
+-- Harvested crops, stored as per-harvest LOTS so each batch can ROT 5 days after
+-- collection (expires_at). qty = units remaining in that lot; one crop_type can
+-- have several live lots. (Older schema used PK (user_id,crop_type) with no
+-- timestamp; the migration block after the seeds reshapes existing prod tables.)
 CREATE TABLE IF NOT EXISTS public.farm_inventory (
-  user_id   uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  crop_type text NOT NULL,
-  qty       integer NOT NULL DEFAULT 0 CHECK (qty >= 0),
-  PRIMARY KEY (user_id, crop_type)
+  id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id      uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  crop_type    text NOT NULL,
+  qty          integer NOT NULL DEFAULT 0 CHECK (qty >= 0),
+  harvested_at timestamptz NOT NULL DEFAULT now(),
+  expires_at   timestamptz NOT NULL DEFAULT (now() + interval '5 days')
 );
 
--- Dynamic NPC price state, one row per crop_type. Server-owned.
+-- Fluctuating NPC price state, one row per crop_type. Server-owned.
+-- base_price = catalog MAX/ceiling; anchor_price = the current "normal" set twice
+-- daily by roll_farm_prices() (sales revert toward it); cur_price = the live price
+-- (sales dip it, it recovers toward anchor_price). See farm-price-history.sql.
 CREATE TABLE IF NOT EXISTS public.farm_market (
   crop_type     text PRIMARY KEY,
-  base_price    numeric NOT NULL CHECK (base_price > 0),  -- "fair value" prices revert toward
-  cur_price     numeric NOT NULL,
+  base_price    numeric NOT NULL CHECK (base_price > 0),  -- catalog MAX / ceiling ("Cena maks.")
+  anchor_price  numeric,                                  -- current rolled "normal" (≤ base); sales revert toward it
+  cur_price     numeric NOT NULL,                         -- live price; sales dip it, recovers toward anchor_price
   total_sold    bigint NOT NULL DEFAULT 0,
   last_decay_at timestamptz NOT NULL DEFAULT now()
 );
@@ -192,22 +201,54 @@ ON CONFLICT (species) DO UPDATE SET
 -- level 1 = yield × price ÷ grow-days). NFT prices are prestige-tier and left high.
 -- DO UPDATE (not DO NOTHING) so re-running re-applies tuning to existing rows; note
 -- that also resets cur_price back to base (wipes live supply/demand state).
-INSERT INTO public.farm_market (crop_type, base_price, cur_price) VALUES
-  ('carrot',     12, 12),
-  ('potato',     10, 10),
-  ('tomato',      9,  9),
-  ('corn',       16, 16),
-  ('chili',      17, 17),
-  ('strawberry', 13, 13),
-  ('pumpkin',    20, 20),
-  ('grapes',     18, 18),
-  ('pineapple',  18, 18),
-  ('diamond_rose',     40, 40),
-  ('golden_sunflower', 55, 55),
-  ('crystal_lotus',    80, 80)
+INSERT INTO public.farm_market (crop_type, base_price, anchor_price, cur_price) VALUES
+  ('carrot',     12, 12, 12),
+  ('potato',     10, 10, 10),
+  ('tomato',      9,  9,  9),
+  ('corn',       16, 16, 16),
+  ('chili',      17, 17, 17),
+  ('strawberry', 13, 13, 13),
+  ('pumpkin',    20, 20, 20),
+  ('grapes',     18, 18, 18),
+  ('pineapple',  18, 18, 18),
+  ('diamond_rose',     40, 40, 40),
+  ('golden_sunflower', 55, 55, 55),
+  ('crystal_lotus',    80, 80, 80)
 ON CONFLICT (crop_type) DO UPDATE SET
-  base_price = EXCLUDED.base_price,
-  cur_price  = EXCLUDED.base_price;
+  base_price   = EXCLUDED.base_price,
+  anchor_price = EXCLUDED.base_price,
+  cur_price    = EXCLUDED.base_price;
+
+-- Migration for prod rows created before anchor_price existed: backfill it.
+ALTER TABLE public.farm_market ADD COLUMN IF NOT EXISTS anchor_price numeric;
+UPDATE public.farm_market SET anchor_price = base_price WHERE anchor_price IS NULL;
+
+-- ── Migration: reshape farm_inventory into per-harvest lots (rot support) ───
+-- Older schema: PK (user_id, crop_type), no timestamps. New: id PK + harvested_at
+-- + expires_at so each harvest rots 5 days later. The table is sparse/empty in
+-- prod (crops are sold quickly), so when the old PK is present we just DROP and
+-- recreate with the lot schema; the RLS/grants/realtime blocks below re-apply to
+-- the fresh table. (CREATE TABLE IF NOT EXISTS above is a no-op once it exists,
+-- so the reshape must happen here.)
+DO $$
+BEGIN
+  IF to_regclass('public.farm_inventory') IS NOT NULL AND EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conrelid = 'public.farm_inventory'::regclass AND contype = 'p'
+       AND pg_get_constraintdef(oid) LIKE '%(user_id, crop_type)%'
+  ) THEN
+    DROP TABLE public.farm_inventory;
+    CREATE TABLE public.farm_inventory (
+      id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      user_id      uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+      crop_type    text NOT NULL,
+      qty          integer NOT NULL DEFAULT 0 CHECK (qty >= 0),
+      harvested_at timestamptz NOT NULL DEFAULT now(),
+      expires_at   timestamptz NOT NULL DEFAULT (now() + interval '5 days')
+    );
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS farm_inventory_lot_idx ON public.farm_inventory(user_id, crop_type, expires_at);
 
 -- ── RLS ────────────────────────────────────────────────────────────────────
 ALTER TABLE public.farm_card_defs     ENABLE ROW LEVEL SECURITY;
@@ -626,6 +667,8 @@ $$;
 
 -- ── RPC: harvest_crop ──────────────────────────────────────────────────────
 -- Mint crop units into inventory (not coins). Yield scales up with card level.
+-- Each harvest is its own LOT that ROTS 5 days later (expires_at); inventory_qty
+-- returned is the crop's total across all of the player's non-expired lots.
 CREATE OR REPLACE FUNCTION public.harvest_crop(p_x integer, p_y integer)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -633,6 +676,7 @@ DECLARE
   v_tile  public.farm_tiles%ROWTYPE;
   v_def   public.farm_card_defs%ROWTYPE;
   v_yield integer;
+  v_exp   timestamptz;
   v_qty   integer;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
@@ -647,40 +691,53 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'bad_species'; END IF;
 
   v_yield := round(v_def.base_yield * (1 + (v_tile.planted_level - 1) * 0.5))::integer;
+  v_exp   := now() + interval '5 days';
 
-  INSERT INTO public.farm_inventory (user_id, crop_type, qty)
-  VALUES (v_user, v_def.crop_type, v_yield)
-  ON CONFLICT (user_id, crop_type) DO UPDATE SET qty = farm_inventory.qty + EXCLUDED.qty
-  RETURNING qty INTO v_qty;
+  -- one new lot per harvest (rots independently)
+  INSERT INTO public.farm_inventory (user_id, crop_type, qty, harvested_at, expires_at)
+  VALUES (v_user, v_def.crop_type, v_yield, now(), v_exp);
+
+  SELECT COALESCE(sum(qty), 0) INTO v_qty FROM public.farm_inventory
+   WHERE user_id = v_user AND crop_type = v_def.crop_type AND expires_at > now();
 
   UPDATE public.farm_tiles
      SET planted_species = NULL, planted_level = NULL, planted_at = NULL, ready_at = NULL
    WHERE x = p_x AND y = p_y;
 
   RETURN json_build_object('ok', true, 'x', p_x, 'y', p_y, 'crop_type', v_def.crop_type,
-    'harvested', v_yield, 'inventory_qty', v_qty);
+    'harvested', v_yield, 'inventory_qty', v_qty, 'expires_at', v_exp);
 END;
 $$;
 
 -- ── RPC: sell_crop_to_npc ──────────────────────────────────────────────────
--- MINT coins at a dynamic supply/demand price. The farm_market row is locked
--- FOR UPDATE (serializes all sells of that crop). Price mean-reverts toward
--- base over time, then drops per-unit WITHIN the batch so dumping crashes your
--- own price and splitting orders gives no edge. Floor = 30% of base.
+-- MINT coins at the fluctuating NPC price. The farm_market row is locked FOR
+-- UPDATE (serializes all sells of that crop). Pricing (mirror in index.html
+-- farmSellQuote):
+--   1. RECOVER cur_price toward the day's anchor_price at 12%/hr since last sale.
+--   2. DROP it once per transaction, scaled by size: dropFrac = min(0.40, 0.005×qty)
+--      (0.5%/unit, capped 40%). The batch is charged the AVERAGE of pre/post price
+--      (eats ~half its own impact); cur_price lands at the post-drop price.
+--   Floor = 30% of base throughout.
+-- Crops are consumed FIFO from the soonest-to-ROT non-expired lots.
 CREATE OR REPLACE FUNCTION public.sell_crop_to_npc(p_crop_type text, p_qty integer)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_user     uuid := auth.uid();
   v_mkt      public.farm_market%ROWTYPE;
+  v_avail    integer;
   v_inv      integer;
-  v_drop     numeric;
+  v_remain   integer;
+  v_take     integer;
   v_floor    numeric;
+  v_anchor   numeric;
+  v_cur_eff  numeric;
+  v_dropfrac numeric;
   v_price    numeric;
-  v_proceeds numeric := 0;
+  v_proceeds numeric;
   v_hours    numeric;
   v_coins    integer;
   v_pay      integer;
-  i          integer;
+  v_lot      record;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_qty IS NULL OR p_qty < 1 THEN RAISE EXCEPTION 'bad_qty'; END IF;
@@ -688,22 +745,39 @@ BEGIN
   SELECT * INTO v_mkt FROM public.farm_market WHERE crop_type = p_crop_type FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_market'; END IF;
 
-  UPDATE public.farm_inventory SET qty = qty - p_qty
-   WHERE user_id = v_user AND crop_type = p_crop_type AND qty >= p_qty
-  RETURNING qty INTO v_inv;
-  IF NOT FOUND THEN RAISE EXCEPTION 'not_enough_crops'; END IF;
+  -- availability across non-expired lots
+  SELECT COALESCE(sum(qty), 0) INTO v_avail FROM public.farm_inventory
+   WHERE user_id = v_user AND crop_type = p_crop_type AND expires_at > now();
+  IF v_avail < p_qty THEN RAISE EXCEPTION 'not_enough_crops'; END IF;
 
-  -- time-based mean reversion toward base (recover ~10% of the gap per hour)
-  v_hours := EXTRACT(EPOCH FROM (now() - v_mkt.last_decay_at)) / 3600.0;
-  v_price := v_mkt.cur_price + (v_mkt.base_price - v_mkt.cur_price) * least(1, v_hours * 0.10);
-  v_floor := v_mkt.base_price * 0.30;
-  v_drop  := v_mkt.base_price * 0.002;
-  IF v_price < v_floor THEN v_price := v_floor; END IF;
-
-  FOR i IN 1..p_qty LOOP
-    v_proceeds := v_proceeds + v_price;
-    v_price := greatest(v_floor, v_price - v_drop);
+  -- consume FIFO: soonest-to-rot lots first
+  v_remain := p_qty;
+  FOR v_lot IN
+    SELECT id, qty FROM public.farm_inventory
+     WHERE user_id = v_user AND crop_type = p_crop_type AND expires_at > now()
+     ORDER BY expires_at, id
+     FOR UPDATE
+  LOOP
+    EXIT WHEN v_remain <= 0;
+    v_take := least(v_remain, v_lot.qty);
+    IF v_take >= v_lot.qty THEN
+      DELETE FROM public.farm_inventory WHERE id = v_lot.id;
+    ELSE
+      UPDATE public.farm_inventory SET qty = qty - v_take WHERE id = v_lot.id;
+    END IF;
+    v_remain := v_remain - v_take;
   END LOOP;
+
+  -- price math (see header)
+  v_anchor  := COALESCE(v_mkt.anchor_price, v_mkt.base_price);
+  v_floor   := v_mkt.base_price * 0.30;
+  v_hours   := EXTRACT(EPOCH FROM (now() - v_mkt.last_decay_at)) / 3600.0;
+  v_cur_eff := v_mkt.cur_price + (v_anchor - v_mkt.cur_price) * least(1, v_hours * 0.12);
+  IF v_cur_eff < v_floor THEN v_cur_eff := v_floor; END IF;
+
+  v_dropfrac := least(0.40, 0.005 * p_qty);
+  v_proceeds := p_qty * v_cur_eff * (1 - v_dropfrac / 2.0);
+  v_price    := greatest(v_floor, v_cur_eff * (1 - v_dropfrac));
 
   UPDATE public.farm_market
      SET cur_price = v_price, total_sold = total_sold + p_qty, last_decay_at = now()
@@ -713,10 +787,15 @@ BEGIN
   UPDATE public.profiles SET coins = coins + v_pay WHERE id = v_user
   RETURNING coins INTO v_coins;
 
+  -- remaining (non-expired) inventory of this crop
+  SELECT COALESCE(sum(qty), 0) INTO v_inv FROM public.farm_inventory
+   WHERE user_id = v_user AND crop_type = p_crop_type AND expires_at > now();
+
   IF to_regclass('public.coin_transactions') IS NOT NULL THEN
     INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
     VALUES (v_user, v_pay, 'farm_crop_sale',
-            jsonb_build_object('crop_type', p_crop_type, 'qty', p_qty, 'cur_price', round(v_price, 2)));
+            jsonb_build_object('crop_type', p_crop_type, 'qty', p_qty,
+                               'cur_price', round(v_cur_eff, 2), 'unit_price', round(v_pay::numeric / p_qty, 2)));
   END IF;
 
   RETURN json_build_object('ok', true, 'coins', v_coins, 'crop_type', p_crop_type,
@@ -742,6 +821,22 @@ GRANT EXECUTE ON FUNCTION public.level_up_card(text)                 TO authenti
 GRANT EXECUTE ON FUNCTION public.plant_crop(integer, integer, text)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.harvest_crop(integer, integer)      TO authenticated;
 GRANT EXECUTE ON FUNCTION public.sell_crop_to_npc(text, integer)     TO authenticated;
+
+-- ── Rot cleanup: delete expired crop lots daily (also filtered everywhere live) ──
+CREATE OR REPLACE FUNCTION public.farm_rot_cleanup()
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  DELETE FROM public.farm_inventory WHERE expires_at <= now();
+$$;
+REVOKE ALL ON FUNCTION public.farm_rot_cleanup() FROM PUBLIC, anon, authenticated;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'farm_rot_cleanup') THEN
+      PERFORM cron.unschedule('farm_rot_cleanup');
+    END IF;
+    PERFORM cron.schedule('farm_rot_cleanup', '20 0 * * *', $cron$SELECT public.farm_rot_cleanup();$cron$);
+  END IF;
+END $$;
 
 -- ── Migration: place every existing Ogródek plant on one tile ──────────────
 -- One tile per gardens row (all slots), packed into the first cells in reading
