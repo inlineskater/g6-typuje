@@ -3742,6 +3742,8 @@
     .farm-plant-modal-stat { min-width: 0; padding: 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
     .farm-plant-modal-stat span { display: block; margin-bottom: 3px; font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; }
     .farm-plant-modal-stat b { display: block; min-width: 0; color: var(--text); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .farm-plant-modal-stat.wrap b { white-space: normal; overflow: visible; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .farm-plant-modal-range { margin: -2px 0 2px; padding: 8px 10px; border-radius: 8px; background: var(--acc-dim); color: var(--accent); font-size: 12px; font-weight: 800; text-align: center; }
     .farm-card-row, .farm-market-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); }
     .farm-card-row:first-of-type, .farm-market-row:first-of-type { border-top: none; }
     .farm-card-emoji { font-size: 22px; width: 28px; text-align: center; flex: 0 0 auto; }
@@ -18578,7 +18580,11 @@ function renderFarmBoard() {
           if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
         }
       }
-      cell.addEventListener('click', () => { fmSel = { x: cx, y: cy }; markFarmSel(); renderFarmSelection(); });
+      cell.addEventListener('click', () => {
+        fmSel = { x: cx, y: cy }; markFarmSel(); renderFarmSelection();
+        const t = fmTiles.get(cx + ',' + cy);
+        if (t && t.planted_species) openFarmPlantedModal(t, cx, cy);
+      });
       board.appendChild(cell);
     }
   }
@@ -19460,6 +19466,107 @@ function openFarmNftModal(n) {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
   document.body.append(overlay);
+}
+
+// Detail overview for a planted crop tile on the farm board: owner, level, sow/
+// harvest times with a live countdown, current vs max NPC price, estimated harvest
+// value, the value range across levels, and the full L1–5 level table. Reuses the
+// farm-plant-modal* look so it matches the migrated-plant modal.
+function openFarmPlantedModal(tile, x, y) {
+  if (!tile || !tile.planted_species) return;
+  const def = fmDefs.get(tile.planted_species);
+  if (!def) return;
+  const rar = def.rarity || 'common';
+  const level = tile.planted_level || 1;
+  const mkt = fmMarket.get(def.crop_type);
+  const cur = mkt ? +mkt.cur_price : null;
+  const base = mkt ? +mkt.base_price : null;
+  const yieldNow = Math.round(def.base_yield * (1 + (level - 1) * 0.5));
+  const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level - 1));
+  const isMine = tile.owner_id === me?.id;
+  const valAt = L => cur != null ? Math.round(def.base_yield * (1 + (L - 1) * 0.5) * cur) : null;
+  const isReady = () => tile.ready_at && Date.now() >= new Date(tile.ready_at).getTime();
+  const fmtCoins = v => v != null ? (Math.round(v * 10) / 10) : '—';
+
+  let timer = null;
+  const overlay = el('div', { className: 'modal-overlay farm-plant-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => {
+    if (timer) { clearInterval(timer); timer = null; }
+    overlay.remove();
+    window.removeEventListener('keydown', esc);
+  };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  window.addEventListener('keydown', esc);
+
+  // Owner label, status line, and a live countdown cell that ticks each second.
+  const ownerTxt = isMine ? 'Ty' : (tile.nick || 'inny gracz');
+  const statusEl = el('div', { className: 'farm-plant-modal-status' });
+  const harvestSlot = el('div', {});
+  const countdownVal = el('b', {});
+  const priceNow = el('span', {}, (cur != null ? fmtCoins(cur) + ' 🪙/szt' : '—') + ' ', farmTrendChip(def.crop_type));
+
+  const grid = el('div', { className: 'farm-plant-modal-grid' },
+    farmPlantStat('Właściciel', ownerTxt),
+    farmPlantStat('Rzadkość', FARM_RARITY_PL[rar] || rar),
+    farmPlantStat('Poziom', String(level)),
+    farmPlantStat('Zasadzono', tile.planted_at ? fmtDateTime(tile.planted_at) : '—'),
+    el('div', { className: 'farm-plant-modal-stat' }, el('span', {}, 'Zbiór'), countdownVal),
+    farmPlantStat('Wzrost (ten poziom)', farmGrowLabel(growNow)),
+    farmPlantStat('Plon (ten poziom)', yieldNow + ' szt.'),
+    el('div', { className: 'farm-plant-modal-stat wrap' }, el('span', {}, 'Cena teraz (NPC)'), el('b', {}, priceNow)),
+    farmPlantStat('Cena maks.', base != null ? fmtCoins(base) + ' 🪙/szt' : '—'),
+    farmPlantStat('Szac. wartość zbioru', cur != null ? (Math.round(yieldNow * cur) + ' 🪙') : '—'),
+  );
+
+  const rangeLine = cur != null
+    ? el('div', { className: 'farm-plant-modal-range' },
+        'Wartość zbioru: poz. 1 ≈ ' + valAt(1) + ' 🪙 → poz. 5 ≈ ' + valAt(5) + ' 🪙 (obecna cena)')
+    : '';
+
+  const body = el('div', { className: 'farm-plant-modal-body' },
+    el('div', { className: 'farm-plant-modal-hero' },
+      el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(def.emoji || '🌱')),
+      el('div', {},
+        el('div', { className: 'farm-plant-modal-name', title: def.name }, def.name),
+        el('div', { className: 'farm-plant-modal-owner farm-rar-' + rar }, ownerTxt),
+        statusEl,
+      ),
+    ),
+    grid,
+    rangeLine,
+    farmCardLevelTable(def, cur != null ? cur : base),
+    harvestSlot,
+  );
+  const modal = el('div', { className: 'modal farm-plant-modal' },
+    el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Szczegóły rośliny'), closeBtn),
+    body,
+  );
+  overlay.append(modal);
+  document.body.append(overlay);
+
+  // Render the maturity-dependent bits (status, countdown, harvest button) and
+  // keep them fresh each second; swap in the harvest button the moment it matures.
+  const refresh = () => {
+    const ready = isReady();
+    statusEl.className = 'farm-plant-modal-status' + (ready ? ' ready' : '');
+    statusEl.textContent = ready ? '✅ Gotowe do zbioru!' : '⏳ Dojrzewa';
+    if (ready) {
+      countdownVal.textContent = tile.ready_at ? '✅ Gotowe! (' + fmtDateTime(tile.ready_at) + ')' : '✅ Gotowe!';
+    } else {
+      const left = tile.ready_at ? new Date(tile.ready_at).getTime() - Date.now() : 0;
+      countdownVal.textContent = '⏳ ' + cvFmtDur(left);
+    }
+    if (isMine && ready && !harvestSlot.firstChild) {
+      const btn = el('button', { className: 'farm-mini-btn primary', style: { marginTop: '10px' } }, '🧺 Zbierz plon');
+      btn.addEventListener('click', () => { harvestCrop(x, y, btn); close(); });
+      harvestSlot.append(btn);
+    }
+  };
+  refresh();
+  timer = setInterval(refresh, 1000);
 }
 
 // Detail modal for a fungible plant card: art, centered name, rarity, a current-
