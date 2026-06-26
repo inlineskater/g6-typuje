@@ -3644,9 +3644,9 @@
     .garden-subtab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .farm-wrap { display: flex; flex-direction: column; gap: 12px; }
     .farm-hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
-    .farm-body { display: grid; grid-template-columns: 210px 1fr; gap: 12px; align-items: start; }
-    .farm-stage { grid-column: 2; grid-row: 1; }
-    .farm-side { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .farm-body { display: flex; flex-direction: column; gap: 12px; }
+    .farm-topbar { display: flex; justify-content: center; padding: 9px 12px; border: 3px solid #765438; border-radius: 10px; background: repeating-linear-gradient(0deg, transparent 0 13px, rgba(60,30,10,.075) 13px 14px), linear-gradient(180deg, #efd3a7 0%, #dfb77f 54%, #c9955f 100%); box-shadow: 0 6px 14px rgba(60,30,10,.16), inset 0 1px 0 rgba(255,255,255,.45); }
+    .farm-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     /* Side panels styled like the Zen garden wooden sign-boards */
     .farm-section { position: relative; padding: 14px 14px 12px; border: 3px solid #765438; border-radius: 8px; color: #3d2810; font-size: 12px; line-height: 1.5;
       background:
@@ -3690,26 +3690,28 @@
     }
     .farm-starter-action:hover { filter: brightness(.96); }
     .farm-field { position: relative; z-index: 2; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 10px; }
-    .farm-board { position: relative; display: grid; grid-template-columns: repeat(13, 1fr); grid-template-rows: repeat(4, 1fr); gap: 4px; --pot-scale: .6; }
-    /* Brick course dividing the migrated-plant row (row 0) from the crop rows below. */
-    .farm-board::after { content: ''; position: absolute; left: -2px; right: -2px; top: calc(var(--cell-h, 80px) + 2px); height: 9px; transform: translateY(-50%); z-index: 3; pointer-events: none; border-radius: 2px; background: repeating-linear-gradient(90deg, #b15a32 0 22px, #7f3f22 22px 25px), linear-gradient(180deg, #c87044, #97492a); box-shadow: 0 2px 3px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.22); }
+    .farm-board { display: grid; grid-template-columns: repeat(13, 1fr); grid-template-rows: repeat(4, 1fr); gap: 4px; --pot-scale: .6; }
     .farm-cell { position: relative; background: rgba(95,140,55,.16); border: 1px solid rgba(80,110,45,.12); border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; min-width: 0; min-height: 0; overflow: visible; }
-    .farm-cell.mine { background: repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 7px, transparent 7px 14px), linear-gradient(180deg, #7d5636, #5c3c25); border-color: rgba(54,36,22,.6); box-shadow: inset 0 2px 0 rgba(255,255,255,.10), inset 0 -4px 7px rgba(0,0,0,.28); }
+    .farm-cell.mine { background: rgba(120,160,80,.26); border-color: rgba(255,255,255,.16); }
     .farm-cell.other { background: rgba(95,140,55,.1); cursor: default; }
-    .farm-cell.crop { background: repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 7px, transparent 7px 14px), linear-gradient(180deg, #6e4a2c, #4f3422); box-shadow: inset 0 2px 0 rgba(255,255,255,.08), inset 0 -4px 7px rgba(0,0,0,.26); }
+    .farm-cell.crop { background: rgba(96,140,60,.34); border-color: rgba(255,255,255,.16); }
     .farm-cell.unowned:hover { outline: 2px dashed var(--accent); outline-offset: -2px; }
     .farm-cell.sel, .farm-plant-cell.sel { outline: 3px solid #d97706; outline-offset: -3px; border-radius: 6px; z-index: 2; }
-    .farm-cell-emoji { font-size: clamp(16px, 4vmin, 30px); line-height: 1; }
+    .farm-cell-emoji { font-size: clamp(16px, 4vmin, 30px); line-height: 1; transform-origin: center bottom; transition: transform .45s ease, opacity .45s ease, filter .3s ease; }
+    .farm-cell.crop .farm-cell-emoji { transform: scale(calc(.56 + .44 * var(--grow, 0))); opacity: calc(.7 + .3 * var(--grow, 0)); }
+    .farm-cell.crop.ready .farm-cell-emoji { transform: scale(1); opacity: 1; filter: drop-shadow(0 1px 4px rgba(34,197,94,.7)); animation: farmCropBob 1.9s ease-in-out infinite; }
+    @keyframes farmCropBob { 0%, 100% { transform: scale(1) translateY(0); } 50% { transform: scale(1.06) translateY(-2px); } }
+    @media (prefers-reduced-motion: reduce) { .farm-cell.crop.ready .farm-cell-emoji { animation: none; } }
     .farm-cell-name { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; text-align: center; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     @media (max-width: 520px) { .farm-cell-name { font-size: 7px; } }
     .farm-cell-owner { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; text-align: center; font-size: 9px; font-weight: 800; color: #ffd97a; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     @media (max-width: 520px) { .farm-cell-owner { font-size: 7px; } }
     .farm-cell.crop .farm-cell-name, .farm-plant-cell .farm-cell-name { bottom: 12px; }
-    .farm-cell-bar { position: absolute; left: 8%; right: 8%; bottom: 23px; height: 4px; background: rgba(0,0,0,.22); border-radius: 3px; overflow: hidden; }
-    .farm-cell-bar-fill { height: 100%; background: #f59e0b; transition: width .3s linear; }
-    .farm-cell-bar.ready .farm-cell-bar-fill { background: #16a34a; }
+    .farm-cell-bar { position: absolute; left: 8%; right: 8%; bottom: 23px; height: 4px; background: rgba(0,0,0,.20); border-radius: 999px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.10); }
+    .farm-cell-bar-fill { height: 100%; background: linear-gradient(90deg, #fbbf24, #f59e0b); border-radius: 999px; transition: width .3s linear, background .3s; }
+    .farm-cell-bar.ready .farm-cell-bar-fill { background: linear-gradient(90deg, #34d399, #16a34a); }
     .farm-cell-ready { position: absolute; top: 2px; right: 4px; color: #16a34a; font-weight: 800; font-size: 13px; }
-    .farm-plant-cell { position: relative; cursor: pointer; border-radius: 6px; min-width: 0; min-height: 0; background: repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 7px, transparent 7px 14px), linear-gradient(180deg, #7d5636, #5c3c25); border: 1px solid rgba(54,36,22,.6); box-shadow: inset 0 2px 0 rgba(255,255,255,.10), inset 0 -4px 7px rgba(0,0,0,.28); }
+    .farm-plant-cell { position: relative; cursor: pointer; border-radius: 6px; min-width: 0; min-height: 0; background: rgba(120,160,80,.26); border: 1px solid rgba(255,255,255,.16); }
     .farm-plant-cell.mine { outline: none; }
     .farm-plant-cell .garden-pot { position: absolute; top: 50%; left: 50%; width: 108px; min-height: 112px; padding: 0 6px 6px; justify-content: flex-end; transform: translate(-50%, -50%) scale(calc(var(--pot-scale, .32) * 1.18)); transform-origin: center; pointer-events: none; margin: 0; background: none; border-color: transparent; box-shadow: none; }
     .farm-plant-cell .garden-pot::before { display: none; }
@@ -3772,7 +3774,7 @@
     .farm-plant-pick { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 18px; }
     .farm-plant-pick small { font-size: 9px; color: var(--muted); }
     .farm-plant-pick:hover { border-color: var(--accent); }
-    @media (max-width: 760px) { .farm-body { grid-template-columns: 1fr; } .farm-stage { grid-column: 1; grid-row: 1; height: 60vh; min-height: 360px; } .farm-side { grid-column: 1; grid-row: 2; } .farm-hint { display: none; } }
+    @media (max-width: 760px) { .farm-stage { height: 56vh; min-height: 320px; } .farm-hint { display: none; } }
     @media (max-width: 560px) { .farm-starter-chip { top: 10px; left: 10px; right: 10px; max-width: none; justify-content: space-between; } .farm-starter-text { flex-direction: column; align-items: flex-start; gap: 0; } }
     @media (max-width: 520px) { .farm-plant-water-line { left: 16%; right: 16%; bottom: 12px; height: 3px; } .farm-plant-modal-hero { grid-template-columns: 74px minmax(0, 1fr); } .farm-plant-modal-emoji { width: 74px; height: 74px; font-size: 46px; } .farm-plant-modal-grid { grid-template-columns: 1fr; } }
     /* Farm lootbox in the Sklep tab */
@@ -3795,7 +3797,8 @@
     .farm-box-coll-emoji { font-size: 24px; }
     .farm-box-coll-item small { font-size: 10px; color: var(--muted); font-weight: 700; }
     /* Ogródek farm: side toolbar + catalog / inventory modals */
-    .farm-toolbar { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(60,30,10,.28); }
+    .farm-toolbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .farm-toolbar .farm-tool-btn { width: auto; flex: 0 1 auto; padding: 9px 16px; }
     .farm-toolbar .farm-box-link-btn { margin-bottom: 0; }
     .farm-tool-btn { display: block; width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-weight: 800; font-size: 12px; color: var(--text); background: var(--surface); }
     .farm-tool-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -5409,6 +5412,7 @@
   <div id="tab-farm" class="hidden">
     <main>
       <div class="farm-wrap">
+        <div class="farm-topbar" id="farm-topbar"></div>
         <div class="farm-body">
           <div class="farm-stage">
             <div class="garden-sky">
@@ -18570,15 +18574,17 @@ function renderFarmBoard() {
           const def = fmDefs.get(tile.planted_species);
           cell.appendChild(el('span', { className: 'farm-cell-name' }, def ? def.name : tile.planted_species));
           cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.nick || '?'));
-          cell.appendChild(el('span', { className: 'farm-cell-emoji' }, farmIcon(def ? def.emoji : '🌱')));
+          cell.appendChild(el('span', { className: 'farm-cell-emoji' }));
           const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
+          let pct = 1;
           if (tile.planted_at && tile.ready_at) {
             const t0 = new Date(tile.planted_at).getTime(), t1 = new Date(tile.ready_at).getTime();
-            const pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
+            pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
             const bar = el('div', { className: 'farm-cell-bar' + (ready ? ' ready' : '') });
             bar.appendChild(el('div', { className: 'farm-cell-bar-fill', style: { width: (pct * 100) + '%' } }));
             cell.appendChild(bar);
           }
+          applyFarmCropVisual(cell, def, pct, ready);
           if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
         }
       }
@@ -18614,7 +18620,6 @@ function scaleFarmPots() {
     board.style.width = (FARM_W * cell + (FARM_W - 1) * gap) + 'px';
     board.style.height = (FARM_H * cell + (FARM_H - 1) * gap) + 'px';
     board.style.setProperty('--pot-scale', Math.max(0.4, Math.min(1.25, cell / 134)).toFixed(3));
-    board.style.setProperty('--cell-h', cell + 'px');
   });
 }
 
@@ -18626,6 +18631,22 @@ function markFarmSel() {
   if (fmSel) {
     const c = board.querySelector('[data-xy="' + fmSel.x + ',' + fmSel.y + '"]');
     if (c) c.classList.add('sel');
+  }
+}
+
+// Crop growth visual: sprout 🌱 → leafy 🌿 → the real crop, scaling up with progress.
+function farmCropStageIcon(def, pct, ready) {
+  const stage = ready ? 2 : (pct < 0.34 ? 0 : (pct < 0.7 ? 1 : 2));
+  return stage === 0 ? '🌱' : (stage === 1 ? '🌿' : ((def && def.emoji) || '🌱'));
+}
+function applyFarmCropVisual(cell, def, pct, ready) {
+  const g = Math.max(0, Math.min(1, pct));
+  cell.style.setProperty('--grow', g.toFixed(3));
+  cell.classList.toggle('ready', !!ready);
+  const span = cell.querySelector('.farm-cell-emoji');
+  if (span) {
+    const icon = farmCropStageIcon(def, g, ready);
+    if (span.dataset.icon !== icon) { span.dataset.icon = icon; span.replaceChildren(farmIcon(icon)); }
   }
 }
 
@@ -18646,6 +18667,7 @@ function updateFarmGrowth() {
     if (fill) fill.style.width = (pct * 100) + '%';
     const bar = cell.querySelector('.farm-cell-bar');
     if (bar) bar.classList.toggle('ready', ready);
+    applyFarmCropVisual(cell, fmDefs.get(tile.planted_species), pct, ready);
     if (ready && !cell.querySelector('.farm-cell-ready')) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
   });
 }
@@ -18679,7 +18701,11 @@ function updateFarmPlantNextLines() {
 }
 
 // ── Side panels ─────────────────────────────────────────────────────────────
-function renderFarmPanels() { renderFarmSelection(); }
+function renderFarmPanels() {
+  const tb = document.getElementById('farm-topbar');
+  if (tb) tb.replaceChildren(farmToolbar());
+  renderFarmSelection();
+}
 
 // Price of the (owned+1)-th tile for a player who already owns `owned` tiles.
 // Mirrors buy_farm_tile in supabase/farm.sql; the help text reuses it so the
@@ -18709,12 +18735,9 @@ function farmToolbar() {
     mkBtn('farm-tool-btn', '📦 Skrzynki', () => openShopSection('farm-lootbox-section')));
 }
 
-// Wrapper: render the tile inspector, then always append the hub buttons at the
-// bottom of the same wooden panel.
+// Render the tile inspector. The hub buttons now live in the top wooden bar.
 function renderFarmSelection() {
   renderFarmSelectionBody();
-  const box = document.getElementById('farm-selection');
-  if (box) box.append(farmToolbar());
 }
 
 function renderFarmSelectionBody() {
