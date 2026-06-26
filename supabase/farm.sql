@@ -9,8 +9,8 @@
 --   → it grows over real time → harvest crops into inventory (crops minted, not coins)
 --   → sell crops to the NPC at a dynamic supply/demand price (coins MINTED).
 --
--- Grid bounds (10 x 4) are mirrored in index.html as FARM_W / FARM_H — keep in sync.
--- Grid is 10 wide x 4 tall (FARM_W x FARM_H in index.html). Existing Ogródek
+-- Grid bounds (13 x 4) are mirrored in index.html as FARM_W / FARM_H — keep in sync.
+-- Grid is 13 wide x 4 tall (FARM_W x FARM_H in index.html). Existing Ogródek
 -- plants occupy the first cells (acquired_via 'migration'); crops can't grow there.
 -- Coin reasons added here (keep economy-stats.sql + leaderboard-net-worth-items.sql in sync):
 --   BURN:  farm_tile_buy, farm_box_buy, card_levelup
@@ -328,7 +328,7 @@ DECLARE
   v_vouchers integer := 0;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
-  IF p_x < 0 OR p_x >= 10 OR p_y < 0 OR p_y >= 4 THEN RAISE EXCEPTION 'bad_coords'; END IF;
+  IF p_x < 0 OR p_x >= 13 OR p_y < 0 OR p_y >= 4 THEN RAISE EXCEPTION 'bad_coords'; END IF;
 
   SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
   v_price := floor(350 * (1 + v_tiles * 0.25))::integer;  -- anti-monopoly escalation (base 350)
@@ -840,7 +840,7 @@ END $$;
 
 -- ── Migration: place every existing Ogródek plant on one tile ──────────────
 -- One tile per gardens row (all slots), packed into the first cells in reading
--- order (10 per row). The tile (acquired_via='migration') displays that plant
+-- order (13 per row). The tile (acquired_via='migration') displays that plant
 -- and is plant-only (no crops). Delete+recreate is deterministic so re-running
 -- is idempotent. Purchased tiles (acquired_via='purchase'/'lootbox') untouched.
 DO $$
@@ -856,7 +856,7 @@ BEGIN
      ORDER BY g.created_at NULLS FIRST, g.id
   LOOP
     INSERT INTO public.farm_tiles (x, y, owner_id, acquired_via, zen_garden_id)
-    VALUES (v_i % 10, v_i / 10, rec.user_id, 'migration', rec.id)
+    VALUES (v_i % 13, v_i / 13, rec.user_id, 'migration', rec.id)
     ON CONFLICT (x, y) DO NOTHING;
     v_i := v_i + 1;
   END LOOP;

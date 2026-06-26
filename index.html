@@ -3644,7 +3644,7 @@
     .garden-subtab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .farm-wrap { display: flex; flex-direction: column; gap: 12px; }
     .farm-hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
-    .farm-body { display: grid; grid-template-columns: 244px 1fr; gap: 12px; align-items: start; }
+    .farm-body { display: grid; grid-template-columns: 210px 1fr; gap: 12px; align-items: start; }
     .farm-stage { grid-column: 2; grid-row: 1; }
     .farm-side { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     /* Side panels styled like the Zen garden wooden sign-boards */
@@ -3690,11 +3690,13 @@
     }
     .farm-starter-action:hover { filter: brightness(.96); }
     .farm-field { position: relative; z-index: 2; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 10px; }
-    .farm-board { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(4, 1fr); gap: 4px; --pot-scale: .6; }
+    .farm-board { position: relative; display: grid; grid-template-columns: repeat(13, 1fr); grid-template-rows: repeat(4, 1fr); gap: 4px; --pot-scale: .6; }
+    /* Brick course dividing the migrated-plant row (row 0) from the crop rows below. */
+    .farm-board::after { content: ''; position: absolute; left: -2px; right: -2px; top: calc(var(--cell-h, 80px) + 2px); height: 9px; transform: translateY(-50%); z-index: 3; pointer-events: none; border-radius: 2px; background: repeating-linear-gradient(90deg, #b15a32 0 22px, #7f3f22 22px 25px), linear-gradient(180deg, #c87044, #97492a); box-shadow: 0 2px 3px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.22); }
     .farm-cell { position: relative; background: rgba(95,140,55,.16); border: 1px solid rgba(80,110,45,.12); border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; min-width: 0; min-height: 0; overflow: visible; }
-    .farm-cell.mine { background: rgba(150,108,56,.34); border-color: rgba(110,80,40,.3); }
+    .farm-cell.mine { background: repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 7px, transparent 7px 14px), linear-gradient(180deg, #7d5636, #5c3c25); border-color: rgba(54,36,22,.6); box-shadow: inset 0 2px 0 rgba(255,255,255,.10), inset 0 -4px 7px rgba(0,0,0,.28); }
     .farm-cell.other { background: rgba(95,140,55,.1); cursor: default; }
-    .farm-cell.crop { background: rgba(120,82,38,.6); }
+    .farm-cell.crop { background: repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 7px, transparent 7px 14px), linear-gradient(180deg, #6e4a2c, #4f3422); box-shadow: inset 0 2px 0 rgba(255,255,255,.08), inset 0 -4px 7px rgba(0,0,0,.26); }
     .farm-cell.unowned:hover { outline: 2px dashed var(--accent); outline-offset: -2px; }
     .farm-cell.sel, .farm-plant-cell.sel { outline: 3px solid #d97706; outline-offset: -3px; border-radius: 6px; z-index: 2; }
     .farm-cell-emoji { font-size: clamp(16px, 4vmin, 30px); line-height: 1; }
@@ -3707,7 +3709,7 @@
     .farm-cell-bar-fill { height: 100%; background: #f59e0b; transition: width .3s linear; }
     .farm-cell-bar.ready .farm-cell-bar-fill { background: #16a34a; }
     .farm-cell-ready { position: absolute; top: 2px; right: 4px; color: #16a34a; font-weight: 800; font-size: 13px; }
-    .farm-plant-cell { position: relative; cursor: pointer; border-radius: 6px; min-width: 0; min-height: 0; }
+    .farm-plant-cell { position: relative; cursor: pointer; border-radius: 6px; min-width: 0; min-height: 0; background: repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 7px, transparent 7px 14px), linear-gradient(180deg, #7d5636, #5c3c25); border: 1px solid rgba(54,36,22,.6); box-shadow: inset 0 2px 0 rgba(255,255,255,.10), inset 0 -4px 7px rgba(0,0,0,.28); }
     .farm-plant-cell.mine { outline: none; }
     .farm-plant-cell .garden-pot { position: absolute; top: 50%; left: 50%; width: 108px; min-height: 112px; padding: 0 6px 6px; justify-content: flex-end; transform: translate(-50%, -50%) scale(calc(var(--pot-scale, .32) * 1.18)); transform-origin: center; pointer-events: none; margin: 0; background: none; border-color: transparent; box-shadow: none; }
     .farm-plant-cell .garden-pot::before { display: none; }
@@ -18158,7 +18160,7 @@ function setupGardenRealtime() {
 
 // ── Farma (farm grid + collectible plant-card economy) ──────────────────────
 // Grid bounds mirror supabase/farm.sql (FARM_W/FARM_H) — keep in sync.
-const FARM_W = 10, FARM_H = 4;
+const FARM_W = 13, FARM_H = 4;
 const FARM_BOX_PRICE = 100;
 const FARM_BOX_DRAWS = 3;   // distinct cards per lootbox — mirror open_farm_lootbox v_draws
 const FARM_RARITY_PL = { common: 'zwykła', rare: 'rzadka', epic: 'epicka', legendary: 'legendarna' };
@@ -18612,6 +18614,7 @@ function scaleFarmPots() {
     board.style.width = (FARM_W * cell + (FARM_W - 1) * gap) + 'px';
     board.style.height = (FARM_H * cell + (FARM_H - 1) * gap) + 'px';
     board.style.setProperty('--pot-scale', Math.max(0.4, Math.min(1.25, cell / 134)).toFixed(3));
+    board.style.setProperty('--cell-h', cell + 'px');
   });
 }
 
