@@ -4259,14 +4259,14 @@
       <button class="nav-group-btn">🛒 Targowisko <span class="nav-chevron">▾</span></button>
       <div class="nav-dropdown">
         <button class="nav-tab" data-shop-target="marketplace-section">🤝 Ogłoszenia</button>
-        <button class="nav-tab" data-shop-target="farm-lootbox-section">📦 Skrzynki <span class="nav-hint-badge" aria-hidden="true">NOWE</span></button>
+        <button class="nav-tab" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
         <button class="nav-tab" data-shop-target="hero-shop-section">🛡️ Herosi</button>
-        <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby <span class="nav-hint-badge" aria-hidden="true">NOWE</span></button>
+        <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
         <button class="nav-tab" data-shop-target="topup-section">💰 Doładowanie</button>
       </div>
     </div>
     <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
-    <button class="nav-tab has-nav-hint" data-tab="farm">🌱 Ogródek <span class="nav-hint-badge" aria-hidden="true">NOWE</span></button>
+    <button class="nav-tab" data-tab="farm">🌱 Ogródek</button>
     <button class="nav-tab" data-tab="leaderboard">📊 Statystyki</button>
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
@@ -5287,9 +5287,9 @@
       </div>
       <div class="shop-category-filters" id="shop-category-filters" aria-label="Kategorie sklepu">
         <button class="shop-category-filter active" type="button" data-shop-target="marketplace-section">🤝 Ogłoszenia</button>
-        <button class="shop-category-filter" type="button" data-shop-target="farm-lootbox-section">📦 Skrzynki <span class="nav-hint-badge">NOWE</span></button>
+        <button class="shop-category-filter" type="button" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
         <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">🛡️ Herosi</button>
-        <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🪴 Ozdoby <span class="nav-hint-badge">NOWE</span></button>
+        <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
         <button class="shop-category-filter" type="button" data-shop-target="topup-section">💰 Doładowanie</button>
       </div>
       <section class="shop-section" id="marketplace-section">
@@ -5311,7 +5311,7 @@
       <section class="shop-section" id="farm-lootbox-section">
         <div class="shop-section-head">
           <div>
-            <div class="shop-section-title">📦 Skrzynki z nasionami <span class="nav-hint-badge">NOWE</span></div>
+            <div class="shop-section-title">📦 Skrzynki z nasionami</div>
             <div class="shop-section-sub">Skrzynki do <strong>🌱 Ogródka</strong>. Każda daje 3 losowe karty roślin — zbieraj duplikaty, ulepszaj karty, sadź je na działkach i sprzedawaj plony. Czasem trafi się 🎁 darmowa działka lub 💎 karta NFT.</div>
           </div>
         </div>
@@ -18701,6 +18701,7 @@ function farmToolbar() {
   return el('div', { className: 'farm-toolbar' },
     mkBtn('farm-tool-btn primary', '🎒 Ekwipunek', () => openFarmHub('inventory')),
     mkBtn('farm-tool-btn', '📖 Katalog', () => openFarmHub('catalog')),
+    mkBtn('farm-tool-btn', '📈 Cennik', () => openFarmHub('market')),
     mkBtn('farm-tool-btn', '❓ Jak to działa', () => openFarmHub('help')),
     mkBtn('farm-tool-btn', '📦 Skrzynki', () => openShopSection('farm-lootbox-section')));
 }
