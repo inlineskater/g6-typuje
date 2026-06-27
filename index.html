@@ -6332,6 +6332,9 @@ let crashBet = 10;
 let crashRafId = null;
 let crashPollTimer = null;
 let crashBusy = false;
+let crashStateInFlight = false;
+let crashQueuedStateLoad = false;
+let crashLastAdvancePokeMs = 0;
 let crashPhaseStartLocal = 0;   // Date.now() when the current running elapsed was sampled
 let crashElapsedBaseMs = 0;     // server-reported elapsedMs at that sample
 let crashExplodedNo = null;     // last crashed round_no we already animated
@@ -6340,8 +6343,8 @@ let crashExplodeMult = 1;       // crash_point to freeze the display at during e
 let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
 let crashRunRoundNo = null;     // round_no whose flight clock we've already synced (sync once → smooth)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
-// supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 5s.
-const CRASH_GROWTH = Math.log(2) / 5000;
+// supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 7s.
+const CRASH_GROWTH = Math.log(2) / 7000;
 const CRASH_POLL_MS = 500;      // fast poll during the running phase to catch the crash promptly
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
@@ -12923,6 +12926,11 @@ function stopCrash() {
   if (crashPollTimer) { clearInterval(crashPollTimer); crashPollTimer = null; }
 }
 
+function setCrashBusy(value) {
+  crashBusy = value;
+  if (crashState?.round) updateCrashButtons(crashState.round.status, crashDisplayMult);
+}
+
 function ensureCrashRaf() {
   if (crashRafId) return;
   const loop = () => {
@@ -12937,6 +12945,7 @@ function ensureCrashPoll() {
   if (crashPollTimer) return;
   crashPollTimer = setInterval(() => {
     if (activeTab !== 'crash') return;
+    if (crashBusy || crashStateInFlight) return;
     if (!crashState || crashState.round.status !== 'running') return;
     if (Date.now() - crashLastStateMs < CRASH_POLL_MS - 100) return;
     loadCrashState(false);
@@ -12944,11 +12953,22 @@ function ensureCrashPoll() {
 }
 
 async function loadCrashState(showSpinner = true) {
+  if (crashStateInFlight) {
+    crashQueuedStateLoad = true;
+    return;
+  }
+  crashStateInFlight = true;
   try {
     const data = await invokeCrash({ action: 'state' });
     applyCrashState(data);
   } catch (err) {
     if (showSpinner) showToast(err.message || 'Nie udało się załadować Rakiety.');
+  } finally {
+    crashStateInFlight = false;
+    if (crashQueuedStateLoad && activeTab === 'crash') {
+      crashQueuedStateLoad = false;
+      setTimeout(() => loadCrashState(false), 80);
+    }
   }
 }
 
@@ -12989,37 +13009,32 @@ function applyCrashState(data) {
 
 async function crashPlaceBet() {
   if (crashBusy) return;
-  crashBusy = true;
+  setCrashBusy(true);
   try { applyCrashState(await invokeCrash({ action: 'place_bet', amount: crashBet })); }
   catch (e) { showToast(e.message); }
-  finally { crashBusy = false; }
+  finally { setCrashBusy(false); }
 }
 
 async function crashClearBet() {
   if (crashBusy) return;
-  crashBusy = true;
+  setCrashBusy(true);
   try { applyCrashState(await invokeCrash({ action: 'clear_bet' })); }
   catch (e) { showToast(e.message); }
-  finally { crashBusy = false; }
+  finally { setCrashBusy(false); }
 }
 
 async function crashCashOut() {
   if (crashBusy || !crashState || !crashState.canCashout) return;
-  crashBusy = true;
+  setCrashBusy(true);
   const m = crashDisplayMult; // the value on the WYPŁAĆ button at click time
-  // Optimistic: flip to cashed locally so the button/row react instantly; the server
-  // response (which pays this same value, capped) reconciles via applyCrashState below.
-  if (crashState.myBet) crashState.myBet = { ...crashState.myBet, status: 'cashed', cashed_multiplier: m };
-  const mine = (crashState.bets || []).find(b => b.isMe);
-  if (mine) { mine.status = 'cashed'; mine.cashed_multiplier = m; }
-  renderCrash();
+  updateCrashButtons(crashState.round.status, m);
   try {
     const data = await invokeCrash({ action: 'cash_out', atMultiplier: m });
     applyCrashState(data);
     if (data.cashedOut) showToast(`Wypłacono x${data.cashedOut.multiplier.toFixed(2)} → +${data.cashedOut.won} 🪙`);
     else if (data.notice) showToast(data.notice);
   } catch (e) { showToast(e.message); loadCrashState(false); }
-  finally { crashBusy = false; }
+  finally { setCrashBusy(false); }
 }
 
 function crashPlayersLabel(n) { return n === 1 ? 'gracz' : 'graczy'; }
@@ -13121,13 +13136,17 @@ function crashTick() {
 // zero we must poke the server so it advances (launch the rocket / open the next round),
 // otherwise the round just sits there until some other event fires.
 function crashMaybeAdvance(remainMs) {
+  const now = Date.now();
   if (remainMs > 150) return;
-  if (Date.now() - crashLastStateMs < 500) return; // throttle to ~2/s
+  if (crashBusy || crashStateInFlight) return;
+  if (now - crashLastStateMs < 500) return; // throttle to ~2/s
+  if (now - crashLastAdvancePokeMs < 700) return;
   // The server advance is idempotent and only ONE client needs to poke it at the
   // boundary. A probabilistic gate keeps 20 open tabs from all hitting the singleton
   // lock in the same RAF frame (thundering herd); whichever client wins advances it,
   // realtime fans the new state out to everyone else.
   if (Math.random() > 0.35) return;
+  crashLastAdvancePokeMs = now;
   loadCrashState(false);
 }
 

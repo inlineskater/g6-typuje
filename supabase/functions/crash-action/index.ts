@@ -22,8 +22,8 @@ const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
 const CRASH_STAKES = [5, 10, 25, 50, 100, 250];
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
-// index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 5 s.
-const CRASH_GROWTH = Math.log(2) / 5000;
+// index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 7 s.
+const CRASH_GROWTH = Math.log(2) / 7000;
 
 function multAt(ms) { return Math.exp(CRASH_GROWTH * Math.max(0, ms)); }
 function durationFor(cp) { return Math.log(cp) / CRASH_GROWTH; } // ms; 0 for cp=1.00
@@ -46,6 +46,7 @@ function genCrashPoint() {
 }
 
 function gameError(msg) { return Object.assign(new Error(msg), { isGame: true }); }
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -185,8 +186,8 @@ async function peekGame(tx) {
 // Lock the singleton table, advance through any due phase transitions, return fresh state.
 async function loadGame(tx) {
   // Fail fast under contention instead of hanging a pool slot indefinitely.
-  await tx`set local lock_timeout = '2500ms'`;
-  await tx`set local statement_timeout = '5s'`;
+  await tx`set local lock_timeout = '900ms'`;
+  await tx`set local statement_timeout = '4s'`;
   const [table] = await tx`select * from public.crash_tables where slug = 'main' for update`;
   if (!table) throw gameError("Stół nie istnieje.");
 
@@ -313,9 +314,22 @@ async function stateResponse(tx, userId, extra = {}) {
 // connection) — safe to retry or to soft-fall-back to a lock-free read.
 function isTransientDbError(err) {
   const code = err?.code;
+  const msg = String(err?.message ?? "");
   return code === "55P03" || code === "40001" || code === "40P01" ||
     code === "57014" || // statement_timeout cancellation
-    code === "CONNECTION_CLOSED" || code === "CONNECTION_DESTROYED" || code === "CONNECT_TIMEOUT";
+    code === "CONNECTION_CLOSED" || code === "CONNECTION_DESTROYED" || code === "CONNECT_TIMEOUT" ||
+    /lock timeout|statement timeout|deadlock|connection .*closed|connection .*destroyed|connect timeout/i.test(msg);
+}
+
+async function withTransientRetry(fn, attempts = 3) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err?.isGame || !isTransientDbError(err) || attempt === attempts - 1) throw err;
+      await sleep(70 * (attempt + 1));
+    }
+  }
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -345,7 +359,7 @@ async function getState(userId) {
 async function placeBet(userId, rawAmount) {
   const amount = Math.trunc(Number(rawAmount));
   if (!CRASH_STAKES.includes(amount)) throw gameError("Nieprawidłowa stawka.");
-  return await db.begin(async (tx) => {
+  return await withTransientRetry(() => db.begin(async (tx) => {
     const { round } = await loadGame(tx);
     if (round.status !== "betting") throw gameError("Zakłady zamknięte — rakieta już leci.");
     const [profile] = await tx`select coins, nick from public.profiles where id = ${userId}`;
@@ -356,13 +370,13 @@ async function placeBet(userId, rawAmount) {
       values (${round.id}, ${round.table_id}, ${userId}, ${profile.nick}, ${amount})
       on conflict (round_id, user_id) do update set amount = excluded.amount, created_at = now()`;
     return await stateResponse(tx, userId);
-  });
+  }));
 }
 
 async function clearBet(userId) {
-  return await db.begin(async (tx) => {
-    await tx`set local lock_timeout = '2500ms'`;
-    await tx`set local statement_timeout = '5s'`;
+  return await withTransientRetry(() => db.begin(async (tx) => {
+    await tx`set local lock_timeout = '900ms'`;
+    await tx`set local statement_timeout = '4s'`;
     // Delete the bet BEFORE advancing so canceling at the window boundary can never
     // accidentally launch the round with this bet (loadGame in stateResponse advances).
     const [table] = await tx`select * from public.crash_tables where slug = 'main' for update`;
@@ -373,17 +387,21 @@ async function clearBet(userId) {
       }
     }
     return await stateResponse(tx, userId);
-  });
+  }));
 }
 
 async function cashOut(userId, clientMultiplier) {
-  return await db.begin(async (tx) => {
+  return await withTransientRetry(() => db.begin(async (tx) => {
     const { round } = await loadGame(tx);
     if (round.status !== "running") {
       return await stateResponse(tx, userId, { notice: "Rakieta nie leci." });
     }
     const [bet] = await tx`select * from public.crash_bets
                            where round_id = ${round.id} and user_id = ${userId} for update`;
+    if (bet?.status === "cashed") {
+      const mult = Number(bet.cashed_multiplier || 1);
+      return await stateResponse(tx, userId, { notice: `Już wypłacono x${mult.toFixed(2)}.` });
+    }
     if (!bet || bet.status !== "active") {
       return await stateResponse(tx, userId, { notice: "Nie masz aktywnego zakładu." });
     }
@@ -404,7 +422,7 @@ async function cashOut(userId, clientMultiplier) {
     await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
     await tx`update public.crash_bets set status = 'cashed', cashed_multiplier = ${mult} where id = ${bet.id}`;
     return await stateResponse(tx, userId, { cashedOut: { multiplier: mult, won } });
-  });
+  }));
 }
 
 Deno.serve(async (req) => {
@@ -426,6 +444,8 @@ Deno.serve(async (req) => {
     return json({ ok: true, ...result });
   } catch (err) {
     console.error(err);
-    return json({ ok: false, error: err?.isGame ? err.message : "Błąd serwera." });
+    if (err?.isGame) return json({ ok: false, error: err.message });
+    if (isTransientDbError(err)) return json({ ok: false, error: "Rakieta jest chwilowo zajęta. Spróbuj ponownie." });
+    return json({ ok: false, error: "Błąd serwera." });
   }
 });
