@@ -6336,10 +6336,11 @@ let crashExplodedNo = null;     // last crashed round_no we already animated
 let crashExplodeStart = 0;      // local ts the explosion animation began (0 = none)
 let crashExplodeMult = 1;       // crash_point to freeze the display at during explosion
 let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
+let crashRunRoundNo = null;     // round_no whose flight clock we've already synced (sync once → smooth)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 5s.
 const CRASH_GROWTH = Math.log(2) / 5000;
-const CRASH_POLL_MS = 700;      // fast poll during the running phase to catch the crash promptly
+const CRASH_POLL_MS = 500;      // fast poll during the running phase to catch the crash promptly
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
@@ -12923,11 +12924,17 @@ function applyCrashState(data) {
 
   const r = data.round;
   if (r.status === 'running') {
-    crashElapsedBaseMs = r.elapsedMs || 0;
-    crashPhaseStartLocal = Date.now();
-    ensureCrashPoll();
-  } else if (crashPollTimer) {
-    clearInterval(crashPollTimer); crashPollTimer = null;
+    // Sync the flight clock ONCE for this round; later polls must NOT re-sync or the
+    // rocket/number jitters (each server snapshot carries a different latency offset).
+    if (crashRunRoundNo !== r.round_no) {
+      crashRunRoundNo = r.round_no;
+      crashElapsedBaseMs = r.elapsedMs || 0;
+      crashPhaseStartLocal = Date.now();
+    }
+    ensureCrashPoll(); // poll keeps running only to detect the crash
+  } else {
+    crashRunRoundNo = null; // reset so the next running round re-syncs once
+    if (crashPollTimer) { clearInterval(crashPollTimer); crashPollTimer = null; }
   }
 
   // Detect a freshly crashed round → play the explosion once.
@@ -12962,14 +12969,21 @@ async function crashClearBet() {
 }
 
 async function crashCashOut() {
-  if (crashBusy) return;
+  if (crashBusy || !crashState || !crashState.canCashout) return;
   crashBusy = true;
+  const m = crashDisplayMult; // the value on the WYPŁAĆ button at click time
+  // Optimistic: flip to cashed locally so the button/row react instantly; the server
+  // response (which pays this same value, capped) reconciles via applyCrashState below.
+  if (crashState.myBet) crashState.myBet = { ...crashState.myBet, status: 'cashed', cashed_multiplier: m };
+  const mine = (crashState.bets || []).find(b => b.isMe);
+  if (mine) { mine.status = 'cashed'; mine.cashed_multiplier = m; }
+  renderCrash();
   try {
-    const data = await invokeCrash({ action: 'cash_out', atMultiplier: crashDisplayMult });
+    const data = await invokeCrash({ action: 'cash_out', atMultiplier: m });
     applyCrashState(data);
     if (data.cashedOut) showToast(`Wypłacono x${data.cashedOut.multiplier.toFixed(2)} → +${data.cashedOut.won} 🪙`);
     else if (data.notice) showToast(data.notice);
-  } catch (e) { showToast(e.message); }
+  } catch (e) { showToast(e.message); loadCrashState(false); }
   finally { crashBusy = false; }
 }
 
