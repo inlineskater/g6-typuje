@@ -198,7 +198,8 @@ AS $$
            AND ct.reason IN ('garden_accessory','hero_item_purchase','store_purchase',
                              'garden_certificate','arcade_entry','hero_appearance_change',
                              'canvas_pixel','canvas_pixel_adjustment',
-                             'farm_tile_buy','farm_box_buy','lootbox_open','card_levelup')
+                             'farm_tile_buy','farm_box_buy','lootbox_open','card_levelup',
+                             'zapps_purchase')
       ), 0::numeric) AS shop_burned,
 
       -- ── house (bank) P&L ────────────────────────────────────────────────
