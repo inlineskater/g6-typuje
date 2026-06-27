@@ -16,8 +16,8 @@ const corsHeaders = {
 const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, idle_timeout: 20 });
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
-const BET_WINDOW_MS = 7000;     // betting window per round
-const RESULT_PAUSE_MS = 4000;   // crashed → next betting round pause
+const BET_WINDOW_MS = 5000;     // betting window per round
+const RESULT_PAUSE_MS = 3000;   // crashed → next betting round pause
 const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
 const CRASH_STAKES = [5, 10, 25, 50, 100, 250];
@@ -290,15 +290,20 @@ async function placeBet(userId, rawAmount) {
 
 async function clearBet(userId) {
   return await db.begin(async (tx) => {
-    const { round } = await loadGame(tx);
-    if (round.status === "betting") {
-      await tx`delete from public.crash_bets where round_id = ${round.id} and user_id = ${userId}`;
+    // Delete the bet BEFORE advancing so canceling at the window boundary can never
+    // accidentally launch the round with this bet (loadGame in stateResponse advances).
+    const [table] = await tx`select * from public.crash_tables where slug = 'main' for update`;
+    if (table?.current_round_id) {
+      const [round] = await tx`select status from public.crash_rounds where id = ${table.current_round_id}`;
+      if (round && round.status === "betting") {
+        await tx`delete from public.crash_bets where round_id = ${table.current_round_id} and user_id = ${userId}`;
+      }
     }
     return await stateResponse(tx, userId);
   });
 }
 
-async function cashOut(userId) {
+async function cashOut(userId, clientMultiplier) {
   return await db.begin(async (tx) => {
     const { round } = await loadGame(tx);
     if (round.status !== "running") {
@@ -311,12 +316,16 @@ async function cashOut(userId) {
     }
     const [sec] = await tx`select crash_point from public.crash_round_secrets where round_id = ${round.id}`;
     const [{ ms }] = await tx`select extract(epoch from (now() - ${round.started_at}::timestamptz)) * 1000 as ms`;
-    const m = multAt(Number(ms));
-    if (!sec || m >= Number(sec.crash_point)) {
+    const serverM = multAt(Number(ms));
+    if (!sec || serverM >= Number(sec.crash_point)) {
       // loadGame would normally have already crashed it; guard against rounding races
       return await stateResponse(tx, userId, { notice: "Za późno! 💥" });
     }
-    const mult = floor2(m);
+    // Pay what the player SAW on the button (client multiplier), capped at the server's
+    // authoritative value so the display matches the payout but nobody can over-claim.
+    let mult = floor2(serverM);
+    const clientM = Number(clientMultiplier);
+    if (Number.isFinite(clientM) && clientM >= 1) mult = Math.max(1, Math.min(mult, floor2(clientM)));
     // Hero payout_bonus hook would apply here for an effect_game='crash' item (none exist yet).
     const won = Math.floor(Number(bet.amount) * mult);
     await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
@@ -338,7 +347,7 @@ Deno.serve(async (req) => {
     if (action === "state" || action === "history") result = await getState(user.id);
     else if (action === "place_bet") result = await placeBet(user.id, body.amount);
     else if (action === "clear_bet") result = await clearBet(user.id);
-    else if (action === "cash_out") result = await cashOut(user.id);
+    else if (action === "cash_out") result = await cashOut(user.id, body.atMultiplier);
     else throw gameError("Nieznana akcja.");
 
     return json({ ok: true, ...result });

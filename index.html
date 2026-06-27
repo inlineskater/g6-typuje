@@ -6335,6 +6335,7 @@ let crashElapsedBaseMs = 0;     // server-reported elapsedMs at that sample
 let crashExplodedNo = null;     // last crashed round_no we already animated
 let crashExplodeStart = 0;      // local ts the explosion animation began (0 = none)
 let crashExplodeMult = 1;       // crash_point to freeze the display at during explosion
+let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 5s.
 const CRASH_GROWTH = Math.log(2) / 5000;
@@ -12964,7 +12965,7 @@ async function crashCashOut() {
   if (crashBusy) return;
   crashBusy = true;
   try {
-    const data = await invokeCrash({ action: 'cash_out' });
+    const data = await invokeCrash({ action: 'cash_out', atMultiplier: crashDisplayMult });
     applyCrashState(data);
     if (data.cashedOut) showToast(`Wypłacono x${data.cashedOut.multiplier.toFixed(2)} → +${data.cashedOut.won} 🪙`);
     else if (data.notice) showToast(data.notice);
@@ -13052,16 +13053,28 @@ function crashTick() {
     drawCrashScene('crashed', 0, displayMult, exploding);
     multEl.textContent = 'x' + displayMult.toFixed(2) + ' 💥';
     multEl.className = 'crash-multiplier is-crashed';
-    const nextS = Math.max(0, Math.ceil(((r.nextInMs || 0) - (Date.now() - crashLastStateMs)) / 1000));
-    statusEl.textContent = `Rakieta wybuchła! Nowa runda za ${nextS}s`;
+    const remain = (r.nextInMs || 0) - (Date.now() - crashLastStateMs);
+    statusEl.textContent = `Rakieta wybuchła! Nowa runda za ${Math.max(0, Math.ceil(remain / 1000))}s`;
+    crashMaybeAdvance(remain); // start the next round the moment the pause ends
   } else {
     drawCrashScene('betting', 0, 1, false);
     multEl.textContent = 'x1.00';
     multEl.className = 'crash-multiplier';
-    const leftS = Math.max(0, Math.ceil(((r.msLeft || 0) - (Date.now() - crashLastStateMs)) / 1000));
-    statusEl.textContent = nPlayers > 0 ? `Start za ${leftS}s • ${nPlayers} ${crashPlayersLabel(nPlayers)}` : 'Czekamy na zakłady…';
+    const remain = (r.msLeft || 0) - (Date.now() - crashLastStateMs);
+    statusEl.textContent = nPlayers > 0 ? `Start za ${Math.max(0, Math.ceil(remain / 1000))}s • ${nPlayers} ${crashPlayersLabel(nPlayers)}` : 'Czekamy na zakłady…';
+    crashMaybeAdvance(remain); // launch the rocket the moment the betting window ends
   }
+  crashDisplayMult = displayMult;
   updateCrashButtons(r.status, displayMult);
+}
+
+// The phase transitions are server-side and LAZY (no cron) — when a countdown reaches
+// zero we must poke the server so it advances (launch the rocket / open the next round),
+// otherwise the round just sits there until some other event fires.
+function crashMaybeAdvance(remainMs) {
+  if (remainMs > 150) return;
+  if (Date.now() - crashLastStateMs < 500) return; // throttle to ~2/s
+  loadCrashState(false);
 }
 
 function updateCrashButtons(phase, displayMult) {
