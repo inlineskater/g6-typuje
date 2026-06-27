@@ -13,7 +13,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, idle_timeout: 20 });
+const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 10, idle_timeout: 20 });
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
 const BET_WINDOW_MS = 5000;     // betting window per round
@@ -150,8 +150,43 @@ async function resolveRound(tx, round, crashPoint) {
            where id = ${round.id}`;
 }
 
+// True if `round` is past its current-phase deadline and needs the lazy state machine
+// to advance it (launch / crash / open next). Used by both the lock-free peek and the
+// in-lock re-check so the herd's 2nd…Nth advancers can bail out without doing work.
+async function transitionDue(tx, round) {
+  if (!round) return true; // missing round → must create one
+  const [{ now }] = await tx`select now() as now`;
+  const nowMs = new Date(now).getTime();
+  if (round.status === "betting") {
+    return !!round.betting_ends_at && nowMs >= new Date(round.betting_ends_at).getTime();
+  }
+  if (round.status === "running") {
+    const [sec] = await tx`select crash_at from public.crash_round_secrets where round_id = ${round.id}`;
+    return !sec || nowMs >= new Date(sec.crash_at).getTime();
+  }
+  if (round.status === "crashed") {
+    return !!round.crashed_at && nowMs >= new Date(round.crashed_at).getTime() + RESULT_PAUSE_MS;
+  }
+  return false;
+}
+
+// Lock-free read: current table + round with NO `FOR UPDATE`. Returns `due` so the
+// caller can decide whether it must escalate to the locking loadGame().
+async function peekGame(tx) {
+  const [table] = await tx`select * from public.crash_tables where slug = 'main'`;
+  if (!table) throw gameError("Stół nie istnieje.");
+  const round = table.current_round_id
+    ? (await tx`select * from public.crash_rounds where id = ${table.current_round_id}`)[0] ?? null
+    : null;
+  const due = await transitionDue(tx, round);
+  return { table, round, due };
+}
+
 // Lock the singleton table, advance through any due phase transitions, return fresh state.
 async function loadGame(tx) {
+  // Fail fast under contention instead of hanging a pool slot indefinitely.
+  await tx`set local lock_timeout = '2500ms'`;
+  await tx`set local statement_timeout = '5s'`;
   const [table] = await tx`select * from public.crash_tables where slug = 'main' for update`;
   if (!table) throw gameError("Stół nie istnieje.");
 
@@ -210,8 +245,10 @@ async function loadGame(tx) {
   return { table: table2, round: round2 };
 }
 
-async function stateResponse(tx, userId, extra = {}) {
-  const { table, round } = await loadGame(tx);
+// Build the sanitized client payload from an ALREADY-LOADED {table, round}. Does no
+// locking and no advancing — callers decide how they obtained the state (loadGame under
+// the lock, or peekGame lock-free).
+async function buildState(tx, userId, table, round, extra = {}) {
   const [profile] = await tx`select coins, nick from public.profiles where id = ${userId}`;
   const [{ now }] = await tx`select now() as now`;
   const nowMs = new Date(now).getTime();
@@ -266,9 +303,43 @@ async function stateResponse(tx, userId, extra = {}) {
   };
 }
 
+// Advance under the lock, then build the payload. Used by every mutating action.
+async function stateResponse(tx, userId, extra = {}) {
+  const { table, round } = await loadGame(tx);
+  return await buildState(tx, userId, table, round, extra);
+}
+
+// Transient DB contention (lock timeout / serialization / deadlock / dropped
+// connection) — safe to retry or to soft-fall-back to a lock-free read.
+function isTransientDbError(err) {
+  const code = err?.code;
+  return code === "55P03" || code === "40001" || code === "40P01" ||
+    code === "57014" || // statement_timeout cancellation
+    code === "CONNECTION_CLOSED" || code === "CONNECTION_DESTROYED" || code === "CONNECT_TIMEOUT";
+}
+
 // ── Actions ──────────────────────────────────────────────────────────────────
+// Read path: lock-free when nothing is due (the overwhelming majority of polls), only
+// escalating to the locking advancer at a real phase boundary. On transient contention
+// it retries once, then soft-falls-back to the lock-free snapshot so a momentary lock
+// blip never surfaces to the user as "Błąd serwera.".
 async function getState(userId) {
-  return await db.begin((tx) => stateResponse(tx, userId));
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await db.begin(async (tx) => {
+        const { table, round, due } = await peekGame(tx);
+        if (!due && round) return await buildState(tx, userId, table, round);
+        return await stateResponse(tx, userId); // a transition is due → advance under the lock
+      });
+    } catch (err) {
+      if (err?.isGame) throw err;
+      if (!isTransientDbError(err)) throw err;
+      if (attempt === 0) continue; // retry once
+      // Still contended → serve the lock-free snapshot; the next tick reconciles.
+      return await db.begin((tx) => peekGame(tx).then(({ table, round }) =>
+        round ? buildState(tx, userId, table, round) : stateResponse(tx, userId)));
+    }
+  }
 }
 
 async function placeBet(userId, rawAmount) {
@@ -290,6 +361,8 @@ async function placeBet(userId, rawAmount) {
 
 async function clearBet(userId) {
   return await db.begin(async (tx) => {
+    await tx`set local lock_timeout = '2500ms'`;
+    await tx`set local statement_timeout = '5s'`;
     // Delete the bet BEFORE advancing so canceling at the window boundary can never
     // accidentally launch the round with this bet (loadGame in stateResponse advances).
     const [table] = await tx`select * from public.crash_tables where slug = 'main' for update`;

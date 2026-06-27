@@ -13088,6 +13088,11 @@ function crashTick() {
 function crashMaybeAdvance(remainMs) {
   if (remainMs > 150) return;
   if (Date.now() - crashLastStateMs < 500) return; // throttle to ~2/s
+  // The server advance is idempotent and only ONE client needs to poke it at the
+  // boundary. A probabilistic gate keeps 20 open tabs from all hitting the singleton
+  // lock in the same RAF frame (thundering herd); whichever client wins advances it,
+  // realtime fans the new state out to everyone else.
+  if (Math.random() > 0.35) return;
   loadCrashState(false);
 }
 
