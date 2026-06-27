@@ -6220,8 +6220,10 @@
       <button class="fb-sort-btn" data-cat="casino">🎰 Kasyno</button>
       <button class="fb-sort-btn" data-cat="football">⚽ Mundial</button>
       <button class="fb-sort-btn" data-cat="game">🕹️ Gry</button>
+      <button class="fb-sort-btn" data-cat="farm">🌾 Farma</button>
       <button class="fb-sort-btn" data-cat="garden">🌱 Ogród</button>
       <button class="fb-sort-btn" data-cat="market">🛍️ Targowisko</button>
+      <button class="fb-sort-btn" data-cat="shop">🛒 Sklep</button>
       <button class="fb-sort-btn" data-cat="other">💰 Inne</button>
     </div>
     <div class="fb-sort-bar af-filter-bar" id="af-user-bar">
@@ -8049,6 +8051,20 @@ const ACT_COIN_REASONS = {
   second_garden_unlocked:     '🌱 odblokował drugi ogród',
   extra_garden_slot:          '🌱 rozbudował ogród',
   marketplace_sale:           '🛍️ sprzedał coś na Targowisku',
+  marketplace_purchase:       '🛍️ kupił coś na Targowisku',
+  // Farma
+  farm_crop_sale:             '🌾 sprzedał plony NPC',
+  farm_tile_buy:              '🌱 kupił działkę na Farmie',
+  farm_box_buy:               '📦 kupił skrzynkę z kartami',
+  lootbox_open:               '🎁 otworzył skrzynkę z kartami',
+  card_levelup:               '⭐ ulepszył kartę roślinną',
+  // Sklep / bohater
+  store_purchase:             '🛒 kupił nagrodę w Sklepie',
+  hero_item_purchase:         '🦸 kupił przedmiot bohatera',
+  hero_appearance_change:     '🎭 zmienił wygląd bohatera',
+  // Wspólne Płótno
+  canvas_pixel:               '🎨 postawił piksel na Płótnie',
+  canvas_pixel_adjustment:    '🎨 postawił piksel na Płótnie',
   zapps_topup:                '💰 doładował konto',
   zapps_purchase:             '💎 kupił Zappsy',
   // daily_interest intentionally omitted — too noisy for the feed
@@ -8069,7 +8085,9 @@ function activityRow(entry) {
 }
 
 // Comprehensive cross-source activity feed: market bets, casino/arcade/seasonal
-// games, Mundial bets, and garden/marketplace coin transactions, newest first.
+// games, Mundial bets, Farma (crop sales, tile/box buys, lootboxes, card upgrades,
+// NFT trades), Sklep/hero purchases, Canvas pixels, and garden/marketplace coin
+// transactions, newest first.
 async function buildActivityFeed() {
   const feed = document.getElementById('activity-feed');
   if (!feed) return;
@@ -8085,7 +8103,7 @@ async function buildActivityFeed() {
   const scoreSel = 'user_id,nick_snapshot,score,submitted_at';
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
-    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, arcadeRes,
+    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, arcadeRes, nftRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -8099,6 +8117,7 @@ async function buildActivityFeed() {
     ranged(sb.from('invoice_horde_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('var_patrol_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
+    ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
 
   const profilesById = {};
@@ -8136,8 +8155,11 @@ async function buildActivityFeed() {
   (coinTxRes.data || []).forEach(c => {
     const label = ACT_COIN_REASONS[c.reason];
     if (!label) return;
-    const cat = c.reason === 'marketplace_sale' ? 'market'
-              : c.reason.includes('garden') ? 'garden'
+    const r = c.reason;
+    const cat = (r.startsWith('farm_') || r === 'lootbox_open' || r === 'card_levelup') ? 'farm'
+              : (r === 'store_purchase' || r.startsWith('hero_')) ? 'shop'
+              : r.startsWith('marketplace_') ? 'market'
+              : r.includes('garden') ? 'garden'
               : 'other';
     entries.push({ nick: nickOf(c), ts: c.created_at, cat, desc: label });
   });
@@ -8155,6 +8177,18 @@ async function buildActivityFeed() {
   (arcadeRes.data || []).forEach(s => {
     entries.push({ nick: nickOf(s), ts: s.created_at, cat: 'game',
       desc: (ACT_GAME_LABELS[s.game_type] || '🕹️ ' + s.game_type) + ' — wynik ' + s.score });
+  });
+
+  (nftRes.data || []).forEach(t => {
+    const def = (typeof fmDefs !== 'undefined' && fmDefs.get) ? fmDefs.get(t.species) : null;
+    const card = (def?.emoji || '💎') + ' ' + (def?.name || t.species) + ' #' + t.serial_no;
+    if (t.kind === 'sale') {
+      entries.push({ nick: profilesById[t.to_owner] || 'Gracz', ts: t.created_at, cat: 'farm',
+        desc: 'kupił NFT ' + card + (t.price ? ' za ' + t.price + ' 🪙' : '') });
+    } else { // mint
+      entries.push({ nick: profilesById[t.to_owner] || 'Gracz', ts: t.created_at, cat: 'farm',
+        desc: 'wylosował NFT ' + card });
+    }
   });
 
   entries.sort((a, b) => new Date(b.ts) - new Date(a.ts));
@@ -8659,6 +8693,7 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'farm_nft_transfers' }, scheduleActivityRebuild)
     .subscribe();
   activityPollTimer = setInterval(() => { if (activityModalOpen()) buildActivityFeed(); }, 20000);
 }
