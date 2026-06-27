@@ -1463,6 +1463,285 @@
     .casino-chip-100  { --chip-face: #0f172a; }
     .casino-chip-200  { --chip-face: #c2410c; }
     .casino-chip-500  { --chip-face: #7c3aed; }
+
+    /* ── Miny G6 ── */
+    #tab-mines.casino {
+      background:
+        radial-gradient(circle at 20% 0%, rgba(250,204,21,.16), transparent 28%),
+        linear-gradient(180deg, #ffffff 0%, #f8fafc 48%, #ecfdf5 100%);
+    }
+    #tab-mines main { color: #0f172a; }
+    .mines-wrap { max-width: 1060px; margin: 0 auto; }
+    .mines-hero {
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+      padding: 14px 16px; margin-bottom: 12px; border: 1px solid rgba(15,23,42,.1); border-radius: 8px;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,.96), rgba(248,250,252,.95) 55%, rgba(236,253,245,.95)),
+        repeating-linear-gradient(135deg, rgba(15,23,42,.035) 0 1px, transparent 1px 10px);
+      color: #0f172a;
+      box-shadow: 0 12px 30px rgba(15,23,42,.08);
+    }
+    .mines-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; line-height: 1; }
+    .mines-title-mark {
+      display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fef3c7, #d97706 55%, #7c2d12);
+      box-shadow: inset 0 2px 8px rgba(255,255,255,.4), 0 4px 16px rgba(0,0,0,.3);
+    }
+    .mines-subtitle { color: #475569; font-size: 13px; margin: 7px 0 0; max-width: 620px; }
+    .mines-hero-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .mines-hero-pill {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 9px;
+      border: 1px solid rgba(15,23,42,.1); border-radius: 999px; background: rgba(255,255,255,.78);
+      font-size: 12px; color: #854d0e; font-weight: 800;
+      box-shadow: 0 4px 12px rgba(15,23,42,.06);
+    }
+    .mines-shell { display: grid; grid-template-columns: minmax(340px, 1fr) 312px; gap: 16px; align-items: start; }
+    @media (max-width: 800px) { .mines-shell { grid-template-columns: 1fr; } }
+    .mines-table, .mines-side {
+      position: relative; overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96)),
+        repeating-linear-gradient(90deg, rgba(15,23,42,.026) 0 1px, transparent 1px 18px);
+      border: 1px solid rgba(15,23,42,.1);
+      border-radius: 8px;
+      padding: 14px;
+      color: #0f172a;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 42px rgba(15,23,42,.1);
+    }
+    .mines-table::before {
+      content: ""; position: absolute; inset: -35% -55%; pointer-events: none;
+      background: linear-gradient(115deg, transparent 34%, rgba(250,204,21,.22) 47%, transparent 60%);
+      transform: translateX(-24%) rotate(8deg); opacity: .14;
+    }
+    .mines-table.is-active::before { animation: mines-table-sweep 3.6s ease-in-out infinite; }
+    .mines-table.is-bust { animation: casino-shake .09s 7; border-color: rgba(248,113,113,.7); }
+    .mines-table.is-win { border-color: rgba(22,163,74,.45); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 2px rgba(52,211,153,.16), 0 0 34px rgba(52,211,153,.18); }
+    .mines-howto {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;
+      border: 1px solid rgba(245,158,11,.22); border-radius: 8px;
+      padding: 10px; margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(255,251,235,.94), rgba(255,255,255,.96));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 8px 20px rgba(15,23,42,.05);
+    }
+    .mines-howto-title {
+      color: #854d0e; font-size: 12px; font-weight: 900; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .mines-howto-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+    .mines-howto-steps span {
+      display: flex; align-items: center; gap: 6px; min-height: 34px;
+      border: 1px solid rgba(15,23,42,.08); border-radius: 8px; padding: 6px 8px;
+      background: rgba(255,255,255,.86); color: #1f2937; font-size: 11.5px; font-weight: 800;
+      line-height: 1.2;
+    }
+    .mines-howto-steps b {
+      display: inline-grid; place-items: center; flex: 0 0 auto;
+      width: 19px; height: 19px; border-radius: 50%; background: #facc15; color: #111827;
+      font-size: 11px;
+    }
+    @media (max-width: 720px) {
+      .mines-howto { grid-template-columns: 1fr; }
+      .mines-howto-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .mines-control-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .mines-control-label { font-size: 12px; font-weight: 800; color: #854d0e; text-transform: uppercase; letter-spacing: 0; }
+    .mines-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .mines-count-control {
+      display: grid; grid-template-columns: 1fr 56px; gap: 8px; align-items: center;
+      min-width: 210px;
+    }
+    .mines-count-control input[type="range"] { width: 100%; accent-color: #f6c453; }
+    .mines-count-input {
+      width: 56px; border: 1px solid rgba(15,23,42,.14); border-radius: 8px;
+      padding: 7px 6px; background: #fff; color: #111827; font-weight: 900;
+      text-align: center;
+    }
+    .mines-stats {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0;
+    }
+    @media (max-width: 520px) { .mines-stats { grid-template-columns: repeat(2, 1fr); } }
+    .mines-stat {
+      border: 1px solid rgba(15,23,42,.1); border-radius: 8px; padding: 9px;
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.92)); min-height: 62px;
+      box-shadow: 0 6px 16px rgba(15,23,42,.05);
+    }
+    .mines-stat span { display: block; color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+    .mines-stat strong { display: block; color: #0f172a; font-size: 18px; font-variant-numeric: tabular-nums; }
+    .mines-stat.is-mult, .mines-stat.is-payout {
+      border-color: rgba(250,204,21,.38);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(250,204,21,.26), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.99), rgba(255,251,235,.92));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.92), 0 0 22px rgba(250,204,21,.12);
+    }
+    .mines-stat.is-mult strong, .mines-stat.is-payout strong {
+      font-size: clamp(24px, 4vw, 32px); line-height: 1.05;
+      color: #92400e; text-shadow: 0 0 14px rgba(250,204,21,.28);
+    }
+    .mines-stat.is-payout strong { color: #047857; text-shadow: 0 0 16px rgba(52,211,153,.28); }
+    .mines-stat.is-hot { animation: mines-stat-glow 1.15s ease-in-out infinite alternate; }
+    .mines-progress {
+      height: 10px; border-radius: 999px; overflow: hidden; margin: 2px 0 14px;
+      border: 1px solid rgba(15,23,42,.1); background: #e2e8f0;
+    }
+    .mines-progress-fill {
+      width: 0%; height: 100%;
+      background: linear-gradient(90deg, #22c55e, #facc15, #f97316);
+      box-shadow: 0 0 12px rgba(250,204,21,.45);
+      transition: width .28s ease;
+    }
+    .mines-board {
+      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px;
+      width: min(100%, 540px); margin: 0 auto; padding: 12px;
+      border: 1px solid rgba(15,23,42,.1); border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.96), rgba(236,253,245,.72)),
+        repeating-linear-gradient(0deg, rgba(15,23,42,.035) 0 1px, transparent 1px 16px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.92);
+    }
+    .mines-cell {
+      position: relative; overflow: hidden;
+      aspect-ratio: 1; border: 1px solid rgba(250,204,21,.32); border-radius: 8px;
+      background:
+        radial-gradient(circle at 34% 24%, rgba(255,255,255,.24), transparent 30%),
+        linear-gradient(180deg, #2f9464, #14532d 72%, #052e1c);
+      color: #fff7cc; font-size: clamp(20px, 7vw, 34px); font-weight: 900;
+      box-shadow: inset 0 -7px 0 rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.24), 0 5px 12px rgba(0,0,0,.24);
+      cursor: pointer; transition: transform .16s, filter .16s, background .16s, box-shadow .16s;
+    }
+    .mines-cell::before {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.22), transparent 38%, rgba(15,23,42,.18) 70%);
+      opacity: .72; transition: opacity .16s;
+    }
+    .mines-cell::after {
+      content: "◇"; position: absolute; inset: 0; display: grid; place-items: center;
+      color: rgba(254,243,199,.92); font-size: clamp(18px, 6vw, 32px);
+      text-shadow: 0 2px 8px rgba(0,0,0,.45);
+    }
+    .mines-cell:not(:disabled):hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: inset 0 -7px 0 rgba(0,0,0,.2), 0 9px 18px rgba(0,0,0,.28); }
+    .mines-cell:not(:disabled):active { transform: translateY(1px); }
+    .mines-cell:disabled { cursor: default; }
+    .mines-table.is-active .mines-cell:not(:disabled):not(.is-revealed):not(.is-mine) {
+      animation: mines-cell-ready 2.4s ease-in-out infinite;
+      animation-delay: var(--cell-delay, 0ms);
+    }
+    .mines-cell.is-revealed {
+      background:
+        radial-gradient(circle at 45% 35%, rgba(255,255,255,.7), transparent 28%),
+        linear-gradient(180deg, #ecfdf5, #86efac);
+      color: #064e3b; border-color: rgba(167,243,208,.78);
+      box-shadow: inset 0 2px 8px rgba(15,23,42,.12), 0 0 18px rgba(52,211,153,.18);
+      animation: mines-safe-pop .34s ease both;
+    }
+    .mines-cell.is-revealed::before { opacity: 0; }
+    .mines-cell.is-revealed::after { content: ""; }
+    .mines-cell.is-last-safe { box-shadow: inset 0 2px 8px rgba(15,23,42,.12), 0 0 0 3px rgba(250,204,21,.3), 0 0 24px rgba(250,204,21,.34); }
+    .mines-cell.is-mine {
+      background:
+        radial-gradient(circle at 35% 28%, rgba(254,202,202,.28), transparent 32%),
+        linear-gradient(180deg, #991b1b, #450a0a);
+      color: #fecaca; border-color: rgba(248,113,113,.55);
+      animation: mines-bomb-pop .36s ease both, casino-shake .09s 5;
+      box-shadow: inset 0 -5px 0 rgba(0,0,0,.3), 0 0 24px rgba(248,113,113,.34);
+    }
+    .mines-cell.is-mine::before, .mines-cell.is-mine::after { content: ""; opacity: 0; }
+    .mines-cell-icon { position: relative; z-index: 1; display: inline-grid; place-items: center; width: 100%; height: 100%; }
+    .mines-burst-layer { position: fixed; inset: 0; pointer-events: none; z-index: 9998; overflow: hidden; }
+    .mines-spark {
+      position: absolute; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%);
+      background: #facc15; box-shadow: 0 0 12px rgba(250,204,21,.8);
+      animation: mines-spark .74s ease-out forwards;
+    }
+    .mines-spark.is-safe { background: #86efac; box-shadow: 0 0 16px rgba(52,211,153,.8); }
+    .mines-spark.is-mine { width: 12px; height: 12px; background: #f87171; box-shadow: 0 0 18px rgba(248,113,113,.9); }
+    @keyframes mines-table-sweep {
+      0%, 100% { transform: translateX(-26%) rotate(8deg); opacity: .08; }
+      48% { transform: translateX(32%) rotate(8deg); opacity: .32; }
+    }
+    @keyframes mines-stat-glow {
+      from { box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 18px rgba(250,204,21,.1); }
+      to { box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 30px rgba(250,204,21,.22); }
+    }
+    @keyframes mines-cell-ready {
+      0%, 100% { filter: brightness(1); box-shadow: inset 0 -7px 0 rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.24), 0 5px 12px rgba(0,0,0,.24); }
+      50% { filter: brightness(1.13); box-shadow: inset 0 -7px 0 rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.32), 0 0 18px rgba(250,204,21,.2); }
+    }
+    @keyframes mines-safe-pop {
+      0% { transform: rotateY(72deg) scale(.84); opacity: .25; }
+      68% { transform: rotateY(0deg) scale(1.06); opacity: 1; }
+      100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+    }
+    @keyframes mines-bomb-pop {
+      0% { transform: scale(.75); filter: brightness(1.4); }
+      65% { transform: scale(1.1); filter: brightness(1.05); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+    @keyframes mines-spark {
+      to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.15); opacity: 0; }
+    }
+    .mines-actions { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 0 0 8px; }
+    .mines-actions .rl-btn { min-width: 148px; }
+    .mines-actions .is-primary:not(:disabled) { box-shadow: 0 0 0 2px rgba(52,211,153,.18), 0 0 22px rgba(52,211,153,.2); }
+    .mines-status {
+      text-align: center; color: #92400e; font-weight: 800; font-size: 13px; min-height: 20px; margin: 0 0 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .mines-status.is-bust { color: #b91c1c; }
+    .mines-status.is-win { color: #047857; }
+    .mines-choice {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 38px; margin: 0 0 14px; padding: 8px 10px;
+      border: 1px solid rgba(15,23,42,.1); border-radius: 8px;
+      background:
+        radial-gradient(circle at 50% -20%, rgba(250,204,21,.24), transparent 58%),
+        rgba(255,255,255,.92);
+      color: #334155; font-size: 14px; font-weight: 900; text-align: center;
+      font-variant-numeric: tabular-nums;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 18px rgba(250,204,21,.08);
+    }
+    .mines-choice.is-live { animation: mines-stat-glow 1.2s ease-in-out infinite alternate; }
+    .mines-choice.is-bust { color: #b91c1c; border-color: rgba(248,113,113,.35); background: rgba(254,242,242,.94); }
+    .mines-choice.is-win { color: #047857; border-color: rgba(52,211,153,.38); background: rgba(236,253,245,.94); }
+    .mines-tile-tip {
+      position: fixed; z-index: 10000; pointer-events: none;
+      width: min(310px, calc(100vw - 24px)); padding: 10px;
+      border: 1px solid rgba(15,23,42,.14); border-radius: 8px;
+      background: rgba(255,255,255,.98); color: #0f172a;
+      box-shadow: 0 18px 42px rgba(15,23,42,.18), inset 0 1px 0 rgba(255,255,255,.92);
+      opacity: 1; transition: opacity .12s ease;
+      font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums;
+    }
+    .mines-tile-tip.is-hidden { opacity: 0; }
+    .mines-tip-title { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; color: #0f172a; font-weight: 900; }
+    .mines-tip-note { color: #64748b; font-size: 11.5px; margin-bottom: 7px; }
+    .mines-tip-row {
+      display: grid; grid-template-columns: 76px 1fr; gap: 8px; align-items: start;
+      padding: 5px 0; border-top: 1px solid rgba(15,23,42,.08);
+    }
+    .mines-tip-row span:first-child { color: #64748b; font-weight: 800; }
+    .mines-tip-row strong { color: #0f172a; }
+    .mines-tip-row.is-gain strong { color: #047857; }
+    .mines-tip-row.is-loss strong { color: #b91c1c; }
+    .mines-side h3 { margin: 0 0 8px; font-size: 13px; color: #854d0e; }
+    .mines-side-stat {
+      display: grid; grid-template-columns: 1fr auto; gap: 7px; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid rgba(15,23,42,.08); color: #64748b; font-size: 12px;
+    }
+    .mines-side-stat strong { color: #0f172a; font-size: 13px; }
+    .mines-note { color: #64748b; font-size: 12.5px; line-height: 1.45; margin: 0 0 12px; }
+    .mines-history { display: grid; gap: 7px; }
+    .mines-history-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      border: 1px solid rgba(15,23,42,.08); border-radius: 8px; padding: 7px 8px; font-size: 12.5px;
+      background: rgba(255,255,255,.88);
+    }
+    .mines-history-row .mh-meta { color: #64748b; }
+    .mines-history-row .mh-win { color: #047857; font-weight: 900; }
+    .mines-history-row .mh-loss { color: #b91c1c; font-weight: 900; }
+
     /* Celebration keyframes (generalized from the old slots animations) */
     @keyframes casino-coinburst {
       0%   { transform: translateY(-50px) rotate(0deg); opacity: 1; }
@@ -1486,6 +1765,66 @@
         transition-duration: .001ms !important;
       }
     }
+
+    /* ── Rakieta (Crash) ── */
+    .crash-wrap { max-width: 760px; margin: 0 auto; }
+    .crash-subtitle { color: var(--muted); font-size: 13px; margin: 2px 0 12px; }
+    .crash-history { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 10px; }
+    .crash-hchip {
+      flex: 0 0 auto; min-width: 52px; text-align: center; padding: 5px 8px; border-radius: 8px;
+      font-weight: 900; font-size: 12.5px; font-variant-numeric: tabular-nums;
+      background: rgba(7,40,22,.5); border: 1px solid rgba(250,204,21,.18); color: #fde68a;
+    }
+    .crash-hchip.lo { color: #fca5a5; border-color: rgba(248,113,113,.3); }
+    .crash-hchip.hi { color: #6ee7b7; border-color: rgba(52,211,153,.4); }
+    .crash-hchip.mid { color: #fcd34d; }
+    .crash-stage {
+      position: relative; border-radius: 16px; overflow: hidden;
+      border: 1px solid rgba(250,204,21,.22);
+      background: radial-gradient(120% 90% at 20% 100%, #1b2747 0%, #0a0f1f 60%, #05070f 100%);
+      box-shadow: inset 0 0 60px rgba(0,0,0,.6);
+    }
+    #crash-canvas { display: block; width: 100%; height: auto; }
+    .crash-multiplier {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      font-weight: 900; font-size: clamp(40px, 11vw, 84px); letter-spacing: 1px;
+      color: #fff; text-shadow: 0 4px 22px rgba(0,0,0,.7), 0 0 24px rgba(110,231,183,.35);
+      font-variant-numeric: tabular-nums; pointer-events: none; transition: color .15s;
+    }
+    .crash-multiplier.is-crashed { color: #f87171; text-shadow: 0 4px 22px rgba(0,0,0,.7), 0 0 30px rgba(248,113,113,.6); }
+    .crash-multiplier.is-cashed { color: #6ee7b7; }
+    .crash-status {
+      position: absolute; left: 0; right: 0; bottom: 12px; text-align: center;
+      font-weight: 800; font-size: 14px; color: #f5f0e0; text-shadow: 0 2px 6px rgba(0,0,0,.8);
+      pointer-events: none;
+    }
+    .crash-controls {
+      display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+      margin: 12px 0; padding: 12px 14px; border-radius: 14px;
+      background: linear-gradient(180deg, rgba(7,40,22,.55), rgba(7,40,22,.38));
+      border: 1px solid rgba(250,204,21,.22);
+    }
+    .crash-stake { display: flex; align-items: center; gap: 8px; color: #f5f0e0; font-size: 13px; font-weight: 700; }
+    .crash-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .crash-controls .rl-btn { margin-left: auto; }
+    .crash-controls .rl-btn + .rl-btn { margin-left: 0; }
+    #crash-cashout-btn { min-width: 150px; }
+    .crash-lower { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 620px) { .crash-lower { grid-template-columns: 1fr; } }
+    .crash-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .crash-box h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+    .crash-betrow, .crash-minerow {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--border);
+    }
+    .crash-betrow:last-child, .crash-minerow:last-child { border-bottom: none; }
+    .crash-betrow .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .crash-betrow.me .nm { color: #fde68a; }
+    .crash-betrow .st { font-variant-numeric: tabular-nums; font-weight: 800; }
+    .crash-betrow .st.active { color: var(--muted); }
+    .crash-betrow .st.cashed { color: #34d399; }
+    .crash-betrow .st.busted { color: #f87171; }
+    .crash-empty { color: var(--muted); font-size: 12.5px; padding: 4px 0; }
 
     /* ── Roulette ── */
     .roulette-chips { display: flex; gap: 6px; }
@@ -4303,6 +4642,8 @@
         <button class="nav-tab" data-tab="poker">♠️ Poker</button>
         <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
         <button class="nav-tab" data-tab="slots">🎰 Sloty</button>
+        <button class="nav-tab" data-tab="mines">💣 Miny G6</button>
+        <button class="nav-tab" data-tab="crash">🚀 Rakieta</button>
       </div>
     </div>
 
@@ -4718,6 +5059,131 @@
 
         <h3 class="section-title">Ostatnie wyniki</h3>
         <div id="slots-history" class="slots-history"></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-mines" class="hidden casino">
+    <main>
+      <div class="mines-wrap">
+        <div class="mines-hero">
+          <div>
+            <h2 class="mines-title"><span class="mines-title-mark">💣</span><span>Miny G6</span></h2>
+            <p class="mines-subtitle">G6 Minefield Casino · odkrywaj pola, zbieraj mnożnik i wyjdź przed wybuchem.</p>
+          </div>
+          <div class="mines-hero-pills">
+            <span class="mines-hero-pill">◇ 25 pól</span>
+            <span class="mines-hero-pill">🏦 RTP 95%</span>
+            <span class="mines-hero-pill">×1000 limit</span>
+          </div>
+        </div>
+
+        <div class="mines-shell">
+          <section class="mines-table">
+            <div class="mines-howto">
+              <div class="mines-howto-title">Jak działa</div>
+              <div class="mines-howto-steps">
+                <span><b>1</b>Ustaw stawkę i ile min chcesz na planszy</span>
+                <span><b>2</b>Klikasz pola. Czyste pole podbija mnożnik</span>
+                <span><b>3</b>Po czystym polu możesz wypłacić</span>
+                <span><b>4</b>Trafisz minę i runda kończy się za 0</span>
+              </div>
+            </div>
+
+            <div class="mines-actions">
+              <button id="mines-start-btn" class="rl-btn is-gold" type="button">Nowa runda</button>
+              <button id="mines-cashout-btn" class="rl-btn is-primary" type="button" disabled>WYPŁAĆ</button>
+            </div>
+            <div id="mines-status" class="mines-status">Ustaw stawkę i liczbę min, potem rozpocznij rundę.</div>
+            <div id="mines-choice" class="mines-choice">Wybierz ryzyko: mniej min gra spokojniej, więcej min szybciej pompuje mnożnik.</div>
+
+            <div class="mines-control-row">
+              <span class="mines-control-label">Stawka</span>
+              <div class="mines-chips">
+                <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+                <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+                <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+                <button class="casino-chip casino-chip-100" data-stake="50">50</button>
+                <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+                <button class="casino-chip casino-chip-200" data-stake="250">250</button>
+              </div>
+            </div>
+
+            <div class="mines-control-row">
+              <span class="mines-control-label">Liczba min</span>
+              <div class="mines-count-control">
+                <input id="mines-count-range" type="range" min="1" max="24" value="3">
+                <input id="mines-count-input" class="mines-count-input" type="number" min="1" max="24" value="3" inputmode="numeric">
+              </div>
+            </div>
+
+            <div class="mines-stats">
+              <div class="mines-stat"><span>Odkryte</span><strong id="mines-safe-label">0/22</strong></div>
+              <div class="mines-stat is-mult"><span>Mnożnik</span><strong id="mines-mult-label">x1.00</strong></div>
+              <div class="mines-stat"><span>Następne</span><strong id="mines-next-label">x1.07</strong></div>
+              <div class="mines-stat is-payout"><span>Wypłata</span><strong id="mines-payout-label">0 🪙</strong></div>
+            </div>
+
+            <div class="mines-progress" aria-hidden="true"><div id="mines-progress-fill" class="mines-progress-fill"></div></div>
+            <div id="mines-board" class="mines-board" aria-label="Plansza Miny G6"></div>
+          </section>
+
+          <aside class="mines-side">
+            <h3>Panel rundy</h3>
+            <div class="mines-side-stat"><span>Stawka</span><strong id="mines-side-bet">10 🪙</strong></div>
+            <div class="mines-side-stat"><span>Miny</span><strong id="mines-side-mines">3</strong></div>
+            <div class="mines-side-stat"><span>Bezpieczne pola</span><strong id="mines-side-safe">22</strong></div>
+            <div class="mines-side-stat"><span>Ryzyko kliknięcia</span><strong id="mines-side-risk">13.6%</strong></div>
+            <h3>Ostatnie rundy</h3>
+            <div id="mines-history" class="mines-history"></div>
+            <h3 style="margin-top:14px">Zasady</h3>
+            <p class="mines-note">Stawka schodzi z konta na starcie. Trafiona mina kończy rundę z wynikiem 0. Po co najmniej jednym bezpiecznym polu możesz wypłacić aktualny mnożnik.</p>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-crash" class="hidden casino">
+    <main>
+      <div class="crash-wrap">
+        <h2 style="font-size:18px">Rakieta 🚀</h2>
+        <p class="crash-subtitle">Wspólna runda • mnożnik rośnie od x1.00 • wypłać zanim rakieta wybuchnie 💥</p>
+
+        <div id="crash-history" class="crash-history"></div>
+
+        <div class="crash-stage">
+          <canvas id="crash-canvas" width="720" height="360"></canvas>
+          <div id="crash-multiplier" class="crash-multiplier">x1.00</div>
+          <div id="crash-status" class="crash-status"></div>
+        </div>
+
+        <div class="crash-controls">
+          <div class="crash-stake">
+            <span>Stawka:</span>
+            <div class="crash-chips">
+              <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+              <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+              <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+              <button class="casino-chip casino-chip-100" data-stake="50">50</button>
+              <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+              <button class="casino-chip casino-chip-200" data-stake="250">250</button>
+            </div>
+          </div>
+          <button id="crash-bet-btn" class="rl-btn is-gold">Postaw <span id="crash-bet-label">10</span> 🪙</button>
+          <button id="crash-cashout-btn" class="rl-btn is-primary" disabled>WYPŁAĆ</button>
+        </div>
+
+        <div class="crash-lower">
+          <div class="crash-box">
+            <h3>Gracze w rundzie</h3>
+            <div id="crash-bets"></div>
+          </div>
+          <div class="crash-box">
+            <h3>Twoje ostatnie loty</h3>
+            <div id="crash-mine"></div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -5842,6 +6308,37 @@ let rouletteLastResultId = null;
 let rouletteHeartbeatTimer = null;
 // Must stay comfortably below SEAT_STALE_MS (90s) in supabase/functions/roulette-action.
 const ROULETTE_HEARTBEAT_MS = 25_000;
+
+// ── Miny G6 state ──
+let minesState = null;
+let minesViewRound = null;
+let minesBet = 10;
+let minesMineCount = 3;
+let minesBusy = false;
+let minesLastTile = null;
+let minesLastOutcome = '';
+let minesTooltipEl = null;
+const MINES_BOARD_SIZE = 25;
+const MINES_HOUSE_FACTOR = 0.95;
+const MINES_MAX_MULT = 1000;
+
+// ── Rakieta (Crash) state ──
+let crashState = null;
+let crashRealtimeReady = false;
+let crashLastStateMs = 0;
+let crashBet = 10;
+let crashRafId = null;
+let crashPollTimer = null;
+let crashBusy = false;
+let crashPhaseStartLocal = 0;   // Date.now() when the current running elapsed was sampled
+let crashElapsedBaseMs = 0;     // server-reported elapsedMs at that sample
+let crashExplodedNo = null;     // last crashed round_no we already animated
+let crashExplodeStart = 0;      // local ts the explosion animation began (0 = none)
+let crashExplodeMult = 1;       // crash_point to freeze the display at during explosion
+// PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
+// supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 5s.
+const CRASH_GROWTH = Math.log(2) / 5000;
+const CRASH_POLL_MS = 700;      // fast poll during the running phase to catch the crash promptly
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
@@ -6378,6 +6875,8 @@ async function doLogout() {
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
   rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null; stopRouletteHeartbeat();
   rouletteLocalBets = null; if (rouletteFlushTimer) { clearTimeout(rouletteFlushTimer); rouletteFlushTimer = null; }
+  minesState = null; minesViewRound = null; minesBusy = false; minesLastTile = null; minesLastOutcome = '';
+  crashState = null; crashRealtimeReady = false; crashExplodedNo = null; stopCrash();
   stopWhackBossRound();
   stopSnakeRound();
   stopInvoiceHordeRound();
@@ -6673,6 +7172,7 @@ function switchTab(tab) {
   if (previousTab === 'football' && tab !== 'football') stopFootballCountdown();
   if (previousTab === 'canvas' && tab !== 'canvas') stopCanvasCountdown();
   if (previousTab === 'farm' && tab !== 'farm') { stopFarmTimer(); stopFarmAtmosphere(); closeFarmPlantModal(); }
+  if (previousTab === 'crash' && tab !== 'crash') stopCrash();
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
@@ -6685,6 +7185,7 @@ function switchTab(tab) {
   const tP = document.getElementById('tab-poker');
   const tR = document.getElementById('tab-roulette');
   const tSl = document.getElementById('tab-slots');
+  const tMi = document.getElementById('tab-mines');
   const tWb = document.getElementById('tab-whack-boss');
   const tS = document.getElementById('tab-shop');
   const tG = document.getElementById('tab-garden');
@@ -6696,6 +7197,7 @@ function switchTab(tab) {
   const tFb = document.getElementById('tab-football');
   const tCv = document.getElementById('tab-canvas');
   const tFa = document.getElementById('tab-farm');
+  const tCr = document.getElementById('tab-crash');
   hide(tAg);
   hide(tFp);
   hide(tBj);
@@ -6703,6 +7205,8 @@ function switchTab(tab) {
   hide(tFb);
   hide(tCv);
   hide(tFa);
+  hide(tMi);
+  hide(tCr);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     if (markets.length === 0) loadMarkets();
@@ -6720,6 +7224,15 @@ function switchTab(tab) {
   } else if (tab === 'slots') {
     hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     loadSlotsHistory();
+  } else if (tab === 'mines') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    show(tMi);
+    loadMinesState();
+  } else if (tab === 'crash') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    show(tCr);
+    setupCrashRealtime();
+    loadCrashState();
   } else if (tab === 'whack-boss') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG); hide(tH);
     loadSeasonalTab();
@@ -7521,7 +8034,7 @@ function buildCardStats(marketId) {
 // ── Activity feed ─────────────────────────────────────────────────────────
 // Maps for the cross-source feed.
 const ACT_GAME_LABELS = {
-  roulette: '🎡 Ruletka', slots: '🎰 Sloty', poker: '🃏 Poker',
+  roulette: '🎡 Ruletka', slots: '🎰 Sloty', mines: '💣 Miny G6', crash: '🚀 Rakieta', poker: '🃏 Poker',
   whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol', arcade: '🕹️ Arkada',
@@ -8944,6 +9457,8 @@ function buildHazardHistoryRows(gameTransactions) {
   const GAME_META = {
     roulette: { icon: '🎰', title: 'Ruletka', sideLabel: 'Spin' },
     slots: { icon: '🎰', title: 'Jednoręki bandyta', sideLabel: 'Spin' },
+    mines: { icon: '💣', title: 'Miny G6', sideLabel: 'Runda' },
+    crash: { icon: '🚀', title: 'Rakieta', sideLabel: 'Lot' },
     poker_buy_in: { icon: '🃏', title: 'Poker', sideLabel: 'Buy-in' },
     poker_cashout: { icon: '🃏', title: 'Poker', sideLabel: 'Cashout' },
   };
@@ -10198,13 +10713,17 @@ function renderCoinRaceDetail(container) {
       const rows = items.map((r, i) => el('tr', {},
         el('td', { className: 'lb-rank' + (i === 0 && pos ? ' gold' : '') }, i === 0 && pos ? '🥇' : String(i + 1)),
         el('td', { className: 'lb-nick' + (r.user_id === me.id ? ' me' : '') }, r.nick),
-        el('td', {}, r.roulette_pl + ' 🪙'), el('td', {}, r.slots_pl + ' 🪙'), el('td', {}, r.poker_pl + ' 🪙'),
+        el('td', {}, (r.roulette_pl || 0) + ' 🪙'),
+        el('td', {}, (r.slots_pl || 0) + ' 🪙'),
+        el('td', {}, (r.mines_pl || 0) + ' 🪙'),
+        el('td', {}, (r.crash_pl || 0) + ' 🪙'),
+        el('td', {}, (r.poker_pl || 0) + ' 🪙'),
         el('td', { className: 'tx-pl ' + (pos ? 'tx-pl-profit' : 'tx-pl-loss') }, (pos ? '+' : '') + r.total_pl + ' 🪙')
       ));
       return el('div', { style: { marginBottom: '16px' } },
         el('div', { className: 'hazardista-col-title' }, ttl),
         el('table', { className: 'lb-table' },
-          el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Ruletka'), el('th', {}, 'Sloty'), el('th', {}, 'Poker'), el('th', {}, 'Suma'))),
+          el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Ruletka'), el('th', {}, 'Sloty'), el('th', {}, 'Miny'), el('th', {}, 'Rakieta'), el('th', {}, 'Poker'), el('th', {}, 'Suma'))),
           el('tbody', {}, ...rows)
         )
       );
@@ -10259,7 +10778,7 @@ function renderCoinRaceDetail(container) {
   function renderFullHazardHistory(container) {
     const fSearch = el('input', { className: 'history-filter-input', type: 'search', placeholder: 'Gracz lub gra' });
     const fGame = el('select', { className: 'history-filter-select' });
-    fGame.innerHTML = '<option value="">Gra: wszystkie</option><option value="roulette">Ruletka</option><option value="slots">Sloty</option><option value="poker">Poker</option>';
+    fGame.innerHTML = '<option value="">Gra: wszystkie</option><option value="roulette">Ruletka</option><option value="slots">Sloty</option><option value="mines">Miny G6</option><option value="crash">Rakieta</option><option value="poker">Poker</option>';
     const fClear = el('button', { className: 'btn-ghost history-clear', type: 'button' }, 'Wyczyść');
     const filters = el('div', { className: 'history-filters', style: { gridTemplateColumns: '1fr 160px auto' } }, fSearch, fGame, fClear);
     const tableWrap = el('div', { className: 'history-wrap' });
@@ -11938,6 +12457,818 @@ function setupRouletteRealtime() {
   document.addEventListener('visibilitychange', onRouletteVisibility);
   startRouletteHeartbeat();
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Miny G6 — single-player house game
+// ════════════════════════════════════════════════════════════════════════════
+function minesFloor2(value) {
+  return Math.floor(Number(value) * 100) / 100;
+}
+
+function minesMultiplierFor(mineCount, safeRevealed) {
+  const mines = Math.max(1, Math.min(24, Math.trunc(Number(mineCount) || 1)));
+  const k = Math.max(0, Math.trunc(Number(safeRevealed) || 0));
+  const safeTiles = MINES_BOARD_SIZE - mines;
+  if (k <= 0) return 1;
+  if (k > safeTiles) return MINES_MAX_MULT;
+  let fair = 1;
+  for (let i = 0; i < k; i += 1) {
+    fair *= (MINES_BOARD_SIZE - i) / (MINES_BOARD_SIZE - mines - i);
+  }
+  return Math.min(MINES_MAX_MULT, minesFloor2(fair * MINES_HOUSE_FACTOR));
+}
+
+function minesMultLabel(mult) {
+  return 'x' + Number(mult || 0).toFixed(2);
+}
+
+async function invokeMines(payload) {
+  const { data, error } = await sb.functions.invoke('mines-action', { body: payload });
+  if (error) throw new Error(error.message || 'Błąd połączenia z Minami.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd gry Miny.');
+  return data;
+}
+
+async function loadMinesState(showToastOnError = true) {
+  try {
+    const data = await invokeMines({ action: 'state' });
+    applyMinesState(data, { resetView: !data.activeRound });
+  } catch (err) {
+    if (showToastOnError) showToast('❌ ' + err.message);
+  }
+}
+
+function applyMinesState(data, opts = {}) {
+  minesState = data;
+  if (typeof data.coins === 'number' && me) {
+    me.coins = data.coins;
+    setText(headerCoins, me.coins);
+  }
+  if (data.activeRound) minesViewRound = data.activeRound;
+  else if (data.completedRound) minesViewRound = data.completedRound;
+  else if (opts.resetView) minesViewRound = null;
+  if (data.notice) showToast('⚠️ ' + data.notice);
+  renderMines();
+}
+
+function setMinesMineCount(value) {
+  minesMineCount = Math.max(1, Math.min(24, Math.trunc(Number(value) || 1)));
+  const range = document.getElementById('mines-count-range');
+  const input = document.getElementById('mines-count-input');
+  if (range) range.value = String(minesMineCount);
+  if (input) input.value = String(minesMineCount);
+  if (!minesState?.activeRound) renderMines();
+}
+
+function minesRoundSafeTiles(round) {
+  return MINES_BOARD_SIZE - Number(round?.mineCount ?? minesMineCount);
+}
+
+function minesEnsureTileTooltip() {
+  if (!minesTooltipEl) {
+    minesTooltipEl = el('div', { className: 'mines-tile-tip is-hidden', role: 'tooltip' });
+    document.body.appendChild(minesTooltipEl);
+  }
+  return minesTooltipEl;
+}
+
+function hideMinesTileTooltip() {
+  if (minesTooltipEl) minesTooltipEl.classList.add('is-hidden');
+}
+
+function addMinesTipRow(box, label, value, tone = '') {
+  box.appendChild(el('div', { className: 'mines-tip-row' + (tone ? ' is-' + tone : '') },
+    el('span', {}, label),
+    el('strong', {}, value)
+  ));
+}
+
+function showMinesTileTooltip(cell, tile) {
+  const tip = minesEnsureTileTooltip();
+  const active = minesState?.activeRound || null;
+  const view = active || minesViewRound;
+  const bet = Number(view?.bet ?? minesBet);
+  const mineCount = Number(view?.mineCount ?? minesMineCount);
+  const revealed = new Set((view?.revealedTiles || []).map(Number));
+  const safeRevealed = Number(view?.safeRevealed || 0);
+  const currentMult = view ? Number(view.currentMultiplier || 1) : 1;
+  const nextMult = active ? Number(active.nextMultiplier || 0) : minesMultiplierFor(minesMineCount, 1);
+  const payout = active ? Number(active.potentialPayout || 0) : view ? Number(view.totalWon || 0) : 0;
+  const nextPayout = nextMult ? Math.floor(bet * nextMult) : 0;
+  const unopened = Math.max(1, MINES_BOARD_SIZE - revealed.size);
+  const mineRisk = active ? mineCount / unopened : mineCount / MINES_BOARD_SIZE;
+  const lossText = payout > 0 ? `${payout} 🪙 z wypłaty na stole` : `${bet} 🪙 stawki`;
+
+  tip.replaceChildren(
+    el('div', { className: 'mines-tip-title' },
+      el('span', {}, 'Pole ' + (tile + 1)),
+      el('span', {}, active ? 'przed kliknięciem' : 'bez rundy')
+    ),
+    el('div', { className: 'mines-tip-note' },
+      active
+        ? 'Tooltip nie zdradza, czy tu jest mina. Pokazuje tylko ryzyko kliknięcia.'
+        : 'Najpierw rozpocznij rundę. Stawka schodzi z konta od razu.'
+    )
+  );
+
+  if (active) {
+    addMinesTipRow(tip, 'Czyste', `${minesMultLabel(nextMult)} -> ${nextPayout} 🪙`, 'gain');
+    addMinesTipRow(tip, 'Mina', `koniec za 0, tracisz ${lossText}`, 'loss');
+    addMinesTipRow(tip, 'Teraz', payout > 0 ? `cashout ${payout} 🪙 @ ${minesMultLabel(currentMult)}` : `stawka ${bet} 🪙 już pobrana`);
+    addMinesTipRow(tip, 'Ryzyko', `${(mineRisk * 100).toFixed(1)}% miny przy losowym polu`);
+  } else {
+    addMinesTipRow(tip, 'Stawka', `${minesBet} 🪙 pobrane na start`);
+    addMinesTipRow(tip, 'Czyste', `${minesMultLabel(nextMult)} -> ${Math.floor(minesBet * nextMult)} 🪙`, 'gain');
+    addMinesTipRow(tip, 'Mina', `runda za 0, strata ${minesBet} 🪙`, 'loss');
+  }
+
+  tip.style.visibility = 'hidden';
+  tip.classList.remove('is-hidden');
+  const rect = cell.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  const margin = 12;
+  const minLeft = margin + tipRect.width / 2;
+  const maxLeft = window.innerWidth - margin - tipRect.width / 2;
+  const left = Math.max(minLeft, Math.min(maxLeft, rect.left + rect.width / 2));
+  let top = rect.top - 10;
+  let transform = 'translate(-50%, -100%)';
+  if (top - tipRect.height < margin) {
+    top = rect.bottom + 10;
+    transform = 'translate(-50%, 0)';
+  }
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+  tip.style.transform = transform;
+  tip.style.visibility = 'visible';
+}
+
+function renderMines() {
+  const board = document.getElementById('mines-board');
+  if (!board) return;
+
+  const active = minesState?.activeRound || null;
+  const view = active || minesViewRound;
+  const mineCount = Number(view?.mineCount ?? minesMineCount);
+  const safeTiles = minesRoundSafeTiles(view);
+  const safeRevealed = Number(view?.safeRevealed || 0);
+  const currentMult = view ? Number(view.currentMultiplier || 1) : 1;
+  const nextMult = active ? active.nextMultiplier : minesMultiplierFor(minesMineCount, 1);
+  const payout = active ? Number(active.potentialPayout || 0) : view ? Number(view.totalWon || 0) : 0;
+  const result = view?.result || '';
+  const isWin = result === 'cashout' || result === 'auto_cashout';
+  const isBust = result === 'bust';
+  const revealed = new Set((view?.revealedTiles || []).map(Number));
+  const mines = new Set((view?.mineTiles || []).map(Number));
+  const unopened = Math.max(1, MINES_BOARD_SIZE - revealed.size);
+  const clickRisk = active ? mineCount / unopened : view && view.status !== 'active' ? 0 : mineCount / MINES_BOARD_SIZE;
+  const progressPct = safeTiles > 0 ? Math.max(0, Math.min(100, safeRevealed / safeTiles * 100)) : 0;
+
+  const table = document.querySelector('#tab-mines .mines-table');
+  if (table) {
+    table.classList.toggle('is-active', !!active);
+    table.classList.toggle('is-win', isWin);
+    table.classList.toggle('is-bust', isBust);
+  }
+
+  setText(document.getElementById('mines-safe-label'), safeRevealed + '/' + safeTiles);
+  const multLabel = document.getElementById('mines-mult-label');
+  const payoutLabel = document.getElementById('mines-payout-label');
+  setText(multLabel, minesMultLabel(currentMult));
+  setText(document.getElementById('mines-next-label'), nextMult ? minesMultLabel(nextMult) : '—');
+  setText(payoutLabel, payout + ' 🪙');
+  multLabel?.parentElement?.classList.toggle('is-hot', Number(currentMult) > 1);
+  payoutLabel?.parentElement?.classList.toggle('is-hot', Number(payout) > 0);
+  const progressFill = document.getElementById('mines-progress-fill');
+  if (progressFill) progressFill.style.width = progressPct.toFixed(1) + '%';
+  setText(document.getElementById('mines-side-bet'), (view?.bet ?? minesBet) + ' 🪙');
+  setText(document.getElementById('mines-side-mines'), mineCount);
+  setText(document.getElementById('mines-side-safe'), safeTiles);
+  setText(document.getElementById('mines-side-risk'), (clickRisk * 100).toFixed(1) + '%');
+
+  const completed = !!view && view.status !== 'active';
+  hideMinesTileTooltip();
+  board.replaceChildren();
+  for (let i = 0; i < MINES_BOARD_SIZE; i += 1) {
+    const isRevealed = revealed.has(i);
+    const isMine = completed && mines.has(i);
+    const isLastSafe = minesLastTile === i && isRevealed && !isMine && minesLastOutcome === 'safe';
+    const cell = el('button', {
+      className: 'mines-cell' + (isRevealed ? ' is-revealed' : '') + (isMine ? ' is-mine' : '') + (isLastSafe ? ' is-last-safe' : ''),
+      type: 'button',
+      disabled: !active || completed || isRevealed || minesBusy,
+      style: { '--cell-delay': (i * 32) + 'ms' },
+      'aria-label': 'Pole ' + (i + 1),
+    }, el('span', { className: 'mines-cell-icon' }, isMine ? '💣' : isRevealed ? '✓' : ''));
+    cell.addEventListener('pointerenter', () => showMinesTileTooltip(cell, i));
+    cell.addEventListener('pointerleave', hideMinesTileTooltip);
+    cell.addEventListener('focus', () => showMinesTileTooltip(cell, i));
+    cell.addEventListener('blur', hideMinesTileTooltip);
+    cell.addEventListener('click', () => revealMinesTile(i));
+    board.appendChild(cell);
+  }
+
+  const startBtn = document.getElementById('mines-start-btn');
+  const cashBtn = document.getElementById('mines-cashout-btn');
+  if (startBtn) {
+    startBtn.disabled = minesBusy || !!active;
+    startBtn.textContent = active ? 'Runda trwa' : `Nowa runda (${minesBet} 🪙)`;
+  }
+  if (cashBtn) {
+    cashBtn.disabled = minesBusy || !active || Number(active.safeRevealed || 0) < 1;
+    cashBtn.textContent = active && Number(active.safeRevealed || 0) >= 1
+      ? `WYPŁAĆ ${Number(active.potentialPayout || 0)} 🪙`
+      : 'WYPŁAĆ';
+  }
+  document.querySelectorAll('.mines-chips .casino-chip').forEach(btn => {
+    btn.disabled = minesBusy || !!active;
+    btn.classList.toggle('active', Number(btn.dataset.stake) === minesBet);
+  });
+  const range = document.getElementById('mines-count-range');
+  const input = document.getElementById('mines-count-input');
+  if (range) range.disabled = minesBusy || !!active;
+  if (input) input.disabled = minesBusy || !!active;
+
+  const status = document.getElementById('mines-status');
+  if (status) {
+    status.classList.toggle('is-bust', isBust);
+    status.classList.toggle('is-win', isWin);
+    if (active && safeRevealed > 0) status.textContent = `Masz ${safeRevealed} czystych pól i wypłatę na stole.`;
+    else if (active) status.textContent = `Runda trwa: ${active.mineCount} min na planszy.`;
+    else if (view?.result === 'bust') status.textContent = 'Mina trafiona. Ta runda kończy się za 0.';
+    else if (view?.result === 'cashout' || view?.result === 'auto_cashout') status.textContent = `Wypłacono ${view.totalWon} 🪙 przy ${minesMultLabel(view.currentMultiplier)}.`;
+    else status.textContent = 'Ustaw stawkę i miny, potem odpal rundę.';
+  }
+
+  const choice = document.getElementById('mines-choice');
+  if (choice) {
+    choice.classList.toggle('is-live', !!active && safeRevealed > 0);
+    choice.classList.toggle('is-bust', isBust);
+    choice.classList.toggle('is-win', isWin);
+    if (active && safeRevealed > 0) {
+      choice.textContent = `Możesz wypłacić ${payout} 🪙 teraz albo kliknąć dalej po ${minesMultLabel(nextMult)}.`;
+    } else if (active) {
+      choice.textContent = `Odkryj pierwsze pole. Po nim wybierasz: wypłata albo dalsze pompowanie mnożnika.`;
+    } else if (view?.result === 'bust') {
+      choice.textContent = 'Ryzyko weszło źle. Następna runda: mniej min = spokojniej, więcej min = większy skok mnożnika.';
+    } else if (view?.result === 'cashout' || view?.result === 'auto_cashout') {
+      choice.textContent = `Zabrałeś z planszy ${view.totalWon} 🪙. Możesz wejść w następną rundę albo podkręcić liczbę min.`;
+    } else {
+      choice.textContent = 'Wybierz ryzyko: mniej min gra spokojniej, więcej min szybciej pompuje mnożnik.';
+    }
+  }
+
+  renderMinesHistory();
+}
+
+function renderMinesHistory() {
+  const box = document.getElementById('mines-history');
+  if (!box) return;
+  const rows = minesState?.history || [];
+  box.replaceChildren();
+  if (!rows.length) {
+    box.appendChild(el('div', { className: 'mines-note' }, 'Brak rund — zagraj pierwszą.'));
+    return;
+  }
+  rows.forEach(row => {
+    const net = Number(row.totalWon || 0) - Number(row.bet || 0);
+    const result = row.result === 'bust'
+      ? `💥 ${row.safeRevealed}/${MINES_BOARD_SIZE - row.mineCount}`
+      : `${minesMultLabel(row.finalMultiplier)} · ${row.safeRevealed}/${MINES_BOARD_SIZE - row.mineCount}`;
+    box.appendChild(el('div', { className: 'mines-history-row' },
+      el('span', { className: 'mh-meta' }, result),
+      el('span', { className: net >= 0 ? 'mh-win' : 'mh-loss' }, (net >= 0 ? '+' : '') + net + ' 🪙')
+    ));
+  });
+}
+
+function minesSparkBurst(tile, kind = 'safe') {
+  const cells = document.querySelectorAll('#mines-board .mines-cell');
+  const cell = cells[tile];
+  if (!cell) return;
+  const rect = cell.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const layer = el('div', { className: 'mines-burst-layer' });
+  const count = kind === 'mine' ? 30 : 18;
+  for (let i = 0; i < count; i += 1) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.25;
+    const dist = (kind === 'mine' ? 100 : 70) + Math.random() * 34;
+    const spark = el('span', { className: 'mines-spark ' + (kind === 'mine' ? 'is-mine' : 'is-safe') });
+    spark.style.left = cx + 'px';
+    spark.style.top = cy + 'px';
+    spark.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    spark.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    layer.appendChild(spark);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 900);
+}
+
+async function startMinesRound() {
+  if (minesBusy) return;
+  if (minesState?.activeRound) { showToast('Dokończ aktywną rundę.'); return; }
+  minesBusy = true;
+  minesLastTile = null;
+  minesLastOutcome = '';
+  renderMines();
+  try {
+    const data = await invokeMines({ action: 'start', bet: minesBet, mineCount: minesMineCount });
+    minesViewRound = null;
+    applyMinesState(data);
+  } catch (err) {
+    showToast('❌ ' + err.message);
+  } finally {
+    minesBusy = false;
+    renderMines();
+  }
+}
+
+async function revealMinesTile(tile) {
+  const active = minesState?.activeRound;
+  if (minesBusy || !active) return;
+  minesBusy = true;
+  renderMines();
+  try {
+    const data = await invokeMines({ action: 'reveal', roundId: active.id, tile });
+    minesLastTile = tile;
+    minesLastOutcome = data.completedRound?.result === 'bust' ? 'mine' : 'safe';
+    applyMinesState(data);
+    if (data.completedRound?.result === 'bust') {
+      minesSparkBurst(tile, 'mine');
+      showToast('💥 Mina! Tracisz stawkę.');
+    } else if (data.completedRound) {
+      minesSparkBurst(tile, 'safe');
+      const net = Number(data.completedRound.totalWon || 0) - Number(data.completedRound.bet || 0);
+      if (net > 0) rouletteWinAnimation(net);
+      showToast(`✅ Auto-wypłata: ${data.completedRound.totalWon} 🪙`);
+    } else {
+      minesSparkBurst(tile, 'safe');
+    }
+  } catch (err) {
+    showToast('❌ ' + err.message);
+  } finally {
+    minesBusy = false;
+    renderMines();
+  }
+}
+
+async function cashOutMines() {
+  const active = minesState?.activeRound;
+  if (minesBusy || !active) return;
+  minesBusy = true;
+  renderMines();
+  try {
+    const data = await invokeMines({ action: 'cash_out', roundId: active.id });
+    minesLastOutcome = 'safe';
+    applyMinesState(data);
+    if (data.cashedOut) {
+      const net = Number(data.cashedOut.won || 0) - Number(active.bet || 0);
+      if (net > 0) rouletteWinAnimation(net);
+      showToast(`Wypłacono ${data.cashedOut.won} 🪙 @ ${minesMultLabel(data.cashedOut.multiplier)}`);
+    }
+  } catch (err) {
+    showToast('❌ ' + err.message);
+  } finally {
+    minesBusy = false;
+    renderMines();
+  }
+}
+
+(function wireMinesControls() {
+  document.querySelectorAll('.mines-chips .casino-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (minesState?.activeRound) return;
+      minesBet = Number(btn.dataset.stake);
+      renderMines();
+    });
+  });
+  const range = document.getElementById('mines-count-range');
+  const input = document.getElementById('mines-count-input');
+  range?.addEventListener('input', () => setMinesMineCount(range.value));
+  input?.addEventListener('change', () => setMinesMineCount(input.value));
+  document.getElementById('mines-start-btn')?.addEventListener('click', startMinesRound);
+  document.getElementById('mines-cashout-btn')?.addEventListener('click', cashOutMines);
+  renderMines();
+})();
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Rakieta (Crash) — shared multiplayer house game
+// ════════════════════════════════════════════════════════════════════════════
+const CRASH_TAU = Math.PI * 2;
+
+async function invokeCrash(payload) {
+  const { data, error } = await sb.functions.invoke('crash-action', { body: payload });
+  if (error) throw new Error(error.message || 'Błąd połączenia.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd serwera.');
+  return data;
+}
+
+function setupCrashRealtime() {
+  if (!crashRealtimeReady) {
+    crashRealtimeReady = true;
+    const reload = () => {
+      if (activeTab !== 'crash') return;
+      if (Date.now() - crashLastStateMs < 500) return;
+      loadCrashState(false);
+    };
+    const ch = sb.channel('crash-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_tables' }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_rounds' }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_bets' }, reload)
+      .subscribe();
+    realtimeChannels.push(ch);
+  }
+  ensureCrashRaf();
+}
+
+function stopCrash() {
+  if (crashRafId) { cancelAnimationFrame(crashRafId); crashRafId = null; }
+  if (crashPollTimer) { clearInterval(crashPollTimer); crashPollTimer = null; }
+}
+
+function ensureCrashRaf() {
+  if (crashRafId) return;
+  const loop = () => {
+    crashRafId = null;
+    crashTick();
+    if (activeTab === 'crash') crashRafId = requestAnimationFrame(loop);
+  };
+  crashRafId = requestAnimationFrame(loop);
+}
+
+function ensureCrashPoll() {
+  if (crashPollTimer) return;
+  crashPollTimer = setInterval(() => {
+    if (activeTab !== 'crash') return;
+    if (!crashState || crashState.round.status !== 'running') return;
+    if (Date.now() - crashLastStateMs < CRASH_POLL_MS - 100) return;
+    loadCrashState(false);
+  }, CRASH_POLL_MS);
+}
+
+async function loadCrashState(showSpinner = true) {
+  try {
+    const data = await invokeCrash({ action: 'state' });
+    applyCrashState(data);
+  } catch (err) {
+    if (showSpinner) showToast(err.message || 'Nie udało się załadować Rakiety.');
+  }
+}
+
+function applyCrashState(data) {
+  crashLastStateMs = Date.now();
+  crashState = data;
+  if (typeof data.coins === 'number' && me) { me.coins = data.coins; setText(headerCoins, me.coins); }
+
+  const r = data.round;
+  if (r.status === 'running') {
+    crashElapsedBaseMs = r.elapsedMs || 0;
+    crashPhaseStartLocal = Date.now();
+    ensureCrashPoll();
+  } else if (crashPollTimer) {
+    clearInterval(crashPollTimer); crashPollTimer = null;
+  }
+
+  // Detect a freshly crashed round → play the explosion once.
+  if (r.status === 'crashed' && r.round_no !== crashExplodedNo) {
+    crashExplodedNo = r.round_no;
+    crashExplodeStart = Date.now();
+    crashExplodeMult = r.crash_point || 1;
+    const stage = document.querySelector('#tab-crash .crash-stage');
+    if (stage) { stage.style.animation = 'casino-shake .09s 5'; setTimeout(() => { stage.style.animation = ''; }, 500); }
+    const mine = data.myResults && data.myResults[0];
+    if (mine && mine.round_id === r.id && mine.total_won > 0) rouletteWinAnimation(mine.total_won - mine.total_bet);
+  }
+
+  ensureCrashRaf();
+  renderCrash();
+}
+
+async function crashPlaceBet() {
+  if (crashBusy) return;
+  crashBusy = true;
+  try { applyCrashState(await invokeCrash({ action: 'place_bet', amount: crashBet })); }
+  catch (e) { showToast(e.message); }
+  finally { crashBusy = false; }
+}
+
+async function crashClearBet() {
+  if (crashBusy) return;
+  crashBusy = true;
+  try { applyCrashState(await invokeCrash({ action: 'clear_bet' })); }
+  catch (e) { showToast(e.message); }
+  finally { crashBusy = false; }
+}
+
+async function crashCashOut() {
+  if (crashBusy) return;
+  crashBusy = true;
+  try {
+    const data = await invokeCrash({ action: 'cash_out' });
+    applyCrashState(data);
+    if (data.cashedOut) showToast(`Wypłacono x${data.cashedOut.multiplier.toFixed(2)} → +${data.cashedOut.won} 🪙`);
+    else if (data.notice) showToast(data.notice);
+  } catch (e) { showToast(e.message); }
+  finally { crashBusy = false; }
+}
+
+function crashPlayersLabel(n) { return n === 1 ? 'gracz' : 'graczy'; }
+
+// ── Rendering: lists update on state events; canvas + dynamic text in the RAF tick ──
+function renderCrash() {
+  if (!crashState) return;
+  renderCrashHistory();
+  renderCrashBets();
+  renderCrashMine();
+}
+
+function renderCrashHistory() {
+  const box = document.getElementById('crash-history'); if (!box) return;
+  box.innerHTML = '';
+  const hist = crashState.history || [];
+  if (!hist.length) { box.appendChild(el('span', { className: 'crash-empty' }, 'Brak historii')); return; }
+  hist.forEach(h => {
+    const cp = Number(h.crash_point);
+    const cls = cp < 1.5 ? 'lo' : cp >= 3 ? 'hi' : 'mid';
+    box.appendChild(el('div', { className: 'crash-hchip ' + cls }, 'x' + cp.toFixed(2)));
+  });
+}
+
+function renderCrashBets() {
+  const box = document.getElementById('crash-bets'); if (!box) return;
+  box.innerHTML = '';
+  const bets = crashState.bets || [];
+  if (!bets.length) { box.appendChild(el('div', { className: 'crash-empty' }, 'Nikt jeszcze nie postawił.')); return; }
+  bets.forEach(b => {
+    const row = el('div', { className: 'crash-betrow' + (b.isMe ? ' me' : '') });
+    row.append(el('span', { className: 'nm' }, b.nick + (b.isMe ? ' (Ty)' : '')));
+    let st, cls;
+    if (b.status === 'cashed') {
+      const m = b.cashed_multiplier || 1;
+      st = `x${m.toFixed(2)} • +${Math.floor(b.amount * m) - b.amount} 🪙`; cls = 'cashed';
+    } else if (b.status === 'busted') { st = `💥 −${b.amount} 🪙`; cls = 'busted'; }
+    else { st = `${b.amount} 🪙`; cls = 'active'; }
+    row.append(el('span', { className: 'st ' + cls }, st));
+    box.appendChild(row);
+  });
+}
+
+function renderCrashMine() {
+  const box = document.getElementById('crash-mine'); if (!box) return;
+  box.innerHTML = '';
+  const rows = crashState.myResults || [];
+  if (!rows.length) { box.appendChild(el('div', { className: 'crash-empty' }, 'Jeszcze nie grałeś.')); return; }
+  rows.forEach(r => {
+    const net = r.total_won - r.total_bet;
+    const left = r.cashout_multiplier
+      ? `Wypłata x${Number(r.cashout_multiplier).toFixed(2)}`
+      : `💥 x${Number(r.crash_point).toFixed(2)}`;
+    const row = el('div', { className: 'crash-minerow' });
+    row.append(el('span', {}, left));
+    row.append(el('span', { className: 'st ' + (net >= 0 ? 'cashed' : 'busted') }, (net >= 0 ? '+' : '') + net + ' 🪙'));
+    box.appendChild(row);
+  });
+}
+
+// ── The animation tick: owns the canvas, the big multiplier, status, and button labels ──
+function crashTick() {
+  const multEl = document.getElementById('crash-multiplier');
+  const statusEl = document.getElementById('crash-status');
+  if (!multEl || !crashState) { drawCrashScene('betting', 0, 1, false); return; }
+  const r = crashState.round;
+  const nPlayers = (crashState.bets || []).length;
+  const exploding = crashExplodeStart && (Date.now() - crashExplodeStart < 1000);
+  let displayMult = 1;
+
+  if (r.status === 'running') {
+    const elapsed = crashElapsedBaseMs + (Date.now() - crashPhaseStartLocal);
+    displayMult = Math.floor(Math.exp(CRASH_GROWTH * elapsed) * 100) / 100;
+    drawCrashScene('running', elapsed, displayMult, false);
+    multEl.textContent = 'x' + displayMult.toFixed(2);
+    multEl.className = 'crash-multiplier' + (crashState.myBet && crashState.myBet.status === 'cashed' ? ' is-cashed' : '');
+    statusEl.textContent = `Leci! • ${nPlayers} ${crashPlayersLabel(nPlayers)}`;
+  } else if (r.status === 'crashed') {
+    displayMult = Number(r.crash_point || crashExplodeMult || 1);
+    drawCrashScene('crashed', 0, displayMult, exploding);
+    multEl.textContent = 'x' + displayMult.toFixed(2) + ' 💥';
+    multEl.className = 'crash-multiplier is-crashed';
+    const nextS = Math.max(0, Math.ceil(((r.nextInMs || 0) - (Date.now() - crashLastStateMs)) / 1000));
+    statusEl.textContent = `Rakieta wybuchła! Nowa runda za ${nextS}s`;
+  } else {
+    drawCrashScene('betting', 0, 1, false);
+    multEl.textContent = 'x1.00';
+    multEl.className = 'crash-multiplier';
+    const leftS = Math.max(0, Math.ceil(((r.msLeft || 0) - (Date.now() - crashLastStateMs)) / 1000));
+    statusEl.textContent = nPlayers > 0 ? `Start za ${leftS}s • ${nPlayers} ${crashPlayersLabel(nPlayers)}` : 'Czekamy na zakłady…';
+  }
+  updateCrashButtons(r.status, displayMult);
+}
+
+function updateCrashButtons(phase, displayMult) {
+  const cashBtn = document.getElementById('crash-cashout-btn');
+  const betBtn = document.getElementById('crash-bet-btn');
+  if (!cashBtn || !betBtn || !crashState) return;
+  const myBet = crashState.myBet;
+
+  if (phase === 'running' && myBet && myBet.status === 'active') {
+    cashBtn.disabled = crashBusy;
+    cashBtn.textContent = `WYPŁAĆ @ x${displayMult.toFixed(2)}`;
+  } else if (myBet && myBet.status === 'cashed') {
+    cashBtn.disabled = true;
+    cashBtn.textContent = `✓ x${(myBet.cashed_multiplier || 1).toFixed(2)}`;
+  } else {
+    cashBtn.disabled = true;
+    cashBtn.textContent = 'WYPŁAĆ';
+  }
+
+  if (phase === 'betting') {
+    betBtn.disabled = crashBusy;
+    if (myBet) { betBtn.textContent = `Anuluj (${myBet.amount} 🪙)`; betBtn.dataset.mode = 'cancel'; }
+    else { betBtn.textContent = `Postaw ${crashBet} 🪙`; betBtn.dataset.mode = 'place'; }
+  } else {
+    betBtn.disabled = true;
+    betBtn.textContent = 'Zakłady zamknięte';
+    betBtn.dataset.mode = 'none';
+  }
+}
+
+// ── Canvas: starfield + rising multiplier curve + the branded G6 rocket ──
+let crashStars = null;
+function crashStarfield(ctx, W, H) {
+  if (!crashStars) {
+    crashStars = []; let s = 0x9e3779b1;
+    const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+    for (let i = 0; i < 64; i++) crashStars.push([rnd() * W, rnd() * H * 0.82, rnd() * 1.5 + 0.4]);
+  }
+  ctx.save();
+  ctx.fillStyle = '#fff';
+  crashStars.forEach((st, i) => {
+    ctx.globalAlpha = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(Date.now() / 700 + i));
+    ctx.beginPath(); ctx.arc(st[0], st[1], st[2], 0, CRASH_TAU); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function crashRoundCapsule(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawG6Rocket(ctx, cx, cy, ang, scale, flame) {
+  ctx.save();
+  ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(scale, scale);
+
+  // Exhaust plume (behind tail, local -x). Length flickers with the multiplier.
+  if (flame > 0) {
+    const fl = 16 + flame * 24 + Math.random() * 9;
+    const grd = ctx.createLinearGradient(-16, 0, -16 - fl, 0);
+    grd.addColorStop(0, '#fff7cc'); grd.addColorStop(.3, '#fbbf24');
+    grd.addColorStop(.7, '#f97316'); grd.addColorStop(1, 'rgba(249,115,22,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.moveTo(-15, -7); ctx.quadraticCurveTo(-16 - fl, 0, -15, 7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.beginPath(); ctx.moveTo(-15, -3); ctx.quadraticCurveTo(-15 - fl * 0.5, 0, -15, 3); ctx.closePath(); ctx.fill();
+  }
+  // Swept tail fins (gold).
+  ctx.fillStyle = '#d99a18';
+  ctx.beginPath(); ctx.moveTo(-12, -6); ctx.lineTo(-24, -16); ctx.lineTo(-11, -2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-12, 6); ctx.lineTo(-24, 16); ctx.lineTo(-11, 2); ctx.closePath(); ctx.fill();
+  // Metallic body.
+  const bg = ctx.createLinearGradient(0, -10, 0, 10);
+  bg.addColorStop(0, '#99a2b1'); bg.addColorStop(.45, '#f5f7fb');
+  bg.addColorStop(.56, '#e9edf5'); bg.addColorStop(1, '#79828f');
+  ctx.fillStyle = bg;
+  crashRoundCapsule(ctx, -18, -10, 40, 20, 10); ctx.fill();
+  // Specular sheen.
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-10, -5.5); ctx.lineTo(16, -5.5); ctx.stroke();
+  // Gold nose cone.
+  ctx.fillStyle = '#f6c453';
+  ctx.beginPath(); ctx.moveTo(22, -10); ctx.quadraticCurveTo(40, 0, 22, 10); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1; ctx.stroke();
+  // Porthole window with cyan glint.
+  ctx.fillStyle = '#0ea5e9'; ctx.beginPath(); ctx.arc(9, 0, 4.4, 0, CRASH_TAU); ctx.fill();
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(7.5, -1.5, 1.3, 0, CRASH_TAU); ctx.fill();
+  ctx.restore();
+
+  // "G6" badge — drawn upright in world space so the wordmark stays legible at any tilt.
+  const lx = -3, ly = 0;
+  const wx = cx + (lx * Math.cos(ang) - ly * Math.sin(ang)) * scale;
+  const wy = cy + (lx * Math.sin(ang) + ly * Math.cos(ang)) * scale;
+  ctx.save();
+  ctx.translate(wx, wy);
+  ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(0, 0, 8 * scale, 0, CRASH_TAU); ctx.fill();
+  ctx.fillStyle = '#f6c453'; ctx.beginPath(); ctx.arc(0, 0, 6.6 * scale, 0, CRASH_TAU); ctx.fill();
+  ctx.fillStyle = '#2b1708';
+  ctx.font = `900 ${9 * scale}px system-ui, -apple-system, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('G6', 0, 0.5 * scale);
+  ctx.restore();
+}
+
+function drawCrashExplosion(ctx, x, y, prog) {
+  const p = Math.min(1, prog);
+  const R = 18 + p * 74;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, 1 - p);
+  const g = ctx.createRadialGradient(x, y, 0, x, y, R);
+  g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(.4, 'rgba(251,191,36,.8)');
+  g.addColorStop(.75, 'rgba(239,68,68,.6)'); g.addColorStop(1, 'rgba(239,68,68,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, CRASH_TAU); ctx.fill();
+  ctx.fillStyle = '#fcd34d';
+  for (let i = 0; i < 11; i++) {
+    const a = i / 11 * CRASH_TAU, d = R * 0.92;
+    ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, 2.2, 0, CRASH_TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCrashScene(phase, elapsed, mult, exploding) {
+  const canvas = document.getElementById('crash-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  crashStarfield(ctx, W, H);
+
+  const padX = 46, padTop = 34, padBot = 40;
+  if (phase === 'betting') {
+    // axes
+    ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padX, H - padBot); ctx.lineTo(W - 20, H - padBot); ctx.stroke();
+    const bob = Math.sin(Date.now() / 320) * 4;
+    drawG6Rocket(ctx, padX + 10, H - padBot - 24 + bob, -Math.PI / 2.15, 1.05, 0.4);
+    return;
+  }
+
+  const t = phase === 'running' ? elapsed : Math.log(Math.max(1.0001, mult)) / CRASH_GROWTH;
+  const tMax = Math.max(4500, t * 1.12);
+  const mMax = Math.max(1.7, mult);
+  const xOf = tt => padX + (tt / tMax) * (W - padX - 28);
+  const yOf = mm => (H - padBot) - ((mm - 1) / (mMax - 1)) * (H - padTop - padBot);
+
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padX, H - padBot); ctx.lineTo(W - 20, H - padBot); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(padX, H - padBot); ctx.lineTo(padX, padTop); ctx.stroke();
+
+  const tipX = xOf(t), tipY = yOf(mult);
+  // curve
+  ctx.beginPath();
+  const N = 70;
+  for (let i = 0; i <= N; i++) {
+    const tt = t * i / N, mm = Math.exp(CRASH_GROWTH * tt);
+    const px = xOf(tt), py = yOf(mm);
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  const grad = ctx.createLinearGradient(padX, H - padBot, tipX, tipY);
+  grad.addColorStop(0, '#34d399');
+  grad.addColorStop(1, phase === 'crashed' ? '#f87171' : '#fde68a');
+  ctx.strokeStyle = grad; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.stroke();
+  // fill under curve
+  ctx.lineTo(tipX, H - padBot); ctx.lineTo(padX, H - padBot); ctx.closePath();
+  ctx.fillStyle = phase === 'crashed' ? 'rgba(248,113,113,.10)' : 'rgba(52,211,153,.10)';
+  ctx.fill();
+
+  // rocket angle from local slope near the tip
+  const t0 = Math.max(0, t - 130);
+  const ang = Math.atan2(tipY - yOf(Math.exp(CRASH_GROWTH * t0)), tipX - xOf(t0));
+
+  if (phase === 'crashed') {
+    drawCrashExplosion(ctx, tipX, tipY, exploding ? (Date.now() - crashExplodeStart) / 1000 : 0.95);
+  } else {
+    const flame = 0.55 + Math.min(1.5, (mult - 1) * 0.16);
+    drawG6Rocket(ctx, tipX, tipY, ang, 1.0, flame);
+  }
+}
+
+// Wire controls once at startup.
+(function wireCrashControls() {
+  const ready = () => {
+    const betBtn = document.getElementById('crash-bet-btn');
+    const cashBtn = document.getElementById('crash-cashout-btn');
+    if (!betBtn || !cashBtn) return false;
+    betBtn.addEventListener('click', () => {
+      if (betBtn.dataset.mode === 'cancel') crashClearBet(); else crashPlaceBet();
+    });
+    cashBtn.addEventListener('click', crashCashOut);
+    document.querySelectorAll('.crash-chips .casino-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.crash-chips .casino-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        crashBet = Number(btn.dataset.stake);
+      });
+    });
+    return true;
+  };
+  if (!ready()) document.addEventListener('DOMContentLoaded', ready);
+})();
 
 async function invokeRoulette(payload) {
   const { data, error } = await sb.functions.invoke('roulette-action', { body: payload });

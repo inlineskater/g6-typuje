@@ -19,6 +19,44 @@
 --
 -- Idempotent: safe to re-run.
 
+CREATE OR REPLACE FUNCTION public.hazard_house_net_from_spins(
+  p_table regclass,
+  p_bet_column text DEFAULT 'total_bet',
+  p_fixed_bet integer DEFAULT NULL
+)
+RETURNS numeric
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_total numeric;
+BEGIN
+  IF p_table IS NULL THEN
+    RETURN 0;
+  END IF;
+
+  IF p_fixed_bet IS NULL THEN
+    EXECUTE format(
+      'SELECT COALESCE(sum(%I - total_won), 0)::numeric FROM %s',
+      COALESCE(p_bet_column, 'total_bet'),
+      p_table
+    ) INTO v_total;
+  ELSE
+    EXECUTE format(
+      'SELECT COALESCE(sum(%s - total_won), 0)::numeric FROM %s',
+      p_fixed_bet,
+      p_table
+    ) INTO v_total;
+  END IF;
+
+  RETURN COALESCE(v_total, 0);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.hazard_house_net_from_spins(regclass, text, integer) FROM PUBLIC;
+
 CREATE OR REPLACE FUNCTION public.economy_stats()
 RETURNS json
 LANGUAGE sql
@@ -211,9 +249,12 @@ AS $$
          WHERE status IN ('won','lost')
       ), 0::bigint)::numeric AS football_house_net,
 
-      -- slots + roulette: total_bet − total_won (positive = house net burned)
-      COALESCE((SELECT sum(10 - total_won) FROM public.slots_spins), 0::bigint)::numeric
-        + COALESCE((SELECT sum(total_bet - total_won) FROM public.roulette_spins), 0::bigint)::numeric
+      -- house casino games: total_bet − total_won (positive = house net burned).
+      -- `crash_spins` is optional until Rocket ships.
+      public.hazard_house_net_from_spins(to_regclass('public.slots_spins'), NULL, 10)
+        + public.hazard_house_net_from_spins(to_regclass('public.roulette_spins'), 'total_bet', NULL::integer)
+        + public.hazard_house_net_from_spins(to_regclass('public.mines_spins'), 'bet', NULL::integer)
+        + public.hazard_house_net_from_spins(to_regclass('public.crash_spins'), 'total_bet', NULL::integer)
         AS hazard_house_net
   )
   SELECT json_build_object(
