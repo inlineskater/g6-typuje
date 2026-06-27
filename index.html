@@ -3645,7 +3645,11 @@
     .farm-wrap { display: flex; flex-direction: column; gap: 12px; }
     .farm-hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
     .farm-body { display: flex; flex-direction: column; gap: 12px; }
-    .farm-topbar { display: flex; justify-content: center; padding: 9px 12px; border: 3px solid #765438; border-radius: 10px; background: repeating-linear-gradient(0deg, transparent 0 13px, rgba(60,30,10,.075) 13px 14px), linear-gradient(180deg, #efd3a7 0%, #dfb77f 54%, #c9955f 100%); box-shadow: 0 6px 14px rgba(60,30,10,.16), inset 0 1px 0 rgba(255,255,255,.45); }
+    .farm-topbar { display: flex; flex-direction: column; gap: 10px; padding: 11px 14px; border: 3px solid #765438; border-radius: 10px; background: repeating-linear-gradient(0deg, transparent 0 13px, rgba(60,30,10,.075) 13px 14px), linear-gradient(180deg, #efd3a7 0%, #dfb77f 54%, #c9955f 100%); box-shadow: 0 6px 14px rgba(60,30,10,.16), inset 0 1px 0 rgba(255,255,255,.45); }
+    .farm-toolbar-host { display: flex; justify-content: center; }
+    /* Tile inspector now lives inside the one wooden top bar — strip its own plate look, add a divider + height cap. */
+    .farm-topbar .farm-section { border: none; border-radius: 0; background: none; box-shadow: none; padding: 10px 2px 0; margin: 0; border-top: 1px solid rgba(60,30,10,.3); max-height: 240px; overflow-y: auto; }
+    .farm-topbar .farm-section::before, .farm-topbar .farm-section::after { display: none; }
     .farm-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     /* Side panels styled like the Zen garden wooden sign-boards */
     .farm-section { position: relative; padding: 14px 14px 12px; border: 3px solid #765438; border-radius: 8px; color: #3d2810; font-size: 12px; line-height: 1.5;
@@ -3690,10 +3694,11 @@
     }
     .farm-starter-action:hover { filter: brightness(.96); }
     .farm-field { position: relative; z-index: 2; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 10px; }
-    .farm-board { display: grid; grid-template-columns: repeat(13, 1fr); grid-template-rows: repeat(4, 1fr); gap: 4px; --pot-scale: .6; }
+    .farm-board { display: flex; flex-direction: column; align-items: center; gap: 14px; --pot-scale: .6; }
+    .fb-seg { display: grid; gap: 4px; }
     .farm-cell { position: relative; background: rgba(95,140,55,.16); border: 1px solid rgba(80,110,45,.12); border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; min-width: 0; min-height: 0; overflow: visible; }
-    .farm-cell.mine { background: rgba(120,160,80,.26); border-color: rgba(255,255,255,.16); }
-    .farm-cell.other { background: rgba(95,140,55,.1); cursor: default; }
+    .farm-cell.mine { background: rgba(120,165,80,.3); border-color: rgba(255,255,255,.16); box-shadow: inset 0 0 0 2px rgba(255,205,100,.55); }
+    .farm-cell.other { background: rgba(108,150,92,.3); border-color: rgba(255,255,255,.28); cursor: default; }
     .farm-cell.crop { background: rgba(96,140,60,.34); border-color: rgba(255,255,255,.16); }
     .farm-cell.unowned:hover { outline: 2px dashed var(--accent); outline-offset: -2px; }
     .farm-cell.sel, .farm-plant-cell.sel { outline: 3px solid #d97706; outline-offset: -3px; border-radius: 6px; z-index: 2; }
@@ -3712,7 +3717,7 @@
     .farm-cell-bar.ready .farm-cell-bar-fill { background: linear-gradient(90deg, #34d399, #16a34a); }
     .farm-cell-ready { position: absolute; top: 2px; right: 4px; color: #16a34a; font-weight: 800; font-size: 13px; }
     .farm-plant-cell { position: relative; cursor: pointer; border-radius: 6px; min-width: 0; min-height: 0; background: rgba(120,160,80,.26); border: 1px solid rgba(255,255,255,.16); }
-    .farm-plant-cell.mine { outline: none; }
+    .farm-plant-cell.mine { outline: none; box-shadow: inset 0 0 0 2px rgba(255,205,100,.55); }
     .farm-plant-cell .garden-pot { position: absolute; top: 50%; left: 50%; width: 108px; min-height: 112px; padding: 0 6px 6px; justify-content: flex-end; transform: translate(-50%, -50%) scale(calc(var(--pot-scale, .32) * 1.18)); transform-origin: center; pointer-events: none; margin: 0; background: none; border-color: transparent; box-shadow: none; }
     .farm-plant-cell .garden-pot::before { display: none; }
     .farm-plant-cell .garden-pot .gp-info,
@@ -3774,7 +3779,7 @@
     .farm-plant-pick { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 18px; }
     .farm-plant-pick small { font-size: 9px; color: var(--muted); }
     .farm-plant-pick:hover { border-color: var(--accent); }
-    @media (max-width: 760px) { .farm-stage { height: 56vh; min-height: 320px; } .farm-hint { display: none; } }
+    @media (max-width: 760px) { .farm-stage { height: auto; max-height: none; } .farm-hint { display: none; } }
     @media (max-width: 560px) { .farm-starter-chip { top: 10px; left: 10px; right: 10px; max-width: none; justify-content: space-between; } .farm-starter-text { flex-direction: column; align-items: flex-start; gap: 0; } }
     @media (max-width: 520px) { .farm-plant-water-line { left: 16%; right: 16%; bottom: 12px; height: 3px; } .farm-plant-modal-hero { grid-template-columns: 74px minmax(0, 1fr); } .farm-plant-modal-emoji { width: 74px; height: 74px; font-size: 46px; } .farm-plant-modal-grid { grid-template-columns: 1fr; } }
     /* Farm lootbox in the Sklep tab */
@@ -5412,23 +5417,21 @@
   <div id="tab-farm" class="hidden">
     <main>
       <div class="farm-wrap">
-        <div class="farm-topbar" id="farm-topbar"></div>
-        <div class="farm-body">
-          <div class="farm-stage">
-            <div class="garden-sky">
-              <div class="garden-glow"></div><div class="garden-stars"></div>
-              <div class="farm-starter-chip hidden" id="farm-starter-banner">
-                <span class="farm-starter-emoji" aria-hidden="true">🎁</span>
-                <span class="farm-starter-text"><strong>Prezent od serwera</strong><span>Darmowe skrzynki za 0 🪙</span></span>
-                <button class="farm-starter-action" id="farm-starter-btn" type="button">Otwórz</button>
-              </div>
+        <div class="farm-topbar" id="farm-topbar">
+          <div class="farm-toolbar-host" id="farm-topbar-btns"></div>
+          <div class="farm-section" id="farm-selection"></div>
+        </div>
+        <div class="farm-stage">
+          <div class="garden-sky">
+            <div class="garden-glow"></div><div class="garden-stars"></div>
+            <div class="farm-starter-chip hidden" id="farm-starter-banner">
+              <span class="farm-starter-emoji" aria-hidden="true">🎁</span>
+              <span class="farm-starter-text"><strong>Prezent od serwera</strong><span>Darmowe skrzynki za 0 🪙</span></span>
+              <button class="farm-starter-action" id="farm-starter-btn" type="button">Otwórz</button>
             </div>
-            <div class="garden-weather"></div>
-            <div class="farm-field"><div class="farm-board" id="farm-board"></div></div>
           </div>
-          <div class="farm-side">
-            <div class="farm-section" id="farm-selection"></div>
-          </div>
+          <div class="garden-weather"></div>
+          <div class="farm-field"><div class="farm-board" id="farm-board"></div></div>
         </div>
       </div>
     </main>
@@ -18288,7 +18291,13 @@ let fmWired = false;
 function setupFarmOnce() {
   if (fmWired) return;
   fmWired = true;
-  window.addEventListener('resize', () => { if (activeTab === 'farm') scaleFarmPots(); });
+  window.addEventListener('resize', () => {
+    if (activeTab !== 'farm') return;
+    const board = document.getElementById('farm-board');
+    const want = farmSegments().length;
+    const have = board ? board.querySelectorAll('.fb-seg').length : 0;
+    if (board && want !== have) renderFarmBoard(); else scaleFarmPots();
+  });
 }
 
 function normalizeFarmTile(t) {
@@ -18523,6 +18532,15 @@ async function waterFarmPlantFromCell(g, cell) {
 // DOM grid board (10x10), sized to fit the screen. Each plant is one cell with a
 // display-only mini Ogródek pot (real buildPot, scaled to the cell — keeps the
 // accessories/size/look); own ready plants water on click, others open details.
+// Mobile: split the 13-wide board into two stacked grids so tiles stay readable.
+function farmSegments() {
+  if (window.innerWidth <= 760) {
+    const half = Math.ceil(FARM_W / 2);
+    return [{ start: 0, end: half - 1 }, { start: half, end: FARM_W - 1 }];
+  }
+  return [{ start: 0, end: FARM_W - 1 }];
+}
+
 function renderFarmBoard() {
   const board = document.getElementById('farm-board');
   if (!board) return;
@@ -18532,18 +18550,22 @@ function renderFarmBoard() {
   gardenCooldownTimers.forEach(id => clearInterval(id));
   gardenCooldownTimers = [];
   board.replaceChildren();
+  const segs = farmSegments();
+  const segEls = segs.map(s => { const e = el('div', { className: 'fb-seg' }); e.dataset.cols = String(s.end - s.start + 1); board.appendChild(e); return e; });
+  const colOf = x => { for (let i = 0; i < segs.length; i++) if (x >= segs[i].start && x <= segs[i].end) return { el: segEls[i], start: segs[i].start }; return { el: segEls[0], start: 0 }; };
   const now = Date.now();
   for (let y = 0; y < FARM_H; y++) {
     for (let x = 0; x < FARM_W; x++) {
       const key = x + ',' + y;
       const tile = fmTiles.get(key);
       const cx = x, cy = y;
+      const seg = colOf(x);
       if (tile && tile.zenAnchor) {
         const g = tile.zenAnchor;
         const snap = farmPlantSnapshot(g);
         const isOwnReady = g.user_id === me?.id && snap.canWater;
         const cell = el('div', { className: 'farm-plant-cell' + (g.user_id === me?.id ? ' mine' : '') + (isOwnReady ? ' can-water' : ''), 'data-xy': key, title: farmPlantTileTitle(g) });
-        cell.style.gridColumn = (x + 1);
+        cell.style.gridColumn = (x - seg.start + 1);
         cell.style.gridRow = (y + 1);
         // Keep farm cells visual-first; detailed watering controls stay in the side panel.
         cell.appendChild(el('span', { className: 'farm-cell-name' }, g.plant_name || 'Roślina'));
@@ -18558,11 +18580,11 @@ function renderFarmBoard() {
           if (g.user_id === me?.id && farmPlantSnapshot(g).canWater) waterFarmPlantFromCell(g, cell);
           else openFarmPlantModal(g);
         });
-        board.appendChild(cell);
+        seg.el.appendChild(cell);
         continue;
       }
       const cell = el('div', { className: 'farm-cell', 'data-xy': key });
-      cell.style.gridColumn = (x + 1);
+      cell.style.gridColumn = (x - seg.start + 1);
       cell.style.gridRow = (y + 1);
       if (!tile) {
         cell.classList.add('unowned');
@@ -18586,6 +18608,8 @@ function renderFarmBoard() {
           }
           applyFarmCropVisual(cell, def, pct, ready);
           if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
+        } else {
+          cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.owner_id === me?.id ? 'Ty' : (tile.nick || '?')));
         }
       }
       cell.addEventListener('click', () => {
@@ -18593,7 +18617,7 @@ function renderFarmBoard() {
         const t = fmTiles.get(cx + ',' + cy);
         if (t && t.planted_species) openFarmPlantedModal(t, cx, cy);
       });
-      board.appendChild(cell);
+      seg.el.appendChild(cell);
     }
   }
   markFarmSel();
@@ -18610,15 +18634,22 @@ function scaleFarmPots() {
     const gap = 4;
     const fw = field.clientWidth;
     if (!fw) return;
-    // square cells: fill the field width, but cap so 4 rows stay within the viewport
-    const byW = (fw - (FARM_W - 1) * gap) / FARM_W;
-    const byH = (window.innerHeight - 300) / FARM_H;
-    const minCell = window.innerWidth <= 520 ? 30 : 46;
+    const segEls = board.querySelectorAll('.fb-seg');
+    if (!segEls.length) return;
+    // Square cells; size to the widest segment so every segment shares one cell size.
+    let maxCols = 1;
+    segEls.forEach(s => { maxCols = Math.max(maxCols, +s.dataset.cols || FARM_W); });
+    const byW = (fw - (maxCols - 1) * gap) / maxCols;
+    const byH = (window.innerHeight - 300) / (FARM_H * segEls.length);
+    const minCell = window.innerWidth <= 520 ? 34 : 46;
     const cell = Math.max(minCell, Math.min(140, Math.floor(Math.min(byW, byH))));
-    board.style.gridTemplateColumns = `repeat(${FARM_W}, ${cell}px)`;
-    board.style.gridTemplateRows = `repeat(${FARM_H}, ${cell}px)`;
-    board.style.width = (FARM_W * cell + (FARM_W - 1) * gap) + 'px';
-    board.style.height = (FARM_H * cell + (FARM_H - 1) * gap) + 'px';
+    segEls.forEach(s => {
+      const cols = +s.dataset.cols || FARM_W;
+      s.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+      s.style.gridTemplateRows = `repeat(${FARM_H}, ${cell}px)`;
+      s.style.width = (cols * cell + (cols - 1) * gap) + 'px';
+      s.style.height = (FARM_H * cell + (FARM_H - 1) * gap) + 'px';
+    });
     board.style.setProperty('--pot-scale', Math.max(0.4, Math.min(1.25, cell / 134)).toFixed(3));
   });
 }
@@ -18702,7 +18733,7 @@ function updateFarmPlantNextLines() {
 
 // ── Side panels ─────────────────────────────────────────────────────────────
 function renderFarmPanels() {
-  const tb = document.getElementById('farm-topbar');
+  const tb = document.getElementById('farm-topbar-btns');
   if (tb) tb.replaceChildren(farmToolbar());
   renderFarmSelection();
 }
