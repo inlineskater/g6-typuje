@@ -104,6 +104,12 @@ Poker is one shared authenticated Texas Hold'em table. Browser clients call `sb.
 
 Table defaults are 100 coin buy-in, 1/2 blinds, 6 seats, and a 30 second action timer. Sitting deducts the buy-in from `profiles.coins`; standing is allowed only between hands and returns the remaining stack. The leaderboard view includes active poker stacks so seated players keep their net worth while playing.
 
+### Roulette (Ruletka)
+
+Roulette is one shared authenticated table (`supabase/roulette.sql` + the `roulette-action` Edge Function; `verify_jwt` off, JWT checked per action). Up to 6 players sit in `roulette_seats`; coins are deducted **only at spin/resolve time** (`resolveRound`), never at bet time — so dropping a seat's open bets refunds nothing. The frontend (`#tab-roulette` → `loadRouletteState`/`renderRoulette*`) is a CSS-grid rounded-rect felt: a control dock on top, wheel + number board side-by-side, an on-felt seat strip, and a lower band holding the bets list + recent results. The unified button system is `.rl-btn` (`is-primary`/`is-ghost`/`is-gold`); the round chip selector reuses the shared `.casino-chip` (do not edit that base for roulette-only tweaks — scope under `.roulette-chips`).
+
+**Idle-seat auto-eviction:** abandoned (closed-tab) seats are freed poker-style — `getState` runs `evictStaleSeats` on every read, deleting any seat whose `last_seen` is older than `SEAT_STALE_MS` (90s, server-only constant in `roulette-action`) and bumping the caller's own `last_seen`. The browser pings `state` every `ROULETTE_HEARTBEAT_MS` (25s, in `index.html`) while on the tab + visible + seated, plus on `visibilitychange`. The two constants are coupled: keep the client heartbeat ≤ ⅓ of the server threshold. `last_seen` lives on `roulette_seats` (idempotent `ADD COLUMN IF NOT EXISTS`).
+
 ### Whack-a-Boss
 
 Whack-a-Boss is an 18-second authenticated mini-game. The browser calls `sb.functions.invoke('whack-boss-action', ...)`; the Edge Function creates the round schedule, validates submitted click timing/positions, stores scores, and returns weekly/all-time leaderboards. Weekly awards are paid by `award_whack_boss_week()` through `pg_cron`: rank 1 gets 100 coins, rank 2 gets 50, rank 3 gets 25. Weekly leaderboards are date-filtered by ISO week in the Europe/Warsaw timezone; all-time records stay stored separately.

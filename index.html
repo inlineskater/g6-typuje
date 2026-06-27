@@ -1456,10 +1456,13 @@
     }
     .casino-chip:hover { transform: translateY(-2px); }
     .casino-chip.active { outline: 3px solid var(--gold-hi); outline-offset: 2px; transform: scale(1.08); }
+    .casino-chip-1    { --chip-face: #475569; }
     .casino-chip-5    { --chip-face: #dc2626; }
     .casino-chip-10   { --chip-face: #2563eb; }
     .casino-chip-25   { --chip-face: #15803d; }
     .casino-chip-100  { --chip-face: #0f172a; }
+    .casino-chip-200  { --chip-face: #c2410c; }
+    .casino-chip-500  { --chip-face: #7c3aed; }
     /* Celebration keyframes (generalized from the old slots animations) */
     @keyframes casino-coinburst {
       0%   { transform: translateY(-50px) rotate(0deg); opacity: 1; }
@@ -1485,18 +1488,39 @@
     }
 
     /* ── Roulette ── */
-    .roulette-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
     .roulette-chips { display: flex; gap: 6px; }
-    .roulette-bet-total { font-size: 13px; color: var(--muted); font-weight: 600; }
-    .roulette-table-status {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-      margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: var(--card);
-      border: 1px solid var(--border); color: var(--muted); font-size: 13px; line-height: 1.45;
+    .roulette-chips .casino-chip.active { transform: scale(1.12); }
+    /* Unified control dock above the felt */
+    .roulette-dock {
+      display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+      margin: 0 0 14px; padding: 12px 14px; border-radius: 14px;
+      background: linear-gradient(180deg, rgba(7,40,22,.6), rgba(7,40,22,.4));
+      border: 1px solid rgba(250,204,21,.22); line-height: 1.4;
     }
-    .roulette-table-status strong { color: var(--text); }
-    .roulette-table-status .roulette-seat-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .roulette-seat-btn { min-height: 34px; padding: 7px 12px; white-space: nowrap; }
-    .roulette-shared-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 12px 0; }
+    .roulette-dock-group { display: flex; align-items: center; gap: 8px; }
+    .roulette-bet-total { font-size: 13px; color: #f5f0e0; font-weight: 700; margin-left: auto; }
+    .roulette-bet-total strong { color: #fde68a; font-variant-numeric: tabular-nums; }
+    .roulette-dock .roulette-seat-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: rgba(245,240,224,.82); }
+    .roulette-dock .roulette-seat-main strong { color: #fff; }
+    .roulette-seat-btn { white-space: nowrap; }
+    /* Unified casino button system */
+    .rl-btn {
+      appearance: none; font: inherit; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 40px; padding: 9px 16px; border-radius: 10px;
+      font-size: 13px; font-weight: 800; letter-spacing: .3px; color: #fff;
+      border: 2px solid rgba(250,204,21,.45);
+      background: linear-gradient(180deg, #2a6b43, #17502f);
+      box-shadow: 0 4px 12px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.18);
+      transition: transform .12s, box-shadow .12s, border-color .12s, background .12s;
+    }
+    .rl-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: #fde68a; box-shadow: 0 7px 18px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.22); }
+    .rl-btn:active:not(:disabled) { transform: translateY(0); box-shadow: inset 0 3px 8px rgba(0,0,0,.32); }
+    .rl-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .rl-btn:focus-visible { outline: 3px solid rgba(245,158,11,.5); outline-offset: 2px; }
+    .rl-btn.is-primary { background: linear-gradient(180deg, #1f9d52, #15803d); border-color: #16a34a; }
+    .rl-btn.is-ghost { background: rgba(7,40,22,.5); border-color: rgba(250,204,21,.28); color: #f5f0e0; }
+    .rl-btn.is-gold { background: linear-gradient(180deg, #f6c453, #d99a18); border-color: #b8860b; color: #2b1708; }
     .roulette-panel {
       background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
       min-width: 0;
@@ -1516,7 +1540,7 @@
     .roulette-seat-stats strong { color: var(--text); font-variant-numeric: tabular-nums; }
     .roulette-pl-pos { color: var(--yes) !important; }
     .roulette-pl-neg { color: var(--no) !important; }
-    .roulette-bet-list { display: grid; gap: 6px; max-height: 222px; overflow-y: auto; padding-right: 2px; }
+    .roulette-bet-list { display: grid; gap: 6px; max-height: 160px; overflow-y: auto; padding-right: 2px; }
     .roulette-bet-row {
       display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center;
       padding: 7px 8px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border);
@@ -1529,16 +1553,17 @@
     .roulette-result-player { font-size: 12px; color: var(--muted); }
     .roulette-result-player strong { color: var(--text); }
 
-    /* Casino layout: wheel + felt board on one continuous table, wooden rail */
+    /* Casino layout: wheel + felt board on one continuous rounded-rect table, wooden rail */
     .roulette-layout {
-      display: flex; gap: 32px; align-items: center; justify-content: center;
-      flex-wrap: wrap;
-      width: min(1040px, calc(100% - 128px)); max-width: 100%; min-height: 520px; margin: 44px auto 32px;
-      padding: 88px 70px 84px;
+      display: grid; gap: 22px 30px; align-items: start;
+      grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+      grid-template-areas: "seats seats" "wheel board" "band band";
+      width: min(1180px, calc(100% - 48px)); max-width: 100%; margin: 28px auto 28px;
+      padding: 44px 46px 40px;
       background:
         radial-gradient(ellipse 72% 58% at 50% 50%, rgba(36,137,77,.9) 0%, rgba(19,100,54,.96) 54%, rgba(7,61,32,1) 100%);
       border: 14px solid #5a3a1a;
-      border-radius: 999px;
+      border-radius: 40px;
       box-shadow:
         inset 0 2px 26px rgba(0,0,0,.45),
         inset 0 0 0 5px rgba(184,134,11,.5),
@@ -1549,17 +1574,26 @@
     }
     .roulette-layout::before {
       content: '';
-      position: absolute; inset: 18px;
+      position: absolute; inset: 14px;
       border: 2px solid rgba(250,204,21,.2);
-      border-radius: inherit;
+      border-radius: 28px;
       pointer-events: none;
       z-index: -1;
     }
+    .roulette-wheel-wrap { grid-area: wheel; }
+    /* Bets + recent results on the felt itself */
+    .roulette-felt-band {
+      grid-area: band; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 16px; margin-top: 4px; padding-top: 14px; border-top: 1px solid rgba(250,204,21,.18);
+    }
+    .roulette-felt-band .roulette-panel { background: rgba(7,40,22,.42); border-color: rgba(250,204,21,.22); }
+    .roulette-felt-band .roulette-panel-title { color: rgba(255,255,255,.82); }
     .roulette-live-seats {
-      position: absolute; inset: 0; pointer-events: none; z-index: 4;
+      grid-area: seats; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+      pointer-events: auto; z-index: 4;
     }
     .roulette-live-seat {
-      position: absolute; width: 154px; min-height: 78px; transform: translate(-50%, -50%);
+      position: relative; width: 150px; min-height: 78px;
       pointer-events: auto; display: grid; gap: 4px; padding: 10px 11px 9px;
       appearance: none; font: inherit; text-align: left; cursor: default;
       border-radius: 10px; border: 2px solid #6b4422;
@@ -1581,19 +1615,15 @@
     }
     button.roulette-live-seat.can-sit { cursor: pointer; opacity: .86; }
     button.roulette-live-seat.can-sit:hover {
-      transform: translate(-50%, -50%) translateY(-3px);
+      transform: translateY(-3px);
       border-color: #f59e0b;
       box-shadow: 0 0 0 3px rgba(245,158,11,.22), 0 12px 22px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.7);
     }
     button.roulette-live-seat:disabled { cursor: default; }
     .roulette-live-seat.me { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.24), 0 8px 16px rgba(0,0,0,.32); }
     .roulette-live-seat.ready { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.24), 0 8px 16px rgba(0,0,0,.32); }
-    .roulette-live-seat.seat-pos-0 { left: 50%; top: -20px; }
-    .roulette-live-seat.seat-pos-1 { left: calc(100% + 46px); top: 27%; }
-    .roulette-live-seat.seat-pos-2 { left: calc(100% + 46px); top: 73%; }
-    .roulette-live-seat.seat-pos-3 { left: 50%; top: calc(100% + 20px); }
-    .roulette-live-seat.seat-pos-4 { left: -46px; top: 73%; }
-    .roulette-live-seat.seat-pos-5 { left: -46px; top: 27%; }
+    /* seat-pos-* are cosmetic no-ops now that seats flow in a strip */
+    .roulette-live-seat[class*="seat-pos-"] { left: auto; top: auto; }
     .roulette-live-seat .roulette-seat-nick { color: #2b1708; font-size: 12px; }
     .roulette-live-seat .roulette-seat-pill { justify-self: start; background: rgba(59,34,13,.13); color: #5a3214; }
     .roulette-live-seat .roulette-seat-pill.ready { background: rgba(22,163,74,.18); color: #166534; }
@@ -1607,7 +1637,7 @@
       flex: 0 0 auto;
     }
     .roulette-wheel-container {
-      position: relative; width: min(320px, 82vw); height: min(320px, 82vw); flex-shrink: 0;
+      position: relative; width: clamp(240px, 22vw, 320px); height: clamp(240px, 22vw, 320px); flex-shrink: 0;
     }
     .roulette-wheel {
       position: relative;
@@ -1625,7 +1655,7 @@
       transition: transform 6.2s cubic-bezier(0.15, 0.6, 0.1, 1);
     }
     .roulette-ball {
-      position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
+      position: absolute; top: 1.6%; left: 50%; transform: translateX(-50%);
       width: 10px; height: 10px; border-radius: 50%;
       background: radial-gradient(circle at 35% 30%, #fff, #cbd5e1 70%, #94a3b8);
       box-shadow: 0 1px 3px rgba(0,0,0,.6);
@@ -1650,31 +1680,32 @@
     }
 
     /* Spin button */
-    .roulette-spin-wrap { text-align: center; }
+    .roulette-spin-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .roulette-spin-btn {
       width: 100px; height: 100px; border-radius: 50%; border: 4px solid #16a34a;
       background: linear-gradient(135deg, #16a34a, #15803d); color: #fff;
       font-size: 15px; font-weight: 800; cursor: pointer; letter-spacing: .5px;
-      box-shadow: 0 6px 24px rgba(22,163,74,.35), inset 0 -3px 6px rgba(0,0,0,.2);
+      box-shadow: 0 0 0 4px rgba(184,134,11,.35), 0 6px 24px rgba(22,163,74,.35), inset 0 -3px 6px rgba(0,0,0,.2);
       transition: all .2s; text-transform: uppercase;
     }
-    .roulette-spin-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 8px 32px rgba(22,163,74,.5); }
+    .roulette-spin-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 0 4px rgba(184,134,11,.5), 0 8px 32px rgba(22,163,74,.5); }
     .roulette-spin-btn:active:not(:disabled) { transform: scale(0.97); }
     .roulette-spin-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
     .roulette-spin-btn.spinning { animation: pulse-spin 1s infinite; }
     @keyframes pulse-spin { 0%,100% { box-shadow: 0 6px 24px rgba(22,163,74,.35); } 50% { box-shadow: 0 6px 32px rgba(22,163,74,.6); } }
 
     /* Table/board */
-    .roulette-table-wrap { flex: 0 1 auto; min-width: 0; max-width: 620px; margin-bottom: 0; overflow-x: auto; }
+    .roulette-table-wrap { grid-area: board; min-width: 0; max-width: none; margin-bottom: 0; overflow-x: visible; }
     /* board blends into the shared felt of .roulette-layout */
     .roulette-board { background: transparent; border: none; padding: 0; box-shadow: none; }
     .roulette-grid {
-      display: grid; grid-template-columns: auto repeat(12, 1fr) auto; gap: 2px; margin-bottom: 8px; min-width: 560px;
+      display: grid; grid-template-columns: minmax(20px, auto) repeat(12, minmax(0, 1fr)) minmax(26px, auto);
+      gap: 2px; margin-bottom: 8px; width: 100%;
     }
     .roulette-cell {
-      position: relative; text-align: center; padding: 8px 2px; border-radius: 4px;
-      font-weight: 700; font-size: 12px; cursor: pointer; color: #fff;
-      border: 2px solid rgba(255,255,255,.15); transition: all .15s; min-width: 32px;
+      position: relative; text-align: center; padding: clamp(5px, 1.4vw, 9px) 2px; border-radius: 6px;
+      font-weight: 700; font-size: clamp(10px, 2.2vw, 13px); cursor: pointer; color: #fff;
+      border: 2px solid rgba(255,255,255,.15); transition: all .15s; min-width: 0;
     }
     .roulette-cell:hover { border-color: #f59e0b; transform: scale(1.08); z-index: 1; box-shadow: 0 0 8px rgba(245,158,11,.5); }
     .roulette-cell.green { background: #16a34a; }
@@ -1688,13 +1719,14 @@
     }
     .roulette-outside { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
     .roulette-out-btn {
-      position: relative; padding: 7px 6px; border-radius: 4px; border: 2px solid rgba(255,255,255,.15);
-      background: rgba(255,255,255,.08); color: #fff; font-size: 11px; font-weight: 700;
-      cursor: pointer; transition: all .15s; text-align: center;
+      position: relative; padding: 8px 6px; border-radius: 8px; border: 2px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.08); color: #fff; font-size: clamp(10px, 2vw, 12px); font-weight: 700;
+      cursor: pointer; transition: transform .12s, border-color .12s, background .12s, box-shadow .12s; text-align: center;
     }
     .roulette-out-btn:hover { border-color: #f59e0b; background: rgba(245,158,11,.15); }
-    .roulette-out-red { background: rgba(220,38,38,.3); }
-    .roulette-out-black { background: rgba(30,41,59,.5); }
+    .roulette-out-btn:active { transform: translateY(1px); }
+    .roulette-out-red { background: linear-gradient(180deg, rgba(220,38,38,.55), rgba(153,27,27,.6)); }
+    .roulette-out-black { background: linear-gradient(180deg, rgba(51,65,85,.7), rgba(15,23,42,.85)); }
     .roulette-out-btn .bet-badge {
       position: absolute; top: -5px; right: -5px; background: #f59e0b; color: #000;
       font-size: 10px; border-radius: 10px; padding: 1px 5px; font-weight: 800;
@@ -1723,7 +1755,6 @@
     .roulette-result-msg.lose { color: var(--no); }
 
     /* History */
-    .roulette-history-section { margin-top: 4px; }
     .roulette-history { display: flex; gap: 5px; flex-wrap: wrap; }
     .roulette-history-dot {
       width: 28px; height: 28px; border-radius: 50%; color: #fff; font-size: 10px;
@@ -1734,16 +1765,20 @@
     .roulette-history-dot.red { background: #dc2626; }
     .roulette-history-dot.black { background: #1e293b; }
     @media (max-width: 940px) {
-      .roulette-layout { width: 100%; min-height: 0; margin: 0 auto 14px; padding: 18px; border-radius: 28px; border-width: 8px; }
-      .roulette-live-seats {
-        position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px; order: 3; width: 100%; pointer-events: auto;
+      .roulette-layout {
+        grid-template-columns: 1fr; grid-template-areas: "seats" "wheel" "board" "band";
+        width: 100%; margin: 0 auto 14px; padding: 20px 14px; border-radius: 24px; border-width: 8px;
       }
-      .roulette-live-seat,
-      button.roulette-live-seat.can-sit:hover { position: relative; left: auto !important; top: auto !important; transform: none; width: auto; min-height: 74px; }
+      .roulette-layout::before { inset: 10px; border-radius: 16px; }
+      .roulette-live-seats { gap: 8px; }
+      .roulette-live-seat { flex: 1 1 130px; max-width: 200px; min-height: 74px; }
     }
     @media (max-width: 760px) {
-      .roulette-shared-panels { grid-template-columns: 1fr; }
+      .roulette-felt-band { grid-template-columns: 1fr; }
+      .roulette-wheel-container { width: min(230px, 64vw); height: min(230px, 64vw); }
+      .roulette-spin-wrap { flex-direction: row; justify-content: center; gap: 12px; flex-wrap: wrap; }
+      .roulette-spin-btn { width: 84px; height: 84px; font-size: 13px; }
+      .roulette-cell .bet-badge, .roulette-out-btn .bet-badge { font-size: 9px; padding: 1px 4px; }
     }
 
     /* ── Slots (Jednoręki Bandyta) ── */
@@ -4549,21 +4584,23 @@
         <span style="font-size:12px;color:var(--muted)">Numer=35:1 · Kolor=1:1 · Par./Niepar.=1:1 · 1-18/19-36=1:1 · Tuzin=2:1 · Kolumna=2:1</span>
       </div>
 
-      <div class="roulette-controls">
+      <div class="roulette-dock" id="roulette-table-status">
         <div class="roulette-chips">
+          <button class="casino-chip casino-chip-1" data-chip="1">1</button>
           <button class="casino-chip casino-chip-5" data-chip="5">5</button>
           <button class="casino-chip casino-chip-10 active" data-chip="10">10</button>
           <button class="casino-chip casino-chip-25" data-chip="25">25</button>
           <button class="casino-chip casino-chip-100" data-chip="100">100</button>
+          <button class="casino-chip casino-chip-200" data-chip="200">200</button>
+          <button class="casino-chip casino-chip-500" data-chip="500">500</button>
         </div>
-        <div class="roulette-bet-total">Stawka: <strong id="roulette-total">0</strong> 🪙</div>
-        <button class="btn-ghost" id="roulette-rebet-btn" type="button">↻ Powtórz</button>
-        <button class="btn-ghost" id="roulette-double-btn" type="button">×2 Podwój</button>
-      </div>
-
-      <div class="roulette-table-status" id="roulette-table-status">
+        <div class="roulette-dock-group">
+          <button class="rl-btn is-gold" id="roulette-rebet-btn" type="button">↻ Powtórz</button>
+          <button class="rl-btn is-gold" id="roulette-double-btn" type="button">×2 Podwój</button>
+        </div>
         <div class="roulette-seat-main"><strong>Wspólny stół</strong><span>Usiądź, żeby obstawiać.</span></div>
-        <button class="btn-primary roulette-seat-btn" id="roulette-seat-btn" type="button">Usiądź</button>
+        <div class="roulette-bet-total">Stawka: <strong id="roulette-total">0</strong> 🪙</div>
+        <button class="rl-btn is-primary roulette-seat-btn" id="roulette-seat-btn" type="button">Usiądź</button>
       </div>
 
       <div class="roulette-layout">
@@ -4577,7 +4614,7 @@
           </div>
           <div class="roulette-spin-wrap">
             <button class="roulette-spin-btn" id="roulette-spin-btn" disabled>ZAKRĘĆ</button>
-            <div style="margin-top:10px"><button class="btn-ghost" id="roulette-clear-btn">Wyczyść zakłady</button></div>
+            <button class="rl-btn is-ghost" id="roulette-clear-btn" type="button">Wyczyść zakłady</button>
           </div>
         </div>
 
@@ -4585,33 +4622,32 @@
           <div class="roulette-board">
             <div class="roulette-grid" id="roulette-grid"></div>
             <div class="roulette-outside" id="roulette-outside">
-            <button class="roulette-out-btn roulette-out-red" data-bet="red">🔴 Czerwony</button>
-            <button class="roulette-out-btn roulette-out-black" data-bet="black">⚫ Czarny</button>
-            <button class="roulette-out-btn" data-bet="odd">Nieparzyste</button>
-            <button class="roulette-out-btn" data-bet="even">Parzyste</button>
-            <button class="roulette-out-btn" data-bet="low">1-18</button>
-            <button class="roulette-out-btn" data-bet="high">19-36</button>
-            <button class="roulette-out-btn" data-bet="dozen" data-value="1">1. tuzin (1-12)</button>
-            <button class="roulette-out-btn" data-bet="dozen" data-value="2">2. tuzin (13-24)</button>
-            <button class="roulette-out-btn" data-bet="dozen" data-value="3">3. tuzin (25-36)</button>
+              <button class="roulette-out-btn roulette-out-red" data-bet="red">🔴 Czerwony</button>
+              <button class="roulette-out-btn roulette-out-black" data-bet="black">⚫ Czarny</button>
+              <button class="roulette-out-btn" data-bet="odd">Nieparzyste</button>
+              <button class="roulette-out-btn" data-bet="even">Parzyste</button>
+              <button class="roulette-out-btn" data-bet="low">1-18</button>
+              <button class="roulette-out-btn" data-bet="high">19-36</button>
+              <button class="roulette-out-btn" data-bet="dozen" data-value="1">1. tuzin (1-12)</button>
+              <button class="roulette-out-btn" data-bet="dozen" data-value="2">2. tuzin (13-24)</button>
+              <button class="roulette-out-btn" data-bet="dozen" data-value="3">3. tuzin (25-36)</button>
+            </div>
           </div>
         </div>
-      </div>
-      </div>
 
-      <div class="roulette-shared-panels">
-        <section class="roulette-panel">
-          <div class="roulette-panel-title">Zakłady na tę rundę</div>
-          <div class="roulette-bet-list" id="roulette-bets-list"></div>
-        </section>
+        <div class="roulette-felt-band">
+          <section class="roulette-panel">
+            <div class="roulette-panel-title">Zakłady na tę rundę</div>
+            <div class="roulette-bet-list" id="roulette-bets-list"></div>
+          </section>
+          <section class="roulette-panel">
+            <div class="roulette-panel-title">Ostatnie wyniki</div>
+            <div id="roulette-history" class="roulette-history"></div>
+          </section>
+        </div>
       </div>
 
       <div id="roulette-result" class="roulette-result hidden"></div>
-
-      <div class="roulette-history-section">
-        <h3 class="section-title">Ostatnie wyniki</h3>
-        <div id="roulette-history" class="roulette-history"></div>
-      </div>
     </main>
   </div>
 
@@ -5787,6 +5823,9 @@ let rouletteState = null;
 let rouletteRealtimeReady = false;
 let rouletteLastStateMs = 0;
 let rouletteLastResultId = null;
+let rouletteHeartbeatTimer = null;
+// Must stay comfortably below SEAT_STALE_MS (90s) in supabase/functions/roulette-action.
+const ROULETTE_HEARTBEAT_MS = 25_000;
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
@@ -6321,7 +6360,7 @@ async function doLogout() {
   await sb.auth.signOut();
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
-  rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null;
+  rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null; stopRouletteHeartbeat();
   stopWhackBossRound();
   stopSnakeRound();
   stopInvoiceHordeRound();
@@ -11804,6 +11843,31 @@ document.querySelectorAll('.roulette-chips .casino-chip').forEach(btn => {
   });
 });
 
+// Keep our seat's last_seen fresh so the server doesn't auto-evict us while we
+// sit and watch without betting. Only pings while on the tab, visible, and seated.
+function startRouletteHeartbeat() {
+  stopRouletteHeartbeat();
+  rouletteHeartbeatTimer = setInterval(() => {
+    if (activeTab !== 'roulette') return;
+    if (document.hidden) return;
+    if (!rouletteState?.me?.seated) return;
+    if (rouletteActionBusy) return;
+    loadRouletteState(false);
+  }, ROULETTE_HEARTBEAT_MS);
+}
+
+function stopRouletteHeartbeat() {
+  if (rouletteHeartbeatTimer) clearInterval(rouletteHeartbeatTimer);
+  rouletteHeartbeatTimer = null;
+}
+
+// Named (not inline) so repeated addEventListener calls across re-logins dedupe.
+function onRouletteVisibility() {
+  if (!document.hidden && activeTab === 'roulette' && rouletteState?.me?.seated) {
+    loadRouletteState(false);
+  }
+}
+
 function setupRouletteRealtime() {
   if (rouletteRealtimeReady) return;
   rouletteRealtimeReady = true;
@@ -11819,6 +11883,9 @@ function setupRouletteRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'roulette_bets' }, reload)
     .subscribe();
   realtimeChannels.push(ch);
+  // Refresh last_seen the moment a backgrounded tab returns, well before the cutoff.
+  document.addEventListener('visibilitychange', onRouletteVisibility);
+  startRouletteHeartbeat();
 }
 
 async function invokeRoulette(payload) {
@@ -12076,7 +12143,7 @@ function renderRouletteStatus() {
   );
   seatBtn.hidden = !meState.seated;
   seatBtn.textContent = roulettePendingAction === 'leave' ? 'Odchodzę...' : 'Odejdź od stołu';
-  seatBtn.className = 'btn-ghost roulette-seat-btn';
+  seatBtn.className = 'rl-btn is-ghost roulette-seat-btn';
   seatBtn.disabled = rouletteActionBusy;
 }
 

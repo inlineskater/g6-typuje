@@ -13,6 +13,13 @@ const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, 
 const REDS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
 const VALID_TYPES = new Set(["straight","red","black","odd","even","high","low","dozen","column"]);
 
+// Auto-evict a seat once its last_seen heartbeat is older than this. The
+// frontend pings `state` every ROULETTE_HEARTBEAT_MS (≈25s) in index.html while
+// seated + tab visible; 90s tolerates ~3 missed pings (background throttling, a
+// brief tab switch, transient network) before freeing an abandoned seat. Keep
+// the client heartbeat comfortably below this (rule of thumb: heartbeat ≤ ⅓).
+const SEAT_STALE_MS = 90_000;
+
 function gameError(message) {
   const err = new Error(message);
   err.isGame = true;
@@ -517,8 +524,57 @@ async function resolveRound(tx, table, round, triggerUserId, force = false) {
   return { resolved: true };
 }
 
+// Sweep abandoned seats. Mirrors leave()'s DB mutations exactly (coins are only
+// touched at spin/resolve time, never at bet time, so deleting a stale seat's
+// current-round bets refunds nothing and corrupts nothing). Runs inside the same
+// FOR UPDATE lock as the rest of the txn, so concurrent state reads serialize and
+// a second sweep simply finds the row already gone. Self-healing: any player's
+// state read clears everyone's ghosts, even after the ghost's own tab is closed.
+async function evictStaleSeats(tx) {
+  const { table, round, seats } = await loadLockedGame(tx);
+  if (!seats.length) return;
+
+  // Don't yank a seat in the brief window right after a resolution: a client
+  // mid-animation hasn't had a chance to send its next heartbeat yet. Correctness
+  // doesn't depend on this (the FOR UPDATE lock already serializes us behind
+  // resolveRound) — it just avoids a cosmetic seat-vanish during the reveal.
+  const lastResolved = await tx`
+    select resolved_at
+    from public.roulette_rounds
+    where table_id = ${table.id} and status = 'resolved'
+    order by resolved_at desc nulls last, created_at desc
+    limit 1
+  `;
+  const resolvedAt = lastResolved[0]?.resolved_at;
+  if (resolvedAt && Date.now() - new Date(resolvedAt).getTime() < 5_000) return;
+
+  const cutoff = Date.now() - SEAT_STALE_MS;
+  const stale = seats.filter((seat) => {
+    const seen = seat.last_seen ? new Date(seat.last_seen).getTime() : 0;
+    return seen < cutoff;
+  });
+  if (!stale.length) return;
+
+  for (const seat of stale) {
+    await tx`delete from public.roulette_bets where round_id = ${round.id} and user_id = ${seat.user_id}`;
+    await tx`delete from public.roulette_seats where id = ${seat.id}`;
+  }
+  await tx`update public.roulette_tables set updated_at = now() where id = ${table.id}`;
+}
+
 async function getState(userId) {
-  return await db.begin((tx) => stateResponse(tx, userId));
+  return await db.begin(async (tx) => {
+    await evictStaleSeats(tx);
+    // Heartbeat: bump the caller's own seat so an idle *watcher* who never bets
+    // isn't evicted (updated_at alone wouldn't cover them). No-op when not seated.
+    await tx`
+      update public.roulette_seats
+         set last_seen = now()
+       where table_id = (select id from public.roulette_tables where slug = 'main')
+         and user_id = ${userId}
+    `;
+    return stateResponse(tx, userId);
+  });
 }
 
 async function sit(userId, requestedSeatNo = null) {
@@ -594,6 +650,7 @@ async function addBet(userId, betInput) {
       insert into public.roulette_bets (round_id, table_id, user_id, seat_no, type, value, amount)
       values (${round.id}, ${round.table_id}, ${userId}, ${seat.seat_no}, ${bet.type}, ${bet.value ?? null}, ${bet.amount})
     `;
+    await tx`update public.roulette_seats set last_seen = now() where id = ${seat.id}`;
     return stateResponse(tx, userId);
   });
 }
@@ -616,7 +673,7 @@ async function setBets(userId, betsInput) {
         values (${round.id}, ${round.table_id}, ${userId}, ${seat.seat_no}, ${bet.type}, ${bet.value ?? null}, ${bet.amount})
       `;
     }
-    await tx`update public.roulette_seats set ready = false, updated_at = now() where id = ${seat.id}`;
+    await tx`update public.roulette_seats set ready = false, updated_at = now(), last_seen = now() where id = ${seat.id}`;
     return stateResponse(tx, userId);
   });
 }
@@ -627,7 +684,7 @@ async function clearBets(userId) {
     const seat = seats.find((row) => row.user_id === userId);
     if (!seat) throw gameError("Nie siedzisz przy stole.");
     await tx`delete from public.roulette_bets where round_id = ${round.id} and user_id = ${userId}`;
-    await tx`update public.roulette_seats set ready = false, updated_at = now() where id = ${seat.id}`;
+    await tx`update public.roulette_seats set ready = false, updated_at = now(), last_seen = now() where id = ${seat.id}`;
     return stateResponse(tx, userId);
   });
 }
@@ -653,7 +710,7 @@ async function setReady(userId, readyValue) {
 
     await tx`
       update public.roulette_seats
-         set ready = ${ready}, updated_at = now()
+         set ready = ${ready}, updated_at = now(), last_seen = now()
        where id = ${seat.id}
     `;
     const result = ready ? await resolveRound(tx, table, round, userId, false) : { resolved: false };
@@ -676,7 +733,7 @@ async function spinNow(userId) {
     if (total <= 0) throw gameError("Najpierw postaw zakład.");
 
     if (seats.length > 1) {
-      await tx`update public.roulette_seats set ready = true, updated_at = now() where id = ${seat.id}`;
+      await tx`update public.roulette_seats set ready = true, updated_at = now(), last_seen = now() where id = ${seat.id}`;
       const result = await resolveRound(tx, table, round, userId, false);
       return stateResponse(tx, userId, result.notice ? { notice: result.notice } : {});
     }

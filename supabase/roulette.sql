@@ -40,6 +40,16 @@ CREATE TABLE IF NOT EXISTS public.roulette_seats (
   UNIQUE (table_id, user_id)
 );
 
+-- Heartbeat for inactivity auto-eviction. Bumped on every authenticated `state`
+-- read for the caller's own seat (and on bet/ready actions); evictStaleSeats in
+-- the roulette-action Edge Function sweeps seats whose last_seen is older than
+-- SEAT_STALE_MS so abandoned (closed-tab) seats free up automatically.
+ALTER TABLE public.roulette_seats
+  ADD COLUMN IF NOT EXISTS last_seen timestamptz NOT NULL DEFAULT now();
+
+CREATE INDEX IF NOT EXISTS roulette_seats_last_seen_idx
+  ON public.roulette_seats(table_id, last_seen);
+
 CREATE TABLE IF NOT EXISTS public.roulette_bets (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   round_id   uuid NOT NULL REFERENCES public.roulette_rounds(id) ON DELETE CASCADE,
