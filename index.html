@@ -1464,6 +1464,318 @@
     .casino-chip-200  { --chip-face: #c2410c; }
     .casino-chip-500  { --chip-face: #7c3aed; }
 
+    /* ── Plinko G6 ── */
+    #tab-plinko.casino {
+      background:
+        radial-gradient(circle at 18% 0%, rgba(34,197,94,.16), transparent 28%),
+        radial-gradient(circle at 84% 8%, rgba(59,130,246,.14), transparent 24%),
+        linear-gradient(180deg, #f8fafc 0%, #eef6f4 48%, #e0f2fe 100%);
+      min-height: calc(100vh - 132px);
+    }
+    #tab-plinko main { color: #0f172a; }
+    .plinko-wrap { max-width: 1180px; margin: 0 auto; }
+    .plinko-hero {
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+      padding: 14px 16px; margin-bottom: 12px; border: 1px solid rgba(15,23,42,.1); border-radius: 8px;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,.98), rgba(240,253,250,.95) 54%, rgba(239,246,255,.96)),
+        repeating-linear-gradient(90deg, rgba(15,23,42,.035) 0 1px, transparent 1px 18px);
+      box-shadow: 0 12px 30px rgba(15,23,42,.08);
+    }
+    .plinko-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; line-height: 1; }
+    .plinko-title-mark {
+      display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(145deg, #fef3c7, #f59e0b 58%, #92400e);
+      color: #2b1708; box-shadow: inset 0 2px 8px rgba(255,255,255,.46), 0 4px 16px rgba(15,23,42,.22);
+      transform: rotate(-6deg);
+    }
+    .plinko-subtitle { color: #475569; font-size: 13px; margin: 7px 0 0; max-width: 660px; }
+    .plinko-hero-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .plinko-hero-pills span {
+      display: inline-flex; align-items: center; min-height: 30px; padding: 5px 9px;
+      border: 1px solid rgba(15,23,42,.1); border-radius: 999px; background: rgba(255,255,255,.82);
+      font-size: 12px; color: #075985; font-weight: 900;
+      box-shadow: 0 4px 12px rgba(15,23,42,.06);
+    }
+    .plinko-shell { display: grid; grid-template-columns: 262px minmax(0, 1fr) 236px; gap: 14px; align-items: start; }
+    @media (max-width: 899px) { .plinko-shell { grid-template-columns: 1fr; } }
+    .plinko-machine, .plinko-side, .plinko-controls {
+      position: relative; overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96)),
+        repeating-linear-gradient(0deg, rgba(15,23,42,.026) 0 1px, transparent 1px 18px);
+      border: 1px solid rgba(15,23,42,.1);
+      border-radius: 8px;
+      padding: 14px;
+      color: #0f172a;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 42px rgba(15,23,42,.1);
+    }
+    .plinko-machine::before {
+      content: "G6 AUDIT DROP";
+      position: absolute; right: 16px; top: 72px; transform: rotate(8deg);
+      color: rgba(239,68,68,.14); font-weight: 900; font-size: clamp(24px, 4vw, 46px);
+      letter-spacing: .04em; pointer-events: none; z-index: 0;
+    }
+    .plinko-toolbar {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; gap: 13px;
+    }
+    .plinko-toolbar .plinko-segments { width: 100%; }
+    .plinko-controls .plinko-drop-buttons { flex-direction: column; gap: 8px; }
+    .plinko-controls .plinko-drop-buttons .rl-btn { width: 100%; flex: 0 0 auto; }
+    .plinko-controls #plinko-drop-many { order: -1; min-height: 50px; font-size: 14px; }
+    /* dead — kept harmless: old 2-col span hints */
+    .plinko-control.plinko-stake,
+    .plinko-toolbar .plinko-count-control,
+    .plinko-toolbar .plinko-drop-control { grid-column: 1 / -1; }
+    @media (max-width: 760px) { .plinko-toolbar { grid-template-columns: 1fr; align-items: stretch; } }
+    .plinko-control { display: grid; gap: 7px; min-width: 0; }
+    .plinko-control > span {
+      color: #075985; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0;
+    }
+    .plinko-drop-control { gap: 6px; }
+    .plinko-drop-control .rl-btn { min-height: 46px; white-space: nowrap; flex: 1 1 0; }
+    .plinko-drop-control #plinko-drop-many { flex: 2 1 0; font-weight: 900; }
+    .plinko-drop-hint { margin: 0; color: #64748b; font-size: 11.5px; line-height: 1.35; }
+    .plinko-drop-hint b { color: #0f172a; }
+    .plinko-drop-count {
+      display: inline-grid; place-items: center;
+      min-width: 22px; height: 22px; margin-left: 6px; padding: 0 6px;
+      border-radius: 999px; background: rgba(15,23,42,.92); color: #fff;
+      font-size: 11px; font-weight: 900; line-height: 1;
+    }
+    .plinko-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .plinko-segments {
+      display: inline-grid; grid-auto-flow: column; grid-auto-columns: minmax(54px, 1fr);
+      gap: 3px; padding: 3px; min-height: 42px; border-radius: 10px;
+      border: 1px solid rgba(15,23,42,.12); background: #e2e8f0;
+    }
+    .plinko-segments button {
+      appearance: none; font: inherit; cursor: pointer;
+      border: 0; border-radius: 8px; padding: 8px 10px; min-width: 0;
+      background: transparent; color: #334155; font-size: 12px; font-weight: 900;
+      transition: background .14s, color .14s, transform .14s, box-shadow .14s;
+    }
+    .plinko-segments button.active {
+      background: #ffffff; color: #0f172a;
+      box-shadow: 0 2px 8px rgba(15,23,42,.12), inset 0 0 0 1px rgba(59,130,246,.15);
+    }
+    .plinko-segments button:hover:not(.active):not(:disabled) { background: rgba(255,255,255,.56); }
+    .plinko-segments button:disabled { opacity: .48; cursor: not-allowed; }
+    .plinko-stage {
+      position: relative; z-index: 1; overflow: hidden;
+      border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
+      background:
+        linear-gradient(180deg, rgba(14,116,144,.12), rgba(15,23,42,.03)),
+        radial-gradient(circle at 50% 12%, rgba(250,204,21,.18), transparent 42%),
+        #f8fafc;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -18px 28px rgba(15,23,42,.05);
+    }
+    #plinko-canvas {
+      display: block; width: 100%; height: min(64vh, 620px); min-height: 430px;
+      touch-action: manipulation;
+    }
+    .plinko-stage.is-dropping {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -18px 28px rgba(15,23,42,.05), 0 0 0 3px rgba(59,130,246,.12);
+    }
+    .plinko-stage.is-win {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 3px rgba(34,197,94,.14), 0 0 32px rgba(34,197,94,.18);
+    }
+    .plinko-stage.is-jackpot {
+      animation: plinko-jackpot-pulse .9s ease-in-out 3;
+    }
+    .plinko-result {
+      position: absolute; left: 14px; right: 14px; top: 12px; z-index: 3;
+      min-height: 38px; display: flex; align-items: center; justify-content: center;
+      padding: 8px 12px; border-radius: 999px;
+      background: rgba(255,255,255,.86); border: 1px solid rgba(15,23,42,.1);
+      color: #334155; font-size: 13px; font-weight: 900; text-align: center;
+      box-shadow: 0 8px 22px rgba(15,23,42,.08); backdrop-filter: blur(8px);
+      font-variant-numeric: tabular-nums;
+    }
+    .plinko-result.win { color: #047857; border-color: rgba(34,197,94,.3); background: rgba(236,253,245,.9); }
+    .plinko-result.loss { color: #b91c1c; border-color: rgba(248,113,113,.28); background: rgba(254,242,242,.88); }
+    .plinko-result.jackpot { color: #92400e; border-color: rgba(245,158,11,.38); background: rgba(255,251,235,.92); }
+    .plinko-buckets {
+      position: relative; z-index: 1;
+      display: grid; gap: 4px; margin-top: 10px;
+    }
+    .plinko-bucket {
+      min-width: 0; min-height: 42px; display: grid; place-items: center;
+      border-radius: 8px; padding: 5px 3px;
+      border: 1px solid rgba(15,23,42,.1);
+      background: linear-gradient(180deg, #ffffff, #f1f5f9);
+      color: #0f172a; font-size: clamp(9px, 1.65vw, 12px); font-weight: 900;
+      box-shadow: inset 0 -2px 0 rgba(15,23,42,.05);
+      font-variant-numeric: tabular-nums;
+    }
+    .plinko-bucket.hot {
+      color: #7c2d12;
+      background: linear-gradient(180deg, #fef3c7, #fdba74);
+      border-color: rgba(245,158,11,.38);
+    }
+    .plinko-bucket.cold { color: #64748b; background: linear-gradient(180deg, #f8fafc, #e2e8f0); }
+    .plinko-bucket.hit {
+      animation: plinko-bucket-hit .56s ease both;
+      border-color: rgba(34,197,94,.55);
+    }
+    .plinko-count-control { min-width: 170px; }
+    .plinko-count-control > span b { color: #0f172a; font-variant-numeric: tabular-nums; }
+    .plinko-slider {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 6px; margin: 8px 0 2px;
+      border-radius: 999px; background: linear-gradient(90deg, #2563eb, #38bdf8); cursor: pointer;
+    }
+    .plinko-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: #f8fafc; border: 2px solid #2563eb; box-shadow: 0 1px 3px rgba(15,23,42,.35); cursor: pointer;
+    }
+    .plinko-slider::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%; background: #f8fafc; border: 2px solid #2563eb;
+      box-shadow: 0 1px 3px rgba(15,23,42,.35); cursor: pointer;
+    }
+    .plinko-drop-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .plinko-drop-buttons .rl-btn { white-space: nowrap; }
+    .plinko-dist-wrap { position: relative; z-index: 1; margin-top: 10px; }
+    .plinko-dist-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 6px;
+    }
+    .plinko-dist-head > span { color: #075985; font-size: 12px; font-weight: 900; letter-spacing: .02em; }
+    #plinko-dist-reset {
+      border: 1px solid rgba(15,23,42,.14); background: rgba(255,255,255,.8); cursor: pointer;
+      border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; color: #475569;
+      font-variant-numeric: tabular-nums;
+    }
+    #plinko-dist-reset:hover { color: #0f172a; border-color: rgba(15,23,42,.28); }
+    .plinko-dist-cell {
+      min-width: 0; display: grid; grid-template-rows: 1fr auto auto; gap: 3px;
+      align-items: end; justify-items: center;
+    }
+    .plinko-dist-cell .pd-barwrap {
+      width: 100%; height: 48px; display: flex; align-items: flex-end;
+      border-radius: 6px 6px 0 0; background: rgba(15,23,42,.05); overflow: hidden;
+    }
+    .plinko-dist-cell .pd-bar {
+      width: 100%; min-height: 2px; border-radius: 6px 6px 0 0;
+      background: linear-gradient(180deg, #60a5fa, #2563eb);
+      transition: height .25s ease;
+    }
+    .plinko-dist-cell.hot .pd-bar { background: linear-gradient(180deg, #fbbf24, #f97316); }
+    .plinko-dist-cell.cold .pd-bar { background: linear-gradient(180deg, #cbd5e1, #94a3b8); }
+    .plinko-dist-cell .pd-count {
+      font-size: clamp(10px, 1.7vw, 13px); font-weight: 900; color: #0f172a;
+      font-variant-numeric: tabular-nums; line-height: 1;
+    }
+    .plinko-dist-cell .pd-count.empty { color: #cbd5e1; }
+    .plinko-dist-cell .pd-mult { font-size: clamp(8px, 1.3vw, 10px); font-weight: 700; color: #94a3b8; line-height: 1; }
+    .plinko-dist-cell.hit .pd-barwrap { animation: plinko-bucket-hit .56s ease both; }
+    .plinko-actions {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .plinko-current {
+      display: grid; gap: 2px; min-width: 180px;
+      padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.78);
+      border: 1px solid rgba(15,23,42,.1);
+    }
+    .plinko-current span { color: #64748b; font-size: 11px; font-weight: 800; }
+    .plinko-current strong { color: #0f172a; font-size: 13px; }
+    .plinko-side h3 { margin: 0 0 8px; font-size: 13px; color: #075985; }
+    .plinko-side-h { margin: 16px 0 8px !important; }
+    .plinko-note { color: #64748b; font-size: 12.5px; line-height: 1.45; margin: 0 0 10px; }
+    /* Session scoreboard */
+    .plinko-scoreboard {
+      border: 1px solid rgba(15,23,42,.1); border-radius: 10px; padding: 11px 11px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(241,245,249,.92));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    .psb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+    .psb-head h3 { margin: 0; font-size: 13px; color: #075985; }
+    .psb-newbtn { width: 100%; margin-top: 10px; min-height: 40px; font-weight: 900; }
+    .psb-reset {
+      border: 1px solid rgba(15,23,42,.14); background: rgba(255,255,255,.85); cursor: pointer;
+      border-radius: 999px; padding: 3px 9px; font-size: 10.5px; font-weight: 800; color: #475569;
+    }
+    .psb-reset:hover { color: #0f172a; border-color: rgba(15,23,42,.3); }
+    .psb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .psb-cell {
+      border: 1px solid rgba(15,23,42,.08); border-radius: 8px; padding: 7px 9px;
+      background: rgba(255,255,255,.78); display: grid; gap: 2px;
+    }
+    .psb-cell.psb-wide { grid-column: 1 / -1; }
+    .psb-cell .psb-k { color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+    .psb-cell .psb-v { color: #0f172a; font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .psb-cell .psb-v.pos { color: #047857; }
+    .psb-cell .psb-v.neg { color: #b91c1c; }
+    /* Recent balls */
+    .plinko-history { display: grid; gap: 6px; margin-bottom: 4px; }
+    .plinko-hrow {
+      display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center;
+      border: 1px solid rgba(15,23,42,.08); border-radius: 8px; padding: 6px 9px;
+      background: rgba(255,255,255,.9); font-size: 12.5px;
+    }
+    .plinko-hrow .ph-mult {
+      font-weight: 900; font-variant-numeric: tabular-nums; color: #334155;
+      background: #e2e8f0; border-radius: 6px; padding: 2px 7px; font-size: 12px;
+    }
+    .plinko-hrow.win .ph-mult { background: #dcfce7; color: #166534; }
+    .plinko-hrow.jackpot .ph-mult { background: #fef3c7; color: #92400e; }
+    .plinko-hrow.loss .ph-mult { background: #fee2e2; color: #991b1b; }
+    .plinko-hrow .ph-mid { color: #64748b; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .plinko-hrow .ph-net { font-weight: 900; font-variant-numeric: tabular-nums; }
+    .plinko-hrow.win .ph-net, .plinko-hrow.jackpot .ph-net { color: #047857; }
+    .plinko-hrow.loss .ph-net { color: #b91c1c; }
+    .plinko-hrow.flat .ph-net { color: #64748b; }
+    .plinko-help { margin-top: 14px; }
+    .plinko-help summary {
+      cursor: pointer; font-size: 12px; font-weight: 900; color: #075985; list-style: none;
+      padding: 4px 0;
+    }
+    .plinko-help summary::-webkit-details-marker { display: none; }
+    .plinko-help summary::before { content: "▸ "; }
+    .plinko-help[open] summary::before { content: "▾ "; }
+    /* Fit the whole Plinko tab in one viewport (no page scroll) on desktop.
+       The board canvas flexes to fill whatever height is left over. */
+    @media (min-width: 900px) {
+      #tab-plinko main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
+      .plinko-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 10px; }
+      .plinko-hero { flex: 0 0 auto; margin-bottom: 0; padding: 9px 14px; align-items: center; }
+      .plinko-hero .plinko-subtitle { margin: 2px 0 0; font-size: 12px; max-width: 620px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .plinko-title { font-size: 20px; }
+      .plinko-title-mark { width: 32px; height: 32px; }
+      .plinko-shell { flex: 1 1 auto; min-height: 0; gap: 14px; align-items: stretch; }
+      .plinko-controls { align-self: stretch; overflow: auto; padding: 14px; }
+      .plinko-controls .plinko-toolbar { gap: 13px; }
+      .plinko-toolbar .plinko-segments { min-height: 38px; }
+      .plinko-toolbar .casino-chip { width: 34px; height: 34px; font-size: 12px; border-width: 2px; }
+      .plinko-machine { display: flex; flex-direction: column; min-height: 0; padding: 12px; }
+      .plinko-stage { flex: 1 1 auto; min-height: 150px; }
+      #plinko-canvas { height: 100%; min-height: 0; }
+      .plinko-dist-wrap { flex: 0 0 auto; margin-top: 8px; }
+      .plinko-dist-cell .pd-barwrap { height: 30px; }
+      .plinko-help { flex: 0 0 auto; margin-top: 8px; }
+      .plinko-side { min-height: 0; overflow: auto; }
+    }
+    .plinko-burst-layer { position: fixed; inset: 0; pointer-events: none; z-index: 9998; overflow: hidden; }
+    .plinko-float {
+      position: absolute; transform: translate(-50%, -50%);
+      color: #f59e0b; font-size: 18px; font-weight: 900; text-shadow: 0 2px 8px rgba(15,23,42,.24);
+      animation: plinko-float-up .72s ease-out forwards;
+    }
+    @keyframes plinko-float-up {
+      to { transform: translate(calc(-50% + var(--dx)), calc(-50% - var(--dy))) scale(.7); opacity: 0; }
+    }
+    @keyframes plinko-bucket-hit {
+      0% { transform: translateY(0) scale(1); }
+      38% { transform: translateY(-5px) scale(1.08); box-shadow: 0 0 24px rgba(34,197,94,.24); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    @keyframes plinko-jackpot-pulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.12) saturate(1.18); }
+    }
+
     /* ── Miny G6 ── */
     #tab-mines.casino {
       background:
@@ -4642,6 +4954,7 @@
         <button class="nav-tab" data-tab="poker">♠️ Poker</button>
         <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
         <button class="nav-tab" data-tab="slots">🎰 Sloty</button>
+        <button class="nav-tab" data-tab="plinko">📌 Plinko G6</button>
         <button class="nav-tab" data-tab="mines">💣 Miny G6</button>
         <button class="nav-tab" data-tab="crash">🚀 Rakieta</button>
       </div>
@@ -5059,6 +5372,101 @@
 
         <h3 class="section-title">Ostatnie wyniki</h3>
         <div id="slots-history" class="slots-history"></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-plinko" class="hidden casino">
+    <main>
+      <div class="plinko-wrap">
+        <div class="plinko-hero">
+          <div>
+            <h2 class="plinko-title"><span class="plinko-title-mark">📌</span><span>Plinko G6</span></h2>
+            <p class="plinko-subtitle">Wrzuć kulę przez tablicę pegów, wybierz liczbę rzędów i poziom ryzyka. Serwer losuje tor i wypłaca mnożnik zależny od pola, w którym kula wyląduje.</p>
+          </div>
+          <div class="plinko-hero-pills">
+            <span>🏦 RTP ok. 95%</span>
+            <span>×1000 jackpot</span>
+            <span>server-side drop</span>
+          </div>
+        </div>
+
+        <div class="plinko-shell">
+          <aside class="plinko-controls">
+            <div class="plinko-toolbar">
+              <div class="plinko-control plinko-stake">
+                <span>Stawka za kulę</span>
+                <div class="plinko-chips">
+                  <button class="casino-chip casino-chip-1" data-stake="1">1</button>
+                  <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+                  <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+                  <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+                  <button class="casino-chip casino-chip-100" data-stake="50">50</button>
+                  <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+                  <button class="casino-chip casino-chip-200" data-stake="250">250</button>
+                </div>
+              </div>
+              <div class="plinko-control">
+                <span>Rzędy</span>
+                <div class="plinko-segments" id="plinko-rows-control">
+                  <button data-rows="8">8</button>
+                  <button data-rows="12" class="active">12</button>
+                  <button data-rows="16">16</button>
+                </div>
+              </div>
+              <div class="plinko-control">
+                <span>Ryzyko</span>
+                <div class="plinko-segments" id="plinko-risk-control">
+                  <button data-risk="low">Low</button>
+                  <button data-risk="medium" class="active">Medium</button>
+                  <button data-risk="high">High</button>
+                </div>
+              </div>
+              <div class="plinko-control plinko-count-control">
+                <span>Kul w serii: <b id="plinko-count-val">10</b></span>
+                <input type="range" id="plinko-count-slider" class="plinko-slider" min="1" max="100" step="1" value="10" aria-label="Liczba kul w serii">
+              </div>
+              <div class="plinko-control plinko-drop-control">
+                <div class="plinko-drop-buttons">
+                  <button id="plinko-drop-one" class="rl-btn is-ghost" title="Klikaj wielokrotnie — każde kliknięcie dorzuca jedną kulę do kolejki">+1 kula · 10 🪙</button>
+                  <button id="plinko-drop-many" class="rl-btn is-gold">Seria 10 · 100 🪙</button>
+                </div>
+                <p class="plinko-drop-hint">Przycisk <b>+1</b> możesz klikać wiele razy — kule dodają się do kolejki i lecą razem.</p>
+              </div>
+            </div>
+          </aside>
+
+          <section class="plinko-machine">
+            <div class="plinko-stage">
+              <canvas id="plinko-canvas" aria-label="Plansza Plinko G6"></canvas>
+              <div id="plinko-result" class="plinko-result">Wybierz parametry i wrzuć znacznik.</div>
+            </div>
+
+            <div class="plinko-dist-wrap">
+              <div class="plinko-dist-head">
+                <span>Rozkład trafień</span>
+                <button id="plinko-dist-reset" type="button" title="Wyzeruj rozkład">0 kul · wyzeruj ✕</button>
+              </div>
+              <div id="plinko-buckets" class="plinko-buckets"></div>
+            </div>
+
+            <details class="plinko-help">
+              <summary>Jak to działa?</summary>
+              <p class="plinko-note">Stawka schodzi z konta przy każdej kuli. Serwer losuje tor przez pegi, zapisuje wynik i odsyła gotową ścieżkę — przeglądarka tylko ją odtwarza.</p>
+              <p class="plinko-note">Więcej rzędów i wyższe ryzyko = ostrzejsze skrajne mnożniki, ale środek tablicy jest bezlitosny.</p>
+            </details>
+          </section>
+
+          <aside class="plinko-side">
+            <div class="plinko-scoreboard">
+              <div class="psb-head">
+                <h3>Ta sesja</h3>
+              </div>
+              <div id="plinko-session" class="psb-grid"></div>
+              <button id="plinko-session-reset" type="button" class="rl-btn is-primary psb-newbtn" title="Wyzeruj statystyki i rozkład — zacznij nową sesję">🔄 Nowa sesja</button>
+            </div>
+          </aside>
+        </div>
       </div>
     </main>
   </div>
@@ -6311,6 +6719,53 @@ let rouletteHeartbeatTimer = null;
 // Must stay comfortably below SEAT_STALE_MS (90s) in supabase/functions/roulette-action.
 const ROULETTE_HEARTBEAT_MS = 25_000;
 
+// ── Plinko G6 state ──
+let plinkoState = null;
+let plinkoBet = 10;
+let plinkoRows = 12;
+let plinkoRisk = 'medium';
+let plinkoCount = 10;
+let plinkoDist = [];
+let plinkoSession = { drops: 0, wagered: 0, won: 0, best: 0 };
+let plinkoBusy = false;
+let plinkoAnims = [];
+let plinkoRaf = null;
+let plinkoLastHitBucket = null;
+let plinkoLastDropId = null;
+let plinkoResizeBound = false;
+let plinkoParticles = [];
+let plinkoLastFrameMs = 0;
+let plinkoQueuedClicks = 0;
+let plinkoServerPending = 0;
+let plinkoDropQueue = [];
+let plinkoBatchTimer = null;
+let plinkoRunId = 0;
+const PLINKO_STAKES = [1, 5, 10, 25, 50, 100, 250];
+const PLINKO_MAX_BATCH = 100;
+const PLINKO_MAX_VISIBLE_QUEUE = 150;
+const PLINKO_MAX_CONCURRENT = 8;
+const PLINKO_LAUNCH_STAGGER_MS = 90;
+const PLINKO_BATCH_DELAY_MS = 110;
+const PLINKO_REQUEST_TIMEOUT_MS = 12000;
+const PLINKO_PAYOUTS = {
+  8: {
+    low:    [5.2, 2, 1.1, 1, 0.5, 1, 1.1, 2, 5.2],
+    medium: [12, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 12],
+    high:   [28, 4, 1.4, 0.3, 0.2, 0.3, 1.4, 4, 28],
+  },
+  12: {
+    low:    [7, 3, 1.6, 1.4, 1.2, 0.8, 0.6, 0.8, 1.2, 1.4, 1.6, 3, 7],
+    medium: [34, 11, 4, 1.8, 1, 0.6, 0.4, 0.6, 1, 1.8, 4, 11, 34],
+    high:   [150, 24, 8, 2, 0.7, 0.2, 0.1, 0.2, 0.7, 2, 8, 24, 150],
+  },
+  16: {
+    low:    [16, 9, 4.4, 2.4, 1.8, 1.2, 1, 0.8, 0.6, 0.8, 1, 1.2, 1.8, 2.4, 4.4, 9, 16],
+    medium: [120, 40, 16, 7, 3, 1.4, 0.8, 0.45, 0.25, 0.45, 0.8, 1.4, 3, 7, 16, 40, 120],
+    high:   [1000, 130, 26, 9, 4, 2, 0.2, 0.2, 0, 0.2, 0.2, 2, 4, 9, 26, 130, 1000],
+  },
+};
+const PLINKO_RISK_LABELS = { low: 'Low', medium: 'Medium', high: 'High' };
+
 // ── Miny G6 state ──
 let minesState = null;
 let minesViewRound = null;
@@ -7179,6 +7634,7 @@ function switchTab(tab) {
   if (previousTab === 'football' && tab !== 'football') stopFootballCountdown();
   if (previousTab === 'canvas' && tab !== 'canvas') stopCanvasCountdown();
   if (previousTab === 'farm' && tab !== 'farm') { stopFarmTimer(); stopFarmAtmosphere(); closeFarmPlantModal(); }
+  if (previousTab === 'plinko' && tab !== 'plinko') stopPlinkoAnimation();
   if (previousTab === 'crash' && tab !== 'crash') stopCrash();
   activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -7192,6 +7648,7 @@ function switchTab(tab) {
   const tP = document.getElementById('tab-poker');
   const tR = document.getElementById('tab-roulette');
   const tSl = document.getElementById('tab-slots');
+  const tPl = document.getElementById('tab-plinko');
   const tMi = document.getElementById('tab-mines');
   const tWb = document.getElementById('tab-whack-boss');
   const tS = document.getElementById('tab-shop');
@@ -7212,6 +7669,7 @@ function switchTab(tab) {
   hide(tFb);
   hide(tCv);
   hide(tFa);
+  hide(tPl);
   hide(tMi);
   hide(tCr);
   if (tab === 'markets') {
@@ -7231,6 +7689,10 @@ function switchTab(tab) {
   } else if (tab === 'slots') {
     hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     loadSlotsHistory();
+  } else if (tab === 'plinko') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    show(tPl);
+    loadPlinkoState();
   } else if (tab === 'mines') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     show(tMi);
@@ -8041,7 +8503,7 @@ function buildCardStats(marketId) {
 // ── Activity feed ─────────────────────────────────────────────────────────
 // Maps for the cross-source feed.
 const ACT_GAME_LABELS = {
-  roulette: '🎡 Ruletka', slots: '🎰 Sloty', mines: '💣 Miny G6', crash: '🚀 Rakieta', poker: '🃏 Poker',
+  roulette: '🎡 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', poker: '🃏 Poker',
   whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol', arcade: '🕹️ Arkada',
@@ -9497,6 +9959,7 @@ function buildHazardHistoryRows(gameTransactions) {
   const GAME_META = {
     roulette: { icon: '🎰', title: 'Ruletka', sideLabel: 'Spin' },
     slots: { icon: '🎰', title: 'Jednoręki bandyta', sideLabel: 'Spin' },
+    plinko: { icon: '📌', title: 'Plinko G6', sideLabel: 'Drop' },
     mines: { icon: '💣', title: 'Miny G6', sideLabel: 'Runda' },
     crash: { icon: '🚀', title: 'Rakieta', sideLabel: 'Lot' },
     poker_buy_in: { icon: '🃏', title: 'Poker', sideLabel: 'Buy-in' },
@@ -9908,7 +10371,7 @@ function drawCoinChart(canvas, points) {
 // `allMarketTrades` holds every trade (any user) for the resolved markets this user won,
 // needed for the pro-rata payout math.
 function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [], coinTxs = [], awards = [], allMarketTrades = [], footballBets = [] }) {
-  const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
+  const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
   const resolvedWinningMarketIds = [...new Set(
     trades.filter(t => t.markets?.resolved && t.side === t.markets?.resolution).map(t => t.market_id)
   )];
@@ -10755,6 +11218,7 @@ function renderCoinRaceDetail(container) {
         el('td', { className: 'lb-nick' + (r.user_id === me.id ? ' me' : '') }, r.nick),
         el('td', {}, (r.roulette_pl || 0) + ' 🪙'),
         el('td', {}, (r.slots_pl || 0) + ' 🪙'),
+        el('td', {}, (r.plinko_pl || 0) + ' 🪙'),
         el('td', {}, (r.mines_pl || 0) + ' 🪙'),
         el('td', {}, (r.crash_pl || 0) + ' 🪙'),
         el('td', {}, (r.poker_pl || 0) + ' 🪙'),
@@ -10763,7 +11227,7 @@ function renderCoinRaceDetail(container) {
       return el('div', { style: { marginBottom: '16px' } },
         el('div', { className: 'hazardista-col-title' }, ttl),
         el('table', { className: 'lb-table' },
-          el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Ruletka'), el('th', {}, 'Sloty'), el('th', {}, 'Miny'), el('th', {}, 'Rakieta'), el('th', {}, 'Poker'), el('th', {}, 'Suma'))),
+          el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Ruletka'), el('th', {}, 'Sloty'), el('th', {}, 'Plinko'), el('th', {}, 'Miny'), el('th', {}, 'Rakieta'), el('th', {}, 'Poker'), el('th', {}, 'Suma'))),
           el('tbody', {}, ...rows)
         )
       );
@@ -10818,7 +11282,7 @@ function renderCoinRaceDetail(container) {
   function renderFullHazardHistory(container) {
     const fSearch = el('input', { className: 'history-filter-input', type: 'search', placeholder: 'Gracz lub gra' });
     const fGame = el('select', { className: 'history-filter-select' });
-    fGame.innerHTML = '<option value="">Gra: wszystkie</option><option value="roulette">Ruletka</option><option value="slots">Sloty</option><option value="mines">Miny G6</option><option value="crash">Rakieta</option><option value="poker">Poker</option>';
+    fGame.innerHTML = '<option value="">Gra: wszystkie</option><option value="roulette">Ruletka</option><option value="slots">Sloty</option><option value="plinko">Plinko G6</option><option value="mines">Miny G6</option><option value="crash">Rakieta</option><option value="poker">Poker</option>';
     const fClear = el('button', { className: 'btn-ghost history-clear', type: 'button' }, 'Wyczyść');
     const filters = el('div', { className: 'history-filters', style: { gridTemplateColumns: '1fr 160px auto' } }, fSearch, fGame, fClear);
     const tableWrap = el('div', { className: 'history-wrap' });
@@ -14007,6 +14471,778 @@ async function loadSlotsHistory() {
     }
   } catch (err) { /* silent */ }
 }
+
+// ── Plinko G6 ─────────────────────────────────────────────────────────────
+function plinkoReducedMotion() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function plinkoPayouts(rows = plinkoRows, risk = plinkoRisk) {
+  return (PLINKO_PAYOUTS[rows] && PLINKO_PAYOUTS[rows][risk]) || PLINKO_PAYOUTS[12].medium;
+}
+
+function plinkoMultLabel(value) {
+  const n = Number(value || 0);
+  if (n >= 100 || Number.isInteger(n)) return 'x' + String(n);
+  return 'x' + n.toFixed(n < 1 ? 2 : 1).replace(/\.0$/, '');
+}
+
+function plinkoRiskTone(mult) {
+  const n = Number(mult || 0);
+  if (n >= 10) return 'hot';
+  if (n < 0.5) return 'cold';
+  return '';
+}
+
+function plinkoQueueTotal() {
+  return plinkoQueuedClicks + plinkoServerPending + plinkoDropQueue.length + plinkoAnims.length;
+}
+
+function syncPlinkoBusy() {
+  plinkoBusy = plinkoQueueTotal() > 0;
+  return plinkoBusy;
+}
+
+async function invokePlinko(payload) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PLINKO_REQUEST_TIMEOUT_MS);
+  try {
+    const { data: authData } = await sb.auth.getSession();
+    const token = authData?.session?.access_token || SUPABASE_ANON_KEY;
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/plinko-action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) {}
+    if (!response.ok) throw new Error(data?.error || `Błąd Plinko (${response.status}).`);
+    if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Plinko.');
+    return data;
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Serwer Plinko nie odpowiedział przez 12 s. Drop został przerwany.');
+    }
+    throw err instanceof Error ? err : new Error('Błąd połączenia z Plinko.');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function loadPlinkoState(showToastOnError = true) {
+  try {
+    const data = await invokePlinko({ action: 'state' });
+    applyPlinkoState(data);
+  } catch (err) {
+    if (showToastOnError) showToast('❌ ' + err.message);
+    renderPlinko();
+  }
+}
+
+function applyPlinkoState(data) {
+  plinkoState = data;
+  if (typeof data.coins === 'number' && me) {
+    me.coins = data.coins;
+    setText(headerCoins, me.coins);
+  }
+  renderPlinko();
+}
+
+function renderPlinko() {
+  renderPlinkoControls();
+  renderPlinkoBuckets();
+  renderPlinkoSession();
+  drawPlinkoBoard();
+  if (!plinkoResizeBound) {
+    plinkoResizeBound = true;
+    window.addEventListener('resize', () => { if (activeTab === 'plinko') drawPlinkoBoard(); });
+  }
+}
+
+function renderPlinkoControls() {
+  syncPlinkoBusy();
+  document.querySelectorAll('.plinko-chips .casino-chip').forEach(btn => {
+    btn.disabled = plinkoBusy;
+    btn.classList.toggle('active', Number(btn.dataset.stake) === plinkoBet);
+  });
+  document.querySelectorAll('#plinko-rows-control button').forEach(btn => {
+    btn.disabled = plinkoBusy;
+    btn.classList.toggle('active', Number(btn.dataset.rows) === plinkoRows);
+  });
+  document.querySelectorAll('#plinko-risk-control button').forEach(btn => {
+    btn.disabled = plinkoBusy;
+    btn.classList.toggle('active', btn.dataset.risk === plinkoRisk);
+  });
+  const countSlider = document.getElementById('plinko-count-slider');
+  if (countSlider && Number(countSlider.value) !== plinkoCount) countSlider.value = plinkoCount;
+  setText(document.getElementById('plinko-count-val'), plinkoCount);
+  const total = plinkoQueueTotal();
+  const full = total >= PLINKO_MAX_VISIBLE_QUEUE;
+  const badge = total > 0 ? `<span class="plinko-drop-count">+${Math.min(total, 999)}</span>` : '';
+  const one = document.getElementById('plinko-drop-one');
+  if (one) {
+    one.disabled = full;
+    one.innerHTML = `+1 kula · ${plinkoBet} 🪙`;
+    one.title = full ? 'Poczekaj, aż kolejka Plinko się zmniejszy.' : 'Klikaj wielokrotnie — każde kliknięcie dorzuca jedną kulę do kolejki';
+  }
+  const many = document.getElementById('plinko-drop-many');
+  if (many) {
+    many.disabled = full;
+    many.innerHTML = `Seria ${plinkoCount} · ${plinkoCount * plinkoBet} 🪙${badge}`;
+    many.title = full ? 'Poczekaj, aż kolejka Plinko się zmniejszy.' : `Wrzuć ${plinkoCount} kul naraz`;
+  }
+}
+
+function plinkoResetDist() {
+  plinkoDist = new Array((Number(plinkoRows) || 12) + 1).fill(0);
+}
+
+function plinkoResetSession() {
+  plinkoSession = { drops: 0, wagered: 0, won: 0, best: 0 };
+  plinkoResetDist();
+  renderPlinkoSession();
+  renderPlinkoBuckets();
+}
+
+function plinkoStatCell(key, value, tone = '', wide = false) {
+  return el('div', { className: 'psb-cell' + (wide ? ' psb-wide' : '') },
+    el('div', { className: 'psb-k' }, key),
+    el('div', { className: 'psb-v' + (tone ? ' ' + tone : '') }, value)
+  );
+}
+
+function renderPlinkoSession() {
+  const box = document.getElementById('plinko-session');
+  if (!box) return;
+  const s = plinkoSession;
+  const net = s.won - s.wagered;
+  box.replaceChildren(
+    plinkoStatCell('Kul', String(s.drops)),
+    plinkoStatCell('Najlepszy', s.best ? plinkoMultLabel(s.best) : '—'),
+    plinkoStatCell('Postawiono', `${s.wagered} 🪙`),
+    plinkoStatCell('Wygrano', `${s.won} 🪙`),
+    plinkoStatCell('Bilans sesji', `${net >= 0 ? '+' : ''}${net} 🪙`, net > 0 ? 'pos' : net < 0 ? 'neg' : '', true)
+  );
+}
+
+// The bottom strip shows the live LANDING DISTRIBUTION (how many balls fell into each
+// slot). The payout multipliers themselves are drawn once, on the canvas, at the slots
+// where the balls actually land — so this row is not a second copy of them.
+function renderPlinkoBuckets(hitBucket = null) {
+  const box = document.getElementById('plinko-buckets');
+  if (!box) return;
+  const payouts = plinkoPayouts();
+  if (!Array.isArray(plinkoDist) || plinkoDist.length !== payouts.length) plinkoResetDist();
+  const totalBalls = plinkoDist.reduce((a, b) => a + b, 0);
+  const max = Math.max(1, ...plinkoDist);
+  box.style.gridTemplateColumns = `repeat(${payouts.length}, minmax(0, 1fr))`;
+  box.replaceChildren(...payouts.map((mult, idx) => {
+    const count = plinkoDist[idx] || 0;
+    const share = totalBalls ? Math.round((count / totalBalls) * 100) : 0;
+    const cell = el('div', { className: 'plinko-dist-cell ' + plinkoRiskTone(mult) + (idx === hitBucket ? ' hit' : '') });
+    cell.title = `${plinkoMultLabel(mult)} — ${count} kul (${share}%)`;
+    cell.append(
+      el('div', { className: 'pd-barwrap' }, el('div', { className: 'pd-bar', style: { height: `${Math.round((count / max) * 100)}%` } })),
+      el('div', { className: 'pd-count' + (count ? '' : ' empty') }, count ? String(count) : '·'),
+      el('div', { className: 'pd-mult' }, plinkoMultLabel(mult))
+    );
+    return cell;
+  }));
+  const resetBtn = document.getElementById('plinko-dist-reset');
+  if (resetBtn) setText(resetBtn, `${totalBalls} kul · wyzeruj ✕`);
+}
+
+
+function plinkoCanvasContext() {
+  const canvas = document.getElementById('plinko-canvas');
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.max(320, Math.round(rect.width || canvas.clientWidth || 760));
+  const H = Math.max(300, Math.round(rect.height || canvas.clientHeight || 520));
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const pxW = Math.round(W * DPR);
+  const pxH = Math.round(H * DPR);
+  if (canvas.width !== pxW || canvas.height !== pxH) {
+    canvas.width = pxW;
+    canvas.height = pxH;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  return { canvas, ctx, W, H };
+}
+
+function plinkoLayout(W, H, rows = plinkoRows) {
+  const topPad = 58;      // room for the result pill + drop spout
+  const bottomPad = 46;   // room for the payout buckets
+  const sidePad = Math.max(16, W * 0.03);
+  const usableW = W - sidePad * 2;
+  const usableH = H - topPad - bottomPad;
+  // Fill the board: horizontal pitch spreads pegs across the full width; vertical pitch
+  // uses the full height but never exceeds the horizontal one (so cells stay square-ish
+  // and pegs never overlap vertically). The bigger the board, the bigger the triangle.
+  const pitchX = usableW / rows;
+  const pitchY = usableH / (rows + 1);
+  const gapX = pitchX;
+  const gapY = Math.min(pitchY, pitchX);
+  const fieldW = gapX * rows;
+  const cx = W / 2;
+  const top = topPad;
+  const node = (r, k) => ({ x: cx + (k - r / 2) * gapX, y: top + r * gapY });
+  const bucketY = Math.min(H - bottomPad, top + rows * gapY + Math.min(16, gapY * 0.55));
+  return { topPad, bottomPad, gapX, gapY, cx, fieldW, top, bucketY, node };
+}
+
+function plinkoPathNodes(drop, W, H) {
+  const rows = Number(drop?.rows || plinkoRows);
+  const layout = plinkoLayout(W, H, rows);
+  const nodes = [layout.node(0, 0)];
+  let bucket = 0;
+  (drop?.path || []).slice(0, rows).forEach((step, idx) => {
+    bucket += Number(step) ? 1 : 0;
+    nodes.push(layout.node(idx + 1, bucket));
+  });
+  nodes.push({ x: layout.node(rows, Number(drop?.bucket || bucket)).x, y: layout.bucketY - 16 });
+  return { nodes, layout };
+}
+
+function drawRoundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
+}
+
+function drawPlinkoBackground(ctx, W, H) {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#f8fafc');
+  bg.addColorStop(0.58, '#eef6f4');
+  bg.addColorStop(1, '#dbeafe');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.globalAlpha = 0.7;
+  ctx.strokeStyle = '#dbe4ea';
+  ctx.lineWidth = 1;
+  for (let x = 18; x < W; x += 28) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 24; y < H; y += 28) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(W - 132, 62);
+  ctx.rotate(0.12);
+  ctx.strokeStyle = 'rgba(220,38,38,.18)';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(-54, -20, 108, 40);
+  ctx.fillStyle = 'rgba(220,38,38,.16)';
+  ctx.font = '900 18px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ZAKSIEGOWANO', 0, 6);
+  ctx.restore();
+
+  ctx.fillStyle = 'rgba(15,23,42,.08)';
+  drawRoundRect(ctx, 22, 46, W - 44, H - 86, 18);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.72)';
+  drawRoundRect(ctx, 18, 40, W - 36, H - 86, 18);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(15,23,42,.12)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawPlinkoBucketsCanvas(ctx, layout, rows, payouts, hitBucket = null) {
+  // Colored landing slots (no text) — the multiplier numbers live once, aligned under
+  // these slots, in the distribution strip below the board.
+  const bucketW = Math.max(12, layout.gapX * 0.9);
+  const h = Math.min(20, layout.gapY * 0.7);
+  payouts.forEach((mult, idx) => {
+    const p = layout.node(rows, idx);
+    const hot = Number(mult) >= 10;
+    const cold = Number(mult) < 0.5;
+    const hit = idx === hitBucket;
+    const x = p.x - bucketW / 2;
+    const y = layout.bucketY;
+    const grad = ctx.createLinearGradient(0, y, 0, y + h);
+    if (hit) {
+      grad.addColorStop(0, '#bbf7d0'); grad.addColorStop(1, '#22c55e');
+    } else if (hot) {
+      grad.addColorStop(0, '#fde68a'); grad.addColorStop(1, '#f97316');
+    } else if (cold) {
+      grad.addColorStop(0, '#e2e8f0'); grad.addColorStop(1, '#cbd5e1');
+    } else {
+      grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, '#cdddf5');
+    }
+    ctx.fillStyle = grad;
+    drawRoundRect(ctx, x, y, bucketW, h, Math.min(5, bucketW / 3));
+    ctx.fill();
+    ctx.strokeStyle = hit ? 'rgba(22,101,52,.6)' : 'rgba(15,23,42,.12)';
+    ctx.lineWidth = hit ? 2 : 1;
+    ctx.stroke();
+  });
+}
+
+function drawPlinkoPegs(ctx, layout, rows, activeIndex = -1) {
+  const rad = Math.max(5.5, Math.min(14, Math.min(layout.gapX, layout.gapY) * 0.34));
+  for (let r = 1; r <= rows; r += 1) {
+    for (let k = 0; k <= r; k += 1) {
+      const p = layout.node(r, k);
+      const hot = activeIndex instanceof Set ? activeIndex.has(r) : r === activeIndex;
+      // soft contact shadow under the peg
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(15,23,42,.16)';
+      ctx.arc(p.x, p.y + rad * 0.34, rad, 0, Math.PI * 2);
+      ctx.fill();
+      // peg body with a vertical sheen so it reads as a rounded stud
+      const grad = ctx.createRadialGradient(p.x - rad * 0.4, p.y - rad * 0.5, rad * 0.15, p.x, p.y, rad);
+      if (hot) {
+        grad.addColorStop(0, '#fff7ed'); grad.addColorStop(0.5, '#fbbf24'); grad.addColorStop(1, '#d97706');
+      } else {
+        grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.45, '#7dd3fc'); grad.addColorStop(1, '#0284c7');
+      }
+      ctx.beginPath();
+      ctx.fillStyle = grad;
+      ctx.shadowColor = hot ? 'rgba(245,158,11,.65)' : 'rgba(2,132,199,.4)';
+      ctx.shadowBlur = hot ? 16 : 8;
+      ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // bright specular highlight
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      ctx.arc(p.x - rad * 0.34, p.y - rad * 0.38, rad * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawPlinkoBall(ctx, x, y, r = 12, glow = false) {
+  ctx.save();
+  ctx.shadowColor = glow ? 'rgba(245,158,11,.9)' : 'rgba(15,23,42,.28)';
+  ctx.shadowBlur = glow ? 24 : 10;
+  const grad = ctx.createRadialGradient(x - r * 0.36, y - r * 0.42, r * 0.12, x, y, r);
+  grad.addColorStop(0, '#fff7ed');
+  grad.addColorStop(0.45, '#facc15');
+  grad.addColorStop(1, '#b45309');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#2b1708';
+  ctx.font = `900 ${Math.max(8, r * 0.72)}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('G6', x, y + r * 0.05);
+  ctx.restore();
+}
+
+function plinkoEase(t) {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+
+function drawPlinkoParticles(ctx, dt) {
+  if (!plinkoParticles.length) return;
+  plinkoParticles = plinkoParticles.filter(p => p.life > 0);
+  for (const p of plinkoParticles) {
+    p.life -= dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 220 * dt;
+    const a = Math.max(0, p.life / p.maxLife);
+    ctx.save();
+    ctx.globalAlpha = a;
+    if (p.text) {
+      ctx.fillStyle = p.color || '#f59e0b';
+      ctx.font = `900 ${p.size || 16}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+    } else {
+      ctx.fillStyle = p.color || '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, (p.size || 4) * (0.6 + a * 0.7), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+const PLINKO_PARTICLE_CAP = 160;
+function spawnPlinkoParticles(x, y, kind = 'peg', amount = 10) {
+  if (plinkoReducedMotion()) return;
+  if (plinkoParticles.length >= PLINKO_PARTICLE_CAP) return; // keep frames light during big batches
+  const colors = kind === 'bucket' ? ['#22c55e', '#facc15', '#38bdf8', '#f97316'] : ['#38bdf8', '#facc15', '#10b981'];
+  for (let i = 0; i < amount; i += 1) {
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.25;
+    const speed = (kind === 'bucket' ? 145 : 82) + Math.random() * 110;
+    plinkoParticles.push({
+      x, y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed - (kind === 'bucket' ? 45 : 0),
+      life: 0.45 + Math.random() * 0.42,
+      maxLife: 0.45 + Math.random() * 0.42,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 3 + Math.random() * 4,
+    });
+  }
+  // Emoji confetti only when few balls are in flight — avoids a storm on big series.
+  if (kind === 'bucket' && plinkoAnims.length <= 3) {
+    ['🧾', '☕', '🪙'].forEach((text, i) => {
+      plinkoParticles.push({
+        x: x + (i - 1) * 9, y,
+        vx: (i - 1) * 44,
+        vy: -120 - Math.random() * 80,
+        life: 0.82,
+        maxLife: 0.82,
+        text,
+        size: 17 + Math.random() * 5,
+      });
+    });
+  }
+}
+
+function plinkoFrame() {
+  plinkoRaf = null;
+  drawPlinkoBoard();
+}
+
+function ensurePlinkoRaf() {
+  if (plinkoRaf != null) return;
+  plinkoRaf = requestAnimationFrame(plinkoFrame);
+}
+
+function drawPlinkoBoard() {
+  const cc = plinkoCanvasContext();
+  if (!cc) return;
+  const { ctx, W, H } = cc;
+  const refDrop = plinkoAnims[0]?.drop;
+  const rows = refDrop?.rows || plinkoRows;
+  const risk = refDrop?.risk || plinkoRisk;
+  const payouts = plinkoPayouts(rows, risk);
+  const layout = plinkoLayout(W, H, rows);
+  const ballR = Math.max(7, Math.min(15, Math.min(layout.gapX, layout.gapY) * 0.5));
+  const now = performance.now();
+  const dt = plinkoLastFrameMs ? Math.min(0.05, (now - plinkoLastFrameMs) / 1000) : 0.016;
+  plinkoLastFrameMs = now;
+
+  drawPlinkoBackground(ctx, W, H);
+
+  // Resolve every active ball's current position (skip ones still on stagger delay).
+  const balls = [];
+  const activeRows = new Set();
+  const settling = [];
+  for (const anim of plinkoAnims) {
+    if (now < anim.startedAt) continue;
+    const t = Math.min(1, (now - anim.startedAt) / anim.duration);
+    const progress = t * (anim.nodes.length - 1);
+    const seg = Math.min(anim.nodes.length - 2, Math.floor(progress));
+    const local = progress - seg;
+    const a = plinkoEase(local);
+    const from = anim.nodes[seg];
+    const to = anim.nodes[seg + 1];
+    const x = from.x + (to.x - from.x) * a;
+    const y = from.y + (to.y - from.y) * a - Math.sin(local * Math.PI) * 13;
+    const scale = 1 + Math.sin(local * Math.PI) * 0.07;
+    activeRows.add(Math.min(rows, seg + 1));
+    while (anim.hitIndex < seg) {
+      anim.hitIndex += 1;
+      const hit = anim.nodes[anim.hitIndex + 1];
+      // Peg sparks only when the board isn't crowded — keeps big series smooth.
+      if (hit && plinkoAnims.length <= 4) spawnPlinkoParticles(hit.x, hit.y, 'peg', 4);
+    }
+    anim.trail.push({ x, y });
+    if (anim.trail.length > 26) anim.trail.shift();
+    balls.push({ x, y, scale, active: !anim.completed });
+    if (t >= 1 && !anim.completed) settling.push(anim);
+  }
+
+  let idleBall = null;
+  if (!plinkoAnims.length) {
+    const idle = layout.node(0, 0);
+    idleBall = { x: idle.x, y: idle.y + Math.sin(Date.now() / 420) * 4, scale: 1 };
+  }
+
+  drawPlinkoBucketsCanvas(ctx, layout, rows, payouts, plinkoLastHitBucket);
+  drawPlinkoPegs(ctx, layout, rows, activeRows.size ? activeRows : -1);
+
+  for (const anim of plinkoAnims) {
+    if (!anim.trail.length) continue;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(245,158,11,.34)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    anim.trail.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  for (const b of balls) drawPlinkoBall(ctx, b.x, b.y, ballR * b.scale, b.active);
+  if (idleBall) drawPlinkoBall(ctx, idleBall.x, idleBall.y, ballR * idleBall.scale, false);
+
+  drawPlinkoParticles(ctx, dt);
+
+  // Settle after drawing so the final frame paints first.
+  settling.forEach(settlePlinkoAnim);
+
+  if (plinkoAnims.length || plinkoParticles.length) ensurePlinkoRaf();
+}
+
+function stopPlinkoAnimation() {
+  plinkoRunId += 1;
+  if (plinkoRaf != null) { cancelAnimationFrame(plinkoRaf); plinkoRaf = null; }
+  if (plinkoBatchTimer) {
+    clearTimeout(plinkoBatchTimer);
+    plinkoBatchTimer = null;
+  }
+  plinkoAnims = [];
+  plinkoLastHitBucket = null;
+  plinkoParticles = [];
+  plinkoQueuedClicks = 0;
+  plinkoServerPending = 0;
+  plinkoDropQueue = [];
+  document.querySelector('#tab-plinko .plinko-stage')?.classList.remove('is-dropping', 'is-win', 'is-jackpot');
+  syncPlinkoBusy();
+}
+
+function setPlinkoResult(text, tone = '') {
+  const result = document.getElementById('plinko-result');
+  if (!result) return;
+  result.className = 'plinko-result' + (tone ? ' ' + tone : '');
+  result.textContent = text;
+}
+
+function settlePlinkoAnim(anim) {
+  if (!anim || anim.completed) return;
+  anim.completed = true;
+  const drop = anim.drop;
+  const net = Number(drop.totalWon || 0) - Number(drop.bet || 0);
+  const jackpot = Number(drop.multiplier) >= 100;
+  const end = anim.nodes[anim.nodes.length - 1];
+  if (end) spawnPlinkoParticles(end.x, end.y, 'bucket', net > 0 ? 12 : 6);
+  plinkoLastHitBucket = drop.bucket;
+  if (!Array.isArray(plinkoDist) || plinkoDist.length !== Number(drop.rows) + 1) plinkoResetDist();
+  plinkoDist[drop.bucket] = (plinkoDist[drop.bucket] || 0) + 1;
+  plinkoSession.drops += 1;
+  plinkoSession.wagered += Number(drop.bet || 0);
+  plinkoSession.won += Number(drop.totalWon || 0);
+  plinkoSession.best = Math.max(plinkoSession.best, Number(drop.multiplier || 0));
+  renderPlinkoSession();
+  renderPlinkoBuckets(drop.bucket);
+  const stage = document.querySelector('#tab-plinko .plinko-stage');
+  if (stage) {
+    stage.classList.remove('is-win', 'is-jackpot');
+    if (net > 0) stage.classList.add('is-win');
+    if (jackpot) stage.classList.add('is-jackpot');
+  }
+  const tone = jackpot ? 'jackpot' : net > 0 ? 'win' : 'loss';
+  const label = `${plinkoMultLabel(drop.multiplier)} → ${drop.totalWon} 🪙 (${net >= 0 ? '+' : ''}${net})`;
+  setPlinkoResult(jackpot ? 'JACKPOT: ' + label : label, tone);
+  // Throttle DOM win bursts so a big batch doesn't spawn dozens of emoji storms.
+  if (jackpot || net >= 100) plinkoWinAnimation(net, jackpot);
+  syncPlinkoBusy();
+  renderPlinkoControls();
+  setTimeout(() => {
+    plinkoAnims = plinkoAnims.filter(a => a !== anim);
+    if (!plinkoAnims.length && !plinkoDropQueue.length) {
+      stage?.classList.remove('is-dropping');
+    }
+    syncPlinkoBusy();
+    startNextPlinkoAnimation();
+    renderPlinkoControls();
+    ensurePlinkoRaf();
+  }, plinkoReducedMotion() ? 90 : (plinkoDropQueue.length || plinkoAnims.length > 1 ? 130 : 620));
+}
+
+function plinkoWinAnimation(netWon, jackpot = false) {
+  if (plinkoReducedMotion()) return;
+  const container = document.createElement('div');
+  container.className = 'plinko-burst-layer';
+  const count = jackpot ? 72 : netWon >= 500 ? 46 : netWon >= 100 ? 30 : 16;
+  const emojis = ['🪙', '🧾', '🧮', '☕', '📌', '✨'];
+  for (let i = 0; i < count; i += 1) {
+    const p = document.createElement('div');
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    const size = 18 + Math.random() * (jackpot ? 30 : 22);
+    p.style.cssText = `position:absolute;top:-52px;left:${Math.random()*100}%;font-size:${size}px;animation:casino-coinburst ${2.1+Math.random()*1.4}s linear ${Math.random()*0.45}s forwards`;
+    container.appendChild(p);
+  }
+  document.body.appendChild(container);
+  if (jackpot || netWon >= 500) document.body.style.animation = 'casino-shake .1s 6';
+  setTimeout(() => { container.remove(); document.body.style.animation = ''; }, 3600);
+}
+
+function plinkoAnimationDuration(drop) {
+  if (plinkoReducedMotion()) return 220;
+  const rows = Number(drop?.rows || plinkoRows);
+  const backlog = plinkoDropQueue.length + plinkoQueuedClicks + plinkoServerPending + plinkoAnims.length;
+  const base = 560 + rows * 68;
+  const factor = backlog >= 12 ? 0.42 : backlog >= 6 ? 0.55 : backlog >= 2 ? 0.72 : 1;
+  return Math.max(520, Math.round(base * factor));
+}
+
+function playPlinkoDrop(drop, delayMs = 0) {
+  if (!drop) return;
+  plinkoLastDropId = drop.id;
+  const cc = plinkoCanvasContext();
+  const built = cc ? plinkoPathNodes(drop, cc.W, cc.H) : { nodes: [] };
+  plinkoAnims.push({
+    drop,
+    nodes: built.nodes,
+    trail: [],
+    hitIndex: -1,
+    startedAt: performance.now() + delayMs,
+    duration: plinkoAnimationDuration(drop),
+    completed: false,
+  });
+  const stage = document.querySelector('#tab-plinko .plinko-stage');
+  if (stage) {
+    stage.classList.remove('is-win', 'is-jackpot');
+    stage.classList.add('is-dropping');
+  }
+  syncPlinkoBusy();
+  renderPlinkoControls();
+  setPlinkoResult(plinkoDropQueue.length ? `Znaczniki spadają... w kolejce ${plinkoDropQueue.length}` : 'Znacznik spada przez tablicę...', '');
+  ensurePlinkoRaf();
+}
+
+function startNextPlinkoAnimation() {
+  let i = 0;
+  while (plinkoAnims.length < PLINKO_MAX_CONCURRENT && plinkoDropQueue.length) {
+    playPlinkoDrop(plinkoDropQueue.shift(), i * PLINKO_LAUNCH_STAGGER_MS);
+    i += 1;
+  }
+  syncPlinkoBusy();
+  ensurePlinkoRaf();
+}
+
+function schedulePlinkoBatch(immediate = false) {
+  if (plinkoBatchTimer) {
+    if (!immediate) return;
+    clearTimeout(plinkoBatchTimer);
+  }
+  plinkoBatchTimer = setTimeout(flushPlinkoBatch, immediate ? 0 : PLINKO_BATCH_DELAY_MS);
+}
+
+async function flushPlinkoBatch() {
+  plinkoBatchTimer = null;
+  if (plinkoServerPending > 0) return;
+
+  const count = Math.min(plinkoQueuedClicks, PLINKO_MAX_BATCH);
+  if (count < 1) {
+    syncPlinkoBusy();
+    renderPlinkoControls();
+    return;
+  }
+
+  const bet = plinkoBet;
+  const rows = plinkoRows;
+  const risk = plinkoRisk;
+  const runId = plinkoRunId;
+  plinkoQueuedClicks -= count;
+  plinkoServerPending = count;
+  syncPlinkoBusy();
+  renderPlinkoControls();
+  setPlinkoResult(count > 1 ? `Serwer liczy ${count} dropów...` : 'Serwer liczy tor dropu...', '');
+  document.querySelector('#tab-plinko .plinko-stage')?.classList.remove('is-win', 'is-jackpot');
+
+  try {
+    const data = await invokePlinko({ action: count > 1 ? 'drop_batch' : 'drop', count, bet, rows, risk });
+    plinkoServerPending = 0;
+    applyPlinkoState(data);
+    if (runId !== plinkoRunId || activeTab !== 'plinko') return;
+
+    const drops = Array.isArray(data.drops) && data.drops.length
+      ? data.drops
+      : data.drop ? [data.drop] : [];
+    if (drops.length) {
+      plinkoDropQueue.push(...drops);
+      startNextPlinkoAnimation();
+    }
+    if (data.warning) showToast('⚠️ ' + data.warning);
+    if (!drops.length) setPlinkoResult(data.warning || 'Nie zwrócono żadnego dropu.', 'loss');
+  } catch (err) {
+    if (runId !== plinkoRunId || activeTab !== 'plinko') return;
+    setPlinkoResult(err.message || 'Nie udało się wrzucić znacznika.', 'loss');
+    showToast('❌ ' + err.message);
+  } finally {
+    if (runId !== plinkoRunId || activeTab !== 'plinko') return;
+    plinkoServerPending = 0;
+    if (plinkoQueuedClicks > 0) schedulePlinkoBatch(true);
+    startNextPlinkoAnimation();
+    syncPlinkoBusy();
+    renderPlinkoControls();
+    if (!plinkoBusy) loadPlinkoState(false);
+  }
+}
+
+function startPlinkoDrop(n = 1) {
+  const want = Math.max(1, Number(n) || 1);
+  const room = PLINKO_MAX_VISIBLE_QUEUE - plinkoQueueTotal();
+  if (room <= 0) {
+    showToast('⏳ Poczekaj, aż kolejka Plinko się zmniejszy.');
+    return;
+  }
+  const add = Math.min(want, room);
+  plinkoQueuedClicks += add;
+  syncPlinkoBusy();
+  renderPlinkoControls();
+  setPlinkoResult(plinkoQueueTotal() > 1 ? `Kolejka dropów: ${plinkoQueueTotal()}` : 'Serwer zaraz policzy drop...', '');
+  schedulePlinkoBatch(plinkoQueuedClicks >= PLINKO_MAX_BATCH || add > 1);
+}
+
+(function wirePlinkoControls() {
+  document.querySelectorAll('.plinko-chips .casino-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (plinkoBusy) return;
+      plinkoBet = Number(btn.dataset.stake);
+      renderPlinko();
+    });
+  });
+  document.querySelectorAll('#plinko-rows-control button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (plinkoBusy) return;
+      plinkoRows = Number(btn.dataset.rows);
+      plinkoResetDist(); // bucket count changed — start a fresh distribution
+      renderPlinko();
+    });
+  });
+  document.querySelectorAll('#plinko-risk-control button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (plinkoBusy) return;
+      plinkoRisk = btn.dataset.risk || 'medium';
+      renderPlinko();
+    });
+  });
+  document.getElementById('plinko-count-slider')?.addEventListener('input', (e) => {
+    plinkoCount = Math.max(1, Math.min(PLINKO_MAX_BATCH, Number(e.target.value) || 1));
+    renderPlinkoControls();
+  });
+  document.getElementById('plinko-drop-one')?.addEventListener('click', () => startPlinkoDrop(1));
+  document.getElementById('plinko-drop-many')?.addEventListener('click', () => startPlinkoDrop(plinkoCount));
+  document.getElementById('plinko-dist-reset')?.addEventListener('click', plinkoResetSession);
+  document.getElementById('plinko-session-reset')?.addEventListener('click', plinkoResetSession);
+  renderPlinkoSession();
+  renderPlinkoBuckets();
+})();
 
 // ── Seasonal Game Framework ───────────────────────────────────────────────
 
