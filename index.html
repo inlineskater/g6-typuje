@@ -5419,7 +5419,6 @@
       <div class="farm-wrap">
         <div class="farm-topbar" id="farm-topbar">
           <div class="farm-toolbar-host" id="farm-topbar-btns"></div>
-          <div class="farm-section" id="farm-selection"></div>
         </div>
         <div class="farm-stage">
           <div class="garden-sky">
@@ -18576,7 +18575,6 @@ function renderFarmBoard() {
         cell.addEventListener('click', () => {
           fmSel = { x: cx, y: cy };
           markFarmSel();
-          renderFarmSelection();
           if (g.user_id === me?.id && farmPlantSnapshot(g).canWater) waterFarmPlantFromCell(g, cell);
           else openFarmPlantModal(g);
         });
@@ -18613,9 +18611,8 @@ function renderFarmBoard() {
         }
       }
       cell.addEventListener('click', () => {
-        fmSel = { x: cx, y: cy }; markFarmSel(); renderFarmSelection();
-        const t = fmTiles.get(cx + ',' + cy);
-        if (t && t.planted_species) openFarmPlantedModal(t, cx, cy);
+        fmSel = { x: cx, y: cy }; markFarmSel();
+        openFarmTileModal(cx, cy);
       });
       seg.el.appendChild(cell);
     }
@@ -18735,7 +18732,6 @@ function updateFarmPlantNextLines() {
 function renderFarmPanels() {
   const tb = document.getElementById('farm-topbar-btns');
   if (tb) tb.replaceChildren(farmToolbar());
-  renderFarmSelection();
 }
 
 // Price of the (owned+1)-th tile for a player who already owns `owned` tiles.
@@ -18766,15 +18762,25 @@ function farmToolbar() {
     mkBtn('farm-tool-btn', '📦 Skrzynki', () => openShopSection('farm-lootbox-section')));
 }
 
-// Render the tile inspector. The hub buttons now live in the top wooden bar.
+// One popup per plain-cell click: planted → rich detail modal; otherwise the
+// buy/plant „działka" popup (the inspector that used to sit in the top bar).
+function openFarmTileModal(x, y) {
+  const tile = fmTiles.get(x + ',' + y);
+  if (tile && tile.planted_species) { openFarmPlantedModal(tile, x, y); return; }
+  farmTileModalBody = openFarmModalShell('📍 Wybrana działka');
+  renderFarmSelectionBody();
+}
+
+// Render the tile inspector into the open popup (no-op when none is open). The
+// hub buttons live in the top wooden bar; the inspector is now click-triggered.
 function renderFarmSelection() {
   renderFarmSelectionBody();
 }
 
 function renderFarmSelectionBody() {
-  const box = document.getElementById('farm-selection');
+  const box = farmTileModalBody;
   if (!box) return;
-  box.replaceChildren(el('div', { className: 'farm-sel-title' }, '📍 Wybrana działka'));
+  box.replaceChildren();   // popup header already shows „📍 Wybrana działka"
   if (!fmSel) {
     let ownTiles = 0; fmTiles.forEach(t => { if (t.owner_id === me?.id && t.acquired_via !== 'migration') ownTiles++; });
     if (!ownTiles) {
@@ -19076,11 +19082,12 @@ function renderFarmMarket() {
 }
 
 // ── Ogródek farm: catalog + consolidated inventory modals ───────────────────
-let farmModalEl = null, farmModalEsc = null;
+let farmModalEl = null, farmModalEsc = null, farmTileModalBody = null;
 
 function closeFarmModal() {
   if (farmModalEsc) { window.removeEventListener('keydown', farmModalEsc); farmModalEsc = null; }
   if (farmModalEl) { farmModalEl.remove(); farmModalEl = null; }
+  farmTileModalBody = null;
 }
 
 // Build a dismissible modal shell (same construction as farm-plant-overlay) and
@@ -20296,7 +20303,7 @@ function startFarmTimer() {
       const tile = fmTiles.get(fmSel.x + ',' + fmSel.y);
       // Tick the growing-crop countdown in place; only full-rebuild the panel
       // (toolbar included) once, when the crop matures and the harvest button appears.
-      const countdown = document.querySelector('#farm-selection .farm-sel-countdown');
+      const countdown = farmTileModalBody && farmTileModalBody.querySelector('.farm-sel-countdown');
       if (tile && tile.planted_species && countdown) {
         const left = tile.ready_at ? new Date(tile.ready_at).getTime() - Date.now() : 0;
         if (left <= 0) renderFarmSelection();
