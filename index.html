@@ -6361,6 +6361,7 @@ async function doLogout() {
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
   rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null; stopRouletteHeartbeat();
+  rouletteLocalBets = null; if (rouletteFlushTimer) { clearTimeout(rouletteFlushTimer); rouletteFlushTimer = null; }
   stopWhackBossRound();
   stopSnakeRound();
   stopInvoiceHordeRound();
@@ -11781,6 +11782,13 @@ let wheelRotation = 0;
 let ballRotation = 0;
 let rouletteActionBusy = false;
 let roulettePendingAction = null;
+// Optimistic bet batching: clicks update this local overlay + UI instantly, then a
+// single debounced set_bets is flushed to the server so rapid clicks don't each
+// pay a network round-trip. null = no unsaved local bets (server state is truth).
+let rouletteLocalBets = null;
+let rouletteFlushTimer = null;
+let rouletteFlushChain = Promise.resolve();
+const ROULETTE_FLUSH_MS = 450;
 
 // Build number grid
 (function buildRouletteGrid() {
@@ -11942,13 +11950,58 @@ function currentRouletteBets() {
     }));
 }
 
+function rouletteBetsEqual(a, b) {
+  const sum = list => { const m = {}; for (const x of list) m[rouletteBetKey(x)] = (m[rouletteBetKey(x)] || 0) + x.amount; return m; };
+  const ma = sum(a), mb = sum(b);
+  const keys = new Set([...Object.keys(ma), ...Object.keys(mb)]);
+  for (const k of keys) if (ma[k] !== mb[k]) return false;
+  return true;
+}
+
 function addRouletteBet(type, value) {
   if (!rouletteState?.me?.seated) { showToast('Najpierw usiądź przy stole.'); return; }
   if (!rouletteState.me.canBet) { showToast('Cofnij gotowość, żeby zmienić zakład.'); return; }
-  rouletteAction({
-    action: 'add_bet',
-    bet: { type, value: value != null ? Number(value) : undefined, amount: activeChip },
+  const v = value != null ? Number(value) : undefined;
+  if (rouletteLocalBets == null) rouletteLocalBets = currentRouletteBets();
+  const curTotal = rouletteLocalBets.reduce((s, b) => s + b.amount, 0);
+  const coins = Number(me?.coins ?? 0);
+  if (curTotal + activeChip > coins) { showToast('Za mało coinów na taki zakład.'); return; }
+  const key = type + (v != null ? '-' + v : '');
+  const existing = rouletteLocalBets.find(b => (b.type + (b.value != null ? '-' + b.value : '')) === key);
+  if (existing) existing.amount += activeChip;
+  else rouletteLocalBets.push({ type, value: v, amount: activeChip });
+  updateRouletteBetUI();          // instant feedback, no network wait
+  scheduleRouletteFlush();
+}
+
+function scheduleRouletteFlush() {
+  if (rouletteFlushTimer) clearTimeout(rouletteFlushTimer);
+  rouletteFlushTimer = setTimeout(() => { rouletteFlushTimer = null; flushRouletteBets(); }, ROULETTE_FLUSH_MS);
+}
+
+// Send the accumulated local bets in one set_bets call. Serialized via a promise
+// chain so a flush triggered mid-flight waits and then sends the latest overlay.
+function flushRouletteBets() {
+  if (rouletteFlushTimer) { clearTimeout(rouletteFlushTimer); rouletteFlushTimer = null; }
+  if (rouletteLocalBets == null) return rouletteFlushChain;
+  rouletteFlushChain = rouletteFlushChain.then(async () => {
+    if (rouletteLocalBets == null) return;
+    const snapshot = rouletteLocalBets.map(b => ({ ...b }));
+    try {
+      const data = await invokeRoulette({ action: 'set_bets', bets: snapshot });
+      applyRouletteState(data);
+      // No further clicks during flight → server is now truth, drop the overlay.
+      if (rouletteLocalBets != null && rouletteBetsEqual(rouletteLocalBets, snapshot)) {
+        rouletteLocalBets = null;
+        updateRouletteBetUI();
+      }
+    } catch (err) {
+      showToast('❌ ' + err.message);
+      rouletteLocalBets = null;
+      await loadRouletteState(false);
+    }
   });
+  return rouletteFlushChain;
 }
 
 function rouletteBetKey(b) {
@@ -11979,10 +12032,23 @@ function roulettePlNode(value) {
 function updateRouletteBetUI() {
   document.querySelectorAll('#roulette-grid .bet-badge, #roulette-outside .bet-badge').forEach(b => b.remove());
   const totals = {};
-  let grandTotal = rouletteState?.me?.currentBet || 0;
+  const overlay = rouletteLocalBets;   // unsaved local bets, or null
+  let grandTotal = 0;
   for (const b of (rouletteState?.bets || [])) {
+    if (overlay && b.isMe) continue;   // overlay stands in for my bets
     const key = rouletteBetKey(b);
     totals[key] = (totals[key] || 0) + b.amount;
+    if (b.isMe) grandTotal += b.amount;
+  }
+  if (overlay) {
+    grandTotal = 0;
+    for (const b of overlay) {
+      const key = rouletteBetKey(b);
+      totals[key] = (totals[key] || 0) + b.amount;
+      grandTotal += b.amount;
+    }
+  } else {
+    grandTotal = rouletteState?.me?.currentBet || 0;
   }
   document.querySelectorAll('#roulette-grid .roulette-cell').forEach(cell => {
     const key = cell.dataset.bet + '-' + cell.dataset.value;
@@ -12024,8 +12090,14 @@ document.getElementById('roulette-outside').addEventListener('click', e => {
   if (btn) addRouletteBet(btn.dataset.bet, btn.dataset.value || undefined);
 });
 
+function discardRouletteOverlay() {
+  if (rouletteFlushTimer) { clearTimeout(rouletteFlushTimer); rouletteFlushTimer = null; }
+  rouletteLocalBets = null;
+}
+
 document.getElementById('roulette-clear-btn').addEventListener('click', () => {
   if (!rouletteState?.me?.seated) return;
+  discardRouletteOverlay();
   rouletteAction({ action: 'clear_bets' });
   hide(document.getElementById('roulette-result'));
 });
@@ -12033,12 +12105,15 @@ document.getElementById('roulette-clear-btn').addEventListener('click', () => {
 document.getElementById('roulette-rebet-btn').addEventListener('click', () => {
   if (!lastRouletteBets.length) { showToast('Brak poprzedniego zakładu.'); return; }
   if (!rouletteState?.me?.seated) { showToast('Najpierw usiądź przy stole.'); return; }
+  discardRouletteOverlay();
   rouletteAction({ action: 'set_bets', bets: lastRouletteBets.map(b => ({ ...b })) });
 });
 
 document.getElementById('roulette-double-btn').addEventListener('click', () => {
-  const mine = currentRouletteBets();
+  // Include any unsaved local bets when doubling.
+  const mine = rouletteLocalBets != null ? rouletteLocalBets.map(b => ({ ...b })) : currentRouletteBets();
   if (!mine.length) return;
+  discardRouletteOverlay();
   rouletteAction({ action: 'set_bets', bets: [...mine, ...mine.map(b => ({ ...b }))] });
 });
 
@@ -12272,6 +12347,7 @@ function applyRouletteState(data) {
   if (result?.id) {
     const mine = (result.players || []).find(p => p.isMe);
     if (mine?.bets?.length) lastRouletteBets = mine.bets.map(b => ({ ...b }));
+    if (result.id !== previousResultId) discardRouletteOverlay();  // round resolved; overlay is stale
     if (hadState && result.id !== previousResultId && activeTab === 'roulette') {
       animateRouletteResult(result);
     } else {
@@ -12285,12 +12361,16 @@ function applyRouletteState(data) {
 
 document.getElementById('roulette-seat-btn').addEventListener('click', () => {
   if (!rouletteState?.me?.seated || rouletteActionBusy) return;
+  discardRouletteOverlay();
   rouletteAction({ action: 'leave' });
 });
 
-document.getElementById('roulette-spin-btn').addEventListener('click', () => {
+document.getElementById('roulette-spin-btn').addEventListener('click', async () => {
+  if (!rouletteState?.me?.seated) { showToast('Najpierw usiądź przy stole.'); return; }
+  // Make sure any unsaved local bets reach the server before readying/spinning.
+  if (rouletteLocalBets != null) await flushRouletteBets();
   const meState = rouletteState?.me;
-  if (!meState?.seated) { showToast('Najpierw usiądź przy stole.'); return; }
+  if (!meState?.seated) return;
   if (meState.canSpin) rouletteAction({ action: 'spin_now' }, { spin: true });
   else if (meState.canCancelReady) rouletteAction({ action: 'set_ready', ready: false });
   else if (meState.currentBet > 0) rouletteAction({ action: 'set_ready', ready: true }, { spin: true });
