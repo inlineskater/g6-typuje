@@ -2530,6 +2530,73 @@
     .slots-history-item .won { color: var(--yes); font-weight: 700; }
     .slots-history-item .lost { color: var(--no); font-weight: 700; }
 
+    /* ──────────────────────────────────────────────────────────────
+       Fit casino games in one viewport (no page scroll) on desktop.
+       Same recipe as Plinko (see the #tab-plinko min-width:900px block):
+       pin main to a fixed viewport height, make the wrapper a flex column
+       with min-height:0 on every flex ancestor, let the board/shell region
+       flex to fill, and let secondary panels scroll internally.
+       108px = sticky header (58) + nav-tabs (44) + borders.
+       Scoped min-width:900px so the existing mobile layouts are untouched.
+       ────────────────────────────────────────────────────────────── */
+    @media (min-width: 900px) {
+      /* ── Poker ── */
+      #tab-poker main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
+      #tab-poker .poker-page-head { flex: 0 0 auto; margin-bottom: 0; }
+      #tab-poker .poker-info { flex: 0 0 auto; margin-bottom: 0; padding: 8px 12px; }
+      #tab-poker .poker-outer { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+      #tab-poker .poker-rules-panel { overflow: auto; min-height: 0; }
+      #tab-poker .poker-wrap { overflow: auto; min-height: 0; align-content: start; }
+
+      /* ── Mines ── */
+      #tab-mines main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
+      #tab-mines .mines-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+      #tab-mines .mines-hero { flex: 0 0 auto; margin-bottom: 10px; }
+      #tab-mines .mines-shell { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+      #tab-mines .mines-side { overflow: auto; min-height: 0; }
+      /* On desktop the play column is height-constrained, so the how-to steps
+         and risk hint live in the side panel (see markup) to give the board
+         more room. Stack them compactly in the narrow side column. */
+      #tab-mines .mines-side .mines-howto { grid-template-columns: 1fr; }
+      #tab-mines .mines-side .mines-howto-steps { grid-template-columns: 1fr 1fr; }
+      /* The board flexes to fill the height left over by the controls above it
+         (mirrors how Plinko's canvas absorbs leftover space), staying square.
+         Use a flex gap + zeroed child margins so the leftover height is exact
+         (cumulative margins would otherwise push the board past the panel). */
+      #tab-mines .mines-table { display: flex; flex-direction: column; gap: 10px; overflow: hidden; min-height: 0; }
+      #tab-mines .mines-table > * { margin: 0; }
+      #tab-mines .mines-table > *:not(.mines-board) { flex: 0 0 auto; }
+      #tab-mines .mines-board {
+        flex: 1 1 0; min-height: 0;
+        width: auto; height: auto; aspect-ratio: 1;
+        max-height: 100%; max-width: min(100%, 560px);
+        align-self: center;
+      }
+
+      /* ── Roulette ── */
+      #tab-roulette main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+      #tab-roulette main > div:first-child { flex: 0 0 auto; margin-bottom: 0; }
+      #tab-roulette .roulette-dock { flex: 0 0 auto; margin-bottom: 0; }
+      #tab-roulette .roulette-layout { flex: 1 1 auto; min-height: 0; overflow: auto; margin: 0 auto; padding: 18px 28px 16px; gap: 12px 24px; }
+
+      /* ── Slots ── */
+      #tab-slots main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
+      #tab-slots .slots-machine { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: stretch; height: 100%; min-height: 0; max-width: 1120px; margin: 0 auto; }
+      #tab-slots .slots-play { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 0; }
+      #tab-slots .slots-reference { overflow: auto; min-height: 0; padding-right: 6px; }
+      #tab-slots .slots-reference .section-title:first-child { margin-top: 0; }
+
+      /* ── Crash / Rakieta ── */
+      #tab-crash main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
+      #tab-crash .crash-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 8px; max-width: 820px; }
+      #tab-crash .crash-wrap > h2, #tab-crash .crash-subtitle, #tab-crash .crash-history, #tab-crash .crash-controls { flex: 0 0 auto; }
+      #tab-crash .crash-subtitle { margin: 0; }
+      #tab-crash .crash-controls { margin: 0; }
+      #tab-crash .crash-stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+      #tab-crash #crash-canvas { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
+      #tab-crash .crash-lower { flex: 0 0 auto; overflow: auto; }
+    }
+
     /* ── Whack-a-Boss ── */
     .wb-layout {
       display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
@@ -5324,6 +5391,7 @@
   <div id="tab-slots" class="hidden casino">
     <main>
       <div class="slots-machine">
+        <div class="slots-play">
         <h2 style="font-size:18px">Jednoręki Bandyta 🎰</h2>
         <p class="slots-subtitle">Audyt Twojego szczęścia • 5 linii wygrywających • RTP ≈ 89%</p>
 
@@ -5346,7 +5414,9 @@
 
         <div><button class="slots-spin-btn" id="slots-spin-btn">ZAKRĘĆ (<span id="slots-bet-label">10</span> 🪙)</button></div>
         <div id="slots-result" class="slots-result"></div>
+        </div>
 
+        <div class="slots-reference">
         <h3 class="section-title" style="margin-top:14px">Tabela wypłat (× stawka)</h3>
         <div class="slots-paytable">
           <span>G6 G6 G6</span><span>×100</span><span></span>
@@ -5372,6 +5442,7 @@
 
         <h3 class="section-title">Ostatnie wyniki</h3>
         <div id="slots-history" class="slots-history"></div>
+        </div>
       </div>
     </main>
   </div>
@@ -5488,22 +5559,11 @@
 
         <div class="mines-shell">
           <section class="mines-table">
-            <div class="mines-howto">
-              <div class="mines-howto-title">Jak działa</div>
-              <div class="mines-howto-steps">
-                <span><b>1</b>Ustaw stawkę i ile min chcesz na planszy</span>
-                <span><b>2</b>Klikasz pola. Czyste pole podbija mnożnik</span>
-                <span><b>3</b>Po czystym polu możesz wypłacić</span>
-                <span><b>4</b>Trafisz minę i runda kończy się za 0</span>
-              </div>
-            </div>
-
             <div class="mines-actions">
               <button id="mines-start-btn" class="rl-btn is-gold" type="button">Nowa runda</button>
               <button id="mines-cashout-btn" class="rl-btn is-primary" type="button" disabled>WYPŁAĆ</button>
             </div>
             <div id="mines-status" class="mines-status">Ustaw stawkę i liczbę min, potem rozpocznij rundę.</div>
-            <div id="mines-choice" class="mines-choice">Wybierz ryzyko: mniej min gra spokojniej, więcej min szybciej pompuje mnożnik.</div>
 
             <div class="mines-control-row">
               <span class="mines-control-label">Stawka</span>
@@ -5537,6 +5597,16 @@
           </section>
 
           <aside class="mines-side">
+            <div class="mines-howto">
+              <div class="mines-howto-title">Jak działa</div>
+              <div class="mines-howto-steps">
+                <span><b>1</b>Ustaw stawkę i ile min chcesz na planszy</span>
+                <span><b>2</b>Klikasz pola. Czyste pole podbija mnożnik</span>
+                <span><b>3</b>Po czystym polu możesz wypłacić</span>
+                <span><b>4</b>Trafisz minę i runda kończy się za 0</span>
+              </div>
+            </div>
+            <div id="mines-choice" class="mines-choice">Wybierz ryzyko: mniej min gra spokojniej, więcej min szybciej pompuje mnożnik.</div>
             <h3>Panel rundy</h3>
             <div class="mines-side-stat"><span>Stawka</span><strong id="mines-side-bet">10 🪙</strong></div>
             <div class="mines-side-stat"><span>Miny</span><strong id="mines-side-mines">3</strong></div>
