@@ -8626,6 +8626,10 @@ const ACT_GAME_LABELS = {
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol', arcade: '🕹️ Arkada',
 };
+// Casino games whose rapid plays are collapsed into one session row; an idle gap
+// longer than SESSION_GAP_MS closes a session (poker buy-ins/cashouts are not grouped).
+const CASINO_GROUP = new Set(['plinko', 'slots', 'roulette', 'mines', 'crash']);
+const SESSION_GAP_MS = 8 * 60 * 1000;
 const ACT_COIN_REASONS = {
   garden_water:               '💧 podlał roślinę',
   garden_accessory:           '🪴 kupił akcesorium do ogrodu',
@@ -8644,7 +8648,12 @@ const ACT_COIN_REASONS = {
   // Sklep / bohater
   store_purchase:             '🛒 kupił nagrodę w Sklepie',
   hero_item_purchase:         '🦸 kupił przedmiot bohatera',
+  hero_auction_bid_reserved:  '🦸 podbił aukcję bohatera',
+  hero_auction_outbid_refund: '🦸 zwrot za przebicie aukcji',
   hero_appearance_change:     '🎭 zmienił wygląd bohatera',
+  // Pozostałe
+  arcade_entry:               '🕹️ wszedł do Arkady',
+  admin_grant:                '🎁 admin dodał monety',
   // Wspólne Płótno
   canvas_pixel:               '🎨 postawił piksel na Płótnie',
   canvas_pixel_adjustment:    '🎨 postawił piksel na Płótnie',
@@ -8723,12 +8732,38 @@ async function buildActivityFeed() {
       desc: ['postawił ' + t.amount + ' 🪙 na ', sideEl, ' ' + tail] });
   });
 
-  (gameRes.data || []).forEach(g => {
-    const label = ACT_GAME_LABELS[g.game] || ('🎲 ' + g.game);
-    const won = +g.won || 0;
-    const tail = won > 0 ? 'wygrał ' + won + ' 🪙' : 'postawił ' + (+g.bet || 0) + ' 🪙';
-    entries.push({ nick: nickOf(g), ts: g.created_at, cat: 'casino', desc: label + ' — ' + tail });
+  // Casino plays: collapse rapid bursts of the same game by the same player into one
+  // session row (count + net coins). Non-grouped games (poker) stay one row per event.
+  const flushSession = s => {
+    const label = ACT_GAME_LABELS[s.game] || ('🎲 ' + s.game);
+    let tail;
+    if (s.count > 1) {
+      const net = s.sumWon - s.sumBet;
+      tail = s.count + ' gier · netto ' + (net >= 0 ? '+' : '−') + Math.abs(net) + ' 🪙';
+    } else {
+      tail = s.sumWon > 0 ? 'wygrał ' + s.sumWon + ' 🪙' : 'postawił ' + s.sumBet + ' 🪙';
+    }
+    entries.push({ nick: s.nick, ts: s.lastTs, cat: 'casino', desc: label + ' — ' + tail });
+  };
+  const sessions = {}; // key: nick|game → active session being accumulated
+  const sortedGames = (gameRes.data || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  sortedGames.forEach(g => {
+    const nick = nickOf(g), bet = +g.bet || 0, won = +g.won || 0, t = g.created_at;
+    if (!CASINO_GROUP.has(g.game)) {
+      const tail = won > 0 ? 'wygrał ' + won + ' 🪙' : 'postawił ' + bet + ' 🪙';
+      entries.push({ nick, ts: t, cat: 'casino', desc: (ACT_GAME_LABELS[g.game] || '🎲 ' + g.game) + ' — ' + tail });
+      return;
+    }
+    const key = nick + '|' + g.game;
+    const s = sessions[key];
+    if (s && (new Date(t) - new Date(s.lastTs)) <= SESSION_GAP_MS) {
+      s.count++; s.sumBet += bet; s.sumWon += won; s.lastTs = t;
+    } else {
+      if (s) flushSession(s);
+      sessions[key] = { nick, game: g.game, count: 1, sumBet: bet, sumWon: won, lastTs: t };
+    }
   });
+  Object.values(sessions).forEach(flushSession);
 
   (footballRes.data || []).forEach(b => {
     entries.push({ nick: nickOf(b), ts: b.created_at, cat: 'football',
@@ -8736,13 +8771,14 @@ async function buildActivityFeed() {
   });
 
   (coinTxRes.data || []).forEach(c => {
-    const label = ACT_COIN_REASONS[c.reason];
-    if (!label) return;
+    if (c.reason === 'daily_interest') return; // automated, too noisy (kept out by design)
     const r = c.reason;
+    const label = ACT_COIN_REASONS[r] || ('💰 ' + r);
     const cat = (r.startsWith('farm_') || r === 'lootbox_open' || r === 'card_levelup') ? 'farm'
               : (r === 'store_purchase' || r.startsWith('hero_')) ? 'shop'
               : r.startsWith('marketplace_') ? 'market'
               : r.includes('garden') ? 'garden'
+              : r === 'arcade_entry' ? 'game'
               : 'other';
     entries.push({ nick: nickOf(c), ts: c.created_at, cat, desc: label });
   });
