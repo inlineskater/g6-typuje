@@ -2594,11 +2594,23 @@
       #tab-roulette main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
       #tab-roulette main > div:first-child { flex: 0 0 auto; margin-bottom: 0; }
       #tab-roulette .roulette-dock { flex: 0 0 auto; margin-bottom: 0; }
-      #tab-roulette .roulette-layout { flex: 1 1 auto; min-height: 0; overflow: hidden; grid-template-rows: auto auto minmax(0, 1fr); margin: 0 auto; padding: 18px 28px 16px; gap: 12px 24px; }
-      #tab-roulette .roulette-felt-band { min-height: 0; }
+      /* Wheel spans the board+band rows so the bets/results band fills the felt
+         beside the wheel (previously wasted space) instead of competing with the
+         tall wheel column for height and collapsing to 0px below the felt. */
+      #tab-roulette .roulette-layout {
+        flex: 1 1 auto; min-height: 0; overflow: hidden; margin: 0 auto;
+        padding: 18px 28px 16px; gap: 12px 24px;
+        grid-template-areas: "seats seats" "wheel board" "wheel band";
+        grid-template-rows: auto auto minmax(0, 1fr);
+      }
+      #tab-roulette .roulette-wheel-wrap { gap: 10px; align-self: start; }
+      #tab-roulette .roulette-table-wrap { align-self: start; }
+      #tab-roulette .roulette-wheel-container { width: clamp(200px, 22vh, 260px); height: clamp(200px, 22vh, 260px); }
+      #tab-roulette .roulette-spin-btn { width: 88px; height: 88px; }
+      #tab-roulette .roulette-felt-band { grid-area: band; align-self: stretch; min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
       #tab-roulette .roulette-felt-band .roulette-panel { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-      #tab-roulette .roulette-wheel-wrap { gap: 10px; }
-      #tab-roulette .roulette-wheel-container { width: clamp(220px, 18vw, 280px); height: clamp(220px, 18vw, 280px); }
+      #tab-roulette .roulette-felt-band .roulette-bet-list { overflow-y: auto; min-height: 0; }
+      #tab-roulette .roulette-history { overflow-y: auto; min-height: 0; }
 
       /* ── Slots ── */
       #tab-slots main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
