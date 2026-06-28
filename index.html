@@ -12785,6 +12785,9 @@ document.getElementById('ml-submit').addEventListener('click', () => {
 });
 
 // ── Garden Cosmetics ──────────────────────────────────────────────────────
+// NOTE: prices here are mirrored by the purchase_accessory CASE in supabase/
+// (shared-garden-accessories.sql + second-garden-slot.sql + garden-accessories.sql).
+// When you add an accessory, update that CASE too or buying it raises 'invalid_accessory'.
 const GARDEN_COSMETICS = [
   { id: 'flaga_pl', emoji: '🇵🇱', name: 'Flaga Rzeczypospolitej Polskiej', price: 10, pos: 'left', anim: 'flag' },
   { id: 'mushroom', emoji: '🍄', name: 'Grzybek', price: 10, pos: 'left' },

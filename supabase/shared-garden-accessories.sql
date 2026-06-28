@@ -16,6 +16,9 @@ DECLARE
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
+  -- Prices mirror GARDEN_COSMETICS in index.html. When adding an accessory, regenerate this
+  -- CASE in ALL copies of purchase_accessory (shared-garden-accessories.sql,
+  -- second-garden-slot.sql, garden-accessories.sql) or the new id raises 'invalid_accessory'.
   v_price := CASE p_accessory_id
     WHEN 'flaga_pl'      THEN 10
     WHEN 'mushroom'      THEN 10
@@ -49,6 +52,110 @@ BEGIN
     WHEN 'grill'         THEN 12
     WHEN 'taczka'        THEN 11
     WHEN 'bmw'           THEN 9999
+    -- Słowiańska mitologia
+    WHEN 'leszy'           THEN 18
+    WHEN 'domowik'         THEN 16
+    WHEN 'strzyga'         THEN 20
+    WHEN 'poludnica'       THEN 19
+    WHEN 'wodnik'          THEN 17
+    WHEN 'rusalka'         THEN 21
+    WHEN 'bies'            THEN 18
+    WHEN 'licho'           THEN 16
+    WHEN 'skrzat'          THEN 15
+    WHEN 'zmij'            THEN 30
+    WHEN 'perun'           THEN 28
+    WHEN 'swarog'          THEN 26
+    WHEN 'weles'           THEN 24
+    WHEN 'marzanna'        THEN 17
+    WHEN 'dziewanna_d'     THEN 15
+    WHEN 'kikimora'        THEN 16
+    WHEN 'topielec'        THEN 18
+    WHEN 'latawiec_d'      THEN 17
+    WHEN 'mokosz'          THEN 19
+    WHEN 'czart'           THEN 18
+    WHEN 'mamuna'          THEN 16
+    WHEN 'planetnik'       THEN 20
+    WHEN 'boruta'          THEN 25
+    WHEN 'zmora'           THEN 17
+    WHEN 'skarbnik'        THEN 22
+    -- Staropolskie / sarmackie
+    WHEN 'kontusz'         THEN 20
+    WHEN 'zupan'           THEN 18
+    WHEN 'karabela'        THEN 24
+    WHEN 'szabla'          THEN 26
+    WHEN 'husaria'         THEN 35
+    WHEN 'miod_pitny'      THEN 16
+    WHEN 'krupnik'         THEN 14
+    WHEN 'bimber'          THEN 13
+    WHEN 'oscypek'         THEN 12
+    WHEN 'zurek'           THEN 12
+    WHEN 'kapliczka'       THEN 18
+    WHEN 'krzyz'           THEN 15
+    WHEN 'bocian'          THEN 17
+    WHEN 'zuraw'           THEN 16
+    WHEN 'chata'           THEN 19
+    WHEN 'woz'             THEN 18
+    WHEN 'kosa'            THEN 17
+    WHEN 'cep'             THEN 14
+    WHEN 'beczka'          THEN 13
+    WHEN 'samowar'         THEN 16
+    WHEN 'piernik'         THEN 14
+    WHEN 'makowiec'        THEN 15
+    WHEN 'sledz'           THEN 12
+    WHEN 'kogut'           THEN 13
+    WHEN 'snopek'          THEN 12
+    -- Wiedźmin / Witcher
+    WHEN 'wiedzmin'        THEN 40
+    WHEN 'medalion'        THEN 30
+    WHEN 'srebrny_miecz'   THEN 28
+    WHEN 'stalowy_miecz'   THEN 24
+    WHEN 'znak_igni'       THEN 22
+    WHEN 'znak_aard'       THEN 22
+    WHEN 'znak_quen'       THEN 22
+    WHEN 'plotka'          THEN 26
+    WHEN 'jaskier'         THEN 20
+    WHEN 'yennefer'        THEN 35
+    WHEN 'ciri'            THEN 33
+    WHEN 'triss'           THEN 30
+    WHEN 'gwint'           THEN 18
+    WHEN 'eliksir'         THEN 17
+    WHEN 'jaskolcze'       THEN 16
+    WHEN 'bestiariusz'     THEN 15
+    WHEN 'kaer_morhen'     THEN 45
+    WHEN 'toussaint'       THEN 20
+    WHEN 'kikimora_w'      THEN 18
+    WHEN 'utopiec'         THEN 17
+    WHEN 'leszy_w'         THEN 22
+    WHEN 'strzyga_w'       THEN 21
+    WHEN 'gryf'            THEN 24
+    WHEN 'bazyliszek'      THEN 26
+    WHEN 'ghul'            THEN 18
+    WHEN 'nilfgaard'       THEN 25
+    WHEN 'geralt'          THEN 50
+    WHEN 'vesemir'         THEN 28
+    WHEN 'regis'           THEN 27
+    WHEN 'lambert'         THEN 24
+    -- Funny mix
+    WHEN 'gar_smalcu'      THEN 11
+    WHEN 'ogorki'          THEN 10
+    WHEN 'kapelusz_grzyb'  THEN 14
+    WHEN 'prawdziwki'      THEN 13
+    WHEN 'wodz'            THEN 22
+    WHEN 'gusla'           THEN 17
+    WHEN 'dziady'          THEN 18
+    WHEN 'sobotka'         THEN 19
+    WHEN 'wianek'          THEN 14
+    WHEN 'zarna'           THEN 12
+    WHEN 'gesle'           THEN 15
+    WHEN 'rogaty'          THEN 16
+    WHEN 'podkowa'         THEN 13
+    WHEN 'czaszka_pal'     THEN 16
+    WHEN 'kruk'            THEN 15
+    WHEN 'wataha'          THEN 18
+    WHEN 'niedzwiedz'      THEN 20
+    WHEN 'zubr'            THEN 22
+    WHEN 'sokol'           THEN 17
+    WHEN 'dab_bartek'      THEN 19
     ELSE NULL
   END;
   IF v_price IS NULL THEN RAISE EXCEPTION 'invalid_accessory'; END IF;
