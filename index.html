@@ -2594,7 +2594,11 @@
       #tab-roulette main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
       #tab-roulette main > div:first-child { flex: 0 0 auto; margin-bottom: 0; }
       #tab-roulette .roulette-dock { flex: 0 0 auto; margin-bottom: 0; }
-      #tab-roulette .roulette-layout { flex: 1 1 auto; min-height: 0; overflow: auto; margin: 0 auto; padding: 18px 28px 16px; gap: 12px 24px; }
+      #tab-roulette .roulette-layout { flex: 1 1 auto; min-height: 0; overflow: hidden; grid-template-rows: auto auto minmax(0, 1fr); margin: 0 auto; padding: 18px 28px 16px; gap: 12px 24px; }
+      #tab-roulette .roulette-felt-band { min-height: 0; }
+      #tab-roulette .roulette-felt-band .roulette-panel { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+      #tab-roulette .roulette-wheel-wrap { gap: 10px; }
+      #tab-roulette .roulette-wheel-container { width: clamp(220px, 18vw, 280px); height: clamp(220px, 18vw, 280px); }
 
       /* ── Slots ── */
       #tab-slots main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
