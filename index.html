@@ -2540,13 +2540,30 @@
        Scoped min-width:900px so the existing mobile layouts are untouched.
        ────────────────────────────────────────────────────────────── */
     @media (min-width: 900px) {
-      /* ── Poker ── */
-      #tab-poker main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
+      /* ── Poker ──
+         No scroll at all: the page-head is fixed, the rules + game columns
+         stretch to the viewport row, and the live table is compacted so the
+         whole hand (6 seats + action controls) fits the column height. */
+      #tab-poker main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
       #tab-poker .poker-page-head { flex: 0 0 auto; margin-bottom: 0; }
-      #tab-poker .poker-info { flex: 0 0 auto; margin-bottom: 0; padding: 8px 12px; }
+      #tab-poker .poker-info { display: none; }   /* redundant with the in-game guide; reclaim the height */
       #tab-poker .poker-outer { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
-      #tab-poker .poker-rules-panel { overflow: auto; min-height: 0; }
-      #tab-poker .poker-wrap { overflow: auto; min-height: 0; align-content: start; }
+      #tab-poker .poker-rules-panel { overflow: hidden; min-height: 0; }
+      #tab-poker .poker-wrap { overflow: hidden; min-height: 0; align-content: start; }
+      /* compact the live table */
+      #tab-poker .poker-guide { padding: 7px 12px; }
+      #tab-poker .poker-board { min-height: 54px; padding: 8px; }
+      #tab-poker .poker-seat { min-height: 0; padding: 7px 8px; gap: 4px; }
+      #tab-poker .poker-seats-grid { gap: 8px; }
+      #tab-poker.casino .poker-seats-grid { padding: 9px; }
+      #tab-poker .poker-seat-cards .playing-card { width: 26px; height: 37px; font-size: 11px; }
+      #tab-poker .poker-hole-cards { min-height: 0; }
+      #tab-poker .poker-hole-cards .playing-card { width: 42px; height: 59px; font-size: 16px; }
+      #tab-poker .poker-action-btn { min-height: 42px; }
+      #tab-poker .poker-btn-sub { font-size: 9px; margin-top: 1px; }
+      /* keep only the 2 most recent table events (full log lives on mobile) */
+      #tab-poker .poker-event-inline:nth-child(n+3) { display: none; }
+      #tab-poker .poker-event-inline { padding: 4px 0; }
 
       /* ── Mines ── */
       #tab-mines main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
