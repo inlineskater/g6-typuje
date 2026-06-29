@@ -6914,12 +6914,13 @@ let crashExplodedNo = null;     // last crashed round_no we already animated
 let crashExplodeStart = 0;      // local ts the explosion animation began (0 = none)
 let crashExplodeMult = 1;       // crash_point to freeze the display at during explosion
 let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
-let crashCashoutPending = null; // optimistically-locked cash-out multiplier (null = none)
+let crashCashoutPending = null; // tap registered, awaiting the server's verdict (null = none)
 let crashRunRoundNo = null;     // round_no whose flight clock we've already synced (sync once → smooth)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 10s.
 const CRASH_GROWTH = Math.log(2) / 10000;
 const CRASH_POLL_MS = 500;      // fast poll during the running phase to catch the crash promptly
+const CRASH_MAX_EXTRAPOLATION_MS = 1500; // cap free-run past the last server sample (background/stall guard)
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
@@ -13541,6 +13542,11 @@ function setupCrashRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_bets' }, reload)
       .subscribe();
     realtimeChannels.push(ch);
+    // On refocus, the paused RAF/throttled poll leave the local flight-clock stale (way ahead);
+    // resync immediately so we don't paint an overshot multiplier until the next poll lands.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && activeTab === 'crash') loadCrashState(false);
+    });
   }
   ensureCrashRaf();
 }
@@ -13613,11 +13619,13 @@ function applyCrashState(data) {
       crashElapsedBaseMs = serverElapsedNow;
       crashPhaseStartLocal = Date.now();
     } else {
-      // Forward-only drift correction: if we've fallen behind the server, jump forward.
-      // NEVER move backward — that is the jitter the original "sync once" was avoiding, and
-      // running slightly ahead is the safe side (the server caps payout at its own value).
+      // Two-sided drift correction. Catch up promptly when behind; ALSO pull back when we've
+      // run ahead of the server beyond a wider tolerance — running ahead is what makes the
+      // display OVERSHOOT the hidden crash and show a multiplier the rocket never reached
+      // (the asymmetry, −250 vs +120, keeps rtt jitter from nudging the number backward).
       const localElapsedNow = crashElapsedBaseMs + (Date.now() - crashPhaseStartLocal);
-      if (serverElapsedNow - localElapsedNow > 120) {
+      const drift = serverElapsedNow - localElapsedNow; // +ve: we're behind; −ve: we're ahead
+      if (drift > 120 || drift < -250) {
         crashElapsedBaseMs = serverElapsedNow;
         crashPhaseStartLocal = Date.now();
       }
@@ -13625,6 +13633,7 @@ function applyCrashState(data) {
     ensureCrashPoll(); // poll keeps running only to detect the crash
   } else {
     crashRunRoundNo = null; // reset so the next running round re-syncs once
+    crashCashoutPending = null; // a pending tap can't outlive the running phase
     if (crashPollTimer) { clearInterval(crashPollTimer); crashPollTimer = null; }
   }
 
@@ -13662,10 +13671,10 @@ async function crashClearBet() {
 async function crashCashOut() {
   if (crashBusy || !crashState || !crashState.canCashout) return;
   const m = crashDisplayMult; // the value on the WYPŁAĆ button at click time
-  // Optimistically lock it in NOW so the tap feels instant — flip the button + big readout
-  // to a green „✓ x1.50" this frame, before the server round-trip returns. The server
-  // response below is authoritative and reconciles (a rare reject just reverts to truth).
-  if (crashState.myBet) { crashState.myBet.status = 'cashed'; crashState.myBet.cashed_multiplier = m; }
+  // Optimistically show the tap REGISTERED — a NEUTRAL „⏳ x1.50" pending state, NOT a win.
+  // The client can't see the hidden crash point, so the rocket may already have blown BELOW
+  // this number; only the server can confirm. (Painting a green „won" here is what turned a
+  // real loss into a phantom win.) We flip to green ✓ or to the loss only after the reply.
   crashState.canCashout = false; // no double-submit while the request is in flight
   crashCashoutPending = m;
   setCrashBusy(true);
@@ -13752,16 +13761,23 @@ function crashTick() {
   let displayMult = 1;
 
   if (r.status === 'running') {
-    const elapsed = crashElapsedBaseMs + (Date.now() - crashPhaseStartLocal);
+    // Cap free-run past the last server sample so a backgrounded/stalled tab can't paint a
+    // runaway multiplier the rocket never reached (healthy polling resyncs every <500ms).
+    const elapsed = crashElapsedBaseMs + Math.min(Date.now() - crashPhaseStartLocal, CRASH_MAX_EXTRAPOLATION_MS);
     displayMult = Math.floor(Math.exp(CRASH_GROWTH * elapsed) * 100) / 100;
     drawCrashScene('running', elapsed, displayMult, false); // curve keeps climbing live
     if (crashState.myBet && crashState.myBet.status === 'cashed') {
-      // We've locked in — show OUR result (green ✓), not the climbing round number, so it's
-      // unambiguous that the tap registered and we're no longer exposed to the crash.
-      const lk = crashState.myBet.cashed_multiplier ?? crashCashoutPending ?? displayMult;
+      // Server-CONFIRMED cash-out → green ✓ win (this status is only set from server state).
+      const lk = crashState.myBet.cashed_multiplier ?? displayMult;
       multEl.textContent = '✓ x' + Number(lk).toFixed(2);
       multEl.className = 'crash-multiplier is-cashed';
       statusEl.textContent = `Wypłacono x${Number(lk).toFixed(2)} • leci dalej…`;
+    } else if (crashCashoutPending != null) {
+      // Tap registered, awaiting the server's verdict — NEUTRAL „pending", not a win, because
+      // the rocket may already have crashed below this number (we can't see the crash point).
+      multEl.textContent = '⏳ x' + Number(crashCashoutPending).toFixed(2);
+      multEl.className = 'crash-multiplier';
+      statusEl.textContent = `Wypłacam x${Number(crashCashoutPending).toFixed(2)}…`;
     } else {
       multEl.textContent = 'x' + displayMult.toFixed(2);
       multEl.className = 'crash-multiplier';
@@ -13811,7 +13827,10 @@ function updateCrashButtons(phase, displayMult) {
   if (!cashBtn || !betBtn || !crashState) return;
   const myBet = crashState.myBet;
 
-  if (phase === 'running' && myBet && myBet.status === 'active') {
+  if (crashCashoutPending != null && (!myBet || myBet.status === 'active')) {
+    cashBtn.disabled = true;
+    cashBtn.textContent = `⏳ x${Number(crashCashoutPending).toFixed(2)}`;
+  } else if (phase === 'running' && myBet && myBet.status === 'active') {
     cashBtn.disabled = crashBusy;
     cashBtn.textContent = `WYPŁAĆ @ x${displayMult.toFixed(2)}`;
   } else if (myBet && myBet.status === 'cashed') {
