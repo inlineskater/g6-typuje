@@ -55,6 +55,24 @@ function asNumber(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+// The round schedule is written as `${JSON.stringify(schedule)}::jsonb`, which
+// postgres.js intermittently double-encodes into a jsonb *string scalar* instead
+// of an array (same quirk as client_meta). When that happens the driver reads it
+// back as a JS string, so a plain `Array.isArray` check yields [] and every
+// answer is discarded → score 0. Coerce both shapes back into an array.
+function coerceSchedule(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function randInt(min, max) {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
@@ -372,7 +390,7 @@ async function submitRound(userId, body) {
     if (round.submitted_at) throw gameError("Ta runda została już zapisana.");
     if (new Date(round.expires_at).getTime() < Date.now()) throw gameError("Runda wygasła.");
 
-    const schedule = Array.isArray(round.schedule) ? round.schedule : [];
+    const schedule = coerceSchedule(round.schedule);
     const answers = parseAnswers(body.answers);
     const submittedDurationMs = asNumber(body.roundDurationMs, NaN);
     const result = scoreAnswers(schedule, answers, submittedDurationMs);

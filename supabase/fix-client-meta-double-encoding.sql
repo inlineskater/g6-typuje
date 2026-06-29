@@ -34,7 +34,7 @@ $$;
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['whack_boss_scores','bug_jumper_scores','flappy_pants_scores','snake_scores']
+  FOREACH t IN ARRAY ARRAY['whack_boss_scores','bug_jumper_scores','flappy_pants_scores','snake_scores','invoice_horde_scores','var_patrol_scores']
   LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS normalize_client_meta ON public.%I', t);
     EXECUTE format(
