@@ -22693,28 +22693,68 @@ function farmSellQuote(crop, qty) {
 }
 
 // Confirm sale with a full price-impact preview, then sell + re-render the host.
-function farmSellConfirm(crop, qty, afterSell) {
+function farmSellConfirm(crop, maxQty, afterSell) {
   const def = [...fmDefs.values()].find(d => d.crop_type === crop);
-  const q = farmSellQuote(crop, qty);
-  if (!q) { sellCrop(crop, qty).then(() => afterSell && afterSell()); return; }
+  const qTest = farmSellQuote(crop, maxQty);
+  if (!qTest) { sellCrop(crop, maxQty).then(() => afterSell && afterSell()); return; }
+  
   const fmt = n => n.toFixed(1).replace('.', ',');
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
+  
+  let currentQty = maxQty;
+  
   const qline = (label, value) => el('div', { className: 'farm-sell-qline' }, el('span', {}, label), value);
-  const confirmBtn = el('button', { className: 'btn-primary', style: { width: '100%' } }, '💰 Sprzedaj za ~' + q.proceeds + ' 🪙');
-  confirmBtn.addEventListener('click', async () => { confirmBtn.disabled = true; await sellCrop(crop, qty); close(); if (afterSell) afterSell(); });
+  const confirmBtn = el('button', { className: 'btn-primary', style: { width: '100%' } }, 'Wczytuję...');
+  
+  const qtyLabel = el('b', {});
+  const priceLabel = el('b', {});
+  const proceedsLabel = el('b', { style: { color: 'var(--accent)' } });
+  const afterPriceLabel = el('b', {});
+  const noteLabel = el('div', { className: 'farm-sell-note' });
+  
+  const updateQuote = () => {
+    const q = farmSellQuote(crop, currentQty);
+    if (!q) { close(); return; }
+    qtyLabel.replaceChildren(farmIcon(def?.emoji || '🧺'), ' ' + (def?.name || crop) + ' ×' + currentQty);
+    priceLabel.replaceChildren(fmt(q.startPrice) + ' → ' + fmt(q.endPrice) + ' 🪙');
+    proceedsLabel.replaceChildren('~' + q.proceeds + ' 🪙');
+    afterPriceLabel.replaceChildren(q.endMaxPct + '% ceny maks. (' + q.base + ' 🪙)');
+    noteLabel.replaceChildren('📉 Ta sprzedaż obniży cenę o ~' + q.dropPct + '% (im więcej naraz, tym mocniej). Cena wraca do dziennego poziomu z czasem i resetuje się o 00:00 i 12:00.');
+    confirmBtn.replaceChildren('💰 Sprzedaj za ~' + q.proceeds + ' 🪙');
+  };
+  
+  confirmBtn.addEventListener('click', async () => { confirmBtn.disabled = true; await sellCrop(crop, currentQty); close(); if (afterSell) afterSell(); });
   const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
   closeX.addEventListener('click', close);
+  
+  const sliderDiv = el('div', { style: { margin: '14px 0 8px' } });
+  if (maxQty > 1) {
+    const slider = el('input', { type: 'range', min: 1, max: maxQty, value: maxQty, style: { width: '100%', marginBottom: '8px' } });
+    const quickBtns = el('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center' } });
+    [1, Math.max(1, Math.floor(maxQty / 2)), maxQty].forEach((val, i) => {
+      const lbl = i === 0 ? 'Min' : (i === 1 ? '½' : 'Max');
+      const b = el('button', { className: 'farm-mini-btn', type: 'button', style: { flex: 1 } }, lbl);
+      b.addEventListener('click', () => { slider.value = val; currentQty = val; updateQuote(); });
+      quickBtns.append(b);
+    });
+    slider.addEventListener('input', () => { currentQty = +slider.value; updateQuote(); });
+    sliderDiv.append(slider, quickBtns);
+  }
+  
   const modal = el('div', { className: 'modal', style: { maxWidth: '380px' } },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Sprzedaż plonów'), closeX),
+    sliderDiv,
     el('div', { className: 'farm-sell-quote' },
-      qline('Sprzedajesz', el('b', {}, farmIcon(def?.emoji || '🧺'), ' ' + (def?.name || crop) + ' ×' + qty)),
-      qline('Cena/szt', el('b', {}, fmt(q.startPrice) + ' → ' + fmt(q.endPrice) + ' 🪙')),
-      qline('Dostaniesz', el('b', { style: { color: 'var(--accent)' } }, '~' + q.proceeds + ' 🪙')),
-      qline('Cena po sprzedaży', el('b', {}, q.endMaxPct + '% ceny maks. (' + q.base + ' 🪙)')),
-      el('div', { className: 'farm-sell-note' }, '📉 Ta sprzedaż obniży cenę o ~' + q.dropPct + '% (im więcej naraz, tym mocniej). Cena wraca do dziennego poziomu z czasem i resetuje się o 00:00 i 12:00.')),
+      qline('Sprzedajesz', qtyLabel),
+      qline('Cena/szt', priceLabel),
+      qline('Dostaniesz', proceedsLabel),
+      qline('Cena po sprzedaży', afterPriceLabel),
+      noteLabel),
     confirmBtn);
+    
+  updateQuote();
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
@@ -22744,16 +22784,11 @@ function farmCropRow(crop, qty, afterSell) {
     el('div', { className: 'farm-card-meta' },
       el('div', { className: 'farm-card-name' }, (def?.name || crop) + ' ×' + qty),
       el('div', { className: 'farm-card-sub' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙', farmTrendChip(crop), farmRotChip(crop))));
-  const sell = (n) => farmSellConfirm(crop, n, afterSell);
+  const sell = () => farmSellConfirm(crop, qty, afterSell);
   const controls = el('div', { className: 'farm-sell-controls' });
-  if (qty > 1) {
-    const half = el('button', { className: 'farm-mini-btn', title: 'Sprzedaj połowę (' + Math.floor(qty / 2) + ')' }, '½');
-    half.addEventListener('click', () => sell(Math.max(1, Math.floor(qty / 2))));
-    controls.append(half);
-  }
-  const all = el('button', { className: 'farm-mini-btn primary' }, qty > 1 ? 'Wszystko' : 'Sprzedaj');
-  all.addEventListener('click', () => sell(qty));
-  controls.append(all);
+  const btn = el('button', { className: 'farm-mini-btn primary' }, 'Sprzedaj...');
+  btn.addEventListener('click', sell);
+  controls.append(btn);
   row.append(controls);
   return row;
 }
@@ -23026,17 +23061,16 @@ function farmPriceChart(points, base) {
     svg.append(svgEl('line', { x1: padL - 4, y1: by, x2: W - padR, y2: by, class: 'farm-chart-base' }));
   }
   
-  const trend = ps.length >= 2 ? (ps[ps.length - 1].p >= ps[0].p ? 'trend-up' : 'trend-down') : '';
   const coords = ps.map(p => [xOf(p.t), yOf(p.p)]);
   
   if (coords.length >= 2) {
     const dline = 'M' + coords.map(c => c[0].toFixed(1) + ' ' + c[1].toFixed(1)).join(' L');
     const x0 = coords[0][0].toFixed(1), xN = coords[coords.length - 1][0].toFixed(1), yB = (H - padB).toFixed(1);
-    svg.append(svgEl('path', { d: dline + ' L' + xN + ' ' + yB + ' L' + x0 + ' ' + yB + ' Z', class: 'farm-chart-area ' + trend }));
-    svg.append(svgEl('path', { d: dline, class: 'farm-chart-line ' + trend }));
+    svg.append(svgEl('path', { d: dline + ' L' + xN + ' ' + yB + ' L' + x0 + ' ' + yB + ' Z', class: 'farm-chart-area' }));
+    svg.append(svgEl('path', { d: dline, class: 'farm-chart-line' }));
   }
   const last = coords[coords.length - 1];
-  svg.append(svgEl('circle', { cx: last[0].toFixed(1), cy: last[1].toFixed(1), r: 3.2, class: 'farm-chart-dot ' + trend }));
+  svg.append(svgEl('circle', { cx: last[0].toFixed(1), cy: last[1].toFixed(1), r: 3.2, class: 'farm-chart-dot' }));
   return svg;
 }
 
