@@ -123,6 +123,9 @@ $$;
 -- Curated, gendered pools of single-word Old Slavic / Old Polish persona names.
 -- Female pool (30) ≥ the largest feminine edition (Róża 25); male pool (35) ≥ the
 -- male editions (15+10). Assigned by a PER-GENDER mint index, so each is unique.
+-- NOTE: most species name through farm_nft_persona() below, which routes some
+-- species to their own regional pool (e.g. the 'Ae Ae banana → Hawaiian names);
+-- this Slavic function is the fallback for everything else.
 CREATE OR REPLACE FUNCTION public.farm_nft_name(p_idx integer, p_female boolean)
 RETURNS text LANGUAGE sql IMMUTABLE AS $$
   SELECT CASE WHEN p_female THEN (ARRAY[
@@ -140,6 +143,30 @@ RETURNS text LANGUAGE sql IMMUTABLE AS $$
     'Witosław','Budzisław','Dalebor','Jarogniew','Niegosław','Racibor',
     'Stojgniew','Unisław','Wojsław','Zbigniew','Żelisław'
   ])[ (abs(p_idx) % 35) + 1 ] END;
+$$;
+
+-- Which persona pool an NFT species draws from. Hawaiian for the 'Ae Ae banana
+-- (named after people of Hawaii, where it grows); Slavic male/female otherwise.
+CREATE OR REPLACE FUNCTION public.farm_nft_pool(p_species text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE
+    WHEN p_species = 'aeae_banana' THEN 'hawaii'
+    WHEN public.farm_nft_is_female(p_species) THEN 'female'
+    ELSE 'male' END;
+$$;
+
+-- Persona name for an NFT instance: Hawaiian pool for the 'Ae Ae banana, else the
+-- existing gendered Slavic pools. Indexed by a PER-POOL mint order so names stay
+-- unique within each pool. Hawaiian pool (14) ≥ the banana edition (5).
+CREATE OR REPLACE FUNCTION public.farm_nft_persona(p_species text, p_idx integer)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE public.farm_nft_pool(p_species)
+    WHEN 'hawaii' THEN (ARRAY[
+      'Kai','Leilani','Keanu','Nalani','Koa','Mahina','Kawika',
+      'Noelani','Kainoa','Makoa','Kekoa','Iolana','Alaula','Pualani'
+    ])[ (abs(p_idx) % 14) + 1 ]
+    ELSE public.farm_nft_name(p_idx, public.farm_nft_is_female(p_species))
+  END;
 $$;
 
 -- Per-user owned consumables: sealed (unopened) seed boxes + free-tile vouchers.
@@ -188,7 +215,11 @@ ON CONFLICT (species) DO UPDATE SET
 INSERT INTO public.farm_card_defs (species, name, emoji, rarity, draw_weight, base_grow_minutes, base_yield, crop_type, edition_size) VALUES
   ('diamond_rose',     'Diamentowa Róża',   '🌹', 'legendary', 2, 4320,  60, 'diamond_rose',     25),
   ('golden_sunflower', 'Złoty Słonecznik',  '🌻', 'legendary', 1, 5760,  80, 'golden_sunflower', 15),
-  ('crystal_lotus',    'Kryształowy Lotos', '🪷', 'legendary', 1, 5760, 100, 'crystal_lotus',    10)
+  ('crystal_lotus',    'Kryształowy Lotos', '🪷', 'legendary', 1, 5760, 100, 'crystal_lotus',    10),
+  -- Apex card: the variegated Hawaiian „Ae Ae" banana (Musa × paradisiaca 'Ae Ae'),
+  -- once reserved for Hawaiian royalty — smallest edition (5), highest yield/price,
+  -- so it is the rarest, most expensive and most profitable NFT in the game.
+  ('aeae_banana',      'Królewski Banan Ae Ae', '🍌', 'legendary', 1, 5760, 120, 'aeae_banana', 5)
 ON CONFLICT (species) DO UPDATE SET
   name = EXCLUDED.name, emoji = EXCLUDED.emoji, rarity = EXCLUDED.rarity,
   draw_weight = EXCLUDED.draw_weight, base_grow_minutes = EXCLUDED.base_grow_minutes,
@@ -213,7 +244,8 @@ INSERT INTO public.farm_market (crop_type, base_price, anchor_price, cur_price) 
   ('pineapple',  18, 18, 18),
   ('diamond_rose',     40, 40, 40),
   ('golden_sunflower', 55, 55, 55),
-  ('crystal_lotus',    80, 80, 80)
+  ('crystal_lotus',    80, 80, 80),
+  ('aeae_banana',     120,120,120)
 ON CONFLICT (crop_type) DO UPDATE SET
   base_price   = EXCLUDED.base_price,
   anchor_price = EXCLUDED.base_price,
@@ -530,10 +562,10 @@ BEGIN
         CONTINUE;   -- sold out (race); already excluded via v_picked, try another card
       END IF;
       v_serial := v_minted + 1;
-      -- unique funny name, gender-matched to the plant, by per-gender mint order
+      -- unique funny name from the species' persona pool, by per-pool mint order
       SELECT count(*) INTO v_nft_idx FROM public.farm_nft_instances ni
-       WHERE public.farm_nft_is_female(ni.species) = public.farm_nft_is_female(v_species);
-      v_nft_name := public.farm_nft_name(v_nft_idx, public.farm_nft_is_female(v_species));
+       WHERE public.farm_nft_pool(ni.species) = public.farm_nft_pool(v_species);
+      v_nft_name := public.farm_nft_persona(v_species, v_nft_idx);
       INSERT INTO public.farm_nft_instances (species, serial_no, edition_size, owner_id, acquired_from, nft_name)
       VALUES (v_species, v_serial, v_def.edition_size, v_user, 'lootbox', v_nft_name)
       RETURNING id INTO v_nft_id;
@@ -862,20 +894,22 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── Backfill: (re)name every NFT instance, gender-matched, by per-gender order ──
--- Overwrites existing names so any older (wrong-gender) names are corrected.
--- Deterministic per-gender index keeps names aligned with future count()-based mints.
+-- ── Backfill: (re)name every NFT instance from its persona pool, by per-pool order ──
+-- Overwrites existing names so any older (wrong-pool) names are corrected.
+-- Deterministic per-pool index keeps names aligned with future count()-based mints.
+-- The male/female partitions are unchanged, so existing Slavic names stay stable;
+-- the 'Ae Ae banana indexes independently in its own Hawaiian pool.
 DO $$
 BEGIN
   IF to_regclass('public.farm_nft_instances') IS NULL THEN RETURN; END IF;
   WITH ordered AS (
-    SELECT id, public.farm_nft_is_female(species) AS fem,
-           (row_number() OVER (PARTITION BY public.farm_nft_is_female(species)
+    SELECT id, species,
+           (row_number() OVER (PARTITION BY public.farm_nft_pool(species)
                                ORDER BY acquired_at, id) - 1) AS rn
       FROM public.farm_nft_instances
   )
   UPDATE public.farm_nft_instances n
-     SET nft_name = public.farm_nft_name(o.rn::integer, o.fem)
+     SET nft_name = public.farm_nft_persona(o.species, o.rn::integer)
     FROM ordered o
    WHERE o.id = n.id;
 END $$;

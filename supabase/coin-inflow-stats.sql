@@ -141,6 +141,10 @@ AS $$
       WHERE total_won > 0
       UNION ALL
       SELECT user_id, total_won AS amount, created_at
+      FROM public.plinko_spins
+      WHERE total_won > 0
+      UNION ALL
+      SELECT user_id, total_won AS amount, created_at
       FROM public.mines_spins
       WHERE total_won > 0
       UNION ALL

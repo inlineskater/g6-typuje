@@ -1,0 +1,145 @@
+Lootboxes + NFT collectibles + secondary market
+
+ Context
+
+ The app needs "items that have value." The user wants to sell lootboxes that mint NFTs, where those NFTs then hold/accrue value through scarcity,
+ provenance, and price discovery (user-selected: serial rarity premium, provenance history, price history/floor).
+
+ The codebase is already 80% of the way there and no blockchain is needed — we reuse two existing engines instead of inventing new ones:
+
+ - hero_item_instances / hero_item_defs (supabase/hero-items.sql) are already unique serialized tokens: each instance has owner_id, serial_no,
+ edition_size, acquired_from. Editions are capped. This is an NFT minus the chain.
+ - The Marketplace ("Targowisko") (supabase/marketplace.sql) is already a complete P2P auction/escrow/buy engine where coins transfer buyer→seller. It
+ only lacks a link to item instances.
+
+ The gap to close, in three parts:
+ 1. Lootboxes — a coin-burning RPC that randomly mints a serialized hero-item instance (rarity-weighted, edition-capped).
+ 2. Secondary market — let players list/sell/auction the instances they own (currently the marketplace only trades free-text listings; minted hero
+ items can't be resold P2P).
+ 3. Value surfacing — serial rarity premium, provenance chain, and per-item price history/floor.
+
+ Coin model: lootbox = burn (mirrors purchase_hero_item); resale = transfer (mirrors marketplace).
+
+ ---
+ Part A — Lootboxes (mint NFTs)
+
+ SQL — new file supabase/lootboxes.sql (idempotent)
+
+ Tables:
+ - lootbox_defs(id uuid pk, slug text unique, name text, emoji text default '🎁', price integer >0, description text, is_active boolean default true,
+ created_at) — the box catalog (e.g. „Skrzynka Brązowa" 50, „Srebrna" 200, „Złota" 1000).
+ - lootbox_pool(box_def_id uuid -> lootbox_defs, item_def_id uuid -> hero_item_defs, weight integer >0 default 1, pk(box_def_id, item_def_id)) — which
+ hero-item defs each box can drop and their draw weights. (Higher-tier boxes weight rare/epic/legendary more.)
+ - lootbox_openings(id uuid pk, user_id uuid -> profiles, box_def_id uuid, item_instance_id uuid -> hero_item_instances, price_paid integer,
+ created_at) — history / reveal feed.
+
+ RPC open_lootbox(p_box_slug text) RETURNS json — SECURITY DEFINER SET search_path = public, REVOKE ALL ... ; GRANT EXECUTE TO authenticated (mirror
+ place_pixel grant block). Flow:
+ 1. auth.uid() → not_authenticated; load box def (is_active), box_not_found.
+ 2. SELECT coins ... FOR UPDATE on profile; insufficient_coins; UPDATE profiles SET coins = coins - price.
+ 3. Build eligible pool: pool rows whose def is active AND not sold out (edition_size IS NULL OR (count of existing instances) < edition_size). If
+ empty → raise pool_empty (and refund — though config should prevent this).
+ 4. Weighted random pick using random() over cumulative weight (standard ORDER BY -ln(random())/weight LIMIT 1, or cumulative-sum scan).
+ 5. Assign serial atomically: SELECT ... FROM hero_item_defs WHERE id = chosen FOR UPDATE (serializes concurrent draws of the same def), then
+ serial_no = count(instances of that def) + 1. Re-check cap; if exceeded, re-roll within the eligible pool (loop, bounded).
+ 6. Insert hero_item_instances(item_def_id, owner_id, acquired_from='lootbox', origin_label, serial_no, edition_size).
+ 7. Append a provenance mint row (Part C).
+ 8. Ledger: insert coin_transactions reason 'lootbox_open', plus a row in lootbox_openings.
+ 9. Return { coins, item: { def fields, instance_id, serial_no, edition_size, rarity } } for the client reveal.
+
+ Realtime: ALTER PUBLICATION supabase_realtime ADD TABLE lootbox_openings (guarded) for a live "drops" feed (optional).
+
+ ▎ Reuses existing hero_item_instances shape, so minted NFTs are immediately equippable with their effect_* and visual_effect, show in
+ ▎ my_hero_inventory, render on the Tavern avatar via buildHeroSVG, and roll into leaderboard.net_worth through user_assets_value() — zero extra
+ ▎ wiring for ownership/display.
+
+ Frontend (index.html)
+
+ - New section in the Sklep tab (or a dedicated „🎁 Skrzynki" sub-panel): render lootbox_defs cards with price + odds-by-rarity hint.
+ - loadLootboxes() (query lootbox_defs + lootbox_pool for the odds display), openLootbox(slug) wrapper around sb.rpc('open_lootbox', {...}) (mirror
+ purchaseHeroItem at ~9208), then a reveal animation (CSS box-open → card flip showing emoji, name, rarity color, and #serial/edition via existing
+ heroItemSerialLabel). On success call refreshMeCoins() + reload inventory.
+ - Add lootbox_openings/hero_item_instances to the existing 'shop-db-changes' realtime channel (~10087).
+
+ ---
+ Part B — Secondary market for owned NFTs (resale)
+
+ SQL — extend supabase/marketplace.sql (idempotent ALTER TABLE ... ADD COLUMN IF NOT EXISTS + CREATE OR REPLACE)
+
+ - Add to marketplace_listings: item_instance_id uuid REFERENCES hero_item_instances(id) (nullable — free-text listings keep NULL) and item_def_id
+ uuid (denormalized for the card view).
+ - New RPC list_hero_item(p_instance_id uuid, p_listing_type text, p_price integer, p_duration_hours integer default 72, p_min_increment integer
+ default 10): verify caller owns the instance, it isn't equipped (hero_equipment) and not already listed/trade_locked_until > now(); set
+ trade_locked_until on the instance; insert a listing carrying item_instance_id/item_def_id and the def's emoji/name as title. (Reuses the validation
+ style of create_marketplace_listing.)
+ - Modify buy_marketplace_listing and settle_marketplace_listing: when item_instance_id IS NOT NULL, after crediting the seller, transfer ownership —
+ UPDATE hero_item_instances SET owner_id = buyer, acquired_from = 'marketplace', trade_locked_until = NULL, and append a provenance trade row (Part
+ C). Existing coin-transfer/escrow logic is untouched.
+ - Modify cancel_marketplace_listing: clear trade_locked_until on the instance.
+ - Extend the marketplace_cards view to expose item_instance_id, serial_no, edition_size, rarity, visual_effect (join hero_item_instances +
+ hero_item_defs) so resale cards show the NFT badge.
+
+ Frontend (index.html)
+
+ - In my inventory (hero items panel), add a „Wystaw na sprzedaż / aukcję" button per owned, unequipped instance → modal (price + fixed/auction +
+ duration) → listHeroItem(...) wrapper.
+ - Extend buildMarketplaceCard (~9462) to detect item_instance_id and render the NFT treatment: rarity-colored border, #serial/edition badge,
+ visual_effect chip, provenance + floor (Part C). Reuse existing placeMarketplaceBid / buyMarketplaceListing / settleMarketplaceListing as-is.
+
+ ---
+ Part C — Value surfacing (the three the user picked)
+
+ Serial rarity premium
+
+ - Already have serial_no/edition_size. Surface prominently everywhere (reveal, inventory, resale cards) with the existing heroItemSerialLabel. Add a
+ "low serial" highlight (e.g. #1–#3 gets a ⭐ badge) and sort inventory/listings by serial ascending option.
+
+ Provenance history
+
+ - New table hero_item_provenance(id uuid pk, item_instance_id uuid -> hero_item_instances ON DELETE CASCADE, seq integer, event_type text CHECK in
+ ('mint','lootbox','buy','auction'), from_user_id uuid, to_user_id uuid, price integer, created_at), public SELECT.
+ - Append a row on: lootbox mint (open_lootbox), shop purchase + auction settle (hero-items.sql), and every secondary sale
+ (buy_/settle_marketplace_listing).
+ - View hero_item_provenance_cards (instance_id → ordered chain with nicks). Frontend: an expandable „Historia właścicieli: zmintował X → kupił Y →
+ Ty" on each NFT card.
+
+ Price history / floor
+
+ - View hero_item_market_stats(item_def_id): last_sale (most recent settled instance listing final_price), floor (min price/current_bid among open
+ instance listings for that def), volume (count of settled instance sales), avg_sale. Built purely from marketplace_listings rows where
+ item_instance_id IS NOT NULL.
+ - Frontend: show „Ostatnia sprzedaż / Floor / Wolumen" on resale and inventory cards (small stat row), giving visible price discovery like an NFT
+ collection page.
+
+ economy_stats (supabase/economy-stats.sql)
+
+ - Add 'lootbox_open' to the shop_burned reasons list so box spend shows in burns. Minted NFTs are already valued via hero_items/user_assets_value();
+ optionally upgrade that valuation to prefer last_sale floor when present (nice-to-have, not required).
+
+ ---
+ Files to modify / add
+
+ - New: supabase/lootboxes.sql (Part A), provenance table can live here or in hero-items.sql.
+ - Edit: supabase/marketplace.sql (instance columns, list_hero_item, ownership transfer in buy/settle/cancel, marketplace_cards),
+ supabase/hero-items.sql (provenance append on purchase/auction-settle), supabase/economy-stats.sql (burn reason).
+ - Edit: index.html — lootbox UI + reveal in Sklep tab, "list my NFT" flow, extend buildMarketplaceCard, provenance/floor display, realtime wiring.
+ - Edit: CLAUDE.md — document the lootbox/NFT/secondary-market stack (follow existing per-feature section style).
+
+ Verification
+
+ 1. Run supabase/lootboxes.sql + edited SQL in the Supabase SQL Editor (project ref rjovhmepanwbdgdkvylr); seed 1–2 lootbox_defs + lootbox_pool rows
+ over a few capped hero_item_defs.
+ 2. As a test user: open a box → confirm coins burned, an instance minted with a sequential serial_no, provenance mint row created, reveal shows
+ correct rarity/serial.
+ 3. Open boxes until an edition sells out → confirm it drops from the pool (no serial past edition_size).
+ 4. List that NFT on the marketplace (fixed + auction) → second user buys/wins → confirm owner_id transferred, seller credited (not burned),
+ trade_locked_until cleared, provenance buy/auction row appended, floor/last-sale stats update.
+ 5. Confirm the NFT now renders on the new owner's Tavern avatar (equip it) and appears in leaderboard net worth for the holder.
+ 6. Concurrency: fire two open_lootbox calls on the same near-sold-out def → confirm no duplicate serial_no (def-row FOR UPDATE lock holds).
+
+ Notes / decisions baked in
+
+ - Lootbox draw uses a SECURITY DEFINER RPC with random() (not an Edge Function) — the result isn't client-replayable, so no anti-cheat function is
+ needed; this mirrors purchase_hero_item/place_pixel.
+ - Sold-out editions are excluded from the pool (clean) rather than allowing dupes/refunds.
+ - Lootbox NFTs are full hero items (equippable, with effects/visuals) — giving them utility value on top of collectible value.

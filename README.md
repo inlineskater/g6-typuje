@@ -23,8 +23,8 @@ Fresh database setup:
 1. Create a Supabase project.
 2. In SQL Editor, run `supabase/schema.sql`.
 3. In SQL Editor, run `supabase/poker.sql`.
-4. In SQL Editor, run the optional game/shop/garden/hero/farm SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, `supabase/hero-items.sql` for equipable hero items, and `supabase/farm.sql` for Farma + Skrzynki Farmy. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), `supabase/snake.sql` (Snake), `supabase/invoice-horde.sql` („Najazd Ticketów"), and `supabase/var-patrol.sql` (VAR Patrol). Run `supabase/coin-inflow-stats.sql` after the economy/game SQL files to enable the gross coin inflow card on the Statistics page.
-5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, `supabase/functions/snake-action`, `supabase/functions/invoice-horde-action`, and `supabase/functions/var-patrol-action`.
+4. In SQL Editor, run the optional game/shop/garden/hero/farm SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, `supabase/hero-items.sql` for equipable hero items, `supabase/plinko.sql` for Plinko G6, `supabase/mines.sql` for Miny G6, and `supabase/farm.sql` for Farma + Skrzynki Farmy. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), `supabase/snake.sql` (Snake), `supabase/invoice-horde.sql` („Najazd Ticketów"), and `supabase/var-patrol.sql` (VAR Patrol). Run `supabase/hazard-views.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql` after the economy/game SQL files to enable the casino and gross coin inflow cards on the Statistics page.
+5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/plinko-action`, `supabase/functions/mines-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, `supabase/functions/snake-action`, `supabase/functions/invoice-horde-action`, and `supabase/functions/var-patrol-action`.
 6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
 7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
 
@@ -40,6 +40,18 @@ Existing project Whack-a-Boss rollout:
 1. Paste and run `supabase/whack-boss.sql` in Supabase SQL Editor.
 2. Deploy `supabase/functions/whack-boss-action` with Supabase CLI or from the Supabase dashboard.
 3. Confirm the `pg_cron` schedule exists if weekly prizes should pay automatically after the week closes.
+
+Existing project Miny G6 rollout:
+
+1. Paste and run `supabase/mines.sql` in Supabase SQL Editor.
+2. Re-run `supabase/hazard-views.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql`.
+3. Deploy `supabase/functions/mines-action` with Supabase CLI or from the Supabase dashboard.
+
+Existing project Plinko G6 rollout:
+
+1. Paste and run `supabase/plinko.sql` in Supabase SQL Editor.
+2. Re-run `supabase/hazard-views.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql`.
+3. Deploy `supabase/functions/plinko-action` with Supabase CLI or from the Supabase dashboard.
 
 Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni", Snake, „Najazd Ticketów", VAR Patrol):
 
@@ -62,6 +74,8 @@ Existing project Bug Jumper hard-course rollout:
 - Betting: CPMM pricing; users can only add to one side per market.
 - Resolution: market creator or an `is_admin` profile can resolve a market.
 - Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
+- Plinko G6: authenticated users play solo casino Plinko drops; the Edge Function resolves the path/payout and the browser animates the trusted result.
+- Miny G6: authenticated users play a 5×5 Mines-style casino game with virtual coins; mine positions are generated and held server-side until the round ends.
 - Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
 - Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, Snake, „Najazd Ticketów", and VAR Patrol). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`; VAR Patrol debuts in the week starting June 22, 2026; Najazd Ticketów is forced for the week starting June 29, 2026. Each pays the weekly top 3 100/50/25 coins.
 - Farma: shared 10x4 farm grid with purchasable plots, seed lootboxes, plant cards, crop harvesting, dynamic NPC crop prices, and migrated Ogródek plants. Details and odds are documented in [docs/farma.md](docs/farma.md).

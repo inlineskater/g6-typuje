@@ -253,6 +253,7 @@ AS $$
       -- `crash_spins` is optional until Rocket ships.
       public.hazard_house_net_from_spins(to_regclass('public.slots_spins'), NULL, 10)
         + public.hazard_house_net_from_spins(to_regclass('public.roulette_spins'), 'total_bet', NULL::integer)
+        + public.hazard_house_net_from_spins(to_regclass('public.plinko_spins'), 'bet', NULL::integer)
         + public.hazard_house_net_from_spins(to_regclass('public.mines_spins'), 'bet', NULL::integer)
         + public.hazard_house_net_from_spins(to_regclass('public.crash_spins'), 'total_bet', NULL::integer)
         AS hazard_house_net

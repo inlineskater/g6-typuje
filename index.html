@@ -1466,9 +1466,9 @@
     .casino-chip-250  { --chip-face: #be123c; }
     .casino-chip-500  { --chip-face: #7c3aed; }
     /* ── Unified bet bar (chips + custom amount + ½/×2/MAX) shared by every casino game ── */
-    .bet-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-    .bet-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-    .bet-quick { display: flex; gap: 6px; }
+    .bet-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+    .bet-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 0 1 auto; }
+    .bet-quick { display: flex; gap: 6px; flex: 0 0 auto; }
     .bet-quick-btn {
       height: 40px; min-width: 44px; padding: 0 12px; border-radius: 12px; cursor: pointer;
       border: 2px solid var(--gold-hi); background: rgba(0,0,0,.34); color: #fff;
@@ -1486,11 +1486,20 @@
       font-weight: 800; font-size: 14px; text-align: center; padding: 2px 6px;
       -moz-appearance: textfield;
     }
+    .casino .bet-bar .stake-custom {
+      flex: 0 0 80px; width: 80px; min-width: 80px; max-width: 80px;
+      min-height: 0; margin: 0; font-family: inherit;
+      background: rgba(0,0,0,.34); border-color: var(--gold-hi); color: #fff;
+    }
     .stake-custom::-webkit-outer-spin-button,
     .stake-custom::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .stake-custom:focus { outline: 3px solid var(--gold-hi); outline-offset: 2px; }
+    .stake-custom:focus,
+    .casino .bet-bar .stake-custom:focus {
+      outline: 3px solid var(--gold-hi); outline-offset: 2px; border-color: var(--gold-hi);
+    }
     .stake-custom::placeholder { color: rgba(255,255,255,.5); font-weight: 600; font-size: 12px; }
     .plinko-toolbar .stake-custom { width: 64px; height: 34px; font-size: 12px; }
+    .plinko-toolbar .bet-bar .stake-custom { flex-basis: 64px; width: 64px; min-width: 64px; max-width: 64px; height: 34px; }
 
     /* ── Plinko G6 ── */
     #tab-plinko.casino {
@@ -1767,17 +1776,18 @@
        The board canvas flexes to fill whatever height is left over. */
     @media (min-width: 900px) {
       #tab-plinko main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
-      .plinko-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 10px; }
+      .plinko-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 10px; max-width: 1240px; }
       .plinko-hero { flex: 0 0 auto; margin-bottom: 0; padding: 9px 14px; align-items: center; }
       .plinko-hero .plinko-subtitle { margin: 2px 0 0; font-size: 12px; max-width: 620px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .plinko-title { font-size: 20px; }
       .plinko-title-mark { width: 32px; height: 32px; }
-      .plinko-shell { flex: 1 1 auto; min-height: 0; gap: 14px; align-items: stretch; }
+      .plinko-shell { flex: 1 1 auto; min-height: 0; gap: 14px; align-items: stretch; grid-template-columns: 238px minmax(0, 1fr) 210px; }
       .plinko-controls { align-self: stretch; overflow: auto; padding: 14px; }
       .plinko-controls .plinko-toolbar { gap: 13px; }
       .plinko-toolbar .plinko-segments { min-height: 38px; }
-      .plinko-toolbar .casino-chip { width: 34px; height: 34px; font-size: 12px; border-width: 2px; }
+      .plinko-toolbar .bet-bar .casino-chip { width: 34px; height: 34px; font-size: 12px; border-width: 2px; }
       .plinko-toolbar .bet-quick-btn { height: 34px; min-width: 38px; padding: 0 9px; font-size: 12px; }
+      .plinko-toolbar .bet-bar .stake-custom { height: 34px; flex-basis: 64px; width: 64px; min-width: 64px; max-width: 64px; }
       .plinko-machine { display: flex; flex-direction: column; min-height: 0; padding: 12px; }
       .plinko-stage { flex: 1 1 auto; min-height: 150px; }
       #plinko-canvas { height: 100%; min-height: 0; }
@@ -1837,8 +1847,8 @@
       box-shadow: 0 4px 12px rgba(15,23,42,.06);
     }
     .mines-shell { display: grid; grid-template-columns: minmax(340px, 1fr) 312px; gap: 16px; align-items: start; }
-    @media (max-width: 800px) { .mines-shell { grid-template-columns: 1fr; } }
-    .mines-table, .mines-side {
+    @media (max-width: 899px) { .mines-shell { grid-template-columns: 1fr; } }
+    .mines-table, .mines-controls-panel, .mines-side {
       position: relative; overflow: hidden;
       background:
         linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96)),
@@ -2582,6 +2592,19 @@
        Scoped min-width:900px so the existing mobile layouts are untouched.
        ────────────────────────────────────────────────────────────── */
     @media (min-width: 900px) {
+      .casino .bet-bar { gap: 6px 10px; }
+      .casino .bet-bar .casino-chip {
+        flex: 0 0 38px; width: 38px; height: 38px; border-width: 2px; font-size: 12px;
+      }
+      .casino .bet-bar .bet-quick-btn {
+        height: 36px; min-width: 38px; padding: 0 9px; border-radius: 10px; font-size: 12px;
+      }
+      .casino .bet-bar .stake-custom {
+        flex-basis: 76px; width: 76px; min-width: 76px; max-width: 76px; height: 38px; padding: 2px 6px; margin: 0;
+      }
+      #tab-plinko .plinko-toolbar .bet-bar .casino-chip { flex-basis: 34px; width: 34px; height: 34px; font-size: 12px; }
+      #tab-plinko .plinko-toolbar .bet-bar .stake-custom { flex-basis: 64px; width: 64px; min-width: 64px; max-width: 64px; height: 34px; }
+
       /* ── Poker ──
          No scroll at all: the page-head is fixed, the rules + game columns
          stretch to the viewport row, and the live table is compacted so the
@@ -2609,48 +2632,79 @@
 
       /* ── Mines ── */
       #tab-mines main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
-      #tab-mines .mines-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-      #tab-mines .mines-hero { flex: 0 0 auto; margin-bottom: 10px; }
+      #tab-mines .mines-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; max-width: 1280px; }
+      #tab-mines .mines-hero { flex: 0 0 auto; margin-bottom: 10px; padding: 9px 14px; align-items: center; }
+      #tab-mines .mines-title { font-size: 20px; }
+      #tab-mines .mines-title-mark { width: 32px; height: 32px; }
+      #tab-mines .mines-subtitle { margin: 2px 0 0; font-size: 12px; max-width: 620px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      #tab-mines .mines-hero-pill { min-height: 28px; padding: 4px 8px; font-size: 11px; }
       #tab-mines .mines-shell { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+      #tab-mines .mines-controls-panel,
       #tab-mines .mines-side { overflow: auto; min-height: 0; }
       /* On desktop the play column is height-constrained, so the how-to steps
          and risk hint live in the side panel (see markup) to give the board
          more room. Stack them compactly in the narrow side column. */
       #tab-mines .mines-side .mines-howto { grid-template-columns: 1fr; }
       #tab-mines .mines-side .mines-howto-steps { grid-template-columns: 1fr 1fr; }
-      /* The board flexes to fill the height left over by the controls above it
-         (mirrors how Plinko's canvas absorbs leftover space), staying square.
-         Use a flex gap + zeroed child margins so the leftover height is exact
-         (cumulative margins would otherwise push the board past the panel). */
-      #tab-mines .mines-table { display: flex; flex-direction: column; gap: 10px; overflow: hidden; min-height: 0; }
-      #tab-mines .mines-table > * { margin: 0; }
-      #tab-mines .mines-table > *:not(.mines-board) { flex: 0 0 auto; }
+      #tab-mines .mines-shell { grid-template-columns: 300px minmax(640px, 1fr) 300px; gap: 14px; }
+      #tab-mines .mines-controls-panel { display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-x: hidden; }
+      #tab-mines .mines-table {
+        display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0; padding: 12px;
+      }
+      #tab-mines .mines-controls-panel > * { margin: 0; }
+      #tab-mines .mines-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      #tab-mines .mines-actions .rl-btn { min-height: 38px; min-width: 0; padding: 7px 8px; font-size: 11.5px; white-space: normal; }
+      #tab-mines .mines-status { font-size: 12px; line-height: 1.25; }
+      #tab-mines .mines-control-row { align-items: flex-start; gap: 6px; }
+      #tab-mines .mines-control-row .mines-control-label { flex: 0 0 100%; }
+      #tab-mines .mines-control-row .bet-bar { gap: 6px; }
+      #tab-mines .mines-count-control { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr) 56px; }
+      #tab-mines .mines-count-input { width: 56px; min-height: 36px; margin: 0; padding: 6px; }
+      #tab-mines .mines-stats { grid-template-columns: 1fr 1fr; gap: 7px; }
+      #tab-mines .mines-stat { min-height: 52px; padding: 7px; }
+      #tab-mines .mines-stat span { font-size: 10px; margin-bottom: 2px; }
+      #tab-mines .mines-stat strong { font-size: 15px; }
+      #tab-mines .mines-stat.is-mult strong,
+      #tab-mines .mines-stat.is-payout strong { font-size: 20px; }
       #tab-mines .mines-board {
-        flex: 1 1 0; min-height: 0;
-        width: auto; height: auto; aspect-ratio: 1;
-        max-height: 100%; max-width: min(100%, 560px);
-        align-self: center;
+        flex: 0 1 auto; min-height: 0; width: min(100%, 640px, calc(100dvh - 250px)); height: auto; aspect-ratio: 1;
+        max-width: 640px; max-height: none; gap: 10px; padding: 12px;
       }
 
       /* ── Roulette ── */
       #tab-roulette main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
-      #tab-roulette main > div:first-child { flex: 0 0 auto; margin-bottom: 0; }
-      #tab-roulette .roulette-dock { flex: 0 0 auto; margin-bottom: 0; }
+      #tab-roulette main > div:first-child { flex: 0 0 auto; margin-bottom: 0 !important; align-items: center !important; }
+      #tab-roulette main > div:first-child h2 { font-size: 16px !important; }
+      #tab-roulette main > div:first-child span { max-width: 960px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      #tab-roulette .roulette-dock { flex: 0 0 auto; margin-bottom: 0; padding: 8px 10px; gap: 8px 10px; border-radius: 10px; flex-wrap: nowrap; }
+      #tab-roulette .roulette-dock .bet-bar { flex: 0 1 auto; flex-wrap: nowrap; gap: 6px 8px; }
+      #tab-roulette .roulette-dock-group { gap: 6px; flex: 0 0 auto; }
+      #tab-roulette .roulette-dock .rl-btn { min-height: 36px; padding: 7px 10px; font-size: 12px; border-radius: 9px; }
+      #tab-roulette .roulette-dock .roulette-seat-main { flex: 0 1 auto; white-space: nowrap; }
+      #tab-roulette .roulette-dock .roulette-seat-main span { display: none; }
+      #tab-roulette .roulette-bet-total { margin-left: 0; white-space: nowrap; font-size: 12px; }
       /* Wheel spans the board+band rows so the bets/results band fills the felt
          beside the wheel (previously wasted space) instead of competing with the
          tall wheel column for height and collapsing to 0px below the felt. */
       #tab-roulette .roulette-layout {
         flex: 1 1 auto; min-height: 0; overflow: hidden; margin: 0 auto;
-        padding: 18px 28px 16px; gap: 12px 24px;
+        width: min(1240px, 100%); padding: 14px 24px 14px; gap: 8px 22px;
+        border-width: 10px; border-radius: 28px;
         grid-template-areas: "seats seats" "wheel board" "wheel band";
         grid-template-rows: auto auto minmax(0, 1fr);
       }
+      #tab-roulette .roulette-layout::before { inset: 10px; border-radius: 20px; }
+      #tab-roulette .roulette-live-seats { gap: 6px; }
+      #tab-roulette .roulette-live-seat { width: 132px; min-height: 54px; padding: 7px 8px; gap: 2px; border-width: 1px; }
+      #tab-roulette .roulette-live-seat::before { display: none; }
+      #tab-roulette .roulette-live-seat .roulette-seat-stats { font-size: 10px; }
       #tab-roulette .roulette-wheel-wrap { gap: 12px; align-self: start; }
       #tab-roulette .roulette-table-wrap { align-self: start; }
-      #tab-roulette .roulette-wheel-container { width: clamp(200px, 22vh, 260px); height: clamp(200px, 22vh, 260px); }
+      #tab-roulette .roulette-wheel-container { width: clamp(230px, 27vh, 280px); height: clamp(230px, 27vh, 280px); }
       /* Spin + clear sit side-by-side so the wheel column stays short enough to fit */
       #tab-roulette .roulette-spin-wrap { flex-direction: row; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
-      #tab-roulette .roulette-spin-btn { width: 88px; height: 88px; }
+      #tab-roulette .roulette-spin-btn { width: 78px; height: 78px; font-size: 12px; }
+      #tab-roulette .roulette-out-btn { padding: 7px 5px; }
       #tab-roulette .roulette-felt-band { grid-area: band; align-self: stretch; min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
       #tab-roulette .roulette-felt-band .roulette-panel { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
       #tab-roulette .roulette-felt-band .roulette-bet-list { overflow-y: auto; min-height: 0; }
@@ -2658,20 +2712,42 @@
 
       /* ── Slots ── */
       #tab-slots main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
-      #tab-slots .slots-machine { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: stretch; height: 100%; min-height: 0; max-width: 1120px; margin: 0 auto; }
-      #tab-slots .slots-play { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 0; }
-      #tab-slots .slots-reference { overflow: auto; min-height: 0; padding-right: 6px; }
+      #tab-slots .slots-machine { display: grid; grid-template-columns: 240px minmax(0, 720px) 240px; gap: 26px; align-items: stretch; height: 100%; min-height: 0; max-width: 1240px; margin: 0 auto; }
+      #tab-slots .slots-play { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0; }
+      #tab-slots .slots-play { grid-column: 2; }
+      #tab-slots .slots-play > h2 { order: 1; margin: 0; font-size: 18px !important; }
+      #tab-slots .slots-subtitle { order: 1; margin: 0 0 2px; }
+      #tab-slots .slots-reels { order: 2; gap: 8px; padding: 14px; margin: 4px 0 0; }
+      #tab-slots .slots-reel { width: 112px; height: 336px; }
+      #tab-slots .slots-cell { width: 112px; height: 112px; font-size: 48px; }
+      #tab-slots .slots-cell .g6-sym { font-size: 25px; }
+      #tab-slots .slots-stake {
+        order: 3; margin: 2px 0 0; padding: 8px 10px; border-radius: 10px;
+        background: rgba(7,40,22,.42); border: 1px solid rgba(250,204,21,.2);
+      }
+      #tab-slots .slots-stake .bet-bar { flex-wrap: nowrap; justify-content: center; }
+      #tab-slots .slots-spin-wrap { order: 4; }
+      #tab-slots .slots-spin-btn { min-width: 220px; margin-bottom: 4px; padding: 13px 30px; }
+      #tab-slots .slots-result { order: 5; margin-bottom: 0; }
+      #tab-slots .slots-reference { grid-column: 3; overflow: auto; min-height: 0; padding-right: 6px; }
       #tab-slots .slots-reference .section-title:first-child { margin-top: 0; }
 
       /* ── Crash / Rakieta ── */
       #tab-crash main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
-      #tab-crash .crash-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 8px; max-width: 820px; }
+      #tab-crash .crash-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 8px; max-width: 1120px; }
       #tab-crash .crash-wrap > h2, #tab-crash .crash-subtitle, #tab-crash .crash-history, #tab-crash .crash-controls { flex: 0 0 auto; }
+      #tab-crash .crash-wrap > h2 { margin: 0; font-size: 18px !important; }
       #tab-crash .crash-subtitle { margin: 0; }
-      #tab-crash .crash-controls { margin: 0; }
+      #tab-crash .crash-history { padding: 2px 2px 6px; }
+      #tab-crash .crash-controls { margin: 0; padding: 8px 10px; border-radius: 10px; flex-wrap: nowrap; gap: 8px; }
+      #tab-crash .crash-stake { flex: 1 1 auto; min-width: 0; }
+      #tab-crash .crash-stake .bet-bar { flex-wrap: nowrap; gap: 6px 8px; }
+      #tab-crash .crash-controls .rl-btn { min-height: 38px; padding: 7px 12px; margin-left: 0; flex: 0 0 auto; }
+      #tab-crash #crash-cashout-btn { min-width: 126px; }
       #tab-crash .crash-stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
-      #tab-crash #crash-canvas { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
-      #tab-crash .crash-lower { flex: 0 0 auto; overflow: auto; }
+      #tab-crash #crash-canvas { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; }
+      #tab-crash .crash-lower { flex: 0 0 auto; overflow: auto; max-height: 112px; }
+      #tab-crash .crash-box { padding: 8px 10px; }
     }
 
     /* ── Whack-a-Boss ── */
@@ -5508,7 +5584,7 @@
           <div class="slots-reel"><div class="slots-reel-strip" data-col="2"></div></div>
         </div>
 
-        <div><button class="slots-spin-btn" id="slots-spin-btn">ZAKRĘĆ (<span id="slots-bet-label">10</span> 🪙)</button></div>
+        <div class="slots-spin-wrap"><button class="slots-spin-btn" id="slots-spin-btn">ZAKRĘĆ (<span id="slots-bet-label">10</span> 🪙)</button></div>
         <div id="slots-result" class="slots-result"></div>
         </div>
 
@@ -5663,7 +5739,7 @@
         </div>
 
         <div class="mines-shell">
-          <section class="mines-table">
+          <aside class="mines-controls-panel">
             <div class="mines-actions">
               <button id="mines-start-btn" class="rl-btn is-gold" type="button">Nowa runda</button>
               <button id="mines-cashout-btn" class="rl-btn is-primary" type="button" disabled>WYPŁAĆ</button>
@@ -5708,6 +5784,9 @@
             </div>
 
             <div class="mines-progress" aria-hidden="true"><div id="mines-progress-fill" class="mines-progress-fill"></div></div>
+          </aside>
+
+          <section class="mines-table">
             <div id="mines-board" class="mines-board" aria-label="Plansza Miny G6"></div>
           </section>
 
