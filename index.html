@@ -22901,13 +22901,19 @@ function farmCatalogTable(mdl) {
       const perDay = farmPerDayIncome(d, f.price);
       const ownedNow = f.have || f.mineOwned;
       const nftLevel = f.have ? f.have.level : 1;
-      const stanCell = f.isNft
+      let stanCell = f.isNft
         ? (f.mineOwned
             ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + nftLevel + ' · ' + f.serials)
             : (f.soldOut ? el('span', { className: 'farm-cat-stan sold' }, 'wyprzedane')
                          : el('span', { className: 'farm-cat-stan locked' }, '🔒')))
         : (f.have ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · 🃏 ' + f.have.count + '/' + (2 * f.have.level))
                   : el('span', { className: 'farm-cat-stan locked' }, '🔒'));
+      if (f.isNft) {
+        const btn = el('button', { className: 'farm-mini-btn', style: { padding: '2px 6px', fontSize: '10px' } }, 'Edycja 💎');
+        btn.addEventListener('click', e => { e.stopPropagation(); openFarmNftExplorer(d.species); });
+        const wrapper = el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' } }, stanCell, btn);
+        stanCell = wrapper;
+      }
       const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable' },
         el('td', { className: 'farm-cat-td-name' },
           el('span', { className: 'farm-cat-chev' }, '▸'),
