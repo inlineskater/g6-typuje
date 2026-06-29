@@ -5324,27 +5324,7 @@
     <main>
       <h2 class="page-title">Statystyki 📊</h2>
       <p class="page-sub">Pulpit menedżerski G6: finanse, hazard, wyścigi i historyczne logi. Wybierz panel oznaczony jako <span style="display:inline-block; font-size: 9px; font-weight: 800; color: var(--accent); background: var(--acc-dim); padding: 1px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; vertical-align: middle;">Szczegóły ➔</span>, aby otworzyć pełny ranking.</p>
-      <div id="coin-race-filters-bar" class="fb-sort-bar" style="margin-bottom: 16px; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <span class="fb-sort-label">Okres:</span>
-          <button class="fb-sort-btn active" data-time="all">Wszystko</button>
-          <button class="fb-sort-btn" data-time="30d">30 dni</button>
-          <button class="fb-sort-btn" data-time="7d">7 dni</button>
-          <button class="fb-sort-btn" data-time="3d">3 dni</button>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="fb-sort-label">Gracze:</span>
-            <button class="fb-sort-btn active" data-players="all">Wszyscy</button>
-            <button class="fb-sort-btn" data-players="top5">Top 5</button>
-            <button class="fb-sort-btn" data-players="me">Tylko Ja</button>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="fb-sort-label">Szukaj:</span>
-            <input type="text" id="coin-race-search-input" placeholder="Wpisz nick..." style="width: 120px; height: 26px; padding: 2px 8px; border: 1.5px solid rgba(15,23,42,.15); border-radius: 6px; font-size: 12px; background: var(--card); color: var(--text); font-weight: 600; outline: none; transition: border-color 0.15s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='rgba(15,23,42,.15)'" aria-label="Wyszukaj gracza po nicku">
-          </div>
-        </div>
-      </div>
+
       <div class="ranking-grid">
         <div class="ranking-card ranking-card-wide">
           <div class="ranking-card-title">⚽ Mundial 2026 — statystyki i ranking</div>
@@ -11253,35 +11233,6 @@ function updateCoinRaceCharts() {
   }
 }
 
-(function initCoinRaceFilters() {
-  const filters = document.getElementById('coin-race-filters-bar');
-  if (filters) {
-    filters.querySelectorAll('[data-time]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        filters.querySelectorAll('[data-time]').forEach(x => x.classList.remove('active'));
-        btn.classList.add('active');
-        _coinRaceTimeFilter = btn.dataset.time;
-        updateCoinRaceCharts();
-      });
-    });
-    filters.querySelectorAll('[data-players]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        filters.querySelectorAll('[data-players]').forEach(x => x.classList.remove('active'));
-        btn.classList.add('active');
-        _coinRacePlayerFilter = btn.dataset.players;
-        updateCoinRaceCharts();
-      });
-    });
-    document.getElementById('coin-race-search-input')?.addEventListener('input', () => {
-      updateCoinRaceCharts();
-      const lbWrap = document.getElementById('leaderboard-wrap');
-      if (lbWrap && _lbData) renderLeaderboardTable(lbWrap, _lbData, _lbCalib);
-      const hazWrap = document.getElementById('hazardista-wrap');
-      if (hazWrap && _hazardistaData) renderHazardista(hazWrap, _hazardistaData);
-    });
-  }
-})();
-
 // Switch the coin-race between cash ('coins') and net worth ('net') by pointing
 // each series' active `bal` at balCash/balNet, then recomputing bounds.
 function applyCoinRaceMode(mode) {
@@ -11302,6 +11253,86 @@ function applyCoinRaceMode(mode) {
   _coinRaceBounds = { tMin, tMax, yLo: balMin - padV, yHi: balMax + padV };
 }
 
+let _coinRaceSearchQuery = '';
+
+function getFilteredRaceData(mode) {
+  const tMax = Date.now();
+  let tMin = Infinity;
+  if (_coinRaceTimeFilter === '3d') {
+    tMin = tMax - 3 * 24 * 3600 * 1000;
+  } else if (_coinRaceTimeFilter === '7d') {
+    tMin = tMax - 7 * 24 * 3600 * 1000;
+  } else if (_coinRaceTimeFilter === '30d') {
+    tMin = tMax - 30 * 24 * 3600 * 1000;
+  } else {
+    _coinRaceRaw.forEach(s => {
+      if (s.points.length) tMin = Math.min(tMin, s.points[0].ts);
+    });
+  }
+  if (!isFinite(tMin) || tMin >= tMax) tMin = tMax - 86400000;
+
+  // Filter players
+  let filteredRaw = [..._coinRaceRaw];
+  const query = (_coinRaceSearchQuery || '').trim().toLowerCase();
+  if (query) {
+    filteredRaw = filteredRaw.filter(s => s.nick.toLowerCase().includes(query));
+  } else {
+    if (_coinRacePlayerFilter === 'me') {
+      filteredRaw = filteredRaw.filter(s => s.userId === me?.id);
+    } else if (_coinRacePlayerFilter === 'top5') {
+      const sorted = [..._coinRaceRaw].sort((a, b) => {
+        const valA = a.points[a.points.length - 1][mode === 'net' ? 'balNet' : 'balCash'] || 0;
+        const valB = b.points[b.points.length - 1][mode === 'net' ? 'balNet' : 'balCash'] || 0;
+        return valB - valA;
+      });
+      const top5 = sorted.slice(0, 5);
+      if (me && !top5.some(s => s.userId === me.id)) {
+        const mySeries = _coinRaceRaw.find(s => s.userId === me.id);
+        if (mySeries) top5.push(mySeries);
+      }
+      filteredRaw = top5;
+    }
+  }
+
+  // Construct series points for the active mode
+  const series = [];
+  filteredRaw.forEach(s => {
+    const pts = [];
+    const field = mode === 'net' ? 'balNet' : 'balCash';
+
+    if (s.points.length && s.points[0].ts < tMin) {
+      pts.push({ ts: tMin, bal: _interpolateField(s.points, tMin, field) });
+    }
+    s.points.forEach(pt => {
+      if (pt.ts >= tMin && pt.ts <= tMax) {
+        pts.push({ ts: pt.ts, bal: pt[field] });
+      }
+    });
+    if (s.points.length) {
+      const last = s.points[s.points.length - 1];
+      pts.push({ ts: tMax, bal: last[field] });
+    }
+
+    if (pts.length >= 2) {
+      series.push({ userId: s.userId, nick: s.nick, color: s.color, points: pts });
+    }
+  });
+
+  // Calculate bounds
+  let yLo = Infinity, yHi = -Infinity;
+  series.forEach(s => {
+    s.points.forEach(pt => {
+      yLo = Math.min(yLo, pt.bal);
+      yHi = Math.max(yHi, pt.bal);
+    });
+  });
+  if (!isFinite(yLo)) { yLo = 0; yHi = 2000; }
+  const pad = Math.max(50, (yHi - yLo) * 0.08);
+  const bounds = { tMin, tMax, yLo: yLo - pad, yHi: yHi + pad };
+
+  return { series, bounds };
+}
+
 // Larger coin-race view for the ranking detail modal: big chart, replay button,
 // and a legend sorted by current balance.
 function renderCoinRaceDetail(container) {
@@ -11309,40 +11340,87 @@ function renderCoinRaceDetail(container) {
     container.append(el('p', { style: { color: 'var(--muted)' } }, 'Brak danych.'));
     return;
   }
-  const canvas = el('canvas', { className: 'coin-race-detail-canvas' });
-  const replayBtn = el('button', { className: 'btn-ghost' }, '▶ Odtwórz ponownie');
-  replayBtn.addEventListener('click', () => animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, { showLabels: true }));
 
+  const canvas = el('canvas', { className: 'coin-race-detail-canvas' });
+  const replayBtn = el('button', { className: 'btn-ghost', style: { marginTop: '8px' } }, '▶ Odtwórz ponownie');
   const legend = el('div', { className: 'coin-race-legend' });
-  const renderLegend = () => {
-    const ranked = [..._coinRaceSeries].sort((a, b) => b.points[b.points.length - 1].bal - a.points[a.points.length - 1].bal);
+
+  // Function to calculate and redraw
+  const redraw = () => {
+    const { series, bounds } = getFilteredRaceData(_coinRaceMode);
+    
+    // Sort legend by current balance
+    const ranked = [...series].sort((a, b) => b.points[b.points.length - 1].bal - a.points[a.points.length - 1].bal);
     legend.replaceChildren(...ranked.map(s => el('div', { className: 'coin-race-legend-item' },
       el('span', { className: 'coin-race-legend-swatch', style: { background: s.color } }),
       s.nick + ' · ' + fmtNum(Math.round(s.points[s.points.length - 1].bal)) + ' 🪙'
     )));
+
+    if (series.length) {
+      playCoinRace(canvas, { showLabels: true, series, bounds });
+    } else {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      legend.replaceChildren(el('p', { style: { color: 'var(--muted)', padding: '12px' } }, 'Brak danych dla wybranych filtrów.'));
+    }
   };
 
-  const modeBtn = (key, label) => {
-    const b = el('button', { className: 'fb-sort-btn' + (_coinRaceMode === key ? ' active' : '') }, label);
-    b.addEventListener('click', () => {
-      if (_coinRaceMode === key) return;
-      applyCoinRaceMode(key);
-      modeBar.querySelectorAll('.fb-sort-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      renderLegend();
-      animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, { showLabels: true });
-    });
-    return b;
-  };
-  const modeBar = el('div', { className: 'fb-sort-bar' },
-    el('span', { className: 'fb-sort-label' }, 'Pokaż:'),
-    modeBtn('coins', '🪙 Gotówka'),
-    modeBtn('net', '💎 Net Worth')
+  replayBtn.addEventListener('click', () => {
+    const { series, bounds } = getFilteredRaceData(_coinRaceMode);
+    if (series.length) {
+      animateCoinRace(canvas, series, bounds, { showLabels: true });
+    }
+  });
+
+  // Construct filters elements
+  const filterBar = el('div', { className: 'fb-sort-bar', style: { marginBottom: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--surface)', borderRadius: '12px' } },
+    el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
+      el('span', { className: 'fb-sort-label' }, 'Okres:'),
+      ...['all', '30d', '7d', '3d'].map(time => {
+        const label = time === 'all' ? 'Wszystko' : time === '30d' ? '30 dni' : time === '7d' ? '7 dni' : '3 dni';
+        const btn = el('button', { className: 'fb-sort-btn' + (_coinRaceTimeFilter === time ? ' active' : '') }, label);
+        btn.addEventListener('click', () => {
+          filterBar.querySelectorAll('[data-time]').forEach(x => x.classList.remove('active'));
+          btn.classList.add('active');
+          _coinRaceTimeFilter = time;
+          redraw();
+        });
+        btn.dataset.time = time;
+        return btn;
+      })
+    ),
+    el('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' } },
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+        el('span', { className: 'fb-sort-label' }, 'Gracze:'),
+        ...['all', 'top5', 'me'].map(players => {
+          const label = players === 'all' ? 'Wszyscy' : players === 'top5' ? 'Top 5' : 'Tylko Ja';
+          const btn = el('button', { className: 'fb-sort-btn' + (_coinRacePlayerFilter === players ? ' active' : '') }, label);
+          btn.addEventListener('click', () => {
+            filterBar.querySelectorAll('[data-players]').forEach(x => x.classList.remove('active'));
+            btn.classList.add('active');
+            _coinRacePlayerFilter = players;
+            redraw();
+          });
+          btn.dataset.players = players;
+          return btn;
+        })
+      ),
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+        el('span', { className: 'fb-sort-label' }, 'Szukaj:'),
+        (() => {
+          const inp = el('input', { type: 'text', placeholder: 'Wpisz nick...', value: _coinRaceSearchQuery, style: { width: '120px', height: '26px', padding: '2px 8px', border: '1.5px solid rgba(15,23,42,.15)', borderRadius: '6px', fontSize: '12px', background: 'var(--card)', color: 'var(--text)', fontWeight: 600, outline: 'none' } });
+          inp.addEventListener('input', () => {
+            _coinRaceSearchQuery = inp.value;
+            redraw();
+          });
+          return inp;
+        })()
+      )
+    )
   );
 
-  renderLegend();
-  container.append(modeBar, replayBtn, canvas, legend);
-  playCoinRace(canvas, { showLabels: true });
+  container.append(filterBar, replayBtn, canvas, legend);
+  redraw();
 }
 
 // ── Ranking Detail Modal ──────────────────────────────────────────────────
@@ -11375,11 +11453,17 @@ function renderCoinRaceDetail(container) {
     } else if (detail === 'coin-race-cash') {
       title.textContent = '📈 Wyścig gotówki — stan gotówki w czasie';
       _coinRaceMode = 'coins';
+      _coinRaceTimeFilter = 'all';
+      _coinRacePlayerFilter = 'all';
+      _coinRaceSearchQuery = '';
       applyCoinRaceMode('coins');
       renderCoinRaceDetail(body);
     } else if (detail === 'coin-race-net') {
       title.textContent = '📈 Wyścig Net Worth — stan majątku w czasie';
       _coinRaceMode = 'net';
+      _coinRaceTimeFilter = 'all';
+      _coinRacePlayerFilter = 'all';
+      _coinRaceSearchQuery = '';
       applyCoinRaceMode('net');
       renderCoinRaceDetail(body);
     } else if (detail === 'economy') {
