@@ -22901,9 +22901,12 @@ function farmCatalogTable(mdl) {
       const perDay = farmPerDayIncome(d, f.price);
       const ownedNow = f.have || f.mineOwned;
       const stanCell = f.isNft
-        ? (f.mineOwned ? el('span', { className: 'farm-cat-stan owned' }, '✅ ' + f.serials)
-                       : (f.soldOut ? el('span', { className: 'farm-cat-stan sold' }, 'wyprzedane')
-                                    : el('span', { className: 'farm-cat-stan locked' }, '🔒')))
+        ? (f.mineOwned
+            ? (f.have
+                ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · ' + f.serials)
+                : el('span', { className: 'farm-cat-stan owned' }, '✅ ' + f.serials))
+            : (f.soldOut ? el('span', { className: 'farm-cat-stan sold' }, 'wyprzedane')
+                         : el('span', { className: 'farm-cat-stan locked' }, '🔒')))
         : (f.have ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · 🃏 ' + f.have.count + '/' + (2 * f.have.level))
                   : el('span', { className: 'farm-cat-stan locked' }, '🔒'));
       const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable' },
@@ -22918,20 +22921,16 @@ function farmCatalogTable(mdl) {
         el('td', {}, f.price != null ? (f.price + ' 🪙') : '—'),
         el('td', { className: 'farm-cat-perday' }, perDay != null ? ('≈ ' + perDay + ' 🪙') : '—'),
         el('td', {}, stanCell));
+      const detailTr = el('tr', { className: 'farm-cat-detail-row hidden' },
+        el('td', { className: 'farm-cat-detail-cell', colSpan: 7 }, farmCardLevelTable(d, f.price)));
       if (f.isNft) {
-        // NFT rows open the edition explorer (all serials, owners, price history).
-        mainTr.title = 'Kliknij, aby zobaczyć całą edycję, właścicieli i historię';
-        mainTr.addEventListener('click', () => openFarmNftExplorer(d.species));
-        tbody.append(mainTr);
-      } else {
-        const detailTr = el('tr', { className: 'farm-cat-detail-row hidden' },
-          el('td', { className: 'farm-cat-detail-cell', colSpan: 7 }, farmCardLevelTable(d, f.price)));
-        mainTr.addEventListener('click', () => {
-          const nowHidden = detailTr.classList.toggle('hidden');
-          mainTr.classList.toggle('expanded', !nowHidden);
-        });
-        tbody.append(mainTr, detailTr);
+        mainTr.title = 'Kliknij, aby rozwinąć poziomy';
       }
+      mainTr.addEventListener('click', () => {
+        const nowHidden = detailTr.classList.toggle('hidden');
+        mainTr.classList.toggle('expanded', !nowHidden);
+      });
+      tbody.append(mainTr, detailTr);
     });
   });
   return el('div', { className: 'farm-cat-table-wrap' },
