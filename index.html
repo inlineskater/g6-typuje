@@ -6914,6 +6914,7 @@ let crashExplodedNo = null;     // last crashed round_no we already animated
 let crashExplodeStart = 0;      // local ts the explosion animation began (0 = none)
 let crashExplodeMult = 1;       // crash_point to freeze the display at during explosion
 let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
+let crashCashoutPending = null; // optimistically-locked cash-out multiplier (null = none)
 let crashRunRoundNo = null;     // round_no whose flight clock we've already synced (sync once → smooth)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 10s.
@@ -13660,18 +13661,25 @@ async function crashClearBet() {
 
 async function crashCashOut() {
   if (crashBusy || !crashState || !crashState.canCashout) return;
-  setCrashBusy(true);
   const m = crashDisplayMult; // the value on the WYPŁAĆ button at click time
+  // Optimistically lock it in NOW so the tap feels instant — flip the button + big readout
+  // to a green „✓ x1.50" this frame, before the server round-trip returns. The server
+  // response below is authoritative and reconciles (a rare reject just reverts to truth).
+  if (crashState.myBet) { crashState.myBet.status = 'cashed'; crashState.myBet.cashed_multiplier = m; }
+  crashState.canCashout = false; // no double-submit while the request is in flight
+  crashCashoutPending = m;
+  setCrashBusy(true);
   updateCrashButtons(crashState.round.status, m);
   try {
     const data = await invokeCrash({ action: 'cash_out', atMultiplier: m });
+    crashCashoutPending = null;
     if (data.cashedOut) showToast(`Wypłacono x${data.cashedOut.multiplier.toFixed(2)} → +${data.cashedOut.won} 🪙`);
     else if (data.notice) showToast(data.notice);
     // The payout is authoritative; the surrounding state may be a bare outcome if the
     // server's lock-free state read fell back — refresh from the server if so.
     if (data.round) applyCrashState(data);
     else loadCrashState(false);
-  } catch (e) { showToast(e.message); loadCrashState(false); }
+  } catch (e) { crashCashoutPending = null; showToast(e.message); loadCrashState(false); }
   finally { setCrashBusy(false); }
 }
 
@@ -13746,10 +13754,19 @@ function crashTick() {
   if (r.status === 'running') {
     const elapsed = crashElapsedBaseMs + (Date.now() - crashPhaseStartLocal);
     displayMult = Math.floor(Math.exp(CRASH_GROWTH * elapsed) * 100) / 100;
-    drawCrashScene('running', elapsed, displayMult, false);
-    multEl.textContent = 'x' + displayMult.toFixed(2);
-    multEl.className = 'crash-multiplier' + (crashState.myBet && crashState.myBet.status === 'cashed' ? ' is-cashed' : '');
-    statusEl.textContent = `Leci! • ${nPlayers} ${crashPlayersLabel(nPlayers)}`;
+    drawCrashScene('running', elapsed, displayMult, false); // curve keeps climbing live
+    if (crashState.myBet && crashState.myBet.status === 'cashed') {
+      // We've locked in — show OUR result (green ✓), not the climbing round number, so it's
+      // unambiguous that the tap registered and we're no longer exposed to the crash.
+      const lk = crashState.myBet.cashed_multiplier ?? crashCashoutPending ?? displayMult;
+      multEl.textContent = '✓ x' + Number(lk).toFixed(2);
+      multEl.className = 'crash-multiplier is-cashed';
+      statusEl.textContent = `Wypłacono x${Number(lk).toFixed(2)} • leci dalej…`;
+    } else {
+      multEl.textContent = 'x' + displayMult.toFixed(2);
+      multEl.className = 'crash-multiplier';
+      statusEl.textContent = `Leci! • ${nPlayers} ${crashPlayersLabel(nPlayers)}`;
+    }
   } else if (r.status === 'crashed') {
     displayMult = Number(r.crash_point || crashExplodeMult || 1);
     drawCrashScene('crashed', 0, displayMult, exploding);

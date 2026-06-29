@@ -16,10 +16,11 @@ const corsHeaders = {
 const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 10, idle_timeout: 20 });
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
-const BET_WINDOW_MS = 5000;     // betting window per round
-const RESULT_PAUSE_MS = 3000;   // crashed → next betting round pause
+const BET_WINDOW_MS = 3000;     // betting window per round
+const RESULT_PAUSE_MS = 2000;   // crashed → next betting round pause
 const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
+const CASHOUT_GRACE_MS = 700;   // forgive network latency: honor an in-time tap that ARRIVES this late
 const CRASH_STAKES = [5, 10, 25, 50, 100, 250];
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 10 s.
@@ -440,14 +441,30 @@ async function cashOut(userId, clientMultiplier) {
       select extract(epoch from (now() - ${round.started_at}::timestamptz)) * 1000 as ms,
              (now() >= ${sec.crash_at}::timestamptz) as crashed`;
     const serverM = multAt(Number(ms));
-    // Keep BOTH guards: crash_at (timestamp truth) OR serverM>=crash_point (rounding edge).
-    if (crashed || serverM >= Number(sec.crash_point)) return { notice: "Za późno! 💥" };
-
-    // Pay what the player SAW on the button (client multiplier), capped at the server's
-    // authoritative value so the display matches the payout but nobody can over-claim.
-    let mult = floor2(serverM);
+    const cp = Number(sec.crash_point);
     const clientM = Number(clientMultiplier);
-    if (Number.isFinite(clientM) && clientM >= 1) mult = Math.max(1, Math.min(mult, floor2(clientM)));
+    const hasClient = Number.isFinite(clientM) && clientM >= 1;
+    const clientFloor = hasClient ? floor2(clientM) : 0;
+
+    let mult;
+    if (!crashed && serverM < cp) {
+      // Still flying on the server clock → pay what they saw on the button, capped at the
+      // server's authoritative value so the display matches the payout but nobody over-claims.
+      mult = floor2(serverM);
+      if (hasClient) mult = Math.max(1, Math.min(mult, clientFloor));
+    } else {
+      // The request crossed the hidden crash instant IN FLIGHT. Forgive bounded network
+      // latency: if the player committed (clientFloor) strictly BELOW the crash point they
+      // tapped in time even though the packet only ARRIVED a hop late → honor exactly what
+      // they saw. Not exploitable — crash_point is disclosed only when resolveRound busts
+      // this bet in the same txn, so a still-'active' bet here means cp was never revealed.
+      const lateMs = Number(ms) - durationFor(cp);
+      if (hasClient && clientFloor < cp && lateMs <= CASHOUT_GRACE_MS) {
+        mult = clientFloor;
+      } else {
+        return { notice: "Za późno! 💥" };
+      }
+    }
     // Hero payout_bonus hook would apply here for an effect_game='crash' item (none exist yet).
     const won = Math.floor(Number(bet.amount) * mult);
     await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
