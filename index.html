@@ -23456,33 +23456,20 @@ function buildGardenAdvisorTable(container) {
   const growList = [];
   const upgradeList = [];
 
-  myNft.forEach(n => {
-    const def = fmDefs.get(n.species);
-    if (!def) return;
-    const mkt = fmMarket.get(def.crop_type);
-    const price = mkt ? +mkt.cur_price : 0;
-    
-    const yieldNow = def.base_yield;
-    const growNow = def.base_grow_minutes;
-    const days = growNow / 1440;
-    const coinsPerDay = Math.round((yieldNow * price) / days);
-
-    growList.push({
-      emoji: def.emoji,
-      name: (n.nft_name || def.name) + ' (NFT)',
-      levelDisplay: '#' + n.serial_no,
-      coinsPerDay,
-      status: 'Zasadź (NFT)',
-      statusClass: 'farm-rar-legendary'
-    });
+  const uniqueOwnedSpecies = new Map();
+  fmCollection.forEach(card => uniqueOwnedSpecies.set(card.species, card));
+  fmNft.forEach(n => {
+    if (n.owner_id === me?.id && !uniqueOwnedSpecies.has(n.species)) {
+      uniqueOwnedSpecies.set(n.species, { species: n.species, level: 1, count: 0 });
+    }
   });
 
-  fmCollection.forEach(card => {
+  uniqueOwnedSpecies.forEach(card => {
     const def = fmDefs.get(card.species);
     if (!def) return;
-    if (def.edition_size != null) return;
 
     const level = card.level;
+    const isNft = def.edition_size != null;
     const mkt = fmMarket.get(def.crop_type);
     const price = mkt ? +mkt.cur_price : 0;
     
@@ -23496,45 +23483,47 @@ function buildGardenAdvisorTable(container) {
       name: def.name,
       levelDisplay: 'Lvl ' + level,
       coinsPerDay,
-      status: 'Zasadź',
-      statusClass: 'farm-rar-common'
+      status: isNft ? 'Zasadź (NFT)' : 'Zasadź',
+      statusClass: isNft ? 'farm-rar-legendary' : 'farm-rar-common'
     });
 
-    const yieldNext = Math.round(def.base_yield * (1 + level * 0.5));
-    const growNext = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level));
-    const daysNext = growNext / 1440;
-    const coinsPerDayNext = Math.round((yieldNext * price) / daysNext);
-    const profitDelta = coinsPerDayNext - coinsPerDay;
+    if (level < 5) {
+      const yieldNext = Math.round(def.base_yield * (1 + level * 0.5));
+      const growNext = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level));
+      const daysNext = growNext / 1440;
+      const coinsPerDayNext = Math.round((yieldNext * price) / daysNext);
+      const profitDelta = coinsPerDayNext - coinsPerDay;
 
-    const dupesNeeded = 2 * level;
-    const coinCost = 50 * level * level;
-    const haveEnoughDupes = card.count >= dupesNeeded;
-    const canUpgrade = haveEnoughDupes && (me?.coins || 0) >= coinCost;
+      const dupesNeeded = 2 * level;
+      const coinCost = 50 * level * level;
+      const haveEnoughDupes = card.count >= dupesNeeded;
+      const canUpgrade = haveEnoughDupes && (me?.coins || 0) >= coinCost;
 
-    let status = '';
-    let statusClass = '';
-    if (canUpgrade) {
-      status = '⬆️ Ulepsz!';
-      statusClass = 'farm-rar-rare';
-    } else if (haveEnoughDupes) {
-      status = 'Brak monet';
-      statusClass = 'farm-rar-epic';
-    } else {
-      status = 'Brak kart';
-      statusClass = 'farm-rar-common';
+      let status = '';
+      let statusClass = '';
+      if (canUpgrade) {
+        status = '⬆️ Ulepsz!';
+        statusClass = 'farm-rar-rare';
+      } else if (haveEnoughDupes) {
+        status = 'Brak monet';
+        statusClass = 'farm-rar-epic';
+      } else {
+        status = 'Brak kart';
+        statusClass = 'farm-rar-common';
+      }
+
+      upgradeList.push({
+        emoji: def.emoji,
+        name: def.name,
+        transition: `Lvl ${level} ➔ ${level + 1}`,
+        profitDelta,
+        requirements: `${coinCost} 🪙 + ${card.count}/${dupesNeeded}`,
+        haveEnoughDupes,
+        canUpgrade,
+        status,
+        statusClass
+      });
     }
-
-    upgradeList.push({
-      emoji: def.emoji,
-      name: def.name,
-      transition: `Lvl ${level} ➔ ${level + 1}`,
-      profitDelta,
-      requirements: `${coinCost} 🪙 + ${card.count}/${dupesNeeded}`,
-      haveEnoughDupes,
-      canUpgrade,
-      status,
-      statusClass
-    });
   });
 
   growList.sort((a, b) => b.coinsPerDay - a.coinsPerDay);
