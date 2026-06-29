@@ -23461,18 +23461,8 @@ function buildGardenAdvisorTable(container) {
     return;
   }
 
-  const table = el('table', { className: 'lb-table-compact', style: { width: '100%', marginTop: '8px' } });
-  
-  const trHead = el('tr', { style: { borderBottom: '2px solid var(--border)', fontWeight: 'bold', color: 'var(--muted)' } },
-    el('th', { style: { textAlign: 'left', padding: '6px' } }, 'Roślina'),
-    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Poziom'),
-    el('th', { style: { textAlign: 'right', padding: '6px' } }, 'Zysk/Doba'),
-    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Ulepszenie'),
-    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Rekomendacja')
-  );
-  table.append(trHead);
-
-  const rows = [];
+  const growList = [];
+  const upgradeList = [];
 
   myNft.forEach(n => {
     const def = fmDefs.get(n.species);
@@ -23485,16 +23475,13 @@ function buildGardenAdvisorTable(container) {
     const days = growNow / 1440;
     const coinsPerDay = Math.round((yieldNow * price) / days);
 
-    rows.push({
-      isNft: true,
+    growList.push({
       emoji: def.emoji,
       name: (n.nft_name || def.name) + ' (NFT)',
       levelDisplay: '#' + n.serial_no,
       coinsPerDay,
-      upgradeDisplay: 'N/A',
-      canUpgrade: false,
-      advice: '🌱 Zasadź (Super Zysk)',
-      rarity: 'legendary'
+      status: 'NFT (Pasywny zysk)',
+      statusClass: 'farm-rar-legendary'
     });
   });
 
@@ -23511,61 +23498,113 @@ function buildGardenAdvisorTable(container) {
     const days = growNow / 1440;
     const coinsPerDay = Math.round((yieldNow * price) / days);
 
+    growList.push({
+      emoji: def.emoji,
+      name: def.name,
+      levelDisplay: 'Lvl ' + level,
+      coinsPerDay,
+      status: 'Zasadź',
+      statusClass: 'farm-rar-common'
+    });
+
+    const yieldNext = Math.round(def.base_yield * (1 + level * 0.5));
+    const growNext = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level));
+    const daysNext = growNext / 1440;
+    const coinsPerDayNext = Math.round((yieldNext * price) / daysNext);
+    const profitDelta = coinsPerDayNext - coinsPerDay;
+
     const dupesNeeded = 2 * level;
     const coinCost = 50 * level * level;
     const haveEnoughDupes = card.count >= dupesNeeded;
     const canUpgrade = haveEnoughDupes && (me?.coins || 0) >= coinCost;
 
-    let advice = '';
-    let rarity = '';
+    let status = '';
+    let statusClass = '';
     if (canUpgrade) {
-      advice = '⬆️ Ulepsz teraz!';
-      rarity = 'rare';
+      status = '⬆️ Ulepsz!';
+      statusClass = 'farm-rar-rare';
     } else if (haveEnoughDupes) {
-      advice = `🪙 Zbierz ${coinCost} 🪙`;
-      rarity = 'epic';
+      status = 'Brak monet';
+      statusClass = 'farm-rar-epic';
     } else {
-      const remaining = dupesNeeded - card.count;
-      advice = `📦 Zdobądź ${remaining} dupl.`;
-      rarity = 'common';
+      status = 'Brak kart';
+      statusClass = 'farm-rar-common';
     }
 
-    rows.push({
-      isNft: false,
+    upgradeList.push({
       emoji: def.emoji,
       name: def.name,
-      levelDisplay: 'Lvl ' + level,
-      coinsPerDay,
-      upgradeDisplay: haveEnoughDupes ? `${coinCost} 🪙` : `${card.count}/${dupesNeeded} szt.`,
+      transition: `Lvl ${level} ➔ ${level + 1}`,
+      profitDelta,
+      requirements: `${coinCost} 🪙 + ${card.count}/${dupesNeeded}`,
+      haveEnoughDupes,
       canUpgrade,
-      advice,
-      rarity
+      status,
+      statusClass
     });
   });
 
-  rows.sort((a, b) => {
+  growList.sort((a, b) => b.coinsPerDay - a.coinsPerDay);
+  const topGrow = growList.slice(0, 5);
+
+  upgradeList.sort((a, b) => {
     if (a.canUpgrade && !b.canUpgrade) return -1;
     if (!a.canUpgrade && b.canUpgrade) return 1;
-    return b.coinsPerDay - a.coinsPerDay;
+    return b.profitDelta - a.profitDelta;
   });
+  const topUpgrade = upgradeList.slice(0, 5);
 
-  rows.forEach(r => {
-    const tr = el('tr', { style: { borderBottom: '1px solid var(--border)' } },
+  container.append(el('div', { style: { fontWeight: 'bold', fontSize: '13px', marginTop: '14px', marginBottom: '6px', color: 'var(--text)' } }, '🌱 Top 5: Najbardziej opłacalne rośliny do uprawy'));
+  
+  const tableGrow = el('table', { className: 'lb-table-compact', style: { width: '100%', marginBottom: '16px' } });
+  tableGrow.append(el('tr', { style: { borderBottom: '2px solid var(--border)', fontWeight: 'bold', color: 'var(--muted)' } },
+    el('th', { style: { textAlign: 'left', padding: '6px' } }, 'Roślina'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Poziom'),
+    el('th', { style: { textAlign: 'right', padding: '6px' } }, 'Zysk/Doba'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Status')
+  ));
+
+  topGrow.forEach(r => {
+    tableGrow.append(el('tr', { style: { borderBottom: '1px solid var(--border)' } },
       el('td', { style: { padding: '6px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px' } },
         farmIcon(r.emoji),
         el('span', { style: { fontWeight: '600' } }, r.name)
       ),
       el('td', { style: { padding: '6px', textAlign: 'center', color: 'var(--muted)' } }, r.levelDisplay),
       el('td', { style: { padding: '6px', textAlign: 'right', fontWeight: 'bold' } }, r.coinsPerDay + ' 🪙'),
-      el('td', { style: { padding: '6px', textAlign: 'center', fontSize: '11px', color: 'var(--muted)' } }, r.upgradeDisplay),
       el('td', { style: { padding: '6px', textAlign: 'center' } },
-        el('span', { className: 'fcc-rar farm-rar-' + r.rarity, style: { fontWeight: '750', fontSize: '9px', padding: '3px 8px', minWidth: '80px', display: 'inline-block' } }, r.advice)
+        el('span', { className: 'fcc-rar ' + r.statusClass, style: { fontWeight: '750', fontSize: '9px', padding: '2px 6px', minWidth: '70px', display: 'inline-block' } }, r.status)
       )
-    );
-    table.append(tr);
+    ));
   });
+  container.append(tableGrow);
 
-  container.append(table);
+  container.append(el('div', { style: { fontWeight: 'bold', fontSize: '13px', marginTop: '10px', marginBottom: '6px', color: 'var(--text)' } }, '⚡ Top 5: Najlepsze ulepszenia kart (Najwyższy wzrost zysku)'));
+
+  const tableUpgrade = el('table', { className: 'lb-table-compact', style: { width: '100%', marginBottom: '12px' } });
+  tableUpgrade.append(el('tr', { style: { borderBottom: '2px solid var(--border)', fontWeight: 'bold', color: 'var(--muted)' } },
+    el('th', { style: { textAlign: 'left', padding: '6px' } }, 'Roślina'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Ulepszenie'),
+    el('th', { style: { textAlign: 'right', padding: '6px' } }, 'Wzrost zysku'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Wymagania'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Status')
+  ));
+
+  topUpgrade.forEach(r => {
+    tableUpgrade.append(el('tr', { style: { borderBottom: '1px solid var(--border)' } },
+      el('td', { style: { padding: '6px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px' } },
+        farmIcon(r.emoji),
+        el('span', { style: { fontWeight: '600' } }, r.name)
+      ),
+      el('td', { style: { padding: '6px', textAlign: 'center', color: 'var(--muted)' } }, r.transition),
+      el('td', { style: { padding: '6px', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' } }, `+${r.profitDelta} 🪙/d`),
+      el('td', { style: { padding: '6px', textAlign: 'center', fontSize: '11px', color: 'var(--muted)' } }, r.requirements),
+      el('td', { style: { padding: '6px', textAlign: 'center' } },
+        el('span', { className: 'fcc-rar ' + r.statusClass, style: { fontWeight: '750', fontSize: '9px', padding: '2px 6px', minWidth: '75px', display: 'inline-block' } }, r.status)
+      )
+    ));
+  });
+  container.append(tableUpgrade);
 }
 
 function farmHelpSection(title, ...nodes) {
