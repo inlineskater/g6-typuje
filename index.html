@@ -11054,8 +11054,9 @@ function playCoinRace(canvas, opts = {}) {
 // preview card. `seasonPromise` is loadSeasonHistory()'s promise so awards are
 // included in the reconstruction.
 async function loadCoinRace(seasonPromise) {
-  const wrap = document.getElementById('coin-race-wrap');
-  if (!wrap) return;
+  const cashWrap = document.getElementById('coin-race-cash-wrap');
+  const netWrap = document.getElementById('coin-race-net-wrap');
+  if (!cashWrap && !netWrap) return;
   try { await (seasonPromise || loadSeasonHistory()); } catch {}
 
   const [profRes, tradesRes, coinTxRes, gameRes, footballRes, lbRes] = await Promise.all([
