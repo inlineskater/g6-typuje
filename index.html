@@ -5675,8 +5675,12 @@
                 </div>
               </div>
               <div class="plinko-control plinko-count-control">
-                <span>Kul w serii: <b id="plinko-count-val">10</b></span>
-                <input type="range" id="plinko-count-slider" class="plinko-slider" min="1" max="100" step="1" value="10" aria-label="Liczba kul w serii">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <span>Kul w serii: <b id="plinko-count-val" style="display:none;">10</b></span>
+                  <span style="font-size: 13px;">Kul w serii:</span>
+                  <input type="number" id="plinko-count-input" min="1" max="1000" value="10" style="width: 76px; height: 28px; padding: 2px 6px; border: 1.5px solid rgba(15,23,42,.15); border-radius: 8px; font-weight: 700; text-align: center; font-size: 13px; background: #ffffff; color: #0f172a;" aria-label="Wpisz liczbę kul">
+                </div>
+                <input type="range" id="plinko-count-slider" class="plinko-slider" min="1" max="100" step="1" value="10" aria-label="Suwak liczby kul">
               </div>
               <div class="plinko-control plinko-drop-control">
                 <div class="plinko-drop-buttons">
@@ -7017,10 +7021,10 @@ let plinkoBatchTimer = null;
 let plinkoRunId = 0;
 const PLINKO_STAKES = [1, 5, 10, 25, 50, 100, 250, 500];
 const PLINKO_MAX_BATCH = 100;
-const PLINKO_MAX_VISIBLE_QUEUE = 150;
+const PLINKO_MAX_VISIBLE_QUEUE = 1000;
 const PLINKO_MAX_CONCURRENT = 8;
-const PLINKO_LAUNCH_STAGGER_MS = 90;
-const PLINKO_BATCH_DELAY_MS = 110;
+const PLINKO_LAUNCH_STAGGER_MS = 140;
+const PLINKO_BATCH_DELAY_MS = 130;
 const PLINKO_REQUEST_TIMEOUT_MS = 12000;
 const PLINKO_PAYOUTS = {
   8: {
@@ -15043,9 +15047,18 @@ function renderPlinkoControls() {
     btn.disabled = plinkoBusy;
     btn.classList.toggle('active', btn.dataset.risk === plinkoRisk);
   });
+  const countInput = document.getElementById('plinko-count-input');
+  if (countInput) {
+    countInput.disabled = plinkoBusy;
+    if (Number(countInput.value) !== plinkoCount) countInput.value = plinkoCount;
+  }
   const countSlider = document.getElementById('plinko-count-slider');
-  if (countSlider && Number(countSlider.value) !== plinkoCount) countSlider.value = plinkoCount;
-  setText(document.getElementById('plinko-count-val'), plinkoCount);
+  if (countSlider) {
+    const sliderVal = Math.min(100, plinkoCount);
+    if (Number(countSlider.value) !== sliderVal) countSlider.value = sliderVal;
+  }
+  const countVal = document.getElementById('plinko-count-val');
+  if (countVal) setText(countVal, plinkoCount);
   const total = plinkoQueueTotal();
   const full = total >= PLINKO_MAX_VISIBLE_QUEUE;
   const badge = total > 0 ? `<span class="plinko-drop-count">+${Math.min(total, 999)}</span>` : '';
@@ -15423,7 +15436,8 @@ function drawPlinkoBoard() {
     const from = anim.nodes[seg];
     const to = anim.nodes[seg + 1];
     const x = from.x + (to.x - from.x) * a;
-    const y = from.y + (to.y - from.y) * a - Math.sin(local * Math.PI) * 13;
+    const bounceH = Math.min(15, layout.gapY * 0.45);
+    const y = from.y + (to.y - from.y) * a - Math.sin(local * Math.PI) * bounceH;
     const scale = 1 + Math.sin(local * Math.PI) * 0.07;
     activeRows.add(Math.min(rows, seg + 1));
     while (anim.hitIndex < seg) {
@@ -15533,7 +15547,7 @@ function settlePlinkoAnim(anim) {
     startNextPlinkoAnimation();
     renderPlinkoControls();
     ensurePlinkoRaf();
-  }, plinkoReducedMotion() ? 90 : (plinkoDropQueue.length || plinkoAnims.length > 1 ? 130 : 620));
+  }, plinkoReducedMotion() ? 90 : (plinkoDropQueue.length || plinkoAnims.length > 1 ? 160 : 700));
 }
 
 function plinkoWinAnimation(netWon, jackpot = false) {
@@ -15558,9 +15572,11 @@ function plinkoAnimationDuration(drop) {
   if (plinkoReducedMotion()) return 220;
   const rows = Number(drop?.rows || plinkoRows);
   const backlog = plinkoDropQueue.length + plinkoQueuedClicks + plinkoServerPending + plinkoAnims.length;
-  const base = 560 + rows * 68;
-  const factor = backlog >= 12 ? 0.42 : backlog >= 6 ? 0.55 : backlog >= 2 ? 0.72 : 1;
-  return Math.max(520, Math.round(base * factor));
+  // Slower base speed: 1000 + rows * 110 (approx. 2320ms for 12 rows)
+  const base = 1000 + rows * 110;
+  // Gentler speed-up factor under queue load
+  const factor = backlog >= 24 ? 0.50 : backlog >= 12 ? 0.62 : backlog >= 4 ? 0.78 : 1;
+  return Math.max(600, Math.round(base * factor));
 }
 
 function playPlinkoDrop(drop, delayMs = 0) {
@@ -15689,10 +15705,13 @@ function startPlinkoDrop(n = 1) {
       renderPlinko();
     });
   });
-  document.getElementById('plinko-count-slider')?.addEventListener('input', (e) => {
-    plinkoCount = Math.max(1, Math.min(PLINKO_MAX_BATCH, Number(e.target.value) || 1));
+  const updatePlinkoCount = (val) => {
+    plinkoCount = Math.max(1, Math.min(1000, Number(val) || 1));
     renderPlinkoControls();
-  });
+  };
+  document.getElementById('plinko-count-slider')?.addEventListener('input', (e) => updatePlinkoCount(e.target.value));
+  document.getElementById('plinko-count-input')?.addEventListener('input', (e) => updatePlinkoCount(e.target.value));
+  document.getElementById('plinko-count-input')?.addEventListener('blur', (e) => updatePlinkoCount(e.target.value));
   document.getElementById('plinko-drop-one')?.addEventListener('click', () => startPlinkoDrop(1));
   document.getElementById('plinko-drop-many')?.addEventListener('click', () => startPlinkoDrop(plinkoCount));
   document.getElementById('plinko-dist-reset')?.addEventListener('click', plinkoResetSession);
