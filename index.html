@@ -5332,11 +5332,17 @@
           <button class="fb-sort-btn" data-time="7d">7 dni</button>
           <button class="fb-sort-btn" data-time="3d">3 dni</button>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <span class="fb-sort-label">Gracze:</span>
-          <button class="fb-sort-btn active" data-players="all">Wszyscy</button>
-          <button class="fb-sort-btn" data-players="top5">Top 5</button>
-          <button class="fb-sort-btn" data-players="me">Tylko Ja</button>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="fb-sort-label">Gracze:</span>
+            <button class="fb-sort-btn active" data-players="all">Wszyscy</button>
+            <button class="fb-sort-btn" data-players="top5">Top 5</button>
+            <button class="fb-sort-btn" data-players="me">Tylko Ja</button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="fb-sort-label">Szukaj:</span>
+            <input type="text" id="coin-race-search-input" placeholder="Wpisz nick..." style="width: 120px; height: 26px; padding: 2px 8px; border: 1.5px solid rgba(15,23,42,.15); border-radius: 6px; font-size: 12px; background: var(--card); color: var(--text); font-weight: 600; outline: none; transition: border-color 0.15s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='rgba(15,23,42,.15)'" aria-label="Wyszukaj gracza po nicku">
+          </div>
         </div>
       </div>
       <div class="ranking-grid">
@@ -10210,12 +10216,19 @@ function renderLeaderboardTable(wrap, data, calibByUser = {}) {
     wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak graczy.'));
     return;
   }
-  const rows = data.map((row, i) => el('tr', {},
-    el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
-    el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-    lbCoinsCell(row),
-    el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
-  ));
+  const searchEl = document.getElementById('coin-race-search-input');
+  const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const filteredData = query ? data.filter(r => r.nick.toLowerCase().includes(query)) : data;
+
+  const rows = filteredData.map((row) => {
+    const origIndex = data.indexOf(row);
+    return el('tr', {},
+      el('td', { className: 'lb-rank' + (origIndex === 0 ? ' gold' : '') }, origIndex === 0 ? '🥇' : String(origIndex + 1)),
+      el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
+      lbCoinsCell(row),
+      el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
+    );
+  });
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
       el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Gotówka'), el('th', {}, 'Net Worth'))),
@@ -10374,8 +10387,12 @@ function renderHazardista(wrap, data) {
     wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak danych.'));
     return;
   }
-  const winners = data.filter(r => r.total_pl > 0).slice(0, 3);
-  const losers = data.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 3);
+  const searchEl = document.getElementById('coin-race-search-input');
+  const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const filteredData = query ? data.filter(r => r.nick.toLowerCase().includes(query)) : data;
+
+  const winners = filteredData.filter(r => r.total_pl > 0).slice(0, 3);
+  const losers = filteredData.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 3);
   const items = [...winners.map(r => ({ nick: r.nick, pl: r.total_pl, pos: true, uid: r.user_id })),
                  ...losers.map(r => ({ nick: r.nick, pl: r.total_pl, pos: false, uid: r.user_id }))];
   const rows = items.map(r => el('tr', {},
@@ -11143,21 +11160,28 @@ function updateCoinRaceCharts() {
   }
   if (!isFinite(tMin) || tMin >= tMax) tMin = tMax - 86400000;
 
+  const searchEl = document.getElementById('coin-race-search-input');
+  const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
   let filteredRaw = [..._coinRaceRaw];
-  if (_coinRacePlayerFilter === 'me') {
-    filteredRaw = filteredRaw.filter(s => s.userId === me?.id);
-  } else if (_coinRacePlayerFilter === 'top5') {
-    const sorted = [..._coinRaceRaw].sort((a, b) => {
-      const aVal = a.points[a.points.length - 1].balNet || 0;
-      const bVal = b.points[b.points.length - 1].balNet || 0;
-      return bVal - aVal;
-    });
-    const top5 = sorted.slice(0, 5);
-    if (me && !top5.some(s => s.userId === me.id)) {
-      const mySeries = _coinRaceRaw.find(s => s.userId === me.id);
-      if (mySeries) top5.push(mySeries);
+  if (query) {
+    filteredRaw = filteredRaw.filter(s => s.nick.toLowerCase().includes(query));
+  } else {
+    if (_coinRacePlayerFilter === 'me') {
+      filteredRaw = filteredRaw.filter(s => s.userId === me?.id);
+    } else if (_coinRacePlayerFilter === 'top5') {
+      const sorted = [..._coinRaceRaw].sort((a, b) => {
+        const aVal = a.points[a.points.length - 1].balNet || 0;
+        const bVal = b.points[b.points.length - 1].balNet || 0;
+        return bVal - aVal;
+      });
+      const top5 = sorted.slice(0, 5);
+      if (me && !top5.some(s => s.userId === me.id)) {
+        const mySeries = _coinRaceRaw.find(s => s.userId === me.id);
+        if (mySeries) top5.push(mySeries);
+      }
+      filteredRaw = top5;
     }
-    filteredRaw = top5;
   }
 
   const cashSeries = [];
@@ -11247,6 +11271,13 @@ function updateCoinRaceCharts() {
         _coinRacePlayerFilter = btn.dataset.players;
         updateCoinRaceCharts();
       });
+    });
+    document.getElementById('coin-race-search-input')?.addEventListener('input', () => {
+      updateCoinRaceCharts();
+      const lbWrap = document.getElementById('leaderboard-wrap');
+      if (lbWrap && _lbData) renderLeaderboardTable(lbWrap, _lbData, _lbCalib);
+      const hazWrap = document.getElementById('hazardista-wrap');
+      if (hazWrap && _hazardistaData) renderHazardista(hazWrap, _hazardistaData);
     });
   }
 })();
