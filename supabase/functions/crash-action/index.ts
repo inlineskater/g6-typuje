@@ -21,7 +21,7 @@ const RESULT_PAUSE_MS = 2000;   // crashed → next betting round pause
 const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
 const CASHOUT_GRACE_MS = 700;   // forgive network latency: honor an in-time tap that ARRIVES this late
-const CRASH_STAKES = [5, 10, 25, 50, 100, 250]; // preset chips; any integer 1..MAX_BET is allowed
+const CRASH_STAKES = [1, 5, 10, 25, 50, 100, 250, 500]; // preset chips; any integer 1..MAX_BET is allowed
 const MAX_BET = 10_000_000;     // ceiling for a custom stake (balance is still enforced separately)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 10 s.

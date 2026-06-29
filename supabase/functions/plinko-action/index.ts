@@ -31,7 +31,7 @@ function corsHeaders(req) {
 
 const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, idle_timeout: 20 });
 
-const STAKES = [1, 5, 10, 25, 50, 100, 250]; // preset chips; any integer 1..MAX_BET is allowed
+const STAKES = [1, 5, 10, 25, 50, 100, 250, 500]; // preset chips; any integer 1..MAX_BET is allowed
 const MAX_BET = 10_000_000;                  // ceiling for a custom stake (balance enforced separately)
 const DEFAULT_BET = 10;
 const DEFAULT_ROWS = 12;

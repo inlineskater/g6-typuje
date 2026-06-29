@@ -16,7 +16,7 @@ const WEIGHTS = [30, 25, 18, 12, 8, 5, 2]; // sum=100
 // RTP = 5 * (Σ p_s^3 · mult_s + 3·p_g6^2·(1−p_g6)·6). With these weights ≈ 89.1%.
 const MULTIPLIERS = { g6: 100, office: 42, briefcase: 20, chart: 11, clipboard: 6, calculator: 3, coffee: 2 };
 const G6X2_MULTIPLIER = 6;
-const STAKES = [5, 10, 25, 50, 100]; // preset chips; any integer 1..MAX_BET is allowed
+const STAKES = [1, 5, 10, 25, 50, 100, 250, 500]; // preset chips; any integer 1..MAX_BET is allowed
 const MAX_BET = 10_000_000;          // ceiling for a custom stake (balance enforced separately)
 const DEFAULT_BET = 10;
 

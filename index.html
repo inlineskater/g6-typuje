@@ -1460,9 +1460,25 @@
     .casino-chip-5    { --chip-face: #dc2626; }
     .casino-chip-10   { --chip-face: #2563eb; }
     .casino-chip-25   { --chip-face: #15803d; }
+    .casino-chip-50   { --chip-face: #0891b2; }
     .casino-chip-100  { --chip-face: #0f172a; }
     .casino-chip-200  { --chip-face: #c2410c; }
+    .casino-chip-250  { --chip-face: #be123c; }
     .casino-chip-500  { --chip-face: #7c3aed; }
+    /* ── Unified bet bar (chips + custom amount + ½/×2/MAX) shared by every casino game ── */
+    .bet-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .bet-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .bet-quick { display: flex; gap: 6px; }
+    .bet-quick-btn {
+      height: 40px; min-width: 44px; padding: 0 12px; border-radius: 12px; cursor: pointer;
+      border: 2px solid var(--gold-hi); background: rgba(0,0,0,.34); color: #fff;
+      font-weight: 900; font-size: 14px; line-height: 1; letter-spacing: .2px;
+      display: inline-flex; align-items: center; justify-content: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,.6); transition: transform .15s, box-shadow .15s, background .15s;
+      user-select: none;
+    }
+    .bet-quick-btn:hover { transform: translateY(-2px); background: rgba(0,0,0,.5); }
+    .bet-quick-btn:active { transform: translateY(0); }
     .stake-custom {
       width: 80px; height: 44px; box-sizing: border-box;
       border-radius: 12px; border: 2px solid var(--gold-hi);
@@ -1474,7 +1490,7 @@
     .stake-custom::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .stake-custom:focus { outline: 3px solid var(--gold-hi); outline-offset: 2px; }
     .stake-custom::placeholder { color: rgba(255,255,255,.5); font-weight: 600; font-size: 12px; }
-    .plinko-chips .stake-custom { width: 64px; height: 34px; font-size: 12px; }
+    .plinko-toolbar .stake-custom { width: 64px; height: 34px; font-size: 12px; }
 
     /* ── Plinko G6 ── */
     #tab-plinko.casino {
@@ -1761,6 +1777,7 @@
       .plinko-controls .plinko-toolbar { gap: 13px; }
       .plinko-toolbar .plinko-segments { min-height: 38px; }
       .plinko-toolbar .casino-chip { width: 34px; height: 34px; font-size: 12px; border-width: 2px; }
+      .plinko-toolbar .bet-quick-btn { height: 34px; min-width: 38px; padding: 0 9px; font-size: 12px; }
       .plinko-machine { display: flex; flex-direction: column; min-height: 0; padding: 12px; }
       .plinko-stage { flex: 1 1 auto; min-height: 150px; }
       #plinko-canvas { height: 100%; min-height: 0; }
@@ -2152,7 +2169,6 @@
 
     /* ── Roulette ── */
     .roulette-chips { display: flex; gap: 6px; }
-    .roulette-chips .casino-chip.active { transform: scale(1.12); }
     /* Unified control dock above the felt */
     .roulette-dock {
       display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
@@ -5383,14 +5399,23 @@
       </div>
 
       <div class="roulette-dock" id="roulette-table-status">
-        <div class="roulette-chips">
-          <button class="casino-chip casino-chip-1" data-chip="1">1</button>
-          <button class="casino-chip casino-chip-5" data-chip="5">5</button>
-          <button class="casino-chip casino-chip-10 active" data-chip="10">10</button>
-          <button class="casino-chip casino-chip-25" data-chip="25">25</button>
-          <button class="casino-chip casino-chip-100" data-chip="100">100</button>
-          <button class="casino-chip casino-chip-200" data-chip="200">200</button>
-          <button class="casino-chip casino-chip-500" data-chip="500">500</button>
+        <div class="bet-bar" data-bet="roulette">
+          <div class="bet-chips">
+            <button class="casino-chip casino-chip-1" data-stake="1">1</button>
+            <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+            <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+            <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+            <button class="casino-chip casino-chip-50" data-stake="50">50</button>
+            <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+            <button class="casino-chip casino-chip-250" data-stake="250">250</button>
+            <button class="casino-chip casino-chip-500" data-stake="500">500</button>
+          </div>
+          <input id="roulette-chip-custom" class="stake-custom bet-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+          <div class="bet-quick">
+            <button class="bet-quick-btn" type="button" data-quick="half">½</button>
+            <button class="bet-quick-btn" type="button" data-quick="double">×2</button>
+            <button class="bet-quick-btn" type="button" data-quick="max">MAX</button>
+          </div>
         </div>
         <div class="roulette-dock-group">
           <button class="rl-btn is-gold" id="roulette-rebet-btn" type="button">↻ Powtórz</button>
@@ -5457,13 +5482,23 @@
 
         <div class="slots-stake">
           <span class="slots-stake-label">Stawka:</span>
-          <div class="slots-chips">
-            <button class="casino-chip casino-chip-5" data-stake="5">5</button>
-            <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
-            <button class="casino-chip casino-chip-25" data-stake="25">25</button>
-            <button class="casino-chip casino-chip-100" data-stake="50">50</button>
-            <button class="casino-chip casino-chip-100" data-stake="100">100</button>
-            <input id="slots-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+          <div class="bet-bar" data-bet="slots">
+            <div class="bet-chips">
+              <button class="casino-chip casino-chip-1" data-stake="1">1</button>
+              <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+              <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+              <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+              <button class="casino-chip casino-chip-50" data-stake="50">50</button>
+              <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+              <button class="casino-chip casino-chip-250" data-stake="250">250</button>
+              <button class="casino-chip casino-chip-500" data-stake="500">500</button>
+            </div>
+            <input id="slots-stake-custom" class="stake-custom bet-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+            <div class="bet-quick">
+              <button class="bet-quick-btn" type="button" data-quick="half">½</button>
+              <button class="bet-quick-btn" type="button" data-quick="double">×2</button>
+              <button class="bet-quick-btn" type="button" data-quick="max">MAX</button>
+            </div>
           </div>
         </div>
 
@@ -5528,15 +5563,23 @@
             <div class="plinko-toolbar">
               <div class="plinko-control plinko-stake">
                 <span>Stawka za kulę</span>
-                <div class="plinko-chips">
-                  <button class="casino-chip casino-chip-1" data-stake="1">1</button>
-                  <button class="casino-chip casino-chip-5" data-stake="5">5</button>
-                  <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
-                  <button class="casino-chip casino-chip-25" data-stake="25">25</button>
-                  <button class="casino-chip casino-chip-100" data-stake="50">50</button>
-                  <button class="casino-chip casino-chip-100" data-stake="100">100</button>
-                  <button class="casino-chip casino-chip-200" data-stake="250">250</button>
-                  <input id="plinko-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+                <div class="bet-bar plinko-chips" data-bet="plinko">
+                  <div class="bet-chips">
+                    <button class="casino-chip casino-chip-1" data-stake="1">1</button>
+                    <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+                    <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+                    <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+                    <button class="casino-chip casino-chip-50" data-stake="50">50</button>
+                    <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+                    <button class="casino-chip casino-chip-250" data-stake="250">250</button>
+                    <button class="casino-chip casino-chip-500" data-stake="500">500</button>
+                  </div>
+                  <input id="plinko-stake-custom" class="stake-custom bet-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+                  <div class="bet-quick">
+                    <button class="bet-quick-btn" type="button" data-quick="half">½</button>
+                    <button class="bet-quick-btn" type="button" data-quick="double">×2</button>
+                    <button class="bet-quick-btn" type="button" data-quick="max">MAX</button>
+                  </div>
                 </div>
               </div>
               <div class="plinko-control">
@@ -5629,14 +5672,23 @@
 
             <div class="mines-control-row">
               <span class="mines-control-label">Stawka</span>
-              <div class="mines-chips">
-                <button class="casino-chip casino-chip-5" data-stake="5">5</button>
-                <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
-                <button class="casino-chip casino-chip-25" data-stake="25">25</button>
-                <button class="casino-chip casino-chip-100" data-stake="50">50</button>
-                <button class="casino-chip casino-chip-100" data-stake="100">100</button>
-                <button class="casino-chip casino-chip-200" data-stake="250">250</button>
-                <input id="mines-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+              <div class="bet-bar mines-chips" data-bet="mines">
+                <div class="bet-chips">
+                  <button class="casino-chip casino-chip-1" data-stake="1">1</button>
+                  <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+                  <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+                  <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+                  <button class="casino-chip casino-chip-50" data-stake="50">50</button>
+                  <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+                  <button class="casino-chip casino-chip-250" data-stake="250">250</button>
+                  <button class="casino-chip casino-chip-500" data-stake="500">500</button>
+                </div>
+                <input id="mines-stake-custom" class="stake-custom bet-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+                <div class="bet-quick">
+                  <button class="bet-quick-btn" type="button" data-quick="half">½</button>
+                  <button class="bet-quick-btn" type="button" data-quick="double">×2</button>
+                  <button class="bet-quick-btn" type="button" data-quick="max">MAX</button>
+                </div>
               </div>
             </div>
 
@@ -5702,14 +5754,23 @@
         <div class="crash-controls">
           <div class="crash-stake">
             <span>Stawka:</span>
-            <div class="crash-chips">
-              <button class="casino-chip casino-chip-5" data-stake="5">5</button>
-              <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
-              <button class="casino-chip casino-chip-25" data-stake="25">25</button>
-              <button class="casino-chip casino-chip-100" data-stake="50">50</button>
-              <button class="casino-chip casino-chip-100" data-stake="100">100</button>
-              <button class="casino-chip casino-chip-200" data-stake="250">250</button>
-              <input id="crash-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+            <div class="bet-bar crash-chips" data-bet="crash">
+              <div class="bet-chips">
+                <button class="casino-chip casino-chip-1" data-stake="1">1</button>
+                <button class="casino-chip casino-chip-5" data-stake="5">5</button>
+                <button class="casino-chip casino-chip-10 active" data-stake="10">10</button>
+                <button class="casino-chip casino-chip-25" data-stake="25">25</button>
+                <button class="casino-chip casino-chip-50" data-stake="50">50</button>
+                <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+                <button class="casino-chip casino-chip-250" data-stake="250">250</button>
+                <button class="casino-chip casino-chip-500" data-stake="500">500</button>
+              </div>
+              <input id="crash-stake-custom" class="stake-custom bet-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
+              <div class="bet-quick">
+                <button class="bet-quick-btn" type="button" data-quick="half">½</button>
+                <button class="bet-quick-btn" type="button" data-quick="double">×2</button>
+                <button class="bet-quick-btn" type="button" data-quick="max">MAX</button>
+              </div>
             </div>
           </div>
           <button id="crash-bet-btn" class="rl-btn is-gold">Postaw <span id="crash-bet-label">10</span> 🪙</button>
@@ -6874,7 +6935,7 @@ let plinkoServerPending = 0;
 let plinkoDropQueue = [];
 let plinkoBatchTimer = null;
 let plinkoRunId = 0;
-const PLINKO_STAKES = [1, 5, 10, 25, 50, 100, 250];
+const PLINKO_STAKES = [1, 5, 10, 25, 50, 100, 250, 500];
 const PLINKO_MAX_BATCH = 100;
 const PLINKO_MAX_VISIBLE_QUEUE = 150;
 const PLINKO_MAX_CONCURRENT = 8;
@@ -13083,15 +13144,6 @@ const ROULETTE_FLUSH_MS = 450;
   host.appendChild(svg);
 })();
 
-// Chip selector
-document.querySelectorAll('.roulette-chips .casino-chip').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.roulette-chips .casino-chip').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeChip = Number(btn.dataset.chip);
-  });
-});
-
 // Keep our seat's last_seen fresh so the server doesn't auto-evict us while we
 // sit and watch without betting. Only pings while on the tab, visible, and seated.
 function startRouletteHeartbeat() {
@@ -13358,10 +13410,12 @@ function renderMines() {
       ? `WYPŁAĆ ${Number(active.potentialPayout || 0)} 🪙`
       : 'WYPŁAĆ';
   }
-  document.querySelectorAll('.mines-chips .casino-chip').forEach(btn => {
+  document.querySelectorAll('[data-bet="mines"] .casino-chip').forEach(btn => {
     btn.disabled = minesBusy || !!active;
     btn.classList.toggle('active', Number(btn.dataset.stake) === minesBet);
   });
+  setBetBarDisabled('mines', minesBusy || !!active);
+  syncBetBar('mines', minesBet, { keepInput: true });
   const range = document.getElementById('mines-count-range');
   const input = document.getElementById('mines-count-input');
   if (range) range.disabled = minesBusy || !!active;
@@ -13514,13 +13568,6 @@ async function cashOutMines() {
 }
 
 (function wireMinesControls() {
-  document.querySelectorAll('.mines-chips .casino-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (minesState?.activeRound) return;
-      minesBet = Number(btn.dataset.stake);
-      renderMines();
-    });
-  });
   const range = document.getElementById('mines-count-range');
   const input = document.getElementById('mines-count-input');
   range?.addEventListener('input', () => setMinesMineCount(range.value));
@@ -14034,13 +14081,6 @@ function drawCrashScene(phase, elapsed, mult, exploding) {
       if (betBtn.dataset.mode === 'cancel') crashClearBet(); else crashPlaceBet();
     });
     cashBtn.addEventListener('click', crashCashOut);
-    document.querySelectorAll('.crash-chips .casino-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.crash-chips .casino-chip').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        crashBet = Number(btn.dataset.stake);
-      });
-    });
     return true;
   };
   if (!ready()) document.addEventListener('DOMContentLoaded', ready);
@@ -14557,47 +14597,137 @@ const SLOTS_PAYLINES = [[[0,0],[0,1],[0,2]],[[1,0],[1,1],[1,2]],[[2,0],[2,1],[2,
 const SLOTS_CELL_H = 72;
 let slotsBet = 10;
 
-// Stake selector
-document.querySelectorAll('.slots-chips .casino-chip').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.slots-chips .casino-chip').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    slotsBet = Number(btn.dataset.stake);
-    setText(document.getElementById('slots-bet-label'), slotsBet);
-  });
-});
-
-// ── Custom bet amount: type any stake (1..CASINO_BET_MAX) in Rakieta/Sloty/Plinko/Miny ──
+// ── Unified casino bet bars: preset chips + custom stake + ½/×2/MAX ──
 const CASINO_BET_MAX = 10000000; // safety rail; the server enforces the same ceiling + your balance
-function wireCustomStake(inputId, chipsSel, setBet) {
-  const input = document.getElementById(inputId);
-  const chips = document.querySelector(chipsSel);
-  if (!input || !chips) return;
-  const deselect = () => chips.querySelectorAll('.casino-chip').forEach(b => b.classList.remove('active'));
-  input.addEventListener('input', () => {
-    const v = Math.floor(Number(input.value));
-    if (!Number.isFinite(v) || v < 1) return; // ignore empty/partial/0 — keep the last stake
-    if (setBet(Math.min(v, CASINO_BET_MAX)) !== false) deselect();
-  });
-  input.addEventListener('change', () => { // normalize on blur / Enter
-    if (input.value === '') return;
-    let v = Math.floor(Number(input.value));
-    if (!Number.isFinite(v) || v < 1) v = 1;
-    v = Math.min(v, CASINO_BET_MAX);
-    input.value = String(v);
-    if (setBet(v) !== false) deselect();
-  });
-  // Picking a preset chip clears the custom field so the two never disagree.
-  chips.addEventListener('click', (e) => { if (e.target.closest('.casino-chip')) input.value = ''; });
+const casinoBetBars = {};
+
+function clampCasinoStake(value) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return null;
+  return Math.max(1, Math.min(CASINO_BET_MAX, n));
 }
-(function wireCustomStakes() {
+
+function casinoBalanceLimit(kind) {
+  const coins = Math.floor(Number(me?.coins));
+  if (!Number.isFinite(coins)) return CASINO_BET_MAX;
+  if (kind === 'roulette') {
+    const bets = rouletteLocalBets != null ? rouletteLocalBets : currentRouletteBets();
+    const alreadyBet = bets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    return Math.max(1, Math.min(CASINO_BET_MAX, coins - alreadyBet));
+  }
+  return Math.max(1, Math.min(CASINO_BET_MAX, coins));
+}
+
+function syncBetBar(kind, value, opts = {}) {
+  const bar = document.querySelector(`.bet-bar[data-bet="${kind}"]`);
+  if (!bar) return;
+  const stake = clampCasinoStake(value);
+  const chips = [...bar.querySelectorAll('.casino-chip')];
+  let hasPreset = false;
+  chips.forEach(btn => {
+    const active = stake != null && Number(btn.dataset.stake) === stake;
+    btn.classList.toggle('active', active);
+    if (active) hasPreset = true;
+  });
+  const input = bar.querySelector('.stake-custom');
+  if (input && !opts.keepInput) input.value = stake != null && !hasPreset ? String(stake) : '';
+}
+
+function setBetBarDisabled(kind, disabled) {
+  const bar = document.querySelector(`.bet-bar[data-bet="${kind}"]`);
+  if (!bar) return;
+  bar.querySelectorAll('.casino-chip, .stake-custom, .bet-quick-btn').forEach(ctrl => {
+    ctrl.disabled = !!disabled;
+  });
+}
+
+function setBetBarValue(kind, value, opts = {}) {
+  const cfg = casinoBetBars[kind];
+  if (!cfg) return false;
+  const next = clampCasinoStake(value);
+  if (next == null) return false;
+  if (cfg.canSet && !cfg.canSet()) {
+    syncBetBar(kind, cfg.get(), { keepInput: false });
+    return false;
+  }
+  if (cfg.set(next) === false) {
+    syncBetBar(kind, cfg.get(), { keepInput: false });
+    return false;
+  }
+  syncBetBar(kind, cfg.get(), { keepInput: opts.keepInput });
+  return true;
+}
+
+function wireBetBar(kind, cfg) {
+  const bar = document.querySelector(`.bet-bar[data-bet="${kind}"]`);
+  if (!bar || bar.dataset.wired === '1') return false;
+  casinoBetBars[kind] = cfg;
+  bar.dataset.wired = '1';
+
+  bar.querySelectorAll('.casino-chip').forEach(btn => {
+    btn.addEventListener('click', () => setBetBarValue(kind, btn.dataset.stake));
+  });
+
+  const input = bar.querySelector('.stake-custom');
+  input?.addEventListener('input', () => {
+    const next = clampCasinoStake(input.value);
+    if (next == null) return; // ignore empty/partial/0 while the user is typing
+    setBetBarValue(kind, next, { keepInput: true });
+  });
+  input?.addEventListener('change', () => {
+    if (input.value === '') { syncBetBar(kind, cfg.get()); return; }
+    const next = clampCasinoStake(input.value) ?? 1;
+    setBetBarValue(kind, next);
+  });
+
+  bar.querySelectorAll('.bet-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const current = clampCasinoStake(cfg.get()) ?? 1;
+      let next = current;
+      if (btn.dataset.quick === 'half') next = Math.max(1, Math.floor(current / 2));
+      else if (btn.dataset.quick === 'double') next = Math.min(CASINO_BET_MAX, current * 2);
+      else if (btn.dataset.quick === 'max') next = cfg.max ? cfg.max() : casinoBalanceLimit(kind);
+      setBetBarValue(kind, next);
+    });
+  });
+
+  syncBetBar(kind, cfg.get());
+  return true;
+}
+
+(function wireBetBars() {
   const ready = () => {
-    if (!document.getElementById('crash-stake-custom')) return false;
-    wireCustomStake('crash-stake-custom', '.crash-chips', v => { crashBet = v; });
-    wireCustomStake('slots-stake-custom', '.slots-chips', v => { slotsBet = v; setText(document.getElementById('slots-bet-label'), v); });
-    wireCustomStake('plinko-stake-custom', '.plinko-chips', v => { if (plinkoBusy) return false; plinkoBet = v; renderPlinko(); });
-    wireCustomStake('mines-stake-custom', '.mines-chips', v => { if (minesState?.activeRound) return false; minesBet = v; renderMines(); });
-    return true;
+    if (!document.querySelector('.bet-bar[data-bet="crash"]')) return false;
+    const wired = [
+      wireBetBar('roulette', {
+        get: () => activeChip,
+        set: v => { activeChip = v; },
+        max: () => casinoBalanceLimit('roulette'),
+      }),
+      wireBetBar('slots', {
+        get: () => slotsBet,
+        set: v => { slotsBet = v; setText(document.getElementById('slots-bet-label'), v); },
+      }),
+      wireBetBar('plinko', {
+        get: () => plinkoBet,
+        canSet: () => !plinkoBusy,
+        set: v => { if (plinkoBusy) return false; plinkoBet = v; renderPlinko(); },
+      }),
+      wireBetBar('mines', {
+        get: () => minesBet,
+        canSet: () => !minesBusy && !minesState?.activeRound,
+        set: v => { if (minesBusy || minesState?.activeRound) return false; minesBet = v; renderMines(); },
+      }),
+      wireBetBar('crash', {
+        get: () => crashBet,
+        set: v => {
+          crashBet = v;
+          if (crashState) updateCrashButtons(crashState.round.status, crashDisplayMult);
+          else setText(document.getElementById('crash-bet-label'), v);
+        },
+      }),
+    ];
+    return wired.every(Boolean);
   };
   if (!ready()) document.addEventListener('DOMContentLoaded', ready);
 })();
@@ -14820,10 +14950,12 @@ function renderPlinko() {
 
 function renderPlinkoControls() {
   syncPlinkoBusy();
-  document.querySelectorAll('.plinko-chips .casino-chip').forEach(btn => {
+  document.querySelectorAll('[data-bet="plinko"] .casino-chip').forEach(btn => {
     btn.disabled = plinkoBusy;
     btn.classList.toggle('active', Number(btn.dataset.stake) === plinkoBet);
   });
+  setBetBarDisabled('plinko', plinkoBusy);
+  syncBetBar('plinko', plinkoBet, { keepInput: true });
   document.querySelectorAll('#plinko-rows-control button').forEach(btn => {
     btn.disabled = plinkoBusy;
     btn.classList.toggle('active', Number(btn.dataset.rows) === plinkoRows);
@@ -15463,13 +15595,6 @@ function startPlinkoDrop(n = 1) {
 }
 
 (function wirePlinkoControls() {
-  document.querySelectorAll('.plinko-chips .casino-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (plinkoBusy) return;
-      plinkoBet = Number(btn.dataset.stake);
-      renderPlinko();
-    });
-  });
   document.querySelectorAll('#plinko-rows-control button').forEach(btn => {
     btn.addEventListener('click', () => {
       if (plinkoBusy) return;
