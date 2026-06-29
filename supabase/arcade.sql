@@ -82,9 +82,25 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_uid uuid := auth.uid();
+  v_uid  uuid := auth.uid();
+  v_paid integer;
+  v_submitted integer;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'not authenticated'; END IF;
+
+  -- Count how many times they paid entry for this game
+  SELECT COUNT(*)::integer INTO v_paid FROM public.coin_transactions
+   WHERE user_id = v_uid AND reason = 'arcade_entry' AND meta->>'game_type' = p_game_type;
+
+  -- Count how many scores they have already recorded for this game
+  SELECT COUNT(*)::integer INTO v_submitted FROM public.arcade_scores
+   WHERE user_id = v_uid AND game_type = p_game_type;
+
+  -- Block submission if they haven't paid for a new entry
+  IF v_paid <= v_submitted THEN
+    RAISE EXCEPTION 'entry fee not paid for this round';
+  END IF;
+
   INSERT INTO arcade_scores(user_id, game_type, score, coins_paid)
   VALUES (v_uid, p_game_type, p_score, 1);
 END;

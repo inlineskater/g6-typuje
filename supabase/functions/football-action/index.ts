@@ -257,6 +257,10 @@ async function placeBet(userId, body) {
     const payout = Math.floor(stake * lockedOdds);
 
     await tx`update public.profiles set coins = coins - ${stake} where id = ${userId}`;
+    await tx`
+      insert into public.coin_transactions (user_id, delta, reason, meta)
+      values (${userId}, ${-stake}, 'football_bet', ${JSON.stringify({ match_id: matchId, pick, locked_odds: lockedOdds })})
+    `;
 
     const [inserted] = await tx`
       insert into public.football_bets
@@ -360,6 +364,10 @@ async function settleFinished() {
         if (b.pick === result) {
           await tx`update public.profiles set coins = coins + ${asInt(b.potential_payout)} where id = ${b.user_id}`;
           await tx`update public.football_bets set status = 'won', settled_at = now() where id = ${b.id}`;
+          await tx`
+            insert into public.coin_transactions (user_id, delta, reason, meta)
+            values (${b.user_id}, ${asInt(b.potential_payout)}, 'football_win', ${JSON.stringify({ match_id: id, bet_id: b.id, pick: b.pick })})
+          `;
           paidBets += 1;
         } else {
           await tx`update public.football_bets set status = 'lost', settled_at = now() where id = ${b.id}`;
@@ -392,6 +400,10 @@ async function voidMatchTx(tx, id) {
   for (const b of open) {
     await tx`update public.profiles set coins = coins + ${asInt(b.stake)} where id = ${b.user_id}`;
     await tx`update public.football_bets set status = 'void', settled_at = now() where id = ${b.id}`;
+    await tx`
+      insert into public.coin_transactions (user_id, delta, reason, meta)
+      values (${b.user_id}, ${asInt(b.stake)}, 'football_refund', ${JSON.stringify({ match_id: id, bet_id: b.id })})
+    `;
   }
   await tx`
     update public.football_matches
