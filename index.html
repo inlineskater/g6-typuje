@@ -9772,7 +9772,7 @@ async function loadSeasonHistory() {
     ]);
 
     // Build pending entries from live scores (dedup by user, keep best score)
-    const PENDING_PRIZES = [100, 50, 25];
+    const PENDING_PRIZES = current.gameType === 'invoice_horde' ? [500, 250, 100] : [100, 50, 25];
     const seen = new Set();
     const pendingEntries = [];
     for (const r of (liveRes.data || [])) {
