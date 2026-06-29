@@ -6850,6 +6850,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const DB_ERROR_MESSAGE = 'Nie można połączyć z bazą danych. Odśwież stronę albo spróbuj później.';
+const CASINO_BET_MAX = 10000000; // safety rail; the server enforces the same ceiling + your balance
 
 // ── Cloudflare Turnstile (anti-brute-force) ─────────────────────────────────
 // Paste your Turnstile *site* key here (public). The matching *secret* key goes
@@ -14598,7 +14599,6 @@ const SLOTS_CELL_H = 72;
 let slotsBet = 10;
 
 // ── Unified casino bet bars: preset chips + custom stake + ½/×2/MAX ──
-const CASINO_BET_MAX = 10000000; // safety rail; the server enforces the same ceiling + your balance
 const casinoBetBars = {};
 
 function clampCasinoStake(value) {
