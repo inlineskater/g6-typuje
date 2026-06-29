@@ -6916,8 +6916,8 @@ let crashExplodeMult = 1;       // crash_point to freeze the display at during e
 let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
 let crashRunRoundNo = null;     // round_no whose flight clock we've already synced (sync once → smooth)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
-// supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 7s.
-const CRASH_GROWTH = Math.log(2) / 7000;
+// supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 10s.
+const CRASH_GROWTH = Math.log(2) / 10000;
 const CRASH_POLL_MS = 500;      // fast poll during the running phase to catch the crash promptly
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
@@ -13518,9 +13518,11 @@ async function cashOutMines() {
 const CRASH_TAU = Math.PI * 2;
 
 async function invokeCrash(payload) {
+  const t0 = performance.now();
   const { data, error } = await sb.functions.invoke('crash-action', { body: payload });
   if (error) throw new Error(error.message || 'Błąd połączenia.');
   if (!data || data.ok === false) throw new Error(data?.error || 'Błąd serwera.');
+  data._rttMs = Math.max(0, performance.now() - t0); // round-trip time → flight-clock latency comp
   return data;
 }
 
@@ -13600,12 +13602,24 @@ function applyCrashState(data) {
 
   const r = data.round;
   if (r.status === 'running') {
-    // Sync the flight clock ONCE for this round; later polls must NOT re-sync or the
-    // rocket/number jitters (each server snapshot carries a different latency offset).
+    // Latency-compensate: r.elapsedMs was sampled on the server one one-way trip ago, so
+    // anchor it forward by ~rtt/2 — otherwise the local clock (and the WYPŁAĆ multiplier we
+    // submit) trails the server, causing under-payment and false "in time" rejects.
+    const serverElapsedNow = (r.elapsedMs || 0) + (Number(data._rttMs) || 0) / 2;
     if (crashRunRoundNo !== r.round_no) {
+      // First sighting of this round → sync once.
       crashRunRoundNo = r.round_no;
-      crashElapsedBaseMs = r.elapsedMs || 0;
+      crashElapsedBaseMs = serverElapsedNow;
       crashPhaseStartLocal = Date.now();
+    } else {
+      // Forward-only drift correction: if we've fallen behind the server, jump forward.
+      // NEVER move backward — that is the jitter the original "sync once" was avoiding, and
+      // running slightly ahead is the safe side (the server caps payout at its own value).
+      const localElapsedNow = crashElapsedBaseMs + (Date.now() - crashPhaseStartLocal);
+      if (serverElapsedNow - localElapsedNow > 120) {
+        crashElapsedBaseMs = serverElapsedNow;
+        crashPhaseStartLocal = Date.now();
+      }
     }
     ensureCrashPoll(); // poll keeps running only to detect the crash
   } else {
@@ -13651,9 +13665,12 @@ async function crashCashOut() {
   updateCrashButtons(crashState.round.status, m);
   try {
     const data = await invokeCrash({ action: 'cash_out', atMultiplier: m });
-    applyCrashState(data);
     if (data.cashedOut) showToast(`Wypłacono x${data.cashedOut.multiplier.toFixed(2)} → +${data.cashedOut.won} 🪙`);
     else if (data.notice) showToast(data.notice);
+    // The payout is authoritative; the surrounding state may be a bare outcome if the
+    // server's lock-free state read fell back — refresh from the server if so.
+    if (data.round) applyCrashState(data);
+    else loadCrashState(false);
   } catch (e) { showToast(e.message); loadCrashState(false); }
   finally { setCrashBusy(false); }
 }

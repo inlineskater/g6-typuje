@@ -22,8 +22,8 @@ const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
 const CRASH_STAKES = [5, 10, 25, 50, 100, 250];
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
-// index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 7 s.
-const CRASH_GROWTH = Math.log(2) / 7000;
+// index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 10 s.
+const CRASH_GROWTH = Math.log(2) / 10000;
 
 function multAt(ms) { return Math.exp(CRASH_GROWTH * Math.max(0, ms)); }
 function durationFor(cp) { return Math.log(cp) / CRASH_GROWTH; } // ms; 0 for cp=1.00
@@ -390,28 +390,59 @@ async function clearBet(userId) {
   }));
 }
 
+// Build the sanitized client payload with a LOCK-FREE read (peekGame, no FOR UPDATE,
+// no advancing). Used as the response builder for cash_out so a contended singleton
+// lock can never roll back an already-committed payout.
+async function lockFreeState(userId, extra = {}) {
+  return await db.begin(async (tx) => {
+    const { table, round } = await peekGame(tx);
+    if (round) return await buildState(tx, userId, table, round, extra);
+    return await stateResponse(tx, userId, extra); // no round yet → create one under the lock (rare)
+  });
+}
+
+// Cash out is DECOUPLED from the singleton crash_tables lock. The payout decision needs
+// only: the immutable secret (crash_point/crash_at), the per-user bet row (locked), and
+// now(). Taking the contended table FOR UPDATE here was the bug — under launch/crash
+// boundary contention the lock wait pushed now() past crash_at and rejected an on-time
+// cash out. Now we pay under ONLY the bet-row lock (txn1), then build state lock-free (txn2).
 async function cashOut(userId, clientMultiplier) {
-  return await withTransientRetry(() => db.begin(async (tx) => {
-    const { round } = await loadGame(tx);
-    if (round.status !== "running") {
-      return await stateResponse(tx, userId, { notice: "Rakieta nie leci." });
-    }
+  // ── Txn1: the PAYMENT, under ONLY this user's crash_bets row lock ──
+  const outcome = await withTransientRetry(() => db.begin(async (tx) => {
+    await tx`set local lock_timeout = '900ms'`;
+    await tx`set local statement_timeout = '4s'`;
+
+    // Pointer read — NO `for update`; never contends with the advance herd.
+    const [table] = await tx`select current_round_id from public.crash_tables where slug = 'main'`;
+    if (!table?.current_round_id) return { notice: "Rakieta nie leci." };
+    const roundId = table.current_round_id;
+
+    // The ONLY lock that matters: this user's bet row (contended solely by resolveRound,
+    // and only on THIS row). resolveRound busts only status='active' bets and never
+    // credits coins, so serializing here yields exactly one outcome per bet.
     const [bet] = await tx`select * from public.crash_bets
-                           where round_id = ${round.id} and user_id = ${userId} for update`;
-    if (bet?.status === "cashed") {
-      const mult = Number(bet.cashed_multiplier || 1);
-      return await stateResponse(tx, userId, { notice: `Już wypłacono x${mult.toFixed(2)}.` });
+                           where round_id = ${roundId} and user_id = ${userId} for update`;
+    if (!bet) return { notice: "Nie masz aktywnego zakładu." };
+    if (bet.status === "cashed") {
+      return { notice: `Już wypłacono x${Number(bet.cashed_multiplier || 1).toFixed(2)}.` };
     }
-    if (!bet || bet.status !== "active") {
-      return await stateResponse(tx, userId, { notice: "Nie masz aktywnego zakładu." });
-    }
-    const [sec] = await tx`select crash_point from public.crash_round_secrets where round_id = ${round.id}`;
-    const [{ ms }] = await tx`select extract(epoch from (now() - ${round.started_at}::timestamptz)) * 1000 as ms`;
+    if (bet.status !== "active") return { notice: "Za późno! 💥" };
+
+    const [round] = await tx`select status, started_at from public.crash_rounds where id = ${roundId}`;
+    if (!round || round.status === "betting") return { notice: "Rakieta jeszcze nie leci." };
+    if (round.status === "crashed") return { notice: "Za późno! 💥" };
+
+    const [sec] = await tx`select crash_point, crash_at from public.crash_round_secrets where round_id = ${roundId}`;
+    if (!sec) return { notice: "Za późno! 💥" };
+    // Authoritative elapsed + lateness in ONE round-trip, decided by Postgres now()
+    // (no isolate↔DB clock skew). `crashed` flips true the instant now() reaches crash_at.
+    const [{ ms, crashed }] = await tx`
+      select extract(epoch from (now() - ${round.started_at}::timestamptz)) * 1000 as ms,
+             (now() >= ${sec.crash_at}::timestamptz) as crashed`;
     const serverM = multAt(Number(ms));
-    if (!sec || serverM >= Number(sec.crash_point)) {
-      // loadGame would normally have already crashed it; guard against rounding races
-      return await stateResponse(tx, userId, { notice: "Za późno! 💥" });
-    }
+    // Keep BOTH guards: crash_at (timestamp truth) OR serverM>=crash_point (rounding edge).
+    if (crashed || serverM >= Number(sec.crash_point)) return { notice: "Za późno! 💥" };
+
     // Pay what the player SAW on the button (client multiplier), capped at the server's
     // authoritative value so the display matches the payout but nobody can over-claim.
     let mult = floor2(serverM);
@@ -420,9 +451,21 @@ async function cashOut(userId, clientMultiplier) {
     // Hero payout_bonus hook would apply here for an effect_game='crash' item (none exist yet).
     const won = Math.floor(Number(bet.amount) * mult);
     await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
-    await tx`update public.crash_bets set status = 'cashed', cashed_multiplier = ${mult} where id = ${bet.id}`;
-    return await stateResponse(tx, userId, { cashedOut: { multiplier: mult, won } });
+    // `and status = 'active'` makes this idempotent under retry and is load-bearing for the
+    // no-double-pay / no-lost-pay proof against a racing resolveRound.
+    await tx`update public.crash_bets set status = 'cashed', cashed_multiplier = ${mult}
+             where id = ${bet.id} and status = 'active'`;
+    return { cashedOut: { multiplier: mult, won } };
   }));
+
+  // ── Txn2: build the response lock-free. Best-effort — the payout is already committed,
+  //    so a transient state-read failure must NOT surface as an error; return the bare
+  //    outcome and let the client's next poll/realtime fill in the full state. ──
+  try {
+    return await lockFreeState(userId, outcome);
+  } catch (_err) {
+    return outcome;
+  }
 }
 
 Deno.serve(async (req) => {
