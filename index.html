@@ -5324,6 +5324,21 @@
     <main>
       <h2 class="page-title">Statystyki 📊</h2>
       <p class="page-sub">Pulpit menedżerski G6: finanse, hazard, wyścigi i historyczne logi. Wybierz panel oznaczony jako <span style="display:inline-block; font-size: 9px; font-weight: 800; color: var(--accent); background: var(--acc-dim); padding: 1px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; vertical-align: middle;">Szczegóły ➔</span>, aby otworzyć pełny ranking.</p>
+      <div id="coin-race-filters-bar" class="fb-sort-bar" style="margin-bottom: 16px; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span class="fb-sort-label">Okres:</span>
+          <button class="fb-sort-btn active" data-time="all">Wszystko</button>
+          <button class="fb-sort-btn" data-time="30d">30 dni</button>
+          <button class="fb-sort-btn" data-time="7d">7 dni</button>
+          <button class="fb-sort-btn" data-time="3d">3 dni</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span class="fb-sort-label">Gracze:</span>
+          <button class="fb-sort-btn active" data-players="all">Wszyscy</button>
+          <button class="fb-sort-btn" data-players="top5">Top 5</button>
+          <button class="fb-sort-btn" data-players="me">Tylko Ja</button>
+        </div>
+      </div>
       <div class="ranking-grid">
         <div class="ranking-card ranking-card-wide">
           <div class="ranking-card-title">⚽ Mundial 2026 — statystyki i ranking</div>
@@ -5361,10 +5376,16 @@
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
-        <div class="ranking-card" data-detail="coin-race">
-          <div class="ranking-card-title">📈 Wyścig coinów</div>
-          <div class="ranking-card-body" id="coin-race-wrap">
-            <canvas class="coin-race-canvas"></canvas>
+        <div class="ranking-card" data-detail="coin-race-cash">
+          <div class="ranking-card-title">📈 Wyścig gotówki</div>
+          <div class="ranking-card-body" id="coin-race-cash-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card" data-detail="coin-race-net">
+          <div class="ranking-card-title">📈 Wyścig Net Worth</div>
+          <div class="ranking-card-body" id="coin-race-net-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
         <div class="ranking-card" data-detail="seasons">
@@ -11021,11 +11042,13 @@ function animateCoinRace(canvas, series, bounds, opts = {}) {
 
 // Start the animation once the canvas actually has width (the tab may be hidden).
 function playCoinRace(canvas, opts = {}) {
-  if (!canvas || !_coinRaceSeries.length || !_coinRaceBounds) return;
+  const series = opts.series || _coinRaceSeries;
+  const bounds = opts.bounds || _coinRaceBounds;
+  if (!canvas || !series || !series.length || !bounds) return;
   attachRaceTooltip(canvas);
-  if (canvas.offsetWidth > 0) { animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, opts); return; }
+  if (canvas.offsetWidth > 0) { animateCoinRace(canvas, series, bounds, opts); return; }
   const ro = new ResizeObserver(() => {
-    if (canvas.offsetWidth > 0) { ro.disconnect(); animateCoinRace(canvas, _coinRaceSeries, _coinRaceBounds, opts); }
+    if (canvas.offsetWidth > 0) { ro.disconnect(); animateCoinRace(canvas, series, bounds, opts); }
   });
   ro.observe(canvas);
 }
@@ -11080,16 +11103,153 @@ async function loadCoinRace(seasonPromise) {
   });
 
   _coinRaceRaw = series;
-  applyCoinRaceMode(_coinRaceMode);
-
-  let canvas = wrap.querySelector('.coin-race-canvas');
-  if (!series.length) {
-    wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak danych.'));
-    return;
-  }
-  if (!canvas) { canvas = el('canvas', { className: 'coin-race-canvas' }); wrap.replaceChildren(canvas); }
-  playCoinRace(canvas, { showLabels: true });
+  updateCoinRaceCharts();
 }
+
+let _coinRaceTimeFilter = 'all';
+let _coinRacePlayerFilter = 'all';
+let _coinRaceCashSeries = [];
+let _coinRaceCashBounds = null;
+let _coinRaceNetSeries = [];
+let _coinRaceNetBounds = null;
+
+function _interpolateField(points, t, field) {
+  if (!points || !points.length) return 0;
+  if (t <= points[0].ts) return points[0][field];
+  for (let i = 1; i < points.length; i++) {
+    if (t <= points[i].ts) {
+      const a = points[i - 1], b = points[i];
+      const valA = a[field] || 0, valB = b[field] || 0;
+      return valA + (valB - valA) * ((t - a.ts) / ((b.ts - a.ts) || 1));
+    }
+  }
+  return points[points.length - 1][field];
+}
+
+function updateCoinRaceCharts() {
+  if (!_coinRaceRaw || !_coinRaceRaw.length) return;
+  const tMax = Date.now();
+  let tMin = Infinity;
+  if (_coinRaceTimeFilter === '3d') {
+    tMin = tMax - 3 * 24 * 3600 * 1000;
+  } else if (_coinRaceTimeFilter === '7d') {
+    tMin = tMax - 7 * 24 * 3600 * 1000;
+  } else if (_coinRaceTimeFilter === '30d') {
+    tMin = tMax - 30 * 24 * 3600 * 1000;
+  } else {
+    _coinRaceRaw.forEach(s => {
+      if (s.points.length) tMin = Math.min(tMin, s.points[0].ts);
+    });
+  }
+  if (!isFinite(tMin) || tMin >= tMax) tMin = tMax - 86400000;
+
+  let filteredRaw = [..._coinRaceRaw];
+  if (_coinRacePlayerFilter === 'me') {
+    filteredRaw = filteredRaw.filter(s => s.userId === me?.id);
+  } else if (_coinRacePlayerFilter === 'top5') {
+    const sorted = [..._coinRaceRaw].sort((a, b) => {
+      const aVal = a.points[a.points.length - 1].balNet || 0;
+      const bVal = b.points[b.points.length - 1].balNet || 0;
+      return bVal - aVal;
+    });
+    const top5 = sorted.slice(0, 5);
+    if (me && !top5.some(s => s.userId === me.id)) {
+      const mySeries = _coinRaceRaw.find(s => s.userId === me.id);
+      if (mySeries) top5.push(mySeries);
+    }
+    filteredRaw = top5;
+  }
+
+  const cashSeries = [];
+  const netSeries = [];
+  filteredRaw.forEach(s => {
+    const cashPts = [];
+    const netPts = [];
+    if (s.points.length && s.points[0].ts < tMin) {
+      cashPts.push({ ts: tMin, bal: _interpolateField(s.points, tMin, 'balCash') });
+      netPts.push({ ts: tMin, bal: _interpolateField(s.points, tMin, 'balNet') });
+    }
+    s.points.forEach(pt => {
+      if (pt.ts >= tMin && pt.ts <= tMax) {
+        cashPts.push({ ts: pt.ts, bal: pt.balCash });
+        netPts.push({ ts: pt.ts, bal: pt.balNet });
+      }
+    });
+    if (s.points.length) {
+      const last = s.points[s.points.length - 1];
+      cashPts.push({ ts: tMax, bal: last.balCash });
+      netPts.push({ ts: tMax, bal: last.balNet });
+    }
+    if (cashPts.length >= 2) {
+      cashSeries.push({ userId: s.userId, nick: s.nick, color: s.color, points: cashPts });
+    }
+    if (netPts.length >= 2) {
+      netSeries.push({ userId: s.userId, nick: s.nick, color: s.color, points: netPts });
+    }
+  });
+
+  const getBounds = (sArr) => {
+    let yLo = Infinity, yHi = -Infinity;
+    sArr.forEach(s => {
+      s.points.forEach(pt => {
+        yLo = Math.min(yLo, pt.bal);
+        yHi = Math.max(yHi, pt.bal);
+      });
+    });
+    if (!isFinite(yLo)) { yLo = 0; yHi = 2000; }
+    const pad = Math.max(50, (yHi - yLo) * 0.08);
+    return { tMin, tMax, yLo: yLo - pad, yHi: yHi + pad };
+  };
+
+  _coinRaceCashSeries = cashSeries;
+  _coinRaceCashBounds = getBounds(cashSeries);
+  _coinRaceNetSeries = netSeries;
+  _coinRaceNetBounds = getBounds(netSeries);
+
+  const cashWrap = document.getElementById('coin-race-cash-wrap');
+  if (cashWrap) {
+    let canvas = cashWrap.querySelector('.coin-race-canvas');
+    if (!canvas) { canvas = el('canvas', { className: 'coin-race-canvas' }); cashWrap.replaceChildren(canvas); }
+    if (cashSeries.length) {
+      playCoinRace(canvas, { showLabels: true, series: cashSeries, bounds: _coinRaceCashBounds });
+    } else {
+      cashWrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak danych.'));
+    }
+  }
+
+  const netWrap = document.getElementById('coin-race-net-wrap');
+  if (netWrap) {
+    let canvas = netWrap.querySelector('.coin-race-canvas');
+    if (!canvas) { canvas = el('canvas', { className: 'coin-race-canvas' }); netWrap.replaceChildren(canvas); }
+    if (netSeries.length) {
+      playCoinRace(canvas, { showLabels: true, series: netSeries, bounds: _coinRaceNetBounds });
+    } else {
+      netWrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, 'Brak danych.'));
+    }
+  }
+}
+
+(function initCoinRaceFilters() {
+  const filters = document.getElementById('coin-race-filters-bar');
+  if (filters) {
+    filters.querySelectorAll('[data-time]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filters.querySelectorAll('[data-time]').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        _coinRaceTimeFilter = btn.dataset.time;
+        updateCoinRaceCharts();
+      });
+    });
+    filters.querySelectorAll('[data-players]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filters.querySelectorAll('[data-players]').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        _coinRacePlayerFilter = btn.dataset.players;
+        updateCoinRaceCharts();
+      });
+    });
+  }
+})();
 
 // Switch the coin-race between cash ('coins') and net worth ('net') by pointing
 // each series' active `bal` at balCash/balNet, then recomputing bounds.
@@ -11181,8 +11341,15 @@ function renderCoinRaceDetail(container) {
     } else if (detail === 'seasons') {
       title.textContent = '🎮 Historia sezonów gier';
       buildSeasonHistorySections(body, false);
-    } else if (detail === 'coin-race') {
-      title.textContent = '📈 Wyścig coinów — stan gotówki w czasie';
+    } else if (detail === 'coin-race-cash') {
+      title.textContent = '📈 Wyścig gotówki — stan gotówki w czasie';
+      _coinRaceMode = 'coins';
+      applyCoinRaceMode('coins');
+      renderCoinRaceDetail(body);
+    } else if (detail === 'coin-race-net') {
+      title.textContent = '📈 Wyścig Net Worth — stan majątku w czasie';
+      _coinRaceMode = 'net';
+      applyCoinRaceMode('net');
       renderCoinRaceDetail(body);
     } else if (detail === 'economy') {
       title.textContent = '🏦 Skarbiec G6 — bank coinów';
