@@ -802,21 +802,26 @@
 
     /* ── RANKING GRID ── */
     .ranking-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      min-height: calc(100dvh - 140px); grid-template-rows: auto 1fr 1fr 1fr;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      min-height: calc(100dvh - 140px);
     }
-    @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; grid-template-rows: auto; min-height: auto; } }
+    @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; gap: 12px; } }
     .ranking-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 12px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column;
-      transition: border-color .15s, box-shadow .15s;
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column;
+      transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+      box-shadow: 0 1px 3px rgba(15,23,42,.03);
     }
-    .ranking-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px var(--acc-dim); }
-    .ranking-card-wide { grid-column: 1 / -1; min-height: 240px; padding: 20px 22px; cursor: default;
-      overflow: visible; background: linear-gradient(180deg, var(--acc-dim), var(--card)); border-color: var(--border-hi); }
-    .ranking-card-wide:hover { box-shadow: none; border-color: var(--border-hi); }
-    .ranking-card-wide .ranking-card-body { overflow: visible; }
-    .ranking-card-wide .ranking-card-title { font-size: 18px; margin-bottom: 12px; }
+    .ranking-card[data-detail]:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px var(--acc-dim);
+      transform: translateY(-2px);
+    }
+    .ranking-card-wide {
+      grid-column: 1 / -1; min-height: 240px; padding: 20px 22px; cursor: default;
+      overflow: visible; background: linear-gradient(180deg, var(--acc-dim), var(--card)); border-color: var(--border-hi);
+    }
+    .ranking-card-wide:hover { box-shadow: none; border-color: var(--border-hi); transform: none; }
     .fb-sort-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 4px; }
     .fb-sort-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
       color: var(--muted); margin-right: 2px; }
@@ -825,7 +830,22 @@
       color: var(--text); transition: border-color .15s, background .15s; }
     .fb-sort-btn:hover { border-color: var(--accent); }
     .fb-sort-btn.active { border-color: var(--accent); background: var(--acc-dim); color: var(--accent); font-weight: 800; }
-    .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
+    .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+    .ranking-card[data-detail] .ranking-card-title {
+      display: flex; justify-content: space-between; align-items: center; width: 100%;
+      font-size: 13px; font-weight: 800; margin-bottom: 12px; color: var(--text);
+    }
+    .ranking-card[data-detail] .ranking-card-title::after {
+      content: 'Szczegóły ➔';
+      font-size: 10px; font-weight: 800; color: var(--accent);
+      background: var(--acc-dim); padding: 3px 8px; border-radius: 99px;
+      opacity: 0.85; transition: all 0.2s ease; text-transform: uppercase;
+      letter-spacing: .05em; display: inline-block; flex-shrink: 0;
+    }
+    .ranking-card[data-detail]:hover .ranking-card-title::after {
+      opacity: 1; background: var(--accent); color: #ffffff;
+      transform: translateX(3px);
+    }
     .ranking-card-body { flex: 1; overflow: hidden; }
     .coin-race-canvas { width: 100%; height: 100%; display: block; }
     .coin-race-detail-canvas { width: 100%; height: 340px; display: block; margin: 4px 0 12px; }
@@ -5303,7 +5323,7 @@
   <div id="tab-leaderboard" class="hidden">
     <main>
       <h2 class="page-title">Statystyki 📊</h2>
-      <p class="page-sub">Kliknij dowolną sekcję, aby zobaczyć szczegóły.</p>
+      <p class="page-sub">Pulpit menedżerski G6: finanse, hazard, wyścigi i historyczne logi. Wybierz panel oznaczony jako <span style="display:inline-block; font-size: 9px; font-weight: 800; color: var(--accent); background: var(--acc-dim); padding: 1px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; vertical-align: middle;">Szczegóły ➔</span>, aby otworzyć pełny ranking.</p>
       <div class="ranking-grid">
         <div class="ranking-card ranking-card-wide">
           <div class="ranking-card-title">⚽ Mundial 2026 — statystyki i ranking</div>
