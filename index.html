@@ -23476,6 +23476,7 @@ function buildGardenAdvisorTable(container) {
   fmCollection.forEach(card => {
     const def = fmDefs.get(card.species);
     if (!def) return;
+    if (def.edition_size != null) return;
 
     const level = card.level;
     const mkt = fmMarket.get(def.crop_type);
