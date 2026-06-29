@@ -7036,6 +7036,11 @@ let rouletteHeartbeatTimer = null;
 // Must stay comfortably below SEAT_STALE_MS (90s) in supabase/functions/roulette-action.
 const ROULETTE_HEARTBEAT_MS = 25_000;
 
+// Ogródek watering presence: ping while the farm tab is open & visible so the
+// server lets us water. Keep ≤ ⅓ of PRESENCE_WINDOW_SECONDS (90s) in garden-action.
+let gardenHeartbeatTimer = null;
+const GARDEN_HEARTBEAT_MS = 30_000;
+
 // ── Plinko G6 state ──
 let plinkoState = null;
 let plinkoBet = 10;
@@ -7952,7 +7957,7 @@ function switchTab(tab) {
   if (previousTab === 'invoice-horde-test' && tab !== 'invoice-horde-test') { stopInvoiceHordeRound(); restoreInvoiceHordePanelHome(); }
   if (previousTab === 'football' && tab !== 'football') stopFootballCountdown();
   if (previousTab === 'canvas' && tab !== 'canvas') stopCanvasCountdown();
-  if (previousTab === 'farm' && tab !== 'farm') { stopFarmTimer(); stopFarmAtmosphere(); closeFarmPlantModal(); }
+  if (previousTab === 'farm' && tab !== 'farm') { stopFarmTimer(); stopFarmAtmosphere(); closeFarmPlantModal(); stopGardenHeartbeat(); }
   if (previousTab === 'plinko' && tab !== 'plinko') stopPlinkoAnimation();
   if (previousTab === 'crash' && tab !== 'crash') stopCrash();
   activeTab = tab;
@@ -8040,6 +8045,7 @@ function switchTab(tab) {
     loadFarm();
     startFarmAtmosphere();
     startFarmTimer();
+    startGardenHeartbeat();
   } else if (tab === 'heroes') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); show(tH);
     loadHeroes();
@@ -21624,6 +21630,10 @@ const GARDEN_ERR_PL = {
   no_first_garden:      'Najpierw zasadź pierwszą roślinę.',
   already_unlocked:     'Certyfikat jest już aktywny.',
   insufficient:         'Za mało coinów.',
+  bad_slot:             'Nieprawidłowe miejsce.',
+  stale_nonce:          'Sesja podlewania wygasła — odśwież stronę i spróbuj ponownie.',
+  inactive:             'Otwórz zakładkę Ogródek i poczekaj chwilę przed podlewaniem.',
+  gate:                 'Nie udało się podlać — odśwież stronę i spróbuj ponownie.',
 };
 const GARDEN_EQUIP_SLOTS = [
   { id: '0', label: 'Góra lewa' },
@@ -21654,6 +21664,59 @@ function gardenErr(err) {
   const msg = (err.message || String(err)).trim();
   return GARDEN_ERR_PL[msg] || msg;
 }
+// Watering goes through the garden-action Edge Function (arm-nonce gate): the
+// direct water_plant RPC is revoked server-side, so a headless cron script can no
+// longer farm the reward with one REST call. We "arm" (one-time, short-lived nonce
+// issued only to a live JWT client) then "water" with it. Returns the same
+// { data, error } shape the old sb.rpc('water_plant') gave, so call sites are unchanged.
+async function gardenWater(slotIndex) {
+  try {
+    const armed = await sb.functions.invoke('garden-action', { body: { action: 'arm' } });
+    if (armed.error) return gardenWaterLegacy(slotIndex);   // function unreachable/not deployed → bridge
+    if (!armed.data?.ok || !armed.data?.nonce) {
+      return { data: null, error: { message: armed.data?.error || 'gate' } };
+    }
+    const res = await sb.functions.invoke('garden-action', {
+      body: { action: 'water', slot: slotIndex, nonce: armed.data.nonce },
+    });
+    if (res.error) return gardenWaterLegacy(slotIndex);
+    if (!res.data?.ok) return { data: null, error: { message: res.data?.error || 'gate' } };
+    return { data: res.data, error: null };
+  } catch (_e) {
+    return gardenWaterLegacy(slotIndex);
+  }
+}
+// Transitional bridge: fires only while garden-action isn't deployed yet (the
+// invoke errors at the HTTP layer). Once that function is live AND Step 2 of
+// garden-water-gate.sql has revoked water_plant, this returns a permission error
+// and the gate becomes the only way to water. Safe to delete after rollout.
+async function gardenWaterLegacy(slotIndex) {
+  return await sb.rpc('water_plant', { p_slot_index: slotIndex });
+}
+// Presence heartbeat: tells the server "this tab is open & active" so watering is
+// allowed. Runs only while on the Ogródek/farm tab and visible. A headless script
+// never pings, so the server's `water` rejects it with `inactive`.
+async function gardenPing() {
+  try { await sb.functions.invoke('garden-action', { body: { action: 'ping' } }); }
+  catch (_e) { /* best-effort; the next tick retries */ }
+}
+function startGardenHeartbeat() {
+  stopGardenHeartbeat();
+  gardenPing(); // ping immediately so the first click isn't rejected as inactive
+  gardenHeartbeatTimer = setInterval(() => {
+    if (activeTab !== 'farm' || document.hidden || !me) return;
+    gardenPing();
+  }, GARDEN_HEARTBEAT_MS);
+}
+function stopGardenHeartbeat() {
+  if (gardenHeartbeatTimer) clearInterval(gardenHeartbeatTimer);
+  gardenHeartbeatTimer = null;
+}
+// Refresh presence the moment a backgrounded farm tab returns to view.
+function onGardenVisibility() {
+  if (!document.hidden && activeTab === 'farm' && me) gardenPing();
+}
+document.addEventListener('visibilitychange', onGardenVisibility);
 function canonicalPlantType(type) {
   return type === 'palm' ? 'banana' : type;
 }
@@ -22159,7 +22222,7 @@ async function waterFarmPlantFromCell(g, cell) {
   cell?.classList.add('busy');
   const plant = cell?.querySelector('.gp-plant');
   if (plant) plant.classList.add('watered');
-  const { data, error } = await sb.rpc('water_plant', { p_slot_index: g.slot_index || 1 });
+  const { data, error } = await gardenWater(g.slot_index || 1);
   if (error) {
     if (plant) plant.classList.remove('watered');
     cell?.classList.remove('busy');
@@ -25358,7 +25421,7 @@ function buildPot(g, isMine) {
         drops.appendChild(el('span'));
         pot.appendChild(can);
         pot.appendChild(drops);
-        const { data, error } = await sb.rpc('water_plant', { p_slot_index: g.slot_index || 1 });
+        const { data, error } = await gardenWater(g.slot_index || 1);
         if (error) {
           can.remove(); drops.remove();
           showToast('❌ ' + gardenErr(error));

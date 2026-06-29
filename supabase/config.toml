@@ -31,6 +31,9 @@ verify_jwt = true
 [functions.crash-action]
 verify_jwt = true
 
+[functions.garden-action]
+verify_jwt = true
+
 # verify_jwt is false so the hourly cron (x-cron-secret) and anonymous "state"
 # reads are allowed; the "bet" action validates the user JWT manually.
 [functions.football-action]
