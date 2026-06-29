@@ -22900,11 +22900,10 @@ function farmCatalogTable(mdl) {
       const f = farmCardFacts(d, mdl);
       const perDay = farmPerDayIncome(d, f.price);
       const ownedNow = f.have || f.mineOwned;
+      const nftLevel = f.have ? f.have.level : 1;
       const stanCell = f.isNft
         ? (f.mineOwned
-            ? (f.have
-                ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · ' + f.serials)
-                : el('span', { className: 'farm-cat-stan owned' }, '✅ ' + f.serials))
+            ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + nftLevel + ' · ' + f.serials)
             : (f.soldOut ? el('span', { className: 'farm-cat-stan sold' }, 'wyprzedane')
                          : el('span', { className: 'farm-cat-stan locked' }, '🔒')))
         : (f.have ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · 🃏 ' + f.have.count + '/' + (2 * f.have.level))
