@@ -22478,13 +22478,49 @@ function renderFarmSelectionBody() {
   }
   if (!tile.planted_species) {
     box.append(el('div', { className: 'farm-card-sub', style: { marginBottom: '6px' } }, 'Twoja pusta działka — zasadź roślinę:'));
-    if (!fmCollection.length) { box.append(el('div', { className: 'farm-empty' }, 'Brak kart roślin. Otwórz skrzynkę 📦.')); return; }
+    const plantedCounts = new Map();
+    fmTiles.forEach(t => {
+      if (t.owner_id === me?.id && t.planted_species) {
+        plantedCounts.set(t.planted_species, (plantedCounts.get(t.planted_species) || 0) + 1);
+      }
+    });
+    const ownedCounts = new Map();
+    fmCollection.forEach(c => {
+      const def = fmDefs.get(c.species);
+      if (def && def.edition_size == null) {
+        ownedCounts.set(c.species, Math.max(c.count || 0, c.level >= 2 ? 1 : 0));
+      }
+    });
+    fmNft.forEach(n => {
+      if (n.owner_id === me?.id) {
+        ownedCounts.set(n.species, (ownedCounts.get(n.species) || 0) + 1);
+      }
+    });
+
+    const uniqueOwnedSpecies = new Map();
+    fmCollection.forEach(card => uniqueOwnedSpecies.set(card.species, card));
+    fmNft.forEach(n => {
+      if (n.owner_id === me?.id && !uniqueOwnedSpecies.has(n.species)) {
+        uniqueOwnedSpecies.set(n.species, { species: n.species, level: 1, count: 0 });
+      }
+    });
+
+    if (uniqueOwnedSpecies.size === 0) { box.append(el('div', { className: 'farm-empty' }, 'Brak kart roślin. Otwórz skrzynkę 📦.')); return; }
+    
     const grid = el('div', { className: 'fcc-grid compact' });
-    fmCollection.slice()
+    [...uniqueOwnedSpecies.values()]
       .sort((a, b) => (fmDefs.get(b.species)?.draw_weight || 0) - (fmDefs.get(a.species)?.draw_weight || 0))
       .forEach(card => {
         if (!fmDefs.get(card.species)) return;
-        grid.append(farmCardTile(card, { onPick: (c, tileEl) => plantCrop(fmSel.x, fmSel.y, c.species, tileEl) }));
+        const owned = ownedCounts.get(card.species) || 0;
+        const planted = plantedCounts.get(card.species) || 0;
+        const limitReached = planted >= owned;
+        
+        grid.append(farmCardTile(card, { 
+          onPick: limitReached ? null : ((c, tileEl) => plantCrop(fmSel.x, fmSel.y, c.species, tileEl)),
+          plantDisabled: limitReached,
+          plantLabel: limitReached ? `Posadzono (${planted}/${owned})` : '🌱 Zasadź'
+        }));
       });
     box.append(grid);
     return;
@@ -22516,17 +22552,21 @@ function farmCardTile(card, opts) {
   const dupesNeeded = 2 * card.level, coinCost = 50 * card.level * card.level;
   const haveEnough = card.count >= dupesNeeded;
   const canLevel = haveEnough && (me?.coins || 0) >= coinCost;
-  const pick = !!opts.onPick;
+  const pick = !!opts.onPick || opts.plantDisabled;
   // In inventory mode the whole card is clickable → its detail modal (with table).
   const tile = el('div', { className: 'fcc pickable rar-' + rar + (isNft ? ' nft' : ''),
-    title: pick ? 'Kliknij, aby zasadzić' : 'Kliknij, aby zobaczyć szczegóły' });
+    title: pick ? (opts.plantDisabled ? 'Zasadzono wszystkie dostępne karty' : 'Kliknij, aby zasadzić') : 'Kliknij, aby zobaczyć szczegóły' });
   const pct = dupesNeeded ? Math.max(0, Math.min(100, card.count / dupesNeeded * 100)) : 0;
   let footer;
   if (pick) {
-    footer = el('button', { className: 'fcc-up ready' }, '🌱 Zasadź');
-    const plant = () => opts.onPick(card, tile);
-    footer.addEventListener('click', e => { e.stopPropagation(); plant(); });
-    tile.addEventListener('click', plant);
+    if (opts.plantDisabled) {
+      footer = el('button', { className: 'fcc-up', disabled: true, style: { background: 'var(--bg-mid)', color: 'var(--muted)', opacity: '0.8' } }, opts.plantLabel || 'W użyciu');
+    } else {
+      footer = el('button', { className: 'fcc-up ready' }, opts.plantLabel || '🌱 Zasadź');
+      const plant = () => opts.onPick(card, tile);
+      footer.addEventListener('click', e => { e.stopPropagation(); plant(); });
+      tile.addEventListener('click', plant);
+    }
   } else {
     footer = el('button', { className: 'fcc-up' + (canLevel ? ' ready' : ''),
         title: 'Ulepszenie do poz. ' + (card.level + 1) + ': ' + dupesNeeded + ' duplikatów + ' + coinCost + ' 🪙' },
@@ -23762,6 +23802,7 @@ function renderFarmHelpInto(bodyEl) {
       P('Uwaga: poziom „zapisuje się" w momencie sadzenia. Jeśli ulepszysz kartę, gdy roślina już rośnie — ta roślina dokończy na starym poziomie, a wyższy zadziała przy następnym sadzeniu.')),
 
     farmHelpSection('🌱 4. Sadzenie i zbiór',
+      P(b('Limit sadzenia: '), 'Możesz mieć posadzonych jednocześnie tylko tyle roślin danego gatunku, ile sztuk kart posiadasz. Każda karta pozwala na obsadzenie jednego pola w danym momencie.'),
       P('Klikasz swoje puste pole i sadzisz wybraną kartę. Roślina rośnie w ', b('prawdziwym czasie'), ' (zegarowym): zwykłe ', b(growRange('common')), ', rzadkie ', b(growRange('rare')), ', epickie ', b(growRange('epic')), '.'),
       P('To są ', b('pełne dni, nie minuty'), ' — uprawa dojrzewa powoli. Czas leci ', b('nawet gdy zamkniesz grę'), ' albo przełączysz kartę: gdy wrócisz, roślina będzie o tyle starsza. Pasek pod doniczką i licznik „Dojrzeje za…" pokazują ile zostało.'),
       P('Wyższy poziom karty skraca wzrost o ', b('≈ 8% na poziom'), ', ale ', b('nigdy poniżej 24 h'), ' — daną roślinę zbierzesz najwyżej ', b('raz dziennie'), '. Gdy dojrzeje, klikasz „Zbierz" i plon trafia do ', b('🎒 Ekwipunku'), '; pole znów jest wolne.'),
