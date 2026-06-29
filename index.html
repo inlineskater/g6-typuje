@@ -5039,20 +5039,33 @@
     .farm-price-meta { min-width: 0; }
     .farm-price-name { font-size: 13px; font-weight: 800; color: var(--text); }
     .farm-price-now { font-size: 16px; font-weight: 900; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .farm-chart-svg { width: 100%; height: 90px; display: block; border-radius: 8px; background: linear-gradient(180deg, var(--surface), transparent); }
-    .farm-chart-area { fill: rgba(99,102,241,.13); stroke: none; }
-    .farm-chart-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-    .farm-chart-base { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; opacity: .55; }
-    .farm-chart-dot { fill: var(--accent); }
+    .farm-chart-svg { width: 100%; height: 90px; display: block; border-radius: 8px; background: linear-gradient(180deg, var(--surface), transparent); overflow: visible; margin-top: 8px; }
+    .farm-chart-svg text { font-size: 8px; fill: var(--muted); font-weight: 600; font-family: inherit; }
+    .farm-chart-area { fill: rgba(136, 136, 136, 0.15); stroke: none; }
+    .farm-chart-area.trend-up { fill: rgba(34, 197, 94, 0.15); }
+    .farm-chart-area.trend-down { fill: rgba(239, 68, 68, 0.15); }
+    .farm-chart-line { fill: none; stroke: var(--muted); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+    .farm-chart-line.trend-up { stroke: #22c55e; }
+    .farm-chart-line.trend-down { stroke: #ef4444; }
+    .farm-chart-base { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; opacity: .5; }
+    .farm-chart-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .4; }
+    .farm-chart-dot { fill: var(--muted); stroke: var(--bg); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .farm-chart-dot.trend-up { fill: #22c55e; }
+    .farm-chart-dot.trend-down { fill: #ef4444; }
     .farm-price-foot { margin-top: 6px; font-size: 10.5px; color: var(--muted); }
     .farm-price-empty { font-size: 12px; color: var(--muted); padding: 22px 0; text-align: center; }
-    .farm-sales-feed { margin-top: 18px; }
-    .farm-sales-title { font-weight: 800; font-size: 13px; margin-bottom: 8px; }
-    .farm-sales-row { font-size: 12px; padding: 5px 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; flex-wrap: wrap; }
-    .farm-sales-row:last-child { border-bottom: none; }
-    .farm-sales-who { font-weight: 700; }
+    .farm-sales-feed { margin-top: 24px; padding-top: 16px; border-top: 2px dashed var(--border); }
+    .farm-sales-title { font-weight: 800; font-size: 14px; margin-bottom: 8px; }
+    .farm-sales-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    .farm-sales-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 700; white-space: nowrap; }
+    .farm-sales-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .farm-sales-table tr.hidden { display: none; }
+    .farm-sales-table tr:last-child td { border-bottom: none; }
+    .farm-sales-who { font-weight: 700; color: var(--text); }
     .farm-sales-coins { font-weight: 800; color: var(--accent); }
-    .farm-sales-time { color: var(--muted); margin-left: auto; }
+    .farm-sales-time { color: var(--muted); white-space: nowrap; }
+    .farm-sales-crop { display: flex; align-items: center; gap: 4px; font-weight: 600; }
+    .farm-sales-more { margin-top: 10px; text-align: center; }
     /* Voucher reveal card in the pack opening */
     .farm-pack-card.voucher .farm-pack-front { background: linear-gradient(160deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
     .farm-pack-card.voucher .farm-pack-glow { background: radial-gradient(circle, #22c55e, transparent 70%); }
@@ -22989,9 +23002,8 @@ function farmCatalogTable(mdl) {
       tbody));
 }
 
-// Inline SVG line chart of a crop's price over time (+ dashed base reference).
 function farmPriceChart(points, base) {
-  const W = 320, H = 96, padL = 4, padR = 6, padT = 8, padB = 10;
+  const W = 320, H = 96, padL = 26, padR = 6, padT = 12, padB = 10;
   const ps = points.slice();
   const vals = ps.map(p => p.p).concat(typeof base === 'number' ? [base] : []);
   let lo = Math.min(...vals), hi = Math.max(...vals);
@@ -23001,19 +23013,30 @@ function farmPriceChart(points, base) {
   const xOf = t => t1 === t0 ? (W - padR) : padL + (t - t0) / (t1 - t0) * (W - padL - padR);
   const yOf = p => padT + (1 - (p - lo) / (hi - lo)) * (H - padT - padB);
   const svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'farm-chart-svg', preserveAspectRatio: 'none' });
+  
+  const mid = (hi + lo) / 2;
+  [lo + pd, mid, hi - pd].forEach(yVal => {
+    const y = yOf(yVal).toFixed(1);
+    svg.append(svgEl('line', { x1: padL - 4, y1: y, x2: W - padR, y2: y, class: 'farm-chart-grid' }));
+    svg.append(svgEl('text', { x: padL - 6, y: +y + 3, 'text-anchor': 'end' }, Math.round(yVal) + ''));
+  });
+
   if (typeof base === 'number') {
     const by = yOf(base).toFixed(1);
-    svg.append(svgEl('line', { x1: padL, y1: by, x2: W - padR, y2: by, class: 'farm-chart-base' }));
+    svg.append(svgEl('line', { x1: padL - 4, y1: by, x2: W - padR, y2: by, class: 'farm-chart-base' }));
   }
+  
+  const trend = ps.length >= 2 ? (ps[ps.length - 1].p >= ps[0].p ? 'trend-up' : 'trend-down') : '';
   const coords = ps.map(p => [xOf(p.t), yOf(p.p)]);
+  
   if (coords.length >= 2) {
     const dline = 'M' + coords.map(c => c[0].toFixed(1) + ' ' + c[1].toFixed(1)).join(' L');
     const x0 = coords[0][0].toFixed(1), xN = coords[coords.length - 1][0].toFixed(1), yB = (H - padB).toFixed(1);
-    svg.append(svgEl('path', { d: dline + ' L' + xN + ' ' + yB + ' L' + x0 + ' ' + yB + ' Z', class: 'farm-chart-area' }));
-    svg.append(svgEl('path', { d: dline, class: 'farm-chart-line' }));
+    svg.append(svgEl('path', { d: dline + ' L' + xN + ' ' + yB + ' L' + x0 + ' ' + yB + ' Z', class: 'farm-chart-area ' + trend }));
+    svg.append(svgEl('path', { d: dline, class: 'farm-chart-line ' + trend }));
   }
   const last = coords[coords.length - 1];
-  svg.append(svgEl('circle', { cx: last[0].toFixed(1), cy: last[1].toFixed(1), r: 3.2, class: 'farm-chart-dot' }));
+  svg.append(svgEl('circle', { cx: last[0].toFixed(1), cy: last[1].toFixed(1), r: 3.2, class: 'farm-chart-dot ' + trend }));
   return svg;
 }
 
@@ -23057,29 +23080,56 @@ async function buildFarmMarketBody(bodyEl) {
   loadFarmSalesFeed(feed);
 }
 
-// „🧾 Ostatnie sprzedaże plonów": public feed of every player's crop sale, read
-// from the coin ledger (reason farm_crop_sale; authenticated SELECT). Visible to all.
 async function loadFarmSalesFeed(host) {
   host.replaceChildren(el('div', { className: 'farm-sales-title' }, '🧾 Ostatnie sprzedaże plonów'),
     el('div', { className: 'farm-price-empty' }, 'Wczytuję…'));
   try {
     const { data } = await sb.from('coin_transactions')
       .select('user_id,delta,meta,created_at, profiles(nick)')
-      .eq('reason', 'farm_crop_sale').order('created_at', { ascending: false }).limit(20);
+      .eq('reason', 'farm_crop_sale').order('created_at', { ascending: false }).limit(100);
     const rows = data || [];
     host.replaceChildren(el('div', { className: 'farm-sales-title' }, '🧾 Ostatnie sprzedaże plonów'));
     if (!rows.length) { host.append(el('div', { className: 'farm-price-empty' }, 'Jeszcze nikt nic nie sprzedał.')); return; }
-    rows.forEach(r => {
+    
+    const table = el('table', { className: 'farm-sales-table' });
+    const thead = el('thead', {}, el('tr', {},
+      el('th', {}, 'Data i czas'),
+      el('th', {}, 'Gracz'),
+      el('th', {}, 'Transakcja'),
+      el('th', {}, 'Zysk')
+    ));
+    const tbody = el('tbody');
+    
+    rows.forEach((r, i) => {
       const ct = r.meta?.crop_type, def = ct ? [...fmDefs.values()].find(d => d.crop_type === ct) : null;
       const qty = r.meta?.qty ?? '?';
       const nick = r.profiles?.nick || '???';
-      host.append(el('div', { className: 'farm-sales-row' },
-        el('span', { className: 'farm-sales-who' }, nick),
-        el('span', {}, ' sprzedał ' + qty + '× '),
-        el('span', {}, farmIcon(def?.emoji || '🧺')),
-        el('span', { className: 'farm-sales-coins' }, ' ' + r.delta + ' 🪙'),
-        el('span', { className: 'farm-sales-time' }, ' · ' + farmTimeAgo(r.created_at))));
+      
+      const d = new Date(r.created_at);
+      const dateStr = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const timeStr = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      
+      const tr = el('tr', { className: i >= 10 ? 'hidden' : '' },
+        el('td', { className: 'farm-sales-time' }, `${dateStr}, ${timeStr}`),
+        el('td', { className: 'farm-sales-who' }, nick),
+        el('td', { className: 'farm-sales-crop' }, farmIcon(def?.emoji || '🧺'), `${qty}× ${def?.name || ct}`),
+        el('td', { className: 'farm-sales-coins' }, `+${r.delta} 🪙`)
+      );
+      tbody.append(tr);
     });
+    
+    table.append(thead, tbody);
+    host.append(table);
+    
+    if (rows.length > 10) {
+      const btn = el('button', { className: 'farm-mini-btn' }, 'Pokaż wszystkie (' + rows.length + ')');
+      const moreDiv = el('div', { className: 'farm-sales-more' }, btn);
+      btn.addEventListener('click', () => {
+        tbody.querySelectorAll('tr.hidden').forEach(tr => tr.classList.remove('hidden'));
+        moreDiv.remove();
+      });
+      host.append(moreDiv);
+    }
   } catch (e) {
     console.error('sales feed', e);
     host.replaceChildren(el('div', { className: 'farm-sales-title' }, '🧾 Ostatnie sprzedaże plonów'),
@@ -23087,7 +23137,7 @@ async function loadFarmSalesFeed(host) {
   }
 }
 
-// Short relative-time label (pl) for the sales feed.
+// Short relative-time label (pl) for other uses.
 function farmTimeAgo(iso) {
   const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
   if (s < 60) return 'teraz';
