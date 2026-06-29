@@ -23146,7 +23146,7 @@ async function loadFarmSalesFeed(host) {
       const tr = el('tr', { className: i >= 10 ? 'hidden' : '' },
         el('td', { className: 'farm-sales-time' }, `${dateStr}, ${timeStr}`),
         el('td', { className: 'farm-sales-who' }, nick),
-        el('td', { className: 'farm-sales-crop' }, farmIcon(def?.emoji || '🧺'), `${qty}× ${def?.name || ct}`),
+        el('td', {}, el('div', { className: 'farm-sales-crop' }, farmIcon(def?.emoji || '🧺'), `${qty}× ${def?.name || ct}`)),
         el('td', { className: 'farm-sales-coins' }, `+${r.delta} 🪙`)
       );
       tbody.append(tr);
