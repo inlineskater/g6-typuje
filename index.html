@@ -22392,7 +22392,7 @@ function farmToolbar() {
     mkBtn('farm-tool-btn', '📖 Katalog', () => openFarmHub('catalog')),
     mkBtn('farm-tool-btn', '📈 Cennik', () => openFarmHub('market')),
     mkBtn('farm-tool-btn', '❓ Jak to działa', () => openFarmHub('help')),
-    mkBtn('farm-tool-btn', '📦 Skrzynki', () => openShopSection('farm-lootbox-section')));
+    mkBtn('farm-tool-btn', '📦 Skrzynki', () => openFarmHub('boxes')));
 }
 
 // One popup per plain-cell click: planted → rich detail modal; otherwise the
@@ -23078,13 +23078,14 @@ function buildFarmCatalogBody(bodyEl) {
   bodyEl.append(farmCatalogTable(mdl));
 }
 
-// ── Ogródek hub: one modal, three tabs (Katalog / Ekwipunek / Jak to działa) ──
-let farmHubTab = 'catalog';
+// ── Ogródek hub: one modal, unified tab bar ──
+let farmHubTab = 'inventory';
 const FARM_HUB_TABS = [
-  { id: 'catalog',   label: '📖 Katalog' },
   { id: 'inventory', label: '🎒 Ekwipunek' },
-  { id: 'market',    label: '📈 Ceny' },
+  { id: 'catalog',   label: '📖 Katalog' },
+  { id: 'market',    label: '📈 Cennik' },
   { id: 'help',      label: '❓ Jak to działa' },
+  { id: 'boxes',     label: '📦 Skrzynki' },
 ];
 
 // Render the active tab's body (each build* fn replaceChildren's the container)
@@ -23095,10 +23096,12 @@ function renderFarmHubBody() {
   if (!bodyEl) return;
   const bar = farmModalEl.querySelector('.farm-hub-tabs');
   if (bar) bar.querySelectorAll('.farm-hub-tab').forEach(b => b.classList.toggle('active', b.dataset.hubtab === farmHubTab));
+  
   if (farmHubTab === 'inventory') buildFarmInventoryBody(bodyEl);
+  else if (farmHubTab === 'catalog') buildFarmCatalogBody(bodyEl);
   else if (farmHubTab === 'market') buildFarmMarketBody(bodyEl);
   else if (farmHubTab === 'help') buildFarmHelpBody(bodyEl);
-  else buildFarmCatalogBody(bodyEl);
+  else if (farmHubTab === 'boxes') buildFarmBoxesBody(bodyEl);
 }
 
 // Re-render after an in-hub action (level-up / sell) without reopening.
@@ -23390,25 +23393,10 @@ async function openFarmNftExplorer(species) {
 function buildFarmInventoryBody(bodyEl) {
   bodyEl.replaceChildren();
 
-  // 📦 Sealed boxes — opened here with the theatrical reveal (bought in the Sklep).
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '📦 Skrzynki z nasionami'));
-  const boxRow = el('div', { className: 'farm-box-owned', style: { textAlign: 'left' } });
-  if (fmBoxes > 0) {
-    boxRow.append('Masz ', el('b', {}, plBoxes(fmBoxes)), ' do otwarcia. ');
-    const openBtn = el('button', { className: 'farm-mini-btn primary', style: { marginLeft: '4px' } }, '📦 Otwórz skrzynkę');
-    openBtn.addEventListener('click', () => openFarmLootbox(openBtn));
-    boxRow.append(openBtn);
-  } else {
-    boxRow.append('Nie masz skrzynek. ');
-    const buyLink = el('button', { className: 'farm-mini-btn', style: { marginLeft: '4px' } }, '🛒 Kup w Sklepie');
-    buyLink.addEventListener('click', () => { closeFarmModal(); openShopSection('farm-lootbox-section'); });
-    boxRow.append(buyLink);
-  }
   if (fmVouchers > 0) {
-    boxRow.append(el('div', { style: { marginTop: '6px' } },
+    bodyEl.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left', marginBottom: '8px' } },
       '🎁 Darmowe działki: ', el('b', {}, String(fmVouchers)), ' — kliknij puste pole na farmie, aby postawić za 0 🪙.'));
   }
-  bodyEl.append(boxRow);
 
   // 💎 NFT collection — this player's serialized cards (newest serial first).
   // Always shown (with a hint when empty) so players learn NFTs exist.
@@ -23605,6 +23593,74 @@ function buildGardenAdvisorTable(container) {
     ));
   });
   container.append(tableUpgrade);
+}
+
+function buildFarmBoxesBody(bodyEl) {
+  bodyEl.replaceChildren();
+
+  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '📦 Skrzynki z nasionami'));
+
+  const container = el('div', { className: 'lootbox-tab-wrap', style: { padding: '10px 4px' } });
+
+  if ((fmBoxes || 0) > 0) {
+    const openCard = el('div', { className: 'lootbox-card', style: { marginBottom: '16px', background: 'var(--surface)', border: '1px solid var(--accent)' } },
+      el('div', { className: 'lootbox-hero' },
+        el('div', { className: 'lootbox-glow' }),
+        el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, '📦')
+      ),
+      el('div', { className: 'lootbox-body' },
+        el('div', { className: 'lootbox-name', style: { fontSize: '16px', fontWeight: 'bold' } }, 'Masz skrzynki do otwarcia!'),
+        el('div', { className: 'lootbox-tag', style: { margin: '4px 0 12px' } }, `Posiadasz: ${plBoxes(fmBoxes)}`),
+        el('button', { className: 'lootbox-buy', style: { background: 'linear-gradient(180deg, #4ade80, #16a34a)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' } }, '📦 Otwórz skrzynkę')
+      )
+    );
+    const openBtn = openCard.querySelector('button');
+    openBtn.addEventListener('click', () => openFarmLootbox(openBtn));
+    container.append(openCard);
+  }
+
+  const affordable = me && (me.coins || 0) >= FARM_BOX_PRICE;
+  const buyBtn = el('button', { className: 'lootbox-buy', style: { width: '100%', marginTop: '12px' } },
+    el('span', {}, '🛒 Kup skrzynkę'), el('span', { className: 'lootbox-buy-price' }, FARM_BOX_PRICE + ' 🪙')
+  );
+  buyBtn.disabled = !affordable;
+  buyBtn.addEventListener('click', () => buyFarmLootbox(buyBtn));
+
+  const buyCard = el('div', { className: 'lootbox-card' },
+    el('div', { className: 'lootbox-hero' },
+      el('div', { className: 'lootbox-glow' }),
+      el('div', { className: 'lootbox-box' }, '📦')
+    ),
+    el('div', { className: 'lootbox-body' },
+      el('div', { className: 'lootbox-head' },
+        el('div', {},
+          el('div', { className: 'lootbox-name' }, 'Skrzynka z nasionami'),
+          el('div', { className: 'lootbox-tag' }, 'Ogródek')
+        ),
+        el('div', { className: 'lootbox-pricetag' }, FARM_BOX_PRICE + ' 🪙')
+      ),
+      el('ul', { className: 'lootbox-feats', style: { margin: '10px 0' } },
+        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🃏'), el('span', {}, FARM_BOX_DRAWS + ' różne karty roślin')),
+        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🎁'), el('span', {}, 'szansa na darmową działkę')),
+        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '💎'), el('span', {}, 'szansa na limitowaną kartę NFT'))
+      ),
+      buyBtn
+    )
+  );
+
+  container.append(buyCard);
+
+  const oddsWrap = el('div', { className: 'lootbox-odds-wrap hidden', style: { marginTop: '8px' } }, farmBoxOddsTable());
+  const oddsBtn = el('button', { className: 'lootbox-odds-toggle', style: { width: '100%', marginTop: '8px' } },
+    el('span', {}, 'ℹ️ Szanse i zawartość'), el('span', { className: 'lootbox-chev' }, '▾')
+  );
+  oddsBtn.addEventListener('click', () => {
+    const hiddenNow = oddsWrap.classList.toggle('hidden');
+    oddsBtn.classList.toggle('open', !hiddenNow);
+  });
+  
+  container.append(oddsBtn, oddsWrap);
+  bodyEl.append(container);
 }
 
 function farmHelpSection(title, ...nodes) {
