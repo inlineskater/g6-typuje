@@ -1463,6 +1463,18 @@
     .casino-chip-100  { --chip-face: #0f172a; }
     .casino-chip-200  { --chip-face: #c2410c; }
     .casino-chip-500  { --chip-face: #7c3aed; }
+    .stake-custom {
+      width: 80px; height: 44px; box-sizing: border-box;
+      border-radius: 12px; border: 2px solid var(--gold-hi);
+      background: rgba(0,0,0,.34); color: #fff;
+      font-weight: 800; font-size: 14px; text-align: center; padding: 2px 6px;
+      -moz-appearance: textfield;
+    }
+    .stake-custom::-webkit-outer-spin-button,
+    .stake-custom::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .stake-custom:focus { outline: 3px solid var(--gold-hi); outline-offset: 2px; }
+    .stake-custom::placeholder { color: rgba(255,255,255,.5); font-weight: 600; font-size: 12px; }
+    .plinko-chips .stake-custom { width: 64px; height: 34px; font-size: 12px; }
 
     /* ── Plinko G6 ── */
     #tab-plinko.casino {
@@ -5451,6 +5463,7 @@
             <button class="casino-chip casino-chip-25" data-stake="25">25</button>
             <button class="casino-chip casino-chip-100" data-stake="50">50</button>
             <button class="casino-chip casino-chip-100" data-stake="100">100</button>
+            <input id="slots-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
           </div>
         </div>
 
@@ -5523,6 +5536,7 @@
                   <button class="casino-chip casino-chip-100" data-stake="50">50</button>
                   <button class="casino-chip casino-chip-100" data-stake="100">100</button>
                   <button class="casino-chip casino-chip-200" data-stake="250">250</button>
+                  <input id="plinko-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
                 </div>
               </div>
               <div class="plinko-control">
@@ -5622,6 +5636,7 @@
                 <button class="casino-chip casino-chip-100" data-stake="50">50</button>
                 <button class="casino-chip casino-chip-100" data-stake="100">100</button>
                 <button class="casino-chip casino-chip-200" data-stake="250">250</button>
+                <input id="mines-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
               </div>
             </div>
 
@@ -5694,6 +5709,7 @@
               <button class="casino-chip casino-chip-100" data-stake="50">50</button>
               <button class="casino-chip casino-chip-100" data-stake="100">100</button>
               <button class="casino-chip casino-chip-200" data-stake="250">250</button>
+              <input id="crash-stake-custom" class="stake-custom" type="number" min="1" step="1" inputmode="numeric" placeholder="kwota" aria-label="Własna stawka">
             </div>
           </div>
           <button id="crash-bet-btn" class="rl-btn is-gold">Postaw <span id="crash-bet-label">10</span> 🪙</button>
@@ -14550,6 +14566,41 @@ document.querySelectorAll('.slots-chips .casino-chip').forEach(btn => {
     setText(document.getElementById('slots-bet-label'), slotsBet);
   });
 });
+
+// ── Custom bet amount: type any stake (1..CASINO_BET_MAX) in Rakieta/Sloty/Plinko/Miny ──
+const CASINO_BET_MAX = 10000000; // safety rail; the server enforces the same ceiling + your balance
+function wireCustomStake(inputId, chipsSel, setBet) {
+  const input = document.getElementById(inputId);
+  const chips = document.querySelector(chipsSel);
+  if (!input || !chips) return;
+  const deselect = () => chips.querySelectorAll('.casino-chip').forEach(b => b.classList.remove('active'));
+  input.addEventListener('input', () => {
+    const v = Math.floor(Number(input.value));
+    if (!Number.isFinite(v) || v < 1) return; // ignore empty/partial/0 — keep the last stake
+    if (setBet(Math.min(v, CASINO_BET_MAX)) !== false) deselect();
+  });
+  input.addEventListener('change', () => { // normalize on blur / Enter
+    if (input.value === '') return;
+    let v = Math.floor(Number(input.value));
+    if (!Number.isFinite(v) || v < 1) v = 1;
+    v = Math.min(v, CASINO_BET_MAX);
+    input.value = String(v);
+    if (setBet(v) !== false) deselect();
+  });
+  // Picking a preset chip clears the custom field so the two never disagree.
+  chips.addEventListener('click', (e) => { if (e.target.closest('.casino-chip')) input.value = ''; });
+}
+(function wireCustomStakes() {
+  const ready = () => {
+    if (!document.getElementById('crash-stake-custom')) return false;
+    wireCustomStake('crash-stake-custom', '.crash-chips', v => { crashBet = v; });
+    wireCustomStake('slots-stake-custom', '.slots-chips', v => { slotsBet = v; setText(document.getElementById('slots-bet-label'), v); });
+    wireCustomStake('plinko-stake-custom', '.plinko-chips', v => { if (plinkoBusy) return false; plinkoBet = v; renderPlinko(); });
+    wireCustomStake('mines-stake-custom', '.mines-chips', v => { if (minesState?.activeRound) return false; minesBet = v; renderMines(); });
+    return true;
+  };
+  if (!ready()) document.addEventListener('DOMContentLoaded', ready);
+})();
 
 function slotsCell(sym) {
   const cell = el('div', { className: 'slots-cell' });

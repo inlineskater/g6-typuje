@@ -23,7 +23,8 @@ const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, 
 const BOARD_SIZE = 25;
 const HOUSE_FACTOR = 0.95;
 const MAX_MULT = 1000;
-const STAKES = [5, 10, 25, 50, 100, 250];
+const STAKES = [5, 10, 25, 50, 100, 250]; // preset chips; any integer 1..MAX_BET is allowed
+const MAX_BET = 10_000_000;               // ceiling for a custom stake (balance enforced separately)
 const DEFAULT_BET = 10;
 const DEFAULT_MINES = 3;
 
@@ -53,7 +54,7 @@ async function requireUser(req) {
 
 function validateBet(raw) {
   const bet = Math.trunc(Number(raw ?? DEFAULT_BET));
-  if (!STAKES.includes(bet)) throw gameError("Nieprawidłowa stawka.");
+  if (!Number.isInteger(bet) || bet < 1 || bet > MAX_BET) throw gameError("Nieprawidłowa stawka.");
   return bet;
 }
 

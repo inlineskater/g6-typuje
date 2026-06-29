@@ -21,7 +21,8 @@ const RESULT_PAUSE_MS = 2000;   // crashed → next betting round pause
 const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
 const CASHOUT_GRACE_MS = 700;   // forgive network latency: honor an in-time tap that ARRIVES this late
-const CRASH_STAKES = [5, 10, 25, 50, 100, 250];
+const CRASH_STAKES = [5, 10, 25, 50, 100, 250]; // preset chips; any integer 1..MAX_BET is allowed
+const MAX_BET = 10_000_000;     // ceiling for a custom stake (balance is still enforced separately)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 10 s.
 const CRASH_GROWTH = Math.log(2) / 10000;
@@ -359,7 +360,7 @@ async function getState(userId) {
 
 async function placeBet(userId, rawAmount) {
   const amount = Math.trunc(Number(rawAmount));
-  if (!CRASH_STAKES.includes(amount)) throw gameError("Nieprawidłowa stawka.");
+  if (!Number.isInteger(amount) || amount < 1 || amount > MAX_BET) throw gameError("Nieprawidłowa stawka.");
   return await withTransientRetry(() => db.begin(async (tx) => {
     const { round } = await loadGame(tx);
     if (round.status !== "betting") throw gameError("Zakłady zamknięte — rakieta już leci.");
