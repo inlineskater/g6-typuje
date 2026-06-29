@@ -23448,6 +23448,124 @@ function buildFarmInventoryBody(bodyEl) {
     bodyEl.append(el('div', { className: 'farm-inv-foot' },
       '🃏 ' + fmCollection.length + ' rodzajów kart • 🧺 plony warte ~' + Math.round(totalVal) + ' 🪙'));
   }
+
+  buildGardenAdvisorTable(bodyEl);
+}
+
+function buildGardenAdvisorTable(container) {
+  container.append(el('div', { className: 'farm-inv-section-title', style: { marginTop: '20px' } }, '💡 Asystent Decyzyjny Ogródka'));
+
+  const myNft = fmNft.filter(n => n.owner_id === me?.id);
+  if (!fmCollection.length && !myNft.length) {
+    container.append(el('div', { className: 'farm-empty' }, 'Brak kart do przeanalizowania. Otwórz skrzynkę, aby zdobyć nasiona.'));
+    return;
+  }
+
+  const table = el('table', { className: 'lb-table-compact', style: { width: '100%', marginTop: '8px' } });
+  
+  const trHead = el('tr', { style: { borderBottom: '2px solid var(--border)', fontWeight: 'bold', color: 'var(--muted)' } },
+    el('th', { style: { textAlign: 'left', padding: '6px' } }, 'Roślina'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Poziom'),
+    el('th', { style: { textAlign: 'right', padding: '6px' } }, 'Zysk/Doba'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Ulepszenie'),
+    el('th', { style: { textAlign: 'center', padding: '6px' } }, 'Rekomendacja')
+  );
+  table.append(trHead);
+
+  const rows = [];
+
+  myNft.forEach(n => {
+    const def = fmDefs.get(n.species);
+    if (!def) return;
+    const mkt = fmMarket.get(def.crop_type);
+    const price = mkt ? +mkt.cur_price : 0;
+    
+    const yieldNow = def.base_yield;
+    const growNow = def.base_grow_minutes;
+    const days = growNow / 1440;
+    const coinsPerDay = Math.round((yieldNow * price) / days);
+
+    rows.push({
+      isNft: true,
+      emoji: def.emoji,
+      name: (n.nft_name || def.name) + ' (NFT)',
+      levelDisplay: '#' + n.serial_no,
+      coinsPerDay,
+      upgradeDisplay: 'N/A',
+      canUpgrade: false,
+      advice: '🌱 Zasadź (Super Zysk)',
+      rarity: 'legendary'
+    });
+  });
+
+  fmCollection.forEach(card => {
+    const def = fmDefs.get(card.species);
+    if (!def) return;
+
+    const level = card.level;
+    const mkt = fmMarket.get(def.crop_type);
+    const price = mkt ? +mkt.cur_price : 0;
+    
+    const yieldNow = Math.round(def.base_yield * (1 + (level - 1) * 0.5));
+    const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level - 1));
+    const days = growNow / 1440;
+    const coinsPerDay = Math.round((yieldNow * price) / days);
+
+    const dupesNeeded = 2 * level;
+    const coinCost = 50 * level * level;
+    const haveEnoughDupes = card.count >= dupesNeeded;
+    const canUpgrade = haveEnoughDupes && (me?.coins || 0) >= coinCost;
+
+    let advice = '';
+    let rarity = '';
+    if (canUpgrade) {
+      advice = '⬆️ Ulepsz teraz!';
+      rarity = 'rare';
+    } else if (haveEnoughDupes) {
+      advice = `🪙 Zbierz ${coinCost} 🪙`;
+      rarity = 'epic';
+    } else {
+      const remaining = dupesNeeded - card.count;
+      advice = `📦 Zdobądź ${remaining} dupl.`;
+      rarity = 'common';
+    }
+
+    rows.push({
+      isNft: false,
+      emoji: def.emoji,
+      name: def.name,
+      levelDisplay: 'Lvl ' + level,
+      coinsPerDay,
+      upgradeDisplay: haveEnoughDupes ? `${coinCost} 🪙` : `${card.count}/${dupesNeeded} szt.`,
+      canUpgrade,
+      advice,
+      rarity
+    });
+  });
+
+  rows.sort((a, b) => {
+    if (a.canUpgrade && !b.canUpgrade) return -1;
+    if (!a.canUpgrade && b.canUpgrade) return 1;
+    return b.coinsPerDay - a.coinsPerDay;
+  });
+
+  rows.forEach(r => {
+    const tr = el('tr', { style: { borderBottom: '1px solid var(--border)' } },
+      el('td', { style: { padding: '6px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px' } },
+        farmIcon(r.emoji),
+        el('span', { style: { fontWeight: '600' } }, r.name)
+      ),
+      el('td', { style: { padding: '6px', textAlign: 'center', color: 'var(--muted)' } }, r.levelDisplay),
+      el('td', { style: { padding: '6px', textAlign: 'right', fontWeight: 'bold' } }, r.coinsPerDay + ' 🪙'),
+      el('td', { style: { padding: '6px', textAlign: 'center', fontSize: '11px', color: 'var(--muted)' } }, r.upgradeDisplay),
+      el('td', { style: { padding: '6px', textAlign: 'center' } },
+        el('span', { className: 'fcc-rar farm-rar-' + r.rarity, style: { fontWeight: '750', fontSize: '9px', padding: '3px 8px', minWidth: '80px', display: 'inline-block' } }, r.advice)
+      )
+    );
+    table.append(tr);
+  });
+
+  container.append(table);
 }
 
 function farmHelpSection(title, ...nodes) {
