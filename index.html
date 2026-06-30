@@ -4809,6 +4809,24 @@
     .farm-tax-stat b { font-size: 13px; color: #3c2a16; }
     .farm-tax-note { margin-top: 7px; font-size: 11px; line-height: 1.35; color: #6b4d2b; }
     .farm-tax-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    /* Ownership deeds (prawa własności) — one mini certificate per owned tile */
+    .farm-deed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .farm-deed {
+      position: relative; padding: 9px 11px; border-radius: 8px;
+      background: linear-gradient(180deg, #fffdf5, #fbf3dd); border: 1px solid #d8c79a;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); color: #4a3a1d;
+    }
+    .farm-deed.mig { background: linear-gradient(180deg, #f3fbf2, #e6f5e3); border-color: #b8d8b0; color: #2f4a2a; }
+    .farm-deed-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .farm-deed-seal { font-size: 20px; line-height: 1; }
+    .farm-deed-title { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+    .farm-deed-id { font-size: 15px; font-weight: 900; }
+    .farm-deed-type { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+    .farm-deed-status { font-size: 11px; padding: 2px 6px; border-radius: 6px; display: inline-block; background: rgba(0,0,0,.05); }
+    .farm-deed-status.free { background: rgba(22,101,52,.12); color: #166534; }
+    .farm-deed-status.busy { background: rgba(180,120,30,.14); color: #92590e; }
+    .farm-deed-status.listed { background: rgba(202,138,4,.18); color: #a16207; }
+    .farm-deed-foot { display: flex; justify-content: space-between; gap: 6px; margin-top: 7px; padding-top: 6px; border-top: 1px dashed rgba(120,90,40,.3); font-size: 10px; opacity: .85; }
     .farm-sel-title { font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
     .farm-onboard-title { font-weight: 800; font-size: 13px; color: #14532d; margin-bottom: 4px; }
     .farm-onboard-steps { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.5; color: #5a4326; }
@@ -23810,6 +23828,62 @@ function farmTerritoryPriceTable() {
       tbody));
 }
 
+// ── Twoje działki (prawa własności) — lives in 🎒 Ekwipunek ──
+// One ownership deed per owned tile + the land-tax status + next-tile prices
+// (moved here from 📈 Cennik, which now shows only crop prices).
+function farmTileDeedLabel(x, y) {
+  return String.fromCharCode(65 + (x % 26)) + (y + 1);   // e.g. "E3"
+}
+
+function farmOwnedTilesSorted() {
+  const mine = [];
+  fmTiles.forEach((t, key) => {
+    if (t.owner_id !== me?.id) return;
+    const [x, y] = key.split(',').map(Number);
+    mine.push({ x, y, tile: t });
+  });
+  mine.sort((a, b) => a.y - b.y || a.x - b.x);
+  return mine;
+}
+
+function farmTileDeed({ x, y, tile }) {
+  const isMig = tile.acquired_via === 'migration';
+  const def = tile.planted_species ? fmDefs.get(tile.planted_species) : null;
+  let status = '✅ Pusta — gotowa pod uprawę', statusCls = 'free';
+  if (tile.listed) { status = '🏷️ Wystawiona na sprzedaż'; statusCls = 'listed'; }
+  else if (def) { status = '🌱 Rośnie: ' + def.name; statusCls = 'busy'; }
+  else if (isMig) { status = '🌿 Roślina Ogródka'; statusCls = 'busy'; }
+  return el('div', { className: 'farm-deed' + (isMig ? ' mig' : '') },
+    el('div', { className: 'farm-deed-head' },
+      el('span', { className: 'farm-deed-seal' }, '📜'),
+      el('div', {},
+        el('div', { className: 'farm-deed-title' }, 'Akt własności'),
+        el('div', { className: 'farm-deed-id' }, 'Działka ' + farmTileDeedLabel(x, y)))),
+    el('div', { className: 'farm-deed-type' }, isMig ? '🌿 z dawnego Ogródka' : '🚜 Działka uprawna'),
+    el('div', { className: 'farm-deed-status ' + statusCls }, status),
+    el('div', { className: 'farm-deed-foot' },
+      el('span', {}, 'Właściciel: ' + (me?.nick || '—')),
+      el('span', {}, isMig ? 'poza limitem' : (tile.asset_value ? (tile.asset_value + ' 🪙') : 'w limicie'))));
+}
+
+function buildFarmLandSection(container) {
+  const tiles = farmOwnedTilesSorted();
+  container.append(el('div', { className: 'farm-inv-section-title' },
+    '🏡 Twoje działki — prawa własności' + (tiles.length ? ' (' + tiles.length + ')' : '')));
+  if (!tiles.length) {
+    container.append(el('div', { className: 'farm-empty' },
+      'Nie masz jeszcze żadnej działki. Kliknij puste pole na farmie, aby kupić (lub użyj 🎁 darmowej działki).'));
+  } else {
+    const grid = el('div', { className: 'farm-deed-grid' });
+    tiles.forEach(t => grid.append(farmTileDeed(t)));
+    container.append(grid);
+  }
+  // Land-tax status + price of the next tiles you could buy (moved here from Cennik).
+  container.append(farmTaxStatusCard());
+  container.append(el('div', { className: 'farm-inv-section-title' }, '🧱 Ceny kolejnych działek'));
+  container.append(farmTerritoryPriceTable());
+}
+
 // „📈 Ceny" hub tab: per-crop current NPC price + trend + price-history chart.
 async function buildFarmMarketBody(bodyEl) {
   bodyEl.replaceChildren(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
@@ -23824,9 +23898,6 @@ async function buildFarmMarketBody(bodyEl) {
   bodyEl.append(el('div', { className: 'farm-cat-head' }, el('div', { className: 'farm-cat-head-txt' },
     el('div', { className: 'farm-cat-head-title' }, '📈 Ceny plonów u NPC'),
     el('div', { className: 'farm-cat-head-sub' }, 'Cena skupu waha się 2×/dobę (00:00 i 12:00) między 30% a 100% ceny maks. (linia przerywana). Sprzedaż chwilowo ją obniża, potem wraca do dziennego poziomu — sprzedawaj, gdy jest wysoko! Historia z 7 dni.'))));
-  bodyEl.append(farmTaxStatusCard());
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🧱 Ceny kolejnych działek'));
-  bodyEl.append(farmTerritoryPriceTable());
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🌾 Ceny plonów'));
   const defs = [...fmDefs.values()].sort((a, b) => (FARM_RARITY_ORDER[a.rarity] - FARM_RARITY_ORDER[b.rarity]) || ((b.draw_weight || 0) - (a.draw_weight || 0)));
   const grid = el('div', { className: 'farm-price-grid' });
@@ -24265,6 +24336,9 @@ function buildFarmInventoryBody(bodyEl) {
     bodyEl.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left', marginBottom: '8px' } },
       '🎁 Darmowe działki: ', el('b', {}, String(fmVouchers)), ' — kliknij puste pole na farmie, aby postawić za 0 🪙.'));
   }
+
+  // 🏡 Twoje działki — prawa własności + podatek + ceny kolejnych działek
+  buildFarmLandSection(bodyEl);
 
   // 💎 NFT collection — this player's serialized cards (newest serial first).
   // Always shown (with a hint when empty) so players learn NFTs exist.
