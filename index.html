@@ -948,8 +948,8 @@
     /* A4-style white sheet that fits on one screen without scrolling */
     .doc-modal {
       display: flex; flex-direction: column;
-      width: 100%; max-width: 540px;
-      height: min(720px, calc(100dvh - 40px)); max-height: calc(100dvh - 40px);
+      width: 100%; max-width: 565px;       /* ~A4 portrait ratio with the height below */
+      height: min(800px, calc(100dvh - 28px)); max-height: calc(100dvh - 28px);
       background: #fff; color: #222;
       border: 1px solid #ccc; border-radius: 3px;
       box-shadow: 0 18px 70px rgba(0,0,0,.45);
@@ -16169,11 +16169,12 @@ const DOCUMENTS = [
     icon: '📜',
     gate: 'farm',
     mandatory: true,
-    title: 'Ustawa Ogródkowa G6',
-    subtitle: 'O handlu działkami, podatku gruntowym i podlewaniu',
+    title: 'Ustawa Reformy Gruntowej Ogródka G6 — o Wolnym Obrocie Działkami i Podatku Katastralnym',
     effectiveDate: '2026-07-02',
-    preamble: 'Ministerstwo Ogrodnictwa G6 ogłasza trzy zmiany w Ogródku. Podpisz po prawej, ' +
-      'że je rozumiesz.',
+    preamble: 'Działając w trosce o stabilność Wielkiego Ogródka, walkę z inflacją marchewki oraz ' +
+      'ukrócenie spekulacji gruntowej, Ministerstwo Ogrodnictwa i Skarbu G6 — po burzliwej debacie ' +
+      'przy grządce — uchwala, co następuje. Niżej podpisany Obywatel-Rolnik oświadcza, że przeczytał, ' +
+      'zrozumiał i (choć niechętnie, jak każdy podatnik) przyjmuje do wiadomości poniższe zmiany.',
     sections: [
       {
         heading: '§1. Handel działkami',
@@ -16185,8 +16186,8 @@ const DOCUMENTS = [
       {
         heading: '§2. Podatek gruntowy',
         paragraphs: [
-          'Od 02.07.2026 za nadmiar działek płacisz codzienny podatek, który rośnie z kwadratem ' +
-          'nadmiaru. Kto chomikuje hektary — ten płaci. Inflacja nie śpi.',
+          'Od 02.07.2026 za nadmiar działek płacisz codzienny podatek — kto chomikuje hektary, ten ' +
+          'płaci. Szczegóły i sposób naliczania znajdziesz w „Jak to działa".',
         ],
       },
       {
@@ -24611,7 +24612,9 @@ function renderFarmHelpInto(bodyEl) {
     farmHelpSection('🚜 1. Pole (działka)',
       P('Pole to kawałek ziemi na własność — na nim sadzisz rośliny. Kupujesz je, klikając puste pole na siatce.'),
       P('Każde kolejne pole jest droższe: pierwsze ', b(tile1 + ' 🪙'), ', drugie ', b(tile2 + ' 🪙'), ', trzecie ', b(tile3 + ' 🪙'), ' itd.'),
-      P(b('Limit i podatek: '), 'normalne działki mają wspólny limit na gracza. Nadmiar kosztuje ', b(FARM_TAX_PER_EXCESS_SQ + ' × nadmiar² 🪙 dziennie'), '. Pierwsza płatność będzie ', b('w piątek 03.07.2026 o 00:00'), ' i obejmie poprzedni zakończony dzień: ', b('czwartek 02.07.2026'), '.'),
+      P(b('📜 Podatek gruntowy (kataster): '), 'to zmiana z ', b('Ustawy Reformy Gruntowej'), ' (zobacz „📄 Moje Dokumenty"). Normalne działki mają wspólny limit na gracza — liczony jako ', b('pojemność pola ÷ liczba aktywnych rolników'), '. Wszystko ponad ten limit to ', b('nadmiar'), '.'),
+      P(b('Ile płacisz: '), b(FARM_TAX_PER_EXCESS_SQ + ' × nadmiar² 🪙 dziennie'), ' — koszt ', b('rośnie z kwadratem'), ' nadmiaru, więc kto chomikuje hektary, ten płaci najwięcej. Niezapłacone zaległości rosną o ', b('10% dziennie'), '.'),
+      P(b('Kiedy: '), 'naliczanie rusza o ', b('00:00 (czas polski)'), ' za poprzedni zakończony dzień. Pierwsza płatność: ', b('piątek 03.07.2026 o 00:00'), ' za ', b('czwartek 02.07.2026'), '.'),
       farmTaxStatusCard({ pay: false }),
       farmTerritoryPriceTable()),
 
