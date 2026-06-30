@@ -314,6 +314,102 @@ BEGIN
 END;
 $$;
 
+-- Farm-aware bid guard: normal marketplace bidding is unchanged, but farm-tile
+-- auctions reserve expansion capacity so players cannot win land above the cap.
+CREATE OR REPLACE FUNCTION public.place_marketplace_bid(p_listing_id uuid, p_amount integer)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user     uuid := auth.uid();
+  v_listing  public.marketplace_listings%ROWTYPE;
+  v_previous public.marketplace_bids%ROWTYPE;
+  v_has_previous boolean := false;
+  v_required integer;
+  v_min_bid  integer;
+  v_coins_left integer;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+  IF p_amount IS NULL OR p_amount < 1 THEN RAISE EXCEPTION 'bad_bid'; END IF;
+
+  SELECT * INTO v_listing
+    FROM public.marketplace_listings
+   WHERE id = p_listing_id
+   FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'listing_not_found'; END IF;
+  IF v_listing.listing_type <> 'auction' THEN RAISE EXCEPTION 'not_auction_listing'; END IF;
+  IF v_listing.status <> 'open' THEN RAISE EXCEPTION 'listing_not_open'; END IF;
+  IF now() >= v_listing.ends_at THEN RAISE EXCEPTION 'auction_finished'; END IF;
+  IF v_listing.seller_id = v_user THEN RAISE EXCEPTION 'cannot_bid_own'; END IF;
+  IF v_listing.item_kind = 'farm_tile' THEN
+    PERFORM public.farm_assert_can_expand(v_user, p_listing_id);
+  END IF;
+
+  SELECT * INTO v_previous
+    FROM public.marketplace_bids
+   WHERE listing_id = p_listing_id
+     AND status = 'leading'
+   ORDER BY amount DESC, created_at ASC
+   LIMIT 1
+   FOR UPDATE;
+  v_has_previous := FOUND;
+
+  v_min_bid := CASE
+    WHEN v_has_previous THEN v_previous.amount + v_listing.min_increment
+    ELSE v_listing.price
+  END;
+  IF p_amount < v_min_bid THEN RAISE EXCEPTION 'bid_too_low'; END IF;
+
+  v_required := CASE
+    WHEN v_has_previous AND v_previous.bidder_id = v_user THEN p_amount - v_previous.amount
+    ELSE p_amount
+  END;
+  IF v_required < 1 THEN RAISE EXCEPTION 'bid_too_low'; END IF;
+
+  UPDATE public.profiles
+     SET coins = coins - v_required
+   WHERE id = v_user
+     AND coins >= v_required
+  RETURNING coins INTO v_coins_left;
+  IF NOT FOUND THEN RAISE EXCEPTION 'insufficient_coins'; END IF;
+
+  IF v_has_previous THEN
+    UPDATE public.marketplace_bids
+       SET status = 'outbid'
+     WHERE id = v_previous.id;
+
+    IF v_previous.bidder_id <> v_user THEN
+      UPDATE public.profiles
+         SET coins = coins + v_previous.amount
+       WHERE id = v_previous.bidder_id;
+
+      IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+        INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+        VALUES (
+          v_previous.bidder_id,
+          v_previous.amount,
+          'marketplace_outbid_refund',
+          jsonb_build_object('listing_id', p_listing_id)
+        );
+      END IF;
+    END IF;
+  END IF;
+
+  INSERT INTO public.marketplace_bids (listing_id, bidder_id, amount, status)
+  VALUES (p_listing_id, v_user, p_amount, 'leading');
+
+  IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+    INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+    VALUES (
+      v_user,
+      -v_required,
+      'marketplace_bid_reserved',
+      jsonb_build_object('listing_id', p_listing_id, 'bid_amount', p_amount)
+    );
+  END IF;
+
+  RETURN json_build_object('ok', true, 'coins_left', v_coins_left, 'current_bid', p_amount);
+END;
+$$;
+
 -- ── buy_marketplace_listing (item-aware) ────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.buy_marketplace_listing(p_listing_id uuid)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -321,6 +417,8 @@ DECLARE
   v_user       uuid := auth.uid();
   v_listing    public.marketplace_listings%ROWTYPE;
   v_coins_left integer;
+  v_sale_tax   json;
+  v_seller_net integer;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
@@ -329,13 +427,26 @@ BEGIN
   IF v_listing.listing_type <> 'fixed' THEN RAISE EXCEPTION 'not_fixed_listing'; END IF;
   IF v_listing.status <> 'open' THEN RAISE EXCEPTION 'listing_not_open'; END IF;
   IF v_listing.seller_id = v_user THEN RAISE EXCEPTION 'cannot_buy_own'; END IF;
+  IF v_listing.item_kind = 'farm_tile' THEN
+    PERFORM public.farm_assert_can_expand(v_user);
+  END IF;
 
   UPDATE public.profiles SET coins = coins - v_listing.price
    WHERE id = v_user AND coins >= v_listing.price
   RETURNING coins INTO v_coins_left;
   IF NOT FOUND THEN RAISE EXCEPTION 'insufficient_coins'; END IF;
 
-  UPDATE public.profiles SET coins = coins + v_listing.price WHERE id = v_listing.seller_id;
+  IF v_listing.item_kind IN ('farm_tile','farm_nft','farm_card') THEN
+    v_sale_tax := public.farm_apply_land_tax_autopay(
+      v_listing.seller_id, v_listing.price, 'farm_marketplace_sale',
+      jsonb_build_object('listing_id', p_listing_id, 'item_kind', v_listing.item_kind, 'buyer_id', v_user)
+    );
+    v_seller_net := COALESCE((v_sale_tax->>'net')::integer, v_listing.price);
+  ELSE
+    v_seller_net := v_listing.price;
+  END IF;
+
+  UPDATE public.profiles SET coins = coins + v_seller_net WHERE id = v_listing.seller_id;
 
   UPDATE public.marketplace_listings
      SET status = 'settled', buyer_id = v_user, final_price = v_listing.price, settled_at = now()
@@ -363,6 +474,8 @@ RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_listing public.marketplace_listings%ROWTYPE;
   v_bid     public.marketplace_bids%ROWTYPE;
+  v_sale_tax json;
+  v_seller_net integer;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
@@ -386,12 +499,26 @@ BEGIN
     RETURN json_build_object('ok', true, 'status', 'cancelled');
   END IF;
 
+  IF v_listing.item_kind = 'farm_tile' THEN
+    PERFORM public.farm_assert_can_expand(v_bid.bidder_id, p_listing_id);
+  END IF;
+
   UPDATE public.marketplace_bids SET status = 'won' WHERE id = v_bid.id;
   UPDATE public.marketplace_listings
      SET status = 'settled', buyer_id = v_bid.bidder_id, final_price = v_bid.amount, settled_at = now()
    WHERE id = p_listing_id;
 
-  UPDATE public.profiles SET coins = coins + v_bid.amount WHERE id = v_listing.seller_id;
+  IF v_listing.item_kind IN ('farm_tile','farm_nft','farm_card') THEN
+    v_sale_tax := public.farm_apply_land_tax_autopay(
+      v_listing.seller_id, v_bid.amount, 'farm_marketplace_sale',
+      jsonb_build_object('listing_id', p_listing_id, 'item_kind', v_listing.item_kind, 'buyer_id', v_bid.bidder_id)
+    );
+    v_seller_net := COALESCE((v_sale_tax->>'net')::integer, v_bid.amount);
+  ELSE
+    v_seller_net := v_bid.amount;
+  END IF;
+
+  UPDATE public.profiles SET coins = coins + v_seller_net WHERE id = v_listing.seller_id;
 
   PERFORM public.farm_marketplace_deliver(v_listing, v_bid.bidder_id, v_bid.amount);
 
@@ -446,6 +573,7 @@ END;
 $$;
 
 -- ── marketplace_cards view: expose the item columns for rendering ───────────
+DROP VIEW IF EXISTS public.marketplace_cards;
 CREATE OR REPLACE VIEW public.marketplace_cards AS
 SELECT
   l.id, l.seller_id, sp.nick AS seller_nick, l.emoji, l.title, l.description,
@@ -492,9 +620,11 @@ GRANT SELECT ON public.marketplace_cards TO anon, authenticated;
 REVOKE ALL ON FUNCTION public.create_farm_nft_listing(uuid, text, integer, integer, integer)  FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.create_farm_card_listing(text, text, integer, integer, integer)  FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.create_farm_tile_listing(integer, integer, text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.place_marketplace_bid(uuid, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_farm_nft_listing(uuid, text, integer, integer, integer)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_farm_card_listing(text, text, integer, integer, integer)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_farm_tile_listing(integer, integer, text, integer, integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.place_marketplace_bid(uuid, integer) TO authenticated;
 -- buy/settle/cancel keep their existing grants from marketplace.sql (CREATE OR REPLACE
 -- preserves grants). The deliver/release helpers are definer-internal:
 REVOKE ALL ON FUNCTION public.farm_marketplace_deliver(public.marketplace_listings, uuid, integer) FROM PUBLIC, anon, authenticated;

@@ -4718,6 +4718,16 @@
     .farm-mini-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
     .farm-mini-btn:disabled { opacity: .5; cursor: not-allowed; }
     .farm-mini-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .farm-tax-card { padding: 10px 12px; margin-bottom: 12px; border: 1px solid rgba(146,64,14,.22); border-radius: 8px; background: #fff7ed; color: #5a4326; }
+    .farm-tax-card.ok { background: #f0fdf4; border-color: rgba(22,101,52,.2); }
+    .farm-tax-title { font-weight: 900; color: #7c2d12; margin-bottom: 6px; }
+    .farm-tax-card.ok .farm-tax-title { color: #166534; }
+    .farm-tax-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px; }
+    .farm-tax-stat { padding: 6px 8px; border-radius: 7px; background: rgba(255,255,255,.72); border: 1px solid rgba(120,53,15,.12); }
+    .farm-tax-stat span { display: block; font-size: 10px; color: #8a6b45; font-weight: 800; text-transform: uppercase; }
+    .farm-tax-stat b { font-size: 13px; color: #3c2a16; }
+    .farm-tax-note { margin-top: 7px; font-size: 11px; line-height: 1.35; color: #6b4d2b; }
+    .farm-tax-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .farm-sel-title { font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
     .farm-onboard-title { font-weight: 800; font-size: 13px; color: #14532d; margin-bottom: 4px; }
     .farm-onboard-steps { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.5; color: #5a4326; }
@@ -12332,6 +12342,9 @@ const ML_FARM_ERR = {
   tile_not_owned: 'To nie jest kupiona działka.', tile_occupied: 'Ta działka nie jest pusta.',
   zen_tile: 'Roślinki z Ogródka nie można wystawić jako działki.', bad_coords: 'Pole poza farmą.',
   bad_price: 'Podaj cenę większą od 0.', use_nft_listing: 'Tę kartę wystaw jako NFT.',
+  land_tax_debt: 'Najpierw spłać podatek od działek.',
+  territory_cap: 'Masz limit działek — nie możesz kupić kolejnej.',
+  territory_over_cap: 'Jesteś ponad limitem działek — sprzedaj nadmiar.',
 };
 async function createFarmListing(kind, ref, listingType, price, hours, incr, btn) {
   btn.disabled = true; btn.textContent = 'Wystawiam…';
@@ -12373,6 +12386,8 @@ async function buyMarketplaceListing(listingId, price, btn) {
               : error.message.includes('tile_not_available') ? 'Ta działka nie jest już dostępna.'
               : error.message.includes('tile_occupied') ? 'Ta działka nie jest już pusta.'
               : error.message.includes('tile_not_listed') ? 'Ta działka nie jest już wystawiona.'
+              : error.message.includes('land_tax_debt') ? 'Najpierw spłać podatek od działek.'
+              : error.message.includes('territory_cap') ? 'Masz limit działek — nie możesz kupić kolejnej.'
               : error.message;
     showToast('❌ ' + msg);
     btn.disabled = false;
@@ -12385,6 +12400,7 @@ async function buyMarketplaceListing(listingId, price, btn) {
   }
   showToast(listing?.item_kind === 'farm_tile' ? '✅ Kupiono działkę w Ogródku!' : '✅ Kupiono! Skontaktuj się ze sprzedającym.');
   await loadShop();
+  if (listing?.item_kind?.startsWith('farm_')) await refreshFarmTaxQuote();
   if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
@@ -12400,6 +12416,8 @@ async function placeMarketplaceBid(listingId, amount, btn) {
               : error.message.includes('bid_too_low')   ? 'Oferta zbyt niska!'
               : error.message.includes('cannot_bid_own') ? 'Nie możesz licytować własnej oferty!'
               : error.message.includes('auction_finished') ? 'Aukcja zakończona!'
+              : error.message.includes('land_tax_debt') ? 'Najpierw spłać podatek od działek.'
+              : error.message.includes('territory_cap') ? 'Masz limit działek — nie możesz licytować kolejnej.'
               : error.message;
     showToast('❌ ' + msg);
     btn.disabled = false;
@@ -12420,7 +12438,11 @@ async function settleMarketplaceListing(listingId, btn) {
   btn.textContent = 'Rozstrzygam…';
   const { data, error } = await sb.rpc('settle_marketplace_listing', { p_listing_id: listingId });
   if (error) {
-    showToast('❌ ' + (error.message.includes('auction_still_open') ? 'Aukcja jeszcze trwa!' : error.message));
+    const msg = error.message.includes('auction_still_open') ? 'Aukcja jeszcze trwa!'
+              : error.message.includes('land_tax_debt') ? 'Zwycięzca musi najpierw spłacić podatek od działek.'
+              : error.message.includes('territory_cap') ? 'Zwycięzca ma już limit działek.'
+              : error.message;
+    showToast('❌ ' + msg);
     btn.disabled = false;
     btn.textContent = 'Rozstrzygnij aukcję';
     return;
@@ -12433,6 +12455,7 @@ async function settleMarketplaceListing(listingId, btn) {
     showToast('✅ Aukcja zakończona bez ofert.');
   }
   await loadShop();
+  if (listing?.item_kind?.startsWith('farm_')) await refreshFarmTaxQuote();
   if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
@@ -21871,6 +21894,9 @@ const FARM_TILE_PRICE_CAP = 50000;
 const FARM_NFT_ODDS_DIVISOR = 3;
 const FARM_VOUCHER_BASE_CHANCE = 0.07;
 const FARM_VOUCHER_ODDS_DIVISOR = 3;
+const FARM_TAX_PER_EXCESS_SQ = 1000;
+const FARM_TAX_FIRST_TAX_DAY = '2026-07-02';
+const FARM_TAX_FIRST_PAYMENT_DAY = '2026-07-03';
 const FARM_RARITY_PL = { common: 'zwykła', rare: 'rzadka', epic: 'epicka', legendary: 'legendarna' };
 const FARM_ERR = {
   not_authenticated: 'Musisz być zalogowany.',
@@ -21892,6 +21918,10 @@ const FARM_ERR = {
   not_enough_crops: 'Za mało plonów.',
   no_market: 'Brak rynku dla tego plonu.',
   bad_qty: 'Zła ilość.',
+  land_tax_debt: 'Najpierw spłać podatek od działek.',
+  territory_cap: 'Masz już limit działek. Sprzedaj nadmiar albo poczekaj aż limit wzrośnie.',
+  territory_over_cap: 'Jesteś ponad limitem działek — sprzedaj nadmiar, żeby znowu sadzić.',
+  bad_amount: 'Podaj poprawną kwotę.',
 };
 
 let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, listed, asset_value, planted_species, planted_level, planted_at, ready_at, nick, zen }
@@ -21905,6 +21935,8 @@ let fmNft = [];                 // all farm_nft_instances: [{species,serial_no,e
 let fmBoxes = 0;                // owned sealed (unopened) seed boxes
 let fmVouchers = 0;             // owned free-tile vouchers
 let fmOwnedTileCountHint = 0;    // used when Sklep loads before the full farm board
+let fmNormalTileCountHint = 0;   // same, but excludes migration Ogródek plant tiles
+let fmTax = null;                // server quote: fair_cap / owned normal tiles / debt / daily tax
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
 let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
@@ -21914,7 +21946,7 @@ function resetFarmState() {
   stopFarmTimer();
   fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmMarket = new Map();
   fmNft = [];
-  fmBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmStarterClaimed = false;
+  fmBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmStarterClaimed = false;
   fmSel = null;
 }
 
@@ -21970,6 +22002,42 @@ function applyFarmUserState(s) {
   if (!s) return;
   if (typeof s.boxes === 'number') fmBoxes = s.boxes;
   if (typeof s.tile_vouchers === 'number') fmVouchers = s.tile_vouchers;
+  if (typeof s.land_tax_debt === 'number') {
+    fmTax = Object.assign({}, fmTax || {}, { debt: Number(s.land_tax_debt || 0) });
+  }
+}
+
+function applyFarmTaxQuote(q) {
+  if (!q) return;
+  fmTax = {
+    normal_capacity: Number(q.normal_capacity || 0),
+    participants: Number(q.participants || 0),
+    fair_cap: Number(q.fair_cap || 0),
+    owned_tiles: Number(q.owned_tiles || 0),
+    pending_tiles: Number(q.pending_tiles || 0),
+    excess_tiles: Number(q.excess_tiles || 0),
+    tax_per_excess_sq: Number(q.tax_per_excess_sq || FARM_TAX_PER_EXCESS_SQ),
+    daily_tax: Number(q.daily_tax || 0),
+    debt: Number(q.debt || 0),
+    interest_next: Number(q.interest_next || 0),
+    first_tax_day: q.first_tax_day || FARM_TAX_FIRST_TAX_DAY,
+    first_payment_day: q.first_payment_day || FARM_TAX_FIRST_PAYMENT_DAY,
+    blocked_expansion: !!q.blocked_expansion,
+    blocked_planting: !!q.blocked_planting,
+  };
+}
+
+async function refreshFarmTaxQuote() {
+  if (!me) return null;
+  try {
+    const { data, error } = await sb.rpc('farm_land_tax_quote');
+    if (error) throw error;
+    applyFarmTaxQuote(data);
+    return fmTax;
+  } catch (e) {
+    console.warn('farm tax quote', e);
+    return null;
+  }
 }
 
 // One-time welcome gift: 3 boxes + a guaranteed tile voucher within them.
@@ -22027,7 +22095,7 @@ async function loadFarm() {
   await claimFarmStarter();   // grant the welcome boxes before we read box state
   const seq = ++fmLoadSeq;
   try {
-    const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes] = await Promise.all([
+    const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes, taxRes] = await Promise.all([
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
@@ -22036,9 +22104,11 @@ async function loadFarm() {
       sb.from('gardens').select('*, profiles(nick)'),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
       sb.from('farm_user_state').select('boxes,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
+      sb.rpc('farm_land_tax_quote'),
     ]);
     if (seq !== fmLoadSeq) return;
     applyFarmUserState(stateRes.data);
+    if (!taxRes.error) applyFarmTaxQuote(taxRes.data);
     setFarmStarterBannerVisible(stateRes.data);
     fmNft = nftRes.data || [];
     fmZen = new Map();
@@ -22046,7 +22116,13 @@ async function loadFarm() {
     fmTiles = new Map();
     (tilesRes.data || []).forEach(t => fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)));
     fmOwnedTileCountHint = 0;
-    fmTiles.forEach(t => { if (t.owner_id === me?.id) fmOwnedTileCountHint++; });
+    fmNormalTileCountHint = 0;
+    fmTiles.forEach(t => {
+      if (t.owner_id === me?.id) {
+        fmOwnedTileCountHint++;
+        if (t.acquired_via !== 'migration') fmNormalTileCountHint++;
+      }
+    });
     tagZenBlocks();
     fmDefs = new Map();
     (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
@@ -22461,12 +22537,87 @@ function farmOwnedTileCount() {
   return Math.max(mine, fmOwnedTileCountHint || 0);
 }
 
+function farmNormalTileCount() {
+  let mine = 0;
+  fmTiles.forEach(t => { if (t.owner_id === me?.id && t.acquired_via !== 'migration') mine++; });
+  return Math.max(mine, fmNormalTileCountHint || 0);
+}
+
+function farmTaxQuoteLocal() {
+  const normalCapacity = Math.max(1, FARM_W * FARM_H - [...fmTiles.values()].filter(t => t.acquired_via === 'migration').length);
+  const owners = new Set();
+  fmTiles.forEach(t => { if (t.owner_id && t.acquired_via !== 'migration') owners.add(t.owner_id); });
+  if (me?.id) owners.add(me.id);
+  const participants = Math.max(1, fmTax?.participants || owners.size || 1);
+  const fairCap = Math.max(1, fmTax?.fair_cap || Math.ceil(normalCapacity / participants));
+  const owned = farmNormalTileCount();
+  const pending = Number(fmTax?.pending_tiles || 0);
+  const excess = Math.max(0, owned - fairCap);
+  const debt = Number(fmTax?.debt || 0);
+  const taxPer = Number(fmTax?.tax_per_excess_sq || FARM_TAX_PER_EXCESS_SQ);
+  return {
+    normal_capacity: normalCapacity,
+    participants,
+    fair_cap: fairCap,
+    owned_tiles: owned,
+    pending_tiles: pending,
+    excess_tiles: excess,
+    tax_per_excess_sq: taxPer,
+    daily_tax: Number(fmTax?.daily_tax ?? (taxPer * excess * excess)),
+    debt,
+    interest_next: Number(fmTax?.interest_next || (debt > 0 ? Math.ceil(debt * 0.10) : 0)),
+    first_tax_day: fmTax?.first_tax_day || FARM_TAX_FIRST_TAX_DAY,
+    first_payment_day: fmTax?.first_payment_day || FARM_TAX_FIRST_PAYMENT_DAY,
+    blocked_expansion: debt > 0 || owned + pending >= fairCap,
+    blocked_planting: owned > fairCap,
+  };
+}
+
+function farmTaxStat(label, value) {
+  return el('div', { className: 'farm-tax-stat' }, el('span', {}, label), el('b', {}, value));
+}
+
+function farmTaxStatusCard(opts = {}) {
+  const q = farmTaxQuoteLocal();
+  const hasProblem = q.excess_tiles > 0 || q.debt > 0;
+  const card = el('div', { className: 'farm-tax-card' + (hasProblem ? '' : ' ok') },
+    el('div', { className: 'farm-tax-title' }, hasProblem ? '🏛️ Podatek od nadmiaru działek' : '🏛️ Podatek od działek: w normie'),
+    el('div', { className: 'farm-tax-grid' },
+      farmTaxStat('Twoje działki', q.owned_tiles + '/' + q.fair_cap),
+      farmTaxStat('Nadmiar', String(q.excess_tiles)),
+      farmTaxStat('Podatek/dzień', q.daily_tax + ' 🪙'),
+      farmTaxStat('Dług', q.debt + ' 🪙')),
+    el('div', { className: 'farm-tax-note' },
+      'Pierwsza płatność podatku będzie w piątek 03.07.2026 o 00:00 i obejmie poprzedni zakończony dzień: czwartek 02.07.2026. ',
+      'Formuła: ', el('b', {}, q.tax_per_excess_sq + ' × nadmiar²'), ' dziennie. Działki z roślinkami Ogródka nie liczą się do limitu.'));
+  if (q.debt > 0 && opts.pay !== false) {
+    const payBtn = el('button', { className: 'farm-mini-btn primary' }, 'Spłać podatek');
+    payBtn.addEventListener('click', () => payFarmLandTax(payBtn));
+    card.append(el('div', { className: 'farm-tax-actions' }, payBtn));
+  }
+  return card;
+}
+
+async function payFarmLandTax(btn) {
+  const q = farmTaxQuoteLocal();
+  if (q.debt <= 0) { showToast('Podatek jest już spłacony.'); return; }
+  if (btn) btn.disabled = true;
+  const { data, error } = await sb.rpc('pay_farm_land_tax', { p_amount: q.debt });
+  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
+  if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
+  fmTax = Object.assign({}, fmTax || {}, { debt: Number(data.debt || 0) });
+  await refreshFarmTaxQuote();
+  showToast('🏛️ Spłacono podatek: ' + (data.paid || 0) + ' 🪙.');
+  renderFarmSelection();
+  if (farmModalEl) refreshFarmHub();
+}
+
 function farmOwnedNftCount() {
   return fmNft.filter(n => n.owner_id === me?.id).length;
 }
 
 function farmTerritoryCount() {
-  return farmOwnedTileCount() + Math.max(0, Number(fmVouchers || 0));
+  return farmNormalTileCount() + Math.max(0, Number(fmVouchers || 0));
 }
 
 function farmVoucherChanceFor(territory) {
@@ -22572,6 +22723,14 @@ function renderFarmSelectionBody() {
   }
   box.append(el('div', { className: 'farm-card-sub', style: { marginBottom: '6px' } }, `Pole [${fmSel.x}, ${fmSel.y}]`));
   if (!tile) {
+    const tax = farmTaxQuoteLocal();
+    if (tax.debt > 0 || farmNormalTileCount() >= tax.fair_cap) {
+      box.append(farmTaxStatusCard());
+      const disabledBtn = el('button', { className: 'farm-mini-btn primary', disabled: true },
+        tax.debt > 0 ? 'Najpierw spłać podatek' : 'Limit działek: ' + tax.fair_cap);
+      box.append(disabledBtn);
+      return;
+    }
     if (fmVouchers > 0) {
       const vbtn = el('button', { className: 'farm-mini-btn primary farm-voucher-btn' }, '🎁 Postaw za darmo (masz ' + fmVouchers + ')');
       vbtn.addEventListener('click', () => buyFarmTile(fmSel.x, fmSel.y, vbtn));
@@ -22615,6 +22774,11 @@ function renderFarmSelectionBody() {
       openMarketplaceListingModal({ kind: 'farm_tile', ref });
     });
     box.append(sellTileBtn);
+    const tax = farmTaxQuoteLocal();
+    if (tax.blocked_planting) {
+      box.append(farmTaxStatusCard());
+      return;
+    }
     const plantedCounts = new Map();
     fmTiles.forEach(t => {
       if (t.owner_id === me?.id && t.planted_species) {
@@ -22962,7 +23126,7 @@ function openFarmModalShell(title) {
 async function ensureFarmData(opts = {}) {
   if (!opts.force && fmDefs.size && fmMarket.size && fmTiles.size) return;
   try {
-    const [defsRes, colRes, invRes, mktRes, nftRes, tilesRes, stateRes] = await Promise.all([
+    const [defsRes, colRes, invRes, mktRes, nftRes, tilesRes, stateRes, taxRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
@@ -22970,6 +23134,7 @@ async function ensureFarmData(opts = {}) {
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
+      me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
     ]);
     fmDefs = new Map(); (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
     fmCollection = colRes.data || [];
@@ -22979,8 +23144,15 @@ async function ensureFarmData(opts = {}) {
     fmTiles = new Map();
     (tilesRes.data || []).forEach(t => fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)));
     fmOwnedTileCountHint = 0;
-    fmTiles.forEach(t => { if (t.owner_id === me?.id) fmOwnedTileCountHint++; });
+    fmNormalTileCountHint = 0;
+    fmTiles.forEach(t => {
+      if (t.owner_id === me?.id) {
+        fmOwnedTileCountHint++;
+        if (t.acquired_via !== 'migration') fmNormalTileCountHint++;
+      }
+    });
     applyFarmUserState(stateRes.data);
+    if (!taxRes.error) applyFarmTaxQuote(taxRes.data);
   } catch (e) { console.error('ensureFarmData', e); }
 }
 
@@ -23250,6 +23422,7 @@ async function buildFarmMarketBody(bodyEl) {
   bodyEl.append(el('div', { className: 'farm-cat-head' }, el('div', { className: 'farm-cat-head-txt' },
     el('div', { className: 'farm-cat-head-title' }, '📈 Ceny plonów u NPC'),
     el('div', { className: 'farm-cat-head-sub' }, 'Cena skupu waha się 2×/dobę (00:00 i 12:00) między 30% a 100% ceny maks. (linia przerywana). Sprzedaż chwilowo ją obniża, potem wraca do dziennego poziomu — sprzedawaj, gdy jest wysoko! Historia z 7 dni.'))));
+  bodyEl.append(farmTaxStatusCard());
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🧱 Ceny kolejnych działek'));
   bodyEl.append(farmTerritoryPriceTable());
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🌾 Ceny plonów'));
@@ -24034,6 +24207,8 @@ function renderFarmHelpInto(bodyEl) {
     farmHelpSection('🚜 1. Pole (działka)',
       P('Pole to kawałek ziemi na własność — na nim sadzisz rośliny. Kupujesz je, klikając puste pole na siatce.'),
       P('Każde kolejne pole jest droższe: pierwsze ', b(tile1 + ' 🪙'), ', drugie ', b(tile2 + ' 🪙'), ', trzecie ', b(tile3 + ' 🪙'), ' itd.'),
+      P(b('Limit i podatek: '), 'normalne działki mają wspólny limit na gracza. Nadmiar kosztuje ', b(FARM_TAX_PER_EXCESS_SQ + ' × nadmiar² 🪙 dziennie'), '. Pierwsza płatność będzie ', b('w piątek 03.07.2026 o 00:00'), ' i obejmie poprzedni zakończony dzień: ', b('czwartek 02.07.2026'), '.'),
+      farmTaxStatusCard({ pay: false }),
       farmTerritoryPriceTable()),
 
     farmHelpSection('📦 2. Skrzynka z nasionami',
@@ -24098,6 +24273,8 @@ async function buyFarmTile(x, y, btn) {
   const viaVoucher = data.via === 'voucher';
   fmTiles.set(x + ',' + y, { owner_id: me.id, acquired_via: viaVoucher ? 'lootbox' : 'purchase', listed: false, asset_value: viaVoucher ? 0 : Number(data.price || 0), planted_species: null, planted_level: null, planted_at: null, ready_at: null, nick: me.nick, zen_garden_id: null, zenAnchor: null, zenCover: false, zenAnchorKey: null });
   fmOwnedTileCountHint = farmOwnedTileCount();
+  fmNormalTileCountHint = farmNormalTileCount();
+  await refreshFarmTaxQuote();
   showToast(viaVoucher ? '🎁 Postawiłeś działkę za darmo!' : ('🌱 Kupiłeś działkę za ' + data.price + ' 🪙!'));
   renderFarmBoard(); renderFarmSelection();
 }
@@ -24108,19 +24285,22 @@ async function loadFarmLootbox() {
   if (!box) return;
   await claimFarmStarter();   // a player who heads straight to the Sklep still gets the gift
   try {
-    const [defsRes, colRes, nftRes, tilesRes, stateRes] = await Promise.all([
+    const [defsRes, colRes, nftRes, tilesRes, stateRes, taxRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
-      me ? sb.from('farm_tiles').select('owner_id').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
+      me ? sb.from('farm_tiles').select('owner_id,acquired_via').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
+      me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
     ]);
     fmDefs = new Map();
     (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
     fmCollection = colRes.data || [];
     fmNft = nftRes.data || [];
     fmOwnedTileCountHint = (tilesRes.data || []).length;
+    fmNormalTileCountHint = (tilesRes.data || []).filter(t => t.acquired_via !== 'migration').length;
     applyFarmUserState(stateRes.data);
+    if (!taxRes.error) applyFarmTaxQuote(taxRes.data);
     renderFarmLootboxStore();
   } catch (e) {
     console.error('loadFarmLootbox', e);
@@ -24384,8 +24564,11 @@ async function sellCrop(crop, qty, btn) {
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
   const mkt = fmMarket.get(crop); if (mkt) mkt.cur_price = +data.cur_price;
+  if (typeof data.land_tax_debt === 'number') fmTax = Object.assign({}, fmTax || {}, { debt: Number(data.land_tax_debt || 0) });
+  await refreshFarmTaxQuote();
   await reloadFarmInventory();   // FIFO lot consumption may have emptied the soonest lot
-  showToast('💰 Sprzedano ' + data.sold + '× za ' + data.proceeds + ' 🪙!');
+  const taxTxt = Number(data.tax_paid || 0) > 0 ? (' · podatek ' + data.tax_paid + ' 🪙, netto ' + data.net + ' 🪙') : '';
+  showToast('💰 Sprzedano ' + data.sold + '× za ' + data.proceeds + ' 🪙' + taxTxt + '!');
   renderFarmMarket();
 }
 
@@ -24406,7 +24589,10 @@ function setupFarmRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_user_state' }, payload => {
       const r = payload.new; if (!r || r.user_id !== me?.id) return;
       applyFarmUserState(r);
-      if (activeTab === 'farm') renderFarmSelection();
+      refreshFarmTaxQuote().then(() => {
+        if (activeTab === 'farm') renderFarmSelection();
+        if (farmModalEl) refreshFarmHub();
+      });
     })
     .subscribe();
   realtimeChannels.push(ch);
@@ -24435,6 +24621,15 @@ function applyFarmTileChange(payload) {
     });
   }
   tagZenBlocks();
+  fmOwnedTileCountHint = 0;
+  fmNormalTileCountHint = 0;
+  fmTiles.forEach(t => {
+    if (t.owner_id === me?.id) {
+      fmOwnedTileCountHint++;
+      if (t.acquired_via !== 'migration') fmNormalTileCountHint++;
+    }
+  });
+  if (r.owner_id === me?.id || payload.old?.owner_id === me?.id) refreshFarmTaxQuote();
   if (activeTab === 'farm') renderFarmBoard();
   if (fmSel && fmSel.x === r.x && fmSel.y === r.y) renderFarmSelection();
 }

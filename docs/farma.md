@@ -65,6 +65,21 @@ Sekwencja startuje od **350 → 700 → 1400 → 2800 → 5600** coinów i bloku
 
 Kupno działki to spalanie coinów (`farm_tile_buy`).
 
+### Limit i podatek od nadmiaru działek
+
+Podatek jest prosty i liczony od liczby **normalnych działek farmy**. Pola migracyjne z roślinkami Ogródka (`acquired_via = 'migration'`) nie liczą się do limitu ani podatku.
+
+```text
+limit_gracza = ceil(liczba_normalnych_działek_na_planszy / liczba_aktywnych_graczy_farmy)
+nadmiar = max(0, normalne_działki_gracza - limit_gracza)
+podatek_dzienny = 1000 * nadmiar^2
+odsetki_od_długu = 10% dziennie
+```
+
+Podatek jest pobierany automatycznie o **00:00 Europe/Warsaw** za poprzedni zakończony dzień. Pierwsza płatność będzie w **piątek 03.07.2026 o 00:00** i obejmie **czwartek 02.07.2026**.
+
+Jeśli gracz nie ma wystarczająco coinów, nieopłacona część przechodzi w dług podatkowy. Dług blokuje kupowanie kolejnych działek i jest automatycznie spłacany z przychodów ze sprzedaży plonów oraz farmowych ofert na Targowisku.
+
 ## Rośliny z Ogródka na farmie
 
 Rośliny z Ogródka są wyświetlane na farmie jako miniaturowe doniczki. To nie są uprawy z kart.

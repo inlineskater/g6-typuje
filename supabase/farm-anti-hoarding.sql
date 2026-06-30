@@ -24,6 +24,12 @@ BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_x < 0 OR p_x >= 13 OR p_y < 0 OR p_y >= 4 THEN RAISE EXCEPTION 'bad_coords'; END IF;
 
+  INSERT INTO public.farm_user_state (user_id) VALUES (v_user)
+  ON CONFLICT (user_id) DO NOTHING;
+  IF to_regprocedure('public.farm_assert_can_expand(uuid,uuid)') IS NOT NULL THEN
+    PERFORM public.farm_assert_can_expand(v_user);
+  END IF;
+
   SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
   v_price := least(50000::numeric, floor(350::numeric * power(2::numeric, v_tiles)))::integer;
 
@@ -104,7 +110,8 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'no_box'; END IF;
   SELECT coins INTO v_coins FROM public.profiles WHERE id = v_user;
   SELECT count(*) INTO v_owned_nfts FROM public.farm_nft_instances WHERE owner_id = v_user;
-  SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
+  SELECT count(*) INTO v_tiles FROM public.farm_tiles
+   WHERE owner_id = v_user AND acquired_via <> 'migration';
   v_territory := v_tiles + COALESCE(v_vouchers, 0);
   v_eff_voucher_p := v_voucher_p / power(3::numeric, greatest(v_territory, 0));
 

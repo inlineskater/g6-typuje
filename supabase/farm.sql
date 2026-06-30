@@ -13,7 +13,7 @@
 -- Grid is 13 wide x 4 tall (FARM_W x FARM_H in index.html). Existing Ogródek
 -- plants occupy the first cells (acquired_via 'migration'); crops can't grow there.
 -- Coin reasons added here (keep economy-stats.sql + leaderboard-net-worth-items.sql in sync):
---   BURN:  farm_tile_buy, farm_box_buy, card_levelup
+--   BURN:  farm_tile_buy, farm_box_buy, card_levelup, farm_land_tax_pay, farm_land_tax_autopay
 --   MINT:  farm_crop_sale
 -- Boxes are bought (farm_box_buy BURN) then opened from inventory; opening itself
 -- moves no coins. Boxes can drop a free-tile voucher (claims a tile for 0 coins);
@@ -195,6 +195,8 @@ CREATE TABLE IF NOT EXISTS public.farm_user_state (
   user_id        uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   boxes          integer NOT NULL DEFAULT 0 CHECK (boxes >= 0),
   tile_vouchers  integer NOT NULL DEFAULT 0 CHECK (tile_vouchers >= 0),
+  land_tax_debt  integer NOT NULL DEFAULT 0 CHECK (land_tax_debt >= 0),
+  land_tax_last_assessed date, -- last completed Warsaw day charged
   -- One-time welcome gift: 3 sealed boxes, with a tile voucher guaranteed to drop
   -- within those first 3 openings (claim_farm_starter sets the window below).
   starter_granted     boolean NOT NULL DEFAULT false,
@@ -205,6 +207,30 @@ CREATE TABLE IF NOT EXISTS public.farm_user_state (
 ALTER TABLE public.farm_user_state ADD COLUMN IF NOT EXISTS starter_granted    boolean NOT NULL DEFAULT false;
 ALTER TABLE public.farm_user_state ADD COLUMN IF NOT EXISTS starter_opens_left integer NOT NULL DEFAULT 0;
 ALTER TABLE public.farm_user_state ADD COLUMN IF NOT EXISTS guaranteed_voucher boolean NOT NULL DEFAULT false;
+ALTER TABLE public.farm_user_state ADD COLUMN IF NOT EXISTS land_tax_debt integer NOT NULL DEFAULT 0;
+ALTER TABLE public.farm_user_state ADD COLUMN IF NOT EXISTS land_tax_last_assessed date;
+DO $$ BEGIN
+  ALTER TABLE public.farm_user_state
+    ADD CONSTRAINT farm_user_state_land_tax_debt_chk CHECK (land_tax_debt >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Audit trail for territory tax/debt events. Clients use farm_land_tax_quote()
+-- for the current state; the table is own-row readable for profile/history views.
+CREATE TABLE IF NOT EXISTS public.farm_land_tax_events (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  event_type   text NOT NULL CHECK (event_type IN ('daily_tax','interest','manual_payment','autopay')),
+  amount       integer NOT NULL CHECK (amount >= 0),
+  debt_before  integer NOT NULL CHECK (debt_before >= 0),
+  debt_after   integer NOT NULL CHECK (debt_after >= 0),
+  fair_cap     integer,
+  owned_tiles  integer,
+  excess_tiles integer,
+  meta         jsonb NOT NULL DEFAULT '{}',
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS farm_land_tax_events_user_time_idx
+  ON public.farm_land_tax_events(user_id, created_at DESC);
 
 -- ── Seed card defs (collectibles) ──────────────────────────────────────────
 -- crop_type == species for Phase 1. Tunable later via an admin RPC (Phase 4).
@@ -308,6 +334,7 @@ ALTER TABLE public.farm_inventory     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.farm_market        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.farm_nft_instances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.farm_user_state     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.farm_land_tax_events ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "farm_card_defs_select" ON public.farm_card_defs;
 CREATE POLICY "farm_card_defs_select" ON public.farm_card_defs
@@ -338,19 +365,23 @@ DROP POLICY IF EXISTS "farm_user_state_select_own" ON public.farm_user_state;
 CREATE POLICY "farm_user_state_select_own" ON public.farm_user_state
   FOR SELECT TO authenticated USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "farm_land_tax_events_select_own" ON public.farm_land_tax_events;
+CREATE POLICY "farm_land_tax_events_select_own" ON public.farm_land_tax_events
+  FOR SELECT TO authenticated USING (user_id = auth.uid());
+
 -- No direct client writes — everything goes through the RPCs below.
 REVOKE ALL ON public.farm_card_defs, public.farm_tiles, public.farm_collection,
               public.farm_inventory, public.farm_market, public.farm_nft_instances,
-              public.farm_user_state FROM anon, authenticated;
+              public.farm_user_state, public.farm_land_tax_events FROM anon, authenticated;
 GRANT SELECT ON public.farm_card_defs, public.farm_tiles, public.farm_market, public.farm_nft_instances TO anon, authenticated;
-GRANT SELECT ON public.farm_collection, public.farm_inventory, public.farm_user_state TO authenticated;
+GRANT SELECT ON public.farm_collection, public.farm_inventory, public.farm_user_state, public.farm_land_tax_events TO authenticated;
 
 -- ── Realtime ───────────────────────────────────────────────────────────────
 DO $$
 DECLARE t text;
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-    FOREACH t IN ARRAY ARRAY['farm_tiles','farm_market','farm_collection','farm_inventory','farm_nft_instances','farm_user_state'] LOOP
+    FOREACH t IN ARRAY ARRAY['farm_tiles','farm_market','farm_collection','farm_inventory','farm_nft_instances','farm_user_state','farm_land_tax_events'] LOOP
       IF NOT EXISTS (
         SELECT 1 FROM pg_publication_tables
         WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = t
@@ -360,6 +391,460 @@ BEGIN
     END LOOP;
   END IF;
 END $$;
+
+-- ── Territory fair-cap + tax helpers ───────────────────────────────────────
+-- Tax is intentionally count-based, not value-based:
+--   fair_cap  = ceil(normal farm capacity / active farm participants)
+--   excess    = max(0, owned normal territories - fair_cap)
+--   daily tax = 1000 * excess^2
+-- Migration Ogródek plant tiles are ignored for tax and cap enforcement.
+CREATE OR REPLACE FUNCTION public.farm_normal_tile_count(p_uid uuid)
+RETURNS integer
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(count(*), 0)::integer
+    FROM public.farm_tiles ft
+   WHERE ft.owner_id = p_uid
+     AND ft.acquired_via <> 'migration';
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_land_tax_participant_count()
+RETURNS integer
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT greatest(1, COALESCE(count(*), 0))::integer
+    FROM public.profiles p
+   WHERE NOT p.is_admin
+     AND (
+       EXISTS (SELECT 1 FROM public.farm_user_state fus WHERE fus.user_id = p.id)
+       OR EXISTS (
+         SELECT 1 FROM public.farm_tiles ft
+          WHERE ft.owner_id = p.id AND ft.acquired_via <> 'migration'
+       )
+     );
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_normal_tile_capacity()
+RETURNS integer
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT greatest(1, 13 * 4 - COALESCE(count(*) FILTER (WHERE acquired_via = 'migration'), 0))::integer
+    FROM public.farm_tiles;
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_fair_cap()
+RETURNS integer
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT greatest(1, ceil(
+           public.farm_normal_tile_capacity()::numeric
+           / greatest(public.farm_land_tax_participant_count(), 1)
+         )::integer);
+$$;
+
+-- Leading farm-tile auction bids count as pending expansion, so one player
+-- cannot reserve several auction wins above the cap. Dynamic SQL keeps farm.sql
+-- runnable before marketplace item columns exist.
+CREATE OR REPLACE FUNCTION public.farm_land_tax_pending_tiles(
+  p_uid uuid,
+  p_exclude_listing_id uuid DEFAULT NULL
+)
+RETURNS integer
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_count integer := 0;
+  v_ready boolean := false;
+BEGIN
+  IF to_regclass('public.marketplace_listings') IS NULL
+     OR to_regclass('public.marketplace_bids') IS NULL THEN
+    RETURN 0;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+      FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'marketplace_listings'
+       AND column_name = 'item_kind'
+  ) INTO v_ready;
+  IF NOT v_ready THEN RETURN 0; END IF;
+
+  EXECUTE $sql$
+    SELECT COALESCE(count(DISTINCT l.id), 0)::integer
+      FROM public.marketplace_bids b
+      JOIN public.marketplace_listings l ON l.id = b.listing_id
+     WHERE b.bidder_id = $1
+       AND b.status = 'leading'
+       AND l.status = 'open'
+       AND l.item_kind = 'farm_tile'
+       AND ($2::uuid IS NULL OR l.id <> $2)
+  $sql$ USING p_uid, p_exclude_listing_id INTO v_count;
+
+  RETURN COALESCE(v_count, 0);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_land_tax_quote_for(
+  p_uid uuid,
+  p_exclude_listing_id uuid DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_capacity integer := public.farm_normal_tile_capacity();
+  v_participants integer := public.farm_land_tax_participant_count();
+  v_cap integer := public.farm_fair_cap();
+  v_owned integer := public.farm_normal_tile_count(p_uid);
+  v_pending integer := public.farm_land_tax_pending_tiles(p_uid, p_exclude_listing_id);
+  v_debt integer := 0;
+  v_excess integer := 0;
+  v_daily integer := 0;
+  v_interest integer := 0;
+  v_first_tax_day date := DATE '2026-07-02';
+  v_first_payment_day date := DATE '2026-07-03';
+BEGIN
+  SELECT COALESCE(land_tax_debt, 0) INTO v_debt
+    FROM public.farm_user_state
+   WHERE user_id = p_uid;
+  v_debt := COALESCE(v_debt, 0);
+  v_excess := greatest(0, v_owned - v_cap);
+  v_daily := 1000 * v_excess * v_excess;
+  v_interest := CASE WHEN v_debt > 0 THEN ceil(v_debt * 0.10)::integer ELSE 0 END;
+
+  RETURN json_build_object(
+    'normal_capacity', v_capacity,
+    'participants', v_participants,
+    'fair_cap', v_cap,
+    'owned_tiles', v_owned,
+    'pending_tiles', v_pending,
+    'excess_tiles', v_excess,
+    'tax_per_excess_sq', 1000,
+    'daily_tax', v_daily,
+    'debt', v_debt,
+    'interest_next', v_interest,
+    'first_tax_day', v_first_tax_day,
+    'first_payment_day', v_first_payment_day,
+    'blocked_expansion', (v_debt > 0 OR v_owned + v_pending >= v_cap),
+    'blocked_planting', (v_owned > v_cap)
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_land_tax_quote()
+RETURNS json
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user uuid := auth.uid();
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+  INSERT INTO public.farm_user_state (user_id) VALUES (v_user)
+  ON CONFLICT (user_id) DO NOTHING;
+  RETURN public.farm_land_tax_quote_for(v_user);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_assert_can_expand(
+  p_uid uuid,
+  p_exclude_listing_id uuid DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_q json := public.farm_land_tax_quote_for(p_uid, p_exclude_listing_id);
+  v_debt integer := COALESCE((v_q->>'debt')::integer, 0);
+  v_owned integer := COALESCE((v_q->>'owned_tiles')::integer, 0);
+  v_pending integer := COALESCE((v_q->>'pending_tiles')::integer, 0);
+  v_cap integer := COALESCE((v_q->>'fair_cap')::integer, 1);
+BEGIN
+  IF v_debt > 0 THEN RAISE EXCEPTION 'land_tax_debt'; END IF;
+  IF v_owned + v_pending >= v_cap THEN RAISE EXCEPTION 'territory_cap'; END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_assert_can_plant(p_uid uuid)
+RETURNS void
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_q json := public.farm_land_tax_quote_for(p_uid);
+BEGIN
+  IF COALESCE((v_q->>'owned_tiles')::integer, 0) > COALESCE((v_q->>'fair_cap')::integer, 1) THEN
+    RAISE EXCEPTION 'territory_over_cap';
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.farm_apply_land_tax_autopay(
+  p_uid uuid,
+  p_gross integer,
+  p_source text,
+  p_meta jsonb DEFAULT '{}'::jsonb
+)
+RETURNS json
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_debt_before integer := 0;
+  v_tax_paid integer := 0;
+  v_debt_after integer := 0;
+BEGIN
+  IF p_gross IS NULL OR p_gross < 0 THEN RAISE EXCEPTION 'bad_amount'; END IF;
+
+  INSERT INTO public.farm_user_state (user_id) VALUES (p_uid)
+  ON CONFLICT (user_id) DO NOTHING;
+
+  SELECT land_tax_debt INTO v_debt_before
+    FROM public.farm_user_state
+   WHERE user_id = p_uid
+   FOR UPDATE;
+  v_debt_before := COALESCE(v_debt_before, 0);
+  v_tax_paid := least(v_debt_before, p_gross);
+  v_debt_after := v_debt_before - v_tax_paid;
+
+  IF v_tax_paid > 0 THEN
+    UPDATE public.farm_user_state
+       SET land_tax_debt = v_debt_after
+     WHERE user_id = p_uid;
+
+    INSERT INTO public.farm_land_tax_events
+      (user_id, event_type, amount, debt_before, debt_after, fair_cap, owned_tiles, excess_tiles, meta)
+    VALUES (
+      p_uid, 'autopay', v_tax_paid, v_debt_before, v_debt_after,
+      public.farm_fair_cap(), public.farm_normal_tile_count(p_uid),
+      greatest(0, public.farm_normal_tile_count(p_uid) - public.farm_fair_cap()),
+      COALESCE(p_meta, '{}'::jsonb) || jsonb_build_object('source', p_source, 'gross', p_gross)
+    );
+
+    IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+      INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+      VALUES (
+        p_uid, -v_tax_paid, 'farm_land_tax_autopay',
+        COALESCE(p_meta, '{}'::jsonb) || jsonb_build_object('source', p_source, 'gross', p_gross)
+      );
+    END IF;
+  END IF;
+
+  RETURN json_build_object(
+    'gross', p_gross,
+    'tax_paid', v_tax_paid,
+    'net', p_gross - v_tax_paid,
+    'debt', v_debt_after
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.pay_farm_land_tax(p_amount integer)
+RETURNS json
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user uuid := auth.uid();
+  v_debt_before integer := 0;
+  v_pay integer := 0;
+  v_debt_after integer := 0;
+  v_coins integer := 0;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+  IF p_amount IS NULL OR p_amount < 1 THEN RAISE EXCEPTION 'bad_amount'; END IF;
+
+  INSERT INTO public.farm_user_state (user_id) VALUES (v_user)
+  ON CONFLICT (user_id) DO NOTHING;
+
+  SELECT land_tax_debt INTO v_debt_before
+    FROM public.farm_user_state
+   WHERE user_id = v_user
+   FOR UPDATE;
+  v_debt_before := COALESCE(v_debt_before, 0);
+  v_pay := least(p_amount, v_debt_before);
+
+  IF v_pay <= 0 THEN
+    SELECT coins INTO v_coins FROM public.profiles WHERE id = v_user;
+    RETURN json_build_object('ok', true, 'paid', 0, 'debt', 0, 'coins', v_coins);
+  END IF;
+
+  UPDATE public.profiles
+     SET coins = coins - v_pay
+   WHERE id = v_user AND coins >= v_pay
+  RETURNING coins INTO v_coins;
+  IF NOT FOUND THEN RAISE EXCEPTION 'insufficient_coins'; END IF;
+
+  v_debt_after := v_debt_before - v_pay;
+  UPDATE public.farm_user_state
+     SET land_tax_debt = v_debt_after
+   WHERE user_id = v_user;
+
+  INSERT INTO public.farm_land_tax_events
+    (user_id, event_type, amount, debt_before, debt_after, fair_cap, owned_tiles, excess_tiles, meta)
+  VALUES (
+    v_user, 'manual_payment', v_pay, v_debt_before, v_debt_after,
+    public.farm_fair_cap(), public.farm_normal_tile_count(v_user),
+    greatest(0, public.farm_normal_tile_count(v_user) - public.farm_fair_cap()),
+    jsonb_build_object('requested_amount', p_amount)
+  );
+
+  IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+    INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+    VALUES (v_user, -v_pay, 'farm_land_tax_pay', jsonb_build_object('source', 'manual_payment'));
+  END IF;
+
+  RETURN json_build_object('ok', true, 'paid', v_pay, 'debt', v_debt_after, 'coins', v_coins);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.assess_farm_land_tax()
+RETURNS json
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_warsaw_now timestamp := now() AT TIME ZONE 'Europe/Warsaw';
+  v_tax_day date := ((now() AT TIME ZONE 'Europe/Warsaw')::date - 1);
+  v_first_tax_day date := DATE '2026-07-02';
+  v_user uuid;
+  v_debt_before integer;
+  v_debt_after integer;
+  v_daily_tax integer;
+  v_interest integer;
+  v_due integer;
+  v_wallet integer;
+  v_wallet_pay integer;
+  v_q json;
+  v_done integer := 0;
+BEGIN
+  IF EXTRACT(HOUR FROM v_warsaw_now)::integer <> 0 THEN
+    RETURN json_build_object('ok', true, 'skipped', true, 'reason', 'not_midnight_warsaw', 'tax_day', v_tax_day, 'assessed', 0);
+  END IF;
+  IF v_tax_day < v_first_tax_day THEN
+    RETURN json_build_object('ok', true, 'skipped', true, 'reason', 'tax_not_started', 'tax_day', v_tax_day, 'first_tax_day', v_first_tax_day, 'assessed', 0);
+  END IF;
+
+  INSERT INTO public.farm_user_state (user_id)
+  SELECT p.id
+    FROM public.profiles p
+   WHERE NOT p.is_admin
+     AND (
+       EXISTS (SELECT 1 FROM public.farm_user_state fus WHERE fus.user_id = p.id)
+       OR EXISTS (
+         SELECT 1 FROM public.farm_tiles ft
+          WHERE ft.owner_id = p.id AND ft.acquired_via <> 'migration'
+       )
+     )
+  ON CONFLICT (user_id) DO NOTHING;
+
+  FOR v_user IN
+    SELECT fus.user_id
+      FROM public.farm_user_state fus
+      JOIN public.profiles p ON p.id = fus.user_id
+     WHERE NOT p.is_admin
+     ORDER BY fus.user_id
+  LOOP
+    SELECT land_tax_debt INTO v_debt_before
+      FROM public.farm_user_state
+     WHERE user_id = v_user
+     FOR UPDATE;
+
+    IF (SELECT land_tax_last_assessed FROM public.farm_user_state WHERE user_id = v_user) = v_tax_day THEN
+      CONTINUE;
+    END IF;
+
+    v_q := public.farm_land_tax_quote_for(v_user);
+    v_daily_tax := COALESCE((v_q->>'daily_tax')::integer, 0);
+    v_interest := COALESCE((v_q->>'interest_next')::integer, 0);
+    v_due := v_daily_tax + v_interest;
+    v_wallet_pay := 0;
+    v_debt_after := COALESCE(v_debt_before, 0);
+
+    IF v_due > 0 THEN
+      SELECT coins INTO v_wallet FROM public.profiles WHERE id = v_user FOR UPDATE;
+      v_wallet_pay := least(COALESCE(v_wallet, 0), v_due);
+      IF v_wallet_pay > 0 THEN
+        UPDATE public.profiles SET coins = coins - v_wallet_pay WHERE id = v_user;
+        IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+          INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
+          VALUES (
+            v_user, -v_wallet_pay, 'farm_land_tax_pay',
+            jsonb_build_object('source', 'daily_assessment', 'tax_day', v_tax_day,
+                               'daily_tax', v_daily_tax, 'interest', v_interest)
+          );
+        END IF;
+      END IF;
+      v_debt_after := v_debt_after + v_due - v_wallet_pay;
+    END IF;
+
+    UPDATE public.farm_user_state
+       SET land_tax_debt = v_debt_after,
+           land_tax_last_assessed = v_tax_day
+     WHERE user_id = v_user;
+
+    IF v_daily_tax > 0 THEN
+      INSERT INTO public.farm_land_tax_events
+        (user_id, event_type, amount, debt_before, debt_after, fair_cap, owned_tiles, excess_tiles, meta)
+      VALUES (
+        v_user, 'daily_tax', v_daily_tax, COALESCE(v_debt_before, 0), v_debt_after,
+        COALESCE((v_q->>'fair_cap')::integer, public.farm_fair_cap()),
+        COALESCE((v_q->>'owned_tiles')::integer, public.farm_normal_tile_count(v_user)),
+        COALESCE((v_q->>'excess_tiles')::integer, 0),
+        jsonb_build_object('tax_day', v_tax_day, 'wallet_paid', v_wallet_pay)
+      );
+    END IF;
+
+    IF v_interest > 0 THEN
+      INSERT INTO public.farm_land_tax_events
+        (user_id, event_type, amount, debt_before, debt_after, fair_cap, owned_tiles, excess_tiles, meta)
+      VALUES (
+        v_user, 'interest', v_interest, COALESCE(v_debt_before, 0), v_debt_after,
+        COALESCE((v_q->>'fair_cap')::integer, public.farm_fair_cap()),
+        COALESCE((v_q->>'owned_tiles')::integer, public.farm_normal_tile_count(v_user)),
+        COALESCE((v_q->>'excess_tiles')::integer, 0),
+        jsonb_build_object('tax_day', v_tax_day, 'wallet_paid', v_wallet_pay)
+      );
+    END IF;
+
+    v_done := v_done + 1;
+  END LOOP;
+
+  RETURN json_build_object('ok', true, 'tax_day', v_tax_day, 'assessed', v_done);
+END;
+$$;
 
 -- ── RPC: buy_farm_tile ─────────────────────────────────────────────────────
 -- Claim an unowned tile for an escalating coin price (BURN). The PK uniqueness
@@ -379,6 +864,10 @@ DECLARE
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_x < 0 OR p_x >= 13 OR p_y < 0 OR p_y >= 4 THEN RAISE EXCEPTION 'bad_coords'; END IF;
+
+  INSERT INTO public.farm_user_state (user_id) VALUES (v_user)
+  ON CONFLICT (user_id) DO NOTHING;
+  PERFORM public.farm_assert_can_expand(v_user);
 
   SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
   v_price := least(50000::numeric, floor(350::numeric * power(2::numeric, v_tiles)))::integer;
@@ -544,7 +1033,8 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'no_box'; END IF;
   SELECT coins INTO v_coins FROM public.profiles WHERE id = v_user;
   SELECT count(*) INTO v_owned_nfts FROM public.farm_nft_instances WHERE owner_id = v_user;
-  SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
+  SELECT count(*) INTO v_tiles FROM public.farm_tiles
+   WHERE owner_id = v_user AND acquired_via <> 'migration';
   v_territory := v_tiles + COALESCE(v_vouchers, 0);
   v_eff_voucher_p := v_voucher_p / power(3::numeric, greatest(v_territory, 0));
 
@@ -714,6 +1204,7 @@ BEGIN
   IF v_tile.acquired_via = 'migration' THEN RAISE EXCEPTION 'zen_tile'; END IF;  -- plant block, not farmland
   IF v_tile.listed THEN RAISE EXCEPTION 'tile_listed'; END IF;
   IF v_tile.planted_species IS NOT NULL THEN RAISE EXCEPTION 'tile_occupied'; END IF;
+  PERFORM public.farm_assert_can_plant(v_user);
 
   SELECT * INTO v_def FROM public.farm_card_defs WHERE species = p_species AND is_active;
   IF NOT FOUND THEN RAISE EXCEPTION 'bad_species'; END IF;
@@ -809,6 +1300,10 @@ DECLARE
   v_hours    numeric;
   v_coins    integer;
   v_pay      integer;
+  v_tax      json;
+  v_tax_paid integer := 0;
+  v_net_pay  integer := 0;
+  v_debt     integer := 0;
   v_lot      record;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
@@ -856,7 +1351,15 @@ BEGIN
    WHERE crop_type = p_crop_type;
 
   v_pay := round(v_proceeds)::integer;
-  UPDATE public.profiles SET coins = coins + v_pay WHERE id = v_user
+  v_tax := public.farm_apply_land_tax_autopay(
+    v_user, v_pay, 'farm_crop_sale',
+    jsonb_build_object('crop_type', p_crop_type, 'qty', p_qty)
+  );
+  v_tax_paid := COALESCE((v_tax->>'tax_paid')::integer, 0);
+  v_net_pay := COALESCE((v_tax->>'net')::integer, v_pay);
+  v_debt := COALESCE((v_tax->>'debt')::integer, 0);
+
+  UPDATE public.profiles SET coins = coins + v_net_pay WHERE id = v_user
   RETURNING coins INTO v_coins;
 
   -- remaining (non-expired) inventory of this crop
@@ -867,11 +1370,14 @@ BEGIN
     INSERT INTO public.coin_transactions (user_id, delta, reason, meta)
     VALUES (v_user, v_pay, 'farm_crop_sale',
             jsonb_build_object('crop_type', p_crop_type, 'qty', p_qty,
-                               'cur_price', round(v_cur_eff, 2), 'unit_price', round(v_pay::numeric / p_qty, 2)));
+                               'cur_price', round(v_cur_eff, 2),
+                               'unit_price', round(v_pay::numeric / p_qty, 2),
+                               'tax_paid', v_tax_paid, 'net', v_net_pay));
   END IF;
 
   RETURN json_build_object('ok', true, 'coins', v_coins, 'crop_type', p_crop_type,
-    'sold', p_qty, 'proceeds', v_pay, 'cur_price', round(v_price, 2), 'inventory_qty', v_inv);
+    'sold', p_qty, 'proceeds', v_pay, 'net', v_net_pay, 'tax_paid', v_tax_paid,
+    'land_tax_debt', v_debt, 'cur_price', round(v_price, 2), 'inventory_qty', v_inv);
 END;
 $$;
 
@@ -884,6 +1390,18 @@ REVOKE ALL ON FUNCTION public.level_up_card(text)                    FROM PUBLIC
 REVOKE ALL ON FUNCTION public.plant_crop(integer, integer, text)     FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.harvest_crop(integer, integer)         FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sell_crop_to_npc(text, integer)        FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_land_tax_quote()                  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.pay_farm_land_tax(integer)             FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.assess_farm_land_tax()                 FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_normal_tile_count(uuid)           FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_land_tax_participant_count()      FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_normal_tile_capacity()            FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_fair_cap()                        FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_land_tax_pending_tiles(uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_land_tax_quote_for(uuid, uuid)    FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_assert_can_expand(uuid, uuid)     FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_assert_can_plant(uuid)            FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.farm_apply_land_tax_autopay(uuid, integer, text, jsonb) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.buy_farm_tile(integer, integer)     TO authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_farm_starter()               TO authenticated;
@@ -893,6 +1411,8 @@ GRANT EXECUTE ON FUNCTION public.level_up_card(text)                 TO authenti
 GRANT EXECUTE ON FUNCTION public.plant_crop(integer, integer, text)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.harvest_crop(integer, integer)      TO authenticated;
 GRANT EXECUTE ON FUNCTION public.sell_crop_to_npc(text, integer)     TO authenticated;
+GRANT EXECUTE ON FUNCTION public.farm_land_tax_quote()               TO authenticated;
+GRANT EXECUTE ON FUNCTION public.pay_farm_land_tax(integer)          TO authenticated;
 
 -- ── Rot cleanup: delete expired crop lots daily (also filtered everywhere live) ──
 CREATE OR REPLACE FUNCTION public.farm_rot_cleanup()
@@ -907,6 +1427,26 @@ BEGIN
       PERFORM cron.unschedule('farm_rot_cleanup');
     END IF;
     PERFORM cron.schedule('farm_rot_cleanup', '20 0 * * *', $cron$SELECT public.farm_rot_cleanup();$cron$);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'farm_land_tax_daily') THEN
+      PERFORM cron.unschedule('farm_land_tax_daily');
+    END IF;
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'farm_land_tax_daily_summer') THEN
+      PERFORM cron.unschedule('farm_land_tax_daily_summer');
+    END IF;
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'farm_land_tax_daily_winter') THEN
+      PERFORM cron.unschedule('farm_land_tax_daily_winter');
+    END IF;
+    -- Supabase pg_cron runs in UTC. These two attempts cover Warsaw summer
+    -- (UTC+2) and winter (UTC+1); assess_farm_land_tax() only runs during
+    -- Warsaw hour 00 and is idempotent by completed tax_day.
+    PERFORM cron.schedule('farm_land_tax_daily_summer', '0 22 * * *', $cron$SELECT public.assess_farm_land_tax();$cron$);
+    PERFORM cron.schedule('farm_land_tax_daily_winter', '0 23 * * *', $cron$SELECT public.assess_farm_land_tax();$cron$);
   END IF;
 END $$;
 
