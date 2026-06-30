@@ -179,7 +179,7 @@ AS $$
            AND fc.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric)
       + COALESCE((
-        SELECT sum(round(20000.0 / ni.edition_size))
+        SELECT sum(round(20000.0 / ni.edition_size * ni.level))
           FROM public.farm_nft_instances ni
          WHERE ni.owner_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric)

@@ -68,7 +68,7 @@ AS $$
             WHERE fc.user_id = p_uid AND d.edition_size IS NULL
          ), 0)
        + COALESCE((
-           SELECT sum(round(20000.0 / ni.edition_size))
+           SELECT sum(round(20000.0 / ni.edition_size * ni.level))
              FROM public.farm_nft_instances ni
             WHERE ni.owner_id = p_uid
          ), 0)
@@ -157,7 +157,7 @@ AS $$
                     FROM public.farm_collection fc
                     JOIN public.farm_card_defs d ON d.species = fc.species
                    WHERE fc.user_id = p_uid AND d.edition_size IS NULL), 0) AS farm_cards,
-      COALESCE((SELECT sum(round(20000.0 / ni.edition_size))
+      COALESCE((SELECT sum(round(20000.0 / ni.edition_size * ni.level))
                   FROM public.farm_nft_instances ni
                  WHERE ni.owner_id = p_uid), 0) AS farm_nft,
       COALESCE((SELECT sum(fi.qty * fm.cur_price)

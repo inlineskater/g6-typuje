@@ -5344,6 +5344,7 @@
     .farm-pack-card.nft .farm-pack-front { background: linear-gradient(160deg, #fffaf0, #ffe8b0); box-shadow: 0 0 20px rgba(245,158,11,.55), 0 12px 28px rgba(0,0,0,.45); }
     /* NFT badges + collection grid */
     .farm-cat-nft-badge { color: #b45309; font-weight: 800; }
+    .farm-cat-nft-levels { font-size: 10px; color: var(--muted); background: var(--bg-mid); border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
     .farm-nft-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 2px 0 8px; }
     .farm-nft-item { width: 108px; padding: 11px 8px; border-radius: 12px; text-align: center; background: linear-gradient(160deg, #fffaf0, #ffe8b0); border: 2px solid #f59e0b; box-shadow: 0 2px 10px rgba(245,158,11,.3); cursor: pointer; transition: transform .12s, box-shadow .12s; }
     .farm-nft-item:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(245,158,11,.42); }
@@ -13035,7 +13036,7 @@ function buildMarketplaceCard(listing) {
   body.appendChild(el('div', { className: 'mlc-head' },
     el('div', { className: 'mlc-name' }, listing.title),
     el('div', { className: 'mlc-pricetag' }, plnum(priceVal) + ' 🪙')));
-  if (listing.item_kind === 'farm_nft') body.appendChild(el('div', { className: 'ml-item-badge nft' }, '💎 Karta NFT #' + listing.nft_serial + '/' + listing.nft_edition));
+  if (listing.item_kind === 'farm_nft') body.appendChild(el('div', { className: 'ml-item-badge nft' }, '💎 Karta NFT #' + listing.nft_serial + '/' + listing.nft_edition + (listing.nft_level > 1 ? ' ' + '⭐'.repeat(listing.nft_level) : '')));
   else if (listing.item_kind === 'farm_card') body.appendChild(el('div', { className: 'ml-item-badge card' }, '🃏 Karta rośliny (Ogródek)'));
   else if (listing.item_kind === 'farm_tile') body.appendChild(el('div', { className: 'ml-item-badge tile' }, '🌱 Działka [' + listing.farm_tile_x + ',' + listing.farm_tile_y + ']'));
   body.appendChild(el('div', { className: 'mlc-seller' }, '👤 Wystawia: ' + (listing.seller_nick || '?')));
@@ -13807,7 +13808,7 @@ async function mlPopulateItemPicker(kind, preselect = '') {
     if (!mine.length) { sel.append(el('option', { value: '' }, 'Brak kart NFT')); hint.textContent = 'Zdobądź kartę NFT ze skrzynki, aby ją wystawić.'; return; }
     mine.sort((a, b) => a.species.localeCompare(b.species) || a.serial_no - b.serial_no).forEach(n => {
       const def = fmDefs.get(n.species);
-      sel.append(el('option', { value: n.id }, (def?.emoji || '💎') + ' ' + (n.nft_name || def?.name || n.species) + ' #' + n.serial_no + '/' + n.edition_size));
+      sel.append(el('option', { value: n.id }, (def?.emoji || '💎') + ' ' + (n.nft_name || def?.name || n.species) + ' #' + n.serial_no + '/' + n.edition_size + (n.level > 1 ? ' ' + '⭐'.repeat(n.level) : '')));
     });
     hint.textContent = 'Sprzedajesz konkretny, numerowany egzemplarz NFT.';
   } else if (kind === 'farm_tile') {
@@ -22771,6 +22772,23 @@ const FARM_ERR = {
   territory_cap: 'Masz już limit działek. Sprzedaj nadmiar albo poczekaj aż limit wzrośnie.',
   territory_over_cap: 'Jesteś ponad limitem działek — sprzedaj nadmiar, żeby znowu sadzić.',
   bad_amount: 'Podaj poprawną kwotę.',
+  nft_use_level_up_nft: 'Tę kartę NFT ulepszysz przez „🔀 Połącz" w 🎒 Moim Majątku.',
+  nft_requires_instance: 'Wybierz konkretny egzemplarz karty NFT do zasadzenia.',
+  nft_not_found: 'Nie znaleziono tej karty NFT.',
+  nft_listed: 'Ta karta NFT jest wystawiona na Targowisku.',
+  nft_already_planted: 'Ta karta NFT jest już zasadzona gdzie indziej.',
+  nft_planted: 'Ta karta NFT jest właśnie zasadzona.',
+  same_instance: 'Wybierz dwie różne karty.',
+  hero_not_found: 'Nie znaleziono wybranej karty.',
+  fuel_not_found: 'Nie znaleziono karty do poświęcenia.',
+  not_owner_hero: 'To nie twoja karta.',
+  not_owner_fuel: 'To nie twoja karta do poświęcenia.',
+  different_species: 'Obie karty muszą być tą samą rośliną.',
+  different_level: 'Obie karty muszą być na tym samym poziomie.',
+  hero_listed: 'Ta karta jest wystawiona na Targowisku.',
+  fuel_listed: 'Wybrana karta do poświęcenia jest wystawiona na Targowisku.',
+  hero_planted: 'Ta karta jest właśnie zasadzona — zbierz plon, by ją połączyć.',
+  fuel_planted: 'Wybrana karta do poświęcenia jest właśnie zasadzona.',
 };
 
 let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, listed, asset_value, planted_species, planted_level, planted_at, ready_at, nick, zen }
@@ -22931,6 +22949,7 @@ function normalizeFarmTile(t) {
     planted_level: t.planted_level || null,
     planted_at: t.planted_at || null,
     ready_at: t.ready_at || null,
+    planted_instance_id: t.planted_instance_id || null,
     nick: (t.profiles && t.profiles.nick) || t.nick || null,
     zen_garden_id: t.zen_garden_id || null,
     zenAnchor: null, zenCover: false, zenAnchorKey: null,  // set by tagZenBlocks()
@@ -22945,13 +22964,13 @@ async function loadFarm() {
   const seq = ++fmLoadSeq;
   try {
     const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes, taxRes] = await Promise.all([
-      sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
+      sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
       sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('gardens').select('*, profiles(nick)'),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
       sb.from('farm_user_state').select('boxes,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
       sb.rpc('farm_land_tax_quote'),
     ]);
@@ -23643,7 +23662,7 @@ function renderFarmSelectionBody() {
       }
     });
     fmNft.forEach(n => {
-      if (n.owner_id === me?.id) {
+      if (n.owner_id === me?.id && !n.listed) {
         ownedCounts.set(n.species, (ownedCounts.get(n.species) || 0) + 1);
       }
     });
@@ -23667,8 +23686,17 @@ function renderFarmSelectionBody() {
         const planted = plantedCounts.get(card.species) || 0;
         const limitReached = planted >= owned;
         
-        grid.append(farmCardTile(card, { 
-          onPick: limitReached ? null : ((c, tileEl) => plantCrop(fmSel.x, fmSel.y, c.species, tileEl)),
+        grid.append(farmCardTile(card, {
+          onPick: limitReached ? null : ((c, tileEl) => {
+            const def = fmDefs.get(c.species);
+            if (def && def.edition_size != null) {
+              const instId = farmPickPlantInstance(c.species);
+              if (!instId) { showToast('Brak wolnego egzemplarza tej karty NFT do zasadzenia.'); return; }
+              plantCrop(fmSel.x, fmSel.y, c.species, instId, tileEl);
+            } else {
+              plantCrop(fmSel.x, fmSel.y, c.species, null, tileEl);
+            }
+          }),
           plantDisabled: limitReached,
           plantLabel: limitReached ? `Posadzono (${planted}/${owned})` : '🌱 Zasadź'
         }));
@@ -23687,6 +23715,29 @@ function renderFarmSelectionBody() {
     const left = tile.ready_at ? (new Date(tile.ready_at).getTime() - Date.now()) : 0;
     box.append(el('div', { className: 'farm-card-sub farm-sel-countdown' }, '⏳ Dojrzeje za ' + cvFmtDur(left)));
   }
+}
+
+// Set of NFT instance ids currently planted on ANY tile (derived fresh from
+// fmTiles each call — mirrors the rest of the farm code's pattern of deriving
+// from canonical maps rather than caching a second source of truth).
+function farmPlantedNftIds() {
+  const s = new Set();
+  fmTiles.forEach(t => { if (t.planted_instance_id) s.add(t.planted_instance_id); });
+  return s;
+}
+
+// Auto-pick which NFT instance to plant for a species: the player's highest-level
+// unlisted, unplanted owned copy. Returns null for fungible (non-NFT) species
+// (plant_crop doesn't need an instance id for those), or undefined if the species
+// is an NFT but the player has no eligible instance left to plant.
+function farmPickPlantInstance(species) {
+  const def = fmDefs.get(species);
+  if (!def || def.edition_size == null) return null;
+  const planted = farmPlantedNftIds();
+  const cand = fmNft.filter(n => n.owner_id === me?.id && n.species === species && !n.listed && !planted.has(n.id));
+  if (!cand.length) return undefined;
+  cand.sort((a, b) => b.level - a.level || a.serial_no - b.serial_no);
+  return cand[0].id;
 }
 
 // Collectible plant card: rarity frame + level gem + a duplicate-progress
@@ -23738,7 +23789,11 @@ function farmCardTile(card, opts) {
       el('div', { className: 'fcc-art' }, farmIcon(def.emoji)),
       el('div', { className: 'fcc-name', title: def.name }, def.name),
       el('div', { className: 'fcc-rar farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar),
-      el('div', { className: 'fcc-prog' },
+      // The duplicate-progress bar is a fungible-card-only concept (NFT cards
+      // level via merging real instances, not via collecting duplicates) — see
+      // farmPickPlantInstance() for how the empty-tile NFT picker resolves an
+      // instance instead.
+      isNft ? '' : el('div', { className: 'fcc-prog' },
         el('div', { className: 'fcc-prog-bar' },
           el('div', { className: 'fcc-prog-fill' + (haveEnough ? ' ready' : ''), style: { width: pct + '%' } }),
           el('div', { className: 'fcc-prog-txt' }, card.count + ' / ' + dupesNeeded + ' szt.'))),
@@ -23748,24 +23803,44 @@ function farmCardTile(card, opts) {
 
 // A serialized NFT instance rendered with the SAME .fcc frame/size as a plant card
 // (gold frame). Clicking opens its trading-card modal. Keeps the inventory grid uniform.
+// Eligible "fuel" candidates to merge into `hero`: same owner, same species,
+// same level, not listed, not currently planted, excluding the hero itself.
+function farmNftMergeCandidates(hero) {
+  const planted = farmPlantedNftIds();
+  return fmNft.filter(x => x.id !== hero.id && x.owner_id === hero.owner_id && x.species === hero.species
+    && x.level === hero.level && !x.listed && !planted.has(x.id));
+}
+
 function farmNftTile(n) {
   const def = fmDefs.get(n.species) || {};
   const rar = def.rarity || 'legendary';
+  const lvl = n.level || 1;
+  const stars = lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '';
   const tile = el('div', { className: 'fcc nft pickable rar-' + rar, title: 'Kliknij, aby zobaczyć kartę' });
-  const view = el('button', { className: 'fcc-up ready' }, '💎 Zobacz');
+  const planted = farmPlantedNftIds();
+  let mergeBtn;
+  if (n.listed) {
+    mergeBtn = el('button', { className: 'fcc-up', disabled: true, title: 'Wystawiona na Targowisku', style: { opacity: '0.8' } }, '🔀 Połącz');
+  } else if (planted.has(n.id)) {
+    mergeBtn = el('button', { className: 'fcc-up', disabled: true, title: 'Zasadzona — zbierz plon, by ją połączyć', style: { opacity: '0.8' } }, '🔀 Połącz');
+  } else if (farmNftMergeCandidates(n).length === 0) {
+    mergeBtn = el('button', { className: 'fcc-up', disabled: true, title: 'Brak innej karty „' + (def.name || n.species) + '" na poziomie ' + lvl + ' do połączenia', style: { opacity: '0.8' } }, '🔀 Połącz');
+  } else {
+    mergeBtn = el('button', { className: 'fcc-up ready', title: 'Połącz z inną kartą na tym poziomie, by awansować' }, '🔀 Połącz');
+    mergeBtn.addEventListener('click', e => { e.stopPropagation(); openFarmNftMergeModal(n); });
+  }
   const open = () => openFarmNftModal(n);
-  view.addEventListener('click', e => { e.stopPropagation(); open(); });
   tile.addEventListener('click', open);
   tile.append(
-    el('div', { className: 'fcc-gem' }, '#' + n.serial_no),
+    el('div', { className: 'fcc-gem' }, '#' + n.serial_no + (lvl > 1 ? ' Lvl' + lvl : '')),
     el('div', { className: 'fcc-pin' }, '💎'),
     el('div', { className: 'fcc-inner' },
       el('div', { className: 'fcc-art' }, farmIcon(def.emoji || '💎')),
-      el('div', { className: 'fcc-name', title: n.nft_name || def.name }, n.nft_name || def.name || n.species),
+      el('div', { className: 'fcc-name', title: n.nft_name || def.name }, (n.nft_name || def.name || n.species) + stars),
       el('div', { className: 'fcc-rar farm-rar-' + rar }, (def.name || n.species)),
       el('div', { className: 'fcc-prog' },
-        el('div', { className: 'fcc-nft-serial' }, '#' + n.serial_no + ' / ' + n.edition_size)),
-      view));
+        el('div', { className: 'fcc-nft-serial' }, '#' + n.serial_no + ' / ' + n.edition_size + (lvl > 1 ? ' · Poz. ' + lvl : ''))),
+      mergeBtn));
   return tile;
 }
 
@@ -23981,8 +24056,8 @@ async function ensureFarmData(opts = {}) {
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
-      sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
+      sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
     ]);
@@ -24030,14 +24105,31 @@ function farmCatalogModel() {
   const owned = new Map(); fmCollection.forEach(c => owned.set(c.species, c));
   const minted = new Map(); fmNft.forEach(n => minted.set(n.species, (minted.get(n.species) || 0) + 1));
   const mySerials = new Map();
-  fmNft.forEach(n => { if (n.owner_id === me?.id) { if (!mySerials.has(n.species)) mySerials.set(n.species, []); mySerials.get(n.species).push(n.serial_no); } });
+  // myInstances: species -> the viewer's own {serial_no, level} list (NFT level
+  // lives on the instance now, not on farm_collection — see nft-leveling-rework.sql).
+  const myInstances = new Map();
+  // nftLevelCounts: species -> Map<level, count> across ALL owners, so the catalog
+  // can show "who's at what level" even for species the viewer doesn't own.
+  const nftLevelCounts = new Map();
+  fmNft.forEach(n => {
+    if (n.owner_id === me?.id) {
+      if (!mySerials.has(n.species)) mySerials.set(n.species, []);
+      mySerials.get(n.species).push(n.serial_no);
+      if (!myInstances.has(n.species)) myInstances.set(n.species, []);
+      myInstances.get(n.species).push({ serial_no: n.serial_no, level: n.level || 1 });
+    }
+    if (!nftLevelCounts.has(n.species)) nftLevelCounts.set(n.species, new Map());
+    const lc = nftLevelCounts.get(n.species);
+    const lvl = n.level || 1;
+    lc.set(lvl, (lc.get(lvl) || 0) + 1);
+  });
   const inPool = d => (d.draw_weight || 0) > 0 && (d.edition_size == null || (minted.get(d.species) || 0) < d.edition_size);
   const sorted = [...fmDefs.values()].sort((a, b) =>
     (FARM_RARITY_ORDER[a.rarity] - FARM_RARITY_ORDER[b.rarity]) || ((b.draw_weight || 0) - (a.draw_weight || 0)));
   const myNftCount = farmOwnedNftCount();
   const effectiveWeight = d => farmEffectiveDrawWeight(d, myNftCount);
   const totalW = sorted.filter(inPool).reduce((s, d) => s + effectiveWeight(d), 0) || 1;
-  return { owned, minted, mySerials, inPool, sorted, totalW, myNftCount, effectiveWeight };
+  return { owned, minted, mySerials, myInstances, nftLevelCounts, inPool, sorted, totalW, myNftCount, effectiveWeight };
 }
 
 // Per-card derived display facts (chance / supply / ownership).
@@ -24050,8 +24142,13 @@ function farmCardFacts(d, mdl) {
   const mineOwned = !!(mine && mine.length);
   const effWeight = mdl.effectiveWeight(d);
   const chance = mdl.inPool(d) ? farmChanceLabel(effWeight / mdl.totalW * 100) : (soldOut ? 'wyprzedane' : '—');
-  const serials = mineOwned ? mine.slice().sort((a, b) => a - b).map(s => '#' + s).join(', ') : '';
-  return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, price: fmMarket.get(d.crop_type)?.base_price, effWeight };
+  const myInsts = mdl.myInstances.get(d.species) || [];
+  const serials = isNft
+    ? myInsts.slice().sort((a, b) => b.level - a.level || a.serial_no - b.serial_no).map(i => 'Lvl' + i.level + ' #' + i.serial_no).join(', ')
+    : (mineOwned ? mine.slice().sort((a, b) => a - b).map(s => '#' + s).join(', ') : '');
+  const levelHisto = isNft ? (mdl.nftLevelCounts.get(d.species) || new Map()) : null;
+  const levelHistoLabel = levelHisto ? [...levelHisto.entries()].sort((a, b) => a[0] - b[0]).map(([lvl, cnt]) => 'L' + lvl + '×' + cnt).join(' ') : '';
+  return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, levelHistoLabel, price: fmMarket.get(d.crop_type)?.base_price, effWeight };
 }
 
 // Split the catalog into ordered, clearly separated groups so NFTs always get
@@ -24142,18 +24239,23 @@ function farmCatalogTable(mdl) {
       const f = farmCardFacts(d, mdl);
       const perDay = farmPerDayIncome(d, f.price);
       const ownedNow = f.have || f.mineOwned;
-      const nftLevel = f.have ? f.have.level : 1;
       let stanCell = f.isNft
         ? (f.mineOwned
-            ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + nftLevel + ' · ' + f.serials)
+            ? el('span', { className: 'farm-cat-stan owned' }, '✅ ' + f.serials)
             : (f.soldOut ? el('span', { className: 'farm-cat-stan sold' }, 'wyprzedane')
                          : el('span', { className: 'farm-cat-stan locked' }, '🔒')))
         : (f.have ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · 🃏 ' + f.have.count + '/' + (2 * f.have.level))
                   : el('span', { className: 'farm-cat-stan locked' }, '🔒'));
       if (f.isNft) {
+        // Always-visible (not gated on ownership) level breakdown across ALL
+        // owners, so a player can see how leveled other people's copies are
+        // without owning one themselves.
+        const histChip = f.levelHistoLabel
+          ? el('span', { className: 'farm-cat-nft-levels', title: 'Rozkład poziomów wszystkich posiadanych egzemplarzy' }, '📊 ' + f.levelHistoLabel)
+          : '';
         const btn = el('button', { className: 'farm-mini-btn', style: { padding: '2px 6px', fontSize: '10px' } }, 'Edycja 💎');
         btn.addEventListener('click', e => { e.stopPropagation(); openFarmNftExplorer(d.species); });
-        const wrapper = el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' } }, stanCell, btn);
+        const wrapper = el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' } }, stanCell, histChip, btn);
         stanCell = wrapper;
       }
       const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable' },
@@ -24512,21 +24614,25 @@ function farmNftFlavor(n) {
 function openFarmNftModal(n) {
   const def = fmDefs.get(n.species) || {};
   const rar = def.rarity || 'legendary';
-  const value = n.edition_size ? Math.round(20000 / n.edition_size) : null;
+  const lvl = n.level || 1;
+  const stars = lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '';
+  const value = n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null;
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
   const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
   closeX.addEventListener('click', close);
   const stat = (label, val) => el('div', { className: 'farm-nft-stat' }, el('span', {}, label), el('b', {}, val));
+  const growMin = def.base_grow_minutes ? def.base_grow_minutes * Math.pow(0.92, lvl - 1) : null;
   const card = el('div', { className: 'farm-nft-card rar-' + rar },
-    el('div', { className: 'farm-nft-card-serial' }, '#' + n.serial_no + ' / ' + n.edition_size),
+    el('div', { className: 'farm-nft-card-serial' }, '#' + n.serial_no + ' / ' + n.edition_size + (lvl > 1 ? ' · Poz. ' + lvl : '')),
     el('div', { className: 'farm-nft-card-art' }, farmIcon(def.emoji || '💎')),
-    el('div', { className: 'farm-nft-card-name' }, n.nft_name || def.name || n.species),
+    el('div', { className: 'farm-nft-card-name' }, (n.nft_name || def.name || n.species) + stars),
     el('div', { className: 'farm-nft-card-species farm-rar-' + rar }, (def.name || n.species) + ' · ' + (FARM_RARITY_PL[rar] || rar) + ' NFT'),
     el('div', { className: 'farm-nft-card-stats' },
+      stat('Poziom', lvl + (lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '')),
       stat('Plon', (def.base_yield || '?') + ' szt.'),
-      stat('Wzrost', def.base_grow_minutes ? farmGrowLabel(def.base_grow_minutes) : '?'),
+      stat('Wzrost', growMin ? farmGrowLabel(Math.max(1440, growMin)) : '?'),
       stat('Wartość', value != null ? (value + ' 🪙') : '?')),
     el('div', { className: 'farm-nft-card-flavor' }, '„' + farmNftFlavor(n) + '"'));
   const modal = el('div', { className: 'modal farm-nft-modal' },
@@ -24536,6 +24642,94 @@ function openFarmNftModal(n) {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
   document.body.append(overlay);
+}
+
+// Merge two same-species, same-level NFT instances into one higher-level NFT.
+// The "fuel" candidate the player picks is destroyed forever; the "hero" (the
+// card whose tile/footer button was clicked) survives and gains a level.
+function openFarmNftMergeModal(hero) {
+  const def = fmDefs.get(hero.species) || {};
+  const lvl = hero.level || 1;
+  const cost = 50 * lvl * lvl;
+  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeX.addEventListener('click', close);
+
+  const heroLine = el('div', { className: 'farm-card-sub' },
+    (def.emoji || '💎') + ' ' + (hero.nft_name || def.name || hero.species) + ' #' + hero.serial_no + ' · poz. ' + lvl);
+
+  const candidates = farmNftMergeCandidates(hero);
+  let selectedId = candidates.length === 1 ? candidates[0].id : null;
+
+  const warn = el('div', { className: 'farm-card-sub', style: { color: '#e74c3c', fontWeight: '600', marginTop: '8px' } });
+  const updateWarn = () => {
+    const fuel = candidates.find(c => c.id === selectedId);
+    warn.textContent = fuel
+      ? '⚠️ Karta #' + fuel.serial_no + ' „' + (fuel.nft_name || def.name || hero.species) + '" zostanie ZNISZCZONA NA ZAWSZE — zniknie z edycji, a pula zmniejszy się o 1 egzemplarz.'
+      : 'Wybierz kartę, którą poświęcisz.';
+  };
+
+  const list = el('div', { className: 'fcc-grid compact' });
+  const confirmBtn = el('button', { className: 'btn-primary', disabled: true, style: { marginTop: '10px' } });
+  const refreshConfirm = () => {
+    const enough = (me?.coins || 0) >= cost;
+    confirmBtn.disabled = !selectedId || !enough;
+    confirmBtn.textContent = !enough ? ('Za mało coinów (' + cost + ' 🪙)') : ('🔀 Połącz i ulepsz do poz. ' + (lvl + 1) + ' · ' + cost + ' 🪙');
+  };
+
+  if (!candidates.length) {
+    list.append(el('div', { className: 'farm-empty' },
+      'Nie masz innej karty „' + (def.name || hero.species) + '" na poziomie ' + lvl + ' do poświęcenia. Zdobądź kolejny egzemplarz ze skrzynki lub Targowiska.'));
+  } else {
+    candidates.forEach(c => {
+      const radio = el('input', { type: 'radio', name: 'farm-merge-fuel' });
+      radio.checked = selectedId === c.id;
+      const row = el('div', { className: 'farm-merge-fuel-row',
+          style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '6px', cursor: 'pointer' } },
+        radio, el('span', {}, '#' + c.serial_no + ' · ' + (c.nft_name || def.name || hero.species)));
+      row.addEventListener('click', () => {
+        selectedId = c.id;
+        list.querySelectorAll('input[type=radio]').forEach(r => { r.checked = false; });
+        radio.checked = true;
+        updateWarn(); refreshConfirm();
+      });
+      list.append(row);
+    });
+  }
+  updateWarn(); refreshConfirm();
+
+  confirmBtn.addEventListener('click', async () => {
+    if (!selectedId) return;
+    const ok = await mergeFarmNft(hero.id, selectedId, confirmBtn);
+    if (ok) close();
+  });
+
+  const modal = el('div', { className: 'modal farm-nft-modal' },
+    el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, '🔀 Połącz karty NFT'), closeX),
+    heroLine,
+    el('div', { className: 'farm-card-sub' }, 'Wybierz drugi egzemplarz tego samego poziomu do poświęcenia:'),
+    list,
+    warn,
+    confirmBtn);
+  overlay.append(modal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  window.addEventListener('keydown', esc);
+  document.body.append(overlay);
+}
+
+async function mergeFarmNft(heroId, fuelId, btn) {
+  if (btn) btn.disabled = true;
+  const { data, error } = await sb.rpc('level_up_nft', { p_hero_id: heroId, p_fuel_id: fuelId });
+  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return false; }
+  if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
+  fmNft = fmNft.filter(n => n.id !== fuelId);
+  const hero = fmNft.find(n => n.id === heroId);
+  if (hero) hero.level = data.new_level;
+  showToast('🔀 ' + (data.hero_name || '') + ' #' + data.hero_serial + ' — poziom ' + data.new_level + '! („' + (data.fuel_name || '') + '" #' + data.fuel_serial + ' poświęcona)');
+  refreshFarmHub(); renderFarmSelection();
+  return true;
 }
 
 // Detail overview for a planted crop tile on the farm board: owner, level, sow/
@@ -24699,7 +24893,7 @@ async function openFarmNftExplorer(species) {
 
   try {
     const [instRes, trRes] = await Promise.all([
-      sb.from('farm_nft_instances').select('id,serial_no,edition_size,owner_id,nft_name,listed').eq('species', species).order('serial_no'),
+      sb.from('farm_nft_instances').select('id,serial_no,edition_size,owner_id,nft_name,listed,level').eq('species', species).order('serial_no'),
       sb.from('farm_nft_transfers').select('serial_no,from_owner,to_owner,price,kind,created_at').eq('species', species).order('created_at'),
     ]);
     const insts = instRes.data || [];
@@ -24729,9 +24923,9 @@ async function openFarmNftExplorer(species) {
     for (let s = 1; s <= editionSize; s++) {
       const inst = bySerial.get(s);
       const slot = el('div', { className: 'farm-nftx-slot' + (inst ? (inst.owner_id === me?.id ? ' mine' : ' minted') : ' locked') },
-        el('div', { className: 'farm-nftx-serial' }, '#' + s),
+        el('div', { className: 'farm-nftx-serial' }, '#' + s + (inst && inst.level > 1 ? ' ⭐'.repeat(inst.level) : '')),
         inst
-          ? el('div', { className: 'farm-nftx-owner' }, el('b', {}, inst.nft_name || '—'), el('span', {}, '👤 ' + nm(inst.owner_id)))
+          ? el('div', { className: 'farm-nftx-owner' }, el('b', {}, (inst.nft_name || '—') + (inst.level > 1 ? ' Poz.' + inst.level : '')), el('span', {}, '👤 ' + nm(inst.owner_id)))
           : el('div', { className: 'farm-nftx-owner' }, el('span', {}, '🔒 niewybita')));
       grid.append(slot);
     }
@@ -24784,11 +24978,17 @@ function buildFarmInventoryBody(bodyEl) {
   }
 
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🃏 Karty roślin'));
-  if (!fmCollection.length) {
+  // Fungible (non-NFT) species only — NFT species render above in 💎 Karty NFT.
+  // farm_collection rows for already-merged/migrated NFT species can linger at
+  // count=0 (the migration zeroes them rather than deleting them), and without
+  // this guard they'd render a stray card whose ⬆ Ulepsz button calls the
+  // fungible level_up_card RPC on a dead field.
+  const fungibleCards = fmCollection.filter(card => fmDefs.get(card.species)?.edition_size == null);
+  if (!fungibleCards.length) {
     bodyEl.append(el('div', { className: 'farm-empty' }, 'Brak kart. Otwórz skrzynkę 📦 (sekcja powyżej / Sklep).'));
   } else {
     const grid = el('div', { className: 'fcc-grid' });
-    fmCollection.slice()
+    fungibleCards.slice()
       .sort((a, b) => (fmDefs.get(b.species)?.draw_weight || 0) - (fmDefs.get(a.species)?.draw_weight || 0))
       .forEach(card => { if (fmDefs.get(card.species)) grid.append(farmCardTile(card, { afterLevel: refreshFarmHub })); });
     bodyEl.append(grid);
@@ -24836,8 +25036,11 @@ function buildGardenAdvisorTable(container) {
     const def = fmDefs.get(card.species);
     if (!def) return;
 
-    const level = card.level;
     const isNft = def.edition_size != null;
+    // NFT level lives on the instance, not on the (now-stale/synthetic) card
+    // object — use the player's best owned instance's level for the estimate.
+    const myLevels = isNft ? fmNft.filter(n => n.owner_id === me?.id && n.species === card.species).map(n => n.level || 1) : [];
+    const level = isNft ? (myLevels.length ? Math.max(...myLevels) : 1) : card.level;
     const mkt = fmMarket.get(def.crop_type);
     const price = mkt ? +mkt.cur_price : 0;
     
@@ -24855,7 +25058,9 @@ function buildGardenAdvisorTable(container) {
       statusClass: isNft ? 'farm-rar-legendary' : 'farm-rar-common'
     });
 
-    if (level < 5) {
+    if (!isNft && level < 5) {
+      // NFT species have no duplicate-based upgrade path anymore — leveling
+      // is the merge mechanic (level_up_nft), not card.count/level_up_card.
       const yieldNext = Math.round(def.base_yield * (1 + level * 0.5));
       const growNext = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level));
       const daysNext = growNext / 1440;
@@ -25196,7 +25401,7 @@ async function loadFarmLootbox() {
     const [defsRes, colRes, nftRes, tilesRes, stateRes, taxRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
       me ? sb.from('farm_tiles').select('owner_id,acquired_via').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
@@ -25336,10 +25541,15 @@ async function openFarmLootbox(btn) {
   const cards = Array.isArray(data.cards) ? data.cards : (data.species ? [data] : []);
   cards.forEach(c => {
     if (c.voucher) return;   // free-tile voucher — a bonus, not a collection card
-    const existing = fmCollection.find(x => x.species === c.species);
-    if (existing) existing.count = c.new_count; else fmCollection.push({ species: c.species, count: c.new_count, level: 1 });
+    if (!c.nft) {
+      // NFT draws no longer touch farm_collection — c.new_count is null for
+      // them (see open_farm_lootbox in nft-leveling-rework.sql); only fungible
+      // species get a farm_collection row/increment.
+      const existing = fmCollection.find(x => x.species === c.species);
+      if (existing) existing.count = c.new_count; else fmCollection.push({ species: c.species, count: c.new_count, level: 1 });
+    }
     if (!fmDefs.has(c.species)) fmDefs.set(c.species, { species: c.species, name: c.name, emoji: c.emoji, rarity: c.rarity, crop_type: c.species, draw_weight: 0, edition_size: c.nft ? c.edition_size : null });
-    if (c.nft) fmNft.push({ id: c.id, species: c.species, serial_no: c.serial_no, edition_size: c.edition_size, owner_id: me.id, nft_name: c.nft_name, listed: false });
+    if (c.nft) fmNft.push({ id: c.id, species: c.species, serial_no: c.serial_no, edition_size: c.edition_size, owner_id: me.id, nft_name: c.nft_name, listed: false, level: 1 });
   });
   renderFarmLootboxStore();
   playFarmPackOpening(cards);
@@ -25432,14 +25642,15 @@ async function levelUpCard(species, btn, opts) {
   return true;
 }
 
-async function plantCrop(x, y, species, btn) {
+async function plantCrop(x, y, species, instanceId, btn) {
   if (btn) btn.disabled = true;
-  const { data, error } = await sb.rpc('plant_crop', { p_x: x, p_y: y, p_species: species });
+  const { data, error } = await sb.rpc('plant_crop', { p_x: x, p_y: y, p_species: species, p_instance_id: instanceId || null });
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   const tile = fmTiles.get(x + ',' + y) || { owner_id: me.id, nick: me.nick };
   tile.listed = false;
   tile.planted_species = species; tile.planted_level = data.level;
   tile.planted_at = new Date().toISOString(); tile.ready_at = data.ready_at;
+  tile.planted_instance_id = instanceId || null;
   fmTiles.set(x + ',' + y, tile);
   showToast('🌱 Zasadzono ' + (fmDefs.get(species)?.name || species) + '!');
   renderFarmBoard(); renderFarmSelection();
@@ -25450,7 +25661,7 @@ async function harvestCrop(x, y, btn) {
   const { data, error } = await sb.rpc('harvest_crop', { p_x: x, p_y: y });
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   const tile = fmTiles.get(x + ',' + y);
-  if (tile) { tile.planted_species = null; tile.planted_level = null; tile.planted_at = null; tile.ready_at = null; }
+  if (tile) { tile.planted_species = null; tile.planted_level = null; tile.planted_at = null; tile.ready_at = null; tile.planted_instance_id = null; }
   await reloadFarmInventory();   // rebuild qty + rot expiries from lots
   showToast('🧺 Zebrano ' + data.harvested + '× ' + (fmDefs.get(data.crop_type)?.name || data.crop_type) + '!');
   renderFarmBoard(); renderFarmSelection(); renderFarmMarket();
@@ -25523,6 +25734,7 @@ function applyFarmTileChange(payload) {
       planted_level: r.planted_level || null,
       planted_at: r.planted_at || null,
       ready_at: r.ready_at || null,
+      planted_instance_id: r.planted_instance_id || null,
       nick: prev.owner_id === r.owner_id ? prev.nick : (r.owner_id === me?.id ? me?.nick : null),
       zen_garden_id: r.zen_garden_id || prev.zen_garden_id || null,
       zenAnchor: null, zenCover: false, zenAnchorKey: null,
