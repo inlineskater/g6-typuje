@@ -22467,7 +22467,7 @@ async function claimFarmStarter() {
   try {
     const { data } = await sb.rpc('claim_farm_starter');
     if (data && typeof data.boxes === 'number') fmBoxes = data.boxes;
-    if (data && data.granted) showToast('🎁 Witaj w Ogródku! Dostajesz 3 skrzynki — otwórz je w 🎒 Ekwipunku.');
+    if (data && data.granted) showToast('🎁 Witaj w Ogródku! Dostajesz 3 skrzynki — otwórz je w 🎒 Moim Majątku.');
   } catch (e) { console.error('claimFarmStarter', e); }
 }
 
@@ -23071,12 +23071,12 @@ function farmBoxLinkBtn() {
   return b;
 }
 
-// Hub buttons, rendered at the bottom of the wooden side panel. 🎒 Ekwipunek is
+// Hub buttons, rendered at the bottom of the wooden side panel. 🎒 Mój Majątek is
 // the prominent primary action (selling & leveling live there now).
 function farmToolbar() {
   const mkBtn = (cls, label, on) => { const b = el('button', { className: cls }, label); b.addEventListener('click', on); return b; };
   return el('div', { className: 'farm-toolbar' },
-    mkBtn('farm-tool-btn primary', '🎒 Ekwipunek', () => openFarmHub('inventory')),
+    mkBtn('farm-tool-btn primary', '🎒 Mój Majątek', () => openFarmHub('inventory')),
     mkBtn('farm-tool-btn', '📖 Katalog', () => openFarmHub('catalog')),
     mkBtn('farm-tool-btn', '📈 Cennik', () => openFarmHub('market')),
     mkBtn('farm-tool-btn', '❓ Jak to działa', () => openFarmHub('help')),
@@ -23109,7 +23109,7 @@ function renderFarmSelectionBody() {
       box.append(el('div', { className: 'farm-empty farm-onboard' },
         el('div', { className: 'farm-onboard-title' }, '🌱 Zacznij tutaj'),
         el('ol', { className: 'farm-onboard-steps' },
-          el('li', {}, 'Masz ', el('strong', {}, '3 startowe skrzynki'), ' — otwórz je w 🎒 Ekwipunku.'),
+          el('li', {}, 'Masz ', el('strong', {}, '3 startowe skrzynki'), ' — otwórz je w 🎒 Moim Majątku.'),
           el('li', {}, 'Jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', el('strong', {}, '🎁 darmową działkę'), '.'),
           el('li', {}, 'Zasadź kartę, poczekaj aż urośnie i ', el('strong', {}, 'zbierz plon'), '.'),
           el('li', {}, 'Sprzedaj plon NPC za 🪙 — kupuj kolejne działki i skrzynki.'))));
@@ -23482,7 +23482,7 @@ function farmRotChip(crop) {
 }
 
 // One crop row (emoji · name×qty · price + trend + rot · ½/all sell controls). Shared
-// by the on-farm market panel and the Ekwipunek; `afterSell` re-renders the host view.
+// by the on-farm market panel and Mój Majątek; `afterSell` re-renders the host view.
 function farmCropRow(crop, qty, afterSell) {
   const mkt = fmMarket.get(crop);
   const price = mkt ? mkt.cur_price : 0;
@@ -23828,7 +23828,7 @@ function farmTerritoryPriceTable() {
       tbody));
 }
 
-// ── Twoje działki (prawa własności) — lives in 🎒 Ekwipunek ──
+// ── Twoje działki (prawa własności) — lives in 🎒 Mój Majątek ──
 // One ownership deed per owned tile + the land-tax status + next-tile prices
 // (moved here from 📈 Cennik, which now shows only crop prices).
 function farmTileDeedLabel(x, y) {
@@ -24020,7 +24020,7 @@ function buildFarmCatalogBody(bodyEl) {
 // ── Ogródek hub: one modal, unified tab bar ──
 let farmHubTab = 'inventory';
 const FARM_HUB_TABS = [
-  { id: 'inventory', label: '🎒 Ekwipunek' },
+  { id: 'inventory', label: '🎒 Mój Majątek' },
   { id: 'catalog',   label: '📖 Katalog' },
   { id: 'market',    label: '📈 Cennik' },
   { id: 'help',      label: '❓ Jak to działa' },
@@ -24078,7 +24078,7 @@ function farmNftFlavor(n) {
   return FARM_NFT_FLAVORS[(n.serial_no + (n.species ? n.species.length : 0)) % FARM_NFT_FLAVORS.length];
 }
 
-// Trading-card detail for a serialized NFT plant (click an NFT in the Ekwipunek).
+// Trading-card detail for a serialized NFT plant (click an NFT in Mój Majątek).
 function openFarmNftModal(n) {
   const def = fmDefs.get(n.species) || {};
   const rar = def.rarity || 'legendary';
@@ -24674,10 +24674,10 @@ function renderFarmHelpInto(bodyEl) {
 
     farmHelpSection('🚀 Pierwsze kroki',
       el('ol', { className: 'farm-help-steps' },
-        step(b('Otwórz startowe skrzynki'), ' — na powitanie masz ', b('3 skrzynki'), '. Otwórz je w ', b('🎒 Ekwipunku'), ' — jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', b('🎁 darmową działkę'), '.'),
+        step(b('Otwórz startowe skrzynki'), ' — na powitanie masz ', b('3 skrzynki'), '. Otwórz je w ', b('🎒 Moim Majątku'), ' — jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', b('🎁 darmową działkę'), '.'),
         step(b('Postaw działkę'), ' — kliknij puste pole na farmie; z voucherem stawiasz ją ', b('za darmo'), ' (kolejne od ', b(tile1 + ' 🪙'), ').'),
         step(b('Posadź kartę'), ' — kliknij swoje pole i wybierz roślinę z kolekcji.'),
-        step(b('Poczekaj i zbierz'), ' — gdy roślina dojrzeje, kliknij „Zbierz"; plon trafia do ', b('🎒 Ekwipunku'), '.'),
+        step(b('Poczekaj i zbierz'), ' — gdy roślina dojrzeje, kliknij „Zbierz"; plon trafia do ', b('🎒 Mojego Majątku'), '.'),
         step(b('Sprzedaj plon'), ' — kliknij „Sprzedaj", by zamienić plon na coiny, i ', b('kup więcej skrzynek'), ' w ', b('Sklep → 🎁 Skrzynki'), '.'))),
 
     farmHelpSection('🚜 1. Pole (działka)',
@@ -24690,13 +24690,13 @@ function renderFarmHelpInto(bodyEl) {
       farmTerritoryPriceTable()),
 
     farmHelpSection('📦 2. Skrzynka z nasionami',
-      P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w ', b('🎒 Ekwipunku'), ' (z animowanym odkrywaniem kart).'),
+      P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w ', b('🎒 Moim Majątku'), ' (z animowanym odkrywaniem kart).'),
       P('Karty mają rzadkość: ', b('zwykłe'), ' są częste i szybkie, ', b('epickie'), ' są rzadkie, ale dają dużo więcej plonu. Szanse teraz: ', b(oddsTxt), '.'),
       P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.')),
 
     farmHelpSection('🃏 3. Karty i łączenie (poziomy)',
       P('Karta to ', b('przepis na roślinę'), ' — sadzisz ją ile chcesz, ', b('nie znika'), ' po posadzeniu. Powtórki tej samej karty (np. drugą Marchewkę) nazywamy ', b('duplikatami'), '.'),
-      P(b('Łączenie'), ': gdy uzbierasz dość duplikatów, w ', b('🎒 Ekwipunku'), ' klikasz ', b('⬆ Ulepsz'), '. Karta zużywa duplikaty + coiny i wskakuje na ', b('wyższy poziom'), '. Sama karta zostaje — znika tylko nadmiar duplikatów.'),
+      P(b('Łączenie'), ': gdy uzbierasz dość duplikatów, w ', b('🎒 Moim Majątku'), ' klikasz ', b('⬆ Ulepsz'), '. Karta zużywa duplikaty + coiny i wskakuje na ', b('wyższy poziom'), '. Sama karta zostaje — znika tylko nadmiar duplikatów.'),
       el('div', { className: 'farm-merge-info' },
         el('span', { className: 'farm-merge-cards' }, '🃏 🃏'),
         el('span', { className: 'farm-merge-plus' }, '+'),
@@ -24712,8 +24712,8 @@ function renderFarmHelpInto(bodyEl) {
       P(b('Limit sadzenia: '), 'Możesz mieć posadzonych jednocześnie tylko tyle roślin danego gatunku, ile sztuk kart posiadasz. Każda karta pozwala na obsadzenie jednego pola w danym momencie.'),
       P('Klikasz swoje puste pole i sadzisz wybraną kartę. Roślina rośnie w ', b('prawdziwym czasie'), ' (zegarowym): zwykłe ', b(growRange('common')), ', rzadkie ', b(growRange('rare')), ', epickie ', b(growRange('epic')), '.'),
       P('To są ', b('pełne dni, nie minuty'), ' — uprawa dojrzewa powoli. Czas leci ', b('nawet gdy zamkniesz grę'), ' albo przełączysz kartę: gdy wrócisz, roślina będzie o tyle starsza. Pasek pod doniczką i licznik „Dojrzeje za…" pokazują ile zostało.'),
-      P('Wyższy poziom karty skraca wzrost o ', b('≈ 8% na poziom'), ', ale ', b('nigdy poniżej 24 h'), ' — daną roślinę zbierzesz najwyżej ', b('raz dziennie'), '. Gdy dojrzeje, klikasz „Zbierz" i plon trafia do ', b('🎒 Ekwipunku'), '; pole znów jest wolne.'),
-      P('⏳ ', b('Plony psują się!'), ' Każdy zbiór ', b('zgnije 5 dni po zebraniu'), ' — w Ekwipunku widzisz licznik „🥀 zgnije za…". Nie zbieraj na zapas: zgniłe plony znikają bez coinów.')),
+      P('Wyższy poziom karty skraca wzrost o ', b('≈ 8% na poziom'), ', ale ', b('nigdy poniżej 24 h'), ' — daną roślinę zbierzesz najwyżej ', b('raz dziennie'), '. Gdy dojrzeje, klikasz „Zbierz" i plon trafia do ', b('🎒 Mojego Majątku'), '; pole znów jest wolne.'),
+      P('⏳ ', b('Plony psują się!'), ' Każdy zbiór ', b('zgnije 5 dni po zebraniu'), ' — w 🎒 Moim Majątku widzisz licznik „🥀 zgnije za…". Nie zbieraj na zapas: zgniłe plony znikają bez coinów.')),
 
     farmHelpSection('🧺 5. Sprzedaż plonów',
       P('Zebrane plony sprzedajesz automatowi (NPC) za coiny — w ekwipunku albo w panelu farmy.'),
@@ -24839,16 +24839,16 @@ function renderFarmLootboxStore() {
   buyBtn.disabled = !affordable;
   buyBtn.addEventListener('click', () => buyFarmLootbox(buyBtn));
 
-  // Owned-boxes strip (two-step flow: buy here, open in the Ekwipunek).
+  // Owned-boxes strip (two-step flow: buy here, open in Mój Majątek).
   const owned = el('div', { className: 'lootbox-owned' + (fmBoxes > 0 ? ' has' : '') });
   if (fmBoxes > 0) {
-    const openBtn = el('button', { className: 'lootbox-open-btn' }, '🎒 Otwórz w Ekwipunku');
+    const openBtn = el('button', { className: 'lootbox-open-btn' }, '🎒 Otwórz w Majątku');
     openBtn.addEventListener('click', () => openFarmHub('inventory'));
     owned.append(
       el('div', { className: 'lootbox-owned-txt' }, el('b', {}, plBoxes(fmBoxes)), ' do otwarcia'),
       openBtn);
   } else {
-    owned.append(el('div', { className: 'lootbox-owned-txt muted' }, 'Po zakupie otworzysz skrzynkę w 🎒 Ekwipunku Ogródka.'));
+    owned.append(el('div', { className: 'lootbox-owned-txt muted' }, 'Po zakupie otworzysz skrzynkę w 🎒 Moim Majątku (Ogródek).'));
   }
 
   // Collapsible odds.
@@ -24889,7 +24889,7 @@ async function buyFarmLootbox(btn) {
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
   if (typeof data.boxes === 'number') fmBoxes = data.boxes;
-  showToast('📦 Kupiono skrzynkę! Otwórz ją w 🎒 Ekwipunku.');
+  showToast('📦 Kupiono skrzynkę! Otwórz ją w 🎒 Moim Majątku.');
   renderFarmLootboxStore();
   if (farmModalEl) refreshFarmHub();
 }
