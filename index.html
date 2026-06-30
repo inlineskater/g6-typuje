@@ -945,77 +945,74 @@
       display: flex; align-items: center; justify-content: center;
       z-index: 200; padding: 20px;
     }
+    /* A4-style white sheet that fits on one screen without scrolling */
     .doc-modal {
       display: flex; flex-direction: column;
-      width: 100%; max-width: 720px; max-height: calc(100dvh - 40px);
-      background: #fbf6e9; color: #2c2316;
-      border: 1px solid #d8c79a; border-radius: 14px;
-      box-shadow: 0 16px 60px rgba(0,0,0,.35);
-      overflow: hidden;
+      width: 100%; max-width: 540px;
+      height: min(720px, calc(100dvh - 40px)); max-height: calc(100dvh - 40px);
+      background: #fff; color: #222;
+      border: 1px solid #ccc; border-radius: 3px;
+      box-shadow: 0 18px 70px rgba(0,0,0,.45);
+      overflow: hidden; font-family: Georgia, 'Times New Roman', serif;
     }
     .doc-modal-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 18px; background: #efe2c2; border-bottom: 1px solid #d8c79a;
+      padding: 8px 16px; border-bottom: 1px solid #eee; flex: 0 0 auto;
     }
-    .doc-modal-title { font-size: 15px; font-weight: 800; letter-spacing: .02em; }
-    .doc-modal-header .btn-close { background: transparent; border: none; font-size: 18px; cursor: pointer; color: #6b5a36; }
+    .doc-modal-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: #888; font-family: system-ui, sans-serif; }
+    .doc-modal-header .btn-close { background: transparent; border: none; font-size: 18px; cursor: pointer; color: #999; }
     .doc-body {
       position: relative; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
-      padding: 26px 30px 30px;
-      background-image: linear-gradient(rgba(216,199,154,.18) 1px, transparent 1px);
-      background-size: 100% 30px;
+      padding: 22px 40px 12px; display: flex; flex-direction: column;
     }
     .doc-stamp {
-      position: absolute; top: 18px; right: 22px; transform: rotate(11deg);
-      border: 2px solid #b23b2e; color: #b23b2e; border-radius: 8px;
-      padding: 6px 10px; font-weight: 800; font-size: 10px; line-height: 1.15;
-      white-space: pre; text-align: center; opacity: .72; letter-spacing: .04em;
+      position: absolute; top: 18px; right: 30px; transform: rotate(10deg);
+      border: 2px solid #b23b2e; color: #b23b2e; border-radius: 6px;
+      padding: 5px 9px; font-weight: 800; font-size: 9px; line-height: 1.15;
+      white-space: pre; text-align: center; opacity: .68; letter-spacing: .04em;
+      font-family: system-ui, sans-serif;
     }
     .doc-title {
-      font-family: Georgia, 'Times New Roman', serif; font-size: 21px; line-height: 1.25;
-      margin: 0 90px 6px 0; color: #241c0e;
+      font-size: 23px; line-height: 1.18; font-weight: 700;
+      margin: 0 86px 2px 0; color: #1a1a1a; letter-spacing: .01em;
     }
-    .doc-meta { font-size: 12px; color: #7a6840; margin-bottom: 16px; font-style: italic; }
-    .doc-preamble {
-      font-family: Georgia, serif; font-style: italic; line-height: 1.6;
-      margin: 0 0 18px; padding-bottom: 14px; border-bottom: 1px dashed #cdb988;
-    }
-    .doc-section-h {
-      font-family: Georgia, serif; font-size: 16px; font-weight: 800;
-      margin: 18px 0 8px; color: #3a2d12;
-    }
-    .doc-p { line-height: 1.62; margin: 0 0 10px; text-align: justify; }
+    .doc-subtitle { font-size: 13px; color: #555; font-style: italic; margin: 0 86px 8px 0; }
+    .doc-meta { font-size: 12px; color: #888; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e6e6e6; }
+    .doc-preamble { line-height: 1.45; margin: 0 0 10px; color: #333; }
+    .doc-section-h { font-size: 15px; font-weight: 700; margin: 9px 0 2px; color: #1a1a1a; }
+    .doc-p { line-height: 1.45; margin: 0 0 3px; color: #333; }
     .doc-sign-block {
-      margin: 26px 0 4px auto; width: 360px; max-width: 100%;
+      margin: auto 0 0 auto; padding-top: 10px; width: 300px; max-width: 100%;
       display: flex; flex-direction: column; align-items: stretch;
     }
-    .doc-sign-hint { font-size: 12px; color: #7a6840; margin-bottom: 4px; }
+    .doc-sign-hint { font-size: 11px; color: #999; margin-bottom: 3px; font-family: system-ui, sans-serif; }
     .doc-sign-canvas {
-      width: 360px; max-width: 100%; height: 140px; touch-action: none; cursor: crosshair;
-      background: #fffdf6; border: 1px solid #d8c79a; border-radius: 8px;
+      width: 300px; max-width: 100%; height: 76px; touch-action: none; cursor: crosshair;
+      background: #fff; border: 1px solid #ccc; border-radius: 4px;
     }
-    .doc-sign-img { width: 360px; max-width: 100%; height: auto; background: #fffdf6; border-radius: 8px; }
-    .doc-sign-line { height: 1px; background: #b9a36a; margin-top: 2px; }
-    .doc-sign-name { font-size: 12px; color: #6b5a36; margin-top: 4px; text-align: center; }
+    .doc-sign-img { width: 300px; max-width: 100%; height: auto; background: #fff; border-radius: 4px; }
+    .doc-sign-line { height: 1px; background: #bbb; margin-top: 2px; }
+    .doc-sign-name { font-size: 11px; color: #777; margin-top: 4px; text-align: center; font-family: system-ui, sans-serif; }
     .doc-footer {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      padding: 12px 18px; background: #efe2c2; border-top: 1px solid #d8c79a;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 0 0 auto;
+      padding: 10px 16px; background: #fafafa; border-top: 1px solid #eee;
     }
-    .doc-status { flex: 1 1 auto; font-size: 12px; color: #7a6840; min-width: 140px; }
+    .doc-status { flex: 1 1 auto; font-size: 12px; color: #888; min-width: 140px; font-family: system-ui, sans-serif; }
+    .doc-footer .btn-ghost, .doc-sign-btn { font-family: system-ui, sans-serif; }
     .doc-sign-btn:disabled { opacity: .45; cursor: not-allowed; }
-    .doc-list-modal { max-width: 560px; }
+    .doc-list-modal { max-width: 560px; height: auto; font-family: system-ui, sans-serif; }
     .doc-list { padding: 14px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
     .doc-list-row {
       display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer;
-      padding: 12px 14px; background: #fffdf6; border: 1px solid #d8c79a; border-radius: 10px;
-      color: #2c2316; font: inherit;
+      padding: 12px 14px; background: #fff; border: 1px solid #ddd; border-radius: 10px;
+      color: #222; font: inherit;
     }
-    .doc-list-row:hover { background: #fbf3dd; }
+    .doc-list-row:hover { background: #f6f6f6; }
     .doc-list-row.unsigned { border-color: #e0a93b; box-shadow: 0 0 0 1px #e0a93b inset; }
     .doc-list-icon { font-size: 22px; }
     .doc-list-main { display: flex; flex-direction: column; gap: 3px; }
     .doc-list-title { font-weight: 700; line-height: 1.3; }
-    .doc-list-status { font-size: 12px; color: #7a6840; }
+    .doc-list-status { font-size: 12px; color: #888; }
 
     /* ── POKER ── */
     .poker-page-head {
@@ -16168,52 +16165,35 @@ const SEASONAL_OVERRIDES = {
 const DOCUMENTS = [
   {
     id: 'farm_reform_2026',
-    version: 1,
+    version: 2,
     icon: '📜',
     gate: 'farm',
     mandatory: true,
-    title: 'Ustawa Reformy Gruntowej Ogródka G6 — o Wolnym Obrocie Działkami i Podatku Katastralnym',
+    title: 'Ustawa Ogródkowa G6',
+    subtitle: 'O handlu działkami, podatku gruntowym i podlewaniu',
     effectiveDate: '2026-07-02',
-    preamble: 'Działając w trosce o stabilność Wielkiego Ogródka, walkę z inflacją marchewki oraz ' +
-      'ukrócenie spekulacji gruntowej, Ministerstwo Ogrodnictwa i Skarbu G6 — po burzliwej debacie ' +
-      'przy grządce — uchwala, co następuje. Niżej podpisany Obywatel-Rolnik oświadcza, że przeczytał, ' +
-      'zrozumiał i (choć niechętnie, jak każdy podatnik) przyjmuje do wiadomości poniższe zmiany.',
+    preamble: 'Ministerstwo Ogrodnictwa G6 ogłasza trzy zmiany w Ogródku. Podpisz po prawej, ' +
+      'że je rozumiesz.',
     sections: [
       {
-        heading: '§1. Wolny obrót działkami (Wielka Prywatyzacja)',
+        heading: '§1. Handel działkami',
         paragraphs: [
-          'Z dniem wejścia w życie niniejszej Ustawy każdy Obywatel-Rolnik może KUPOWAĆ i SPRZEDAWAĆ ' +
-          'działki bezpośrednio innym graczom — przez Targowisko (Ogłoszenia), w formie ceny stałej lub ' +
-          'licytacji. Monety wędrują od kupującego do sprzedającego (nie znikają jak w kasynie).',
-          'Sprzedać można wyłącznie własną, PUSTĄ działkę nie-migracyjną. Działka wystawiona na sprzedaż ' +
-          'nosi tabliczkę „FOR SALE" i — niczym mieszkanie w trakcie remontu — nie nadaje się pod uprawę, ' +
-          'dopóki transakcja nie zostanie sfinalizowana lub anulowana.',
-          'Ministerstwo przypomina: jak w Monopoly, kto pierwszy wykupi całą uliczkę, ten rządzi — ale ' +
-          'patrz §2, bo posiadanie też kosztuje.',
+          'Możesz teraz kupować i sprzedawać działki innym graczom na Targowisku — jak w Monopoly. ' +
+          'Monety idą od kupującego do sprzedającego.',
         ],
       },
       {
-        heading: '§2. Podatek katastralny (Kataster Grządkowy)',
+        heading: '§2. Podatek gruntowy',
         paragraphs: [
-          'Wprowadza się DZIENNY podatek gruntowy od nadmiarowych działek nie-migracyjnych. Limit ' +
-          'wolny od podatku to ⌈normalna pojemność ⁄ liczba aktywnych rolników⌉ — wszystko ponad to ' +
-          'jest „nadmiarem" (excess) podlegającym opodatkowaniu.',
-          'Stawka: 1000 × excess² monet dziennie. Tak, do KWADRATU — kto chomikuje hektary, ten płaci ' +
-          'jak za zboże w czasach kryzysu. Zaległości rosną o 10% odsetek dziennie (urzędowa inflacja ' +
-          'nie śpi).',
-          'Naliczanie startuje o 00:00 (Europe/Warsaw) za poprzedni zakończony dzień. Pierwsza wycena ' +
-          'obejmie czwartek 02.07.2026, a pierwszy rachunek wpadnie w piątek 03.07.2026 o północy. ' +
-          'Termin nieubłagany jak deadline projektu w piątek o 17:00.',
+          'Od 02.07.2026 za nadmiar działek płacisz codzienny podatek, który rośnie z kwadratem ' +
+          'nadmiaru. Kto chomikuje hektary — ten płaci. Inflacja nie śpi.',
         ],
       },
       {
-        heading: '§3. Postanowienia końcowe (drobny druczek)',
+        heading: '§3. Co podlewać, a co uprawiać',
         paragraphs: [
-          'Niewiedza nie zwalnia z podatku, a marchewka nie jest legalnym środkiem płatniczym. ' +
-          'Ministerstwo zastrzega sobie prawo do dosadzania kolejnych paragrafów wedle koniunktury ' +
-          'politycznej i kursu cebuli.',
-          'Podpisując poniżej (po prawej stronie, jak na prawdziwym urzędzie), Obywatel-Rolnik ' +
-          'potwierdza, że zapoznał się z reformą i nie będzie udawał, że „nikt go nie poinformował".',
+          'Stare rośliny z poprzedniego Ogródka podlewasz 💧 jak dawniej. Nowe działki są pod uprawę — ' +
+          'sadzisz i zbierasz plony, podlewać się ich nie da.',
         ],
       },
     ],
@@ -16353,11 +16333,12 @@ function openDocumentModal(doc, opts) {
     header.append(closeBtn);
   }
 
-  // Scrollable body
+  // Document body (A4 sheet)
   const body = el('div', { className: 'doc-body' });
+  body.append(el('div', { className: 'doc-stamp' }, 'MINISTERSTWO\nOGRODNICTWA\nG6'));
+  body.append(el('h2', { className: 'doc-title' }, doc.title));
+  if (doc.subtitle) body.append(el('div', { className: 'doc-subtitle' }, doc.subtitle));
   body.append(
-    el('div', { className: 'doc-stamp' }, 'MINISTERSTWO\nOGRODNICTWA\nG6'),
-    el('h2', { className: 'doc-title' }, doc.title),
     el('div', { className: 'doc-meta' }, 'Wchodzi w życie: ' + formatDocDate(doc.effectiveDate)),
     buildDocumentSections(doc),
   );
