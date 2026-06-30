@@ -21805,6 +21805,11 @@ function setupGardenRealtime() {
 const FARM_W = 13, FARM_H = 4;
 const FARM_BOX_PRICE = 100;
 const FARM_BOX_DRAWS = 3;   // distinct cards per lootbox — mirror open_farm_lootbox v_draws
+const FARM_TILE_BASE_PRICE = 350;
+const FARM_TILE_PRICE_CAP = 50000;
+const FARM_NFT_ODDS_DIVISOR = 3;
+const FARM_VOUCHER_BASE_CHANCE = 0.07;
+const FARM_VOUCHER_ODDS_DIVISOR = 3;
 const FARM_RARITY_PL = { common: 'zwykła', rare: 'rzadka', epic: 'epicka', legendary: 'legendarna' };
 const FARM_ERR = {
   not_authenticated: 'Musisz być zalogowany.',
@@ -21837,6 +21842,7 @@ let fmMarket = new Map();       // crop_type -> { base_price, anchor_price, cur_
 let fmNft = [];                 // all farm_nft_instances: [{species,serial_no,edition_size,owner_id}]
 let fmBoxes = 0;                // owned sealed (unopened) seed boxes
 let fmVouchers = 0;             // owned free-tile vouchers
+let fmOwnedTileCountHint = 0;    // used when Sklep loads before the full farm board
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
 let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
@@ -21845,7 +21851,8 @@ let fmRealtimeReady = false, fmTimer = null;
 function resetFarmState() {
   stopFarmTimer();
   fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmMarket = new Map();
-  fmBoxes = 0; fmVouchers = 0; fmStarterClaimed = false;
+  fmNft = [];
+  fmBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmStarterClaimed = false;
   fmSel = null;
 }
 
@@ -21974,6 +21981,8 @@ async function loadFarm() {
     (zenRes.data || []).forEach(g => fmZen.set(g.id, g));   // keyed by gardens.id (one block per plant)
     fmTiles = new Map();
     (tilesRes.data || []).forEach(t => fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)));
+    fmOwnedTileCountHint = 0;
+    fmTiles.forEach(t => { if (t.owner_id === me?.id) fmOwnedTileCountHint++; });
     tagZenBlocks();
     fmDefs = new Map();
     (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
@@ -22370,14 +22379,48 @@ function renderFarmPanels() {
   if (tb) tb.replaceChildren(farmToolbar());
 }
 
+function farmChanceLabel(pct) {
+  if (!Number.isFinite(pct)) return '—';
+  if (pct > 0 && pct < 0.1) return '<0.1%';
+  return pct.toFixed(pct < 1 ? 2 : 1) + '%';
+}
+
+function farmOwnedTileCount() {
+  let mine = 0; fmTiles.forEach(t => { if (t.owner_id === me?.id) mine++; });
+  return Math.max(mine, fmOwnedTileCountHint || 0);
+}
+
+function farmOwnedNftCount() {
+  return fmNft.filter(n => n.owner_id === me?.id).length;
+}
+
+function farmTerritoryCount() {
+  return farmOwnedTileCount() + Math.max(0, Number(fmVouchers || 0));
+}
+
+function farmVoucherChanceFor(territory) {
+  return FARM_VOUCHER_BASE_CHANCE / Math.pow(FARM_VOUCHER_ODDS_DIVISOR, Math.max(0, territory || 0));
+}
+
+function farmVoucherChance() {
+  return farmVoucherChanceFor(farmTerritoryCount());
+}
+
+function farmEffectiveDrawWeight(d, ownedNfts = farmOwnedNftCount()) {
+  const w = Number(d?.draw_weight || 0);
+  if (!w) return 0;
+  return d.edition_size != null ? w / Math.pow(FARM_NFT_ODDS_DIVISOR, Math.max(0, ownedNfts || 0)) : w;
+}
+
 // Price of the (owned+1)-th tile for a player who already owns `owned` tiles.
 // Mirrors buy_farm_tile in supabase/farm.sql; the help text reuses it so the
 // quoted prices can never drift from the real formula.
-function farmTilePriceFor(owned) { return Math.floor(350 * (1 + owned * 0.25)); }
+function farmTilePriceFor(owned) {
+  return Math.min(FARM_TILE_PRICE_CAP, Math.floor(FARM_TILE_BASE_PRICE * Math.pow(2, Math.max(0, owned || 0))));
+}
 
 function farmTilePrice() {
-  let mine = 0; fmTiles.forEach(t => { if (t.owner_id === me?.id) mine++; });
-  return farmTilePriceFor(mine);
+  return farmTilePriceFor(farmOwnedTileCount());
 }
 
 function farmBoxLinkBtn() {
@@ -22425,7 +22468,7 @@ function renderFarmSelectionBody() {
         el('div', { className: 'farm-onboard-title' }, '🌱 Zacznij tutaj'),
         el('ol', { className: 'farm-onboard-steps' },
           el('li', {}, 'Masz ', el('strong', {}, '3 startowe skrzynki'), ' — otwórz je w 🎒 Ekwipunku.'),
-          el('li', {}, 'W jednej jest ', el('strong', {}, '🎁 darmowa działka'), ' — postaw ją na pustym polu.'),
+          el('li', {}, 'Jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', el('strong', {}, '🎁 darmową działkę'), '.'),
           el('li', {}, 'Zasadź kartę, poczekaj aż urośnie i ', el('strong', {}, 'zbierz plon'), '.'),
           el('li', {}, 'Sprzedaj plon NPC za 🪙 — kupuj kolejne działki i skrzynki.'))));
     } else if (!fmCollection.length) {
@@ -22873,8 +22916,10 @@ function farmCatalogModel() {
   const inPool = d => (d.draw_weight || 0) > 0 && (d.edition_size == null || (minted.get(d.species) || 0) < d.edition_size);
   const sorted = [...fmDefs.values()].sort((a, b) =>
     (FARM_RARITY_ORDER[a.rarity] - FARM_RARITY_ORDER[b.rarity]) || ((b.draw_weight || 0) - (a.draw_weight || 0)));
-  const totalW = sorted.filter(inPool).reduce((s, d) => s + (d.draw_weight || 0), 0) || 1;
-  return { owned, minted, mySerials, inPool, sorted, totalW };
+  const myNftCount = farmOwnedNftCount();
+  const effectiveWeight = d => farmEffectiveDrawWeight(d, myNftCount);
+  const totalW = sorted.filter(inPool).reduce((s, d) => s + effectiveWeight(d), 0) || 1;
+  return { owned, minted, mySerials, inPool, sorted, totalW, myNftCount, effectiveWeight };
 }
 
 // Per-card derived display facts (chance / supply / ownership).
@@ -22885,9 +22930,10 @@ function farmCardFacts(d, mdl) {
   const have = mdl.owned.get(d.species);
   const mine = mdl.mySerials.get(d.species);
   const mineOwned = !!(mine && mine.length);
-  const chance = mdl.inPool(d) ? (d.draw_weight / mdl.totalW * 100).toFixed(1) + '%' : (soldOut ? 'wyprzedane' : '—');
+  const effWeight = mdl.effectiveWeight(d);
+  const chance = mdl.inPool(d) ? farmChanceLabel(effWeight / mdl.totalW * 100) : (soldOut ? 'wyprzedane' : '—');
   const serials = mineOwned ? mine.slice().sort((a, b) => a - b).map(s => '#' + s).join(', ') : '';
-  return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, price: fmMarket.get(d.crop_type)?.base_price };
+  return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, price: fmMarket.get(d.crop_type)?.base_price, effWeight };
 }
 
 // Split the catalog into ordered, clearly separated groups so NFTs always get
@@ -23064,6 +23110,37 @@ function farmPriceChart(points, base) {
   return svg;
 }
 
+function farmTerritoryPriceTable() {
+  const max = FARM_W * FARM_H;
+  const cols = 4;
+  const rows = Math.ceil(max / cols);
+  const owned = farmOwnedTileCount();
+  const tbody = el('tbody', {});
+  for (let r = 0; r < rows; r++) {
+    const tr = el('tr', {});
+    for (let c = 0; c < cols; c++) {
+      const n = r + c * rows + 1;
+      if (n > max) {
+        tr.append(el('td', {}, ''), el('td', {}, ''));
+        continue;
+      }
+      const isNext = n === owned + 1;
+      tr.append(
+        el('td', { className: isNext ? 'farm-cat-perday' : '' }, (isNext ? '→ ' : '') + n + '. działka'),
+        el('td', { className: isNext ? 'farm-cat-perday' : '' }, farmTilePriceFor(n - 1) + ' 🪙'));
+    }
+    tbody.append(tr);
+  }
+  return el('div', { className: 'farm-cat-table-wrap', style: { marginBottom: '14px' } },
+    el('table', { className: 'farm-cat-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Działka'), el('th', {}, 'Cena'),
+        el('th', {}, 'Działka'), el('th', {}, 'Cena'),
+        el('th', {}, 'Działka'), el('th', {}, 'Cena'),
+        el('th', {}, 'Działka'), el('th', {}, 'Cena'))),
+      tbody));
+}
+
 // „📈 Ceny" hub tab: per-crop current NPC price + trend + price-history chart.
 async function buildFarmMarketBody(bodyEl) {
   bodyEl.replaceChildren(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
@@ -23078,6 +23155,9 @@ async function buildFarmMarketBody(bodyEl) {
   bodyEl.append(el('div', { className: 'farm-cat-head' }, el('div', { className: 'farm-cat-head-txt' },
     el('div', { className: 'farm-cat-head-title' }, '📈 Ceny plonów u NPC'),
     el('div', { className: 'farm-cat-head-sub' }, 'Cena skupu waha się 2×/dobę (00:00 i 12:00) między 30% a 100% ceny maks. (linia przerywana). Sprzedaż chwilowo ją obniża, potem wraca do dziennego poziomu — sprzedawaj, gdy jest wysoko! Historia z 7 dni.'))));
+  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🧱 Ceny kolejnych działek'));
+  bodyEl.append(farmTerritoryPriceTable());
+  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🌾 Ceny plonów'));
   const defs = [...fmDefs.values()].sort((a, b) => (FARM_RARITY_ORDER[a.rarity] - FARM_RARITY_ORDER[b.rarity]) || ((b.draw_weight || 0) - (a.draw_weight || 0)));
   const grid = el('div', { className: 'farm-price-grid' });
   defs.forEach(d => {
@@ -23189,7 +23269,7 @@ function buildFarmCatalogBody(bodyEl) {
     el('strong', {}, '❓ Jak to działa'), '.'));
 
   bodyEl.append(el('div', { className: 'farm-cat-legend' },
-    'Kolumny: Szansa = trafienie w skrzynce • Wzrost = czas do zbioru (min. 24 h) • Plon = sztuk z jednego zbioru • ',
+    'Kolumny: Szansa = Twoja obecna szansa w skrzynce po karze za posiadane NFT • Wzrost = czas do zbioru (min. 24 h) • Plon = sztuk z jednego zbioru • ',
     el('strong', {}, 'Cena maks.'), ' = górny pułap; NPC płaci od ~30% do 100% tej kwoty, a cena zmienia się 2×/dobę (00:00 i 12:00) • ',
     el('strong', {}, '≈ Zysk/doba (maks.)'), ' = maksymalny dzienny zysk z pola przy cenie maks. (plon × cena maks. ÷ dni wzrostu, poziom 1) — w praktyce zwykle mniej. Plony psują się 5 dni po zbiorze.'));
 
@@ -23749,8 +23829,8 @@ function buildFarmBoxesBody(bodyEl) {
       ),
       el('ul', { className: 'lootbox-feats', style: { margin: '10px 0' } },
         el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🃏'), el('span', {}, FARM_BOX_DRAWS + ' różne karty roślin')),
-        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🎁'), el('span', {}, 'szansa na darmową działkę')),
-        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '💎'), el('span', {}, 'szansa na limitowaną kartę NFT'))
+        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🎁'), el('span', {}, 'darmowa działka: ' + farmChanceLabel(farmVoucherChance() * 100) + ' teraz')),
+        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '💎'), el('span', {}, farmOwnedNftCount() ? 'NFT trudniejsze po posiadanych NFT' : 'szansa na limitowaną kartę NFT'))
       ),
       buyBtn
     )
@@ -23791,11 +23871,15 @@ function buildFarmHelpBody(bodyEl) {
 }
 
 function renderFarmHelpInto(bodyEl) {
-  const pool = [...fmDefs.values()].filter(d => d.edition_size == null && (d.draw_weight || 0) > 0);
-  const totalW = pool.reduce((s, d) => s + (d.draw_weight || 0), 0) || 1;
-  const byRar = {}; pool.forEach(d => { byRar[d.rarity] = (byRar[d.rarity] || 0) + (d.draw_weight || 0); });
-  const oddsTxt = ['common', 'rare', 'epic', 'legendary'].filter(r => byRar[r])
-    .map(r => (FARM_RARITY_PL[r] || r) + ' ' + Math.round(byRar[r] / totalW * 100) + '%').join(' · ');
+  const oddsModel = farmCatalogModel();
+  const byRar = {};
+  oddsModel.sorted.filter(oddsModel.inPool).forEach(d => {
+    const key = d.edition_size != null ? 'nft' : d.rarity;
+    byRar[key] = (byRar[key] || 0) + oddsModel.effectiveWeight(d);
+  });
+  const oddsTxt = ['common', 'rare', 'epic', 'nft'].filter(r => byRar[r])
+    .map(r => (r === 'nft' ? 'NFT' : (FARM_RARITY_PL[r] || r)) + ' ' + farmChanceLabel(byRar[r] / oddsModel.totalW * 100)).join(' · ');
+  const voucherChanceTxt = farmChanceLabel(farmVoucherChance() * 100);
 
   // Derive all quoted economy numbers from the live data/formulas so the help
   // text can never drift from the real game (tile prices, level cost, grow).
@@ -23846,7 +23930,7 @@ function renderFarmHelpInto(bodyEl) {
 
     farmHelpSection('🚀 Pierwsze kroki',
       el('ol', { className: 'farm-help-steps' },
-        step(b('Otwórz startowe skrzynki'), ' — na powitanie masz ', b('3 skrzynki'), '. Otwórz je w ', b('🎒 Ekwipunku'), ' — w jednej na pewno znajdziesz ', b('🎁 darmową działkę'), '.'),
+        step(b('Otwórz startowe skrzynki'), ' — na powitanie masz ', b('3 skrzynki'), '. Otwórz je w ', b('🎒 Ekwipunku'), ' — jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', b('🎁 darmową działkę'), '.'),
         step(b('Postaw działkę'), ' — kliknij puste pole na farmie; z voucherem stawiasz ją ', b('za darmo'), ' (kolejne od ', b(tile1 + ' 🪙'), ').'),
         step(b('Posadź kartę'), ' — kliknij swoje pole i wybierz roślinę z kolekcji.'),
         step(b('Poczekaj i zbierz'), ' — gdy roślina dojrzeje, kliknij „Zbierz"; plon trafia do ', b('🎒 Ekwipunku'), '.'),
@@ -23854,12 +23938,13 @@ function renderFarmHelpInto(bodyEl) {
 
     farmHelpSection('🚜 1. Pole (działka)',
       P('Pole to kawałek ziemi na własność — na nim sadzisz rośliny. Kupujesz je, klikając puste pole na siatce.'),
-      P('Każde kolejne pole jest droższe: pierwsze ', b(tile1 + ' 🪙'), ', drugie ', b(tile2 + ' 🪙'), ', trzecie ', b(tile3 + ' 🪙'), ' itd.')),
+      P('Każde kolejne pole jest droższe: pierwsze ', b(tile1 + ' 🪙'), ', drugie ', b(tile2 + ' 🪙'), ', trzecie ', b(tile3 + ' 🪙'), ' itd.'),
+      farmTerritoryPriceTable()),
 
     farmHelpSection('📦 2. Skrzynka z nasionami',
       P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w ', b('🎒 Ekwipunku'), ' (z animowanym odkrywaniem kart).'),
       P('Karty mają rzadkość: ', b('zwykłe'), ' są częste i szybkie, ', b('epickie'), ' są rzadkie, ale dają dużo więcej plonu. Szanse teraz: ', b(oddsTxt), '.'),
-      P('Dodatkowo ', b('~7% skrzynek'), ' daje ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.')),
+      P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.')),
 
     farmHelpSection('🃏 3. Karty i łączenie (poziomy)',
       P('Karta to ', b('przepis na roślinę'), ' — sadzisz ją ile chcesz, ', b('nie znika'), ' po posadzeniu. Powtórki tej samej karty (np. drugą Marchewkę) nazywamy ', b('duplikatami'), '.'),
@@ -23900,6 +23985,7 @@ function renderFarmHelpInto(bodyEl) {
       list('farm-help-list', [
         'Numer seryjny: każdy egzemplarz ma własny numer, np. „#3 / 25" — trzecia wybita sztuka z całej edycji 25.',
         'Zdobywasz je tylko ze zwykłej skrzynki za ' + FARM_BOX_PRICE + ' 🪙 (te same 3 losowania) — wypadają bardzo rzadko, nie ma osobnego zakupu.',
+        'Każde NFT, które już posiadasz, dzieli wagę kolejnych NFT przez ' + FARM_NFT_ODDS_DIVISOR + ', więc kolekcjonerom coraz trudniej trafiać następne okazy.',
         'Gdy edycja się wyprzeda, karta znika z puli losowań i w Katalogu ma status „wyprzedane".',
         'Sadzisz i ulepszasz je jak każdą kartę — mają najmocniejsze staty (największy plon i cena NPC).',
         'Wartość w majątku (Net Worth, 💼 Portfel) = 20000 ÷ wielkość edycji za sztukę, więc mniejsza edycja = cenniejsza karta.',
@@ -23916,6 +24002,7 @@ async function buyFarmTile(x, y, btn) {
   if (typeof data.tile_vouchers === 'number') fmVouchers = data.tile_vouchers;
   const viaVoucher = data.via === 'voucher';
   fmTiles.set(x + ',' + y, { owner_id: me.id, acquired_via: viaVoucher ? 'lootbox' : 'purchase', planted_species: null, planted_level: null, planted_at: null, ready_at: null, nick: me.nick, zen_garden_id: null, zenAnchor: null, zenCover: false, zenAnchorKey: null });
+  fmOwnedTileCountHint = farmOwnedTileCount();
   showToast(viaVoucher ? '🎁 Postawiłeś działkę za darmo!' : ('🌱 Kupiłeś działkę za ' + data.price + ' 🪙!'));
   renderFarmBoard(); renderFarmSelection();
 }
@@ -23926,14 +24013,18 @@ async function loadFarmLootbox() {
   if (!box) return;
   await claimFarmStarter();   // a player who heads straight to the Sklep still gets the gift
   try {
-    const [defsRes, colRes, stateRes] = await Promise.all([
+    const [defsRes, colRes, nftRes, tilesRes, stateRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
+      sb.from('farm_nft_instances').select('species,serial_no,edition_size,owner_id,nft_name'),
+      me ? sb.from('farm_tiles').select('owner_id').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     fmDefs = new Map();
     (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
     fmCollection = colRes.data || [];
+    fmNft = nftRes.data || [];
+    fmOwnedTileCountHint = (tilesRes.data || []).length;
     applyFarmUserState(stateRes.data);
     renderFarmLootboxStore();
   } catch (e) {
@@ -23976,7 +24067,9 @@ function farmBoxOddsTable() {
           el('th', {}, 'Roślina'), el('th', {}, 'Szansa'), el('th', {}, 'Edycja NFT'))),
         tbody)),
     el('div', { className: 'farm-cat-legend', style: { marginTop: '8px' } },
-      'Szansa = trafienie danej karty w pojedynczym z ' + FARM_BOX_DRAWS + ' losowań skrzynki. Karty 💎 NFT wypadają, dopóki edycja się nie wyprzeda. Dodatkowo ~7% skrzynek daje 🎁 darmową działkę.'));
+      'Szansa = Twoja obecna szansa w pojedynczym z ' + FARM_BOX_DRAWS + ' losowań skrzynki. Każde posiadane NFT dzieli wagę kolejnych NFT przez '
+      + FARM_NFT_ODDS_DIVISOR + '. Karty 💎 NFT wypadają, dopóki edycja się nie wyprzeda. Naturalna szansa na 🎁 darmową działkę teraz: '
+      + farmChanceLabel(farmVoucherChance() * 100) + ' — maleje z każdą posiadaną działką albo voucherem.'));
 }
 
 function renderFarmLootboxStore() {
@@ -24026,8 +24119,8 @@ function renderFarmLootboxStore() {
         el('div', { className: 'lootbox-pricetag' }, FARM_BOX_PRICE + ' 🪙')),
       el('ul', { className: 'lootbox-feats' },
         feat('🃏', FARM_BOX_DRAWS + ' różne karty roślin'),
-        feat('🎁', 'szansa na darmową działkę'),
-        feat('💎', 'szansa na limitowaną kartę NFT')),
+        feat('🎁', 'darmowa działka: ' + farmChanceLabel(farmVoucherChance() * 100) + ' teraz'),
+        feat('💎', farmOwnedNftCount() ? 'NFT trudniejsze po posiadanych NFT' : 'szansa na limitowaną kartę NFT')),
       buyBtn,
       owned,
       oddsBtn,

@@ -46,21 +46,22 @@ Oba okna są dostępne także zanim wejdzie się na zakładkę — dane doczytuj
 
 ## Siatka farmy i działki
 
-Farma ma aktualnie **10 kolumn x 4 rzędy**, czyli 40 pól.
+Farma ma aktualnie **13 kolumn x 4 rzędy**, czyli 52 pola.
 
 Typy pól:
 
 - **Brak wpisu w `farm_tiles`**: pole wolne, można je kupić.
 - **`acquired_via = 'migration'`**: pole zajęte przez roślinę z Ogródka. Nie da się sadzić tam upraw z kart.
 - **`acquired_via = 'purchase'`**: kupiona działka, można sadzić uprawy.
+- **`acquired_via = 'lootbox'`**: działka postawiona z darmowego vouchera ze skrzynki.
 
 Cena kupna działki rośnie z liczbą posiadanych pól:
 
 ```text
-cena = floor(500 * (1 + liczba_posiadanych_pól * 0.25))
+cena = min(50000, floor(350 * 2 ^ liczba_posiadanych_pól))
 ```
 
-Uwaga: backend liczy wszystkie pola gracza w `farm_tiles`, w tym pola migracyjne z Ogródka.
+Sekwencja startuje od **350 → 700 → 1400 → 2800 → 5600** coinów i blokuje się na 50000. Backend liczy wszystkie pola gracza w `farm_tiles`, w tym pola migracyjne z Ogródka. Voucher nadal stawia jedną działkę za 0 coinów, ale ta działka podnosi cenę kolejnych.
 
 Kupno działki to spalanie coinów (`farm_tile_buy`).
 
@@ -86,12 +87,10 @@ Aktualnie istnieje jedna skrzynka farmy:
 |---|---:|---|
 | Skrzynka z nasionami | 100 coinów | Losuje **3 różne karty** roślin |
 
-Otwarcie skrzynki:
+Kupno skrzynki kosztuje **100 coinów** i spala coiny (`farm_box_buy`). Otwarcie posiadanej skrzynki:
 
-- kosztuje **100 coinów**,
-- spala coiny (`lootbox_open`),
 - losuje **3 różne** aktywne karty z `farm_card_defs` (każda inna — losowanie bez powtórzeń w obrębie jednej skrzynki),
-- każde z 3 losowań jest ważone `draw_weight` i bierze pod uwagę tylko karty z `draw_weight > 0` i `edition_size IS NULL`,
+- każde z 3 losowań jest ważone efektywną wagą karty i bierze pod uwagę karty z `draw_weight > 0`; NFT wypadają tylko dopóki edycja nie jest wyprzedana,
 - dodaje wylosowane karty do kolekcji gracza,
 - jeśli gracz ma już daną kartę, zwiększa jej licznik duplikatów (`count`) o 1.
 
@@ -99,22 +98,24 @@ Liczba kart na skrzynkę to stała `v_draws` (=3) w `open_farm_lootbox()`, mirro
 
 ## Szanse w skrzynce
 
-Szanse wynikają z wag `draw_weight`. Suma wag to **132** (128 zwykłych/rzadkich/epickich + 4 z kart NFT, dopóki edycje się nie wyprzedadzą).
+Szanse bazowe wynikają z wag `draw_weight`. Pełna bazowa suma wag to **133** (128 zwykłych/rzadkich/epickich + 5 z kart NFT, dopóki edycje się nie wyprzedadzą).
+
+Anti-hoarding: jeśli gracz posiada już NFT, efektywna waga każdej kolejnej karty NFT wynosi `draw_weight / 3 ^ liczba_posiadanych_NFT`. Zwykłe karty nie mają tej kary. Gdy edycja NFT się wyprzeda, jej karta wypada z puli, a suma wag spada.
 
 Szansa na rzadkość w **pojedynczym** losowaniu (skrzynka robi 3 takie losowania bez powtórzeń):
 
 | Rzadkość | Suma wag | Szansa dokładna |
 |---|---:|---:|
-| common / zwykła | 82 | 62.1% |
-| rare / rzadka | 34 | 25.8% |
-| epic / epicka | 12 | 9.1% |
-| legendary / NFT | 4 | 3.0% |
+| common / zwykła | 82 | 61.7% |
+| rare / rzadka | 34 | 25.6% |
+| epic / epicka | 12 | 9.0% |
+| legendary / NFT | 5 | 3.8% |
 
-Gdy edycja NFT się wyprzeda, jej karta wypada z puli, a suma wag spada.
+Darmowa działka ze skrzynki ma bazowo **7%** naturalnej szansy, ale efektywna szansa gracza to `0.07 / 3 ^ (posiadane_działki + posiadane_vouchery)`. Starterowy gwarantowany voucher działa tylko dopóki gracz nie ma jeszcze żadnej działki ani vouchera.
 
 ## Wszystkie karty
 
-Pełna lista wszystkich kart w grze (rośliny zwykłe/rzadkie/epickie + karty NFT). Szansa = trafienie w pojedynczym losowaniu, przy pełnej puli wag **132**. W aplikacji ta sama lista jest w **📖 Katalog** jako jeden ujednolicony widok kart, pogrupowany po rzadkości.
+Pełna lista wszystkich kart w grze (rośliny zwykłe/rzadkie/epickie + karty NFT). Szansa = bazowe trafienie w pojedynczym losowaniu przy pełnej puli wag **133**, przed indywidualną karą za posiadane NFT. W aplikacji ta sama lista jest w **📖 Katalog** jako jeden ujednolicony widok kart, pogrupowany po rzadkości.
 
 ### Rośliny zwykłe / rzadkie / epickie
 
@@ -122,15 +123,15 @@ Kolumna „≈ Zysk/doba" (poziom 1) = `plon × cena ÷ dni wzrostu` — bezpoś
 
 | Karta | Emoji | Rzadkość | Waga | Szansa | Czas wzrostu | Plon | Cena NPC | ≈ Zysk/doba |
 |---|---|---|---:|---:|---:|---:|---:|---:|
-| Marchewka | 🥕 | zwykła | 30 | 22.7% | 1 dzień | 3 | 10 | 30 |
-| Ziemniak | 🥔 | zwykła | 28 | 21.2% | 1 dzień | 4 | 8 | 32 |
-| Pomidor | 🍅 | zwykła | 24 | 18.2% | 1 dzień | 5 | 6 | 30 |
-| Kukurydza | 🌽 | rzadka | 13 | 9.8% | 2 dni | 12 | 12 | 72 |
-| Papryczka | 🌶️ | rzadka | 12 | 9.1% | 2 dni | 11 | 13 | 72 |
-| Truskawka | 🍓 | rzadka | 9 | 6.8% | 2 dni | 15 | 10 | 75 |
-| Dynia | 🎃 | epicka | 5 | 3.8% | 3 dni | 30 | 16 | 160 |
-| Winogrona | 🍇 | epicka | 4 | 3.0% | 3 dni | 35 | 14 | 163 |
-| Ananas | 🍍 | epicka | 3 | 2.3% | 4 dni | 45 | 14 | 158 |
+| Marchewka | 🥕 | zwykła | 30 | 22.6% | 1 dzień | 4 | 12 | 48 |
+| Ziemniak | 🥔 | zwykła | 28 | 21.1% | 1 dzień | 5 | 10 | 50 |
+| Pomidor | 🍅 | zwykła | 24 | 18.0% | 1 dzień | 6 | 9 | 54 |
+| Kukurydza | 🌽 | rzadka | 13 | 9.8% | 2 dni | 12 | 16 | 96 |
+| Papryczka | 🌶️ | rzadka | 12 | 9.0% | 2 dni | 11 | 17 | 94 |
+| Truskawka | 🍓 | rzadka | 9 | 6.8% | 2 dni | 15 | 13 | 98 |
+| Dynia | 🎃 | epicka | 5 | 3.8% | 3 dni | 30 | 20 | 200 |
+| Winogrona | 🍇 | epicka | 4 | 3.0% | 3 dni | 35 | 18 | 210 |
+| Ananas | 🍍 | epicka | 3 | 2.3% | 4 dni | 45 | 18 | 203 |
 
 ### Karty NFT (legendarne, limitowane)
 
@@ -139,8 +140,9 @@ Kolumna „≈ Zysk/doba" (poziom 1) = `plon × cena ÷ dni wzrostu` — bezpoś
 | Diamentowa Róża | 🌹 | 25 szt. | 2 | 1.5% | 3 dni | 60 | 40 | 800 🪙 |
 | Złoty Słonecznik | 🌻 | 15 szt. | 1 | 0.8% | 4 dni | 80 | 55 | 1333 🪙 |
 | Kryształowy Lotos | 🪷 | 10 szt. | 1 | 0.8% | 4 dni | 100 | 80 | 2000 🪙 |
+| Królewski Banan Ae Ae | 🍌 | 5 szt. | 1 | 0.8% | 4 dni | 120 | 120 | 4000 🪙 |
 
-\* Szansa na NFT obowiązuje dopóki edycja się nie wyprzeda — potem karta znika z puli i suma wag spada. Wartość w majątku liczona jako `round(20000 / edycja)` 🪙 za sztukę.
+\* Szansa na NFT obowiązuje dopóki edycja się nie wyprzeda i przed indywidualną karą za posiadane NFT — potem karta znika z puli i suma wag spada. Wartość w majątku liczona jako `round(20000 / edycja)` 🪙 za sztukę.
 
 ## Karty i ulepszenia
 
@@ -235,13 +237,14 @@ Aktualne ceny bazowe (rebalans „milder" — patrz „Balans ekonomii" niżej):
 | Diamentowa Róża | 40 |
 | Złoty Słonecznik | 55 |
 | Kryształowy Lotos | 80 |
+| Królewski Banan Ae Ae | 120 |
 
 ## Ekonomia coinów
 
 Spalanie coinów:
 
 - kupno działki: `farm_tile_buy`,
-- otwarcie skrzynki: `lootbox_open`,
+- kupno skrzynki: `farm_box_buy`,
 - ulepszenie karty: `card_levelup`.
 
 Mintowanie coinów:
@@ -250,7 +253,7 @@ Mintowanie coinów:
 
 ## Balans ekonomii
 
-Punkt odniesienia: darmowe **podlewanie** w zen-Ogródku (`water_plant`) daje **10🪙/podlanie** (rośnie do **20🪙** przy serii 6 dni), **3×/dobę** → **30–60🪙/dobę za darmo** (do ~120/dobę z drugą rośliną). Uprawy z kart muszą to przebić, bo wymagają działki (≥500🪙) i skrzynki (100🪙/3 karty).
+Punkt odniesienia: darmowe **podlewanie** w zen-Ogródku (`water_plant`) daje **10🪙/podlanie** (rośnie do **20🪙** przy serii 6 dni), **3×/dobę** → **30–60🪙/dobę za darmo** (do ~120/dobę z drugą rośliną). Uprawy z kart muszą to przebić, bo wymagają działki (od 350🪙, potem szybko drożej) i skrzynki (100🪙/3 karty).
 
 Na żywej bazie ceny NPC były pierwotnie tak niskie (np. Marchewka 6🪙/dobę), że uprawa commonów nie miała sensu wobec darmowego podlewania. Zastosowano rebalans **„milder"** (ceny w tabeli wyżej), tak by ścieżka common/rare przebijała podlewanie i zwracała działkę w rozsądnym czasie. Przybliżony **Zysk/doba (poz. 1)**: zwykłe ~30, rzadkie ~72–75, epickie ~158–163, NFT 800–2000.
 
@@ -265,12 +268,14 @@ Karty z ustawionym `edition_size` to **legendarne NFT** — wyjątkowe, numerowa
 | Diamentowa Róża | 🌹 | 25 sztuk | 60 | 3 dni | 40 | 800 🪙 |
 | Złoty Słonecznik | 🌻 | 15 sztuk | 80 | 4 dni | 55 | 1333 🪙 |
 | Kryształowy Lotos | 🪷 | 10 sztuk | 100 | 4 dni | 80 | 2000 🪙 |
+| Królewski Banan Ae Ae | 🍌 | 5 sztuk | 120 | 4 dni | 120 | 4000 🪙 |
 
-> **Status wdrożenia:** kolekcja NFT (tabela `farm_nft_instances`, definicje 3 kart, mintowanie w `open_farm_lootbox`) **jest wdrożona na żywej bazie** (projekt `rjovhmepanwbdgdkvylr`) — przez pewien czas żywa baza miała starszą wersję farmy bez NFT i z testowymi (minutowymi) czasami wzrostu; zostało to naprawione. Wycena NFT w majątku jest też wpięta w `economy_stats()` oraz `user_assets_value()`/`user_net_worth_breakdown()`. Na świeżym środowisku wystarczy zastosować `supabase/farm.sql` (idempotentny). W aplikacji przewodnik **„💎 Kolekcja NFT"** w oknie „❓ Jak to działa" buduje listę edycji **na żywo** z `farm_card_defs`, więc pokazuje dokładnie te karty, które są aktywne.
+> **Status wdrożenia:** kolekcja NFT (tabela `farm_nft_instances`, definicje 4 kart, mintowanie w `open_farm_lootbox`) **jest wdrożona na żywej bazie** (projekt `rjovhmepanwbdgdkvylr`) — przez pewien czas żywa baza miała starszą wersję farmy bez NFT i z testowymi (minutowymi) czasami wzrostu; zostało to naprawione. Wycena NFT w majątku jest też wpięta w `economy_stats()` oraz `user_assets_value()`/`user_net_worth_breakdown()`. Na świeżym środowisku wystarczy zastosować `supabase/farm.sql` (idempotentny). W aplikacji przewodnik **„💎 Kolekcja NFT"** w oknie „❓ Jak to działa" buduje listę edycji **na żywo** z `farm_card_defs`, więc pokazuje dokładnie te karty, które są aktywne.
 
 Jak działają:
 
 - **wypadają (rzadko) ze zwykłej skrzynki** — mają niskie `draw_weight`; gdy cała edycja się rozejdzie, znikają z puli losowań,
+- im więcej NFT gracz już posiada, tym trudniej trafić kolejne: każda posiadana sztuka dzieli efektywną wagę NFT przez 3,
 - przy zdobyciu serwer nadaje **unikalny numer seryjny** (np. `#3 / 25`) i zapisuje go w `farm_nft_instances` (publiczny odczyt, `UNIQUE(species, serial_no)`),
 - trafiają też do `farm_collection`, więc **można je sadzić i ulepszać** jak zwykłe karty (mocne staty),
 - **liczą się do majątku** (Net Worth) — każda sztuka warta `round(20000 / edycja)` 🪙 (rzadsza edycja = więcej),
@@ -292,7 +297,7 @@ W panelu bocznym Ogródka przycisk **„❓ Jak to działa"** otwiera okno z prz
 - **💎 Kolekcja NFT — pełny przewodnik** — buduje **na żywo** z `farm_card_defs` listę aktywnych edycji (nazwa, „tylko N szt.", plon, czas wzrostu, wartość `round(20000/edycja)` 🪙), a obok wyjaśnia numery seryjne, sposób zdobycia (ta sama skrzynka), status „wyprzedane", sadzenie/ulepszanie i gdzie zobaczyć podaż oraz swoje numery,
 - pozostałe sekcje mechanik: działki, skrzynki, sprzedaż.
 
-Liczby w pomocy (ceny pól, koszt ulepszenia, czasy wzrostu, szanse w skrzynce) są **wyliczane na żywo** z `fmDefs`/formuł (`farmTilePriceFor`, `2*L` / `50*L²`, `base_grow_minutes`), więc nie rozjeżdżają się z faktyczną grą — nie ma już zaszytych na sztywno wartości `500/625/750` ani `1/2/3–4 dni`.
+Liczby w pomocy (ceny pól, koszt ulepszenia, czasy wzrostu, szanse w skrzynce) są **wyliczane na żywo** z `fmDefs`/formuł (`farmTilePriceFor`, `2*L` / `50*L²`, `base_grow_minutes`), więc nie rozjeżdżają się z faktyczną grą — nie ma już zaszytych na sztywno wartości `350/700/1400` ani `1/2/3–4 dni`.
 
 Pełna lista kart z cechami jest w **„📖 Katalog roślin"** — jeden ujednolicony widok kart (bez przełącznika), pogrupowany po rzadkości z wyróżnioną sekcją NFT.
 

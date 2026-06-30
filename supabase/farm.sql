@@ -2,9 +2,9 @@
 -- Run in Supabase SQL Editor (Dashboard → SQL Editor → New query → paste → Run).
 -- Idempotent: CREATE ... IF NOT EXISTS / CREATE OR REPLACE / guarded blocks — safe to re-run.
 --
--- A shared 10 x 4 grid with real per-tile OWNERSHIP layered on the
+-- A shared 13 x 4 grid with real per-tile OWNERSHIP layered on the
 -- Ogródek tab (the old zen water_plant view is hidden but reused for plant tiles). Loop:
---   buy tile (BURN, escalating) → open lootbox (BURN 100) → collect plant CARDS
+--   buy tile (BURN, escalating) → buy/open lootbox (BURN at buy) → collect plant CARDS
 --   → level a card with duplicates + coins (BURN) → plant a card on an owned tile
 --   → it grows over real time → harvest crops into inventory (crops minted, not coins)
 --   → sell crops to the NPC at a dynamic supply/demand price (coins MINTED).
@@ -16,7 +16,8 @@
 --   BURN:  farm_tile_buy, farm_box_buy, card_levelup
 --   MINT:  farm_crop_sale
 -- Boxes are bought (farm_box_buy BURN) then opened from inventory; opening itself
--- moves no coins. Boxes can drop a free-tile voucher (claims a tile for 0 coins).
+-- moves no coins. Boxes can drop a free-tile voucher (claims a tile for 0 coins);
+-- that natural voucher chance falls as the player owns more tiles/vouchers.
 
 -- ── Tables ─────────────────────────────────────────────────────────────────
 
@@ -363,7 +364,7 @@ BEGIN
   IF p_x < 0 OR p_x >= 13 OR p_y < 0 OR p_y >= 4 THEN RAISE EXCEPTION 'bad_coords'; END IF;
 
   SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
-  v_price := floor(350 * (1 + v_tiles * 0.25))::integer;  -- anti-monopoly escalation (base 350)
+  v_price := least(50000::numeric, floor(350::numeric * power(2::numeric, v_tiles)))::integer;
 
   -- A free-tile voucher (dropped by a seed box) claims a tile for 0 coins.
   -- Consume one under a row lock; if none, fall back to the escalating coin price.
@@ -473,19 +474,26 @@ $$;
 -- ── RPC: open_farm_lootbox ─────────────────────────────────────────────────
 -- Consume ONE sealed box, draw FARM_BOX_DRAWS (3) DISTINCT rarity-weighted cards.
 -- Each draw excludes already-picked species so every box yields different cards
--- (the pool has 9 species, so 3 distinct is always possible). Server-side
+-- (the active pool is larger than the 3-card draw). Server-side
 -- random() — the result isn't client-replayable so no anti-cheat is needed.
--- Also ~7% of boxes drop a free-tile voucher (a {voucher:true} card entry).
+-- Free-tile voucher odds and NFT odds get anti-hoarding penalties:
+-- every owned NFT divides future NFT weights by 3, and every owned tile/voucher
+-- divides the natural voucher chance by 3. Starter guarantee only applies while
+-- the player still has zero territory.
 -- Returns { coins, boxes, tile_vouchers, cards:[ {species,...}|{voucher:true} ] }.
 CREATE OR REPLACE FUNCTION public.open_farm_lootbox()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_user      uuid := auth.uid();
   v_draws     constant integer := 3;       -- cards per box (keep in sync with index.html)
-  v_voucher_p constant numeric := 0.07;    -- chance a box also drops a free-tile voucher
+  v_voucher_p constant numeric := 0.07;    -- base natural chance for a free-tile voucher
   v_coins     integer;
   v_boxes     integer;
   v_vouchers  integer := 0;
+  v_tiles     integer := 0;
+  v_territory integer := 0;
+  v_owned_nfts integer := 0;
+  v_eff_voucher_p numeric := 0;
   v_got_vch   boolean := false;
   v_starter   integer := 0;       -- starter openings remaining (guarantee window)
   v_guar      boolean := false;   -- a tile voucher is still guaranteed within the window
@@ -517,6 +525,10 @@ BEGIN
        INTO v_boxes, v_vouchers, v_starter, v_guar;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_box'; END IF;
   SELECT coins INTO v_coins FROM public.profiles WHERE id = v_user;
+  SELECT count(*) INTO v_owned_nfts FROM public.farm_nft_instances WHERE owner_id = v_user;
+  SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
+  v_territory := v_tiles + COALESCE(v_vouchers, 0);
+  v_eff_voucher_p := v_voucher_p / power(3::numeric, greatest(v_territory, 0));
 
   -- Eligible = active + weighted, and either uncapped OR an NFT edition with supply left.
   SELECT count(*) INTO v_eligible
@@ -532,7 +544,10 @@ BEGIN
   WHILE v_got < v_target AND v_attempts < 40 LOOP
     v_attempts := v_attempts + 1;
 
-    SELECT sum(d.draw_weight) INTO v_total
+    SELECT sum(CASE WHEN d.edition_size IS NOT NULL
+                    THEN d.draw_weight::numeric / power(3::numeric, v_owned_nfts)
+                    ELSE d.draw_weight::numeric END)
+      INTO v_total
       FROM public.farm_card_defs d
      WHERE d.is_active AND d.draw_weight > 0 AND d.species <> ALL(v_picked)
        AND (d.edition_size IS NULL
@@ -541,7 +556,11 @@ BEGIN
 
     v_roll := random() * v_total;
     SELECT species INTO v_species FROM (
-      SELECT d.species, sum(d.draw_weight) OVER (ORDER BY d.species) AS cum
+      SELECT d.species,
+             sum(CASE WHEN d.edition_size IS NOT NULL
+                      THEN d.draw_weight::numeric / power(3::numeric, v_owned_nfts)
+                      ELSE d.draw_weight::numeric END)
+             OVER (ORDER BY d.species) AS cum
         FROM public.farm_card_defs d
        WHERE d.is_active AND d.draw_weight > 0 AND d.species <> ALL(v_picked)
          AND (d.edition_size IS NULL
@@ -574,6 +593,7 @@ BEGIN
         INSERT INTO public.farm_nft_transfers (instance_id, species, serial_no, from_owner, to_owner, price, kind)
         VALUES (v_nft_id, v_species, v_serial, NULL, v_user, NULL, 'mint');
       END IF;
+      v_owned_nfts := v_owned_nfts + 1; -- same box gets lower odds for another NFT draw
     END IF;
 
     INSERT INTO public.farm_collection (user_id, species, count, level)
@@ -591,10 +611,11 @@ BEGIN
     v_got := v_got + 1;
   END LOOP;
 
-  -- Free-tile voucher: ~7% natural drop, BUT within the 3-box starter window a
-  -- voucher is guaranteed — if it hasn't dropped by the last starter box, force it.
+  -- Free-tile voucher: natural odds shrink with existing territory. The starter
+  -- guarantee only survives while the player has no tile and no held voucher.
+  IF v_guar AND v_territory > 0 THEN v_guar := false; END IF;
   IF v_starter > 0 THEN v_starter := v_starter - 1; END IF;
-  v_drop_vch := (random() < v_voucher_p) OR (v_guar AND v_starter = 0);
+  v_drop_vch := (random() < v_eff_voucher_p) OR (v_guar AND v_starter = 0);
   IF v_drop_vch AND v_guar THEN v_guar := false; END IF;  -- guarantee satisfied
 
   UPDATE public.farm_user_state
