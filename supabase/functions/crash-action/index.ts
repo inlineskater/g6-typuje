@@ -2,10 +2,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
-// „Rakieta" (Crash) — shared multiplayer house game. One rocket per round; the
-// multiplier climbs from x1.00 and players tap CASH OUT to lock it before a hidden,
-// server-owned crash point. All state transitions are LAZY (request-driven, no cron):
-// every action locks the singleton crash_tables row FOR UPDATE and calls advance().
+// „Rakieta" (Crash) — SOLO house game. Each player flies their OWN rocket: the multiplier
+// climbs from x1.00 and the player taps CASH OUT to lock it before a hidden, server-owned
+// crash point. One round per player; no shared table, no realtime. The browser only ever
+// animates a trusted server result — it never sees the crash point until the round resolves.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://inlineskater.github.io",
@@ -16,8 +16,6 @@ const corsHeaders = {
 const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 10, idle_timeout: 20 });
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
-const BET_WINDOW_MS = 3000;     // betting window per round
-const RESULT_PAUSE_MS = 2000;   // crashed → next betting round pause
 const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
 const CASHOUT_GRACE_MS = 700;   // forgive network latency: honor an in-time tap that ARRIVES this late
@@ -48,7 +46,6 @@ function genCrashPoint() {
 }
 
 function gameError(msg) { return Object.assign(new Error(msg), { isGame: true }); }
-function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -70,372 +67,125 @@ async function requireUser(req) {
   return data.user;
 }
 
-// Inert forward-compat hook: no item targets effect_game='crash' yet, so this
-// returns null today. Wire a payout_bonus credit at cash_out when a crash item ships.
-async function getStrongestHeroEffect(tx, userId, game) {
-  try {
-    const rows = await tx`
-      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
-      from public.hero_equipment e
-      join public.hero_item_instances i on i.id = e.item_instance_id
-      join public.hero_item_defs d on d.id = i.item_def_id
-      where e.user_id = ${userId}
-        and i.owner_id = ${userId}
-        and d.is_active = true
-        and d.effect_game = ${game}
-      order by d.effect_value desc, d.price desc, d.slug
-      limit 1
-    `;
-    return rows[0] ?? null;
-  } catch (err) {
-    console.warn("Hero item effects unavailable:", err?.message ?? err);
-    return null;
-  }
+function validateBet(raw) {
+  const bet = Math.floor(Number(raw));
+  if (!Number.isFinite(bet) || bet < 1) throw gameError("Nieprawidłowa stawka.");
+  if (bet > MAX_BET) throw gameError("Stawka zbyt wysoka.");
+  return bet;
 }
 
-// ── Round chain ────────────────────────────────────────────────────────────────
-async function createNextRound(tx, table) {
-  const nextNo = table.round_no + 1;
-  const [round] = await tx`
-    insert into public.crash_rounds (table_id, round_no, status, betting_ends_at)
-    values (${table.id}, ${nextNo}, 'betting', now() + (${BET_WINDOW_MS} * interval '1 millisecond'))
-    returning *`;
-  await tx`update public.crash_tables
-           set round_no = ${nextNo}, current_round_id = ${round.id}, updated_at = now()
-           where id = ${table.id}`;
-  table.round_no = nextNo;
-  table.current_round_id = round.id;
-  return round;
-}
-
-// Deduct stakes for everyone who can still cover; drop the rest. Returns kept count.
-async function tryLaunch(tx, round) {
-  const bets = await tx`select id, user_id, amount from public.crash_bets
-                        where round_id = ${round.id} for update`;
-  let kept = 0;
-  for (const bet of bets) {
-    const res = await tx`update public.profiles set coins = coins - ${bet.amount}
-                         where id = ${bet.user_id} and coins >= ${bet.amount}`;
-    if (res.count === 1) kept++;
-    else await tx`delete from public.crash_bets where id = ${bet.id}`;
-  }
-  if (kept === 0) return 0;
-
-  const cp = genCrashPoint();
-  const [r] = await tx`update public.crash_rounds
-                       set status = 'running', started_at = now()
-                       where id = ${round.id} returning started_at`;
-  const crashAt = new Date(new Date(r.started_at).getTime() + durationFor(cp));
-  await tx`insert into public.crash_round_secrets (round_id, crash_point, crash_at)
-           values (${round.id}, ${cp}, ${crashAt})`;
-  await tx`update public.crash_rounds
-           set total_bet = coalesce((select sum(amount) from public.crash_bets where round_id = ${round.id}), 0)
-           where id = ${round.id}`;
-  return kept;
-}
-
-async function resolveRound(tx, round, crashPoint) {
-  await tx`update public.crash_bets set status = 'busted'
-           where round_id = ${round.id} and status = 'active'`;
-  const bets = await tx`select user_id, amount, cashed_multiplier, status
-                        from public.crash_bets where round_id = ${round.id}`;
-  let totalWon = 0;
-  for (const b of bets) {
-    const won = b.status === "cashed" ? Math.floor(Number(b.amount) * Number(b.cashed_multiplier)) : 0;
-    totalWon += won;
-    await tx`insert into public.crash_spins
-             (user_id, round_id, total_bet, cashout_multiplier, total_won, crash_point)
-             values (${b.user_id}, ${round.id}, ${b.amount},
-                     ${b.status === "cashed" ? b.cashed_multiplier : null}, ${won}, ${crashPoint})`;
-  }
-  await tx`update public.crash_rounds
-           set status = 'crashed', crash_point = ${crashPoint}, crashed_at = now(), total_won = ${totalWon}
-           where id = ${round.id}`;
-}
-
-// True if `round` is past its current-phase deadline and needs the lazy state machine
-// to advance it (launch / crash / open next). Used by both the lock-free peek and the
-// in-lock re-check so the herd's 2nd…Nth advancers can bail out without doing work.
-async function transitionDue(tx, round) {
-  if (!round) return true; // missing round → must create one
-  const [{ now }] = await tx`select now() as now`;
-  const nowMs = new Date(now).getTime();
-  if (round.status === "betting") {
-    return !!round.betting_ends_at && nowMs >= new Date(round.betting_ends_at).getTime();
-  }
-  if (round.status === "running") {
-    const [sec] = await tx`select crash_at from public.crash_round_secrets where round_id = ${round.id}`;
-    return !sec || nowMs >= new Date(sec.crash_at).getTime();
-  }
-  if (round.status === "crashed") {
-    return !!round.crashed_at && nowMs >= new Date(round.crashed_at).getTime() + RESULT_PAUSE_MS;
-  }
-  return false;
-}
-
-// Lock-free read: current table + round with NO `FOR UPDATE`. Returns `due` so the
-// caller can decide whether it must escalate to the locking loadGame().
-async function peekGame(tx) {
-  const [table] = await tx`select * from public.crash_tables where slug = 'main'`;
-  if (!table) throw gameError("Stół nie istnieje.");
-  const round = table.current_round_id
-    ? (await tx`select * from public.crash_rounds where id = ${table.current_round_id}`)[0] ?? null
-    : null;
-  const due = await transitionDue(tx, round);
-  return { table, round, due };
-}
-
-// Lock the singleton table, advance through any due phase transitions, return fresh state.
-async function loadGame(tx) {
-  // Fail fast under contention instead of hanging a pool slot indefinitely.
-  await tx`set local lock_timeout = '900ms'`;
-  await tx`set local statement_timeout = '4s'`;
-  const [table] = await tx`select * from public.crash_tables where slug = 'main' for update`;
-  if (!table) throw gameError("Stół nie istnieje.");
-
-  for (let i = 0; i < 6; i++) {
-    let round = table.current_round_id
-      ? (await tx`select * from public.crash_rounds where id = ${table.current_round_id} for update`)[0]
-      : null;
-    if (!round) { await createNextRound(tx, table); continue; }
-
-    const [{ now }] = await tx`select now() as now`;
-    const nowMs = new Date(now).getTime();
-
-    if (round.status === "betting") {
-      if (round.betting_ends_at && nowMs >= new Date(round.betting_ends_at).getTime()) {
-        // drop bets the user can no longer cover, then launch if any remain
-        await tx`delete from public.crash_bets b using public.profiles p
-                 where b.round_id = ${round.id} and b.user_id = p.id and p.coins < b.amount`;
-        const [{ cnt }] = await tx`select count(*)::int as cnt from public.crash_bets where round_id = ${round.id}`;
-        if (cnt > 0) {
-          const kept = await tryLaunch(tx, round);
-          if (kept > 0) continue;          // launched → loop (may instant-bust)
-        }
-        // nobody to launch → extend the betting window
-        await tx`update public.crash_rounds
-                 set betting_ends_at = now() + (${BET_WINDOW_MS} * interval '1 millisecond')
-                 where id = ${round.id}`;
-      }
-      break;
-    }
-
-    if (round.status === "running") {
-      const [sec] = await tx`select crash_point, crash_at from public.crash_round_secrets where round_id = ${round.id}`;
-      if (!sec) { // defensive: missing secret, force a crash at x1.00
-        await resolveRound(tx, round, 1.00);
-        continue;
-      }
-      if (nowMs >= new Date(sec.crash_at).getTime()) {
-        await resolveRound(tx, round, Number(sec.crash_point));
-        continue;
-      }
-      break;
-    }
-
-    if (round.status === "crashed") {
-      if (round.crashed_at && nowMs >= new Date(round.crashed_at).getTime() + RESULT_PAUSE_MS) {
-        await createNextRound(tx, table);
-        continue;
-      }
-      break;
-    }
-    break;
-  }
-
-  const [table2] = await tx`select * from public.crash_tables where slug = 'main'`;
-  const [round2] = await tx`select * from public.crash_rounds where id = ${table2.current_round_id}`;
-  return { table: table2, round: round2 };
-}
-
-// Build the sanitized client payload from an ALREADY-LOADED {table, round}. Does no
-// locking and no advancing — callers decide how they obtained the state (loadGame under
-// the lock, or peekGame lock-free).
-async function buildState(tx, userId, table, round, extra = {}) {
-  const [profile] = await tx`select coins, nick from public.profiles where id = ${userId}`;
-  const [{ now }] = await tx`select now() as now`;
-  const nowMs = new Date(now).getTime();
-
-  const bets = await tx`
-    select user_id, nick_snapshot, amount, cashed_multiplier, status
-    from public.crash_bets where round_id = ${round.id} order by created_at`;
-  const myBet = bets.find((b) => b.user_id === userId) ?? null;
-
-  const history = await tx`
-    select round_no, crash_point from public.crash_rounds
-    where table_id = ${table.id} and status = 'crashed' order by round_no desc limit 20`;
-
-  const myResults = await tx`
-    select round_id, total_bet, cashout_multiplier, total_won, crash_point, created_at
-    from public.crash_spins where user_id = ${userId} order by created_at desc limit 10`;
-
-  // Sanitized round — never expose crash_point / timing of a RUNNING round.
-  const roundOut = { id: round.id, round_no: round.round_no, status: round.status };
-  if (round.status === "betting") {
-    roundOut.msLeft = Math.max(0, new Date(round.betting_ends_at).getTime() - nowMs);
-  } else if (round.status === "running") {
-    roundOut.elapsedMs = Math.max(0, nowMs - new Date(round.started_at).getTime());
-  } else if (round.status === "crashed") {
-    roundOut.crash_point = Number(round.crash_point);
-    roundOut.nextInMs = Math.max(0, new Date(round.crashed_at).getTime() + RESULT_PAUSE_MS - nowMs);
-  }
-
+function historyOut(row) {
   return {
-    round: roundOut,
+    id: row.id,
+    roundId: row.round_id,
+    totalBet: Number(row.total_bet),
+    cashoutMultiplier: row.cashout_multiplier != null ? Number(row.cashout_multiplier) : null,
+    totalWon: Number(row.total_won || 0),
+    crashPoint: Number(row.crash_point),
+    createdAt: row.created_at,
+  };
+}
+
+// Build the full player snapshot the client renders. `extra` carries the per-action
+// outcome (started / cashedOut / busted / notice) that drives the one-shot animations.
+async function stateResponse(tx, userId, extra = {}) {
+  const [profile] = await tx`select coins, nick from public.profiles where id = ${userId}`;
+  const [active] = await tx`
+    select id, bet, status, extract(epoch from (now() - started_at)) * 1000 as elapsed_ms
+    from public.crash_rounds
+    where user_id = ${userId} and status = 'running'
+    order by started_at desc
+    limit 1`;
+  const history = await tx`
+    select id, round_id, total_bet, cashout_multiplier, total_won, crash_point, created_at
+    from public.crash_spins
+    where user_id = ${userId}
+    order by created_at desc
+    limit 12`;
+  return {
     coins: profile?.coins ?? 0,
     nick: profile?.nick ?? "",
-    bets: bets.map((b) => ({
-      nick: b.nick_snapshot,
-      amount: b.amount,
-      cashed_multiplier: b.cashed_multiplier !== null ? Number(b.cashed_multiplier) : null,
-      status: b.status,
-      isMe: b.user_id === userId,
-    })),
-    myBet: myBet ? { amount: myBet.amount, status: myBet.status,
-      cashed_multiplier: myBet.cashed_multiplier !== null ? Number(myBet.cashed_multiplier) : null } : null,
-    canBet: round.status === "betting",
-    canCashout: round.status === "running" && !!myBet && myBet.status === "active",
-    history: history.map((h) => ({ round_no: h.round_no, crash_point: Number(h.crash_point) })),
-    myResults: myResults.map((r) => ({
-      round_id: r.round_id, total_bet: r.total_bet,
-      cashout_multiplier: r.cashout_multiplier !== null ? Number(r.cashout_multiplier) : null,
-      total_won: r.total_won, crash_point: Number(r.crash_point), created_at: r.created_at,
-    })),
+    activeRound: active
+      ? { id: active.id, bet: Number(active.bet), status: active.status, elapsedMs: Math.max(0, Number(active.elapsed_ms)) }
+      : null,
+    history: history.map(historyOut),
     stakes: CRASH_STAKES,
     ...extra,
   };
 }
 
-// Advance under the lock, then build the payload. Used by every mutating action.
-async function stateResponse(tx, userId, extra = {}) {
-  const { table, round } = await loadGame(tx);
-  return await buildState(tx, userId, table, round, extra);
+// If the player's running round has reached its hidden crash time, resolve it as BUSTED:
+// record a 0-win spin and flip status. Returns the revealed outcome (or null). Locks the
+// round row FOR UPDATE so concurrent polls / a racing cash_out resolve it exactly once.
+async function resolveDueRound(tx, userId) {
+  const [round] = await tx`
+    select r.id, r.bet, s.crash_point, (now() >= s.crash_at) as due
+    from public.crash_rounds r
+    join public.crash_round_secrets s on s.round_id = r.id
+    where r.user_id = ${userId} and r.status = 'running'
+    for update of r`;
+  if (!round || !round.due) return null;
+  await tx`update public.crash_rounds set status = 'busted' where id = ${round.id}`;
+  await tx`insert into public.crash_spins
+           (user_id, round_id, total_bet, cashout_multiplier, total_won, crash_point)
+           values (${userId}, ${round.id}, ${round.bet}, null, 0, ${round.crash_point})`;
+  return { roundId: round.id, crashPoint: Number(round.crash_point) };
 }
 
-// Transient DB contention (lock timeout / serialization / deadlock / dropped
-// connection) — safe to retry or to soft-fall-back to a lock-free read.
-function isTransientDbError(err) {
-  const code = err?.code;
-  const msg = String(err?.message ?? "");
-  return code === "55P03" || code === "40001" || code === "40P01" ||
-    code === "57014" || // statement_timeout cancellation
-    code === "CONNECTION_CLOSED" || code === "CONNECTION_DESTROYED" || code === "CONNECT_TIMEOUT" ||
-    /lock timeout|statement timeout|deadlock|connection .*closed|connection .*destroyed|connect timeout/i.test(msg);
-}
-
-async function withTransientRetry(fn, attempts = 3) {
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (err?.isGame || !isTransientDbError(err) || attempt === attempts - 1) throw err;
-      await sleep(70 * (attempt + 1));
-    }
-  }
-}
-
-// ── Actions ──────────────────────────────────────────────────────────────────
-// Read path: lock-free when nothing is due (the overwhelming majority of polls), only
-// escalating to the locking advancer at a real phase boundary. On transient contention
-// it retries once, then soft-falls-back to the lock-free snapshot so a momentary lock
-// blip never surfaces to the user as "Błąd serwera.".
+// state / history → resolve a due crash, then return the snapshot.
 async function getState(userId) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      return await db.begin(async (tx) => {
-        const { table, round, due } = await peekGame(tx);
-        if (!due && round) return await buildState(tx, userId, table, round);
-        return await stateResponse(tx, userId); // a transition is due → advance under the lock
-      });
-    } catch (err) {
-      if (err?.isGame) throw err;
-      if (!isTransientDbError(err)) throw err;
-      if (attempt === 0) continue; // retry once
-      // Still contended → serve the lock-free snapshot; the next tick reconciles.
-      return await db.begin((tx) => peekGame(tx).then(({ table, round }) =>
-        round ? buildState(tx, userId, table, round) : stateResponse(tx, userId)));
-    }
-  }
-}
-
-async function placeBet(userId, rawAmount) {
-  const amount = Math.trunc(Number(rawAmount));
-  if (!Number.isInteger(amount) || amount < 1 || amount > MAX_BET) throw gameError("Nieprawidłowa stawka.");
-  return await withTransientRetry(() => db.begin(async (tx) => {
-    const { round } = await loadGame(tx);
-    if (round.status !== "betting") throw gameError("Zakłady zamknięte — rakieta już leci.");
-    const [profile] = await tx`select coins, nick from public.profiles where id = ${userId}`;
-    if (!profile) throw gameError("Profil nie istnieje.");
-    if (profile.coins < amount) throw gameError("Za mało coinów!");
-    await tx`
-      insert into public.crash_bets (round_id, table_id, user_id, nick_snapshot, amount)
-      values (${round.id}, ${round.table_id}, ${userId}, ${profile.nick}, ${amount})
-      on conflict (round_id, user_id) do update set amount = excluded.amount, created_at = now()`;
-    return await stateResponse(tx, userId);
-  }));
-}
-
-async function clearBet(userId) {
-  return await withTransientRetry(() => db.begin(async (tx) => {
-    await tx`set local lock_timeout = '900ms'`;
-    await tx`set local statement_timeout = '4s'`;
-    // Delete the bet BEFORE advancing so canceling at the window boundary can never
-    // accidentally launch the round with this bet (loadGame in stateResponse advances).
-    const [table] = await tx`select * from public.crash_tables where slug = 'main' for update`;
-    if (table?.current_round_id) {
-      const [round] = await tx`select status from public.crash_rounds where id = ${table.current_round_id}`;
-      if (round && round.status === "betting") {
-        await tx`delete from public.crash_bets where round_id = ${table.current_round_id} and user_id = ${userId}`;
-      }
-    }
-    return await stateResponse(tx, userId);
-  }));
-}
-
-// Build the sanitized client payload with a LOCK-FREE read (peekGame, no FOR UPDATE,
-// no advancing). Used as the response builder for cash_out so a contended singleton
-// lock can never roll back an already-committed payout.
-async function lockFreeState(userId, extra = {}) {
   return await db.begin(async (tx) => {
-    const { table, round } = await peekGame(tx);
-    if (round) return await buildState(tx, userId, table, round, extra);
-    return await stateResponse(tx, userId, extra); // no round yet → create one under the lock (rare)
+    await tx`set local lock_timeout = '4s'`;
+    const busted = await resolveDueRound(tx, userId);
+    return await stateResponse(tx, userId, busted ? { busted } : {});
   });
 }
 
-// Cash out is DECOUPLED from the singleton crash_tables lock. The payout decision needs
-// only: the immutable secret (crash_point/crash_at), the per-user bet row (locked), and
-// now(). Taking the contended table FOR UPDATE here was the bug — under launch/crash
-// boundary contention the lock wait pushed now() past crash_at and rejected an on-time
-// cash out. Now we pay under ONLY the bet-row lock (txn1), then build state lock-free (txn2).
+// start → deduct the bet and launch a fresh rocket with a hidden crash point.
+async function startRound(userId, rawBet) {
+  const bet = validateBet(rawBet);
+  return await db.begin(async (tx) => {
+    await tx`set local lock_timeout = '4s'`;
+    // Lock order crash_rounds → profiles, IDENTICAL to cashOut(), so a start racing a cash-out
+    // for the same user (e.g. two tabs) can never deadlock. resolveDueRound takes the running
+    // round's FOR UPDATE lock (and busts it if it already crashed) BEFORE we touch profiles.
+    await resolveDueRound(tx, userId);
+    const [profile] = await tx`select coins from public.profiles where id = ${userId} for update`;
+    if (!profile) throw gameError("Profil nie istnieje.");
+    // Re-check after BOTH locks: a round still genuinely flying — or one a concurrent start just
+    // committed — blocks a second launch with a clean message instead of a unique-index violation
+    // (crash_rounds_one_live_per_user is the final backstop).
+    const [live] = await tx`select 1 from public.crash_rounds where user_id = ${userId} and status = 'running'`;
+    if (live) throw gameError("Rakieta już leci — najpierw wypłać! 🚀");
+
+    if (Number(profile.coins) < bet) throw gameError("Za mało coinów!");
+
+    const cp = genCrashPoint();
+    await tx`update public.profiles set coins = coins - ${bet} where id = ${userId}`;
+    const [round] = await tx`
+      insert into public.crash_rounds (user_id, bet, status, started_at)
+      values (${userId}, ${bet}, 'running', now())
+      returning id, started_at`;
+    const crashAt = new Date(new Date(round.started_at).getTime() + durationFor(cp));
+    await tx`insert into public.crash_round_secrets (round_id, crash_point, crash_at)
+             values (${round.id}, ${cp}, ${crashAt})`;
+
+    return await stateResponse(tx, userId, { started: { id: round.id } });
+  });
+}
+
+// cash_out → pay the player out if the rocket is still flying on the server clock.
 async function cashOut(userId, clientMultiplier) {
-  // ── Txn1: the PAYMENT, under ONLY this user's crash_bets row lock ──
-  const outcome = await withTransientRetry(() => db.begin(async (tx) => {
-    await tx`set local lock_timeout = '900ms'`;
-    await tx`set local statement_timeout = '4s'`;
+  return await db.begin(async (tx) => {
+    await tx`set local lock_timeout = '4s'`;
+    const [round] = await tx`
+      select id, bet, started_at from public.crash_rounds
+      where user_id = ${userId} and status = 'running' for update`;
+    if (!round) return await stateResponse(tx, userId, { notice: "Nie masz aktywnego lotu." });
 
-    // Pointer read — NO `for update`; never contends with the advance herd.
-    const [table] = await tx`select current_round_id from public.crash_tables where slug = 'main'`;
-    if (!table?.current_round_id) return { notice: "Rakieta nie leci." };
-    const roundId = table.current_round_id;
+    const [sec] = await tx`select crash_point, crash_at from public.crash_round_secrets where round_id = ${round.id}`;
+    if (!sec) return await stateResponse(tx, userId, { notice: "Brak danych lotu." });
 
-    // The ONLY lock that matters: this user's bet row (contended solely by resolveRound,
-    // and only on THIS row). resolveRound busts only status='active' bets and never
-    // credits coins, so serializing here yields exactly one outcome per bet.
-    const [bet] = await tx`select * from public.crash_bets
-                           where round_id = ${roundId} and user_id = ${userId} for update`;
-    if (!bet) return { notice: "Nie masz aktywnego zakładu." };
-    if (bet.status === "cashed") {
-      return { notice: `Już wypłacono x${Number(bet.cashed_multiplier || 1).toFixed(2)}.` };
-    }
-    if (bet.status !== "active") return { notice: "Za późno! 💥" };
-
-    const [round] = await tx`select status, started_at from public.crash_rounds where id = ${roundId}`;
-    if (!round || round.status === "betting") return { notice: "Rakieta jeszcze nie leci." };
-    if (round.status === "crashed") return { notice: "Za późno! 💥" };
-
-    const [sec] = await tx`select crash_point, crash_at from public.crash_round_secrets where round_id = ${roundId}`;
-    if (!sec) return { notice: "Za późno! 💥" };
     // Authoritative elapsed + lateness in ONE round-trip, decided by Postgres now()
     // (no isolate↔DB clock skew). `crashed` flips true the instant now() reaches crash_at.
     const [{ ms, crashed }] = await tx`
@@ -447,43 +197,37 @@ async function cashOut(userId, clientMultiplier) {
     const hasClient = Number.isFinite(clientM) && clientM >= 1;
     const clientFloor = hasClient ? floor2(clientM) : 0;
 
-    let mult;
+    let mult = null;
     if (!crashed && serverM < cp) {
       // Still flying on the server clock → pay what they saw on the button, capped at the
       // server's authoritative value so the display matches the payout but nobody over-claims.
       mult = floor2(serverM);
       if (hasClient) mult = Math.max(1, Math.min(mult, clientFloor));
     } else {
-      // The request crossed the hidden crash instant IN FLIGHT. Forgive bounded network
-      // latency: if the player committed (clientFloor) strictly BELOW the crash point they
-      // tapped in time even though the packet only ARRIVED a hop late → honor exactly what
-      // they saw. Not exploitable — crash_point is disclosed only when resolveRound busts
-      // this bet in the same txn, so a still-'active' bet here means cp was never revealed.
+      // The request crossed the hidden crash IN FLIGHT. Forgive bounded network latency: if
+      // the player committed (clientFloor) strictly BELOW the crash point they tapped in time
+      // even though the packet only ARRIVED a hop late → honor exactly what they saw.
       const lateMs = Number(ms) - durationFor(cp);
-      if (hasClient && clientFloor < cp && lateMs <= CASHOUT_GRACE_MS) {
-        mult = clientFloor;
-      } else {
-        return { notice: "Za późno! 💥" };
-      }
+      if (hasClient && clientFloor < cp && lateMs <= CASHOUT_GRACE_MS) mult = clientFloor;
     }
-    // Hero payout_bonus hook would apply here for an effect_game='crash' item (none exist yet).
-    const won = Math.floor(Number(bet.amount) * mult);
-    await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
-    // `and status = 'active'` makes this idempotent under retry and is load-bearing for the
-    // no-double-pay / no-lost-pay proof against a racing resolveRound.
-    await tx`update public.crash_bets set status = 'cashed', cashed_multiplier = ${mult}
-             where id = ${bet.id} and status = 'active'`;
-    return { cashedOut: { multiplier: mult, won } };
-  }));
 
-  // ── Txn2: build the response lock-free. Best-effort — the payout is already committed,
-  //    so a transient state-read failure must NOT surface as an error; return the bare
-  //    outcome and let the client's next poll/realtime fill in the full state. ──
-  try {
-    return await lockFreeState(userId, outcome);
-  } catch (_err) {
-    return outcome;
-  }
+    if (mult == null) {
+      // Too late → bust the round and record the loss so the client shows the explosion.
+      await tx`update public.crash_rounds set status = 'busted' where id = ${round.id}`;
+      await tx`insert into public.crash_spins
+               (user_id, round_id, total_bet, cashout_multiplier, total_won, crash_point)
+               values (${userId}, ${round.id}, ${round.bet}, null, 0, ${cp})`;
+      return await stateResponse(tx, userId, { notice: "Za późno! 💥", busted: { roundId: round.id, crashPoint: cp } });
+    }
+
+    const won = Math.floor(Number(round.bet) * mult);
+    await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
+    await tx`update public.crash_rounds set status = 'cashed' where id = ${round.id}`;
+    await tx`insert into public.crash_spins
+             (user_id, round_id, total_bet, cashout_multiplier, total_won, crash_point)
+             values (${userId}, ${round.id}, ${round.bet}, ${mult}, ${won}, ${cp})`;
+    return await stateResponse(tx, userId, { cashedOut: { multiplier: mult, won } });
+  });
 }
 
 Deno.serve(async (req) => {
@@ -497,16 +241,13 @@ Deno.serve(async (req) => {
 
     let result;
     if (action === "state" || action === "history") result = await getState(user.id);
-    else if (action === "place_bet") result = await placeBet(user.id, body.amount);
-    else if (action === "clear_bet") result = await clearBet(user.id);
-    else if (action === "cash_out") result = await cashOut(user.id, body.atMultiplier);
+    else if (action === "start") result = await startRound(user.id, body.bet ?? body.amount);
+    else if (action === "cash_out" || action === "cashout") result = await cashOut(user.id, body.atMultiplier ?? body.multiplier);
     else throw gameError("Nieznana akcja.");
 
     return json({ ok: true, ...result });
   } catch (err) {
     console.error(err);
-    if (err?.isGame) return json({ ok: false, error: err.message });
-    if (isTransientDbError(err)) return json({ ok: false, error: "Rakieta jest chwilowo zajęta. Spróbuj ponownie." });
-    return json({ ok: false, error: "Błąd serwera." });
+    return json({ ok: false, error: err?.isGame ? err.message : "Błąd serwera." });
   }
 });

@@ -2180,21 +2180,17 @@
     .crash-controls .rl-btn { margin-left: auto; }
     .crash-controls .rl-btn + .rl-btn { margin-left: 0; }
     #crash-cashout-btn { min-width: 150px; }
-    .crash-lower { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 620px) { .crash-lower { grid-template-columns: 1fr; } }
+    .crash-lower { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .crash-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
     .crash-box h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
-    .crash-betrow, .crash-minerow {
+    .crash-minerow {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
       padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--border);
     }
-    .crash-betrow:last-child, .crash-minerow:last-child { border-bottom: none; }
-    .crash-betrow .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .crash-betrow.me .nm { color: #fde68a; }
-    .crash-betrow .st { font-variant-numeric: tabular-nums; font-weight: 800; }
-    .crash-betrow .st.active { color: var(--muted); }
-    .crash-betrow .st.cashed { color: #34d399; }
-    .crash-betrow .st.busted { color: #f87171; }
+    .crash-minerow:last-child { border-bottom: none; }
+    .crash-minerow .st { font-variant-numeric: tabular-nums; font-weight: 800; }
+    .crash-minerow .st.cashed { color: #34d399; }
+    .crash-minerow .st.busted { color: #f87171; }
     .crash-empty { color: var(--muted); font-size: 12.5px; padding: 4px 0; }
 
     /* ── Roulette ── */
@@ -5862,7 +5858,7 @@
     <main>
       <div class="crash-wrap">
         <h2 style="font-size:18px">Rakieta 🚀</h2>
-        <p class="crash-subtitle">Wspólna runda • mnożnik rośnie od x1.00 • wypłać zanim rakieta wybuchnie 💥</p>
+        <p class="crash-subtitle">Twój lot • mnożnik rośnie od x1.00 • wypłać zanim rakieta wybuchnie 💥</p>
 
         <div id="crash-history" class="crash-history"></div>
 
@@ -5899,10 +5895,6 @@
         </div>
 
         <div class="crash-lower">
-          <div class="crash-box">
-            <h3>Gracze w rundzie</h3>
-            <div id="crash-bets"></div>
-          </div>
           <div class="crash-box">
             <h3>Twoje ostatnie loty</h3>
             <div id="crash-mine"></div>
@@ -7101,9 +7093,8 @@ const MINES_BOARD_SIZE = 25;
 const MINES_HOUSE_FACTOR = 0.95;
 const MINES_MAX_MULT = 1000;
 
-// ── Rakieta (Crash) state ──
+// ── Rakieta (Crash) — solo state ──
 let crashState = null;
-let crashRealtimeReady = false;
 let crashLastStateMs = 0;
 let crashBet = 10;
 let crashRafId = null;
@@ -7111,20 +7102,21 @@ let crashPollTimer = null;
 let crashBusy = false;
 let crashStateInFlight = false;
 let crashQueuedStateLoad = false;
-let crashLastAdvancePokeMs = 0;
-let crashPhaseStartLocal = 0;   // Date.now() when the current running elapsed was sampled
-let crashElapsedBaseMs = 0;     // server-reported elapsedMs at that sample
-let crashExplodedNo = null;     // last crashed round_no we already animated
+let crashActiveRoundId = null;  // id of the round we're animating (null = idle/between flights)
+let crashShownMs = 0;           // monotonic displayed flight time (ms), advanced each RAF frame
+let crashServerMs = 0;          // latest latency-comped server elapsed sample (background-gap snap)
+let crashLastFrameTs = 0;       // performance.now() of the previous RAF tick (0 = none/just synced)
+let crashExplodedNo = null;     // round id whose explosion we already animated
 let crashExplodeStart = 0;      // local ts the explosion animation began (0 = none)
 let crashExplodeMult = 1;       // crash_point to freeze the display at during explosion
 let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
 let crashCashoutPending = null; // tap registered, awaiting the server's verdict (null = none)
-let crashRunRoundNo = null;     // round_no whose flight clock we've already synced (sync once → smooth)
+let crashVisibilityWired = false;
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 10s.
 const CRASH_GROWTH = Math.log(2) / 10000;
-const CRASH_POLL_MS = 500;      // fast poll during the running phase to catch the crash promptly
-const CRASH_MAX_EXTRAPOLATION_MS = 1500; // cap free-run past the last server sample (background/stall guard)
+const CRASH_POLL_MS = 250;      // solo: poll briskly so the crash/explosion is caught promptly
+const CRASH_MAX_FRAME_MS = 250; // RAF gap bigger than this = backgrounded/stalled → snap, don't integrate
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
@@ -7662,7 +7654,7 @@ async function doLogout() {
   rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null; stopRouletteHeartbeat();
   rouletteLocalBets = null; if (rouletteFlushTimer) { clearTimeout(rouletteFlushTimer); rouletteFlushTimer = null; }
   minesState = null; minesViewRound = null; minesBusy = false; minesLastTile = null; minesLastOutcome = '';
-  crashState = null; crashRealtimeReady = false; crashExplodedNo = null; stopCrash();
+  crashState = null; crashActiveRoundId = null; crashCashoutPending = null; crashExplodedNo = null; stopCrash();
   stopWhackBossRound();
   stopSnakeRound();
   stopInvoiceHordeRound();
@@ -8024,7 +8016,7 @@ function switchTab(tab) {
   } else if (tab === 'crash') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
     show(tCr);
-    setupCrashRealtime();
+    ensureCrashTab();
     loadCrashState();
   } else if (tab === 'whack-boss') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG); hide(tH);
@@ -13982,7 +13974,7 @@ async function cashOutMines() {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════
-//  Rakieta (Crash) — shared multiplayer house game
+//  Rakieta (Crash) — SOLO house game (one rocket per player, server-owned crash point)
 // ════════════════════════════════════════════════════════════════════════════
 const CRASH_TAU = Math.PI * 2;
 
@@ -13995,22 +13987,16 @@ async function invokeCrash(payload) {
   return data;
 }
 
-function setupCrashRealtime() {
-  if (!crashRealtimeReady) {
-    crashRealtimeReady = true;
-    const reload = () => {
-      if (activeTab !== 'crash') return;
-      if (Date.now() - crashLastStateMs < 500) return;
-      loadCrashState(false);
-    };
-    const ch = sb.channel('crash-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_tables' }, reload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_rounds' }, reload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_bets' }, reload)
-      .subscribe();
-    realtimeChannels.push(ch);
-    // On refocus, the paused RAF/throttled poll leave the local flight-clock stale (way ahead);
-    // resync immediately so we don't paint an overshot multiplier until the next poll lands.
+// 'running' while our rocket is in the air, 'idle' between flights.
+function crashPhase() {
+  return (crashState && crashState.activeRound && crashState.activeRound.status === 'running') ? 'running' : 'idle';
+}
+
+// Solo: no realtime/other players. Just keep the RAF alive and, once, wire a refocus resync so a
+// backgrounded tab snaps its flight clock back to the server instead of painting a stale climb.
+function ensureCrashTab() {
+  if (!crashVisibilityWired) {
+    crashVisibilityWired = true;
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && activeTab === 'crash') loadCrashState(false);
     });
@@ -14025,7 +14011,7 @@ function stopCrash() {
 
 function setCrashBusy(value) {
   crashBusy = value;
-  if (crashState?.round) updateCrashButtons(crashState.round.status, crashDisplayMult);
+  if (crashState) updateCrashButtons(crashPhase(), crashDisplayMult);
 }
 
 function ensureCrashRaf() {
@@ -14043,8 +14029,8 @@ function ensureCrashPoll() {
   crashPollTimer = setInterval(() => {
     if (activeTab !== 'crash') return;
     if (crashBusy || crashStateInFlight) return;
-    if (!crashState || crashState.round.status !== 'running') return;
-    if (Date.now() - crashLastStateMs < CRASH_POLL_MS - 100) return;
+    if (crashPhase() !== 'running') return;
+    if (Date.now() - crashLastStateMs < CRASH_POLL_MS - 60) return;
     loadCrashState(false);
   }, CRASH_POLL_MS);
 }
@@ -14074,45 +14060,45 @@ function applyCrashState(data) {
   crashState = data;
   if (typeof data.coins === 'number' && me) { me.coins = data.coins; setText(headerCoins, me.coins); }
 
-  const r = data.round;
-  if (r.status === 'running') {
-    // Latency-compensate: r.elapsedMs was sampled on the server one one-way trip ago, so
-    // anchor it forward by ~rtt/2 — otherwise the local clock (and the WYPŁAĆ multiplier we
-    // submit) trails the server, causing under-payment and false "in time" rejects.
-    const serverElapsedNow = (r.elapsedMs || 0) + (Number(data._rttMs) || 0) / 2;
-    if (crashRunRoundNo !== r.round_no) {
-      // First sighting of this round → sync once.
-      crashRunRoundNo = r.round_no;
-      crashElapsedBaseMs = serverElapsedNow;
-      crashPhaseStartLocal = Date.now();
+  const r = data.activeRound;
+  if (r && r.status === 'running') {
+    if (crashActiveRoundId !== r.id) {
+      // New (or reload-resumed) flight → anchor the local clock ONCE. r.elapsedMs was sampled on
+      // the server one one-way trip ago, so push it forward by ~rtt/2 so the WYPŁAĆ multiplier we
+      // submit doesn't trail the server (which would cause under-payment / false "in time" rejects).
+      crashActiveRoundId = r.id;
+      crashCashoutPending = null;
+      crashExplodeStart = 0;
+      const serverElapsedNow = (r.elapsedMs || 0) + (Number(data._rttMs) || 0) / 2;
+      crashShownMs = serverElapsedNow;
+      crashServerMs = serverElapsedNow;
+      crashLastFrameTs = 0;
     } else {
-      // Two-sided drift correction. Catch up promptly when behind; ALSO pull back when we've
-      // run ahead of the server beyond a wider tolerance — running ahead is what makes the
-      // display OVERSHOOT the hidden crash and show a multiplier the rocket never reached
-      // (the asymmetry, −250 vs +120, keeps rtt jitter from nudging the number backward).
-      const localElapsedNow = crashElapsedBaseMs + (Date.now() - crashPhaseStartLocal);
-      const drift = serverElapsedNow - localElapsedNow; // +ve: we're behind; −ve: we're ahead
-      if (drift > 120 || drift < -250) {
-        crashElapsedBaseMs = serverElapsedNow;
-        crashPhaseStartLocal = Date.now();
-      }
+      // Same flight, a routine poll → just refresh the server sample used by the background-gap snap.
+      crashServerMs = (r.elapsedMs || 0) + (Number(data._rttMs) || 0) / 2;
     }
-    ensureCrashPoll(); // poll keeps running only to detect the crash
+    ensureCrashPoll(); // poll keeps running only to detect the crash promptly
   } else {
-    crashRunRoundNo = null; // reset so the next running round re-syncs once
-    crashCashoutPending = null; // a pending tap can't outlive the running phase
+    // No running round → the flight ended (cashed/busted) or we're idle between flights.
+    crashActiveRoundId = null;
+    crashCashoutPending = null;
+    crashLastFrameTs = 0;
     if (crashPollTimer) { clearInterval(crashPollTimer); crashPollTimer = null; }
   }
 
-  // Detect a freshly crashed round → play the explosion once.
-  if (r.status === 'crashed' && r.round_no !== crashExplodedNo) {
-    crashExplodedNo = r.round_no;
+  // One-shot explosion when our rocket busts (poll-resolved OR a cash-out that arrived too late).
+  if (data.busted && data.busted.roundId !== crashExplodedNo) {
+    crashExplodedNo = data.busted.roundId;
     crashExplodeStart = Date.now();
-    crashExplodeMult = r.crash_point || 1;
+    crashExplodeMult = Number(data.busted.crashPoint) || 1;
     const stage = document.querySelector('#tab-crash .crash-stage');
     if (stage) { stage.style.animation = 'casino-shake .09s 5'; setTimeout(() => { stage.style.animation = ''; }, 500); }
-    const mine = data.myResults && data.myResults[0];
-    if (mine && mine.round_id === r.id && mine.total_won > 0) rouletteWinAnimation(mine.total_won - mine.total_bet);
+  }
+  // Win celebration on a server-confirmed cash-out.
+  if (data.cashedOut) {
+    const last = data.history && data.history[0];
+    const net = last ? (Number(last.totalWon) - Number(last.totalBet)) : 0;
+    if (net > 0) rouletteWinAnimation(net);
   }
 
   ensureCrashRaf();
@@ -14120,52 +14106,36 @@ function applyCrashState(data) {
 }
 
 async function crashPlaceBet() {
-  if (crashBusy) return;
+  if (crashBusy || crashPhase() === 'running') return;
   setCrashBusy(true);
-  try { applyCrashState(await invokeCrash({ action: 'place_bet', amount: crashBet })); }
-  catch (e) { showToast(e.message); }
-  finally { setCrashBusy(false); }
-}
-
-async function crashClearBet() {
-  if (crashBusy) return;
-  setCrashBusy(true);
-  try { applyCrashState(await invokeCrash({ action: 'clear_bet' })); }
+  try { applyCrashState(await invokeCrash({ action: 'start', bet: crashBet })); }
   catch (e) { showToast(e.message); }
   finally { setCrashBusy(false); }
 }
 
 async function crashCashOut() {
-  if (crashBusy || !crashState || !crashState.canCashout) return;
+  if (crashBusy || crashPhase() !== 'running') return;
   const m = crashDisplayMult; // the value on the WYPŁAĆ button at click time
   // Optimistically show the tap REGISTERED — a NEUTRAL „⏳ x1.50" pending state, NOT a win.
   // The client can't see the hidden crash point, so the rocket may already have blown BELOW
-  // this number; only the server can confirm. (Painting a green „won" here is what turned a
-  // real loss into a phantom win.) We flip to green ✓ or to the loss only after the reply.
-  crashState.canCashout = false; // no double-submit while the request is in flight
+  // this number; only the server can confirm. We flip to green ✓ or to the loss after the reply.
   crashCashoutPending = m;
   setCrashBusy(true);
-  updateCrashButtons(crashState.round.status, m);
+  updateCrashButtons('running', m);
   try {
     const data = await invokeCrash({ action: 'cash_out', atMultiplier: m });
     crashCashoutPending = null;
     if (data.cashedOut) showToast(`Wypłacono x${data.cashedOut.multiplier.toFixed(2)} → +${data.cashedOut.won} 🪙`);
     else if (data.notice) showToast(data.notice);
-    // The payout is authoritative; the surrounding state may be a bare outcome if the
-    // server's lock-free state read fell back — refresh from the server if so.
-    if (data.round) applyCrashState(data);
-    else loadCrashState(false);
+    applyCrashState(data); // carries cashedOut / busted / notice + the fresh snapshot
   } catch (e) { crashCashoutPending = null; showToast(e.message); loadCrashState(false); }
   finally { setCrashBusy(false); }
 }
 
-function crashPlayersLabel(n) { return n === 1 ? 'gracz' : 'graczy'; }
-
-// ── Rendering: lists update on state events; canvas + dynamic text in the RAF tick ──
+// ── Rendering: history lists update on state events; canvas + dynamic text in the RAF tick ──
 function renderCrash() {
   if (!crashState) return;
   renderCrashHistory();
-  renderCrashBets();
   renderCrashMine();
 }
 
@@ -14175,41 +14145,22 @@ function renderCrashHistory() {
   const hist = crashState.history || [];
   if (!hist.length) { box.appendChild(el('span', { className: 'crash-empty' }, 'Brak historii')); return; }
   hist.forEach(h => {
-    const cp = Number(h.crash_point);
+    const cp = Number(h.crashPoint);
     const cls = cp < 1.5 ? 'lo' : cp >= 3 ? 'hi' : 'mid';
     box.appendChild(el('div', { className: 'crash-hchip ' + cls }, 'x' + cp.toFixed(2)));
-  });
-}
-
-function renderCrashBets() {
-  const box = document.getElementById('crash-bets'); if (!box) return;
-  box.innerHTML = '';
-  const bets = crashState.bets || [];
-  if (!bets.length) { box.appendChild(el('div', { className: 'crash-empty' }, 'Nikt jeszcze nie postawił.')); return; }
-  bets.forEach(b => {
-    const row = el('div', { className: 'crash-betrow' + (b.isMe ? ' me' : '') });
-    row.append(el('span', { className: 'nm' }, b.nick + (b.isMe ? ' (Ty)' : '')));
-    let st, cls;
-    if (b.status === 'cashed') {
-      const m = b.cashed_multiplier || 1;
-      st = `x${m.toFixed(2)} • +${Math.floor(b.amount * m) - b.amount} 🪙`; cls = 'cashed';
-    } else if (b.status === 'busted') { st = `💥 −${b.amount} 🪙`; cls = 'busted'; }
-    else { st = `${b.amount} 🪙`; cls = 'active'; }
-    row.append(el('span', { className: 'st ' + cls }, st));
-    box.appendChild(row);
   });
 }
 
 function renderCrashMine() {
   const box = document.getElementById('crash-mine'); if (!box) return;
   box.innerHTML = '';
-  const rows = crashState.myResults || [];
+  const rows = crashState.history || [];
   if (!rows.length) { box.appendChild(el('div', { className: 'crash-empty' }, 'Jeszcze nie grałeś.')); return; }
   rows.forEach(r => {
-    const net = r.total_won - r.total_bet;
-    const left = r.cashout_multiplier
-      ? `Wypłata x${Number(r.cashout_multiplier).toFixed(2)}`
-      : `💥 x${Number(r.crash_point).toFixed(2)}`;
+    const net = Number(r.totalWon) - Number(r.totalBet);
+    const left = r.cashoutMultiplier
+      ? `Wypłata x${Number(r.cashoutMultiplier).toFixed(2)}`
+      : `💥 x${Number(r.crashPoint).toFixed(2)}`;
     const row = el('div', { className: 'crash-minerow' });
     row.append(el('span', {}, left));
     row.append(el('span', { className: 'st ' + (net >= 0 ? 'cashed' : 'busted') }, (net >= 0 ? '+' : '') + net + ' 🪙'));
@@ -14222,24 +14173,24 @@ function crashTick() {
   const multEl = document.getElementById('crash-multiplier');
   const statusEl = document.getElementById('crash-status');
   if (!multEl || !crashState) { drawCrashScene('betting', 0, 1, false); return; }
-  const r = crashState.round;
-  const nPlayers = (crashState.bets || []).length;
+  const r = crashState.activeRound;
   const exploding = crashExplodeStart && (Date.now() - crashExplodeStart < 1000);
   let displayMult = 1;
 
-  if (r.status === 'running') {
-    // Cap free-run past the last server sample so a backgrounded/stalled tab can't paint a
-    // runaway multiplier the rocket never reached (healthy polling resyncs every <500ms).
-    const elapsed = crashElapsedBaseMs + Math.min(Date.now() - crashPhaseStartLocal, CRASH_MAX_EXTRAPOLATION_MS);
+  if (r && r.status === 'running') {
+    // Per-frame delta-time clock: integrate REAL elapsed time each frame so the climb is smooth
+    // and never freezes. A big frame gap means the tab was backgrounded/stalled (RAF paused) →
+    // snap to the last server sample instead of integrating a giant jump past the hidden crash.
+    const now = performance.now();
+    if (crashLastFrameTs) {
+      const dt = now - crashLastFrameTs;
+      if (dt > CRASH_MAX_FRAME_MS) crashShownMs = crashServerMs; else crashShownMs += dt;
+    }
+    crashLastFrameTs = now;
+    const elapsed = crashShownMs;
     displayMult = Math.floor(Math.exp(CRASH_GROWTH * elapsed) * 100) / 100;
     drawCrashScene('running', elapsed, displayMult, false); // curve keeps climbing live
-    if (crashState.myBet && crashState.myBet.status === 'cashed') {
-      // Server-CONFIRMED cash-out → green ✓ win (this status is only set from server state).
-      const lk = crashState.myBet.cashed_multiplier ?? displayMult;
-      multEl.textContent = '✓ x' + Number(lk).toFixed(2);
-      multEl.className = 'crash-multiplier is-cashed';
-      statusEl.textContent = `Wypłacono x${Number(lk).toFixed(2)} • leci dalej…`;
-    } else if (crashCashoutPending != null) {
+    if (crashCashoutPending != null) {
       // Tap registered, awaiting the server's verdict — NEUTRAL „pending", not a win, because
       // the rocket may already have crashed below this number (we can't see the crash point).
       multEl.textContent = '⏳ x' + Number(crashCashoutPending).toFixed(2);
@@ -14248,75 +14199,51 @@ function crashTick() {
     } else {
       multEl.textContent = 'x' + displayMult.toFixed(2);
       multEl.className = 'crash-multiplier';
-      statusEl.textContent = `Leci! • ${nPlayers} ${crashPlayersLabel(nPlayers)}`;
+      statusEl.textContent = 'Leci! 🚀 Wypłać zanim wybuchnie!';
     }
-  } else if (r.status === 'crashed') {
-    displayMult = Number(r.crash_point || crashExplodeMult || 1);
-    drawCrashScene('crashed', 0, displayMult, exploding);
+  } else if (exploding) {
+    displayMult = Number(crashExplodeMult || 1);
+    drawCrashScene('crashed', 0, displayMult, true);
     multEl.textContent = 'x' + displayMult.toFixed(2) + ' 💥';
     multEl.className = 'crash-multiplier is-crashed';
-    const remain = (r.nextInMs || 0) - (Date.now() - crashLastStateMs);
-    statusEl.textContent = `Rakieta wybuchła! Nowa runda za ${Math.max(0, Math.ceil(remain / 1000))}s`;
-    crashMaybeAdvance(remain); // start the next round the moment the pause ends
+    statusEl.textContent = 'Rakieta wybuchła! Postaw, by lecieć znowu.';
   } else {
+    // Idle between flights — rocket waits on the pad.
     drawCrashScene('betting', 0, 1, false);
-    multEl.textContent = 'x1.00';
-    multEl.className = 'crash-multiplier';
-    const remain = (r.msLeft || 0) - (Date.now() - crashLastStateMs);
-    statusEl.textContent = nPlayers > 0 ? `Start za ${Math.max(0, Math.ceil(remain / 1000))}s • ${nPlayers} ${crashPlayersLabel(nPlayers)}` : 'Czekamy na zakłady…';
-    crashMaybeAdvance(remain); // launch the rocket the moment the betting window ends
+    if (crashState.cashedOut) {
+      multEl.textContent = '✓ x' + Number(crashState.cashedOut.multiplier).toFixed(2);
+      multEl.className = 'crash-multiplier is-cashed';
+      statusEl.textContent = `Wypłacono +${crashState.cashedOut.won} 🪙 • Postaw, by lecieć znowu.`;
+    } else {
+      multEl.textContent = 'x1.00';
+      multEl.className = 'crash-multiplier';
+      statusEl.textContent = 'Postaw stawkę i leć! 🚀';
+    }
   }
   crashDisplayMult = displayMult;
-  updateCrashButtons(r.status, displayMult);
-}
-
-// The phase transitions are server-side and LAZY (no cron) — when a countdown reaches
-// zero we must poke the server so it advances (launch the rocket / open the next round),
-// otherwise the round just sits there until some other event fires.
-function crashMaybeAdvance(remainMs) {
-  const now = Date.now();
-  if (remainMs > 150) return;
-  if (crashBusy || crashStateInFlight) return;
-  if (now - crashLastStateMs < 500) return; // throttle to ~2/s
-  if (now - crashLastAdvancePokeMs < 700) return;
-  // The server advance is idempotent and only ONE client needs to poke it at the
-  // boundary. A probabilistic gate keeps 20 open tabs from all hitting the singleton
-  // lock in the same RAF frame (thundering herd); whichever client wins advances it,
-  // realtime fans the new state out to everyone else.
-  if (Math.random() > 0.35) return;
-  crashLastAdvancePokeMs = now;
-  loadCrashState(false);
+  updateCrashButtons(r && r.status === 'running' ? 'running' : 'idle', displayMult);
 }
 
 function updateCrashButtons(phase, displayMult) {
   const cashBtn = document.getElementById('crash-cashout-btn');
   const betBtn = document.getElementById('crash-bet-btn');
-  if (!cashBtn || !betBtn || !crashState) return;
-  const myBet = crashState.myBet;
+  if (!cashBtn || !betBtn) return;
+  const running = phase === 'running';
 
-  if (crashCashoutPending != null && (!myBet || myBet.status === 'active')) {
+  if (crashCashoutPending != null) {
     cashBtn.disabled = true;
     cashBtn.textContent = `⏳ x${Number(crashCashoutPending).toFixed(2)}`;
-  } else if (phase === 'running' && myBet && myBet.status === 'active') {
+  } else if (running) {
     cashBtn.disabled = crashBusy;
-    cashBtn.textContent = `WYPŁAĆ @ x${displayMult.toFixed(2)}`;
-  } else if (myBet && myBet.status === 'cashed') {
-    cashBtn.disabled = true;
-    cashBtn.textContent = `✓ x${(myBet.cashed_multiplier || 1).toFixed(2)}`;
+    cashBtn.textContent = `WYPŁAĆ @ x${Number(displayMult).toFixed(2)}`;
   } else {
     cashBtn.disabled = true;
     cashBtn.textContent = 'WYPŁAĆ';
   }
 
-  if (phase === 'betting') {
-    betBtn.disabled = crashBusy;
-    if (myBet) { betBtn.textContent = `Anuluj (${myBet.amount} 🪙)`; betBtn.dataset.mode = 'cancel'; }
-    else { betBtn.textContent = `Postaw ${crashBet} 🪙`; betBtn.dataset.mode = 'place'; }
-  } else {
-    betBtn.disabled = true;
-    betBtn.textContent = 'Zakłady zamknięte';
-    betBtn.dataset.mode = 'none';
-  }
+  // Bet button launches a fresh rocket; locked (greyed) while one is in the air. The stake label
+  // (#crash-bet-label) is owned by the shared bet-bar, so only toggle disabled — never its text.
+  betBtn.disabled = running || crashBusy;
 }
 
 // ── Canvas: starfield + rising multiplier curve + the branded G6 rocket ──
@@ -14481,9 +14408,7 @@ function drawCrashScene(phase, elapsed, mult, exploding) {
     const betBtn = document.getElementById('crash-bet-btn');
     const cashBtn = document.getElementById('crash-cashout-btn');
     if (!betBtn || !cashBtn) return false;
-    betBtn.addEventListener('click', () => {
-      if (betBtn.dataset.mode === 'cancel') crashClearBet(); else crashPlaceBet();
-    });
+    betBtn.addEventListener('click', () => crashPlaceBet());
     cashBtn.addEventListener('click', crashCashOut);
     return true;
   };
@@ -15123,10 +15048,12 @@ function wireBetBar(kind, cfg) {
       }),
       wireBetBar('crash', {
         get: () => crashBet,
+        canSet: () => crashPhase() !== 'running',
         set: v => {
+          if (crashPhase() === 'running') return false;
           crashBet = v;
-          if (crashState) updateCrashButtons(crashState.round.status, crashDisplayMult);
-          else setText(document.getElementById('crash-bet-label'), v);
+          setText(document.getElementById('crash-bet-label'), v);
+          if (crashState) updateCrashButtons(crashPhase(), crashDisplayMult);
         },
       }),
     ];
