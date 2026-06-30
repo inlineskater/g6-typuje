@@ -175,7 +175,7 @@ $$;
 
 -- Persona name for an NFT instance: Hawaiian pool for the 'Ae Ae banana, else the
 -- existing gendered Slavic pools. Indexed by a PER-POOL mint order so names stay
--- unique within each pool. Hawaiian pool (14) ≥ the banana edition (5).
+-- unique within each pool. Hawaiian pool (14) ≥ the banana edition (8).
 CREATE OR REPLACE FUNCTION public.farm_nft_persona(p_species text, p_idx integer)
 RETURNS text LANGUAGE sql IMMUTABLE AS $$
   SELECT CASE public.farm_nft_pool(p_species)
@@ -261,9 +261,9 @@ INSERT INTO public.farm_card_defs (species, name, emoji, rarity, draw_weight, ba
   ('golden_sunflower', 'Złoty Słonecznik',  '🌻', 'legendary', 1, 5760,  80, 'golden_sunflower', 15),
   ('crystal_lotus',    'Kryształowy Lotos', '🪷', 'legendary', 1, 5760, 100, 'crystal_lotus',    10),
   -- Apex card: the variegated Hawaiian „Ae Ae" banana (Musa × paradisiaca 'Ae Ae'),
-  -- once reserved for Hawaiian royalty — smallest edition (5), highest yield/price,
+  -- once reserved for Hawaiian royalty — smallest edition (8), highest yield/price,
   -- so it is the rarest, most expensive and most profitable NFT in the game.
-  ('aeae_banana',      'Królewski Banan Ae Ae', '🍌', 'legendary', 1, 5760, 120, 'aeae_banana', 5)
+  ('aeae_banana',      'Królewski Banan Ae Ae', '🍌', 'legendary', 1, 5760, 120, 'aeae_banana', 8)
 ON CONFLICT (species) DO UPDATE SET
   name = EXCLUDED.name, emoji = EXCLUDED.emoji, rarity = EXCLUDED.rarity,
   draw_weight = EXCLUDED.draw_weight, base_grow_minutes = EXCLUDED.base_grow_minutes,
