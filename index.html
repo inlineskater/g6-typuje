@@ -4638,6 +4638,8 @@
     .farm-cell.mine { background: rgba(120,165,80,.3); border-color: rgba(255,255,255,.16); box-shadow: inset 0 0 0 2px rgba(255,205,100,.55); }
     .farm-cell.other { background: rgba(108,150,92,.3); border-color: rgba(255,255,255,.28); cursor: default; }
     .farm-cell.crop { background: rgba(96,140,60,.34); border-color: rgba(255,255,255,.16); }
+    .farm-cell.listed { background: rgba(190,140,65,.34); border-color: rgba(251,191,36,.45); }
+    .farm-cell.other.listed { cursor: pointer; }
     .farm-cell.unowned:hover { outline: 2px dashed var(--accent); outline-offset: -2px; }
     .farm-cell.sel, .farm-plant-cell.sel { outline: 3px solid #d97706; outline-offset: -3px; border-radius: 6px; z-index: 2; }
     .farm-cell-emoji { font-size: clamp(16px, 4vmin, 30px); line-height: 1; transform-origin: center bottom; transition: transform .45s ease, opacity .45s ease, filter .3s ease; }
@@ -4654,6 +4656,14 @@
     .farm-cell-bar-fill { height: 100%; background: linear-gradient(90deg, #fbbf24, #f59e0b); border-radius: 999px; transition: width .3s linear, background .3s; }
     .farm-cell-bar.ready .farm-cell-bar-fill { background: linear-gradient(90deg, #34d399, #16a34a); }
     .farm-cell-ready { position: absolute; top: 2px; right: 4px; color: #16a34a; font-weight: 800; font-size: 13px; }
+    .farm-sale-sign { position: absolute; top: 5px; right: 5px; z-index: 9; display: flex; flex-direction: column; align-items: center; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); transform: rotate(-4deg); }
+    .farm-sale-sign::after { content: ""; width: 2px; height: 12px; background: #7c3f13; border-radius: 2px; margin-top: -1px; }
+    .farm-sale-sign span { display: block; padding: 2px 4px; border: 1px solid #7c2d12; border-radius: 2px; background: #fff7ed; color: #9a3412; font-size: 7px; line-height: 1; font-weight: 900; letter-spacing: 0; box-shadow: inset 0 0 0 1px rgba(251,146,60,.35); white-space: nowrap; }
+    @media (max-width: 520px) {
+      .farm-sale-sign { top: 3px; right: 3px; transform: rotate(-4deg) scale(.86); transform-origin: top right; }
+      .farm-sale-sign::after { height: 9px; }
+      .farm-sale-sign span { font-size: 6px; padding: 1px 3px; }
+    }
     .farm-plant-cell { position: relative; cursor: pointer; border-radius: 6px; min-width: 0; min-height: 0; background: rgba(120,160,80,.26); border: 1px solid rgba(255,255,255,.16); }
     .farm-plant-cell.mine { outline: none; box-shadow: inset 0 0 0 2px rgba(255,205,100,.55); }
     .farm-plant-cell .garden-pot { position: absolute; top: 50%; left: 50%; width: 108px; min-height: 112px; padding: 0 6px 6px; justify-content: flex-end; transform: translate(-50%, -50%) scale(calc(var(--pot-scale, .32) * 1.18)); transform-origin: center; pointer-events: none; margin: 0; background: none; border-color: transparent; box-shadow: none; }
@@ -5000,6 +5010,7 @@
     .mlc-hero.glow-auction .mlc-glow { background: radial-gradient(circle, rgba(245,158,11,.5), transparent 65%); }
     .mlc-hero.glow-nft .mlc-glow { background: radial-gradient(circle, rgba(245,158,11,.55), transparent 65%); }
     .mlc-hero.glow-card .mlc-glow { background: radial-gradient(circle, rgba(34,197,94,.5), transparent 65%); }
+    .mlc-hero.glow-tile .mlc-glow { background: radial-gradient(circle, rgba(132,204,22,.52), transparent 65%); }
     .mlc-icon { position: relative; font-size: 56px; line-height: 1; filter: drop-shadow(0 6px 12px rgba(0,0,0,.5)); }
     .mlc-icon .farm-ico { width: 56px; height: 56px; }
     .mlc-type { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 800; color: #fff; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 2px 9px; }
@@ -5105,6 +5116,7 @@
     .ml-item-badge { display: inline-block; margin: 0 auto 4px; padding: 2px 9px; border-radius: 999px; font-size: 10px; font-weight: 900; }
     .ml-item-badge.nft { background: linear-gradient(160deg, #fff7e0, #ffe2a6); color: #b45309; border: 1px solid #f0c060; }
     .ml-item-badge.card { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+    .ml-item-badge.tile { background: rgba(132,204,22,.14); color: #3f6212; border: 1px solid rgba(101,163,13,.35); }
   </style>
 </head>
 <body>
@@ -6866,6 +6878,7 @@
         <button class="shop-category-filter active" type="button" data-kind="good" style="flex:1;padding:8px 10px">🛍️ Usługa / rzecz</button>
         <button class="shop-category-filter" type="button" data-kind="farm_card" style="flex:1;padding:8px 10px">🃏 Karta rośliny</button>
         <button class="shop-category-filter" type="button" data-kind="farm_nft" style="flex:1;padding:8px 10px">💎 Karta NFT</button>
+        <button class="shop-category-filter" type="button" data-kind="farm_tile" style="flex:1;padding:8px 10px">🌱 Działka</button>
       </div>
     </div>
     <div id="ml-good-fields">
@@ -12314,16 +12327,22 @@ async function createMarketplaceListing(emoji, title, desc, listingType, price, 
 // Farm item listings (Phase 2): list an owned NFT instance or a fungible plant-card
 // duplicate. The item is reserved server-side at create; shares the bid/escrow engine.
 const ML_FARM_ERR = {
-  not_owner: 'To nie twój przedmiot.', already_listed: 'Ta karta NFT jest już wystawiona.',
+  not_owner: 'To nie twój przedmiot.', already_listed: 'Ten przedmiot jest już wystawiony.',
   no_duplicate: 'Nie masz wolnego duplikatu tej karty.', nft_not_found: 'Nie znaleziono karty NFT.',
+  tile_not_owned: 'To nie jest kupiona działka.', tile_occupied: 'Ta działka nie jest pusta.',
+  zen_tile: 'Roślinki z Ogródka nie można wystawić jako działki.', bad_coords: 'Pole poza farmą.',
   bad_price: 'Podaj cenę większą od 0.', use_nft_listing: 'Tę kartę wystaw jako NFT.',
 };
 async function createFarmListing(kind, ref, listingType, price, hours, incr, btn) {
   btn.disabled = true; btn.textContent = 'Wystawiam…';
-  const fn = kind === 'farm_nft' ? 'create_farm_nft_listing' : 'create_farm_card_listing';
+  const fn = kind === 'farm_nft' ? 'create_farm_nft_listing'
+           : kind === 'farm_tile' ? 'create_farm_tile_listing'
+           : 'create_farm_card_listing';
   const args = kind === 'farm_nft'
     ? { p_instance_id: ref, p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr }
-    : { p_species: ref, p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr };
+    : kind === 'farm_tile'
+      ? { p_x: Number(ref.x), p_y: Number(ref.y), p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr }
+      : { p_species: ref, p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr };
   const { error } = await sb.rpc(fn, args);
   btn.disabled = false; btn.textContent = 'Wystaw ogłoszenie';
   if (error) {
@@ -12331,13 +12350,19 @@ async function createFarmListing(kind, ref, listingType, price, hours, incr, btn
     showToast('❌ ' + (ML_FARM_ERR[slug] || error.message));
     return;
   }
-  showToast('✅ Karta wystawiona na Targowisku!');
+  showToast(kind === 'farm_tile' ? '✅ Działka wystawiona na Targowisku!' : '✅ Karta wystawiona na Targowisku!');
   hide(document.getElementById('ml-overlay'));
-  await ensureFarmData();   // refresh owned items (count/instance reserved)
+  await ensureFarmData({ force: true });   // refresh owned items (count/instance reserved)
+  if (kind === 'farm_tile') {
+    const tile = fmTiles.get(ref.x + ',' + ref.y);
+    if (tile) tile.listed = true;
+    renderFarmBoard(); renderFarmSelection();
+  }
   loadShop();
 }
 
 async function buyMarketplaceListing(listingId, price, btn) {
+  const listing = marketplaceListings.find(l => l.id === listingId);
   btn.disabled = true;
   btn.textContent = 'Kupuję…';
   const { data, error } = await sb.rpc('buy_marketplace_listing', { p_listing_id: listingId });
@@ -12345,6 +12370,9 @@ async function buyMarketplaceListing(listingId, price, btn) {
     const msg = error.message.includes('insufficient') ? 'Za mało coinów!'
               : error.message.includes('listing_not_open') ? 'Ogłoszenie już nieaktywne!'
               : error.message.includes('cannot_buy_own') ? 'Nie możesz kupić własnej oferty!'
+              : error.message.includes('tile_not_available') ? 'Ta działka nie jest już dostępna.'
+              : error.message.includes('tile_occupied') ? 'Ta działka nie jest już pusta.'
+              : error.message.includes('tile_not_listed') ? 'Ta działka nie jest już wystawiona.'
               : error.message;
     showToast('❌ ' + msg);
     btn.disabled = false;
@@ -12355,8 +12383,9 @@ async function buyMarketplaceListing(listingId, price, btn) {
     me.coins = data.coins_left;
     setText(headerCoins, me.coins);
   }
-  showToast('✅ Kupiono! Skontaktuj się ze sprzedającym.');
-  loadShop();
+  showToast(listing?.item_kind === 'farm_tile' ? '✅ Kupiono działkę w Ogródku!' : '✅ Kupiono! Skontaktuj się ze sprzedającym.');
+  await loadShop();
+  if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
 async function placeMarketplaceBid(listingId, amount, btn) {
@@ -12386,6 +12415,7 @@ async function placeMarketplaceBid(listingId, amount, btn) {
 }
 
 async function settleMarketplaceListing(listingId, btn) {
+  const listing = marketplaceListings.find(l => l.id === listingId);
   btn.disabled = true;
   btn.textContent = 'Rozstrzygam…';
   const { data, error } = await sb.rpc('settle_marketplace_listing', { p_listing_id: listingId });
@@ -12396,14 +12426,18 @@ async function settleMarketplaceListing(listingId, btn) {
     return;
   }
   if (data?.status === 'settled') {
-    showToast(data.buyer_id === me?.id ? '🏆 Wygrałeś aukcję!' : '✅ Aukcja rozstrzygnięta. Sprzedający otrzymał coiny!');
+    showToast(listing?.item_kind === 'farm_tile'
+      ? (data.buyer_id === me?.id ? '🏆 Wygrałeś aukcję działki!' : '✅ Aukcja działki rozstrzygnięta.')
+      : (data.buyer_id === me?.id ? '🏆 Wygrałeś aukcję!' : '✅ Aukcja rozstrzygnięta. Sprzedający otrzymał coiny!'));
   } else {
     showToast('✅ Aukcja zakończona bez ofert.');
   }
-  loadShop();
+  await loadShop();
+  if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
 async function cancelMarketplaceListing(listingId, btn) {
+  const listing = marketplaceListings.find(l => l.id === listingId);
   btn.disabled = true;
   btn.textContent = 'Anulowanie…';
   const { error } = await sb.rpc('cancel_marketplace_listing', { p_listing_id: listingId });
@@ -12414,7 +12448,8 @@ async function cancelMarketplaceListing(listingId, btn) {
     return;
   }
   showToast('✅ Ogłoszenie anulowane.');
-  loadShop();
+  await loadShop();
+  if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
 // Marketplace listing card — same polished card language as the lootbox offer.
@@ -12429,6 +12464,7 @@ function buildMarketplaceCard(listing) {
   const plnum = n => Number(n || 0).toLocaleString('pl-PL');
   const glowClass = listing.item_kind === 'farm_nft' ? 'glow-nft'
                   : listing.item_kind === 'farm_card' ? 'glow-card'
+                  : listing.item_kind === 'farm_tile' ? 'glow-tile'
                   : (isFixed ? 'glow-fixed' : 'glow-auction');
 
   const card = el('div', { className: 'mlc-card' + (!isOpen ? ' is-closed' : '') });
@@ -12444,6 +12480,7 @@ function buildMarketplaceCard(listing) {
     el('div', { className: 'mlc-pricetag' }, plnum(priceVal) + ' 🪙')));
   if (listing.item_kind === 'farm_nft') body.appendChild(el('div', { className: 'ml-item-badge nft' }, '💎 Karta NFT #' + listing.nft_serial + '/' + listing.nft_edition));
   else if (listing.item_kind === 'farm_card') body.appendChild(el('div', { className: 'ml-item-badge card' }, '🃏 Karta rośliny (Ogródek)'));
+  else if (listing.item_kind === 'farm_tile') body.appendChild(el('div', { className: 'ml-item-badge tile' }, '🌱 Działka [' + listing.farm_tile_x + ',' + listing.farm_tile_y + ']'));
   body.appendChild(el('div', { className: 'mlc-seller' }, '👤 Wystawia: ' + (listing.seller_nick || '?')));
   if (listing.description) body.appendChild(el('div', { className: 'mlc-desc' }, listing.description));
 
@@ -13167,7 +13204,8 @@ document.getElementById('btn-ml-history')?.addEventListener('click', openMarketp
 
 // Marketplace new-listing modal
 const mlOverlay = document.getElementById('ml-overlay');
-document.getElementById('btn-new-listing').addEventListener('click', () => {
+document.getElementById('btn-new-listing').addEventListener('click', () => openMarketplaceListingModal());
+function openMarketplaceListingModal(opts = {}) {
   // Reset form
   mlIcon = '🛍️';
   mlListingType = 'fixed';
@@ -13184,35 +13222,54 @@ document.getElementById('btn-new-listing').addEventListener('click', () => {
   document.getElementById('ml-type-toggle').querySelectorAll('button').forEach(b => {
     b.classList.toggle('active', b.dataset.type === 'fixed');
   });
-  mlSetSellKind('good');
+  mlSetSellKind(opts.kind || 'good', opts.ref || '');
   show(mlOverlay);
-});
+}
 document.getElementById('ml-close').addEventListener('click', () => hide(mlOverlay));
 mlOverlay.addEventListener('click', e => { if (e.target === mlOverlay) hide(mlOverlay); });
 
-// "What are you selling?" — IRL good vs a Farma plant card / NFT.
+// "What are you selling?" — IRL good vs a Farma plant card / NFT / territory.
 let mlSellKind = 'good';
-function mlSetSellKind(kind) {
+function mlSetSellKind(kind, preselect = '') {
   mlSellKind = kind;
   document.getElementById('ml-sell-kind').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.kind === kind));
   document.getElementById('ml-good-fields').style.display = kind === 'good' ? '' : 'none';
   document.getElementById('ml-item-field').style.display = kind === 'good' ? 'none' : '';
-  if (kind !== 'good') mlPopulateItemPicker(kind);
+  if (kind !== 'good') mlPopulateItemPicker(kind, preselect);
 }
-async function mlPopulateItemPicker(kind) {
+async function mlPopulateItemPicker(kind, preselect = '') {
   const sel = document.getElementById('ml-item-select');
   const hint = document.getElementById('ml-item-hint');
+  const label = document.querySelector('#ml-item-field .field-label');
+  if (label) label.textContent = kind === 'farm_tile' ? 'Wybierz działkę z Ogródka' : 'Wybierz przedmiot z Ogródka';
   sel.replaceChildren(el('option', { value: '' }, 'Ładowanie…'));
   await ensureFarmData();
   sel.replaceChildren();
   if (kind === 'farm_nft') {
-    const mine = fmNft.filter(n => n.owner_id === me?.id);
+    const mine = fmNft.filter(n => n.owner_id === me?.id && !n.listed);
     if (!mine.length) { sel.append(el('option', { value: '' }, 'Brak kart NFT')); hint.textContent = 'Zdobądź kartę NFT ze skrzynki, aby ją wystawić.'; return; }
     mine.sort((a, b) => a.species.localeCompare(b.species) || a.serial_no - b.serial_no).forEach(n => {
       const def = fmDefs.get(n.species);
       sel.append(el('option', { value: n.id }, (def?.emoji || '💎') + ' ' + (n.nft_name || def?.name || n.species) + ' #' + n.serial_no + '/' + n.edition_size));
     });
     hint.textContent = 'Sprzedajesz konkretny, numerowany egzemplarz NFT.';
+  } else if (kind === 'farm_tile') {
+    const tiles = [];
+    fmTiles.forEach((t, key) => {
+      if (t.owner_id !== me?.id) return;
+      if (t.acquired_via === 'migration' || t.planted_species || t.listed) return;
+      const [x, y] = key.split(',').map(Number);
+      tiles.push({ x, y, key, value: Number(t.asset_value || 0) });
+    });
+    if (!tiles.length) {
+      sel.append(el('option', { value: '' }, 'Brak pustych działek'));
+      hint.textContent = 'Możesz wystawić tylko pustą, niewystawioną działkę z Farmy.';
+      return;
+    }
+    tiles.sort((a, b) => a.y - b.y || a.x - b.x).forEach(t => {
+      sel.append(el('option', { value: t.key }, '🌱 Działka [' + t.x + ',' + t.y + ']' + (t.value ? ' · wartość ' + t.value + ' 🪙' : '')));
+    });
+    hint.textContent = 'Po wystawieniu na polu pojawi się tabliczka FOR SALE i nie będzie można sadzić do czasu sprzedaży albo anulowania.';
   } else {
     const owned = fmCollection.filter(c => c.count >= 1 && !(fmDefs.get(c.species)?.edition_size != null));
     if (!owned.length) { sel.append(el('option', { value: '' }, 'Brak wolnych duplikatów')); hint.textContent = 'Potrzebujesz co najmniej jednego duplikatu karty (poza NFT).'; return; }
@@ -13222,6 +13279,7 @@ async function mlPopulateItemPicker(kind) {
     });
     hint.textContent = 'Sprzedajesz jeden duplikat (poziom 1). Twój poziom karty zostaje nienaruszony.';
   }
+  if (preselect && [...sel.options].some(o => o.value === preselect)) sel.value = preselect;
 }
 document.getElementById('ml-sell-kind').addEventListener('click', e => {
   const btn = e.target.closest('button[data-kind]'); if (!btn) return;
@@ -13255,7 +13313,10 @@ document.getElementById('ml-submit').addEventListener('click', () => {
   } else {
     const ref = document.getElementById('ml-item-select').value;
     if (!ref) { showToast('❌ Wybierz przedmiot do sprzedaży.'); return; }
-    createFarmListing(mlSellKind, ref, mlListingType, price, hours, incr, btn);
+    const listingRef = mlSellKind === 'farm_tile'
+      ? { x: Number(ref.split(',')[0]), y: Number(ref.split(',')[1]) }
+      : ref;
+    createFarmListing(mlSellKind, listingRef, mlListingType, price, hours, incr, btn);
   }
 });
 
@@ -21824,6 +21885,7 @@ const FARM_ERR = {
   tile_not_owned: 'To nie jest kupiona działka.',
   not_your_tile: 'To nie twoja działka.',
   tile_occupied: 'Na tej działce już coś rośnie.',
+  tile_listed: 'Ta działka jest wystawiona na sprzedaż.',
   bad_species: 'Nieznana roślina.',
   tile_empty: 'Działka jest pusta.',
   not_ready: 'Plon jeszcze nie dojrzał.',
@@ -21832,7 +21894,7 @@ const FARM_ERR = {
   bad_qty: 'Zła ilość.',
 };
 
-let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, planted_species, planted_level, planted_at, ready_at, nick, zen }
+let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, listed, asset_value, planted_species, planted_level, planted_at, ready_at, nick, zen }
 let fmDefs = new Map();         // species -> def row
 let fmZen = new Map();          // owner_id -> { type, stage, name } (existing Ogródek plant shown on the home tile)
 let fmCollection = [];          // [{species,count,level}]
@@ -21946,6 +22008,8 @@ function normalizeFarmTile(t) {
   return {
     owner_id: t.owner_id,
     acquired_via: t.acquired_via || null,
+    listed: !!t.listed,
+    asset_value: Number(t.asset_value || 0),
     planted_species: t.planted_species || null,
     planted_level: t.planted_level || null,
     planted_at: t.planted_at || null,
@@ -21964,13 +22028,13 @@ async function loadFarm() {
   const seq = ++fmLoadSeq;
   try {
     const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes] = await Promise.all([
-      sb.from('farm_tiles').select('x,y,owner_id,acquired_via,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
+      sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
       sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('gardens').select('*, profiles(nick)'),
-      sb.from('farm_nft_instances').select('species,serial_no,edition_size,owner_id,nft_name'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
       sb.from('farm_user_state').select('boxes,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
     ]);
     if (seq !== fmLoadSeq) return;
@@ -22234,6 +22298,10 @@ function renderFarmBoard() {
         cell.title = 'Wolna działka — kliknij, by kupić';
       } else {
         cell.classList.add(tile.owner_id === me?.id ? 'mine' : 'other');
+        if (tile.listed) {
+          cell.classList.add('listed');
+          cell.title = 'Działka wystawiona na sprzedaż';
+        }
         if (tile.planted_species) {
           cell.classList.add('crop');
           const def = fmDefs.get(tile.planted_species);
@@ -22253,6 +22321,9 @@ function renderFarmBoard() {
           if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
         } else {
           cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.owner_id === me?.id ? 'Ty' : (tile.nick || '?')));
+        }
+        if (tile.listed) {
+          cell.appendChild(el('span', { className: 'farm-sale-sign', 'aria-label': 'For sale' }, el('span', {}, 'FOR SALE')));
         }
       }
       cell.addEventListener('click', () => {
@@ -22516,14 +22587,34 @@ function renderFarmSelectionBody() {
   }
   if (tile.owner_id !== me?.id) {
     box.append(el('div', { className: 'farm-card-sub' }, 'Właściciel: ' + (tile.nick || 'inny gracz')));
+    if (tile.listed) {
+      const go = el('button', { className: 'farm-mini-btn primary', style: { marginTop: '8px' } }, '🏷️ Zobacz ofertę na Targowisku');
+      go.addEventListener('click', () => { closeFarmModal(); openShopSection('marketplace-section'); });
+      box.append(el('div', { className: 'farm-card-sub' }, 'Ta działka jest wystawiona na sprzedaż.'), go);
+    }
     if (tile.planted_species) {
       const def = fmDefs.get(tile.planted_species);
       box.append(el('div', { className: 'farm-card-sub' }, 'Rośnie: ' + (def ? def.emoji + ' ' + def.name : tile.planted_species)));
     }
     return;
   }
+  if (tile.listed) {
+    const go = el('button', { className: 'farm-mini-btn primary' }, '🏷️ Otwórz Targowisko');
+    go.addEventListener('click', () => { closeFarmModal(); openShopSection('marketplace-section'); });
+    box.append(
+      el('div', { className: 'farm-card-sub' }, 'Działka jest wystawiona na sprzedaż. Do czasu sprzedaży albo anulowania nie można tu sadzić.'),
+      go);
+    return;
+  }
   if (!tile.planted_species) {
     box.append(el('div', { className: 'farm-card-sub', style: { marginBottom: '6px' } }, 'Twoja pusta działka — zasadź roślinę:'));
+    const sellTileBtn = el('button', { className: 'farm-mini-btn', style: { marginBottom: '8px' } }, '🏷️ Wystaw działkę na Targowisku');
+    sellTileBtn.addEventListener('click', () => {
+      const ref = fmSel.x + ',' + fmSel.y;
+      closeFarmModal();
+      openMarketplaceListingModal({ kind: 'farm_tile', ref });
+    });
+    box.append(sellTileBtn);
     const plantedCounts = new Map();
     fmTiles.forEach(t => {
       if (t.owner_id === me?.id && t.planted_species) {
@@ -22868,15 +22959,16 @@ function openFarmModalShell(title) {
 
 // Load the farm data maps if not already populated (e.g. opened from Portfel
 // before the Ogródek tab was ever visited). Mirrors loadFarm()'s queries.
-async function ensureFarmData() {
-  if (fmDefs.size && fmMarket.size) return;
+async function ensureFarmData(opts = {}) {
+  if (!opts.force && fmDefs.size && fmMarket.size && fmTiles.size) return;
   try {
-    const [defsRes, colRes, invRes, mktRes, nftRes, stateRes] = await Promise.all([
+    const [defsRes, colRes, invRes, mktRes, nftRes, tilesRes, stateRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
-      sb.from('farm_nft_instances').select('species,serial_no,edition_size,owner_id,nft_name'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
+      sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at, profiles(nick)'),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     fmDefs = new Map(); (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
@@ -22884,6 +22976,10 @@ async function ensureFarmData() {
     buildFarmInventory(invRes.data || []);
     fmMarket = new Map(); (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, normalizeFarmMarket(m)));
     fmNft = nftRes.data || [];
+    fmTiles = new Map();
+    (tilesRes.data || []).forEach(t => fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)));
+    fmOwnedTileCountHint = 0;
+    fmTiles.forEach(t => { if (t.owner_id === me?.id) fmOwnedTileCountHint++; });
     applyFarmUserState(stateRes.data);
   } catch (e) { console.error('ensureFarmData', e); }
 }
@@ -23527,7 +23623,7 @@ async function openFarmNftExplorer(species) {
 
   try {
     const [instRes, trRes] = await Promise.all([
-      sb.from('farm_nft_instances').select('id,serial_no,edition_size,owner_id,nft_name').eq('species', species).order('serial_no'),
+      sb.from('farm_nft_instances').select('id,serial_no,edition_size,owner_id,nft_name,listed').eq('species', species).order('serial_no'),
       sb.from('farm_nft_transfers').select('serial_no,from_owner,to_owner,price,kind,created_at').eq('species', species).order('created_at'),
     ]);
     const insts = instRes.data || [];
@@ -24000,7 +24096,7 @@ async function buyFarmTile(x, y, btn) {
   if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
   if (typeof data.tile_vouchers === 'number') fmVouchers = data.tile_vouchers;
   const viaVoucher = data.via === 'voucher';
-  fmTiles.set(x + ',' + y, { owner_id: me.id, acquired_via: viaVoucher ? 'lootbox' : 'purchase', planted_species: null, planted_level: null, planted_at: null, ready_at: null, nick: me.nick, zen_garden_id: null, zenAnchor: null, zenCover: false, zenAnchorKey: null });
+  fmTiles.set(x + ',' + y, { owner_id: me.id, acquired_via: viaVoucher ? 'lootbox' : 'purchase', listed: false, asset_value: viaVoucher ? 0 : Number(data.price || 0), planted_species: null, planted_level: null, planted_at: null, ready_at: null, nick: me.nick, zen_garden_id: null, zenAnchor: null, zenCover: false, zenAnchorKey: null });
   fmOwnedTileCountHint = farmOwnedTileCount();
   showToast(viaVoucher ? '🎁 Postawiłeś działkę za darmo!' : ('🌱 Kupiłeś działkę za ' + data.price + ' 🪙!'));
   renderFarmBoard(); renderFarmSelection();
@@ -24015,7 +24111,7 @@ async function loadFarmLootbox() {
     const [defsRes, colRes, nftRes, tilesRes, stateRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      sb.from('farm_nft_instances').select('species,serial_no,edition_size,owner_id,nft_name'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed'),
       me ? sb.from('farm_tiles').select('owner_id').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
@@ -24155,7 +24251,7 @@ async function openFarmLootbox(btn) {
     const existing = fmCollection.find(x => x.species === c.species);
     if (existing) existing.count = c.new_count; else fmCollection.push({ species: c.species, count: c.new_count, level: 1 });
     if (!fmDefs.has(c.species)) fmDefs.set(c.species, { species: c.species, name: c.name, emoji: c.emoji, rarity: c.rarity, crop_type: c.species, draw_weight: 0, edition_size: c.nft ? c.edition_size : null });
-    if (c.nft) fmNft.push({ species: c.species, serial_no: c.serial_no, edition_size: c.edition_size, owner_id: me.id, nft_name: c.nft_name });
+    if (c.nft) fmNft.push({ id: c.id, species: c.species, serial_no: c.serial_no, edition_size: c.edition_size, owner_id: me.id, nft_name: c.nft_name, listed: false });
   });
   renderFarmLootboxStore();
   playFarmPackOpening(cards);
@@ -24253,6 +24349,7 @@ async function plantCrop(x, y, species, btn) {
   const { data, error } = await sb.rpc('plant_crop', { p_x: x, p_y: y, p_species: species });
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   const tile = fmTiles.get(x + ',' + y) || { owner_id: me.id, nick: me.nick };
+  tile.listed = false;
   tile.planted_species = species; tile.planted_level = data.level;
   tile.planted_at = new Date().toISOString(); tile.ready_at = data.ready_at;
   fmTiles.set(x + ',' + y, tile);
@@ -24326,11 +24423,13 @@ function applyFarmTileChange(payload) {
     fmTiles.set(key, {
       owner_id: r.owner_id,
       acquired_via: r.acquired_via || prev.acquired_via || null,
+      listed: !!r.listed,
+      asset_value: Number(r.asset_value || 0),
       planted_species: r.planted_species || null,
       planted_level: r.planted_level || null,
       planted_at: r.planted_at || null,
       ready_at: r.ready_at || null,
-      nick: prev.nick || (r.owner_id === me?.id ? me?.nick : null),
+      nick: prev.owner_id === r.owner_id ? prev.nick : (r.owner_id === me?.id ? me?.nick : null),
       zen_garden_id: r.zen_garden_id || prev.zen_garden_id || null,
       zenAnchor: null, zenCover: false, zenAnchorKey: null,
     });

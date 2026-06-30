@@ -44,8 +44,10 @@ CREATE TABLE IF NOT EXISTS public.farm_tiles (
   x               integer NOT NULL,
   y               integer NOT NULL,
   owner_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  acquired_via    text NOT NULL DEFAULT 'purchase' CHECK (acquired_via IN ('migration','purchase','lootbox')),
+  acquired_via    text NOT NULL DEFAULT 'purchase' CHECK (acquired_via IN ('migration','purchase','lootbox','marketplace')),
   acquired_at     timestamptz NOT NULL DEFAULT now(),
+  listed          boolean NOT NULL DEFAULT false,
+  asset_value     integer NOT NULL DEFAULT 0 CHECK (asset_value >= 0),
   planted_species text,                   -- NULL = empty owned tile
   planted_level   integer,                -- card level snapshot at plant time
   planted_at      timestamptz,
@@ -56,6 +58,21 @@ CREATE INDEX IF NOT EXISTS farm_tiles_owner_idx ON public.farm_tiles(owner_id);
 -- Links a migration tile to the specific gardens row it displays (one tile per
 -- plant, so owners with two Ogródek plants get two migration tiles).
 ALTER TABLE public.farm_tiles ADD COLUMN IF NOT EXISTS zen_garden_id uuid;
+ALTER TABLE public.farm_tiles ADD COLUMN IF NOT EXISTS listed boolean NOT NULL DEFAULT false;
+ALTER TABLE public.farm_tiles ADD COLUMN IF NOT EXISTS asset_value integer NOT NULL DEFAULT 0;
+DO $$ BEGIN
+  ALTER TABLE public.farm_tiles DROP CONSTRAINT IF EXISTS farm_tiles_acquired_via_check;
+  ALTER TABLE public.farm_tiles
+    ADD CONSTRAINT farm_tiles_acquired_via_check CHECK (acquired_via IN ('migration','purchase','lootbox','marketplace'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER TABLE public.farm_tiles
+    ADD CONSTRAINT farm_tiles_asset_value_chk CHECK (asset_value >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER TABLE public.farm_tiles
+    ADD CONSTRAINT farm_tiles_listed_empty_chk CHECK (NOT listed OR planted_species IS NULL);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Per-user plant-card pile: duplicate count + level per species.
 CREATE TABLE IF NOT EXISTS public.farm_collection (
@@ -373,8 +390,9 @@ BEGIN
   RETURNING tile_vouchers INTO v_vouchers;
   IF FOUND THEN v_voucher := true; ELSE v_price := v_price; END IF;
 
-  INSERT INTO public.farm_tiles (x, y, owner_id, acquired_via)
-  VALUES (p_x, p_y, v_user, CASE WHEN v_voucher THEN 'lootbox' ELSE 'purchase' END)
+  INSERT INTO public.farm_tiles (x, y, owner_id, acquired_via, asset_value)
+  VALUES (p_x, p_y, v_user, CASE WHEN v_voucher THEN 'lootbox' ELSE 'purchase' END,
+          CASE WHEN v_voucher THEN 0 ELSE v_price END)
   ON CONFLICT (x, y) DO NOTHING
   RETURNING owner_id INTO v_claimed;
   IF v_claimed IS NULL THEN RAISE EXCEPTION 'tile_taken'; END IF;
@@ -605,7 +623,7 @@ BEGIN
       'species', v_species, 'name', v_def.name, 'emoji', v_def.emoji,
       'rarity', v_def.rarity, 'new_count', v_new_count);
     IF v_def.edition_size IS NOT NULL THEN
-      v_card := v_card || jsonb_build_object('nft', true, 'serial_no', v_serial, 'edition_size', v_def.edition_size, 'nft_name', v_nft_name);
+      v_card := v_card || jsonb_build_object('nft', true, 'id', v_nft_id, 'serial_no', v_serial, 'edition_size', v_def.edition_size, 'nft_name', v_nft_name);
     END IF;
     v_cards := v_cards || v_card;
     v_got := v_got + 1;
@@ -694,6 +712,7 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'tile_not_owned'; END IF;
   IF v_tile.owner_id <> v_user THEN RAISE EXCEPTION 'not_your_tile'; END IF;
   IF v_tile.acquired_via = 'migration' THEN RAISE EXCEPTION 'zen_tile'; END IF;  -- plant block, not farmland
+  IF v_tile.listed THEN RAISE EXCEPTION 'tile_listed'; END IF;
   IF v_tile.planted_species IS NOT NULL THEN RAISE EXCEPTION 'tile_occupied'; END IF;
 
   SELECT * INTO v_def FROM public.farm_card_defs WHERE species = p_species AND is_active;

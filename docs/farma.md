@@ -281,11 +281,11 @@ Jak działają:
 - **liczą się do majątku** (Net Worth) — każda sztuka warta `round(20000 / edycja)` 🪙 (rzadsza edycja = więcej),
 - swoje numery widać w **🎒 Ekwipunku** (sekcja „💎 Karty NFT"), a podaż i Twoje numery w **📖 Katalogu**.
 
-Odsprzedaż NFT innym graczom (przez Targowisko) jest planowana w kolejnej fazie (patrz `nft.txt`).
+Odsprzedaż kart NFT, duplikatów kart roślin oraz pustych działek działa przez **Targowisko**. Działka wystawiona na sprzedaż dostaje na planszy małą tabliczkę **FOR SALE** i do czasu sprzedaży albo anulowania nie można na niej sadzić.
 
 ## Normalne karty a majątek
 
-Posiadane karty roślin też liczą się do Net Worth, wyceniane po rzadkości: **zwykła 20**, **rzadka 50**, **epicka 150** 🪙 za sztukę (karty NFT są wyceniane osobno, jako instancje — patrz wyżej). Do tego dochodzą: kupione działki i coiny wydane na ulepszenia (`farm_tile_buy` + `card_levelup`) oraz plony w magazynie po aktualnej cenie rynkowej.
+Posiadane karty roślin też liczą się do Net Worth, wyceniane po rzadkości: **zwykła 20**, **rzadka 50**, **epicka 150** 🪙 za sztukę (karty NFT są wyceniane osobno, jako instancje — patrz wyżej). Do tego dochodzą: aktualnie posiadane działki według `farm_tiles.asset_value`, coiny wydane na ulepszenia (`card_levelup`) oraz plony w magazynie po aktualnej cenie rynkowej.
 
 ## Pomoc w aplikacji
 

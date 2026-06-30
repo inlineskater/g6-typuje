@@ -1,12 +1,13 @@
--- Phase 2: sell Farma plant cards & serialized NFT cards between players, reusing
+-- Phase 2: sell Farma plant cards, serialized NFT cards, and empty territories between players, reusing
 -- the Targowisko (marketplace) auction/escrow engine. Run AFTER marketplace.sql
 -- and farm.sql. Idempotent (ALTER ... IF NOT EXISTS / CREATE OR REPLACE).
 --
 -- What this adds:
---   • item linkage on marketplace_listings (item_kind + nft_instance_id / card_species)
+--   • item linkage on marketplace_listings (item_kind + nft_instance_id / card_species / farm tile coords)
 --   • a `listed` reservation flag on farm_nft_instances (can't double-list / lose it)
+--   • a `listed` reservation flag on farm_tiles (can't plant / double-list while for sale)
 --   • farm_nft_transfers: full provenance + price history per NFT (mint + each sale)
---   • create_farm_nft_listing / create_farm_card_listing (reserve the item at create)
+--   • create_farm_nft_listing / create_farm_card_listing / create_farm_tile_listing (reserve the item at create)
 --   • item-aware buy / settle / cancel (transfer ownership on sale, release on cancel)
 --   • marketplace_cards view extended with the item columns for rendering
 --
@@ -17,13 +18,73 @@
 ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS item_kind       text;
 ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS nft_instance_id uuid REFERENCES public.farm_nft_instances(id) ON DELETE SET NULL;
 ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS card_species    text REFERENCES public.farm_card_defs(species);
+ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS farm_tile_x     integer;
+ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS farm_tile_y     integer;
 DO $$ BEGIN
+  ALTER TABLE public.marketplace_listings DROP CONSTRAINT IF EXISTS marketplace_item_kind_chk;
   ALTER TABLE public.marketplace_listings
-    ADD CONSTRAINT marketplace_item_kind_chk CHECK (item_kind IS NULL OR item_kind IN ('farm_nft','farm_card'));
+    ADD CONSTRAINT marketplace_item_kind_chk CHECK (item_kind IS NULL OR item_kind IN ('farm_nft','farm_card','farm_tile'));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Reserve flag: an NFT instance that is currently listed for sale.
 ALTER TABLE public.farm_nft_instances ADD COLUMN IF NOT EXISTS listed boolean NOT NULL DEFAULT false;
+
+-- Reserve/value fields for territories listed on Targowisko.
+ALTER TABLE public.farm_tiles ADD COLUMN IF NOT EXISTS listed boolean NOT NULL DEFAULT false;
+ALTER TABLE public.farm_tiles ADD COLUMN IF NOT EXISTS asset_value integer NOT NULL DEFAULT 0;
+DO $$ BEGIN
+  ALTER TABLE public.farm_tiles DROP CONSTRAINT IF EXISTS farm_tiles_acquired_via_check;
+  ALTER TABLE public.farm_tiles
+    ADD CONSTRAINT farm_tiles_acquired_via_check CHECK (acquired_via IN ('migration','purchase','lootbox','marketplace'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER TABLE public.farm_tiles
+    ADD CONSTRAINT farm_tiles_asset_value_chk CHECK (asset_value >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER TABLE public.farm_tiles
+    ADD CONSTRAINT farm_tiles_listed_empty_chk CHECK (NOT listed OR planted_species IS NULL);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+CREATE INDEX IF NOT EXISTS farm_tiles_listed_idx ON public.farm_tiles(listed) WHERE listed;
+
+-- Existing purchased tiles were historically valued from their farm_tile_buy
+-- ledger row. Move that cost basis onto the current tile so ownership transfers
+-- can move land value with the tile.
+DO $$
+BEGIN
+  IF to_regclass('public.coin_transactions') IS NOT NULL THEN
+    EXECUTE $sql$
+      UPDATE public.farm_tiles ft
+         SET asset_value = COALESCE((
+          SELECT (ct.meta->>'price')::integer
+            FROM public.coin_transactions ct
+           WHERE ct.user_id = ft.owner_id
+             AND ct.reason = 'farm_tile_buy'
+             AND ct.meta ? 'price'
+             AND ct.meta ? 'x'
+             AND ct.meta ? 'y'
+             AND (ct.meta->>'x')::integer = ft.x
+             AND (ct.meta->>'y')::integer = ft.y
+           ORDER BY ct.created_at DESC
+           LIMIT 1
+        ), ft.asset_value)
+       WHERE ft.asset_value = 0
+         AND ft.acquired_via = 'purchase'
+         AND EXISTS (
+          SELECT ct.meta
+            FROM public.coin_transactions ct
+           WHERE ct.user_id = ft.owner_id
+             AND ct.reason = 'farm_tile_buy'
+             AND ct.meta ? 'price'
+             AND ct.meta ? 'x'
+             AND ct.meta ? 'y'
+             AND (ct.meta->>'x')::integer = ft.x
+             AND (ct.meta->>'y')::integer = ft.y
+           LIMIT 1
+        )
+    $sql$;
+  END IF;
+END $$;
 
 -- Provenance + price log for serialized NFTs (public showcase, like the instances).
 -- One row per ownership event: 'mint' (price NULL) and each 'sale' (price = coins paid).
@@ -62,7 +123,9 @@ SELECT ni.id, ni.species, ni.serial_no, NULL, ni.owner_id, NULL, 'mint', ni.acqu
 CREATE OR REPLACE FUNCTION public.farm_marketplace_deliver(
   p_listing public.marketplace_listings, p_buyer uuid, p_price integer)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_inst public.farm_nft_instances%ROWTYPE;
+DECLARE
+  v_inst public.farm_nft_instances%ROWTYPE;
+  v_tile public.farm_tiles%ROWTYPE;
 BEGIN
   IF p_listing.item_kind = 'farm_nft' THEN
     SELECT * INTO v_inst FROM public.farm_nft_instances
@@ -79,6 +142,23 @@ BEGIN
     INSERT INTO public.farm_collection (user_id, species, count, level)
     VALUES (p_buyer, p_listing.card_species, 1, 1)
     ON CONFLICT (user_id, species) DO UPDATE SET count = farm_collection.count + 1;
+  ELSIF p_listing.item_kind = 'farm_tile' THEN
+    SELECT * INTO v_tile FROM public.farm_tiles
+     WHERE x = p_listing.farm_tile_x AND y = p_listing.farm_tile_y
+     FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'tile_not_found'; END IF;
+    IF v_tile.owner_id <> p_listing.seller_id THEN RAISE EXCEPTION 'tile_not_available'; END IF;
+    IF NOT v_tile.listed THEN RAISE EXCEPTION 'tile_not_listed'; END IF;
+    IF v_tile.acquired_via = 'migration' THEN RAISE EXCEPTION 'zen_tile'; END IF;
+    IF v_tile.planted_species IS NOT NULL THEN RAISE EXCEPTION 'tile_occupied'; END IF;
+
+    UPDATE public.farm_tiles
+       SET owner_id = p_buyer,
+           acquired_via = 'marketplace',
+           acquired_at = now(),
+           listed = false,
+           asset_value = p_price
+     WHERE x = p_listing.farm_tile_x AND y = p_listing.farm_tile_y;
   END IF;
 END;
 $$;
@@ -93,6 +173,12 @@ BEGIN
     INSERT INTO public.farm_collection (user_id, species, count, level)
     VALUES (p_listing.seller_id, p_listing.card_species, 1, 1)
     ON CONFLICT (user_id, species) DO UPDATE SET count = farm_collection.count + 1;
+  ELSIF p_listing.item_kind = 'farm_tile' THEN
+    UPDATE public.farm_tiles
+       SET listed = false
+     WHERE x = p_listing.farm_tile_x
+       AND y = p_listing.farm_tile_y
+       AND owner_id = p_listing.seller_id;
   END IF;
 END;
 $$;
@@ -181,6 +267,50 @@ BEGIN
   RETURNING id INTO v_id;
 
   RETURN json_build_object('ok', true, 'listing_id', v_id, 'count_left', v_cnt);
+END;
+$$;
+
+-- ── create_farm_tile_listing ───────────────────────────────────────────────
+-- List one empty, non-migration territory tile. Reserves it with farm_tiles.listed
+-- so it cannot be planted or listed again while the offer is open.
+CREATE OR REPLACE FUNCTION public.create_farm_tile_listing(
+  p_x integer, p_y integer, p_listing_type text, p_price integer,
+  p_duration_hours integer DEFAULT 72, p_min_increment integer DEFAULT 10)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user  uuid := auth.uid();
+  v_tile  public.farm_tiles%ROWTYPE;
+  v_dur   integer := LEAST(GREATEST(COALESCE(p_duration_hours, 72), 1), 720);
+  v_incr  integer := LEAST(GREATEST(COALESCE(p_min_increment, 10), 1), 1000000);
+  v_ends  timestamptz;
+  v_id    uuid;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+  IF p_x < 0 OR p_x >= 13 OR p_y < 0 OR p_y >= 4 THEN RAISE EXCEPTION 'bad_coords'; END IF;
+  IF p_listing_type NOT IN ('fixed','auction') THEN RAISE EXCEPTION 'bad_listing_type'; END IF;
+  IF p_price IS NULL OR p_price < 1 THEN RAISE EXCEPTION 'bad_price'; END IF;
+
+  SELECT * INTO v_tile FROM public.farm_tiles WHERE x = p_x AND y = p_y FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'tile_not_owned'; END IF;
+  IF v_tile.owner_id <> v_user THEN RAISE EXCEPTION 'not_owner'; END IF;
+  IF v_tile.acquired_via = 'migration' THEN RAISE EXCEPTION 'zen_tile'; END IF;
+  IF v_tile.planted_species IS NOT NULL THEN RAISE EXCEPTION 'tile_occupied'; END IF;
+  IF v_tile.listed THEN RAISE EXCEPTION 'already_listed'; END IF;
+
+  IF p_listing_type = 'auction' THEN v_ends := now() + (v_dur || ' hours')::interval; END IF;
+
+  UPDATE public.farm_tiles SET listed = true WHERE x = p_x AND y = p_y;
+
+  INSERT INTO public.marketplace_listings
+    (seller_id, emoji, title, description, listing_type, price, min_increment, ends_at, item_kind, farm_tile_x, farm_tile_y)
+  VALUES (
+    v_user, '🏡',
+    'Działka Ogródka [' || p_x || ',' || p_y || ']',
+    'Pusta działka gotowa do obsadzenia w Ogródku.',
+    p_listing_type, p_price, v_incr, v_ends, 'farm_tile', p_x, p_y)
+  RETURNING id INTO v_id;
+
+  RETURN json_build_object('ok', true, 'listing_id', v_id, 'x', p_x, 'y', p_y);
 END;
 $$;
 
@@ -331,14 +461,16 @@ SELECT
   END AS next_min_bid,
   tb.top_bidders,
   -- item linkage (NULL for plain IRL goods)
-  l.item_kind, l.nft_instance_id, l.card_species,
+  l.item_kind, l.nft_instance_id, l.card_species, l.farm_tile_x, l.farm_tile_y,
   ni.serial_no   AS nft_serial,
   ni.edition_size AS nft_edition,
-  ni.nft_name     AS nft_name
+  ni.nft_name     AS nft_name,
+  ft.asset_value  AS farm_tile_asset_value
 FROM public.marketplace_listings l
 JOIN public.profiles sp ON sp.id = l.seller_id
 LEFT JOIN public.profiles bp ON bp.id = l.buyer_id
 LEFT JOIN public.farm_nft_instances ni ON ni.id = l.nft_instance_id
+LEFT JOIN public.farm_tiles ft ON ft.x = l.farm_tile_x AND ft.y = l.farm_tile_y
 LEFT JOIN LATERAL (
   SELECT b.bidder_id, b.amount FROM public.marketplace_bids b
    WHERE b.listing_id = l.id AND b.status IN ('leading','won')
@@ -359,8 +491,10 @@ GRANT SELECT ON public.marketplace_cards TO anon, authenticated;
 -- ── Grants ──────────────────────────────────────────────────────────────────
 REVOKE ALL ON FUNCTION public.create_farm_nft_listing(uuid, text, integer, integer, integer)  FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.create_farm_card_listing(text, text, integer, integer, integer)  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.create_farm_tile_listing(integer, integer, text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_farm_nft_listing(uuid, text, integer, integer, integer)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_farm_card_listing(text, text, integer, integer, integer)  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_farm_tile_listing(integer, integer, text, integer, integer, integer) TO authenticated;
 -- buy/settle/cancel keep their existing grants from marketplace.sql (CREATE OR REPLACE
 -- preserves grants). The deliver/release helpers are definer-internal:
 REVOKE ALL ON FUNCTION public.farm_marketplace_deliver(public.marketplace_listings, uuid, integer) FROM PUBLIC, anon, authenticated;

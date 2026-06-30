@@ -4,6 +4,12 @@
 
 BEGIN;
 
+ALTER TABLE public.farm_tiles ADD COLUMN IF NOT EXISTS asset_value integer NOT NULL DEFAULT 0;
+DO $$ BEGIN
+  ALTER TABLE public.farm_tiles
+    ADD CONSTRAINT farm_tiles_asset_value_chk CHECK (asset_value >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 CREATE OR REPLACE FUNCTION public.buy_farm_tile(p_x integer, p_y integer)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -26,8 +32,9 @@ BEGIN
   RETURNING tile_vouchers INTO v_vouchers;
   IF FOUND THEN v_voucher := true; ELSE v_price := v_price; END IF;
 
-  INSERT INTO public.farm_tiles (x, y, owner_id, acquired_via)
-  VALUES (p_x, p_y, v_user, CASE WHEN v_voucher THEN 'lootbox' ELSE 'purchase' END)
+  INSERT INTO public.farm_tiles (x, y, owner_id, acquired_via, asset_value)
+  VALUES (p_x, p_y, v_user, CASE WHEN v_voucher THEN 'lootbox' ELSE 'purchase' END,
+          CASE WHEN v_voucher THEN 0 ELSE v_price END)
   ON CONFLICT (x, y) DO NOTHING
   RETURNING owner_id INTO v_claimed;
   IF v_claimed IS NULL THEN RAISE EXCEPTION 'tile_taken'; END IF;
@@ -48,7 +55,7 @@ BEGIN
     VALUES (v_user, -v_price, 'farm_tile_buy', jsonb_build_object('x', p_x, 'y', p_y, 'price', v_price));
   END IF;
 
-  RETURN json_build_object('ok', true, 'x', p_x, 'y', 'price', v_price,
+  RETURN json_build_object('ok', true, 'x', p_x, 'y', p_y, 'price', v_price,
                            'coins', v_coins, 'via', 'coins');
 END;
 $$;
@@ -170,7 +177,7 @@ BEGIN
       'species', v_species, 'name', v_def.name, 'emoji', v_def.emoji,
       'rarity', v_def.rarity, 'new_count', v_new_count);
     IF v_def.edition_size IS NOT NULL THEN
-      v_card := v_card || jsonb_build_object('nft', true, 'serial_no', v_serial, 'edition_size', v_def.edition_size, 'nft_name', v_nft_name);
+      v_card := v_card || jsonb_build_object('nft', true, 'id', v_nft_id, 'serial_no', v_serial, 'edition_size', v_def.edition_size, 'nft_name', v_nft_name);
     END IF;
     v_cards := v_cards || v_card;
     v_got := v_got + 1;

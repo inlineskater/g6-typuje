@@ -151,12 +151,17 @@ AS $$
            AND ct.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric) AS accessories,
 
-      -- farm: land + card-level investment (coin cost paid) + crop inventory at market
+      -- farm: currently owned land value + card-level investment + crop inventory at market
       -- + plant cards held (by rarity) + serialized NFT cards (scarcity value)
       COALESCE((
+        SELECT sum(ft.asset_value)
+          FROM public.farm_tiles ft
+         WHERE ft.owner_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+      ), 0::numeric)
+      + COALESCE((
         SELECT sum(-ct.delta)
           FROM public.coin_transactions ct
-         WHERE ct.reason IN ('farm_tile_buy','card_levelup')
+         WHERE ct.reason = 'card_levelup'
            AND ct.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric)
       + COALESCE((

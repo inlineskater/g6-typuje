@@ -42,13 +42,18 @@ AS $$
             WHERE ct.user_id = p_uid
               AND ct.reason = 'garden_accessory'
          ), 0)
-       -- Farm: land + card-level investment (coins spent) + crop inventory at market price
+       -- Farm: currently owned land value + card-level investment + crop inventory at market price
        -- + plant cards held (by rarity) + serialized NFT cards (scarcity value).
+       + COALESCE((
+           SELECT sum(ft.asset_value)
+             FROM public.farm_tiles ft
+            WHERE ft.owner_id = p_uid
+         ), 0)
        + COALESCE((
            SELECT sum(-ct.delta)
              FROM public.coin_transactions ct
             WHERE ct.user_id = p_uid
-              AND ct.reason IN ('farm_tile_buy','card_levelup')
+              AND ct.reason = 'card_levelup'
          ), 0)
        + COALESCE((
            SELECT sum(fi.qty * fm.cur_price)
@@ -144,8 +149,8 @@ AS $$
       COALESCE((SELECT sum(-ct.delta) FROM public.coin_transactions ct
                  WHERE ct.user_id = p_uid AND ct.reason = 'garden_accessory'), 0) AS accessories,
       -- ── Ogródek (Farma), split into sub-components ──
-      COALESCE((SELECT sum(-ct.delta) FROM public.coin_transactions ct
-                 WHERE ct.user_id = p_uid AND ct.reason = 'farm_tile_buy'), 0) AS farm_land,
+      COALESCE((SELECT sum(ft.asset_value) FROM public.farm_tiles ft
+                 WHERE ft.owner_id = p_uid), 0) AS farm_land,
       COALESCE((SELECT sum(-ct.delta) FROM public.coin_transactions ct
                  WHERE ct.user_id = p_uid AND ct.reason = 'card_levelup'), 0)
       + COALESCE((SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
