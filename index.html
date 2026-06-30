@@ -23111,8 +23111,8 @@ function farmPriceChart(points, base) {
 }
 
 function farmTerritoryPriceTable() {
-  const max = FARM_W * FARM_H;
-  const cols = 4;
+  const max = Math.min(12, FARM_W * FARM_H);
+  const cols = 3;
   const rows = Math.ceil(max / cols);
   const owned = farmOwnedTileCount();
   const tbody = el('tbody', {});
@@ -23134,7 +23134,6 @@ function farmTerritoryPriceTable() {
   return el('div', { className: 'farm-cat-table-wrap', style: { marginBottom: '14px' } },
     el('table', { className: 'farm-cat-table' },
       el('thead', {}, el('tr', {},
-        el('th', {}, 'Działka'), el('th', {}, 'Cena'),
         el('th', {}, 'Działka'), el('th', {}, 'Cena'),
         el('th', {}, 'Działka'), el('th', {}, 'Cena'),
         el('th', {}, 'Działka'), el('th', {}, 'Cena'))),
