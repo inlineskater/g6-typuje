@@ -16207,10 +16207,7 @@ let _signaturesLoaded = false;
 function docById(id) { return DOCUMENTS.find(d => d.id === id) || null; }
 
 // Show the blocking land-reform memo on Ogródek open until it's signed.
-// TESTING: gated to admin accounts only for now (remove the isAdmin() check to
-// roll out to everyone).
 async function maybeGateFarmDocument() {
-  if (!isAdmin()) return;
   const doc = DOCUMENTS.find(d => d.gate === 'farm' && d.mandatory);
   if (!doc) return;
   if (!_signaturesLoaded) await loadMySignatures();
