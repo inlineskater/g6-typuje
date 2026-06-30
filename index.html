@@ -933,6 +933,90 @@
     .ranking-detail-modal .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .ranking-detail-modal .modal-title { font-size: 16px; font-weight: 800; }
 
+    /* ── DOKUMENTY (Moje Dokumenty) ── */
+    #documents-btn { position: relative; }
+    .doc-badge {
+      position: absolute; top: 2px; right: 2px; width: 9px; height: 9px;
+      background: #e23b3b; border-radius: 50%; box-shadow: 0 0 0 2px var(--card, #fff);
+    }
+    .doc-overlay {
+      position: fixed; inset: 0; background: rgba(20,12,0,.5);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px;
+    }
+    .doc-modal {
+      display: flex; flex-direction: column;
+      width: 100%; max-width: 720px; max-height: calc(100dvh - 40px);
+      background: #fbf6e9; color: #2c2316;
+      border: 1px solid #d8c79a; border-radius: 14px;
+      box-shadow: 0 16px 60px rgba(0,0,0,.35);
+      overflow: hidden;
+    }
+    .doc-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px; background: #efe2c2; border-bottom: 1px solid #d8c79a;
+    }
+    .doc-modal-title { font-size: 15px; font-weight: 800; letter-spacing: .02em; }
+    .doc-modal-header .btn-close { background: transparent; border: none; font-size: 18px; cursor: pointer; color: #6b5a36; }
+    .doc-body {
+      position: relative; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
+      padding: 26px 30px 30px;
+      background-image: linear-gradient(rgba(216,199,154,.18) 1px, transparent 1px);
+      background-size: 100% 30px;
+    }
+    .doc-stamp {
+      position: absolute; top: 18px; right: 22px; transform: rotate(11deg);
+      border: 2px solid #b23b2e; color: #b23b2e; border-radius: 8px;
+      padding: 6px 10px; font-weight: 800; font-size: 10px; line-height: 1.15;
+      white-space: pre; text-align: center; opacity: .72; letter-spacing: .04em;
+    }
+    .doc-title {
+      font-family: Georgia, 'Times New Roman', serif; font-size: 21px; line-height: 1.25;
+      margin: 0 90px 6px 0; color: #241c0e;
+    }
+    .doc-meta { font-size: 12px; color: #7a6840; margin-bottom: 16px; font-style: italic; }
+    .doc-preamble {
+      font-family: Georgia, serif; font-style: italic; line-height: 1.6;
+      margin: 0 0 18px; padding-bottom: 14px; border-bottom: 1px dashed #cdb988;
+    }
+    .doc-section-h {
+      font-family: Georgia, serif; font-size: 16px; font-weight: 800;
+      margin: 18px 0 8px; color: #3a2d12;
+    }
+    .doc-p { line-height: 1.62; margin: 0 0 10px; text-align: justify; }
+    .doc-sign-block {
+      margin: 26px 0 4px auto; width: 360px; max-width: 100%;
+      display: flex; flex-direction: column; align-items: stretch;
+    }
+    .doc-sign-hint { font-size: 12px; color: #7a6840; margin-bottom: 4px; }
+    .doc-sign-canvas {
+      width: 360px; max-width: 100%; height: 140px; touch-action: none; cursor: crosshair;
+      background: #fffdf6; border: 1px solid #d8c79a; border-radius: 8px;
+    }
+    .doc-sign-img { width: 360px; max-width: 100%; height: auto; background: #fffdf6; border-radius: 8px; }
+    .doc-sign-line { height: 1px; background: #b9a36a; margin-top: 2px; }
+    .doc-sign-name { font-size: 12px; color: #6b5a36; margin-top: 4px; text-align: center; }
+    .doc-footer {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 12px 18px; background: #efe2c2; border-top: 1px solid #d8c79a;
+    }
+    .doc-status { flex: 1 1 auto; font-size: 12px; color: #7a6840; min-width: 140px; }
+    .doc-sign-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .doc-list-modal { max-width: 560px; }
+    .doc-list { padding: 14px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .doc-list-row {
+      display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer;
+      padding: 12px 14px; background: #fffdf6; border: 1px solid #d8c79a; border-radius: 10px;
+      color: #2c2316; font: inherit;
+    }
+    .doc-list-row:hover { background: #fbf3dd; }
+    .doc-list-row.unsigned { border-color: #e0a93b; box-shadow: 0 0 0 1px #e0a93b inset; }
+    .doc-list-icon { font-size: 22px; }
+    .doc-list-main { display: flex; flex-direction: column; gap: 3px; }
+    .doc-list-title { font-weight: 700; line-height: 1.3; }
+    .doc-list-status { font-size: 12px; color: #7a6840; }
+
     /* ── POKER ── */
     .poker-page-head {
       display: flex; align-items: flex-start; justify-content: space-between;
@@ -5215,6 +5299,7 @@
       <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
       <button class="btn-ghost" id="activity-btn">📋 Aktywność</button>
       <button class="btn-ghost" id="wallet-btn">💼 Portfel</button>
+      <button class="btn-ghost" id="documents-btn">📄 Moje Dokumenty</button>
       <span class="header-nick" id="header-nick"></span>
       <button class="btn-ghost" id="logout-btn">Wyloguj</button>
     </div>
@@ -7727,6 +7812,7 @@ function showApp() {
   updateAdminTestTabs();
   switchTab('markets');
   setupRealtime();
+  loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
 }
 
 function updateAdminTestTabs() {
@@ -11530,6 +11616,9 @@ function renderCoinRaceDetail(container) {
     }
     openUserProfile(me.id, me.nick, me.coins, { wallet: true });
   });
+
+  const documentsBtn = document.getElementById('documents-btn');
+  if (documentsBtn) documentsBtn.addEventListener('click', () => { if (me) openMyDocuments(); });
 
   function renderFullLeaderboard(container) {
     const data = _lbData;
@@ -16069,6 +16158,339 @@ const SEASONAL_OVERRIDES = {
   '2026-06-22': { gameType: 'var_patrol', displayName: 'VAR Patrol 📺' },
   '2026-06-29': { gameType: 'invoice_horde', displayName: 'Najazd Ticketów 🎫' },
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Dokumenty do podpisania („Moje Dokumenty")
+//  Server stores only the drawn signature (document_signatures + sign_document
+//  RPC in supabase/documents.sql); the text lives here. `gate:'farm'` docs block
+//  the Ogródek until signed; append future docs (e.g. gate:'app') to the array.
+// ════════════════════════════════════════════════════════════════════════════
+const DOCUMENTS = [
+  {
+    id: 'farm_reform_2026',
+    version: 1,
+    icon: '📜',
+    gate: 'farm',
+    mandatory: true,
+    title: 'Ustawa Reformy Gruntowej Ogródka G6 — o Wolnym Obrocie Działkami i Podatku Katastralnym',
+    effectiveDate: '2026-07-02',
+    preamble: 'Działając w trosce o stabilność Wielkiego Ogródka, walkę z inflacją marchewki oraz ' +
+      'ukrócenie spekulacji gruntowej, Ministerstwo Ogrodnictwa i Skarbu G6 — po burzliwej debacie ' +
+      'przy grządce — uchwala, co następuje. Niżej podpisany Obywatel-Rolnik oświadcza, że przeczytał, ' +
+      'zrozumiał i (choć niechętnie, jak każdy podatnik) przyjmuje do wiadomości poniższe zmiany.',
+    sections: [
+      {
+        heading: '§1. Wolny obrót działkami (Wielka Prywatyzacja)',
+        paragraphs: [
+          'Z dniem wejścia w życie niniejszej Ustawy każdy Obywatel-Rolnik może KUPOWAĆ i SPRZEDAWAĆ ' +
+          'działki bezpośrednio innym graczom — przez Targowisko (Ogłoszenia), w formie ceny stałej lub ' +
+          'licytacji. Monety wędrują od kupującego do sprzedającego (nie znikają jak w kasynie).',
+          'Sprzedać można wyłącznie własną, PUSTĄ działkę nie-migracyjną. Działka wystawiona na sprzedaż ' +
+          'nosi tabliczkę „FOR SALE" i — niczym mieszkanie w trakcie remontu — nie nadaje się pod uprawę, ' +
+          'dopóki transakcja nie zostanie sfinalizowana lub anulowana.',
+          'Ministerstwo przypomina: jak w Monopoly, kto pierwszy wykupi całą uliczkę, ten rządzi — ale ' +
+          'patrz §2, bo posiadanie też kosztuje.',
+        ],
+      },
+      {
+        heading: '§2. Podatek katastralny (Kataster Grządkowy)',
+        paragraphs: [
+          'Wprowadza się DZIENNY podatek gruntowy od nadmiarowych działek nie-migracyjnych. Limit ' +
+          'wolny od podatku to ⌈normalna pojemność ⁄ liczba aktywnych rolników⌉ — wszystko ponad to ' +
+          'jest „nadmiarem" (excess) podlegającym opodatkowaniu.',
+          'Stawka: 1000 × excess² monet dziennie. Tak, do KWADRATU — kto chomikuje hektary, ten płaci ' +
+          'jak za zboże w czasach kryzysu. Zaległości rosną o 10% odsetek dziennie (urzędowa inflacja ' +
+          'nie śpi).',
+          'Naliczanie startuje o 00:00 (Europe/Warsaw) za poprzedni zakończony dzień. Pierwsza wycena ' +
+          'obejmie czwartek 02.07.2026, a pierwszy rachunek wpadnie w piątek 03.07.2026 o północy. ' +
+          'Termin nieubłagany jak deadline projektu w piątek o 17:00.',
+        ],
+      },
+      {
+        heading: '§3. Postanowienia końcowe (drobny druczek)',
+        paragraphs: [
+          'Niewiedza nie zwalnia z podatku, a marchewka nie jest legalnym środkiem płatniczym. ' +
+          'Ministerstwo zastrzega sobie prawo do dosadzania kolejnych paragrafów wedle koniunktury ' +
+          'politycznej i kursu cebuli.',
+          'Podpisując poniżej (po prawej stronie, jak na prawdziwym urzędzie), Obywatel-Rolnik ' +
+          'potwierdza, że zapoznał się z reformą i nie będzie udawał, że „nikt go nie poinformował".',
+        ],
+      },
+    ],
+  },
+];
+
+const mySignatures = {};   // { [doc_id]: { doc_version, signed_at, signature } }
+let _signaturesLoaded = false;
+
+function docById(id) { return DOCUMENTS.find(d => d.id === id) || null; }
+
+// Show the blocking land-reform memo on Ogródek open until it's signed.
+// TESTING: gated to admin accounts only for now (remove the isAdmin() check to
+// roll out to everyone).
+async function maybeGateFarmDocument() {
+  if (!isAdmin()) return;
+  const doc = DOCUMENTS.find(d => d.gate === 'farm' && d.mandatory);
+  if (!doc) return;
+  if (!_signaturesLoaded) await loadMySignatures();
+  if (docModalEl) return;                 // a document modal is already open
+  if (needsSigning(doc)) openDocumentModal(doc, { mandatory: true });
+}
+
+function needsSigning(doc) {
+  if (!doc) return false;
+  const sig = mySignatures[doc.id];
+  return !sig || Number(sig.doc_version || 0) < Number(doc.version || 1);
+}
+
+async function loadMySignatures() {
+  if (!me) return;
+  try {
+    const { data, error } = await sb.from('document_signatures')
+      .select('doc_id,doc_version,signed_at,signature').eq('user_id', me.id);
+    if (error) throw error;
+    Object.keys(mySignatures).forEach(k => delete mySignatures[k]);
+    (data || []).forEach(r => { mySignatures[r.doc_id] = r; });
+    _signaturesLoaded = true;
+  } catch (e) { console.error('loadMySignatures', e); }
+  refreshDocBadge();
+}
+
+function refreshDocBadge() {
+  const btn = document.getElementById('documents-btn');
+  if (!btn) return;
+  const unsigned = DOCUMENTS.some(d => d.mandatory && needsSigning(d));
+  let badge = btn.querySelector('.doc-badge');
+  if (unsigned) {
+    if (!badge) { badge = el('span', { className: 'doc-badge' }); btn.appendChild(badge); }
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+// ── Signature canvas ─────────────────────────────────────────────────────────
+function setupSignatureCanvas(canvas, onChange) {
+  const ctx = canvas.getContext('2d');
+  let dirty = false, drawing = false, last = null;
+  function paintBaseline() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'rgba(120,90,40,.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(14, canvas.height - 22);
+    ctx.lineTo(canvas.width - 14, canvas.height - 22);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(120,90,40,.5)';
+    ctx.font = '15px serif';
+    ctx.fillText('✕', 16, canvas.height - 28);
+  }
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (canvas.width / r.width),
+             y: (e.clientY - r.top) * (canvas.height / r.height) };
+  }
+  function start(e) { drawing = true; last = pos(e); e.preventDefault(); }
+  function move(e) {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.strokeStyle = '#1a2a55';
+    ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+    if (!dirty) { dirty = true; if (onChange) onChange(); }
+    e.preventDefault();
+  }
+  function end() { drawing = false; }
+  canvas.addEventListener('pointerdown', start);
+  canvas.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  paintBaseline();
+  return {
+    isEmpty() { return !dirty; },
+    toDataURL() { return canvas.toDataURL('image/png'); },
+    clear() { dirty = false; paintBaseline(); if (onChange) onChange(); },
+  };
+}
+
+// ── Document modal ───────────────────────────────────────────────────────────
+let docModalEl = null, docModalEsc = null;
+
+function closeDocumentModal() {
+  if (docModalEsc) { window.removeEventListener('keydown', docModalEsc); docModalEsc = null; }
+  if (docModalEl) { docModalEl.remove(); docModalEl = null; }
+}
+
+function formatDocDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : (iso || '');
+}
+
+function buildDocumentSections(doc) {
+  const wrap = el('div', { className: 'doc-text' });
+  if (doc.preamble) wrap.append(el('p', { className: 'doc-preamble' }, doc.preamble));
+  (doc.sections || []).forEach(s => {
+    wrap.append(el('h3', { className: 'doc-section-h' }, s.heading));
+    (s.paragraphs || []).forEach(p => wrap.append(el('p', { className: 'doc-p' }, p)));
+  });
+  return wrap;
+}
+
+function openDocumentModal(doc, opts) {
+  opts = opts || {};
+  closeDocumentModal();
+  const alreadySigned = !needsSigning(doc);
+  const blocking = !!opts.mandatory && !alreadySigned;
+
+  const overlay = el('div', { className: 'doc-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const modal = el('div', { className: 'doc-modal' });
+
+  // Header
+  const header = el('div', { className: 'doc-modal-header' },
+    el('span', { className: 'doc-modal-title' }, (doc.icon || '📄') + ' Dokument urzędowy'));
+  if (!blocking) {
+    const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+    closeBtn.addEventListener('click', closeDocumentModal);
+    header.append(closeBtn);
+  }
+
+  // Scrollable body
+  const body = el('div', { className: 'doc-body' });
+  body.append(
+    el('div', { className: 'doc-stamp' }, 'MINISTERSTWO\nOGRODNICTWA\nG6'),
+    el('h2', { className: 'doc-title' }, doc.title),
+    el('div', { className: 'doc-meta' }, 'Wchodzi w życie: ' + formatDocDate(doc.effectiveDate)),
+    buildDocumentSections(doc),
+  );
+
+  // Signature block (bottom-right)
+  const signBlock = el('div', { className: 'doc-sign-block' });
+  let signApi = null, signBtn = null;
+  if (alreadySigned) {
+    const sig = mySignatures[doc.id];
+    const img = el('img', { className: 'doc-sign-img', src: sig.signature, alt: 'Podpis' });
+    signBlock.append(
+      img,
+      el('div', { className: 'doc-sign-line' }),
+      el('div', { className: 'doc-sign-name' }, (me ? me.nick : '') + ' — podpisano ' + formatDocDate(sig.signed_at)),
+    );
+  } else {
+    const canvas = el('canvas', { className: 'doc-sign-canvas', width: 360, height: 140 });
+    signBlock.append(
+      el('div', { className: 'doc-sign-hint' }, '✍️ Podpisz tutaj:'),
+      canvas,
+      el('div', { className: 'doc-sign-name' }, (me ? me.nick : '') + ' — ' + formatDocDate(doc.effectiveDate)),
+    );
+    signApi = setupSignatureCanvas(canvas, () => updateSignState());
+  }
+  body.append(signBlock);
+
+  // Footer with actions
+  const footer = el('div', { className: 'doc-footer' });
+  const status = el('div', { className: 'doc-status' });
+  footer.append(status);
+  if (!alreadySigned) {
+    const clearBtn = el('button', { className: 'btn-ghost', type: 'button' }, 'Wyczyść');
+    clearBtn.addEventListener('click', () => { if (signApi) signApi.clear(); });
+    signBtn = el('button', { className: 'btn doc-sign-btn', type: 'button', disabled: true }, '🖋️ Podpisuję');
+    signBtn.addEventListener('click', async () => {
+      if (!signApi || signApi.isEmpty()) return;
+      signBtn.disabled = true; signBtn.textContent = 'Podpisywanie…';
+      try {
+        await signDocumentRpc(doc, signApi.toDataURL());
+        closeDocumentModal();
+      } catch (e) {
+        console.error('sign', e);
+        signBtn.disabled = false; signBtn.textContent = '🖋️ Podpisuję';
+        status.textContent = 'Nie udało się zapisać podpisu — spróbuj ponownie.';
+      }
+    });
+    footer.append(clearBtn, signBtn);
+  }
+
+  let scrolledToEnd = false;
+  function updateSignState() {
+    if (!signBtn) return;
+    const ready = scrolledToEnd && signApi && !signApi.isEmpty();
+    signBtn.disabled = !ready;
+    if (!scrolledToEnd) status.textContent = '📖 Przewiń dokument do końca, aby podpisać.';
+    else if (signApi && signApi.isEmpty()) status.textContent = '✍️ Złóż podpis w polu po prawej.';
+    else status.textContent = '';
+  }
+  if (!alreadySigned) {
+    body.addEventListener('scroll', () => {
+      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 24) {
+        scrolledToEnd = true; updateSignState();
+      }
+    });
+  }
+
+  modal.append(header, body, footer);
+  overlay.append(modal);
+  if (!blocking) {
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeDocumentModal(); });
+    docModalEsc = e => { if (e.key === 'Escape') closeDocumentModal(); };
+    window.addEventListener('keydown', docModalEsc);
+  }
+  document.body.append(overlay);
+  docModalEl = overlay;
+
+  // Initial state: if the document already fits without scrolling, treat as read.
+  if (!alreadySigned) {
+    requestAnimationFrame(() => {
+      if (body.scrollHeight <= body.clientHeight + 24) scrolledToEnd = true;
+      updateSignState();
+    });
+  }
+}
+
+async function signDocumentRpc(doc, dataURL) {
+  const { data, error } = await sb.rpc('sign_document', {
+    p_doc_id: doc.id, p_version: doc.version, p_signature: dataURL,
+  });
+  if (error) throw error;
+  mySignatures[doc.id] = {
+    doc_id: doc.id, doc_version: doc.version,
+    signed_at: (data && data.signed_at) || new Date().toISOString(),
+    signature: dataURL,
+  };
+  refreshDocBadge();
+  showToast('🖋️ Podpisano. Reforma wchodzi w życie!');
+}
+
+async function openMyDocuments() {
+  if (!me) return;
+  await loadMySignatures();
+  closeDocumentModal();
+  const overlay = el('div', { className: 'doc-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const modal = el('div', { className: 'doc-modal doc-list-modal' });
+  const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeBtn.addEventListener('click', closeDocumentModal);
+  const header = el('div', { className: 'doc-modal-header' },
+    el('span', { className: 'doc-modal-title' }, '📄 Moje Dokumenty'), closeBtn);
+  const list = el('div', { className: 'doc-list' });
+  DOCUMENTS.forEach(doc => {
+    const signed = !needsSigning(doc);
+    const sig = mySignatures[doc.id];
+    const row = el('button', { className: 'doc-list-row' + (signed ? '' : ' unsigned'), type: 'button' });
+    row.append(
+      el('span', { className: 'doc-list-icon' }, doc.icon || '📄'),
+      el('span', { className: 'doc-list-main' },
+        el('span', { className: 'doc-list-title' }, doc.title),
+        el('span', { className: 'doc-list-status' },
+          signed ? ('✅ Podpisano ' + formatDocDate(sig && sig.signed_at))
+                 : '⚠️ Do podpisania')),
+    );
+    row.addEventListener('click', () => openDocumentModal(doc, { mandatory: false }));
+    list.append(row);
+  });
+  modal.append(header, list);
+  overlay.append(modal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeDocumentModal(); });
+  docModalEsc = e => { if (e.key === 'Escape') closeDocumentModal(); };
+  window.addEventListener('keydown', docModalEsc);
+  document.body.append(overlay);
+  docModalEl = overlay;
+}
 
 function parseWeekStartDate(weekStartStr) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStartStr || '');
@@ -22110,6 +22532,7 @@ async function loadFarm() {
     applyFarmUserState(stateRes.data);
     if (!taxRes.error) applyFarmTaxQuote(taxRes.data);
     setFarmStarterBannerVisible(stateRes.data);
+    maybeGateFarmDocument();
     fmNft = nftRes.data || [];
     fmZen = new Map();
     (zenRes.data || []).forEach(g => fmZen.set(g.id, g));   // keyed by gardens.id (one block per plant)
