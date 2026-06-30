@@ -51,70 +51,406 @@
     .hidden { display: none !important; }
 
     /* ── LOGIN ── */
+    /* ── LOGIN ── */
     .login-wrap {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      min-height: 100vh; min-height: 100dvh; padding: 24px;
-      background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.06) 0%, transparent 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 0;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.45s ease-in-out, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .login-container-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      width: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      max-width: 100vw;
+    }
+
+    /* Left Hero Showcase Side */
+    .login-hero-showcase {
+      position: relative;
+      background: #090d16;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 60px;
+      color: #fff;
+    }
+    
+    .login-hero-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.65;
+      filter: saturate(1.15) brightness(0.8);
+      z-index: 1;
+      transform: scale(1.02);
+      animation: zoomSlow 24s infinite alternate ease-in-out;
+      transition: opacity 2s ease, transform 2.5s cubic-bezier(0.16, 1, 0.3, 1), filter 2s ease;
+    }
+    
+    @keyframes zoomSlow {
+      0% { transform: scale(1.02); }
+      100% { transform: scale(1.08); }
+    }
+
+    .login-hero-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, 
+                    rgba(9, 13, 22, 0.1) 0%, 
+                    rgba(9, 13, 22, 0.65) 50%, 
+                    #090d16 100%);
+      z-index: 2;
+    }
+
+    .login-hero-content {
+      position: relative;
+      z-index: 3;
+      max-width: 640px;
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 14px;
+      background: rgba(99, 102, 241, 0.22);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #a5b4fc;
+      margin-bottom: 24px;
+      letter-spacing: 0.03em;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .hero-title {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 60%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      color: #94a3b8;
+      line-height: 1.65;
+      margin-bottom: 40px;
+      font-weight: 400;
+    }
+
+    .hero-stats-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .hero-stat-card {
+      background: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+    
+    .hero-stat-card:hover {
+      background: rgba(15, 23, 42, 0.55);
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .stat-emoji {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .hero-stat-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 3px;
+    }
+
+    .hero-stat-card p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.3;
+    }
+
+    /* Right Form Side */
+    .login-form-side {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      padding: 40px;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    /* Background blurs inside form side */
+    .login-form-side::before, .login-form-side::after {
+      content: '';
+      position: absolute;
+      width: min(300px, 70vw);
+      height: min(300px, 70vw);
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      z-index: 0;
+      pointer-events: none;
+      animation: floatGlow 14s infinite alternate ease-in-out;
+      transition: transform 2.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 2s ease, filter 2s ease, background 2s ease;
+    }
+    
+    .login-form-side::before {
+      background: rgba(99, 102, 241, 0.22);
+      top: 15%;
+      right: 10%;
+    }
+    .login-form-side::after {
+      background: rgba(168, 85, 247, 0.16);
+      bottom: 15%;
+      left: 10%;
+      animation-delay: -7s;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(30px, 25px) scale(1.1); }
+    }
+
+    /* Transition states when loading (Warp zoom + cloud swell) */
+    .login-wrap.loading::before {
+      transform: scale(1.6) translate(80px, 60px) !important;
+      opacity: 0.8 !important;
+      filter: blur(40px) !important;
+      background: rgba(99, 102, 241, 0.4) !important;
+    }
+    .login-wrap.loading::after {
+      transform: scale(1.6) translate(-80px, -60px) !important;
+      opacity: 0.7 !important;
+      filter: blur(40px) !important;
+      background: rgba(168, 85, 247, 0.35) !important;
+    }
+    .login-wrap.loading .login-hero-img {
+      transform: scale(1.12) !important;
+      opacity: 0.35 !important;
+      filter: saturate(1.3) brightness(0.6) blur(2px) !important;
+    }
+    .login-wrap.loading .login-card {
+      transform: scale(0.96);
+      opacity: 0.92;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+    }
+
+    .login-wrap.logging-out {
+      opacity: 0 !important;
+      transform: scale(1.04);
+      pointer-events: none;
+      transition: opacity 0.45s ease-in-out, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    #screen-app {
+      opacity: 1;
+      transform: none;
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #screen-app.app-entering {
+      opacity: 0;
+      transform: scale(0.98) translateY(12px);
     }
 
     .login-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 14px; padding: 44px 40px;
-      max-width: 400px; width: 100%; text-align: center;
-      box-shadow: 0 4px 24px rgba(0,0,0,.06);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-radius: 24px; padding: 44px 36px;
+      max-width: 440px; width: 100%; text-align: center;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.05), 
+                  0 1px 3px rgba(15, 23, 42, 0.01),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      z-index: 1;
+      position: relative;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .login-card:hover {
+      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.09), 
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.7);
     }
 
-    .logo-big    { font-size: 48px; margin-bottom: 12px; }
-    .login-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; letter-spacing: 0; }
-    .login-sub   { color: var(--muted); font-size: 14px; margin-bottom: 32px; line-height: 1.5; }
+    /* Floating logo container with a nice gradient and glow */
+    .logo-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 20px rgba(99, 102, 241, 0.25),
+                  0 0 0 4px rgba(99, 102, 241, 0.08);
+      animation: floatLogo 4s infinite ease-in-out;
+    }
+    .logo-big { font-size: 34px; line-height: 1; }
+
+    @keyframes floatLogo {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .login-title { 
+      font-size: 26px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; 
+      background: linear-gradient(135deg, #0f172a 30%, #475569 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .login-sub   { color: var(--muted); font-size: 14px; margin-bottom: 32px; line-height: 1.5; font-weight: 400; }
 
     .field-label {
-      text-align: left; font-size: 11px; color: var(--muted); margin-bottom: 6px;
-      letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+      text-align: left; font-size: 11px; color: #475569; margin-bottom: 8px;
+      letter-spacing: .06em; text-transform: uppercase; font-weight: 700;
     }
 
     input[type="text"], input[type="password"] {
-      width: 100%; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit;
-      min-height: 44px; padding: 11px 13px; outline: none;
-      transition: border-color .15s; margin-bottom: 12px;
+      width: 100%; background: rgba(255, 255, 255, 0.65); border: 1.5px solid #e2e8f0;
+      border-radius: 12px; color: var(--text); font-size: 15px; font-family: inherit;
+      min-height: 48px; padding: 12px 16px; outline: none;
+      transition: all 0.2s ease; margin-bottom: 18px;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.01);
     }
-    input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); }
+    input[type="text"]:focus, input[type="password"]:focus { 
+      border-color: var(--accent); 
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12),
+                  inset 0 1px 2px rgba(15, 23, 42, 0.01);
+    }
 
     .nick-select {
-      width: 100%; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit;
-      min-height: 44px; padding: 11px 36px 11px 13px; outline: none; margin-bottom: 12px;
+      width: 100%; background: rgba(255, 255, 255, 0.65); border: 1.5px solid #e2e8f0;
+      border-radius: 12px; color: var(--text); font-size: 15px; font-family: inherit;
+      min-height: 48px; padding: 12px 40px 12px 16px; outline: none; margin-bottom: 18px;
       appearance: none; cursor: pointer;
-      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M6 7L0 0h12z' fill='%2364748b'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 13px center;
-      transition: border-color .15s;
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 16px center;
+      background-size: 14px;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.01);
     }
-    .nick-select:focus { border-color: var(--accent); }
+    .nick-select:focus { 
+      border-color: var(--accent); 
+      background-color: #ffffff;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12),
+                  inset 0 1px 2px rgba(15, 23, 42, 0.01);
+    }
 
     .btn-primary {
-      width: 100%; background: var(--accent); border: none; border-radius: 8px;
-      color: #fff; cursor: pointer; font-size: 15px; font-weight: 700; font-family: inherit;
-      min-height: 44px; padding: 12px; transition: opacity .15s; margin-bottom: 4px; letter-spacing: 0;
+      width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%); 
+      border: none; border-radius: 12px;
+      color: #fff; cursor: pointer; font-size: 15px; font-weight: 600; font-family: inherit;
+      min-height: 48px; padding: 12px; transition: all 0.2s ease; margin-bottom: 8px; letter-spacing: 0.02em;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.18);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    .btn-primary:hover { opacity: .86; }
-    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary:hover { 
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.26);
+      filter: brightness(1.04);
+    }
+    .btn-primary:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+    }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    .login-hint { color: var(--muted); font-size: 12px; margin-top: 18px; line-height: 1.7; }
-    .login-hint a { color: var(--accent); text-decoration: none; font-weight: 500; }
-    .login-hint a:hover { text-decoration: underline; }
-    .login-error { color: var(--no); font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .login-hint { color: var(--muted); font-size: 13px; margin-top: 20px; line-height: 1.6; }
+    .login-hint a { color: var(--accent); text-decoration: none; font-weight: 600; transition: color 0.15s ease; }
+    .login-hint a:hover { color: #4f46e5; text-decoration: underline; }
+    .login-error { color: var(--no); font-size: 13px; margin-top: 12px; min-height: 18px; font-weight: 500; }
+    
+    /* Sleek interactive FAQ details */
     .login-faq {
-      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
-      display: grid; gap: 12px; text-align: left;
+      margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(226, 232, 240, 0.8);
+      display: flex; flex-direction: column; gap: 14px; text-align: left;
     }
     .login-faq h2 {
-      font-size: 12px; font-weight: 800; letter-spacing: .08em;
-      text-transform: uppercase; color: var(--muted);
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: #475569; margin-bottom: 4px;
     }
-    .faq-item h3 { font-size: 13px; font-weight: 700; margin-bottom: 3px; color: var(--text); }
-    .faq-item p { color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .faq-item {
+      background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;
+      border-radius: 10px; padding: 12px 14px; transition: all 0.2s ease;
+    }
+    .faq-item:hover {
+      background: rgba(248, 250, 252, 1);
+      border-color: #e2e8f0;
+      transform: translateX(2px);
+    }
+    .faq-item h3 { 
+      font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .faq-item h3::before {
+      content: '•';
+      color: var(--accent);
+      font-size: 16px;
+      line-height: 1;
+    }
+    .faq-item p { color: #64748b; font-size: 12px; line-height: 1.5; }
+
+    /* Custom styles for Adam force PIN blame block */
+    .force-blame {
+      background: rgba(220, 38, 38, 0.04);
+      border: 1px dashed rgba(220, 38, 38, 0.25);
+      border-radius: 12px;
+      padding: 16px;
+      color: #991b1b;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .force-blame-sub {
+      display: block;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #dc2626;
+      font-style: italic;
+    }
 
     /* ── HEADER ── */
     header {
@@ -1491,14 +1827,53 @@
       .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
     }
 
+    @media (max-width: 900px) {
+      .login-wrap {
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: block;
+      }
+      .login-container-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      .login-hero-showcase {
+        height: 240px;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+      .login-hero-content {
+        display: none !important;
+      }
+      .login-form-side {
+        padding: 0 16px 40px;
+        align-items: flex-start;
+      }
+      .login-card {
+        margin-top: -40px;
+        padding: 36px 24px;
+        border-radius: 20px;
+        max-width: 420px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+
     @media (max-width: 480px) {
       :root { --page-pad: 14px; }
 
-      .login-wrap { align-items: stretch; justify-content: flex-start; padding: 16px 14px; }
-      .login-card { padding: 28px 18px; max-width: none; }
-      .logo-big { font-size: 42px; }
-      .login-title { font-size: 22px; }
-      .login-sub { margin-bottom: 24px; }
+      .login-hero-showcase { height: 180px; }
+      .login-form-side { padding: 0 12px 24px; }
+      .login-card { padding: 28px 18px; margin-top: -30px; border-radius: 18px; }
+      .logo-container { width: 56px; height: 56px; margin-bottom: 12px; }
+      .logo-big { font-size: 26px; }
+      .login-title { font-size: 20px; }
+      .login-sub { margin-bottom: 20px; }
       input[type="text"], input[type="password"], .nick-select { font-size: 16px; }
 
       .coins-badge { padding: 5px 10px; }
@@ -5232,77 +5607,112 @@
 
 <!-- ── LOGIN ── -->
 <div id="screen-login" class="login-wrap hidden">
-  <div class="login-card">
-    <div class="logo-big">🎲</div>
-    <h1 class="login-title">Rynek Proroctw G6</h1>
-    <p class="login-sub" id="login-sub">Wybierz swój nick i podaj PIN.</p>
-
-    <form id="mode-login" autocomplete="off">
-      <p class="field-label">Twój nick</p>
-      <select id="nick-select" class="nick-select">
-        <option value="">Ładowanie…</option>
-      </select>
-      <p class="field-label">PIN</p>
-      <input type="password" id="pin-input" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
-      <div id="cf-login" class="cf-turnstile-box"></div>
-      <button class="btn-primary" id="login-btn">Zaloguj →</button>
-      <p class="login-hint">Nowy gracz? <a href="#" id="go-register">Zarejestruj się →</a></p>
-      <p class="login-hint">Masz stary 4-cyfrowy PIN? <a href="#" id="go-migrate">Ustaw nowy 5-cyfrowy PIN →</a></p>
-    </form>
-
-    <form id="mode-register" class="hidden" autocomplete="off">
-      <p class="field-label">Twój nick</p>
-      <input type="text" id="reg-nick" placeholder="np. Kasia, Marek…" maxlength="30" autocomplete="off" spellcheck="false">
-      <p class="field-label">Ustaw 5-cyfrowy PIN</p>
-      <input type="password" id="reg-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
-      <div id="cf-register" class="cf-turnstile-box"></div>
-      <button class="btn-primary" id="register-btn">Zarejestruj →</button>
-      <p class="login-hint">Dostaniesz <strong>1000 coinów 🪙</strong> na start.<br>
-        Masz konto? <a href="#" id="go-login">Wróć do logowania →</a></p>
-    </form>
-
-    <div id="mode-migrate" class="hidden">
-      <p class="field-label">Twój nick</p>
-      <select id="migrate-nick" class="nick-select">
-        <option value="">Ładowanie…</option>
-      </select>
-      <p class="field-label">Dotychczasowy PIN</p>
-      <input type="password" id="migrate-old-pin" placeholder="stary PIN" maxlength="5" inputmode="numeric" autocomplete="off">
-      <p class="field-label">Nowy 5-cyfrowy PIN</p>
-      <input type="password" id="migrate-new-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
-      <div id="cf-migrate" class="cf-turnstile-box"></div>
-      <button class="btn-primary" id="migrate-btn">Zmień PIN →</button>
-      <p class="login-hint">Wróć do <a href="#" id="migrate-back">logowania →</a></p>
+  <div class="login-container-grid">
+    
+    <!-- Left Column: Hero Visual Showcase with customized company lore graphic -->
+    <div class="login-hero-showcase">
+      <div class="login-hero-overlay"></div>
+      <img src="./login_hero.jpg" alt="Rynek Proroctw G6 Custom Lore" class="login-hero-img">
+      <div class="login-hero-content">
+        <span class="hero-badge">🔮 Platforma Predykcyjna G6</span>
+        <h2 class="hero-title">Witaj na firmowym parkiecie proroctw.</h2>
+        <p class="hero-subtitle">Typuj wyniki Mundialu, zarządzaj wirtualnym Ogródkiem, sprawdzaj kursy i pomnażaj coiny w biurowym kasynie.</p>
+        
+        <!-- Live Tickers / Stats inside the Showcase -->
+        <div class="hero-stats-cards">
+          <div class="hero-stat-card">
+            <span class="stat-emoji">🌱</span>
+            <div>
+              <h4>Ogródek G6</h4>
+              <p>Sadź, zbieraj i sprzedawaj plony</p>
+            </div>
+          </div>
+          <div class="hero-stat-card">
+            <span class="stat-emoji">⚽</span>
+            <div>
+              <h4>Mundial 2026</h4>
+              <p>Kursy i zakłady na żywo</p>
+            </div>
+          </div>
+          <div class="hero-stat-card">
+            <span class="stat-emoji">👖</span>
+            <div>
+              <h4>Arkadówki G6</h4>
+              <p>Miny, Plinko i 3 Pary Spodni</p>
+            </div>
+          </div>
+          <div class="hero-stat-card">
+            <span class="stat-emoji">📊</span>
+            <div>
+              <h4>Księgowość i Skarbiec</h4>
+              <p>Zarządzaj majątkiem biurowym</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+    
+    <!-- Right Column: Login Card & Forms -->
+    <div class="login-form-side">
+      <div class="login-card">
+        <div class="logo-container">
+          <div class="logo-big">🎲</div>
+        </div>
+        <h1 class="login-title">Rynek Proroctw G6</h1>
+        <p class="login-sub" id="login-sub">Wybierz swój nick i podaj PIN.</p>
 
-    <div id="mode-forcepin" class="hidden">
-      <p class="force-blame">😤 To wina Adama — grzebie gdzie nie trzeba i psuje nam grę.<br>
-        Zgadywał cudze 4-cyfrowe PIN-y, więc teraz wszyscy ustawiają 5 cyfr. Dzięki, Adam. 🙄<br>
-        <span class="force-blame-sub">Adam, jeśli to czytasz: oddaj klawiaturę i idź się napić (wody) 🍺💧</span></p>
-      <p class="field-label">Ustaw nowy 5-cyfrowy PIN</p>
-      <input type="password" id="force-new-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
-      <p class="field-label">Powtórz nowy PIN</p>
-      <input type="password" id="force-confirm-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
-      <button class="btn-primary" id="force-btn">Zapisz nowy PIN →</button>
+        <form id="mode-login" autocomplete="off">
+          <p class="field-label">Twój nick</p>
+          <select id="nick-select" class="nick-select">
+            <option value="">Ładowanie…</option>
+          </select>
+          <p class="field-label">PIN</p>
+          <input type="password" id="pin-input" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+          <div id="cf-login" class="cf-turnstile-box"></div>
+          <button class="btn-primary" id="login-btn">Zaloguj →</button>
+          <p class="login-hint">Nowy gracz? <a href="#" id="go-register">Zarejestruj się →</a></p>
+        </form>
+
+        <form id="mode-register" class="hidden" autocomplete="off">
+          <p class="field-label">Twój nick</p>
+          <input type="text" id="reg-nick" placeholder="np. Kasia, Marek…" maxlength="30" autocomplete="off" spellcheck="false">
+          <p class="field-label">Ustaw 5-cyfrowy PIN</p>
+          <input type="password" id="reg-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+          <div id="cf-register" class="cf-turnstile-box"></div>
+          <button class="btn-primary" id="register-btn">Zarejestruj →</button>
+          <p class="login-hint">Dostaniesz <strong>1000 coinów 🪙</strong> na start.<br>
+            Masz konto? <a href="#" id="go-login">Wróć do logowania →</a></p>
+        </form>
+
+        <div id="mode-migrate" class="hidden">
+          <p class="field-label">Twój nick</p>
+          <select id="migrate-nick" class="nick-select">
+            <option value="">Ładowanie…</option>
+          </select>
+          <p class="field-label">Dotychczasowy PIN</p>
+          <input type="password" id="migrate-old-pin" placeholder="stary PIN" maxlength="5" inputmode="numeric" autocomplete="off">
+          <p class="field-label">Nowy 5-cyfrowy PIN</p>
+          <input type="password" id="migrate-new-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+          <div id="cf-migrate" class="cf-turnstile-box"></div>
+          <button class="btn-primary" id="migrate-btn">Zmień PIN →</button>
+          <p class="login-hint">Wróć do <a href="#" id="migrate-back">logowania →</a></p>
+        </div>
+
+        <div id="mode-forcepin" class="hidden">
+          <p class="force-blame">😤 To wina Adama — grzebie gdzie nie trzeba i psuje nam grę.<br>
+            Zgadywał cudze 4-cyfrowe PIN-y, więc teraz wszyscy ustawiają 5 cyfr. Dzięki, Adam. 🙄<br>
+            <span class="force-blame-sub">Adam, jeśli to czytasz: oddaj klawiaturę i idź się napić (wody) 🍺💧</span></p>
+          <p class="field-label">Ustaw nowy 5-cyfrowy PIN</p>
+          <input type="password" id="force-new-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+          <p class="field-label">Powtórz nowy PIN</p>
+          <input type="password" id="force-confirm-pin" placeholder="•••••" maxlength="5" inputmode="numeric" autocomplete="off">
+          <button class="btn-primary" id="force-btn">Zapisz nowy PIN →</button>
+        </div>
+
+        <p class="login-error" id="login-error"></p>
+      </div>
     </div>
-
-    <p class="login-error" id="login-error"></p>
-
-    <section class="login-faq" aria-label="FAQ">
-      <h2>FAQ</h2>
-      <div class="faq-item">
-        <h3>Co to jest?</h3>
-        <p>Firmowa zabawa w typowanie wyników. Każdy tworzy lub obstawia rynki TAK/NIE za wirtualne coiny.</p>
-      </div>
-      <div class="faq-item">
-        <h3>Jak działa wygrana?</h3>
-        <p>Po zamknięciu rynku zwycięzcy odzyskują stawki, a coiny przegranej strony dzielą proporcjonalnie do udziałów.</p>
-      </div>
-      <div class="faq-item">
-        <h3>Czy to prawdziwe pieniądze?</h3>
-        <p>Nie. Coiny są tylko do gry, rankingu i wewnętrznej rywalizacji.</p>
-      </div>
-    </section>
+    
   </div>
 </div>
 
@@ -7621,6 +8031,7 @@ async function doLogin() {
 
   const btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = 'Łączę…';
+  screenLogin.classList.add('loading');
 
   const email = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
   const creds = { email, password: 'pin-' + pin };
@@ -7629,9 +8040,18 @@ async function doLogin() {
 
   if (CAPTCHA_ON) captchaReset('login');
   btn.disabled = false; btn.textContent = 'Zaloguj →';
-  if (error) { loginError.textContent = 'Zły nick lub PIN.'; pinInput.value = ''; return; }
+  if (error) {
+    screenLogin.classList.remove('loading');
+    loginError.textContent = 'Zły nick lub PIN.';
+    pinInput.value = '';
+    return;
+  }
   pinInput.value = '';
-  if (!data.user?.user_metadata?.pin5) { startForcePin(data.user); return; }
+  if (!data.user?.user_metadata?.pin5) {
+    screenLogin.classList.remove('loading');
+    startForcePin(data.user);
+    return;
+  }
   await initSession(data.user);
 }
 
@@ -7652,6 +8072,7 @@ async function doRegister() {
 
   const btn = document.getElementById('register-btn');
   btn.disabled = true; btn.textContent = 'Rejestruję…';
+  screenLogin.classList.add('loading');
 
   const email = nick.toLowerCase().replace(/[^a-z0-9_.-]/g, '_') + '@typuje.local';
   const opts = { data: { nick, pin5: true } };
@@ -7661,6 +8082,7 @@ async function doRegister() {
   if (CAPTCHA_ON) captchaReset('register');
   btn.disabled = false; btn.textContent = 'Zarejestruj →';
   if (error) {
+    screenLogin.classList.remove('loading');
     loginError.textContent = error.message.includes('already') ? 'Ten nick jest zajęty.' : error.message;
     return;
   }
@@ -7821,7 +8243,15 @@ let txFilterSearch, txFilterSide, txFilterStatus, txFilterClear;
 
 // ── App shell ─────────────────────────────────────────────────────────────
 function showApp() {
-  hide(screenLogin); show(screenApp);
+  screenLogin.classList.add('logging-out');
+  setTimeout(() => {
+    hide(screenLogin);
+    screenLogin.classList.remove('logging-out', 'loading');
+    show(screenApp);
+    screenApp.classList.add('app-entering');
+    setTimeout(() => screenApp.classList.remove('app-entering'), 500);
+  }, 450);
+
   setText(headerNick, me.nick);
   setText(headerCoins, me.coins);
   updateAdminTestTabs();
