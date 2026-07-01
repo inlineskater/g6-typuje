@@ -5251,14 +5251,30 @@
     .farm-table-summary .ftbl-clear:hover { border-color: var(--accent); }
     table.farm-table { width: 100%; min-width: 1860px; border-collapse: collapse; font-size: 12px; }
     table.farm-table th, table.farm-table td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
-    table.farm-table th { position: sticky; top: 0; background: var(--surface); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-dim, #6b7280); z-index: 2; }
-    table.farm-table thead tr.farm-table-filter-row th { top: 32px; padding: 4px 6px 7px; border-bottom: 2px solid var(--border); z-index: 2; }
-    .ftbl-sort-btn { width: 100%; min-height: 24px; display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
-    .ftbl-sort-btn:hover, .ftbl-sort-btn.active { color: var(--accent); }
-    .ftbl-sort-arrow { flex: 0 0 auto; min-width: 10px; font-size: 11px; line-height: 1; color: var(--accent); }
-    .ftbl-filter-input, .ftbl-filter-select { width: 100%; min-width: 74px; height: 26px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg, #f8fafc); color: var(--text); font: inherit; font-size: 11px; font-weight: 600; padding: 3px 6px; outline: none; text-transform: none; letter-spacing: 0; }
+    table.farm-table th { position: sticky; top: 0; background: var(--surface); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-dim, #6b7280); z-index: 4; }
+    table.farm-table th.has-menu { z-index: 12; }
+    .ftbl-head-btn { width: 100%; min-height: 28px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
+    .ftbl-head-btn:hover, .ftbl-head-btn.active, .ftbl-head-btn.filtered { color: var(--accent); }
+    .ftbl-head-label { overflow: hidden; text-overflow: ellipsis; }
+    .ftbl-head-icons { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-width: 22px; justify-content: flex-end; color: var(--muted); font-size: 10px; }
+    .ftbl-head-btn.active .ftbl-sort-arrow, .ftbl-head-btn.filtered .ftbl-filter-mark { color: var(--accent); }
+    .ftbl-filter-mark { width: 7px; height: 7px; border-radius: 999px; background: currentColor; opacity: .95; }
+    .ftbl-menu-caret { font-size: 11px; color: var(--muted); }
+    .ftbl-menu { position: absolute; top: calc(100% - 1px); left: 6px; width: 258px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); box-shadow: 0 16px 36px rgba(15,23,42,.18); text-transform: none; letter-spacing: 0; z-index: 30; white-space: normal; }
+    .ftbl-menu-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 1px 8px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 900; color: var(--text); }
+    .ftbl-menu-title small { color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .ftbl-menu-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 9px 0; }
+    .ftbl-menu-action { border: 1px solid var(--border); border-radius: 7px; background: var(--bg, #f8fafc); color: var(--text); cursor: pointer; font: inherit; font-size: 11px; font-weight: 800; padding: 7px 8px; text-align: left; }
+    .ftbl-menu-action:hover, .ftbl-menu-action.active { border-color: var(--accent); color: var(--accent); background: var(--acc-dim); }
+    .ftbl-menu-filter { display: grid; gap: 6px; }
+    .ftbl-menu-filter label { font-size: 10px; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .ftbl-filter-input, .ftbl-filter-select { width: 100%; min-width: 0; height: 32px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg, #f8fafc); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; padding: 5px 8px; outline: none; text-transform: none; letter-spacing: 0; }
     .ftbl-filter-input:focus, .ftbl-filter-select:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 2px var(--acc-dim); }
     .ftbl-filter-input::placeholder { color: var(--muted); font-weight: 500; }
+    .ftbl-menu-hint { font-size: 10px; color: var(--muted); line-height: 1.35; }
+    .ftbl-menu-footer { display: flex; justify-content: space-between; gap: 8px; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--border); }
+    .ftbl-menu-link { border: 0; background: transparent; color: var(--accent); cursor: pointer; font: inherit; font-size: 11px; font-weight: 900; padding: 2px 0; }
+    .ftbl-menu-link:disabled { color: var(--muted); cursor: default; opacity: .55; }
     table.farm-table tbody tr { cursor: pointer; }
     table.farm-table tbody tr:hover { background: rgba(120,84,56,.07); }
     table.farm-table tbody tr.is-mine { background: rgba(245,158,11,.08); }
@@ -22984,12 +23000,24 @@ function setupFarmOnce() {
   });
   const viewToggle = document.getElementById('farm-view-toggle');
   if (viewToggle) viewToggle.addEventListener('click', toggleFarmView);
+  document.addEventListener('click', e => {
+    if (farmViewMode !== 'table' || !farmTableOpenMenu) return;
+    if (e.target.closest('#farm-table-wrap .ftbl-menu') || e.target.closest('#farm-table-wrap .ftbl-head-btn')) return;
+    farmTableOpenMenu = null;
+    renderFarmTable();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || farmViewMode !== 'table' || !farmTableOpenMenu) return;
+    farmTableOpenMenu = null;
+    renderFarmTable();
+  });
 }
 
 // ── Ogródek ⇄ tabela: same tile data, two presentations ──────────────────────
 let farmViewMode = 'garden';   // 'garden' | 'table'
 let farmTableSort = { key: 'pos', dir: 1 };
 let farmTableFilters = {};
+let farmTableOpenMenu = null;
 
 function toggleFarmView() {
   farmViewMode = farmViewMode === 'garden' ? 'table' : 'garden';
@@ -23004,7 +23032,11 @@ function applyFarmViewMode() {
   if (stage) stage.classList.toggle('hidden', isTable);
   if (tableWrap) tableWrap.classList.toggle('hidden', !isTable);
   if (btn) btn.textContent = isTable ? '🌳 Widok ogródka' : '📋 Widok tabeli';
-  if (isTable) renderFarmTable(); else scaleFarmPots();
+  if (isTable) renderFarmTable();
+  else {
+    farmTableOpenMenu = null;
+    scaleFarmPots();
+  }
 }
 
 // Classify a crop tile for the table: growth %, ready flag, and a status label.
@@ -23264,6 +23296,7 @@ function farmTableSortRows(rows) {
 function farmTableSetFilter(key, value, cursor) {
   if (value) farmTableFilters[key] = value;
   else delete farmTableFilters[key];
+  farmTableOpenMenu = key;
   renderFarmTable({ focusKey: key, cursor });
 }
 
@@ -23303,18 +23336,77 @@ function farmTableFilterControl(col, rows) {
   return input;
 }
 
-function farmTableHeaderCell(col) {
-  const active = farmTableSort.key === col.key;
-  const arrow = active ? (farmTableSort.dir === -1 ? '↓' : '↑') : '';
-  const btn = el('button', { className: 'ftbl-sort-btn' + (active ? ' active' : ''), type: 'button', title: 'Sortuj: ' + col.label },
-    el('span', {}, col.label),
-    el('span', { className: 'ftbl-sort-arrow' }, arrow));
-  btn.addEventListener('click', () => {
-    if (farmTableSort.key === col.key) farmTableSort = { key: col.key, dir: -farmTableSort.dir };
-    else farmTableSort = { key: col.key, dir: col.defaultDir || 1 };
+function farmTableMenu(col, rows) {
+  const filtered = !!farmTableFilters[col.key];
+  const menu = el('div', { className: 'ftbl-menu', role: 'dialog', 'aria-label': 'Filtr kolumny ' + col.label },
+    el('div', { className: 'ftbl-menu-title' },
+      el('span', {}, col.label),
+      el('small', {}, 'Filtr')),
+    el('div', { className: 'ftbl-menu-actions' }),
+    el('div', { className: 'ftbl-menu-filter' },
+      el('label', {}, 'Pokaż wiersze'),
+      farmTableFilterControl(col, rows),
+      col.filter === 'number'
+        ? el('div', { className: 'ftbl-menu-hint' }, 'Obsługuje np. >10, <=50 albo 10..20.')
+        : el('div', { className: 'ftbl-menu-hint' }, col.filter === 'select' ? 'Wybierz jedną wartość z tej kolumny.' : 'Wpisz fragment tekstu.')),
+    el('div', { className: 'ftbl-menu-footer' }));
+  const actions = menu.querySelector('.ftbl-menu-actions');
+  const sortAction = (label, dir) => {
+    const active = farmTableSort.key === col.key && farmTableSort.dir === dir;
+    const b = el('button', { className: 'ftbl-menu-action' + (active ? ' active' : ''), type: 'button' }, label);
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      farmTableSort = { key: col.key, dir };
+      farmTableOpenMenu = null;
+      renderFarmTable();
+    });
+    return b;
+  };
+  actions.append(sortAction('↑ Rosnąco', 1), sortAction('↓ Malejąco', -1));
+  const footer = menu.querySelector('.ftbl-menu-footer');
+  const clear = el('button', { className: 'ftbl-menu-link', type: 'button', disabled: !filtered }, 'Wyczyść filtr');
+  clear.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!filtered) return;
+    delete farmTableFilters[col.key];
+    farmTableOpenMenu = col.key;
     renderFarmTable();
   });
-  return el('th', {}, btn);
+  const close = el('button', { className: 'ftbl-menu-link', type: 'button' }, 'Zamknij');
+  close.addEventListener('click', e => {
+    e.stopPropagation();
+    farmTableOpenMenu = null;
+    renderFarmTable();
+  });
+  footer.append(clear, close);
+  menu.addEventListener('click', e => e.stopPropagation());
+  return menu;
+}
+
+function farmTableHeaderCell(col, rows) {
+  const active = farmTableSort.key === col.key;
+  const filtered = !!farmTableFilters[col.key];
+  const open = farmTableOpenMenu === col.key;
+  const arrow = active ? (farmTableSort.dir === -1 ? '↓' : '↑') : '';
+  const btn = el('button', {
+    className: 'ftbl-head-btn' + (active ? ' active' : '') + (filtered ? ' filtered' : ''),
+    type: 'button',
+    title: 'Sortuj i filtruj: ' + col.label,
+    'aria-expanded': open ? 'true' : 'false',
+  },
+    el('span', { className: 'ftbl-head-label' }, col.label),
+    el('span', { className: 'ftbl-head-icons' },
+      active ? el('span', { className: 'ftbl-sort-arrow' }, arrow) : '',
+      filtered ? el('span', { className: 'ftbl-filter-mark', title: 'Filtr aktywny' }) : '',
+      el('span', { className: 'ftbl-menu-caret' }, '▾')));
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    farmTableOpenMenu = open ? null : col.key;
+    renderFarmTable();
+  });
+  const th = el('th', { className: open ? 'has-menu' : '' }, btn);
+  if (open) th.appendChild(farmTableMenu(col, rows));
+  return th;
 }
 
 function farmTableSummary(rows, totalRows) {
@@ -23352,6 +23444,8 @@ function farmTableSummary(rows, totalRows) {
 function renderFarmTable(opts = {}) {
   const wrap = document.getElementById('farm-table-wrap');
   if (!wrap) return;
+  const keepLeft = wrap.scrollLeft;
+  const keepTop = wrap.scrollTop;
   const allRows = farmTableRows(Date.now());
   const filtered = allRows.filter(farmTableRowPasses);
   const rows = farmTableSortRows(filtered);
@@ -23372,14 +23466,13 @@ function renderFarmTable(opts = {}) {
     });
     tbody.appendChild(tr);
   });
-  const filterRow = el('tr', { className: 'farm-table-filter-row' },
-    ...FARM_TABLE_COLS.map(col => el('th', {}, farmTableFilterControl(col, allRows))));
   const table = el('table', { className: 'farm-table' },
     el('thead', {},
-      el('tr', {}, ...FARM_TABLE_COLS.map(farmTableHeaderCell)),
-      filterRow),
+      el('tr', {}, ...FARM_TABLE_COLS.map(col => farmTableHeaderCell(col, allRows)))),
     tbody);
   wrap.replaceChildren(farmTableSummary(rows, allRows), table);
+  wrap.scrollLeft = keepLeft;
+  wrap.scrollTop = keepTop;
   farmTableRestoreFocus(opts);
 }
 
