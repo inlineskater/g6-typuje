@@ -5239,6 +5239,24 @@
     .farm-toolbar .farm-box-link-btn { margin-bottom: 0; }
     .farm-tool-btn { display: block; width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-weight: 800; font-size: 12px; color: var(--text); background: var(--surface); }
     .farm-tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* Ogródek ⇄ tabela view switch */
+    .farm-view-switch { display: flex; justify-content: center; margin-top: 2px; }
+    .farm-view-toggle { padding: 7px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .farm-view-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    .farm-table-wrap { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow-x: auto; }
+    .farm-table-summary { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px 4px; }
+    .farm-table-summary .ftbl-chip { font-size: 12px; font-weight: 700; color: var(--text-dim, #6b7280); background: var(--bg, #f3f4f6); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+    .farm-table-summary .ftbl-chip b { color: var(--text); }
+    table.farm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.farm-table th, table.farm-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    table.farm-table th { position: sticky; top: 0; background: var(--surface); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim, #6b7280); z-index: 1; }
+    table.farm-table tbody tr { cursor: pointer; }
+    table.farm-table tbody tr:hover { background: rgba(120,84,56,.07); }
+    table.farm-table tbody tr.is-mine { background: rgba(245,158,11,.08); }
+    table.farm-table tbody tr.is-mine:hover { background: rgba(245,158,11,.16); }
+    table.farm-table .ftbl-pos { font-variant-numeric: tabular-nums; color: var(--text-dim, #6b7280); }
+    table.farm-table .ftbl-status.ready { color: #15803d; font-weight: 800; }
+    table.farm-table .ftbl-free { color: var(--text-dim, #9ca3af); font-style: italic; }
     .farm-v2-overlay { align-items: flex-start; padding: 24px 16px; overflow-y: auto; }
     .farm-v2-modal { max-width: 960px; width: 100%; border-radius: var(--radius); scrollbar-width: none; -ms-overflow-style: none; }
     .farm-v2-modal::-webkit-scrollbar { width: 0; height: 0; display: none; }
@@ -7198,6 +7216,10 @@
           </div>
           <div class="garden-weather"></div>
           <div class="farm-field"><div class="farm-board" id="farm-board"></div></div>
+        </div>
+        <div class="farm-table-wrap hidden" id="farm-table-wrap"></div>
+        <div class="farm-view-switch">
+          <button class="farm-view-toggle" id="farm-view-toggle" type="button">📋 Widok tabeli</button>
         </div>
       </div>
     </main>
@@ -22943,6 +22965,113 @@ function setupFarmOnce() {
     const have = board ? board.querySelectorAll('.fb-seg').length : 0;
     if (board && want !== have) renderFarmBoard(); else scaleFarmPots();
   });
+  const viewToggle = document.getElementById('farm-view-toggle');
+  if (viewToggle) viewToggle.addEventListener('click', toggleFarmView);
+}
+
+// ── Ogródek ⇄ tabela: same tile data, two presentations ──────────────────────
+let farmViewMode = 'garden';   // 'garden' | 'table'
+
+function toggleFarmView() {
+  farmViewMode = farmViewMode === 'garden' ? 'table' : 'garden';
+  applyFarmViewMode();
+}
+
+function applyFarmViewMode() {
+  const stage = document.querySelector('#tab-farm .farm-stage');
+  const tableWrap = document.getElementById('farm-table-wrap');
+  const btn = document.getElementById('farm-view-toggle');
+  const isTable = farmViewMode === 'table';
+  if (stage) stage.classList.toggle('hidden', isTable);
+  if (tableWrap) tableWrap.classList.toggle('hidden', !isTable);
+  if (btn) btn.textContent = isTable ? '🌳 Widok ogródka' : '📋 Widok tabeli';
+  if (isTable) renderFarmTable(); else scaleFarmPots();
+}
+
+// Classify a crop tile for the table: growth %, ready flag, and a status label.
+function farmCropCellState(tile, now) {
+  const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
+  let pct = 1;
+  if (tile.planted_at && tile.ready_at) {
+    const t0 = new Date(tile.planted_at).getTime(), t1 = new Date(tile.ready_at).getTime();
+    pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
+  }
+  return { ready: !!ready, pct, text: ready ? '✓ Gotowe do zbioru' : 'Rośnie ' + Math.round(pct * 100) + '%' };
+}
+
+// Build the table mirror of the farm board. Zen (migration) plants collapse to a
+// single row at their anchor cell; cover cells are skipped so each entity = 1 row.
+function renderFarmTable() {
+  const wrap = document.getElementById('farm-table-wrap');
+  if (!wrap) return;
+  const now = Date.now();
+  let mine = 0, growing = 0, ready = 0, free = 0, plants = 0;
+  const tbody = el('tbody');
+  for (let y = 0; y < FARM_H; y++) {
+    for (let x = 0; x < FARM_W; x++) {
+      const key = x + ',' + y;
+      const tile = fmTiles.get(key);
+      if (tile && tile.zenCover) continue;                 // part of a plant block — shown at its anchor
+      const isMine = !!tile && tile.owner_id === me?.id;
+      if (isMine) mine++;
+      const tr = el('tr', { 'data-xy': key });
+      if (isMine) tr.classList.add('is-mine');
+      let ownerTxt, content, statusEl;
+      if (tile && tile.zenAnchor) {
+        const g = tile.zenAnchor;
+        plants++;
+        ownerTxt = g.user_id === me?.id ? 'Ty' : (g.profiles?.nick || g.nick || '?');
+        content = '🌱 ' + (g.plant_name || 'Roślinka');
+        const snap = farmPlantSnapshot(g);
+        const wtxt = g.user_id === me?.id
+          ? (snap.canWater ? '💧 Gotowa do podlania' : 'Podlanie ' + farmPlantNextWaterText(g))
+          : 'Roślina gracza';
+        statusEl = el('span', { className: 'ftbl-status' + (g.user_id === me?.id && snap.canWater ? ' ready' : '') }, wtxt);
+      } else if (!tile) {
+        free++;
+        ownerTxt = '—';
+        content = el('span', { className: 'ftbl-free' }, 'Wolna działka');
+        statusEl = el('span', { className: 'ftbl-status ftbl-free' }, 'Do kupienia');
+      } else {
+        ownerTxt = isMine ? 'Ty' : (tile.nick || '?');
+        if (tile.planted_species) {
+          const def = fmDefs.get(tile.planted_species);
+          content = (def && def.emoji ? def.emoji + ' ' : '🌾 ') + (def ? def.name : tile.planted_species);
+          const st = farmCropCellState(tile, now);
+          if (isMine) { if (st.ready) ready++; else growing++; }
+          statusEl = el('span', { className: 'ftbl-status' + (st.ready ? ' ready' : '') }, st.text);
+        } else if (tile.listed) {
+          content = 'Pusta działka';
+          statusEl = el('span', { className: 'ftbl-status' }, '🏷️ Wystawiona na sprzedaż');
+        } else {
+          content = 'Pusta działka';
+          statusEl = el('span', { className: 'ftbl-status ftbl-free' }, isMine ? 'Gotowa do obsadzenia' : 'Zajęta');
+        }
+      }
+      tr.append(
+        el('td', { className: 'ftbl-pos' }, '[' + x + ', ' + y + ']'),
+        el('td', {}, ownerTxt),
+        el('td', {}, content),
+        el('td', {}, statusEl));
+      tr.addEventListener('click', () => {
+        fmSel = { x, y }; markFarmSel();
+        if (tile && tile.zenAnchor) openFarmPlantModal(tile.zenAnchor);
+        else openFarmTileModal(x, y);
+      });
+      tbody.appendChild(tr);
+    }
+  }
+  const summary = el('div', { className: 'farm-table-summary' },
+    el('span', { className: 'ftbl-chip' }, 'Twoje działki: ', el('b', {}, String(mine))),
+    el('span', { className: 'ftbl-chip' }, '🌾 Rośnie: ', el('b', {}, String(growing))),
+    el('span', { className: 'ftbl-chip' }, '✓ Gotowe: ', el('b', {}, String(ready))),
+    el('span', { className: 'ftbl-chip' }, '🌱 Roślinki: ', el('b', {}, String(plants))),
+    el('span', { className: 'ftbl-chip' }, 'Wolne: ', el('b', {}, String(free))));
+  const table = el('table', { className: 'farm-table' },
+    el('thead', {}, el('tr', {},
+      el('th', {}, 'Pole'), el('th', {}, 'Właściciel'), el('th', {}, 'Zawartość'), el('th', {}, 'Status'))),
+    tbody);
+  wrap.replaceChildren(summary, table);
 }
 
 function normalizeFarmTile(t) {
@@ -23286,6 +23415,7 @@ function renderFarmBoard() {
   }
   markFarmSel();
   scaleFarmPots();
+  if (farmViewMode === 'table') renderFarmTable();   // keep the table mirror in sync
 }
 
 // Size the board to a square fitting the grass field, then scale the mini pots
@@ -23364,6 +23494,22 @@ function updateFarmGrowth() {
     if (bar) bar.classList.toggle('ready', ready);
     applyFarmCropVisual(cell, fmDefs.get(tile.planted_species), pct, ready);
     if (ready && !cell.querySelector('.farm-cell-ready')) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
+  });
+  if (farmViewMode === 'table') updateFarmTableGrowth(now);
+}
+
+// Patch crop status cells in the table view without a full rebuild (1s tick).
+function updateFarmTableGrowth(now) {
+  const wrap = document.getElementById('farm-table-wrap');
+  if (!wrap) return;
+  fmTiles.forEach((tile, key) => {
+    if (!tile.planted_species) return;
+    const row = wrap.querySelector('tr[data-xy="' + key + '"]');
+    const status = row && row.querySelector('.ftbl-status');
+    if (!status) return;
+    const st = farmCropCellState(tile, now);
+    status.textContent = st.text;
+    status.classList.toggle('ready', st.ready);
   });
 }
 
