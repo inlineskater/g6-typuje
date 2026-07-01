@@ -157,6 +157,12 @@ DO $$ BEGIN
     ADD CONSTRAINT farm_nft_transfers_kind_check CHECK (kind IN ('mint','sale','merge_fuel','merge_hero'));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- A 'merge_fuel' provenance row records a BURNED card, so it has no recipient
+-- (to_owner = NULL). The column was originally NOT NULL (every transfer used to
+-- have a recipient); relax it to match from_owner (nullable for 'mint' rows).
+-- Without this the merge INSERT fails and the whole level_up_nft txn rolls back.
+ALTER TABLE public.farm_nft_transfers ALTER COLUMN to_owner DROP NOT NULL;
+
 -- ── Update plant_crop to read level from NFT instance ──────────────────────
 -- Replaces the function from farm-plant-once-fix.sql to support instance-aware planting.
 CREATE OR REPLACE FUNCTION public.plant_crop(p_x integer, p_y integer, p_species text, p_instance_id uuid DEFAULT NULL)
