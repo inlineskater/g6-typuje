@@ -23687,22 +23687,42 @@ function renderFarmSelectionBody() {
     [...uniqueOwnedSpecies.values()]
       .sort((a, b) => (fmDefs.get(b.species)?.draw_weight || 0) - (fmDefs.get(a.species)?.draw_weight || 0))
       .forEach(card => {
-        if (!fmDefs.get(card.species)) return;
+        const def = fmDefs.get(card.species);
+        if (!def) return;
+
+        // NFT species: level lives on each numbered instance, so render one pick
+        // card PER eligible (owned, unlisted, unplanted) copy — with its own name,
+        // serial and real level — instead of one aggregate card that always showed
+        // "Lvl 1" and no name. Lets the player plant a specific egzemplarz (e.g.
+        // Świętosława #2) rather than blindly auto-picking the highest level.
+        if (def.edition_size != null) {
+          // Skip a stale farm_collection NFT row when no instances are actually owned.
+          if (!fmNft.some(n => n.owner_id === me?.id && n.species === card.species)) return;
+          const plantedIds = farmPlantedNftIds();
+          const insts = fmNft
+            .filter(n => n.owner_id === me?.id && n.species === card.species && !n.listed && !plantedIds.has(n.id))
+            .sort((a, b) => b.level - a.level || a.serial_no - b.serial_no);
+          if (!insts.length) {
+            grid.append(farmCardTile({ species: card.species, level: 1, count: 0 },
+              { plantDisabled: true, plantLabel: 'Wszystkie w użyciu' }));
+            return;
+          }
+          insts.forEach(inst => {
+            grid.append(farmCardTile({ species: card.species, level: inst.level || 1, count: 0 }, {
+              nameOverride: (inst.nft_name ? inst.nft_name + ' ' : '') + '#' + inst.serial_no,
+              onPick: (c, tileEl) => plantCrop(fmSel.x, fmSel.y, c.species, inst.id, tileEl),
+              plantLabel: '🌱 Zasadź'
+            }));
+          });
+          return;
+        }
+
+        // Fungible card: one aggregate card, capped by how many copies are free.
         const owned = ownedCounts.get(card.species) || 0;
         const planted = plantedCounts.get(card.species) || 0;
         const limitReached = planted >= owned;
-        
         grid.append(farmCardTile(card, {
-          onPick: limitReached ? null : ((c, tileEl) => {
-            const def = fmDefs.get(c.species);
-            if (def && def.edition_size != null) {
-              const instId = farmPickPlantInstance(c.species);
-              if (!instId) { showToast('Brak wolnego egzemplarza tej karty NFT do zasadzenia.'); return; }
-              plantCrop(fmSel.x, fmSel.y, c.species, instId, tileEl);
-            } else {
-              plantCrop(fmSel.x, fmSel.y, c.species, null, tileEl);
-            }
-          }),
+          onPick: limitReached ? null : ((c, tileEl) => plantCrop(fmSel.x, fmSel.y, c.species, null, tileEl)),
           plantDisabled: limitReached,
           plantLabel: limitReached ? `Posadzono (${planted}/${owned})` : '🌱 Zasadź'
         }));
@@ -23730,20 +23750,6 @@ function farmPlantedNftIds() {
   const s = new Set();
   fmTiles.forEach(t => { if (t.planted_instance_id) s.add(t.planted_instance_id); });
   return s;
-}
-
-// Auto-pick which NFT instance to plant for a species: the player's highest-level
-// unlisted, unplanted owned copy. Returns null for fungible (non-NFT) species
-// (plant_crop doesn't need an instance id for those), or undefined if the species
-// is an NFT but the player has no eligible instance left to plant.
-function farmPickPlantInstance(species) {
-  const def = fmDefs.get(species);
-  if (!def || def.edition_size == null) return null;
-  const planted = farmPlantedNftIds();
-  const cand = fmNft.filter(n => n.owner_id === me?.id && n.species === species && !n.listed && !planted.has(n.id));
-  if (!cand.length) return undefined;
-  cand.sort((a, b) => b.level - a.level || a.serial_no - b.serial_no);
-  return cand[0].id;
 }
 
 // Collectible plant card: rarity frame + level gem + a duplicate-progress
@@ -23793,12 +23799,11 @@ function farmCardTile(card, opts) {
     isNft ? el('div', { className: 'fcc-pin' }, '💎') : '',
     el('div', { className: 'fcc-inner' },
       el('div', { className: 'fcc-art' }, farmIcon(def.emoji)),
-      el('div', { className: 'fcc-name', title: def.name }, def.name),
+      el('div', { className: 'fcc-name', title: opts.nameOverride || def.name }, opts.nameOverride || def.name),
       el('div', { className: 'fcc-rar farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar),
       // The duplicate-progress bar is a fungible-card-only concept (NFT cards
-      // level via merging real instances, not via collecting duplicates) — see
-      // farmPickPlantInstance() for how the empty-tile NFT picker resolves an
-      // instance instead.
+      // level via merging real instances, not via collecting duplicates); the
+      // empty-tile picker renders one card per NFT instance (name/serial/level).
       isNft ? '' : el('div', { className: 'fcc-prog' },
         el('div', { className: 'fcc-prog-bar' },
           el('div', { className: 'fcc-prog-fill' + (haveEnough ? ' ready' : ''), style: { width: pct + '%' } }),
