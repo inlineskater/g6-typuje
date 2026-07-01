@@ -1,8 +1,8 @@
 # Rynek Proroctw G6
 
-Company prediction market, shared Texas Hold'em table, and small office games with virtual coins.
+Company prediction market with virtual coins, a shared Texas Hold'em table, a casino, rotating arcade games, World Cup betting, a collaborative pixel canvas, and a farm/NFT economy. Polish UI, single static `index.html`.
 
-Production URL after GitHub Pages deploy:
+Production URL:
 
 ```text
 https://inlineskater.github.io/rynek-proroctw-g6/
@@ -10,77 +10,47 @@ https://inlineskater.github.io/rynek-proroctw-g6/
 
 ## Deployment
 
-The app is a static single-page site. Pushes to `main` deploy through `.github/workflows/pages.yml` using GitHub Pages Actions.
+There is no build step. Pushes to `main` deploy `index.html` through `.github/workflows/pages.yml` (GitHub Pages Actions). For a new repo, enable Pages with GitHub Actions as the source.
 
-For a new GitHub repo, make sure Pages is enabled with GitHub Actions as the source in repository settings if GitHub does not enable it automatically on the first workflow run.
+Database changes are applied by pasting the relevant `supabase/*.sql` file into the Supabase SQL Editor. Edge Functions are deployed with the Supabase CLI or from the dashboard. The general rollout pattern for any feature is:
+
+1. Run its SQL file(s) in the SQL Editor.
+2. Deploy its Edge Function (if it has one — see `supabase/functions/`).
+3. Re-run the stats views (`supabase/hazard-views.sql`, `supabase/coin-inflow-stats.sql`, `supabase/economy-stats.sql`) if the feature moves coins.
+4. Push `index.html`.
+
+`CLAUDE.md` documents every SQL file, its purpose, and file-specific ordering constraints (e.g. the farm stack order: `farm.sql` → `farm-marketplace.sql` → `nft-leveling-rework.sql` → `nft-merge-fixes.sql`).
 
 ## Supabase
 
-The frontend uses the public anon key in `index.html`. This is expected for Supabase browser apps; the production safety boundary is RLS plus limited function grants.
+The public anon key in `index.html` is intentional for Supabase browser apps; the safety boundary is RLS plus limited function grants. All writes go through `SECURITY DEFINER` RPCs or authenticated Edge Functions — the browser never writes tables directly.
 
-Fresh database setup:
+Fresh project setup:
 
 1. Create a Supabase project.
-2. In SQL Editor, run `supabase/schema.sql`.
-3. In SQL Editor, run `supabase/poker.sql`.
-4. In SQL Editor, run the optional game/shop/garden/hero/farm SQL files you need, including `supabase/store.sql` for the reward shop, `supabase/whack-boss.sql` for Whack-a-Boss, `supabase/hero-items.sql` for equipable hero items, `supabase/plinko.sql` for Plinko G6, `supabase/mines.sql` for Miny G6, and `supabase/farm.sql` for Farma + Skrzynki Farmy. For the rotating seasonal games also run `supabase/bug-jumper.sql` (Bug Jumper), `supabase/flappy-pants.sql` („3 Pary Spodni"), `supabase/snake.sql` (Snake), `supabase/invoice-horde.sql` („Najazd Ticketów"), and `supabase/var-patrol.sql` (VAR Patrol). Run `supabase/hazard-views.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql` after the economy/game SQL files to enable the casino and gross coin inflow cards on the Statistics page.
-5. Deploy the Edge Functions in `supabase/functions/poker-action`, `supabase/functions/plinko-action`, `supabase/functions/mines-action`, `supabase/functions/whack-boss-action`, `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, `supabase/functions/snake-action`, `supabase/functions/invoice-horde-action`, and `supabase/functions/var-patrol-action`.
-6. Authentication -> Providers -> Email: disable email confirmation for PIN-based signups.
-7. Authentication -> URL Configuration: set the site URL to the GitHub Pages URL above.
+2. In SQL Editor, run `supabase/schema.sql` (core prediction market), then the feature SQL files you want — poker, store, marketplace, garden, heroes, casino games (`plinko`, `mines`, `roulette`, `crash`, `slots`), seasonal games (`whack-boss`, `bug-jumper`, `flappy-pants`, `snake`, `invoice-horde`, `var-patrol` + `season-award-gating.sql`), `football.sql` (Mundial), `canvas.sql`, `documents.sql`, and the farm stack in the order above.
+3. Run the stats views last: `hazard-views.sql`, `coin-inflow-stats.sql`, `economy-stats.sql`, `leaderboard-net-worth-items.sql`.
+4. Deploy the Edge Functions in `supabase/functions/` (one per server-owned game: poker, roulette, crash, slots, plinko, mines, football, garden, whack-boss, and the five seasonal `*-action` functions).
+5. Run `supabase/prod-hardening.sql`.
+6. Authentication → Providers → Email: disable email confirmation (PIN signups use synthetic emails).
+7. Authentication → URL Configuration: set the site URL to the GitHub Pages URL.
+8. Confirm the `pg_cron` jobs from the SQL files exist (weekly game awards, football odds sync, farm price rolls, farm rot cleanup, land-tax assessment).
 
-Existing database hardening: paste and run `supabase/prod-hardening.sql` in Supabase SQL Editor. Then re-run the installed ranking view SQL (`supabase/hazard-views.sql` and, if hero items are installed, `supabase/leaderboard-net-worth-items.sql`) so admin/test accounts can be filtered via `is_admin`. After the Whack-a-Boss / 3 Pary Spodni server-validation changes, also re-run `supabase/whack-boss.sql` and `supabase/flappy-pants.sql` before deploying the updated Edge Functions.
+Function secrets used by `football-action`: `ODDS_API_KEY`, `FOOTBALL_CRON_SECRET`, optional `ODDS_SPORT_KEY` / `ODDS_REGIONS` / `ODDS_BOOKMAKER`.
 
-Existing project poker rollout:
+## How it works
 
-1. Paste and run `supabase/poker.sql` in Supabase SQL Editor.
-2. Deploy `supabase/functions/poker-action` with Supabase CLI or from the Supabase dashboard.
+- Auth: nick + 5-digit PIN (Supabase email/password under the hood, with Cloudflare Turnstile). Starting balance: 1000 coins.
+- Markets: anyone can create prediction markets; CPMM pricing; one side per user per market; creator or admin resolves.
+- Mundial: fixed-odds World Cup 2026 betting vs the house; odds come from The Odds API and are locked at bet time; one bet per match.
+- Poker: one shared Hold'em table, 100 coin buy-in, server-owned state.
+- Casino (house games): Plinko, Miny (5×5 mines), Ruletka (shared table), Rakieta (solo crash), and slots — all RNG and payouts are server-owned; the browser only animates trusted results.
+- Seasonal games: one rotating arcade game per Monday-start week (Whack-a-Boss, Bug Jumper, „3 Pary Spodni", Snake, „Najazd Ticketów", VAR Patrol); server-validated rounds; weekly top 3 earn 100/50/25.
+- Wspólne Płótno: shared 192×108 pixel canvas; one free pixel per 2 h, then 1 coin per pixel.
+- Targowisko: peer-to-peer marketplace (fixed price or auction with escrow); coins transfer buyer → seller.
+- Ogródek (Farma): shared 13×4 tile grid; buy tiles, open card lootboxes, plant, harvest, and sell crops at a fluctuating "stalk market" NPC price; serialized NFT cards with per-instance levels (merge two to level up); land tax on holdings above the fair share; P2P resale of cards/NFTs/tiles via Targowisko. Details in [docs/farma.md](docs/farma.md).
+- Leaderboard: cash plus open bets, positions, escrow, and owned assets (net worth).
 
-Existing project Whack-a-Boss rollout:
+## Security note
 
-1. Paste and run `supabase/whack-boss.sql` in Supabase SQL Editor.
-2. Deploy `supabase/functions/whack-boss-action` with Supabase CLI or from the Supabase dashboard.
-3. Confirm the `pg_cron` schedule exists if weekly prizes should pay automatically after the week closes.
-
-Existing project Miny G6 rollout:
-
-1. Paste and run `supabase/mines.sql` in Supabase SQL Editor.
-2. Re-run `supabase/hazard-views.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql`.
-3. Deploy `supabase/functions/mines-action` with Supabase CLI or from the Supabase dashboard.
-
-Existing project Plinko G6 rollout:
-
-1. Paste and run `supabase/plinko.sql` in Supabase SQL Editor.
-2. Re-run `supabase/hazard-views.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql`.
-3. Deploy `supabase/functions/plinko-action` with Supabase CLI or from the Supabase dashboard.
-
-Existing project seasonal games rollout (Bug Jumper, „3 Pary Spodni", Snake, „Najazd Ticketów", VAR Patrol):
-
-1. Paste and run `supabase/bug-jumper.sql`, `supabase/flappy-pants.sql`, `supabase/snake.sql`, `supabase/invoice-horde.sql`, and `supabase/var-patrol.sql` in Supabase SQL Editor.
-2. Re-run `supabase/hero-items.sql`, `supabase/season-award-gating.sql`, `supabase/coin-inflow-stats.sql`, and `supabase/economy-stats.sql` after adding a seasonal game.
-3. Deploy `supabase/functions/bug-jumper-action`, `supabase/functions/flappy-pants-action`, `supabase/functions/snake-action`, `supabase/functions/invoice-horde-action`, and `supabase/functions/var-patrol-action` with Supabase CLI or from the Supabase dashboard.
-4. Confirm each game's `pg_cron` weekly-award job exists (`bug_jumper_weekly_awards`, `flappy_pants_weekly_awards`, `snake_weekly_awards`, `invoice_horde_weekly_awards`, `var_patrol_weekly_awards`) so the weekly top 3 are paid automatically.
-
-Existing project Bug Jumper hard-course rollout:
-
-1. Paste and run `supabase/bug-jumper-hard-v2.sql` in Supabase SQL Editor.
-2. Deploy the updated `supabase/functions/bug-jumper-action`.
-3. Publish the updated `index.html` so the June 8, 2026 season override and fixed hard course are live together.
-
-## How It Works
-
-- Auth: nick + 5-digit PIN, with a forced migration path for legacy 4-digit PIN accounts.
-- Starting balance: 1000 virtual coins.
-- Markets: authenticated users can create prediction markets.
-- Betting: CPMM pricing; users can only add to one side per market.
-- Resolution: market creator or an `is_admin` profile can resolve a market.
-- Poker: authenticated users can sit at one shared Texas Hold'em table for a 100 coin buy-in.
-- Plinko G6: authenticated users play solo casino Plinko drops; the Edge Function resolves the path/payout and the browser animates the trusted result.
-- Miny G6: authenticated users play a 5×5 Mines-style casino game with virtual coins; mine positions are generated and held server-side until the round ends.
-- Whack-a-Boss: authenticated users play 18-second rounds; weekly top 3 receive 100/50/25 coins and all-time records stay visible.
-- Seasonal games: one rotating arcade game per week in the seasonal tab (Whack-a-Boss, Bug Jumper, „3 Pary Spodni" — a Flappy Bird clone with 3 lives, Snake, „Najazd Ticketów", and VAR Patrol). Bug Jumper's hard-course season uses the same fixed 10-column, 30-line course for everyone, with safe rest lines at 10, 20, and 30. Snake's June 15, 2026 season was prompted by Filip with `do snake, make no mistakes`; VAR Patrol debuts in the week starting June 22, 2026; Najazd Ticketów is forced for the week starting June 29, 2026. Each pays the weekly top 3 100/50/25 coins.
-- Farma: shared 10x4 farm grid with purchasable plots, seed lootboxes, plant cards, crop harvesting, dynamic NPC crop prices, and migrated Ogródek plants. Details and odds are documented in [docs/farma.md](docs/farma.md).
-- Leaderboard: cash plus open position value.
-
-## Security Note
-
-This uses PIN auth and virtual coins only. Keep Supabase CAPTCHA/rate limits enabled, revoke leaked personal access tokens immediately, enable leaked-password protection after moving to a Supabase Pro plan, and do not use it for real money or sensitive data.
+PIN auth and virtual coins only. Keep Supabase CAPTCHA/rate limits enabled, revoke leaked tokens immediately, and do not use this for real money or sensitive data.

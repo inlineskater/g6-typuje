@@ -25941,16 +25941,15 @@ function renderFarmHelpInto(bodyEl) {
 
     farmHelpSection('🌱 4. Sadzenie i zbiór',
       P(b('Limit sadzenia: '), 'Możesz mieć posadzonych jednocześnie tylko tyle roślin danego gatunku, ile sztuk kart posiadasz. Każda karta pozwala na obsadzenie jednego pola w danym momencie.'),
-      P('Klikasz swoje puste pole i sadzisz wybraną kartę. Roślina rośnie w ', b('prawdziwym czasie'), ' (zegarowym): zwykłe ', b(growRange('common')), ', rzadkie ', b(growRange('rare')), ', epickie ', b(growRange('epic')), '.'),
-      P('To są ', b('pełne dni, nie minuty'), ' — uprawa dojrzewa powoli. Czas leci ', b('nawet gdy zamkniesz grę'), ' albo przełączysz kartę: gdy wrócisz, roślina będzie o tyle starsza. Pasek pod doniczką i licznik „Dojrzeje za…" pokazują ile zostało.'),
-      P('Wyższy poziom karty skraca wzrost o ', b('≈ 8% na poziom'), ', ale ', b('nigdy poniżej 24 h'), ' — daną roślinę zbierzesz najwyżej ', b('raz dziennie'), '. Gdy dojrzeje, klikasz „Zbierz" i plon trafia do ', b('🎒 Mojego Majątku'), '; pole znów jest wolne.'),
+      P('Klikasz swoje puste pole i sadzisz wybraną kartę. Roślina rośnie w ', b('prawdziwym czasie'), ' — także gdy zamkniesz grę: zwykłe ', b(growRange('common')), ', rzadkie ', b(growRange('rare')), ', epickie ', b(growRange('epic')), '. Pasek pod doniczką pokazuje, ile zostało.'),
+      P('Gdy dojrzeje, klikasz ', b('„Zbierz"'), ' — plon trafia do ', b('🎒 Mojego Majątku'), ', a pole znów jest wolne. Przez 24-godzinną podłogę wzrostu daną roślinę zbierzesz najwyżej ', b('raz dziennie'), '.'),
       P('⏳ ', b('Plony psują się!'), ' Każdy zbiór ', b('zgnije 5 dni po zebraniu'), ' — w 🎒 Moim Majątku widzisz licznik „🥀 zgnije za…". Nie zbieraj na zapas: zgniłe plony znikają bez coinów.')),
 
     farmHelpSection('🧺 5. Sprzedaż plonów',
       P('Zebrane plony sprzedajesz automatowi (NPC) za coiny — w ekwipunku albo w panelu farmy.'),
       P(b('Cena się waha.'), ' Cena w katalogu to ', b('cena MAKSYMALNA'), ' (pułap). NPC płaci ', b('od 30% do 100%'), ' tej kwoty, a poziom zmienia się ', b('2 razy na dobę: o 00:00 i 12:00'), ' (czas polski). Czasem trafi się ', b('wysoka stawka'), ' — to wtedy warto sprzedawać.'),
       P(b('Śledź wykres.'), ' W zakładce ', b('📈 Ceny'), ' masz historię z 7 dni dla każdej rośliny (linia przerywana = cena maks.). Zgadnij dobry moment i sprzedaj, gdy słupek jest wysoko.'),
-      P(b('Sprzedaż obniża cenę.'), ' Każda transakcja chwilowo zbija cenę — ', b('im więcej sprzedasz naraz, tym mocniejszy spadek'), ' (do 40% przy dużej partii, minimum 30% ceny maks.). Cena ', b('wraca do dziennego poziomu'), ' z czasem, więc dzielenie wielkiej sprzedaży na kawałki nie pomaga.'),
+      P(b('Sprzedaż obniża cenę.'), ' Każda transakcja chwilowo zbija cenę — ', b('im więcej sprzedasz naraz, tym mocniejszy spadek'), ' (do 40% przy dużej partii, minimum 30% ceny maks.). Cena wraca do dziennego poziomu ', b('~12% na godzinę'), '; szybkie klikanie sprzedaży na raty nic nie daje — pomaga tylko odczekanie.'),
       P(b('Wszyscy widzą sprzedaże.'), ' Lista ', b('🧾 Ostatnie sprzedaże plonów'), ' (zakładka 📈 Ceny) pokazuje, kto co i za ile sprzedał.')),
 
     farmHelpSection('💎 Kolekcja NFT — pełny przewodnik',
@@ -25979,14 +25978,13 @@ function renderFarmHelpInto(bodyEl) {
         el('span', { className: 'farm-merge-arrow' }, '→'),
         el('span', { className: 'farm-merge-result' }, '💎 ⭐ Poz. 2 (druga znika)')),
       P(b('Gdzie to zrobić: '), 'w ', b('🎒 Moim Majątku'), ' → sekcja ', b('💎 Karty NFT'), ' → na karcie klikasz ', b('🔀 Połącz'), ', wybierasz egzemplarz „na spalenie" i potwierdzasz. Przycisk jest ', b('nieaktywny'), ', gdy karta jest ', b('wystawiona na Targowisku'), ', ', b('zasadzona'), ', albo gdy ', b('nie masz drugiej karty na tym samym poziomie'), '.'),
-      P(b('Koszt: '), b('50 × poziom² 🪙'), ' (poz. 1→2: 50 🪙, 2→3: 200 🪙, 3→4: 450 🪙…). Obie karty muszą być niewystawione i niezasadzone.'),
+      P(b('Koszt: '), b('50 × poziom² 🪙'), ' (poz. 1→2: 50 🪙, 2→3: 200 🪙, 3→4: 450 🪙…).'),
       P(b('To drzewko: '), 'każdy poziom podwaja liczbę potrzebnych kart bazowych — ', b('poz. 2 = 2 karty, poz. 3 = 4 karty, poz. 4 = 8 kart'), '. Przy edycjach po 5–25 sztuk wysoki poziom NFT to rzadkość na skalę całego serwera.'),
       P(b('Poziom podróżuje z kartą: '), 'gdy sprzedasz NFT na Targowisku, kupujący dostaje ją ', b('z jej poziomem'), ' (gwiazdki ⭐ w tytule aukcji). Może potem połączyć ją z własnym egzemplarzem tego samego poziomu i piąć się wyżej — dlatego kupno podlewelowanej karty bywa jedyną realną drogą do wysokiego poziomu.')),
 
     farmHelpSection('🆕 Co zmieniło się 01.07.2026',
-      P('Przebudowaliśmy poziomy kart NFT. ', b('Wcześniej'), ' poziom był ', b('wspólny dla całego gatunku'), ' (np. „twoje banany = poziom 2", niezależnie od liczby sztuk). ', b('Teraz'), ' poziom należy do ', b('każdego pojedynczego, numerowanego egzemplarza'), ' — jedna sztuka może być na poz. 2, a druga tej samej rośliny na poz. 1.'),
-      P(b('Migracja starych kont: '), 'stary poziom gatunku przypisaliśmy ', b('egzemplarzowi o najniższym numerze seryjnym'), ', a pozostałe sztuki zostały na ', b('poziomie 1'), '. Dlatego u części graczy dwie takie same karty mają dziś ', b('różne poziomy'), ' (np. jedna poz. 2, druga poz. 1) — to pamiątka po starym systemie.'),
-      P(b('Co to oznacza w praktyce: '), 'takiego układu ', b('nie da się już stworzyć samodzielnie'), ' (łączenie zawsze zamienia dwie karty w jedną), a ', b('dwóch kart o różnych poziomach nie połączysz'), ' — najpierw trzeba dorobić drugą kartę na tym samym poziomie. Wartość NFT w majątku też liczy się teraz ', b('per egzemplarz razy jego poziom'), '.')),
+      P('Przebudowaliśmy poziomy kart NFT. ', b('Wcześniej'), ' poziom był ', b('wspólny dla całego gatunku'), '; ', b('teraz'), ' należy do ', b('każdego pojedynczego, numerowanego egzemplarza'), ' — jedna sztuka może być na poz. 2, a druga tej samej rośliny na poz. 1.'),
+      P(b('Migracja starych kont: '), 'stary poziom gatunku dostał ', b('egzemplarz o najniższym numerze seryjnym'), ', reszta została na ', b('poziomie 1'), ' — dlatego u części graczy dwie takie same karty mają dziś różne poziomy. Kart o różnych poziomach nie połączysz — najpierw dorób drugą na tym samym poziomie.')),
   );
 }
 
