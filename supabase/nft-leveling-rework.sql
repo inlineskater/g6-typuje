@@ -91,7 +91,9 @@ BEGIN
     SELECT * INTO v_hero FROM public.farm_nft_instances WHERE id = p_hero_id FOR UPDATE;
   END IF;
 
-  IF NOT FOUND OR v_hero.id IS NULL THEN RAISE EXCEPTION 'hero_not_found'; END IF;
+  -- Check each row var explicitly (NOT FOUND only reflects the last SELECT above,
+  -- so a missing fuel would otherwise be mislabeled as 'hero_not_found').
+  IF v_hero.id IS NULL THEN RAISE EXCEPTION 'hero_not_found'; END IF;
   IF v_fuel.id IS NULL THEN RAISE EXCEPTION 'fuel_not_found'; END IF;
   IF v_hero.owner_id <> v_user THEN RAISE EXCEPTION 'not_owner_hero'; END IF;
   IF v_fuel.owner_id <> v_user THEN RAISE EXCEPTION 'not_owner_fuel'; END IF;
@@ -237,6 +239,52 @@ BEGIN
 
   RETURN json_build_object('ok', true, 'x', p_x, 'y', p_y, 'species', p_species,
     'level', v_level, 'ready_at', v_ready);
+END;
+$$;
+
+-- ── Update harvest_crop to clear planted_instance_id ───────────────────────
+-- Redefined here (not in farm.sql) because farm.sql runs BEFORE the
+-- planted_instance_id column is added above. Without clearing it, a harvested
+-- NFT crop leaves the tile still pointing at the instance, so the NFT is treated
+-- as permanently planted (can't merge, list, or re-plant it). Only the closing
+-- UPDATE differs from the farm.sql original — the NFT instance is freed.
+CREATE OR REPLACE FUNCTION public.harvest_crop(p_x integer, p_y integer)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user  uuid := auth.uid();
+  v_tile  public.farm_tiles%ROWTYPE;
+  v_def   public.farm_card_defs%ROWTYPE;
+  v_yield integer;
+  v_exp   timestamptz;
+  v_qty   integer;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+
+  SELECT * INTO v_tile FROM public.farm_tiles WHERE x = p_x AND y = p_y FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'tile_not_owned'; END IF;
+  IF v_tile.owner_id <> v_user THEN RAISE EXCEPTION 'not_your_tile'; END IF;
+  IF v_tile.planted_species IS NULL THEN RAISE EXCEPTION 'tile_empty'; END IF;
+  IF v_tile.ready_at IS NULL OR now() < v_tile.ready_at THEN RAISE EXCEPTION 'not_ready'; END IF;
+
+  SELECT * INTO v_def FROM public.farm_card_defs WHERE species = v_tile.planted_species;
+  IF NOT FOUND THEN RAISE EXCEPTION 'bad_species'; END IF;
+
+  v_yield := round(v_def.base_yield * (1 + (v_tile.planted_level - 1) * 0.5))::integer;
+  v_exp   := now() + interval '5 days';
+
+  INSERT INTO public.farm_inventory (user_id, crop_type, qty, harvested_at, expires_at)
+  VALUES (v_user, v_def.crop_type, v_yield, now(), v_exp);
+
+  SELECT COALESCE(sum(qty), 0) INTO v_qty FROM public.farm_inventory
+   WHERE user_id = v_user AND crop_type = v_def.crop_type AND expires_at > now();
+
+  UPDATE public.farm_tiles
+     SET planted_species = NULL, planted_level = NULL, planted_at = NULL, ready_at = NULL,
+         planted_instance_id = NULL   -- free the NFT instance so it can merge/list/replant
+   WHERE x = p_x AND y = p_y;
+
+  RETURN json_build_object('ok', true, 'x', p_x, 'y', p_y, 'crop_type', v_def.crop_type,
+    'harvested', v_yield, 'inventory_qty', v_qty, 'expires_at', v_exp);
 END;
 $$;
 
