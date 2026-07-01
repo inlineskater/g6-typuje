@@ -11364,9 +11364,15 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
   // auction escrow) keep net worth flat: lockDelta cancels the cash delta. Hero-item
   // purchases, accessories & the garden certificate add to net_worth assets; auction
   // reserve/refunds top up / release the escrow that becomes the won item (valued at the
-  // winning bid). Everything else (interest, awards, store redemptions, marketplace
-  // transfers, garden watering) is pure cash P/L that moves net worth.
-  const NEUTRAL = { hero_item_purchase: 1, garden_accessory: 1, garden_certificate: 1, hero_auction_bid_reserved: 1, hero_auction_outbid_refund: 1, hero_auction_edition_refund: 1 };
+  // winning bid). Farm buys convert cash into assets the live net_worth still counts —
+  // land (farm_tile_buy → asset_value), sealed boxes (farm_box_buy → boxes×100), and
+  // card/NFT level investment (card_levelup) — so they must be neutral too, otherwise a
+  // farm-heavy player's history nosedives through every purchase and snaps back up at
+  // the pinned endpoint. (farm_crop_sale stays pure income: the harvested-crop asset it
+  // liquidates was minted outside the coin ledger, so it was never added to `lock`.)
+  // Everything else (interest, awards, store redemptions, marketplace transfers, crop
+  // sales, garden watering) is pure cash P/L that moves net worth.
+  const NEUTRAL = { hero_item_purchase: 1, garden_accessory: 1, garden_certificate: 1, hero_auction_bid_reserved: 1, hero_auction_outbid_refund: 1, hero_auction_edition_refund: 1, farm_tile_buy: 1, farm_box_buy: 1, card_levelup: 1 };
   coinTxs.forEach(t => {
     const label = t.reason === 'garden_water'
       ? '🌱 Podlewanie' + (t.meta?.streak > 1 ? ' (streak ' + t.meta.streak + ')' : '')
@@ -25365,14 +25371,32 @@ function renderFarmHelpInto(bodyEl) {
             list('farm-help-list', nftLines))
         : P('Edycje pojawią się w grze wkrótce.'),
       P(b('Jak działa kolekcja:')),
-      list('farm-help-list', [
-        'Numer seryjny: każdy egzemplarz ma własny numer, np. „#3 / 25" — trzecia wybita sztuka z całej edycji 25.',
-        'Zdobywasz je tylko ze zwykłej skrzynki za ' + FARM_BOX_PRICE + ' 🪙 (te same 3 losowania) — wypadają bardzo rzadko, nie ma osobnego zakupu.',
-        'Każde NFT, które już posiadasz, dzieli wagę kolejnych NFT przez ' + FARM_NFT_ODDS_DIVISOR + ', więc kolekcjonerom coraz trudniej trafiać następne okazy.',
-        'Gdy edycja się wyprzeda, karta znika z puli losowań i w Katalogu ma status „wyprzedane".',
-        'Sadzisz i ulepszasz je jak każdą kartę — mają najmocniejsze staty (największy plon i cena NPC).',
-        'Wartość w majątku (Net Worth, 💼 Portfel) = 20000 ÷ wielkość edycji za sztukę, więc mniejsza edycja = cenniejsza karta.',
-      ])),
+      el('ul', { className: 'farm-help-list' },
+        step(b('Numer seryjny: '), 'każdy egzemplarz ma własny numer, np. „#3 / 25" — trzecia wybita sztuka z całej edycji 25.'),
+        step(b('Skąd: '), 'zdobywasz je tylko ze zwykłej skrzynki za ' + FARM_BOX_PRICE + ' 🪙 (te same 3 losowania) — wypadają bardzo rzadko, nie ma osobnego zakupu.'),
+        step(b('Malejące szanse: '), 'każde NFT, które już posiadasz, dzieli wagę kolejnych NFT przez ' + FARM_NFT_ODDS_DIVISOR + ', więc kolekcjonerom coraz trudniej trafiać następne okazy.'),
+        step(b('Wyprzedaż edycji: '), 'gdy edycja się wyczerpie, karta znika z puli losowań i w Katalogu ma status „wyprzedane".'),
+        step(b('Sadzenie: '), 'sadzisz je jak każdą kartę i mają najmocniejsze staty (największy plon i cena NPC). Uwaga: ', b('poziom siedzi na konkretnym egzemplarzu'), ' — sadzisz wybrany numer, a rośnie zgodnie z jego poziomem.'),
+        step(b('Wartość w majątku'), ' (Net Worth, 💼 Portfel) = ', b('20000 ÷ wielkość edycji × poziom'), ' za egzemplarz — mniejsza edycja i wyższy poziom = cenniejsza karta.'))),
+
+    farmHelpSection('🔀 Ulepszanie NFT (łączenie egzemplarzy)',
+      P('NFT ', b('nie ulepsza się duplikatami'), ' jak zwykłe karty. Poziom siedzi na ', b('każdym pojedynczym, numerowanym egzemplarzu'), ' z osobna, więc żeby awansować, ', b('łączysz dwa egzemplarze'), ' tej samej rośliny w jeden mocniejszy.'),
+      P(b('Zasada: '), 'bierzesz ', b('dwie karty tego samego gatunku i tego samego poziomu'), '. Jedna („bohater") ', b('awansuje o poziom'), ', druga („paliwo") zostaje ', b('zniszczona na zawsze'), ' — znika z edycji, a pula danej rośliny kurczy się o 1 egzemplarz.'),
+      el('div', { className: 'farm-merge-info' },
+        el('span', { className: 'farm-merge-cards' }, '💎 💎'),
+        el('span', { className: 'farm-merge-plus' }, '+'),
+        el('span', {}, '50 🪙'),
+        el('span', { className: 'farm-merge-arrow' }, '→'),
+        el('span', { className: 'farm-merge-result' }, '💎 ⭐ Poz. 2 (druga znika)')),
+      P(b('Gdzie to zrobić: '), 'w ', b('🎒 Moim Majątku'), ' → sekcja ', b('💎 Karty NFT'), ' → na karcie klikasz ', b('🔀 Połącz'), ', wybierasz egzemplarz „na spalenie" i potwierdzasz. Przycisk jest ', b('nieaktywny'), ', gdy karta jest ', b('wystawiona na Targowisku'), ', ', b('zasadzona'), ', albo gdy ', b('nie masz drugiej karty na tym samym poziomie'), '.'),
+      P(b('Koszt: '), b('50 × poziom² 🪙'), ' (poz. 1→2: 50 🪙, 2→3: 200 🪙, 3→4: 450 🪙…). Obie karty muszą być niewystawione i niezasadzone.'),
+      P(b('To drzewko: '), 'każdy poziom podwaja liczbę potrzebnych kart bazowych — ', b('poz. 2 = 2 karty, poz. 3 = 4 karty, poz. 4 = 8 kart'), '. Przy edycjach po 5–25 sztuk wysoki poziom NFT to rzadkość na skalę całego serwera.'),
+      P(b('Poziom podróżuje z kartą: '), 'gdy sprzedasz NFT na Targowisku, kupujący dostaje ją ', b('z jej poziomem'), ' (gwiazdki ⭐ w tytule aukcji). Może potem połączyć ją z własnym egzemplarzem tego samego poziomu i piąć się wyżej — dlatego kupno podlewelowanej karty bywa jedyną realną drogą do wysokiego poziomu.')),
+
+    farmHelpSection('🆕 Co zmieniło się 01.07.2026',
+      P('Przebudowaliśmy poziomy kart NFT. ', b('Wcześniej'), ' poziom był ', b('wspólny dla całego gatunku'), ' (np. „twoje banany = poziom 2", niezależnie od liczby sztuk). ', b('Teraz'), ' poziom należy do ', b('każdego pojedynczego, numerowanego egzemplarza'), ' — jedna sztuka może być na poz. 2, a druga tej samej rośliny na poz. 1.'),
+      P(b('Migracja starych kont: '), 'stary poziom gatunku przypisaliśmy ', b('egzemplarzowi o najniższym numerze seryjnym'), ', a pozostałe sztuki zostały na ', b('poziomie 1'), '. Dlatego u części graczy dwie takie same karty mają dziś ', b('różne poziomy'), ' (np. jedna poz. 2, druga poz. 1) — to pamiątka po starym systemie.'),
+      P(b('Co to oznacza w praktyce: '), 'takiego układu ', b('nie da się już stworzyć samodzielnie'), ' (łączenie zawsze zamienia dwie karty w jedną), a ', b('dwóch kart o różnych poziomach nie połączysz'), ' — najpierw trzeba dorobić drugą kartę na tym samym poziomie. Wartość NFT w majątku też liczy się teraz ', b('per egzemplarz razy jego poziom'), '.')),
   );
 }
 
