@@ -5336,7 +5336,10 @@
     .farm-cat-lvl-table tr:last-child td { border-bottom: none; }
     .farm-cat-lvl-table td.farm-cat-perday { color: var(--accent); font-weight: 800; }
     .farm-cat-lvl-note { margin-top: 7px; font-size: 10.5px; color: var(--muted); line-height: 1.4; }
-    .farm-cat-td-name { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--text); }
+    .farm-cat-td-name { font-weight: 700; color: var(--text); }
+    .farm-cat-name-wrap { display: flex; align-items: center; gap: 7px; min-height: 24px; }
+    .farm-cat-table td { vertical-align: middle; }
+    .farm-cat-stan-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 6px; }
     .farm-cat-emoji-sm { font-size: 20px; }
     .farm-cat-table td.farm-rar-common, .farm-cat-table td.farm-rar-rare, .farm-cat-table td.farm-rar-epic, .farm-cat-table td.farm-rar-legendary { font-weight: 800; }
     .farm-cat-table td.farm-cat-own.yes { color: var(--accent); font-weight: 700; }
@@ -24833,15 +24836,15 @@ function farmCatalogTable(mdl) {
           : '';
         const btn = el('button', { className: 'farm-mini-btn', style: { padding: '2px 6px', fontSize: '10px' } }, 'Edycja 💎');
         btn.addEventListener('click', e => { e.stopPropagation(); openFarmNftExplorer(d.species); });
-        const wrapper = el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' } }, stanCell, histChip, btn);
-        stanCell = wrapper;
+        stanCell = el('div', { className: 'farm-cat-stan-wrap' }, stanCell, histChip, btn);
       }
       const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable' },
         el('td', { className: 'farm-cat-td-name' },
-          el('span', { className: 'farm-cat-chev' }, '▸'),
-          el('span', { className: 'farm-cat-emoji-sm' }, farmIcon(d.emoji)),
-          el('span', { className: 'farm-cat-name-txt farm-rar-' + d.rarity }, d.name),
-          f.isNft ? el('small', { className: 'farm-cat-nft-badge' }, ' 💎 ' + f.minted + '/' + d.edition_size) : ''),
+          el('div', { className: 'farm-cat-name-wrap' },
+            el('span', { className: 'farm-cat-chev' }, '▸'),
+            el('span', { className: 'farm-cat-emoji-sm' }, farmIcon(d.emoji)),
+            el('span', { className: 'farm-cat-name-txt farm-rar-' + d.rarity }, d.name),
+            f.isNft ? el('small', { className: 'farm-cat-nft-badge' }, ' 💎 ' + f.minted + '/' + d.edition_size) : '')),
         el('td', {}, f.chance),
         el('td', {}, farmGrowLabel(d.base_grow_minutes)),
         el('td', {}, d.base_yield + ' szt.'),
