@@ -24676,7 +24676,12 @@ function farmGrowDaysLabel(min) {
 // Shared per-card facts used by the catalog cards.
 function farmCatalogModel() {
   const owned = new Map(); fmCollection.forEach(c => owned.set(c.species, c));
+  // minted-ever per species: merges BURN instances, so counting live fmNft rows
+  // undercounts and would show a sold-out edition as available again. Prefer the
+  // server counter (farm_card_defs.minted_count, nft-merge-fixes.sql); the live
+  // count stays as a fallback for a DB that predates the column.
   const minted = new Map(); fmNft.forEach(n => minted.set(n.species, (minted.get(n.species) || 0) + 1));
+  fmDefs.forEach(d => { if (d.minted_count != null) minted.set(d.species, Math.max(minted.get(d.species) || 0, d.minted_count)); });
   const mySerials = new Map();
   // myInstances: species -> the viewer's own {serial_no, level} list (NFT level
   // lives on the instance now, not on farm_collection — see nft-leveling-rework.sql).
@@ -25472,6 +25477,11 @@ async function openFarmNftExplorer(species) {
     const insts = instRes.data || [];
     const transfers = trRes.data || [];
     const editionSize = def.edition_size || insts.reduce((m, i) => Math.max(m, i.edition_size || 0), 0) || insts.length;
+    // minted-ever: merges burn instances, so a serial can be minted yet have no
+    // live row. Server counter first, live rows + transfer log as fallback.
+    const mintedEver = Math.max(def.minted_count || 0, insts.length,
+      insts.reduce((m, i) => Math.max(m, i.serial_no || 0), 0),
+      transfers.reduce((m, t) => Math.max(m, t.serial_no || 0), 0));
     // resolve nicks for every owner referenced
     const ids = new Set();
     insts.forEach(i => i.owner_id && ids.add(i.owner_id));
@@ -25489,17 +25499,22 @@ async function openFarmNftExplorer(species) {
       farmIcon(def.emoji || '💎', 'farm-nftx-emoji'),
       el('div', {},
         el('div', { className: 'farm-nftx-title' }, def.name || species),
-        el('div', { className: 'farm-nftx-sub' }, insts.length + ' / ' + editionSize + ' wybitych · wartość ' + (editionSize ? Math.round(20000 / editionSize) : '?') + ' 🪙/szt'))));
+        el('div', { className: 'farm-nftx-sub' },
+          mintedEver + ' / ' + editionSize + ' wybitych' +
+          (mintedEver > insts.length ? ' · 🔥 ' + (mintedEver - insts.length) + ' spalonych (fuzje)' : '') +
+          ' · wartość ' + (editionSize ? Math.round(20000 / editionSize) : '?') + ' 🪙/szt'))));
 
-    // Edition grid: every slot 1..N (minted shows owner+name, locked = not yet drawn)
+    // Edition grid: every slot 1..N — minted shows owner+name; a minted serial
+    // with no live instance was burned as merge fuel; locked = not yet drawn.
     const grid = el('div', { className: 'farm-nftx-grid' });
     for (let s = 1; s <= editionSize; s++) {
       const inst = bySerial.get(s);
+      const burned = !inst && s <= mintedEver;
       const slot = el('div', { className: 'farm-nftx-slot' + (inst ? (inst.owner_id === me?.id ? ' mine' : ' minted') : ' locked') },
         el('div', { className: 'farm-nftx-serial' }, '#' + s + (inst && inst.level > 1 ? ' ⭐'.repeat(inst.level) : '')),
         inst
           ? el('div', { className: 'farm-nftx-owner' }, el('b', {}, (inst.nft_name || '—') + (inst.level > 1 ? ' Poz.' + inst.level : '')), el('span', {}, '👤 ' + nm(inst.owner_id)))
-          : el('div', { className: 'farm-nftx-owner' }, el('span', {}, '🔒 niewybita')));
+          : el('div', { className: 'farm-nftx-owner' }, el('span', {}, burned ? '🔥 spalona (fuzja)' : '🔒 niewybita')));
       grid.append(slot);
     }
     body.append(el('div', { className: 'farm-inv-section-title' }, '🎴 Egzemplarze'), grid);
@@ -25512,10 +25527,18 @@ async function openFarmNftExplorer(species) {
       const list = el('div', { className: 'farm-nftx-hist' });
       transfers.slice().reverse().forEach(t => {
         const when = new Date(t.created_at).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const line = t.kind === 'mint'
-          ? el('span', {}, '✨ Wybito #' + t.serial_no + ' → ', el('b', {}, nm(t.to_owner)))
-          : el('span', {}, '🔁 #' + t.serial_no + ': ', el('b', {}, nm(t.from_owner)), ' → ', el('b', {}, nm(t.to_owner)),
-              el('span', { className: 'farm-nftx-price' }, ' za ' + (t.price != null ? t.price + ' 🪙' : '—')));
+        let line;
+        if (t.kind === 'mint') {
+          line = el('span', {}, '✨ Wybito #' + t.serial_no + ' → ', el('b', {}, nm(t.to_owner)));
+        } else if (t.kind === 'merge_fuel') {
+          line = el('span', {}, '🔥 #' + t.serial_no + ' spalona przy fuzji przez ', el('b', {}, nm(t.from_owner)));
+        } else if (t.kind === 'merge_hero') {
+          line = el('span', {}, '⬆️ #' + t.serial_no + ' awansowała przez fuzję (', el('b', {}, nm(t.from_owner)), ')',
+            el('span', { className: 'farm-nftx-price' }, t.price != null ? ' · koszt ' + t.price + ' 🪙' : ''));
+        } else {
+          line = el('span', {}, '🔁 #' + t.serial_no + ': ', el('b', {}, nm(t.from_owner)), ' → ', el('b', {}, nm(t.to_owner)),
+            el('span', { className: 'farm-nftx-price' }, ' za ' + (t.price != null ? t.price + ' 🪙' : '—')));
+        }
         list.append(el('div', { className: 'farm-nftx-hrow' }, line, el('span', { className: 'farm-nftx-when' }, when)));
       });
       body.append(list);

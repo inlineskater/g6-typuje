@@ -982,6 +982,9 @@ END;
 $$;
 
 -- ── RPC: open_farm_lootbox ─────────────────────────────────────────────────
+-- ⚠️ SUPERSEDED twice: nft-leveling-rework.sql (no farm_collection row for NFT
+--    draws) and then nft-merge-fixes.sql (serials/supply from minted_count).
+--    After re-running this file, re-run BOTH, in that order.
 -- Consume ONE sealed box, draw FARM_BOX_DRAWS (3) DISTINCT rarity-weighted cards.
 -- Each draw excludes already-picked species so every box yields different cards
 -- (the active pool is larger than the 3-card draw). Server-side
@@ -1187,6 +1190,9 @@ END;
 $$;
 
 -- ── RPC: plant_crop ────────────────────────────────────────────────────────
+-- ⚠️ SUPERSEDED by the 4-arg instance-aware version in nft-leveling-rework.sql;
+--    nft-merge-fixes.sql then DROPs this 3-arg overload (a 3-named-arg PostgREST
+--    call would be ambiguous). After re-running this file, re-run both.
 -- Plant an owned card species on an owned empty tile. Planting does NOT consume
 -- a card (the card is a permanent blueprint). Growth time scales down with level.
 CREATE OR REPLACE FUNCTION public.plant_crop(p_x integer, p_y integer, p_species text)
@@ -1232,6 +1238,9 @@ END;
 $$;
 
 -- ── RPC: harvest_crop ──────────────────────────────────────────────────────
+-- ⚠️ SUPERSEDED by nft-leveling-rework.sql, whose version also clears
+--    planted_instance_id (else a harvested NFT stays "planted" forever —
+--    unmergeable, unlistable). Re-run that file after re-running this one.
 -- Mint crop units into inventory (not coins). Yield scales up with card level.
 -- Each harvest is its own LOT that ROTS 5 days later (expires_at); inventory_qty
 -- returned is the crop's total across all of the player's non-expired lots.

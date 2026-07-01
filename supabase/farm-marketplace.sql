@@ -88,13 +88,19 @@ END $$;
 
 -- Provenance + price log for serialized NFTs (public showcase, like the instances).
 -- One row per ownership event: 'mint' (price NULL) and each 'sale' (price = coins paid).
+-- The log must OUTLIVE the instance: level_up_nft burns the fuel card, so
+-- instance_id is nullable with ON DELETE SET NULL (NOT CASCADE — that would
+-- erase the burned card's whole history). to_owner is nullable for 'merge_fuel'
+-- rows (a burn has no recipient). Kind values are widened by
+-- nft-leveling-rework.sql; the FK/nullability fixes also live in
+-- nft-merge-fixes.sql for existing databases.
 CREATE TABLE IF NOT EXISTS public.farm_nft_transfers (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  instance_id uuid NOT NULL REFERENCES public.farm_nft_instances(id) ON DELETE CASCADE,
+  instance_id uuid REFERENCES public.farm_nft_instances(id) ON DELETE SET NULL,
   species     text NOT NULL,
   serial_no   integer NOT NULL,
   from_owner  uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  to_owner    uuid NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
+  to_owner    uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   price       integer,                       -- NULL = mint / non-coin transfer
   kind        text NOT NULL CHECK (kind IN ('mint','sale')),
   created_at  timestamptz NOT NULL DEFAULT now()
@@ -469,6 +475,9 @@ END;
 $$;
 
 -- ── settle_marketplace_listing (item-aware) ─────────────────────────────────
+-- ⚠️ SUPERSEDED by nft-merge-fixes.sql, which voids (refund + release) instead
+--    of raising when a farm-tile auction winner has unpaid land-tax debt.
+--    Re-run nft-merge-fixes.sql after re-running this file.
 CREATE OR REPLACE FUNCTION public.settle_marketplace_listing(p_listing_id uuid)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE

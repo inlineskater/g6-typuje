@@ -289,6 +289,9 @@ END;
 $$;
 
 -- ── Update open_farm_lootbox: skip farm_collection.count for NFT species ───
+-- ⚠️ SUPERSEDED by nft-merge-fixes.sql, which re-derives serials/supply from
+--    farm_card_defs.minted_count (live-instance counts break after merges burn
+--    cards). Re-run nft-merge-fixes.sql after re-running this file.
 -- farm_collection is no longer the source of truth for NFT levels (the level
 -- now lives on the individual farm_nft_instances row), so an NFT draw must not
 -- create/increment a farm_collection row anymore. The only change from the
