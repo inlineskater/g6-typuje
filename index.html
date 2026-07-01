@@ -23443,8 +23443,10 @@ function farmTaxQuoteLocal() {
     interest_next: Number(fmTax?.interest_next || (debt > 0 ? Math.ceil(debt * 0.10) : 0)),
     first_tax_day: fmTax?.first_tax_day || FARM_TAX_FIRST_TAX_DAY,
     first_payment_day: fmTax?.first_payment_day || FARM_TAX_FIRST_PAYMENT_DAY,
-    blocked_expansion: debt > 0 || owned + pending >= fairCap,
-    blocked_planting: owned > fairCap,
+    // Soft cap: only an unpaid tax debt blocks buying/planting — owning past
+    // the fair share is allowed and simply taxed (mirrors farm_land_tax_quote_for).
+    blocked_expansion: debt > 0,
+    blocked_planting: debt > 0,
   };
 }
 
@@ -23599,12 +23601,19 @@ function renderFarmSelectionBody() {
   box.append(el('div', { className: 'farm-card-sub', style: { marginBottom: '6px' } }, `Pole [${fmSel.x}, ${fmSel.y}]`));
   if (!tile) {
     const tax = farmTaxQuoteLocal();
-    if (tax.debt > 0 || farmNormalTileCount() >= tax.fair_cap) {
+    // Soft cap: an outstanding tax debt is the only hard block. Buying past the
+    // fair share is allowed — we just warn that the tile becomes taxable excess.
+    if (tax.debt > 0) {
       box.append(farmTaxStatusCard());
-      const disabledBtn = el('button', { className: 'farm-mini-btn primary', disabled: true },
-        tax.debt > 0 ? 'Najpierw spłać podatek' : 'Limit działek: ' + tax.fair_cap);
-      box.append(disabledBtn);
+      box.append(el('button', { className: 'farm-mini-btn primary', disabled: true }, 'Najpierw spłać podatek'));
       return;
+    }
+    if (tax.owned_tiles >= tax.fair_cap) {
+      box.append(farmTaxStatusCard());
+      const nextExcess = (tax.owned_tiles + 1) - tax.fair_cap;
+      const nextDaily = tax.tax_per_excess_sq * nextExcess * nextExcess;
+      box.append(el('div', { className: 'farm-card-sub', style: { marginTop: '6px', marginBottom: '4px', color: '#c2410c', fontWeight: '600' } },
+        '⚠️ Przekraczasz limit (' + tax.fair_cap + '). Ta działka będzie nadmiarowa — podatek wyniesie ' + nextDaily + ' 🪙/dzień.'));
     }
     if (fmVouchers > 0) {
       const vbtn = el('button', { className: 'farm-mini-btn primary farm-voucher-btn' }, '🎁 Postaw za darmo (masz ' + fmVouchers + ')');

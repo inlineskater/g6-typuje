@@ -544,8 +544,10 @@ BEGIN
     'interest_next', v_interest,
     'first_tax_day', v_first_tax_day,
     'first_payment_day', v_first_payment_day,
-    'blocked_expansion', (v_debt > 0 OR v_owned + v_pending >= v_cap),
-    'blocked_planting', (v_owned > v_cap)
+    -- Soft cap: buying/planting past the fair share is allowed (excess is taxed
+    -- daily); only an unpaid tax debt blocks expansion + new planting.
+    'blocked_expansion', (v_debt > 0),
+    'blocked_planting', (v_debt > 0)
   );
 END;
 $$;
@@ -580,12 +582,10 @@ AS $$
 DECLARE
   v_q json := public.farm_land_tax_quote_for(p_uid, p_exclude_listing_id);
   v_debt integer := COALESCE((v_q->>'debt')::integer, 0);
-  v_owned integer := COALESCE((v_q->>'owned_tiles')::integer, 0);
-  v_pending integer := COALESCE((v_q->>'pending_tiles')::integer, 0);
-  v_cap integer := COALESCE((v_q->>'fair_cap')::integer, 1);
 BEGIN
+  -- Soft cap: expansion past fair_cap is allowed (the excess is taxed daily).
+  -- Only an outstanding tax debt blocks buying more land.
   IF v_debt > 0 THEN RAISE EXCEPTION 'land_tax_debt'; END IF;
-  IF v_owned + v_pending >= v_cap THEN RAISE EXCEPTION 'territory_cap'; END IF;
 END;
 $$;
 
@@ -597,11 +597,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_q json := public.farm_land_tax_quote_for(p_uid);
+  v_debt integer := 0;
 BEGIN
-  IF COALESCE((v_q->>'owned_tiles')::integer, 0) > COALESCE((v_q->>'fair_cap')::integer, 1) THEN
-    RAISE EXCEPTION 'territory_over_cap';
-  END IF;
+  -- Soft cap: planting is allowed at any size; only an unpaid tax debt freezes
+  -- new planting (pay the kataster tax to keep farming your excess tiles).
+  SELECT COALESCE(land_tax_debt, 0) INTO v_debt
+    FROM public.farm_user_state
+   WHERE user_id = p_uid;
+  IF COALESCE(v_debt, 0) > 0 THEN RAISE EXCEPTION 'land_tax_debt'; END IF;
 END;
 $$;
 
