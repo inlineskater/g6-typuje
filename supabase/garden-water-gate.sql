@@ -104,7 +104,7 @@ BEGIN
     v_streak := 1;
   END IF;
 
-  v_reward := LEAST(10 + (v_streak - 1) * 2, 20);
+  v_reward := LEAST(15 + (v_streak - 1) * 3, 30);
   v_stage  := LEAST(v_streak, 6);
 
   UPDATE public.gardens SET
