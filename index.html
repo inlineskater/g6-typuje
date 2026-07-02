@@ -5252,7 +5252,7 @@
     .farm-view-switch { display: flex; justify-content: center; margin-top: 2px; }
     .farm-view-toggle { padding: 7px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     .farm-view-toggle:hover { border-color: var(--accent); color: var(--accent); }
-    .farm-table-wrap { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: auto; max-height: calc(100vh - 190px); }
+    .farm-table-wrap { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: auto; max-height: calc(100dvh - 190px); }
     .farm-table-summary { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px 8px; position: sticky; left: 0; background: var(--surface); z-index: 3; }
     .farm-table-summary .ftbl-chip { font-size: 12px; font-weight: 700; color: var(--text-dim, #6b7280); background: var(--bg, #f3f4f6); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
     .farm-table-summary .ftbl-chip b { color: var(--text); }
@@ -5402,7 +5402,7 @@
     .farm-pack-count { font-size: 11px; color: #6b5a3a; }
     .farm-pack-hint { margin-top: 20px; color: #e5e7eb; font-size: 13px; }
     .farm-pack-close { margin-top: 18px; width: auto; padding: 10px 22px; }
-    @media (max-width: 520px) { .farm-pack-card { width: 116px; height: 166px; } .farm-pack-emoji { font-size: 48px; } .farm-pack-back { font-size: 46px; } }
+    @media (max-width: 520px) { .farm-pack-row { gap: 10px; } .farm-pack-card { width: 116px; height: 166px; } .farm-pack-emoji { font-size: 48px; } .farm-pack-back { font-size: 46px; } }
     .farm-pack-serial { font-size: 12px; font-weight: 900; color: #b45309; }
     .farm-pack-card.nft .farm-pack-front { background: linear-gradient(160deg, #fffaf0, #ffe8b0); box-shadow: 0 0 20px rgba(245,158,11,.55), 0 12px 28px rgba(0,0,0,.45); }
     /* NFT badges + collection grid */
@@ -16901,7 +16901,7 @@ function setupSignatureCanvas(canvas, onChange) {
     return { x: (e.clientX - r.left) * (canvas.width / r.width),
              y: (e.clientY - r.top) * (canvas.height / r.height) };
   }
-  function start(e) { drawing = true; last = pos(e); e.preventDefault(); }
+  function start(e) { drawing = true; last = pos(e); try { canvas.setPointerCapture(e.pointerId); } catch {} e.preventDefault(); }
   function move(e) {
     if (!drawing) return;
     const p = pos(e);
@@ -16929,7 +16929,7 @@ let docModalEl = null, docModalEsc = null;
 
 function closeDocumentModal() {
   if (docModalEsc) { window.removeEventListener('keydown', docModalEsc); docModalEsc = null; }
-  if (docModalEl) { docModalEl.remove(); docModalEl = null; }
+  if (docModalEl) { docModalEl.remove(); docModalEl = null; document.body.style.overflow = ''; }
 }
 
 function formatDocDate(iso) {
@@ -17046,6 +17046,7 @@ function openDocumentModal(doc, opts) {
   }
   document.body.append(overlay);
   docModalEl = overlay;
+  document.body.style.overflow = 'hidden';
 
   // Initial state: if the document already fits without scrolling, treat as read.
   if (!alreadySigned) {
@@ -17103,6 +17104,7 @@ async function openMyDocuments() {
   window.addEventListener('keydown', docModalEsc);
   document.body.append(overlay);
   docModalEl = overlay;
+  document.body.style.overflow = 'hidden';
 }
 
 function parseWeekStartDate(weekStartStr) {
@@ -25018,6 +25020,9 @@ function renderFarmSelectionBody() {
     const left = tile.ready_at ? (new Date(tile.ready_at).getTime() - Date.now()) : 0;
     box.append(el('div', { className: 'farm-card-sub farm-sel-countdown' }, '⏳ Dojrzeje za ' + cvFmtDur(left)));
   }
+  const rmBtn = el('button', { className: 'farm-mini-btn', style: { marginTop: '6px' } }, '🗑️ Wykop roślinę');
+  rmBtn.addEventListener('click', () => removeCrop(fmSel.x, fmSel.y, rmBtn));
+  box.append(rmBtn);
 }
 
 // Set of NFT instance ids currently planted on ANY tile (derived fresh from
@@ -25308,7 +25313,7 @@ let farmModalEl = null, farmModalEsc = null, farmTileModalBody = null;
 
 function closeFarmModal() {
   if (farmModalEsc) { window.removeEventListener('keydown', farmModalEsc); farmModalEsc = null; }
-  if (farmModalEl) { farmModalEl.remove(); farmModalEl = null; }
+  if (farmModalEl) { farmModalEl.remove(); farmModalEl = null; document.body.style.overflow = ''; }
   farmTileModalBody = null;
 }
 
@@ -25331,6 +25336,7 @@ function openFarmModalShell(title) {
   overlay.append(modal);
   document.body.append(overlay);
   farmModalEl = overlay;
+  document.body.style.overflow = 'hidden';
   return bodyEl;
 }
 
@@ -26083,6 +26089,13 @@ function openFarmPlantedModal(tile, x, y) {
         'Wartość zbioru: poz. 1 ≈ ' + valAt(1) + ' 🪙 → poz. 5 ≈ ' + valAt(5) + ' 🪙 (obecna cena)')
     : '';
 
+  let removeSlot = '';
+  if (isMine) {
+    const rmBtn = el('button', { className: 'farm-mini-btn', style: { marginTop: '6px' } }, '🗑️ Wykop roślinę');
+    rmBtn.addEventListener('click', async () => { if (await removeCrop(x, y, rmBtn)) close(); });
+    removeSlot = el('div', {}, rmBtn);
+  }
+
   const body = el('div', { className: 'farm-plant-modal-body' },
     el('div', { className: 'farm-plant-modal-hero' },
       el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(def.emoji || '🌱')),
@@ -26096,6 +26109,7 @@ function openFarmPlantedModal(tile, x, y) {
     rangeLine,
     farmCardLevelTable(def, cur != null ? cur : base),
     harvestSlot,
+    removeSlot,
   );
   const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Szczegóły rośliny'), closeBtn),
@@ -26992,6 +27006,21 @@ async function harvestCrop(x, y, btn) {
   await reloadFarmInventory();   // rebuild qty + rot expiries from lots
   showToast('🧺 Zebrano ' + data.harvested + '× ' + (fmDefs.get(data.crop_type)?.name || data.crop_type) + '!');
   renderFarmBoard(); renderFarmSelection(); renderFarmMarket();
+}
+
+// Uproot: the owner discards a plant at any growth stage — no yield, nothing
+// refunded. Clears the same tile columns as harvest, so a planted NFT is freed.
+async function removeCrop(x, y, btn) {
+  const tile = fmTiles.get(x + ',' + y);
+  const def = tile ? fmDefs.get(tile.planted_species) : null;
+  if (!confirm('Roślina' + (def ? ' (' + def.emoji + ' ' + def.name + ')' : '') + ' zostanie usunięta bez zbiorów. Na pewno?')) return false;
+  if (btn) btn.disabled = true;
+  const { error } = await sb.rpc('remove_crop', { p_x: x, p_y: y });
+  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return false; }
+  if (tile) { tile.planted_species = null; tile.planted_level = null; tile.planted_at = null; tile.ready_at = null; tile.planted_instance_id = null; }
+  showToast('🗑️ Usunięto roślinę z działki.');
+  renderFarmBoard(); renderFarmSelection();
+  return true;
 }
 
 // Re-read the player's crop lots and rebuild fmInventory/fmInventoryExp (lots are

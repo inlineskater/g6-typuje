@@ -1238,9 +1238,6 @@ END;
 $$;
 
 -- ── RPC: harvest_crop ──────────────────────────────────────────────────────
--- ⚠️ SUPERSEDED by nft-leveling-rework.sql, whose version also clears
---    planted_instance_id (else a harvested NFT stays "planted" forever —
---    unmergeable, unlistable). Re-run that file after re-running this one.
 -- Mint crop units into inventory (not coins). Yield scales up with card level.
 -- Each harvest is its own LOT that ROTS 5 days later (expires_at); inventory_qty
 -- returned is the crop's total across all of the player's non-expired lots.
@@ -1276,11 +1273,40 @@ BEGIN
    WHERE user_id = v_user AND crop_type = v_def.crop_type AND expires_at > now();
 
   UPDATE public.farm_tiles
-     SET planted_species = NULL, planted_level = NULL, planted_at = NULL, ready_at = NULL
+     SET planted_species = NULL, planted_level = NULL, planted_at = NULL, ready_at = NULL,
+         planted_instance_id = NULL   -- free the NFT instance so it can merge/list/replant
    WHERE x = p_x AND y = p_y;
 
   RETURN json_build_object('ok', true, 'x', p_x, 'y', p_y, 'crop_type', v_def.crop_type,
     'harvested', v_yield, 'inventory_qty', v_qty, 'expires_at', v_exp);
+END;
+$$;
+
+-- ── RPC: remove_crop ───────────────────────────────────────────────────────
+-- Uproot: the tile owner discards a plant at any growth stage — no yield, no
+-- refund, no coin movement (planting never consumed anything: fungible cards
+-- are availability-checked, NFTs only locked via planted_instance_id). Clears
+-- the same columns as harvest, so a planted NFT is freed too. Zen migration
+-- tiles and listed tiles never have planted_species, so 'tile_empty' covers them.
+CREATE OR REPLACE FUNCTION public.remove_crop(p_x integer, p_y integer)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user    uuid := auth.uid();
+  v_tile    public.farm_tiles%ROWTYPE;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+
+  SELECT * INTO v_tile FROM public.farm_tiles WHERE x = p_x AND y = p_y FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'tile_not_owned'; END IF;
+  IF v_tile.owner_id <> v_user THEN RAISE EXCEPTION 'not_your_tile'; END IF;
+  IF v_tile.planted_species IS NULL THEN RAISE EXCEPTION 'tile_empty'; END IF;
+
+  UPDATE public.farm_tiles
+     SET planted_species = NULL, planted_level = NULL, planted_at = NULL, ready_at = NULL,
+         planted_instance_id = NULL
+   WHERE x = p_x AND y = p_y;
+
+  RETURN json_build_object('ok', true, 'x', p_x, 'y', p_y, 'species', v_tile.planted_species);
 END;
 $$;
 
@@ -1401,6 +1427,7 @@ REVOKE ALL ON FUNCTION public.open_farm_lootbox()                    FROM PUBLIC
 REVOKE ALL ON FUNCTION public.level_up_card(text)                    FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.plant_crop(integer, integer, text)     FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.harvest_crop(integer, integer)         FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.remove_crop(integer, integer)          FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sell_crop_to_npc(text, integer)        FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.farm_land_tax_quote()                  FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.pay_farm_land_tax(integer)             FROM PUBLIC, anon, authenticated;
@@ -1422,6 +1449,7 @@ GRANT EXECUTE ON FUNCTION public.open_farm_lootbox()                 TO authenti
 GRANT EXECUTE ON FUNCTION public.level_up_card(text)                 TO authenticated;
 GRANT EXECUTE ON FUNCTION public.plant_crop(integer, integer, text)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.harvest_crop(integer, integer)      TO authenticated;
+GRANT EXECUTE ON FUNCTION public.remove_crop(integer, integer)       TO authenticated;
 GRANT EXECUTE ON FUNCTION public.sell_crop_to_npc(text, integer)     TO authenticated;
 GRANT EXECUTE ON FUNCTION public.farm_land_tax_quote()               TO authenticated;
 GRANT EXECUTE ON FUNCTION public.pay_farm_land_tax(integer)          TO authenticated;
