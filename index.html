@@ -5203,6 +5203,16 @@
     .farm-seasonal-sub { font-size: 12px; line-height: 1.45; color: #334155; margin-bottom: 10px; }
     .farm-seasonal-how { display: grid; gap: 6px; margin-bottom: 10px; padding: 9px 10px; border-radius: 8px; background: rgba(255,255,255,.72); border: 1px solid rgba(37,99,235,.14); font-size: 12px; line-height: 1.4; color: #334155; }
     .farm-seasonal-how b { color: #1e3a8a; }
+    .farm-seasonal-goals { display: grid; gap: 7px; margin-bottom: 10px; }
+    .farm-seasonal-goal { padding: 8px 10px; border-left: 3px solid #2563eb; background: rgba(255,255,255,.65); border-radius: 7px; font-size: 12px; line-height: 1.4; color: #334155; }
+    .farm-seasonal-goal b { display: block; margin-bottom: 2px; color: #1e3a8a; font-size: 12px; }
+    .farm-seasonal-price { margin-bottom: 10px; padding: 9px 10px; border-radius: 8px; background: rgba(22,163,74,.08); border: 1px solid rgba(22,163,74,.18); color: #14532d; }
+    .farm-seasonal-price-title { font-size: 12px; font-weight: 900; margin-bottom: 7px; }
+    .farm-seasonal-price-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .farm-seasonal-price-stat { min-width: 0; padding: 6px 7px; border-radius: 7px; background: rgba(255,255,255,.72); border: 1px solid rgba(22,163,74,.12); }
+    .farm-seasonal-price-stat span { display: block; font-size: 10px; font-weight: 900; color: #166534; text-transform: uppercase; }
+    .farm-seasonal-price-stat b { display: block; font-size: 13px; color: #14532d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .farm-seasonal-price-note { margin-top: 6px; font-size: 11px; line-height: 1.35; color: #166534; }
     .farm-seasonal-progress { height: 14px; border-radius: 999px; background: rgba(30,58,138,.13); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(30,58,138,.08); }
     .farm-seasonal-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #60a5fa, #2563eb); transition: width .35s ease; }
     .farm-seasonal-progress-fill.done { background: linear-gradient(90deg, #4ade80, #16a34a); }
@@ -5618,6 +5628,10 @@
     .farm-price-meta { min-width: 0; }
     .farm-price-name { font-size: 13px; font-weight: 800; color: var(--text); }
     .farm-price-now { font-size: 16px; font-weight: 900; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .farm-price-card.seasonal { border-color: rgba(22,163,74,.34); background: linear-gradient(180deg, #f0fdf4, var(--card)); }
+    .farm-price-seasonal-badge { display: inline-flex; align-items: center; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: rgba(22,163,74,.12); color: #15803d; font-size: 10px; font-weight: 900; white-space: nowrap; }
+    .farm-price-seasonal-now { padding: 2px 6px; border-radius: 999px; background: rgba(22,163,74,.12); color: #15803d; font-size: 11px; font-weight: 900; }
+    .farm-price-seasonal-foot { margin-top: 6px; padding: 6px 7px; border-radius: 7px; background: rgba(22,163,74,.08); color: #166534; font-size: 10.5px; line-height: 1.35; font-weight: 800; }
     .farm-chart-svg { width: 100%; height: 90px; display: block; border-radius: 8px; background: linear-gradient(180deg, var(--surface), transparent); overflow: visible; margin-top: 8px; }
     .farm-chart-svg text { font-size: 8px; fill: var(--muted); font-weight: 600; font-family: inherit; }
     .farm-chart-area { fill: rgba(136, 136, 136, 0.15); stroke: none; }
@@ -25266,6 +25280,30 @@ function farmSeasonalEligibleQty(crop, qty) {
   return eligible;
 }
 
+function farmPriceLabel(n) {
+  const v = Math.round(Number(n || 0) * 10) / 10;
+  return Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1).replace('.', ',');
+}
+
+function farmSeasonalPriceInfo(crop, bonus) {
+  const mkt = fmMarket.get(crop);
+  if (!mkt) return null;
+  const q = farmSellQuote(crop, 1);
+  const normalNow = q ? q.startPrice : Number(mkt.cur_price || 0);
+  const maxNormal = Number(mkt.base_price || 0);
+  const minNormal = maxNormal * 0.30;
+  const extra = Number(bonus || 0);
+  return {
+    normalNow,
+    minNormal,
+    maxNormal,
+    seasonalNow: normalNow + extra,
+    minSeasonal: minNormal + extra,
+    maxSeasonal: maxNormal + extra,
+    bonus: extra,
+  };
+}
+
 // Client-side replica of sell_crop_to_npc's pricing (farm.sql): recover cur_price
 // toward the day's anchor at 12%/hr, then ONE per-transaction drop scaled by size
 // (0.5%/unit, capped 40%); the batch is charged the average of pre/post (floor 30%
@@ -25823,6 +25861,7 @@ function buildFarmLandSection(container) {
 async function buildFarmMarketBody(bodyEl) {
   bodyEl.replaceChildren(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
   await ensureFarmData();
+  await refreshFarmSeasonalState();
   const hist = {};
   try {
     const since = new Date(Date.now() - 7 * 864e5).toISOString();   // last 7 days
@@ -25840,17 +25879,32 @@ async function buildFarmMarketBody(bodyEl) {
     const mkt = fmMarket.get(d.crop_type); if (!mkt) return;
     const q = farmSellQuote(d.crop_type, 1);
     const cur = q ? q.startPrice : +mkt.cur_price;
+    const isSeasonal = !!(fmSeasonalEvent
+      && fmSeasonalEvent.crop_type === d.crop_type
+      && Number(fmSeasonalEvent.bonus_per_unit || 0) > 0
+      && (fmSeasonalEvent.status === 'active' || fmSeasonalEvent.status === 'upcoming'));
+    const seasonalPrice = isSeasonal ? farmSeasonalPriceInfo(d.crop_type, Number(fmSeasonalEvent.bonus_per_unit || 0)) : null;
     const pts = (hist[d.crop_type] || []).slice();
     pts.push({ t: Date.now(), p: cur });   // end the line at the live price
-    const card = el('div', { className: 'farm-price-card' },
+    const card = el('div', { className: 'farm-price-card' + (isSeasonal ? ' seasonal' : '') },
       el('div', { className: 'farm-price-head' },
         el('div', { className: 'farm-price-ic' }, farmIcon(d.emoji)),
         el('div', { className: 'farm-price-meta' },
-          el('div', { className: 'farm-price-name' }, d.name),
-          el('div', { className: 'farm-price-now' }, cur.toFixed(1).replace('.', ',') + ' 🪙', farmTrendChip(d.crop_type)))));
+          el('div', { className: 'farm-price-name' }, d.name,
+            isSeasonal ? el('span', { className: 'farm-price-seasonal-badge' }, 'Wyzwanie +' + Number(fmSeasonalEvent.bonus_per_unit || 0) + ' 🪙') : null),
+          el('div', { className: 'farm-price-now' },
+            cur.toFixed(1).replace('.', ',') + ' 🪙',
+            farmTrendChip(d.crop_type),
+            seasonalPrice ? el('span', { className: 'farm-price-seasonal-now' }, 'z premią ~' + farmPriceLabel(seasonalPrice.seasonalNow) + ' 🪙') : null))));
     if (pts.length >= 2) card.append(farmPriceChart(pts, +mkt.base_price));
     else card.append(el('div', { className: 'farm-price-empty' }, 'Historia zbiera się od teraz — wróć później.'));
     card.append(el('div', { className: 'farm-price-foot' }, 'Cena maks.: ' + (+mkt.base_price) + ' 🪙 · ' + (pts.length - 1) + ' pkt historii (7 dni)'));
+    if (seasonalPrice) {
+      card.append(el('div', { className: 'farm-price-seasonal-foot' },
+        'W wyzwaniu zaliczona sztuka: teraz ~', farmPriceLabel(seasonalPrice.seasonalNow), ' 🪙, zakres ',
+        farmPriceLabel(seasonalPrice.minSeasonal), '–', farmPriceLabel(seasonalPrice.maxSeasonal),
+        ' 🪙. Normalna cena + premia kontraktu.'));
+    }
     grid.append(card);
   });
   bodyEl.append(grid);
@@ -25939,8 +25993,7 @@ function farmSeasonalPrizeList(ev) {
   return el('div', { className: 'farm-seasonal-prizes' },
     el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '1. miejsce'), ': ' + ev.rank1_coins + ' 🪙 + losowa karta NFT'),
     el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '2. miejsce'), ': ' + ev.rank2_coins + ' 🪙 + ' + ev.rank2_boxes + ' skrzynek'),
-    el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '3. miejsce'), ': ' + ev.rank3_coins + ' 🪙 + ' + ev.rank3_boxes + ' skrzynki'),
-    el('div', { className: 'farm-seasonal-prize' }, el('b', {}, 'Wspólny pasek'), ': ' + ev.bar_boxes + ' skrzynek dla każdego, kto sprzeda min. 1 szt.'));
+    el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '3. miejsce'), ': ' + ev.rank3_coins + ' 🪙 + ' + ev.rank3_boxes + ' skrzynki'));
 }
 
 async function buildFarmSeasonalBody(bodyEl) {
@@ -25961,6 +26014,7 @@ async function buildFarmSeasonalBody(bodyEl) {
   const def = fmDefs.get(ev.species);
   const cropName = ev.name || def?.name || ev.crop_type;
   const bonus = Number(ev.bonus_per_unit || 0);
+  const price = farmSeasonalPriceInfo(ev.crop_type, bonus);
   const title = ev.status === 'upcoming' ? 'Następny kontrakt: ' : 'Kontrakt tygodnia: ';
   const statusCls = ev.status === 'active' ? ' active' : (ev.status === 'closed' ? ' closed' : '');
 
@@ -25970,10 +26024,21 @@ async function buildFarmSeasonalBody(bodyEl) {
       el('div', { className: 'farm-seasonal-status' + statusCls }, farmSeasonalStatusText(ev))),
     el('div', { className: 'farm-seasonal-sub' },
       farmSeasonalDateRange(ev), ' · aktywna roślina: ', el('b', {}, cropName)),
-    el('div', { className: 'farm-seasonal-how' },
-      el('div', {}, 'Zbieraj ', el('b', {}, cropName), ' w czasie wyzwania i sprzedawaj ją do skupu.'),
-      el('div', {}, 'Każda zaliczona sztuka daje ', el('b', {}, '+' + bonus + ' 🪙'), ' ekstra ponad normalną cenę sprzedaży i liczy się do rankingu.'),
-      el('div', {}, 'Stare zapasy się nie liczą. Plon musi być zebrany w tym tygodniu wyzwania.')),
+    el('div', { className: 'farm-seasonal-goals' },
+      el('div', { className: 'farm-seasonal-goal' },
+        el('b', {}, '1. Ranking'),
+        'Sprzedaj do skupu jak najwięcej ', cropName, '. Top 3 graczy dostaje nagrody.'),
+      el('div', { className: 'farm-seasonal-goal' },
+        el('b', {}, '2. Wspólny pasek'),
+        'Wszyscy razem nabijacie pasek. Po wypełnieniu każdy z min. 1 zaliczoną sztuką dostaje ', ev.bar_boxes, ' skrzynek.')),
+    price ? el('div', { className: 'farm-seasonal-price' },
+      el('div', { className: 'farm-seasonal-price-title' }, 'Cena zaliczonej sztuki'),
+      el('div', { className: 'farm-seasonal-price-grid' },
+        el('div', { className: 'farm-seasonal-price-stat' }, el('span', {}, 'Teraz'), el('b', {}, '~' + farmPriceLabel(price.seasonalNow) + ' 🪙')),
+        el('div', { className: 'farm-seasonal-price-stat' }, el('span', {}, 'Minimum'), el('b', {}, farmPriceLabel(price.minSeasonal) + ' 🪙')),
+        el('div', { className: 'farm-seasonal-price-stat' }, el('span', {}, 'Maksimum'), el('b', {}, farmPriceLabel(price.maxSeasonal) + ' 🪙'))),
+      el('div', { className: 'farm-seasonal-price-note' },
+        'To normalna cena skupu + premia kontraktu ', el('b', {}, '+' + bonus + ' 🪙'), '. Stare zapasy nie dostają premii.')) : null,
     el('div', { className: 'farm-inv-section-title' }, '🎁 Wspólny pasek'),
     el('div', { className: 'farm-seasonal-progress' },
       el('div', { className: 'farm-seasonal-progress-fill' + (ev.bar_filled ? ' done' : ''), style: { width: pct + '%' } })),
@@ -25983,6 +26048,7 @@ async function buildFarmSeasonalBody(bodyEl) {
     el('div', { className: 'farm-tax-note' }, 'Po wypełnieniu paska każdy, kto sprzeda min. 1 zaliczoną sztukę, dostanie ' + ev.bar_boxes + ' skrzynek.'));
 
   bodyEl.append(card);
+  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🏆 Nagrody za ranking'));
   bodyEl.append(farmSeasonalPrizeList(ev));
 
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '👤 Twój wynik'));
