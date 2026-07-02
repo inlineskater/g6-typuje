@@ -1,14 +1,23 @@
 // @ts-nocheck
-// World Cup 2026 fixed-odds betting ("Mundial") — backed by The Odds API (v4).
-// Owns all writes to football_matches / football_bets. Browsers can only read
-// those tables (RLS SELECT) — odds are never trusted from the client; the bet
-// action locks the odds already stored server-side. The cron action (gated by
+// World Cup 2026 fixed-odds betting ("Mundial") — odds from The Odds API (v4),
+// settlement scores from football-data.org (v4). Owns all writes to
+// football_matches / football_bets. Browsers can only read those tables (RLS
+// SELECT) — odds are never trusted from the client; the bet action locks the
+// odds already stored server-side. The cron action (gated by
 // FOOTBALL_CRON_SECRET) refreshes events/odds and settles finished matches.
 //
-// Quota note: The Odds API free tier is 500 requests/month. Each cron run costs
-// 1 (odds) + 2 (scores, only when there is something to settle) = up to 3. The
-// pg_cron job therefore runs every 6h (≈12 req/day, ≈360/month) — hourly is
-// impossible on free (24×30 > 500). See supabase/football.sql.
+// Why two providers: The Odds API's /scores only ever returns the actual
+// final score of a match, with no way to tell whether it includes extra time.
+// A knockout "1X2" market must settle on the 90-minute (regulation) result —
+// standard betting convention — so a match decided in extra time needs its
+// pre-ET score, which The Odds API simply does not expose. football-data.org
+// does: score.duration ("REGULAR"/"EXTRA_TIME"/"PENALTIES") plus a
+// score.regularTime object whenever duration isn't REGULAR.
+//
+// Quota note: The Odds API free tier is 500 requests/month; syncOdds() costs 1
+// call/run. football-data.org's free tier is 10 req/minute with no monthly cap
+// and settleFinished() costs 1 call/run only when something is pending — both
+// comfortably support the every-6h pg_cron job. See supabase/football.sql.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
@@ -23,12 +32,37 @@ const db = databaseUrl
   ? postgres(databaseUrl, { prepare: false, max: 4, idle_timeout: 20 })
   : null;
 
-// ── The Odds API config ────────────────────────────────────────────────────
+// ── The Odds API config (odds/pricing only) ───────────────────────────────
 const ODDS_BASE = "https://api.the-odds-api.com/v4";
 const SPORT_KEY = Deno.env.get("ODDS_SPORT_KEY") ?? "soccer_fifa_world_cup";
 const ODDS_REGIONS = Deno.env.get("ODDS_REGIONS") ?? "eu";
 const PREFERRED_BOOKMAKER = Deno.env.get("ODDS_BOOKMAKER") ?? ""; // e.g. "pinnacle"; empty = first usable
-const SCORES_DAYS_FROM = 3;
+
+// ── football-data.org config (settlement scores only) ────────────────────
+const FOOTBALL_DATA_BASE = "https://api.football-data.org/v4";
+const FOOTBALL_DATA_COMPETITION = Deno.env.get("FOOTBALL_DATA_COMPETITION") ?? "WC";
+
+// The Odds API and football-data.org spell a handful of teams differently.
+// Keyed by the football-data.org normalized name -> The Odds API's spelling.
+const TEAM_ALIASES = {
+  "congo dr": "dr congo",
+  "cape verde islands": "cape verde",
+  "czechia": "czech republic",
+  "united states": "usa",
+};
+
+function normalizeTeamName(name) {
+  return String(name ?? "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function canonicalTeam(name) {
+  const n = normalizeTeamName(name);
+  return TEAM_ALIASES[n] ?? n;
+}
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -82,6 +116,61 @@ async function oddsGet(path) {
   }
   const data = await res.json();
   return { data, remaining };
+}
+
+// ── football-data.org fetch (settlement scores only) ──────────────────────
+async function footballDataGet(path) {
+  const apiKey = Deno.env.get("FOOTBALL_DATA_API_KEY");
+  if (!apiKey) throw new Error("Missing FOOTBALL_DATA_API_KEY.");
+  const res = await fetch(`${FOOTBALL_DATA_BASE}${path}`, {
+    headers: { "X-Auth-Token": apiKey },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`football-data.org ${path} -> HTTP ${res.status} ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+// Settlement + display data for every FINISHED match in [fromDate, toDate],
+// keyed by "canonicalHomeTeam|canonicalAwayTeam".
+//
+// score.duration is "REGULAR" / "EXTRA_TIME" / "PENALTY_SHOOTOUT":
+//  - REGULAR: score.fullTime IS the 90-min score; nothing else to unpack.
+//  - EXTRA_TIME: score.regularTime is the pre-ET (90-min) score; score.fullTime
+//    is the true final score (real goals, safe to display).
+//  - PENALTY_SHOOTOUT: score.regularTime is the pre-shootout (90-min, still
+//    level) score; score.fullTime bizarrely ADDS the penalty kicks on top of
+//    the goal count (e.g. a 1-1 draw decided 4-3 on penalties is reported as
+//    fullTime 4-5) — not a real scoreline, never display it.
+//
+// `result` always reflects the 90-minute score (the "1X2" market's standard
+// settlement convention, regardless of what extra time/penalties decided).
+// `display` is the true goals-scored scoreline shown on the match card.
+async function loadRegularTimeScores(fromDate, toDate) {
+  const data = await footballDataGet(
+    `/competitions/${FOOTBALL_DATA_COMPETITION}/matches?dateFrom=${fromDate}&dateTo=${toDate}`,
+  );
+  const byPair = new Map();
+  for (const m of data.matches ?? []) {
+    if (m.status !== "FINISHED") continue;
+    const score = m.score ?? {};
+    const duration = score.duration;
+    const regularTime = duration === "REGULAR" ? score.fullTime : score.regularTime;
+    const rhs = asInt(regularTime?.home, null);
+    const ras = asInt(regularTime?.away, null);
+    if (rhs == null || ras == null) continue;
+
+    const displayTime = duration === "PENALTY_SHOOTOUT" ? regularTime : score.fullTime;
+    const dhs = asInt(displayTime?.home, rhs);
+    const das = asInt(displayTime?.away, ras);
+
+    const statusCode = duration === "EXTRA_TIME" ? "AET" : duration === "PENALTY_SHOOTOUT" ? "PEN" : "FT";
+
+    const key = `${canonicalTeam(m.homeTeam?.name)}|${canonicalTeam(m.awayTeam?.name)}`;
+    byPair.set(key, { result: { hs: rhs, as: ras }, display: { hs: dhs, as: das }, statusCode });
+  }
+  return byPair;
 }
 
 // De-vig: implied prob_i = (1/odd_i) / Σ(1/odd_j).
@@ -328,26 +417,29 @@ async function syncOdds() {
 }
 
 async function settleFinished() {
-  // Only spend the (cost-2) scores call when something is actually pending.
-  const [{ pending }] = await db`
-    select count(*)::int as pending from public.football_matches
+  // Only spend a football-data.org call when something is actually pending.
+  const pending = await db`
+    select id, home_team, away_team, kickoff from public.football_matches
     where settled = false and kickoff <= now()
+    order by kickoff asc
   `;
-  if (!pending) return { settledMatches: 0, paidBets: 0, calls: 0, scoresRemaining: null };
+  if (!pending.length) return { settledMatches: 0, paidBets: 0, calls: 0 };
 
-  const { data: events, remaining } = await oddsGet(
-    `/sports/${SPORT_KEY}/scores?daysFrom=${SCORES_DAYS_FROM}`,
-  );
+  const kickoffMs = pending.map((m) => new Date(m.kickoff).getTime());
+  const fromDate = new Date(Math.min(...kickoffMs) - 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const toDate = new Date(Math.max(Date.now(), ...kickoffMs) + 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const scores = await loadRegularTimeScores(fromDate, toDate);
+
   let settledMatches = 0;
   let paidBets = 0;
 
-  for (const ev of events ?? []) {
-    if (!ev.completed) continue;
-    const id = String(ev.id ?? "");
-    const scores = ev.scores ?? [];
-    const hs = asInt((scores.find((s) => s.name === ev.home_team) || {}).score, null);
-    const as = asInt((scores.find((s) => s.name === ev.away_team) || {}).score, null);
-    if (hs == null || as == null) continue;
+  for (const m of pending) {
+    const id = m.id;
+    const key = `${canonicalTeam(m.home_team)}|${canonicalTeam(m.away_team)}`;
+    const found = scores.get(key);
+    if (!found) continue; // not finished yet (or no match found) — voidStale() sweeps stragglers after 12h
+
+    const { hs, as } = found.result;
     const result = hs > as ? "1" : hs < as ? "2" : "X";
 
     const settled = await db.begin(async (tx) => {
@@ -375,7 +467,8 @@ async function settleFinished() {
       }
       await tx`
         update public.football_matches
-           set status = 'FT', result = ${result}, home_goals = ${hs}, away_goals = ${as},
+           set status = ${found.statusCode}, result = ${result},
+               home_goals = ${found.display.hs}, away_goals = ${found.display.as},
                settled = true, updated_at = now()
          where id = ${id}
       `;
@@ -383,7 +476,7 @@ async function settleFinished() {
     });
     if (settled) settledMatches += 1;
   }
-  return { settledMatches, paidBets, calls: 1, scoresRemaining: remaining };
+  return { settledMatches, paidBets, calls: 1 };
 }
 
 // Refund + void a single match's open bets in one transaction. Returns the
