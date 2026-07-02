@@ -5201,6 +5201,8 @@
     .farm-seasonal-status.active { background: rgba(22,163,74,.13); color: #15803d; }
     .farm-seasonal-status.closed { background: rgba(100,116,139,.13); color: #475569; }
     .farm-seasonal-sub { font-size: 12px; line-height: 1.45; color: #334155; margin-bottom: 10px; }
+    .farm-seasonal-how { display: grid; gap: 6px; margin-bottom: 10px; padding: 9px 10px; border-radius: 8px; background: rgba(255,255,255,.72); border: 1px solid rgba(37,99,235,.14); font-size: 12px; line-height: 1.4; color: #334155; }
+    .farm-seasonal-how b { color: #1e3a8a; }
     .farm-seasonal-progress { height: 14px; border-radius: 999px; background: rgba(30,58,138,.13); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(30,58,138,.08); }
     .farm-seasonal-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #60a5fa, #2563eb); transition: width .35s ease; }
     .farm-seasonal-progress-fill.done { background: linear-gradient(90deg, #4ade80, #16a34a); }
@@ -25957,27 +25959,28 @@ async function buildFarmSeasonalBody(bodyEl) {
   const pct = Math.min(100, Math.round(total / target * 100));
   const my = farmSeasonalMyRow();
   const def = fmDefs.get(ev.species);
+  const cropName = ev.name || def?.name || ev.crop_type;
+  const bonus = Number(ev.bonus_per_unit || 0);
   const title = ev.status === 'upcoming' ? 'Następny kontrakt: ' : 'Kontrakt tygodnia: ';
   const statusCls = ev.status === 'active' ? ' active' : (ev.status === 'closed' ? ' closed' : '');
 
   const card = el('div', { className: 'farm-seasonal-card' },
     el('div', { className: 'farm-seasonal-head' },
-      el('div', { className: 'farm-seasonal-title' }, farmIcon(ev.emoji || def?.emoji || '🌱'), el('span', {}, title + (ev.name || def?.name || ev.crop_type))),
+      el('div', { className: 'farm-seasonal-title' }, farmIcon(ev.emoji || def?.emoji || '🌱'), el('span', {}, title + cropName)),
       el('div', { className: 'farm-seasonal-status' + statusCls }, farmSeasonalStatusText(ev))),
     el('div', { className: 'farm-seasonal-sub' },
-      farmSeasonalDateRange(ev), ' · premia ', el('b', {}, '+' + Number(ev.bonus_per_unit || 0) + ' 🪙/szt.'), ' · liczą się tylko plony zebrane i sprzedane w tym tygodniu.'),
-    el('div', { className: 'farm-tax-grid' },
-      farmTaxStat('Uczestnicy', String(ev.participants_snapshot || '—')),
-      farmTaxStat('Fair cap', String(ev.fair_cap_snapshot || '—') + ' działki'),
-      farmTaxStat('Tyg./działkę', String(ev.units_per_tile_week || '—') + ' szt.'),
-      farmTaxStat('Fair cap/gracz', String(ev.fair_cap_user_units || '—') + ' szt.')),
+      farmSeasonalDateRange(ev), ' · aktywna roślina: ', el('b', {}, cropName)),
+    el('div', { className: 'farm-seasonal-how' },
+      el('div', {}, 'Zbieraj ', el('b', {}, cropName), ' w czasie wyzwania i sprzedawaj ją do skupu.'),
+      el('div', {}, 'Każda zaliczona sztuka daje ', el('b', {}, '+' + bonus + ' 🪙'), ' ekstra ponad normalną cenę sprzedaży i liczy się do rankingu.'),
+      el('div', {}, 'Stare zapasy się nie liczą. Plon musi być zebrany w tym tygodniu wyzwania.')),
     el('div', { className: 'farm-inv-section-title' }, '🎁 Wspólny pasek'),
     el('div', { className: 'farm-seasonal-progress' },
       el('div', { className: 'farm-seasonal-progress-fill' + (ev.bar_filled ? ' done' : ''), style: { width: pct + '%' } })),
     el('div', { className: 'farm-seasonal-progress-text' },
       el('span', {}, total + ' / ' + target + ' szt.'),
       el('span', {}, ev.contributor_count + ' uczestników')),
-    el('div', { className: 'farm-tax-note' }, 'Jeśli pasek się zapełni, każdy kontrybutor z co najmniej 1 sprzedaną sztuką dostanie ' + ev.bar_boxes + ' skrzynek.'));
+    el('div', { className: 'farm-tax-note' }, 'Po wypełnieniu paska każdy, kto sprzeda min. 1 zaliczoną sztukę, dostanie ' + ev.bar_boxes + ' skrzynek.'));
 
   bodyEl.append(card);
   bodyEl.append(farmSeasonalPrizeList(ev));
