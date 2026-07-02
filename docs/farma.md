@@ -77,6 +77,33 @@ Zbiór (`harvest_crop`) mintuje plon do `farm_inventory` jako **partię, która 
 
 Klient ma wierną replikę tej matematyki w `farmSellQuote` (podgląd przed potwierdzeniem) — **musi zostać w synchronizacji z `sell_crop_to_npc`**. Historię 7 dni na roślinę rysuje zakładka **📈 Cennik** (`farm_price_history`), a publiczny feed 🧾 pokazuje wszystkie sprzedaże.
 
+## Kontrakt tygodnia
+
+`farm-seasonal-contracts.sql` dodaje cotygodniowe kontrakty na jedną istniejącą roślinę. Pierwszy start: **poniedziałek 06.07.2026 00:00 Europe/Warsaw**, **🥕 Marchewka**. Klient pokazuje to w hubie farmy jako **🏆 Wyzwanie**.
+
+Do wyniku liczą się tylko sztuki aktywnej rośliny **zebrane i sprzedane w tym samym tygodniu eventu**. Stare partie można sprzedać normalnie, ale nie dają premii, punktów rankingu ani wkładu do paska.
+
+Event odświeża żywe parametry farmy do pierwszej zaliczonej sprzedaży, potem zamraża je dla uczciwego rankingu:
+
+```text
+uczestnicy            = farm_land_tax_participant_count()
+fair_cap              = farm_fair_cap()
+dni_wzrostu           = max(1, base_grow_minutes / 1440)
+cykle_tygodnia        = floor(7 / dni_wzrostu)
+sztuk/działkę/tydzień = cykle_tygodnia × base_yield
+fair_cap/gracz        = fair_cap × sztuk/działkę/tydzień
+pasek                 = ceil_do_25(uczestnicy × fair_cap × sztuk/działkę/tydzień × 0,35)
+```
+
+Premia za sztukę celuje w ok. **125% najlepszego zwykłego plonu**, zaokrąglone do 10 🪙/działkę/dzień. Przy obecnym balansie daje target **150 🪙/działkę/dzień**, więc Marchewka dostaje **+31 🪙/szt.**.
+
+Nagrody tygodnia:
+
+- 1. miejsce: **2500 🪙 + losowa karta NFT** z pozostałej podaży (`minted_count`; fallback 10 skrzynek, jeśli NFT się wyprzedały).
+- 2. miejsce: **1500 🪙 + 5 skrzynek**.
+- 3. miejsce: **1000 🪙 + 2 skrzynki**.
+- Jeśli wspólny pasek się zapełni, każdy kontrybutor z **min. 1 sprzedaną sztuką** dostaje **5 skrzynek**.
+
 ## Karty NFT (legendarne, numerowane)
 
 Karty z `edition_size` to limitowane NFT: 🌹 Diamentowa Róża (25 szt.), 🌻 Złoty Słonecznik (15), 🪷 Kryształowy Lotos (10), 🍌 Królewski Banan Ae Ae (8 — najrzadszy i najmocniejszy). Wypadają z tej samej skrzynki; przy trafieniu serwer mintuje unikalny numer seryjny + zabawne imię-personę do `farm_nft_instances` (kolejny serial pochodzi z monotonicznego `minted_count`, nie z liczby żywych egzemplarzy).
@@ -102,5 +129,6 @@ Klient nie zapisuje tabel farmy bezpośrednio — wszystkie mutacje to RPC `SECU
 - `farm_card_defs`: `draw_weight` (szanse), `base_grow_minutes`, `base_yield`, `edition_size`.
 - `farm_market.base_price`: cena maksymalna (pułap kotwicy).
 - Pasma kotwicy (30–100%) w `roll_farm_prices()`; matematyka sprzedaży zduplikowana w `sell_crop_to_npc` + `farmSellQuote`.
+- Kontrakty tygodnia: rotacja i start w `farm_seasonal_species_for_week()`, target paska i premia w `ensure_farm_seasonal_event()`, nagrody w `award_farm_seasonal_week()`.
 - Cena skrzynki: `FARM_BOX_PRICE` w `index.html` **i** `v_cost` w `buy_farm_lootbox` — zmieniać razem.
 - Na żywej bazie używaj `supabase/farm-anti-hoarding.sql` zamiast pełnego `farm.sql` (pełny plik resetuje ceny rynku).

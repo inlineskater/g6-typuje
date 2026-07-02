@@ -207,12 +207,15 @@ AS $$
       ), 0::bigint)::numeric AS hero_auction_escrow,
 
       -- ── coin flow: minting ──────────────────────────────────────────────
-      -- coins minted via garden harvest, admin grants, top-ups, daily interest, farm crop sales
+      -- coins minted via garden harvest, admin grants, top-ups, daily interest,
+      -- farm crop sales, and farm seasonal contract/rank payouts
       COALESCE((
         SELECT sum(ct.delta)
           FROM public.coin_transactions ct
          WHERE ct.delta > 0
-           AND ct.reason IN ('garden_water','admin_grant','zapps_topup','daily_interest','farm_crop_sale')
+           AND ct.reason IN ('garden_water','admin_grant','zapps_topup','daily_interest',
+                             'farm_crop_sale','farm_seasonal_contract_bonus',
+                             'farm_seasonal_rank_award')
       ), 0::numeric) AS ledger_minted,
 
       -- weekly game prize payouts (100/50/25 per rank per season)

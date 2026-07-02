@@ -5193,6 +5193,28 @@
     .farm-tax-stat b { font-size: 13px; color: #3c2a16; }
     .farm-tax-note { margin-top: 7px; font-size: 11px; line-height: 1.35; color: #6b4d2b; }
     .farm-tax-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .farm-seasonal-card { padding: 12px; border: 1px solid rgba(37,99,235,.22); border-radius: 10px; background: #eff6ff; color: #1e3a8a; }
+    .farm-seasonal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .farm-seasonal-title { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; font-weight: 900; color: #1e3a8a; }
+    .farm-seasonal-title .farm-ico { width: 28px; height: 28px; }
+    .farm-seasonal-status { flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; background: rgba(37,99,235,.12); color: #1d4ed8; font-size: 11px; font-weight: 900; }
+    .farm-seasonal-status.active { background: rgba(22,163,74,.13); color: #15803d; }
+    .farm-seasonal-status.closed { background: rgba(100,116,139,.13); color: #475569; }
+    .farm-seasonal-sub { font-size: 12px; line-height: 1.45; color: #334155; margin-bottom: 10px; }
+    .farm-seasonal-progress { height: 14px; border-radius: 999px; background: rgba(30,58,138,.13); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(30,58,138,.08); }
+    .farm-seasonal-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #60a5fa, #2563eb); transition: width .35s ease; }
+    .farm-seasonal-progress-fill.done { background: linear-gradient(90deg, #4ade80, #16a34a); }
+    .farm-seasonal-progress-text { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 5px; font-size: 11px; font-weight: 800; color: #334155; }
+    .farm-seasonal-rank { display: grid; grid-template-columns: 42px minmax(0, 1fr) 82px; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(37,99,235,.13); font-size: 12px; }
+    .farm-seasonal-rank:last-child { border-bottom: none; }
+    .farm-seasonal-rank-pos { font-weight: 900; color: #1d4ed8; }
+    .farm-seasonal-rank-name { min-width: 0; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .farm-seasonal-rank-qty { text-align: right; font-weight: 900; color: #1e3a8a; font-variant-numeric: tabular-nums; }
+    .farm-seasonal-prizes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+    .farm-seasonal-prize { padding: 8px 9px; border: 1px solid rgba(37,99,235,.15); border-radius: 8px; background: rgba(255,255,255,.72); font-size: 12px; color: #334155; }
+    .farm-seasonal-prize b { color: #1e3a8a; }
+    .farm-seasonal-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface); }
+    .farm-seasonal-bonus { color: #15803d; font-weight: 900; }
     /* Ownership deeds (prawa własności) — one mini certificate per owned tile */
     .farm-deed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
     .farm-deed {
@@ -23575,6 +23597,7 @@ let fmZen = new Map();          // owner_id -> { type, stage, name } (existing O
 let fmCollection = [];          // [{species,count,level}]
 let fmInventory = new Map();    // crop_type -> qty (sum of non-expired lots)
 let fmInventoryExp = new Map(); // crop_type -> soonest expires_at (ISO) of its lots (rot countdown)
+let fmInventoryLots = [];       // non-expired lots with harvested_at, for event eligibility previews
 let fmMarket = new Map();       // crop_type -> { base_price, anchor_price, cur_price, last_decay_at }
 let fmNft = [];                 // all farm_nft_instances: [{species,serial_no,edition_size,owner_id}]
 let fmBoxes = 0;                // owned sealed (unopened) seed boxes
@@ -23582,6 +23605,8 @@ let fmVouchers = 0;             // owned free-tile vouchers
 let fmOwnedTileCountHint = 0;    // used when Sklep loads before the full farm board
 let fmNormalTileCountHint = 0;   // same, but excludes migration Ogródek plant tiles
 let fmTax = null;                // server quote: fair_cap / owned normal tiles / debt / daily tax
+let fmSeasonalEvent = null;      // current/upcoming weekly crop contract
+let fmSeasonalLeaderboard = [];  // current event aggregate leaderboard
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
 let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
@@ -23589,9 +23614,9 @@ let fmRealtimeReady = false, fmTimer = null;
 
 function resetFarmState() {
   stopFarmTimer();
-  fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmMarket = new Map();
+  fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmInventoryLots = []; fmMarket = new Map();
   fmNft = [];
-  fmBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmStarterClaimed = false;
+  fmBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmStarterClaimed = false;
   fmSel = null;
 }
 
@@ -23606,15 +23631,23 @@ function normalizeFarmMarket(m) {
 function buildFarmInventory(rows) {
   fmInventory = new Map();
   fmInventoryExp = new Map();
+  fmInventoryLots = [];
   const now = Date.now();
   (rows || []).forEach(r => {
     if (r.expires_at && new Date(r.expires_at).getTime() <= now) return;  // rotted
+    fmInventoryLots.push({
+      crop_type: r.crop_type,
+      qty: Number(r.qty || 0),
+      harvested_at: r.harvested_at || null,
+      expires_at: r.expires_at || null,
+    });
     fmInventory.set(r.crop_type, (fmInventory.get(r.crop_type) || 0) + r.qty);
     if (r.expires_at) {
       const prev = fmInventoryExp.get(r.crop_type);
       if (!prev || r.expires_at < prev) fmInventoryExp.set(r.crop_type, r.expires_at);
     }
   });
+  fmInventoryLots.sort((a, b) => String(a.expires_at || '').localeCompare(String(b.expires_at || '')));
 }
 
 // ── Twemoji SVG plant icons ─────────────────────────────────────────────────
@@ -23681,6 +23714,32 @@ async function refreshFarmTaxQuote() {
     return fmTax;
   } catch (e) {
     console.warn('farm tax quote', e);
+    return null;
+  }
+}
+
+async function refreshFarmSeasonalState() {
+  fmSeasonalEvent = null;
+  fmSeasonalLeaderboard = [];
+  try {
+    // Creates the display event row if the seasonal SQL has been installed.
+    await sb.rpc('farm_ensure_seasonal_display_event');
+    const { data: ev, error: evErr } = await sb.from('farm_seasonal_display_event').select('*').maybeSingle();
+    if (evErr) throw evErr;
+    fmSeasonalEvent = ev || null;
+    if (!fmSeasonalEvent?.event_id) return fmSeasonalEvent;
+    const { data: lb, error: lbErr } = await sb.from('farm_seasonal_leaderboard')
+      .select('*')
+      .eq('event_id', fmSeasonalEvent.event_id)
+      .order('rank', { ascending: true })
+      .limit(25);
+    if (lbErr) throw lbErr;
+    fmSeasonalLeaderboard = lb || [];
+    return fmSeasonalEvent;
+  } catch (e) {
+    // The app must keep working before the SQL migration is deployed.
+    const msg = String(e?.message || '').toLowerCase();
+    if (!msg.includes('seasonal') && !msg.includes('does not exist')) console.warn('farm seasonal state', e);
     return null;
   }
 }
@@ -24221,7 +24280,7 @@ async function loadFarm() {
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
-      sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id),
+      sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('gardens').select('*, profiles(nick)'),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
@@ -24253,6 +24312,7 @@ async function loadFarm() {
     buildFarmInventory(invRes.data || []);
     fmMarket = new Map();
     (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, normalizeFarmMarket(m)));
+    await refreshFarmSeasonalState();
     renderFarmPanels();
     renderFarmBoard();
     if (pendingFarmHubOpen && activeTab === 'farm') {
@@ -24804,6 +24864,7 @@ function farmToolbar() {
   const mkBtn = (cls, label, on) => { const b = el('button', { className: cls }, label); b.addEventListener('click', on); return b; };
   return el('div', { className: 'farm-toolbar' },
     mkBtn('farm-tool-btn primary', '🎒 Mój Majątek', () => openFarmHub('inventory')),
+    mkBtn('farm-tool-btn', '🏆 Wyzwanie', () => openFarmHub('seasonal')),
     mkBtn('farm-tool-btn', '📖 Katalog', () => openFarmHub('catalog')),
     mkBtn('farm-tool-btn', '📈 Cennik', () => openFarmHub('market')),
     mkBtn('farm-tool-btn', '❓ Jak to działa', () => openFarmHub('help')),
@@ -25176,6 +25237,33 @@ function farmTrendChip(crop) {
   return el('span', { className: 'farm-trend ' + cls, title: 'NPC płaci ' + cur.toFixed(1) + ' 🪙 = ' + pct + '% ceny maks. (' + base + ' 🪙). Cena zmienia się 2×/dobę (00:00 i 12:00), a sprzedaż chwilowo ją obniża.' }, arrow + ' ' + pct + '% maks.');
 }
 
+function farmSeasonalEventBounds(ev = fmSeasonalEvent) {
+  if (!ev?.starts_at || !ev?.ends_at) return null;
+  const from = new Date(ev.starts_at).getTime();
+  const to = new Date(ev.ends_at).getTime();
+  return Number.isFinite(from) && Number.isFinite(to) ? { from, to } : null;
+}
+
+function farmSeasonalEligibleQty(crop, qty) {
+  const ev = fmSeasonalEvent;
+  if (!ev || ev.status !== 'active' || ev.crop_type !== crop || !Number(ev.bonus_per_unit)) return 0;
+  const bounds = farmSeasonalEventBounds(ev);
+  if (!bounds) return 0;
+  let remain = Math.max(0, Number(qty || 0));
+  let eligible = 0;
+  fmInventoryLots
+    .filter(l => l.crop_type === crop && Number(l.qty || 0) > 0)
+    .sort((a, b) => String(a.expires_at || '').localeCompare(String(b.expires_at || '')))
+    .forEach(lot => {
+      if (remain <= 0) return;
+      const take = Math.min(remain, Number(lot.qty || 0));
+      const harvested = lot.harvested_at ? new Date(lot.harvested_at).getTime() : 0;
+      if (harvested >= bounds.from && harvested < bounds.to) eligible += take;
+      remain -= take;
+    });
+  return eligible;
+}
+
 // Client-side replica of sell_crop_to_npc's pricing (farm.sql): recover cur_price
 // toward the day's anchor at 12%/hr, then ONE per-transaction drop scaled by size
 // (0.5%/unit, capped 40%); the batch is charged the average of pre/post (floor 30%
@@ -25193,9 +25281,12 @@ function farmSellQuote(crop, qty) {
   const startPrice = curEff;
   const endPrice = Math.max(floor, curEff * (1 - dropFrac));
   const proceeds = Math.round(qty * curEff * (1 - dropFrac / 2));
+  const eventQty = farmSeasonalEligibleQty(crop, qty);
+  const eventBonus = eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0);
   return { base, startPrice, endPrice, proceeds, dropPct: Math.round(dropFrac * 100),
     startMaxPct: Math.round(startPrice / base * 100),
-    endMaxPct: Math.round(endPrice / base * 100) };
+    endMaxPct: Math.round(endPrice / base * 100),
+    eventQty, eventBonus, totalProceeds: proceeds + eventBonus };
 }
 
 // Confirm sale with a full price-impact preview, then sell + re-render the host.
@@ -25217,6 +25308,7 @@ function farmSellConfirm(crop, maxQty, afterSell) {
   const qtyLabel = el('b', {});
   const priceLabel = el('b', {});
   const proceedsLabel = el('b', { style: { color: 'var(--accent)' } });
+  const bonusLabel = el('b', { className: 'farm-seasonal-bonus' });
   const afterPriceLabel = el('b', {});
   const noteLabel = el('div', { className: 'farm-sell-note' });
   
@@ -25226,9 +25318,14 @@ function farmSellConfirm(crop, maxQty, afterSell) {
     qtyLabel.replaceChildren(farmIcon(def?.emoji || '🧺'), ' ' + (def?.name || crop) + ' ×' + currentQty);
     priceLabel.replaceChildren(fmt(q.startPrice) + ' → ' + fmt(q.endPrice) + ' 🪙');
     proceedsLabel.replaceChildren('~' + q.proceeds + ' 🪙');
+    bonusLabel.replaceChildren(q.eventBonus > 0
+      ? ('+' + q.eventBonus + ' 🪙 za kontrakt (' + q.eventQty + ' szt.)')
+      : '—');
     afterPriceLabel.replaceChildren(q.endMaxPct + '% ceny maks. (' + q.base + ' 🪙)');
-    noteLabel.replaceChildren('📉 Ta sprzedaż obniży cenę o ~' + q.dropPct + '% (im więcej naraz, tym mocniej). Cena wraca do dziennego poziomu z czasem i resetuje się o 00:00 i 12:00.');
-    confirmBtn.replaceChildren('💰 Sprzedaj za ~' + q.proceeds + ' 🪙');
+    noteLabel.replaceChildren(q.eventBonus > 0
+      ? '🏆 Kontrakt liczy tylko plony zebrane w aktywnym tygodniu. Normalna sprzedaż nadal obniży cenę o ~' + q.dropPct + '%.'
+      : '📉 Ta sprzedaż obniży cenę o ~' + q.dropPct + '% (im więcej naraz, tym mocniej). Cena wraca do dziennego poziomu z czasem i resetuje się o 00:00 i 12:00.');
+    confirmBtn.replaceChildren('💰 Sprzedaj za ~' + q.totalProceeds + ' 🪙');
   };
   
   confirmBtn.addEventListener('click', async () => { confirmBtn.disabled = true; await sellCrop(crop, currentQty); close(); if (afterSell) afterSell(); });
@@ -25256,6 +25353,7 @@ function farmSellConfirm(crop, maxQty, afterSell) {
       qline('Sprzedajesz', qtyLabel),
       qline('Cena/szt', priceLabel),
       qline('Dostaniesz', proceedsLabel),
+      qline('Kontrakt tygodnia', bonusLabel),
       qline('Cena po sprzedaży', afterPriceLabel),
       noteLabel),
     confirmBtn);
@@ -25285,11 +25383,14 @@ function farmCropRow(crop, qty, afterSell) {
   const mkt = fmMarket.get(crop);
   const price = mkt ? mkt.cur_price : 0;
   const def = [...fmDefs.values()].find(d => d.crop_type === crop);
+  const eventQty = farmSeasonalEligibleQty(crop, qty);
   const row = el('div', { className: 'farm-market-row' },
     el('div', { className: 'farm-card-emoji' }, def?.emoji || '🧺'),
     el('div', { className: 'farm-card-meta' },
       el('div', { className: 'farm-card-name' }, (def?.name || crop) + ' ×' + qty),
-      el('div', { className: 'farm-card-sub' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙', farmTrendChip(crop), farmRotChip(crop))));
+      el('div', { className: 'farm-card-sub' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙',
+        farmTrendChip(crop), farmRotChip(crop),
+        eventQty > 0 ? el('span', { className: 'farm-seasonal-bonus', title: 'Tyle sztuk liczy się do kontraktu tygodnia' }, ' 🏆 +' + (eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0)) + ' 🪙') : '')));
   const sell = () => farmSellConfirm(crop, qty, afterSell);
   const controls = el('div', { className: 'farm-sell-controls' });
   const btn = el('button', { className: 'farm-mini-btn primary' }, 'Sprzedaj...');
@@ -25348,7 +25449,7 @@ async function ensureFarmData(opts = {}) {
     const [defsRes, colRes, invRes, mktRes, nftRes, tilesRes, stateRes, taxRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      me ? sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
+      me ? sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
@@ -25372,6 +25473,7 @@ async function ensureFarmData(opts = {}) {
     });
     applyFarmUserState(stateRes.data);
     if (!taxRes.error) applyFarmTaxQuote(taxRes.data);
+    await refreshFarmSeasonalState();
   } catch (e) { console.error('ensureFarmData', e); }
 }
 
@@ -25813,6 +25915,93 @@ async function loadFarmSalesFeed(host) {
   }
 }
 
+function farmSeasonalStatusText(ev) {
+  if (!ev) return '';
+  if (ev.status === 'active') return 'Aktywne';
+  if (ev.status === 'upcoming') return 'Start w poniedziałek';
+  if (ev.rank_awarded) return 'Rozliczone';
+  return 'Zakończone';
+}
+
+function farmSeasonalDateRange(ev) {
+  if (!ev?.starts_at || !ev?.ends_at) return '';
+  const fmt = d => new Date(d).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+  return fmt(ev.starts_at) + '–' + fmt(new Date(new Date(ev.ends_at).getTime() - 1));
+}
+
+function farmSeasonalMyRow() {
+  return fmSeasonalLeaderboard.find(r => r.user_id === me?.id) || null;
+}
+
+function farmSeasonalPrizeList(ev) {
+  return el('div', { className: 'farm-seasonal-prizes' },
+    el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '1. miejsce'), ': ' + ev.rank1_coins + ' 🪙 + losowa karta NFT'),
+    el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '2. miejsce'), ': ' + ev.rank2_coins + ' 🪙 + ' + ev.rank2_boxes + ' skrzynek'),
+    el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '3. miejsce'), ': ' + ev.rank3_coins + ' 🪙 + ' + ev.rank3_boxes + ' skrzynki'),
+    el('div', { className: 'farm-seasonal-prize' }, el('b', {}, 'Wspólny pasek'), ': ' + ev.bar_boxes + ' skrzynek dla każdego, kto sprzeda min. 1 szt.'));
+}
+
+async function buildFarmSeasonalBody(bodyEl) {
+  bodyEl.replaceChildren(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
+  await ensureFarmData();
+  await refreshFarmSeasonalState();
+  bodyEl.replaceChildren();
+  const ev = fmSeasonalEvent;
+  if (!ev) {
+    bodyEl.append(el('div', { className: 'farm-seasonal-empty' }, 'Wyzwanie tygodnia pojawi się po wdrożeniu kontraktów farmy.'));
+    return;
+  }
+
+  const total = Number(ev.total_units || 0);
+  const target = Math.max(1, Number(ev.bar_target_units || 1));
+  const pct = Math.min(100, Math.round(total / target * 100));
+  const my = farmSeasonalMyRow();
+  const def = fmDefs.get(ev.species);
+  const title = ev.status === 'upcoming' ? 'Następny kontrakt: ' : 'Kontrakt tygodnia: ';
+  const statusCls = ev.status === 'active' ? ' active' : (ev.status === 'closed' ? ' closed' : '');
+
+  const card = el('div', { className: 'farm-seasonal-card' },
+    el('div', { className: 'farm-seasonal-head' },
+      el('div', { className: 'farm-seasonal-title' }, farmIcon(ev.emoji || def?.emoji || '🌱'), el('span', {}, title + (ev.name || def?.name || ev.crop_type))),
+      el('div', { className: 'farm-seasonal-status' + statusCls }, farmSeasonalStatusText(ev))),
+    el('div', { className: 'farm-seasonal-sub' },
+      farmSeasonalDateRange(ev), ' · premia ', el('b', {}, '+' + Number(ev.bonus_per_unit || 0) + ' 🪙/szt.'), ' · liczą się tylko plony zebrane i sprzedane w tym tygodniu.'),
+    el('div', { className: 'farm-tax-grid' },
+      farmTaxStat('Uczestnicy', String(ev.participants_snapshot || '—')),
+      farmTaxStat('Fair cap', String(ev.fair_cap_snapshot || '—') + ' działki'),
+      farmTaxStat('Tyg./działkę', String(ev.units_per_tile_week || '—') + ' szt.'),
+      farmTaxStat('Fair cap/gracz', String(ev.fair_cap_user_units || '—') + ' szt.')),
+    el('div', { className: 'farm-inv-section-title' }, '🎁 Wspólny pasek'),
+    el('div', { className: 'farm-seasonal-progress' },
+      el('div', { className: 'farm-seasonal-progress-fill' + (ev.bar_filled ? ' done' : ''), style: { width: pct + '%' } })),
+    el('div', { className: 'farm-seasonal-progress-text' },
+      el('span', {}, total + ' / ' + target + ' szt.'),
+      el('span', {}, ev.contributor_count + ' uczestników')),
+    el('div', { className: 'farm-tax-note' }, 'Jeśli pasek się zapełni, każdy kontrybutor z co najmniej 1 sprzedaną sztuką dostanie ' + ev.bar_boxes + ' skrzynek.'));
+
+  bodyEl.append(card);
+  bodyEl.append(farmSeasonalPrizeList(ev));
+
+  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '👤 Twój wynik'));
+  bodyEl.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left' } },
+    my ? ('Sprzedano: ' + my.qty + ' szt. · premia: +' + my.event_bonus + ' 🪙 · miejsce: #' + my.rank)
+       : (ev.status === 'active' ? 'Sprzedaj co najmniej 1 sztukę aktywnej rośliny, żeby wejść do paska.' : 'Wyzwanie jeszcze nie wystartowało.')));
+
+  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🏆 Ranking'));
+  if (!fmSeasonalLeaderboard.length) {
+    bodyEl.append(el('div', { className: 'farm-seasonal-empty' }, ev.status === 'upcoming' ? 'Ranking ruszy po starcie tygodnia.' : 'Jeszcze nikt nie sprzedał aktywnej rośliny.'));
+  } else {
+    const list = el('div', { className: 'farm-seasonal-board' });
+    fmSeasonalLeaderboard.slice(0, 10).forEach(r => {
+      list.append(el('div', { className: 'farm-seasonal-rank' },
+        el('div', { className: 'farm-seasonal-rank-pos' }, '#' + r.rank),
+        el('div', { className: 'farm-seasonal-rank-name' }, r.nick || '???'),
+        el('div', { className: 'farm-seasonal-rank-qty' }, r.qty + ' szt.')));
+    });
+    bodyEl.append(list);
+  }
+}
+
 // Short relative-time label (pl) for other uses.
 function farmTimeAgo(iso) {
   const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -25852,6 +26041,7 @@ function buildFarmCatalogBody(bodyEl) {
 let farmHubTab = 'inventory';
 const FARM_HUB_TABS = [
   { id: 'inventory', label: '🎒 Mój Majątek' },
+  { id: 'seasonal',  label: '🏆 Wyzwanie' },
   { id: 'catalog',   label: '📖 Katalog' },
   { id: 'market',    label: '📈 Cennik' },
   { id: 'help',      label: '❓ Jak to działa' },
@@ -25868,6 +26058,7 @@ function renderFarmHubBody() {
   if (bar) bar.querySelectorAll('.farm-hub-tab').forEach(b => b.classList.toggle('active', b.dataset.hubtab === farmHubTab));
   
   if (farmHubTab === 'inventory') buildFarmInventoryBody(bodyEl);
+  else if (farmHubTab === 'seasonal') buildFarmSeasonalBody(bodyEl);
   else if (farmHubTab === 'catalog') buildFarmCatalogBody(bodyEl);
   else if (farmHubTab === 'market') buildFarmMarketBody(bodyEl);
   else if (farmHubTab === 'help') buildFarmHelpBody(bodyEl);
@@ -27028,7 +27219,7 @@ async function removeCrop(x, y, btn) {
 async function reloadFarmInventory() {
   if (!me) return;
   try {
-    const { data } = await sb.from('farm_inventory').select('crop_type,qty,expires_at').eq('user_id', me.id);
+    const { data } = await sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id);
     buildFarmInventory(data || []);
   } catch (e) { console.error('reloadFarmInventory', e); }
 }
@@ -27042,9 +27233,12 @@ async function sellCrop(crop, qty, btn) {
   if (typeof data.land_tax_debt === 'number') fmTax = Object.assign({}, fmTax || {}, { debt: Number(data.land_tax_debt || 0) });
   await refreshFarmTaxQuote();
   await reloadFarmInventory();   // FIFO lot consumption may have emptied the soonest lot
+  await refreshFarmSeasonalState();
   const taxTxt = Number(data.tax_paid || 0) > 0 ? (' · podatek ' + data.tax_paid + ' 🪙, netto ' + data.net + ' 🪙') : '';
-  showToast('💰 Sprzedano ' + data.sold + '× za ' + data.proceeds + ' 🪙' + taxTxt + '!');
+  const eventTxt = Number(data.event_bonus || 0) > 0 ? (' · kontrakt +' + data.event_bonus + ' 🪙') : '';
+  showToast('💰 Sprzedano ' + data.sold + '× za ' + data.proceeds + ' 🪙' + eventTxt + taxTxt + '!');
   renderFarmMarket();
+  if (farmModalEl) refreshFarmHub();
 }
 
 // ── Realtime + growth timer ─────────────────────────────────────────────────
@@ -27060,6 +27254,16 @@ function setupFarmRealtime() {
       const r = payload.new; if (!r) return;
       fmMarket.set(r.crop_type, normalizeFarmMarket(r));
       if (activeTab === 'farm') renderFarmMarket();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_seasonal_event_sales' }, () => {
+      refreshFarmSeasonalState().then(() => {
+        if (activeTab === 'farm' && farmModalEl && farmHubTab === 'seasonal') refreshFarmHub();
+      });
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_seasonal_weekly_awards' }, () => {
+      refreshFarmSeasonalState().then(() => {
+        if (activeTab === 'farm' && farmModalEl && farmHubTab === 'seasonal') refreshFarmHub();
+      });
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_user_state' }, payload => {
       const r = payload.new; if (!r || r.user_id !== me?.id) return;
