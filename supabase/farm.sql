@@ -1317,7 +1317,7 @@ $$;
 --   1. RECOVER cur_price toward the day's anchor_price at 12%/hr since last sale.
 --   2. DROP it once per transaction, scaled by size: dropFrac = min(0.40, 0.005×qty)
 --      (0.5%/unit, capped 40%). The batch is charged the AVERAGE of pre/post price
---      (eats ~half its own impact); cur_price lands at the post-drop price.
+--      (eats ~half its own impact after floor clamp); cur_price lands at the post-drop price.
 --   Floor = 30% of base throughout.
 -- Crops are consumed FIFO from the soonest-to-ROT non-expired lots.
 CREATE OR REPLACE FUNCTION public.sell_crop_to_npc(p_crop_type text, p_qty integer)
@@ -1381,8 +1381,8 @@ BEGIN
   IF v_cur_eff < v_floor THEN v_cur_eff := v_floor; END IF;
 
   v_dropfrac := least(0.40, 0.005 * p_qty);
-  v_proceeds := p_qty * v_cur_eff * (1 - v_dropfrac / 2.0);
   v_price    := greatest(v_floor, v_cur_eff * (1 - v_dropfrac));
+  v_proceeds := p_qty * ((v_cur_eff + v_price) / 2.0);
 
   UPDATE public.farm_market
      SET cur_price = v_price, total_sold = total_sold + p_qty, last_decay_at = now()
@@ -1415,7 +1415,8 @@ BEGIN
 
   RETURN json_build_object('ok', true, 'coins', v_coins, 'crop_type', p_crop_type,
     'sold', p_qty, 'proceeds', v_pay, 'net', v_net_pay, 'tax_paid', v_tax_paid,
-    'land_tax_debt', v_debt, 'cur_price', round(v_price, 2), 'inventory_qty', v_inv);
+    'land_tax_debt', v_debt, 'cur_price', round(v_price, 2), 'last_decay_at', now(),
+    'inventory_qty', v_inv);
 END;
 $$;
 

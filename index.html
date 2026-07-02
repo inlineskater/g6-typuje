@@ -23649,6 +23649,7 @@ let gardenUpdateNoticeDismissedSession = false;
 let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
 let fmRealtimeReady = false, fmTimer = null;
+let fmMarketUiRefreshTimer = null;
 
 function resetFarmState() {
   stopFarmTimer();
@@ -23662,6 +23663,18 @@ function normalizeFarmMarket(m) {
   return { base_price: +m.base_price,
     anchor_price: m.anchor_price != null ? +m.anchor_price : +m.base_price,
     cur_price: +m.cur_price, last_decay_at: m.last_decay_at };
+}
+
+function farmMarketEffectivePrice(mkt) {
+  if (!mkt) return null;
+  const base = Number(mkt.base_price || 0);
+  const cur = Number(mkt.cur_price || 0);
+  if (!base) return cur;
+  const anchor = mkt.anchor_price != null ? Number(mkt.anchor_price) : base;
+  const floor = base * 0.30;
+  const last = mkt.last_decay_at ? new Date(mkt.last_decay_at).getTime() : NaN;
+  const hours = Number.isFinite(last) ? Math.max(0, (Date.now() - last) / 3600000) : 0;
+  return Math.max(floor, cur + (anchor - cur) * Math.min(1, hours * 0.12));
 }
 
 // Crops are stored as per-harvest lots (rot 5d). Sum non-expired qty per crop into
@@ -24018,7 +24031,7 @@ function farmTableBuildRow(x, y, now) {
     const mkt = def ? fmMarket.get(def.crop_type) : null;
     const yieldQty = farmTableCropYield(def, level);
     const growMin = farmTableGrowMinutes(def, level);
-    const priceNow = mkt ? Number(mkt.cur_price) : null;
+    const priceNow = farmMarketEffectivePrice(mkt);
     const priceMax = mkt ? Number(mkt.base_price) : null;
     const readyAtTs = tile.ready_at ? new Date(tile.ready_at).getTime() : null;
     base.rowKind = 'crop';
@@ -25306,7 +25319,7 @@ function renderFarmCollection() {
 function farmTrendChip(crop) {
   const mkt = fmMarket.get(crop);
   if (!mkt) return el('span', { className: 'farm-trend flat' }, '');
-  const cur = +mkt.cur_price, base = +mkt.base_price;
+  const cur = farmMarketEffectivePrice(mkt), base = +mkt.base_price;
   // pct of the catalog MAX the NPC pays right now (0–100%). ▲ = near max (sell!), ▼ = low.
   const pct = base > 0 ? Math.round(cur / base * 100) : 0;
   let cls = 'flat', arrow = '≈';
@@ -25351,7 +25364,7 @@ function farmSeasonalPriceInfo(crop, bonus) {
   const mkt = fmMarket.get(crop);
   if (!mkt) return null;
   const q = farmSellQuote(crop, 1);
-  const normalNow = q ? q.startPrice : Number(mkt.cur_price || 0);
+  const normalNow = q ? q.startPrice : Number(farmMarketEffectivePrice(mkt) || 0);
   const maxNormal = Number(mkt.base_price || 0);
   const minNormal = maxNormal * 0.30;
   const extra = Number(bonus || 0);
@@ -25376,13 +25389,11 @@ function farmSellQuote(crop, qty) {
   const base = +mkt.base_price;
   const anchor = mkt.anchor_price != null ? +mkt.anchor_price : base;
   const floor = base * 0.30;
-  const hours = mkt.last_decay_at ? Math.max(0, (Date.now() - new Date(mkt.last_decay_at).getTime()) / 3600000) : 0;
-  let curEff = (+mkt.cur_price) + (anchor - (+mkt.cur_price)) * Math.min(1, hours * 0.12);
-  if (curEff < floor) curEff = floor;
+  const curEff = farmMarketEffectivePrice(mkt);
   const dropFrac = Math.min(0.40, 0.005 * qty);
   const startPrice = curEff;
   const endPrice = Math.max(floor, curEff * (1 - dropFrac));
-  const proceeds = Math.round(qty * curEff * (1 - dropFrac / 2));
+  const proceeds = Math.round(qty * ((startPrice + endPrice) / 2));
   const eventQty = farmSeasonalEligibleQty(crop, qty);
   const eventBonus = eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0);
   return { base, startPrice, endPrice, proceeds, dropPct: Math.round(dropFrac * 100),
@@ -25483,7 +25494,7 @@ function farmRotChip(crop) {
 // by the on-farm market panel and Mój Majątek; `afterSell` re-renders the host view.
 function farmCropRow(crop, qty, afterSell) {
   const mkt = fmMarket.get(crop);
-  const price = mkt ? mkt.cur_price : 0;
+  const price = farmMarketEffectivePrice(mkt) || 0;
   const def = [...fmDefs.values()].find(d => d.crop_type === crop);
   const eventQty = farmSeasonalEligibleQty(crop, qty);
   const row = el('div', { className: 'farm-market-row' },
@@ -25940,7 +25951,7 @@ async function buildFarmMarketBody(bodyEl) {
   defs.forEach(d => {
     const mkt = fmMarket.get(d.crop_type); if (!mkt) return;
     const q = farmSellQuote(d.crop_type, 1);
-    const cur = q ? q.startPrice : +mkt.cur_price;
+    const cur = q ? q.startPrice : +(farmMarketEffectivePrice(mkt) || mkt.cur_price);
     const isSeasonal = !!(fmSeasonalEvent
       && fmSeasonalEvent.crop_type === d.crop_type
       && Number(fmSeasonalEvent.bonus_per_unit || 0) > 0
@@ -26199,6 +26210,18 @@ function renderFarmHubBody() {
 // Re-render after an in-hub action (level-up / sell) without reopening.
 function refreshFarmHub() { renderFarmHubBody(); }
 
+function scheduleFarmMarketUiRefresh() {
+  if (fmMarketUiRefreshTimer) clearTimeout(fmMarketUiRefreshTimer);
+  fmMarketUiRefreshTimer = setTimeout(() => {
+    fmMarketUiRefreshTimer = null;
+    if (activeTab === 'farm') {
+      renderFarmMarket();
+      renderFarmSelection();
+    }
+    if (farmModalEl) refreshFarmHub();
+  }, 250);
+}
+
 async function openFarmHub(initialTab) {
   if (initialTab && FARM_HUB_TABS.some(t => t.id === initialTab)) farmHubTab = initialTab;
   const shellBody = openFarmModalShell('🌱 Ogródek');
@@ -26214,7 +26237,7 @@ async function openFarmHub(initialTab) {
   // brief spinner while ensureFarmData() loads (e.g. opened from Portfel).
   if (fmDefs.size) renderFarmHubBody();
   else body.append(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
-  await ensureFarmData();
+  await ensureFarmData({ force: true });
   if (!farmModalEl) return;   // user closed it while loading
   renderFarmHubBody();
 }
@@ -26364,7 +26387,7 @@ function openFarmPlantedModal(tile, x, y) {
   const rar = def.rarity || 'common';
   const level = tile.planted_level || 1;
   const mkt = fmMarket.get(def.crop_type);
-  const cur = mkt ? +mkt.cur_price : null;
+  const cur = farmMarketEffectivePrice(mkt);
   const base = mkt ? +mkt.base_price : null;
   const yieldNow = Math.round(def.base_yield * (1 + (level - 1) * 0.5));
   const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level - 1));
@@ -26649,7 +26672,7 @@ function buildFarmInventoryBody(bodyEl) {
     let totalVal = 0;
     crops.forEach(([crop, qty]) => {
       const mkt = fmMarket.get(crop);
-      totalVal += (mkt ? mkt.cur_price : 0) * qty;
+      totalVal += (farmMarketEffectivePrice(mkt) || 0) * qty;
       bodyEl.append(farmCropRow(crop, qty, refreshFarmHub));
     });
     bodyEl.append(el('div', { className: 'farm-inv-foot' },
@@ -26689,7 +26712,7 @@ function buildGardenAdvisorTable(container) {
     const myLevels = isNft ? fmNft.filter(n => n.owner_id === me?.id && n.species === card.species).map(n => n.level || 1) : [];
     const level = isNft ? (myLevels.length ? Math.max(...myLevels) : 1) : card.level;
     const mkt = fmMarket.get(def.crop_type);
-    const price = mkt ? +mkt.cur_price : 0;
+    const price = farmMarketEffectivePrice(mkt) || 0;
     
     const yieldNow = Math.round(def.base_yield * (1 + (level - 1) * 0.5));
     const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level - 1));
@@ -27360,7 +27383,11 @@ async function sellCrop(crop, qty, btn) {
   const { data, error } = await sb.rpc('sell_crop_to_npc', { p_crop_type: crop, p_qty: qty });
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
-  const mkt = fmMarket.get(crop); if (mkt) mkt.cur_price = +data.cur_price;
+  const mkt = fmMarket.get(crop);
+  if (mkt) {
+    mkt.cur_price = +data.cur_price;
+    mkt.last_decay_at = data.last_decay_at || new Date().toISOString();
+  }
   if (typeof data.land_tax_debt === 'number') fmTax = Object.assign({}, fmTax || {}, { debt: Number(data.land_tax_debt || 0) });
   await refreshFarmTaxQuote();
   await reloadFarmInventory();   // FIFO lot consumption may have emptied the soonest lot
@@ -27384,7 +27411,7 @@ function setupFarmRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_market' }, payload => {
       const r = payload.new; if (!r) return;
       fmMarket.set(r.crop_type, normalizeFarmMarket(r));
-      if (activeTab === 'farm') renderFarmMarket();
+      scheduleFarmMarketUiRefresh();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_seasonal_event_sales' }, () => {
       refreshFarmSeasonalState().then(() => {

@@ -593,8 +593,8 @@ BEGIN
   IF v_cur_eff < v_floor THEN v_cur_eff := v_floor; END IF;
 
   v_dropfrac := least(0.40, 0.005 * p_qty);
-  v_proceeds := p_qty * v_cur_eff * (1 - v_dropfrac / 2.0);
   v_price    := greatest(v_floor, v_cur_eff * (1 - v_dropfrac));
+  v_proceeds := p_qty * ((v_cur_eff + v_price) / 2.0);
 
   UPDATE public.farm_market
      SET cur_price = v_price, total_sold = total_sold + p_qty, last_decay_at = now()
@@ -660,7 +660,8 @@ BEGIN
 
   RETURN json_build_object('ok', true, 'coins', v_coins, 'crop_type', p_crop_type,
     'sold', p_qty, 'proceeds', v_pay, 'net', v_net_pay, 'tax_paid', v_tax_paid,
-    'land_tax_debt', v_debt, 'cur_price', round(v_price, 2), 'inventory_qty', v_inv,
+    'land_tax_debt', v_debt, 'cur_price', round(v_price, 2), 'last_decay_at', now(),
+    'inventory_qty', v_inv,
     'seasonal_event_id', CASE WHEN v_has_event THEN v_event.id ELSE NULL END,
     'event_counted_qty', v_event_qty, 'event_bonus', v_event_bonus,
     'event_net', v_event_net, 'event_tax_paid', v_event_tax_paid);
