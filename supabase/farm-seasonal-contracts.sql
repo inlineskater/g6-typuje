@@ -905,7 +905,7 @@ BEGIN
       $cron$SELECT public.award_farm_seasonal_week(public.farm_seasonal_week_start(now() - interval '7 days'));$cron$
     );
   END IF;
-EXCEPTION WHEN undefined_schema OR undefined_function THEN
+EXCEPTION WHEN invalid_schema_name OR undefined_function THEN
   NULL;
 END $$;
 
