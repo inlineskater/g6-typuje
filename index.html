@@ -5826,7 +5826,7 @@
       <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
       <button class="btn-ghost" id="activity-btn">📋 Aktywność</button>
       <button class="btn-ghost" id="wallet-btn">💼 Portfel</button>
-      <button class="btn-ghost" id="documents-btn">📄 Moje Dokumenty</button>
+      <button class="btn-ghost hidden" id="documents-btn">📄 Moje Dokumenty</button>
       <span class="header-nick" id="header-nick"></span>
       <button class="btn-ghost" id="logout-btn">Wyloguj</button>
     </div>
@@ -8459,7 +8459,7 @@ function showApp() {
   updateAdminTestTabs();
   switchTab('markets');
   setupRealtime();
-  loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
+  if (DOCUMENTS_ENABLED) loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
 }
 
 function updateAdminTestTabs() {
@@ -12285,7 +12285,7 @@ function renderCoinRaceDetail(container) {
   });
 
   const documentsBtn = document.getElementById('documents-btn');
-  if (documentsBtn) documentsBtn.addEventListener('click', () => { if (me) openMyDocuments(); });
+  if (documentsBtn) documentsBtn.addEventListener('click', () => { if (DOCUMENTS_ENABLED && me) openMyDocuments(); });
 
   function renderFullLeaderboard(container) {
     const data = _lbData;
@@ -16834,6 +16834,7 @@ const SEASONAL_OVERRIDES = {
 //  RPC in supabase/documents.sql); the text lives here. `gate:'farm'` docs block
 //  the Ogródek until signed; append future docs (e.g. gate:'app') to the array.
 // ════════════════════════════════════════════════════════════════════════════
+const DOCUMENTS_ENABLED = false;
 const DOCUMENTS = [
   {
     id: 'farm_reform_2026',
@@ -16880,6 +16881,7 @@ function docById(id) { return DOCUMENTS.find(d => d.id === id) || null; }
 
 // Show the blocking land-reform memo on Ogródek open until it's signed.
 async function maybeGateFarmDocument() {
+  if (!DOCUMENTS_ENABLED) return;
   const doc = DOCUMENTS.find(d => d.gate === 'farm' && d.mandatory);
   if (!doc) return;
   if (!_signaturesLoaded) await loadMySignatures();
@@ -16894,6 +16896,7 @@ function needsSigning(doc) {
 }
 
 async function loadMySignatures() {
+  if (!DOCUMENTS_ENABLED) return;
   if (!me) return;
   try {
     const { data, error } = await sb.from('document_signatures')
@@ -16909,6 +16912,12 @@ async function loadMySignatures() {
 function refreshDocBadge() {
   const btn = document.getElementById('documents-btn');
   if (!btn) return;
+  btn.classList.toggle('hidden', !DOCUMENTS_ENABLED);
+  if (!DOCUMENTS_ENABLED) {
+    const badgeOff = btn.querySelector('.doc-badge');
+    if (badgeOff) badgeOff.remove();
+    return;
+  }
   const unsigned = DOCUMENTS.some(d => d.mandatory && needsSigning(d));
   let badge = btn.querySelector('.doc-badge');
   if (unsigned) {
@@ -17110,6 +17119,7 @@ async function signDocumentRpc(doc, dataURL) {
 }
 
 async function openMyDocuments() {
+  if (!DOCUMENTS_ENABLED) return;
   if (!me) return;
   await loadMySignatures();
   closeDocumentModal();
@@ -26903,7 +26913,7 @@ function renderFarmHelpInto(bodyEl) {
     farmHelpSection('🚜 1. Pole (działka)',
       P('Pole to kawałek ziemi na własność — na nim sadzisz rośliny. Kupujesz je, klikając puste pole na siatce.'),
       P('Każde kolejne pole jest droższe: pierwsze ', b(tile1 + ' 🪙'), ', drugie ', b(tile2 + ' 🪙'), ', trzecie ', b(tile3 + ' 🪙'), ' itd.'),
-      P(b('📜 Podatek gruntowy (kataster): '), 'to zmiana z ', b('Ustawy Reformy Gruntowej'), ' (zobacz „📄 Moje Dokumenty"). Normalne działki mają wspólny limit na gracza — liczony jako ', b('pojemność pola ÷ liczba aktywnych rolników'), '. Wszystko ponad ten limit to ', b('nadmiar'), '.'),
+      P(b('📜 Podatek gruntowy (kataster): '), 'normalne działki mają wspólny limit na gracza — liczony jako ', b('pojemność pola ÷ liczba aktywnych rolników'), '. Wszystko ponad ten limit to ', b('nadmiar'), '.'),
       P(b('Ile płacisz: '), b(FARM_TAX_PER_EXCESS_SQ + ' × nadmiar² 🪙 dziennie'), ' — koszt ', b('rośnie z kwadratem'), ' nadmiaru, więc kto chomikuje hektary, ten płaci najwięcej. Niezapłacone zaległości rosną o ', b('10% dziennie'), '.'),
       P(b('Kiedy: '), 'naliczanie rusza o ', b('00:00 (czas polski)'), ' za poprzedni zakończony dzień. Pierwsza płatność: ', b('piątek 03.07.2026 o 00:00'), ' za ', b('czwartek 02.07.2026'), '.'),
       farmTaxStatusCard({ pay: false }),
