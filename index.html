@@ -5096,6 +5096,15 @@
       background: #16a34a; color: #fff; cursor: pointer; font: inherit; font-size: 10px; font-weight: 900;
     }
     .farm-starter-action:hover { filter: brightness(.96); }
+    .garden-update-modal { max-width: 430px; border-radius: 12px; padding: 0; overflow: hidden; }
+    .garden-update-card { padding: 18px; background: linear-gradient(180deg, #f0fdf4, #ffffff); color: #16351f; }
+    .garden-update-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 18px; font-weight: 900; color: #14532d; }
+    .garden-update-sub { margin-bottom: 12px; font-size: 12px; line-height: 1.45; color: #36583d; }
+    .garden-update-list { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
+    .garden-update-list li { padding: 9px 10px; border-radius: 8px; background: rgba(255,255,255,.78); border: 1px solid rgba(22,101,52,.14); font-size: 13px; line-height: 1.4; }
+    .garden-update-list b { color: #166534; }
+    .garden-update-note { margin-bottom: 14px; font-size: 11px; line-height: 1.4; color: #64748b; }
+    .garden-update-actions { display: flex; justify-content: flex-end; }
     .farm-field { position: relative; z-index: 2; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 10px; }
     .farm-board { display: flex; flex-direction: column; align-items: center; gap: 14px; --pot-scale: .6; }
     .fb-seg { display: grid; gap: 4px; }
@@ -23573,6 +23582,7 @@ const FARM_VOUCHER_ODDS_DIVISOR = 3;
 const FARM_TAX_PER_EXCESS_SQ = 1000;
 const FARM_TAX_FIRST_TAX_DAY = '2026-07-02';
 const FARM_TAX_FIRST_PAYMENT_DAY = '2026-07-03';
+const GARDEN_UPDATE_NOTICE_ID = '2026-07-ogrodek-wyzwanie-podlewanie';
 const FARM_RARITY_PL = { common: 'zwykła', rare: 'rzadka', epic: 'epicka', legendary: 'legendarna' };
 const FARM_ERR = {
   not_authenticated: 'Musisz być zalogowany.',
@@ -23634,6 +23644,8 @@ let fmTax = null;                // server quote: fair_cap / owned normal tiles 
 let fmSeasonalEvent = null;      // current/upcoming weekly crop contract
 let fmSeasonalLeaderboard = [];  // current event aggregate leaderboard
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
+let gardenUpdateNoticeOpen = false;
+let gardenUpdateNoticeDismissedSession = false;
 let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
 let fmRealtimeReady = false, fmTimer = null;
@@ -23780,6 +23792,45 @@ async function claimFarmStarter() {
     if (data && typeof data.boxes === 'number') fmBoxes = data.boxes;
     if (data && data.granted) showToast('🎁 Witaj w Ogródku! Dostajesz 3 skrzynki — otwórz je w 🎒 Moim Majątku.');
   } catch (e) { console.error('claimFarmStarter', e); }
+}
+
+function gardenUpdateNoticeKey() {
+  return 'rp:garden-update:' + GARDEN_UPDATE_NOTICE_ID + ':' + (me?.id || 'anon');
+}
+
+function gardenUpdateNoticeDismissed() {
+  if (gardenUpdateNoticeDismissedSession) return true;
+  try { return localStorage.getItem(gardenUpdateNoticeKey()) === '1'; }
+  catch { return false; }
+}
+
+function dismissGardenUpdateNotice() {
+  gardenUpdateNoticeDismissedSession = true;
+  try { localStorage.setItem(gardenUpdateNoticeKey(), '1'); } catch {}
+}
+
+function maybeShowGardenUpdateNotice() {
+  if (!me || activeTab !== 'farm' || gardenUpdateNoticeOpen || gardenUpdateNoticeDismissed()) return;
+  gardenUpdateNoticeOpen = true;
+  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => {
+    dismissGardenUpdateNotice();
+    gardenUpdateNoticeOpen = false;
+    overlay.remove();
+  };
+  const btn = el('button', { className: 'btn-primary', type: 'button' }, 'Rozumiem, zamknij');
+  btn.addEventListener('click', close);
+  const modal = el('div', { className: 'modal garden-update-modal' },
+    el('div', { className: 'garden-update-card' },
+      el('div', { className: 'garden-update-title' }, '🌿 Zmiany w Ogródku'),
+      el('div', { className: 'garden-update-sub' }, 'Krótka informacja jednorazowa. Po zamknięciu nie będzie jej już w menu.'),
+      el('ul', { className: 'garden-update-list' },
+        el('li', {}, el('b', {}, '🏆 Nowe wyzwanie od poniedziałku 06.07'), 'Co tydzień jedna roślina będzie rośliną wyzwania. Sprzedawaj ją do skupu: top 3 graczy dostanie nagrody, a wspólny pasek może odblokować skrzynki dla uczestników.'),
+        el('li', {}, el('b', {}, '💧 Podlewanie roślinek'), 'Podlewanie starych roślinek będzie lepiej nagradzane, więc codzienne dbanie o Ogródek znowu ma większy sens.')),
+      el('div', { className: 'garden-update-note' }, 'To tylko ogłoszenie zmian. Nie ma osobnej zakładki ani archiwum tej wiadomości.'),
+      el('div', { className: 'garden-update-actions' }, btn)));
+  overlay.append(modal);
+  document.body.append(overlay);
 }
 
 function fmErr(error) {
@@ -24346,6 +24397,7 @@ async function loadFarm() {
       pendingFarmHubOpen = null;
       openFarmHub(hubTab);
     }
+    setTimeout(maybeShowGardenUpdateNotice, 250);
   } catch (e) {
     console.error('loadFarm', e);
   }
