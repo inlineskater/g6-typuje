@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.hero_item_defs (
   price        integer NOT NULL CHECK (price >= 0),
   rarity       text NOT NULL DEFAULT 'common' CHECK (rarity IN ('common','rare','epic','legendary')),
   description  text NOT NULL DEFAULT '',
-  effect_game  text CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','poker','tavern','global')),
+  effect_game  text CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','egg_catch','poker','tavern','global')),
   effect_type  text NOT NULL,
   effect_value numeric NOT NULL DEFAULT 0,
   sale_type    text NOT NULL DEFAULT 'shop' CHECK (sale_type IN ('shop','auction','both','hidden')),
@@ -62,7 +62,7 @@ ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_rarity_check
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_effect_game_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_effect_game_check
-  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','poker','tavern','global'));
+  CHECK (effect_game IS NULL OR effect_game IN ('roulette','slots','whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','egg_catch','poker','tavern','global'));
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_sale_type_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_sale_type_check

@@ -27,9 +27,10 @@ AS $$
     WHEN '2026-06-15' THEN 'snake'
     WHEN '2026-06-22' THEN 'var_patrol'  -- VAR Patrol debut
     WHEN '2026-06-29' THEN 'invoice_horde'  -- Najazd Ticketów
+    WHEN '2026-07-06' THEN 'egg_catch'  -- Łap Jajka debut
     -- SEASONAL_ROTATION from SEASONAL_ANCHOR_WEEK_START (2026-05-18, a Monday)
-    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol'])[
-      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 6) + 1
+    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','egg_catch'])[
+      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 7) + 1
     ]
   END;
 $$;
@@ -80,5 +81,13 @@ SELECT cron.schedule(
   '5 0 * * 1',
   $$SELECT CASE WHEN public.seasonal_game_for_week(public.var_patrol_week_start(now() - interval '7 days')) = 'var_patrol'
       THEN public.award_var_patrol_week(public.var_patrol_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+SELECT cron.schedule(
+  'egg_catch_weekly_awards',
+  '5 0 * * 1',
+  $$SELECT CASE WHEN public.seasonal_game_for_week(public.egg_catch_week_start(now() - interval '7 days')) = 'egg_catch'
+      THEN public.award_egg_catch_week(public.egg_catch_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );

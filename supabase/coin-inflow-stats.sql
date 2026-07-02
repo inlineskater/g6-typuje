@@ -176,6 +176,8 @@ AS $$
     SELECT user_id, prize_coins, awarded_at FROM public.invoice_horde_weekly_awards
     UNION ALL
     SELECT user_id, prize_coins, awarded_at FROM public.var_patrol_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.egg_catch_weekly_awards
   ),
   seasonal_inflows AS (
     SELECT

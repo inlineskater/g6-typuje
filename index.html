@@ -3526,6 +3526,15 @@
       box-shadow: 0 0 15px rgba(34,197,94,0.28), inset 0 0 10px rgba(34,197,94,0.1);
     }
     .sn-arena canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+    /* ── Łap Jajka (egg_catch) — Elektronika LCD handheld ── */
+    .ec-arena {
+      border: 3px solid #8a6d3f; border-radius: 14px;
+      background: #e9d9ae; overflow: hidden;
+      aspect-ratio: 9 / 7; width: 100%; max-width: 560px; margin: 0 auto;
+      user-select: none; touch-action: none; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(90,60,20,.3), inset 0 2px 0 rgba(255,255,255,.5);
+    }
+    .ec-arena canvas { width: 100%; height: 100%; display: block; }
     .sn-prompt {
       background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.24);
       border-radius: 8px; padding: 9px 12px; color: var(--muted);
@@ -6833,6 +6842,83 @@
         </div>
       </div>
 
+      <!-- Łap Jajka panel (Elektronika/Nu-pogodi egg catcher; gameType egg_catch) -->
+      <div id="seasonal-game-egg-catch" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">Łap Jajka 🥚</h2>
+                <p class="page-sub">Klasyk z ręcznej konsolki „Elektronika": jajka staczają się z 4 kurnych grzęd, a Ty łapiesz je koszykiem wilka. Trzy stłuczki i koniec — a jajka lecą coraz szybciej.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 100 🪙</span>
+                <span class="bj-prize">🥈 50 🪙</span>
+                <span class="bj-prize">🥉 25 🪙</span>
+              </div>
+            </div>
+
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać</div>
+              <ul>
+                <li><strong>Q / A / P / L</strong> — cztery pozycje koszyka (lewa góra / lewy dół / prawa góra / prawy dół). Działają też <strong>strzałki</strong> (←→ strona, ↑↓ wysokość) i <strong>tapnięcie ćwiartki</strong> ekranu.</li>
+                <li><strong>+1 pkt</strong> za każde złapane jajko. Jajko bez koszyka = 🍳 stłuczka.</li>
+                <li><strong>3 stłuczki kończą rundę.</strong> Z każdym poziomem jajka staczają się szybciej i lecą gęściej.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 100 🪙 · 🥈 50 🪙 · 🥉 25 🪙.</li>
+              </ul>
+            </div>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Wynik</div>
+                <div class="bj-stat-value" id="ec-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Stłuczki</div>
+                <div class="bj-stat-value" id="ec-misses">0/3</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Tempo</div>
+                <div class="bj-stat-value" id="ec-level">1</div>
+              </div>
+            </div>
+
+            <div class="ec-arena" id="ec-arena">
+              <canvas id="ec-canvas"></canvas>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="ec-start-btn">Start rundy</button>
+              <div class="bj-status" id="ec-status">Q/A/P/L, strzałki albo tapnij ćwiartkę ekranu. Wyniki zapisują się po rundzie.</div>
+            </div>
+          </section>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="ec-week-label"></span>
+              </div>
+              <div id="ec-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="ec-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
+              </div>
+              <div class="bj-awards" id="ec-awards"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
+
       <!-- Najazd Ticketów panel (IT-helpdesk survival season; gameType invoice_horde) -->
       <div id="seasonal-game-invoice-horde" class="hidden">
         <div class="bj-layout">
@@ -7065,6 +7151,17 @@
           <div class="ag-card-body">
             <div class="ag-card-name">VAR Patrol</div>
             <div class="ag-card-desc">Pokój VAR: 60 sekund decyzji tylko o spalonym. Oglądaj stop-klatkę, wybierz GRA albo SPALONY, buduj serię.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">REFLEKS</span>
+            </div>
+          </div>
+        </button>
+        <button class="ag-card" data-game="egg_catch">
+          <div class="ag-card-banner">🥚</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">Łap Jajka</div>
+            <div class="ag-card-desc">Elektronika LCD: jajka staczają się z 4 kurnych grzęd, Ty łapiesz je koszykiem wilka. Trzy stłuczki kończą rundę, a jajka lecą coraz szybciej.</div>
             <div class="ag-card-meta">
               <span class="ag-card-cost">1 🪙 / runda</span>
               <span class="ag-card-tag">REFLEKS</span>
@@ -7714,6 +7811,7 @@ let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
 let snakeRuntime = null;
+let eggCatchRuntime = null;
 let invoiceHordeRuntime = null;
 let varPatrolRuntime = null;
 let allGamesMode = false;
@@ -7734,7 +7832,7 @@ const HERO_ITEM_SLOTS = [
   { id: 'weapon', label: 'Broń' },
 ];
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
-const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol']);
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch']);
 let heroItemDefs = [];
 let myHeroInventory = [];
 let publicHeroEquipment = [];
@@ -7967,6 +8065,12 @@ const snStatus        = document.getElementById('sn-status');
 const snScoreEl       = document.getElementById('sn-score');
 const snLengthEl      = document.getElementById('sn-length');
 const snMovesEl       = document.getElementById('sn-moves');
+const ecArena         = document.getElementById('ec-arena');
+const ecStartBtn      = document.getElementById('ec-start-btn');
+const ecStatus        = document.getElementById('ec-status');
+const ecScoreEl       = document.getElementById('ec-score');
+const ecMissesEl      = document.getElementById('ec-misses');
+const ecLevelEl       = document.getElementById('ec-level');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
@@ -8430,6 +8534,7 @@ const AG_PANEL_IDS = {
   snake:         'seasonal-game-snake',
   invoice_horde: 'seasonal-game-invoice-horde',
   var_patrol:    'seasonal-game-var-patrol',
+  egg_catch:     'seasonal-game-egg-catch',
 };
 let agPanelHome = {};
 
@@ -8450,7 +8555,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
   allGamesSelectedGame = null;
@@ -8543,7 +8648,7 @@ document.querySelectorAll('.ag-card').forEach(btn => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -8556,7 +8661,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -9437,7 +9542,8 @@ const ACT_GAME_LABELS = {
   roulette: '🎡 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', poker: '🃏 Poker',
   whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
-  invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol', arcade: '🕹️ Arkada',
+  invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
+  egg_catch: '🥚 Łap Jajka', arcade: '🕹️ Arkada',
 };
 // Casino games whose rapid plays are collapsed into one session row; an idle gap
 // longer than SESSION_GAP_MS closes a session (poker buy-ins/cashouts are not grouped).
@@ -9508,7 +9614,7 @@ async function buildActivityFeed() {
   const scoreSel = 'user_id,nick_snapshot,score,submitted_at';
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
-    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, arcadeRes, nftRes,
+    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, eggCatchRes, arcadeRes, nftRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -9521,6 +9627,7 @@ async function buildActivityFeed() {
     ranged(sb.from('bug_jumper_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('invoice_horde_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('var_patrol_scores').select(scoreSel), 'submitted_at'),
+    ranged(sb.from('egg_catch_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
     ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
@@ -9606,6 +9713,7 @@ async function buildActivityFeed() {
   pushScores(bugRes.data, 'bug_jumper');
   pushScores(invoiceRes.data, 'invoice_horde');
   pushScores(varPatrolRes.data, 'var_patrol');
+  pushScores(eggCatchRes.data, 'egg_catch');
   (arcadeRes.data || []).forEach(s => {
     entries.push({ nick: nickOf(s), ts: s.created_at, cat: 'game',
       desc: (ACT_GAME_LABELS[s.game_type] || '🕹️ ' + s.game_type) + ' — wynik ' + s.score });
@@ -9895,6 +10003,13 @@ function setupRealtime() {
       if (activeTab === 'whack-boss') loadSnakeState(false);
       await refreshMeCoins();
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_scores' }, () => {
+      if (activeTab === 'whack-boss') loadEggCatchState(false);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') loadEggCatchState(false);
+      await refreshMeCoins();
+    })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, () => {
       if (activeTab === 'whack-boss') loadInvoiceHordeState(false);
     })
@@ -10123,6 +10238,7 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bug_jumper_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_scores' }, scheduleActivityRebuild)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'farm_nft_transfers' }, scheduleActivityRebuild)
@@ -10390,13 +10506,14 @@ async function loadSeasonHistory() {
       .order('submitted_at', { ascending: true })
       .limit(20);
 
-    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, liveRes] = await Promise.all([
+    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_weekly_awards').select('week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('snake_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('invoice_horde_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('var_patrol_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from('egg_catch_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       liveScoresQuery,
     ]);
 
@@ -10428,6 +10545,7 @@ async function loadSeasonHistory() {
       ...mapSeasonAwardRows(snRes.data, 'snake'),
       ...mapSeasonAwardRows(ihRes.data, 'invoice_horde'),
       ...mapSeasonAwardRows(vpRes.data, 'var_patrol'),
+      ...mapSeasonAwardRows(ecRes.data, 'egg_catch'),
       ...pendingEntries,
     ];
     if (wrap) {
@@ -16662,12 +16780,14 @@ const SEASONAL_ROTATION = [
   { gameType: 'snake', displayName: 'Snake 🐍' },
   { gameType: 'invoice_horde', displayName: 'Najazd Ticketów 🎫' },
   { gameType: 'var_patrol', displayName: 'VAR Patrol 📺' },
+  { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
   '2026-06-15': { gameType: 'snake', displayName: 'Snake 🐍' },
   '2026-06-22': { gameType: 'var_patrol', displayName: 'VAR Patrol 📺' },
   '2026-06-29': { gameType: 'invoice_horde', displayName: 'Najazd Ticketów 🎫' },
+  '2026-07-06': { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },  // debut
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -17082,6 +17202,7 @@ function loadSeasonalTab(showSpinner = true) {
   const snPanel       = document.getElementById('seasonal-game-snake');
   const ihPanel       = document.getElementById('seasonal-game-invoice-horde');
   const vpPanel       = document.getElementById('seasonal-game-var-patrol');
+  const ecPanel       = document.getElementById('seasonal-game-egg-catch');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -17090,12 +17211,14 @@ function loadSeasonalTab(showSpinner = true) {
   const isSN = current.gameType === 'snake';
   const isIH = current.gameType === 'invoice_horde';
   const isVP = current.gameType === 'var_patrol';
+  const isEC = current.gameType === 'egg_catch';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
   if (snPanel) { if (isSN) show(snPanel); else hide(snPanel); }
   if (ihPanel) { if (isIH) show(ihPanel); else hide(ihPanel); }
   if (vpPanel) { if (isVP) show(vpPanel); else hide(vpPanel); }
+  if (ecPanel) { if (isEC) show(ecPanel); else hide(ecPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -17103,18 +17226,21 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isSN && snakeRuntime?.playing) stopSnakeRound();
   if (!isIH && invoiceHordeRuntime?.playing) stopInvoiceHordeRound();
   if (!isVP && varPatrolRuntime?.playing) stopVarPatrolRound();
+  if (!isEC && eggCatchRuntime?.playing) stopEggCatchRound();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
   if (snakeRuntime) snakeRuntime.archiveMode = false;
   if (invoiceHordeRuntime) invoiceHordeRuntime.archiveMode = false;
   if (varPatrolRuntime) varPatrolRuntime.archiveMode = false;
+  if (eggCatchRuntime) eggCatchRuntime.archiveMode = false;
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) loadBugJumperState(showSpinner);
   if (isFP) loadFlappyPantsState(showSpinner);
   if (isSN) loadSnakeState(showSpinner);
   if (isIH) loadInvoiceHordeState(showSpinner);
   if (isVP) loadVarPatrolState(showSpinner);
+  if (isEC) loadEggCatchState(showSpinner);
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
@@ -21668,6 +21794,591 @@ if (snArena) {
     const dy = evt.clientY - start.y;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
     snakeQueueDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U'));
+  });
+}
+
+// ── Łap Jajka (egg_catch) — Elektronika LCD egg catcher ─────────────────────
+// PARITY CONTRACT: the EC_* constants and the ecInitState/ecAdvanceTick
+// transition rules must stay byte-for-byte equivalent to the block in
+// supabase/functions/egg-catch-action/index.ts — the server replays
+// seed + moves to derive the trusted score.
+const EC_TICK_MS = 100;
+const EC_LANES = 4;              // 0 TL, 1 BL, 2 TR, 3 BR
+const EC_STEPS = 5;              // egg slots 0..4; resolves stepping past 4
+const EC_MAX_MISSES = 3;
+const EC_MAX_TICKS = 6000;       // 10 min hard cap
+const EC_MAX_SCORE = 300;        // anti-cheat ceiling
+const EC_BEAT_START_TICKS = 8;   // 0.8 s per egg step at level 0
+const EC_BEAT_MIN_TICKS = 3;
+const EC_LEVEL_EVERY = 10;       // spawned eggs per speed level
+const EC_SPAWN_GAP_START = 3;    // beats between spawns
+const EC_SPAWN_GAP_MIN = 2;
+const EC_SPAWN_GAP_DROP_LEVEL = 4;
+const EC_CS_W = 360, EC_CS_H = 280;
+const EC_MAX_DPR = 2;
+
+function ecLevel(spawned) { return Math.floor(spawned / EC_LEVEL_EVERY); }
+function ecBeatTicks(level) { return Math.max(EC_BEAT_MIN_TICKS, EC_BEAT_START_TICKS - level); }
+function ecSpawnGapBeats(level) { return level >= EC_SPAWN_GAP_DROP_LEVEL ? EC_SPAWN_GAP_MIN : EC_SPAWN_GAP_START; }
+
+function ecInitState(seed) {
+  return {
+    rngState: (Number(seed) >>> 0) || 1,
+    wolfPos: 0,
+    eggs: [],            // { lane, step }
+    spawned: 0,
+    caught: 0,
+    misses: 0,
+    beatCountdown: ecBeatTicks(0),
+    spawnCountdown: 1,   // first egg on the first beat
+    tick: 0,
+  };
+}
+
+function ecRng(st) {
+  st.rngState = (Math.imul(st.rngState, 1664525) + 1013904223) >>> 0;
+  return st.rngState / 4294967296;
+}
+
+// One simulation tick. movePos (0..3 or null) is applied BEFORE the beat check.
+function ecAdvanceTick(st, movePos) {
+  st.tick += 1;
+  if (movePos != null) st.wolfPos = movePos;
+  const ev = { beat: false, caught: [], broken: [], spawnedLane: null };
+  st.beatCountdown -= 1;
+  if (st.beatCountdown > 0) return ev;
+  ev.beat = true;
+
+  const kept = [];
+  for (const egg of st.eggs) {
+    egg.step += 1;
+    if (egg.step >= EC_STEPS) {
+      if (egg.lane === st.wolfPos) { st.caught += 1; ev.caught.push(egg.lane); }
+      else { st.misses += 1; ev.broken.push(egg.lane); }
+    } else {
+      kept.push(egg);
+    }
+  }
+  st.eggs = kept;
+  if (st.misses >= EC_MAX_MISSES) return ev;
+
+  st.spawnCountdown -= 1;
+  if (st.spawnCountdown <= 0) {
+    const first = Math.floor(ecRng(st) * EC_LANES);
+    for (let i = 0; i < EC_LANES; i += 1) {
+      const lane = (first + i) % EC_LANES;
+      const blocked = st.eggs.some(e => e.lane === lane && e.step <= 1);
+      if (!blocked) {
+        st.eggs.push({ lane, step: 0 });
+        st.spawned += 1;
+        ev.spawnedLane = lane;
+        break;
+      }
+    }
+    st.spawnCountdown = ecSpawnGapBeats(ecLevel(st.spawned));
+  }
+  st.beatCountdown = ecBeatTicks(ecLevel(st.spawned));
+  return ev;
+}
+
+function newEggCatchRuntime() {
+  return {
+    playing: false, submitting: false, archiveMode: false,
+    roundId: null,
+    seed: 1,
+    timer: null,
+    sim: ecInitState(1),
+    queuedPos: null,
+    queuedTick: 0,
+    moveLog: [],
+    moves: 0,
+    endedReason: '',
+    fx: [],              // cosmetic: { kind: 'caught'|'broken', lane, untilTick }
+    pointerDown: false,
+  };
+}
+
+let ecCtx = null;
+let ecStatScoreText = null;
+let ecStatMissesText = null;
+let ecStatLevelText = null;
+
+// LCD geometry: hens at the four chute tops, baskets beside the wolf.
+const EC_GEO = {
+  henX: [40, 40, 320, 320], henY: [64, 118, 64, 118],
+  basketX: [142, 142, 218, 218], basketY: [140, 178, 140, 178],
+  floorY: 208,
+};
+
+function ecSlotXY(lane, step) {
+  const t = (step + 0.6) / EC_STEPS;
+  return {
+    x: EC_GEO.henX[lane] + (EC_GEO.basketX[lane] - EC_GEO.henX[lane]) * t,
+    y: EC_GEO.henY[lane] + (EC_GEO.basketY[lane] - EC_GEO.henY[lane]) * t,
+  };
+}
+
+function eggCatchInitCanvas() {
+  const canvas = document.getElementById('ec-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const DPR = Math.min(window.devicePixelRatio || 1, EC_MAX_DPR);
+  const w = Math.round((rect.width || EC_CS_W) * DPR);
+  const h = Math.round((rect.height || EC_CS_H) * DPR);
+  if (!ecCtx || canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+    ecCtx = canvas.getContext('2d');
+  }
+  ecCtx.setTransform(w / EC_CS_W, 0, 0, h / EC_CS_H, 0, 0);
+}
+
+function eggCatchResetBoard(seed = 1) {
+  const rt = eggCatchRuntime || newEggCatchRuntime();
+  rt.seed = seed;
+  rt.sim = ecInitState(seed);
+  rt.queuedPos = null;
+  rt.queuedTick = 0;
+  rt.moveLog = [];
+  rt.moves = 0;
+  rt.endedReason = '';
+  rt.fx = [];
+  eggCatchRuntime = rt;
+  return rt;
+}
+
+function eggCatchResetStatCache() {
+  ecStatScoreText = null;
+  ecStatMissesText = null;
+  ecStatLevelText = null;
+}
+
+function eggCatchSetStats(force = false) {
+  const rt = eggCatchRuntime || newEggCatchRuntime();
+  const st = rt.sim;
+  const scoreText = String(Math.min(EC_MAX_SCORE, st.caught));
+  const missesText = st.misses + '/' + EC_MAX_MISSES;
+  const levelText = String(ecLevel(st.spawned) + 1);
+  if (ecScoreEl && (force || scoreText !== ecStatScoreText)) { ecScoreEl.textContent = scoreText; ecStatScoreText = scoreText; }
+  if (ecMissesEl && (force || missesText !== ecStatMissesText)) { ecMissesEl.textContent = missesText; ecStatMissesText = missesText; }
+  if (ecLevelEl && (force || levelText !== ecStatLevelText)) { ecLevelEl.textContent = levelText; ecStatLevelText = levelText; }
+}
+
+// LCD-style segment color; ghosts are the barely-visible "off" segments that
+// give old Elektronika handhelds their look.
+const EC_SEG = '#39402e';
+const EC_GHOST = 'rgba(57,64,46,.13)';
+
+function ecDrawEgg(ctx, x, y, ghost) {
+  ctx.fillStyle = ghost ? EC_GHOST : EC_SEG;
+  ctx.beginPath();
+  ctx.ellipse(x, y, 6.5, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (!ghost) {
+    ctx.fillStyle = '#b9c5a4';
+    ctx.beginPath();
+    ctx.ellipse(x - 2, y - 2.5, 1.6, 2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function ecDrawBasket(ctx, lane, active) {
+  const x = EC_GEO.basketX[lane], y = EC_GEO.basketY[lane];
+  ctx.strokeStyle = active ? EC_SEG : EC_GHOST;
+  ctx.lineWidth = active ? 4 : 3;
+  ctx.beginPath();
+  ctx.moveTo(x - 12, y - 4);
+  ctx.quadraticCurveTo(x, y + 12, x + 12, y - 4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - 12, y - 4);
+  ctx.lineTo(x + 12, y - 4);
+  ctx.stroke();
+}
+
+function eggCatchDraw() {
+  const ctx = ecCtx;
+  if (!ctx) return;
+  const rt = eggCatchRuntime;
+  const st = rt?.sim;
+  const W = EC_CS_W, H = EC_CS_H;
+
+  // beige case + LCD screen
+  ctx.fillStyle = '#e9d9ae';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#b9c5a4';
+  ctx.fillRect(12, 12, W - 24, H - 60);
+  ctx.strokeStyle = '#7d6a41';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(12, 12, W - 24, H - 60);
+  ctx.fillStyle = '#8a6d3f';
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('E L E K T R O N I K A   G 6  ·  Ł A P   J A J K A', W / 2, H - 26);
+
+  // chute rails + ghost slots
+  for (let lane = 0; lane < EC_LANES; lane += 1) {
+    const a = ecSlotXY(lane, -0.4), b = ecSlotXY(lane, EC_STEPS - 0.4);
+    ctx.strokeStyle = 'rgba(57,64,46,.28)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y + 10);
+    ctx.lineTo(b.x, b.y + 10);
+    ctx.stroke();
+    for (let s = 0; s < EC_STEPS; s += 1) {
+      const p = ecSlotXY(lane, s);
+      ecDrawEgg(ctx, p.x, p.y, true);
+    }
+  }
+
+  // hens
+  ctx.font = '20px sans-serif';
+  for (let lane = 0; lane < EC_LANES; lane += 1) {
+    const flip = lane >= 2;
+    ctx.save();
+    ctx.translate(EC_GEO.henX[lane] + (flip ? 6 : -6), EC_GEO.henY[lane] - 2);
+    if (!flip) ctx.scale(-1, 1);
+    ctx.fillText('🐔', 0, 0);
+    ctx.restore();
+  }
+
+  // live eggs
+  if (st) {
+    st.eggs.forEach(egg => {
+      const p = ecSlotXY(egg.lane, egg.step);
+      ecDrawEgg(ctx, p.x, p.y, false);
+    });
+  }
+
+  // baskets (active one solid, others ghosted) + wolf
+  const wolfPos = st ? st.wolfPos : 0;
+  for (let lane = 0; lane < EC_LANES; lane += 1) ecDrawBasket(ctx, lane, lane === wolfPos);
+  const wolfSide = wolfPos >= 2 ? 1 : -1;
+  ctx.save();
+  ctx.translate(W / 2, 186);
+  if (wolfSide < 0) ctx.scale(-1, 1);
+  ctx.font = '34px sans-serif';
+  ctx.fillText('🐺', 0, 0);
+  ctx.restore();
+
+  // cosmetic FX
+  if (rt && st) {
+    ctx.font = '15px sans-serif';
+    rt.fx.forEach(f => {
+      if (f.kind === 'broken') {
+        const x = EC_GEO.basketX[f.lane] + (f.lane >= 2 ? 26 : -26);
+        ctx.fillText('🍳', x, EC_GEO.floorY);
+      } else {
+        ctx.fillStyle = EC_SEG;
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText('+1', EC_GEO.basketX[f.lane], EC_GEO.basketY[f.lane] - 20);
+        ctx.font = '15px sans-serif';
+      }
+    });
+  }
+
+  // HUD: misses top-left, score top-right (LCD digits)
+  if (st) {
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('🍳'.repeat(st.misses) || '', 22, 30);
+    ctx.fillStyle = EC_SEG;
+    ctx.font = 'bold 20px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(Math.min(EC_MAX_SCORE, st.caught)).padStart(3, '0'), W - 22, 30);
+    ctx.textAlign = 'center';
+  }
+
+  // idle overlay
+  if (!rt?.playing) {
+    ctx.fillStyle = 'rgba(185,197,164,.82)';
+    ctx.fillRect(12, 12, W - 24, H - 60);
+    ctx.fillStyle = EC_SEG;
+    ctx.font = 'bold 24px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('ŁAP JAJKA', W / 2, H / 2 - 46);
+    ctx.font = '36px sans-serif';
+    ctx.fillText('🥚🐺', W / 2, H / 2 - 8);
+    ctx.font = '11px monospace';
+    ctx.fillStyle = 'rgba(57,64,46,.75)';
+    const hint = rt?.archiveMode ? 'demo lokalne' : 'Q/A/P/L · strzalki · tapnij cwiartke';
+    ctx.fillText(hint, W / 2, H / 2 + 30);
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+async function invokeEggCatch(payload) {
+  const { data, error } = await sb.functions.invoke('egg-catch-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z Łap Jajka.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Łap Jajka.');
+  return data;
+}
+
+async function loadEggCatchState(showSpinner = true) {
+  eggCatchInitCanvas();
+  if (!eggCatchRuntime) eggCatchResetBoard(1);
+  eggCatchDraw();
+  const weeklyWrap  = document.getElementById('ec-weekly-board');
+  const allTimeWrap = document.getElementById('ec-alltime-board');
+  const awardsWrap  = document.getElementById('ec-awards');
+  if (showSpinner) {
+    if (weeklyWrap)  weeklyWrap.replaceChildren(makeSpinner());
+    if (allTimeWrap) allTimeWrap.replaceChildren(makeSpinner());
+    if (awardsWrap)  awardsWrap.replaceChildren();
+  }
+  try {
+    const data = await invokeEggCatch({ action: 'state' });
+    renderEggCatchState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać gry.';
+    if (weeklyWrap)  weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, msg));
+    if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Brak danych.'));
+    if (awardsWrap)  awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+    if (ecStatus) ecStatus.textContent = 'Łap Jajka nie jest jeszcze aktywne.';
+  }
+}
+
+function renderEggCatchState(data) {
+  if (data.profile) { me.coins = data.profile.coins; setText(headerCoins, me.coins); }
+  const weekLabel = document.getElementById('ec-week-label');
+  if (weekLabel) {
+    const range = whackBossWeekRange(data.weekStart);
+    weekLabel.textContent = range ? range.short : '';
+  }
+  renderEggCatchTable(document.getElementById('ec-weekly-board'), data.weekly || [], 'weekly');
+  renderEggCatchTable(document.getElementById('ec-alltime-board'), data.allTime || [], 'allTime');
+  renderEggCatchAwards(document.getElementById('ec-awards'), data.awards || []);
+  if (!eggCatchRuntime?.playing && ecStatus) {
+    ecStatus.textContent = data.myWeekly
+      ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
+      : 'Łap jajka do koszyka. Najlepszy wynik tygodnia trafia do rankingu.';
+  }
+}
+
+function renderEggCatchTable(wrap, rows, mode) {
+  if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+  const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
+    el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    lbScoreCell(row)
+  ));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik' }, 'Wynik'))),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderEggCatchAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  wrap.replaceChildren(...awards.slice(0, 6).map(row => {
+    const label = whackBossWeekRange(row.week_start)?.short || '';
+    return el('div', { className: 'bj-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  }));
+}
+
+function stopEggCatchRound() {
+  const rt = eggCatchRuntime;
+  if (rt?.timer) clearTimeout(rt.timer);
+  eggCatchRuntime = newEggCatchRuntime();
+  eggCatchResetBoard(eggCatchRuntime.seed || 1);
+  eggCatchRuntime.playing = false;
+  eggCatchRuntime.archiveMode = rt?.archiveMode || false;
+  if (ecStartBtn) { ecStartBtn.disabled = false; ecStartBtn.textContent = 'Start rundy'; }
+  eggCatchResetStatCache();
+  eggCatchSetStats(true);
+  eggCatchInitCanvas();
+  eggCatchDraw();
+}
+
+function beginEggCatchRound(round, options = {}) {
+  stopEggCatchRound();
+  const seed = Number(round.seed || Date.now()) || 1;
+  eggCatchRuntime = newEggCatchRuntime();
+  const rt = eggCatchResetBoard(seed);
+  rt.playing = true;
+  rt.archiveMode = !!options.archiveMode;
+  rt.roundId = round.id;
+  if (ecStartBtn) { ecStartBtn.disabled = true; ecStartBtn.textContent = 'Runda trwa'; }
+  if (ecStatus) {
+    ecStatus.textContent = rt.archiveMode
+      ? 'Demo — wynik nie zostanie zapisany.'
+      : 'Q/A/P/L albo strzałki. Trzy stłuczki kończą rundę.';
+  }
+  if (ecArena) {
+    if (!ecArena.hasAttribute('tabindex')) ecArena.tabIndex = 0;
+    try { ecArena.focus({ preventScroll: true }); } catch { ecArena.focus(); }
+  }
+  eggCatchResetStatCache();
+  eggCatchSetStats(true);
+  eggCatchDraw();
+  rt.timer = setTimeout(eggCatchTick, EC_TICK_MS);
+}
+
+function eggCatchQueuePos(pos) {
+  const rt = eggCatchRuntime;
+  if (!rt?.playing || !Number.isInteger(pos) || pos < 0 || pos >= EC_LANES) return false;
+  const st = rt.sim;
+  const effective = rt.queuedPos != null ? rt.queuedPos : st.wolfPos;
+  if (pos === effective) return false;
+  const tick = st.tick + 1;
+  if (rt.queuedTick === tick) return false;
+  rt.queuedPos = pos;
+  rt.queuedTick = tick;
+  rt.moveLog.push({ tick, pos });
+  rt.moves = rt.moveLog.length;
+  return true;
+}
+
+function eggCatchTick() {
+  const rt = eggCatchRuntime;
+  if (!rt?.playing) return;
+  const st = rt.sim;
+  const nextTick = st.tick + 1;
+  let movePos = null;
+  if (rt.queuedPos != null && rt.queuedTick === nextTick) {
+    movePos = rt.queuedPos;
+    rt.queuedPos = null;
+    rt.queuedTick = 0;
+  }
+  const ev = ecAdvanceTick(st, movePos);
+  ev.caught.forEach(l => rt.fx.push({ kind: 'caught', lane: l, untilTick: st.tick + 6 }));
+  ev.broken.forEach(l => rt.fx.push({ kind: 'broken', lane: l, untilTick: st.tick + 12 }));
+  rt.fx = rt.fx.filter(f => f.untilTick > st.tick);
+  eggCatchSetStats();
+  eggCatchDraw();
+  if (st.misses >= EC_MAX_MISSES) {
+    rt.endedReason = '3 stłuczki';
+    finishEggCatchRound();
+    return;
+  }
+  if (st.tick >= EC_MAX_TICKS) {
+    rt.endedReason = 'limit czasu';
+    finishEggCatchRound();
+    return;
+  }
+  rt.timer = setTimeout(eggCatchTick, EC_TICK_MS);
+}
+
+async function startEggCatchRound() {
+  const rt = eggCatchRuntime;
+  if (rt?.playing || rt?.submitting) return;
+  if (allGamesMode) {
+    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
+  if (ecStartBtn) { ecStartBtn.disabled = true; ecStartBtn.textContent = 'Ładuję...'; }
+  if (ecStatus) ecStatus.textContent = 'Przygotowuję rundę...';
+  try {
+    const data = await invokeEggCatch({ action: 'start' });
+    renderEggCatchState(data);
+    beginEggCatchRound(data.round);
+    if (allGamesMode) eggCatchRuntime.archiveMode = true;
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (ecStatus) ecStatus.textContent = 'Nie udało się wystartować rundy.';
+    if (ecStartBtn) { ecStartBtn.disabled = false; ecStartBtn.textContent = 'Start rundy'; }
+  }
+}
+
+async function finishEggCatchRound() {
+  const rt = eggCatchRuntime;
+  if (!rt || rt.submitting) return;
+  rt.playing = false;
+  rt.submitting = true;
+  if (rt.timer) clearTimeout(rt.timer);
+  eggCatchSetStats(true);
+  eggCatchDraw();
+
+  if (rt.archiveMode) {
+    rt.submitting = false;
+    if (ecStartBtn) { ecStartBtn.disabled = false; ecStartBtn.textContent = 'Zagraj ponownie'; }
+    const finalScore = Math.min(EC_MAX_SCORE, rt.sim.caught);
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'egg_catch', p_score: finalScore });
+        if (ecStatus) ecStatus.textContent = 'Wynik: ' + finalScore + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('egg_catch');
+      } catch (e) { if (ecStatus) ecStatus.textContent = 'Wynik: ' + finalScore + ' (błąd zapisu).'; }
+    } else {
+      if (ecStatus) ecStatus.textContent = 'Demo — wynik: ' + finalScore + ' (nie zapisano).';
+    }
+    return;
+  }
+
+  if (ecStartBtn) { ecStartBtn.disabled = true; ecStartBtn.textContent = 'Zapisuję...'; }
+  if (ecStatus) ecStatus.textContent = 'Zapisuję wynik...';
+  try {
+    const data = await invokeEggCatch({
+      action: 'submit',
+      roundId: rt.roundId,
+      seed: rt.seed,
+      moves: rt.moveLog,
+      elapsedTicks: rt.sim.tick,
+      score: Math.min(EC_MAX_SCORE, rt.sim.caught),
+    });
+    renderEggCatchState(data);
+    showToast('✅ Wynik zapisany: ' + data.score.score);
+    if (ecStatus) {
+      const reason = rt.endedReason ? ' · ' + rt.endedReason : '';
+      ecStatus.textContent = 'Ostatni wynik: ' + data.score.score + reason + '.';
+    }
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (ecStatus) ecStatus.textContent = 'Nie udało się zapisać wyniku.';
+  } finally {
+    rt.submitting = false;
+    if (ecStartBtn) { ecStartBtn.disabled = false; ecStartBtn.textContent = 'Zagraj ponownie'; }
+  }
+}
+
+if (ecStartBtn) ecStartBtn.addEventListener('click', startEggCatchRound);
+
+document.addEventListener('keydown', evt => {
+  const rt = eggCatchRuntime;
+  if (!rt?.playing) return;
+  const key = evt.key.toLowerCase();
+  const st = rt.sim;
+  const effective = rt.queuedPos != null ? rt.queuedPos : st.wolfPos;
+  let pos = null;
+  if (key === 'q') pos = 0;
+  else if (key === 'a') pos = 1;
+  else if (key === 'p') pos = 2;
+  else if (key === 'l') pos = 3;
+  else if (evt.key === 'ArrowLeft') pos = (effective % 2 === 0) ? 0 : 1;
+  else if (evt.key === 'ArrowRight') pos = (effective % 2 === 0) ? 2 : 3;
+  else if (evt.key === 'ArrowUp' || key === 'w') pos = effective < 2 ? 0 : 2;
+  else if (evt.key === 'ArrowDown' || key === 's') pos = effective < 2 ? 1 : 3;
+  if (pos == null) return;
+  evt.preventDefault();
+  eggCatchQueuePos(pos);
+});
+
+if (ecArena) {
+  ecArena.addEventListener('pointerdown', evt => {
+    evt.preventDefault();
+    const rt = eggCatchRuntime;
+    if (!rt?.playing && !rt?.submitting) {
+      startEggCatchRound();
+      return;
+    }
+    if (!rt?.playing) return;
+    const rect = ecArena.getBoundingClientRect();
+    const right = (evt.clientX - rect.left) > rect.width / 2;
+    const bottom = (evt.clientY - rect.top) > rect.height / 2;
+    eggCatchQueuePos((right ? 2 : 0) + (bottom ? 1 : 0));
   });
 }
 
