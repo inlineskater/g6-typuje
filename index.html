@@ -5139,7 +5139,10 @@
       .farm-sale-sign span { font-size: 6px; padding: 1px 3px; }
     }
     .farm-plant-cell { position: relative; cursor: pointer; border-radius: 6px; min-width: 0; min-height: 0; background: rgba(120,160,80,.26); border: 1px solid rgba(255,255,255,.16); }
-    .farm-plant-cell.mine { outline: none; box-shadow: inset 0 0 0 2px rgba(255,205,100,.55); }
+    .farm-plant-cell.mine { outline: none; }
+    /* Own tiles/plants always stand out: bright gold ring + soft outer glow */
+    .farm-cell.mine, .farm-plant-cell.mine { z-index: 1;
+      box-shadow: inset 0 0 0 3px rgba(255,213,110,.95), 0 0 12px 3px rgba(255,196,60,.45); }
     .farm-plant-cell .garden-pot { position: absolute; top: 50%; left: 50%; width: 108px; min-height: 112px; padding: 0 6px 6px; justify-content: flex-end; transform: translate(-50%, -50%) scale(calc(var(--pot-scale, .32) * 1.18)); transform-origin: center; pointer-events: none; margin: 0; background: none; border-color: transparent; box-shadow: none; }
     .farm-plant-cell .garden-pot::before { display: none; }
     .farm-plant-cell .garden-pot .gp-info,
