@@ -12,3 +12,5 @@ node_modules/
 *.log
 
 supabase/.temp/
+
+document_signatures_export/
