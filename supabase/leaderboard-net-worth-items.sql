@@ -7,6 +7,7 @@
 --           + live poker stack
 --           + owned hero items & certificates (shop price, or auction winning bid)
 --           + garden accessories (price paid, from the coin ledger)
+--           − outstanding farm land-tax debt (kataster liability)
 --
 -- hero_item_instances is RLS-restricted to its owner, so the leaderboard
 -- (security_invoker) view cannot aggregate other players' items directly.
@@ -75,6 +76,16 @@ AS $$
        -- sealed (unopened) seed boxes (100 each) + free-tile vouchers (350 each)
        + COALESCE((
            SELECT fus.boxes * 100 + fus.tile_vouchers * 350
+             FROM public.farm_user_state fus
+            WHERE fus.user_id = p_uid
+         ), 0)
+       -- minus outstanding farm land-tax debt (kataster): a hard liability —
+       -- autopaid from every crop/marketplace payout, accrues 10%/day interest,
+       -- and blocks buying/planting until cleared. Subtracting it HERE nets it
+       -- out of both the leaderboard view and economy_stats() holdings/richest,
+       -- which both call this function.
+       - COALESCE((
+           SELECT fus.land_tax_debt
              FROM public.farm_user_state fus
             WHERE fus.user_id = p_uid
          ), 0);
@@ -166,7 +177,12 @@ AS $$
                  WHERE fi.user_id = p_uid AND fi.expires_at > now()), 0) AS farm_crops,
       COALESCE((SELECT fus.boxes * 100 + fus.tile_vouchers * 350
                   FROM public.farm_user_state fus
-                 WHERE fus.user_id = p_uid), 0) AS farm_boxes
+                 WHERE fus.user_id = p_uid), 0) AS farm_boxes,
+      -- liability: outstanding land-tax debt (kataster), reported positive here,
+      -- subtracted from 'total' below (must mirror user_assets_value)
+      COALESCE((SELECT fus.land_tax_debt
+                  FROM public.farm_user_state fus
+                 WHERE fus.user_id = p_uid), 0) AS farm_tax_debt
   )
   SELECT json_build_object(
     'cash',             round(cash)::int,
@@ -182,8 +198,10 @@ AS $$
                           'nft',    round(farm_nft)::int,
                           'crops',  round(farm_crops)::int,
                           'boxes',  round(farm_boxes)::int),
+    'farm_tax_debt',    round(farm_tax_debt)::int,
     'total',            round(cash + market_positions + football_open + poker_stack + hero_items + accessories
-                              + farm_land + farm_cards + farm_nft + farm_crops + farm_boxes)::int,
+                              + farm_land + farm_cards + farm_nft + farm_crops + farm_boxes
+                              - farm_tax_debt)::int,
     'items', COALESCE((
       SELECT json_agg(it ORDER BY (it->>'value')::int DESC)
         FROM (

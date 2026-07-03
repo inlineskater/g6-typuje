@@ -10873,7 +10873,12 @@ function _buildEconomyDetailContent(container, s) {
       el('span', { className: 'fb-stat-nick ' + (s.hazard_house_net >= 0 ? 'fb-profit-pos' : 'fb-profit-neg') },
         (s.hazard_house_net >= 0 ? '+' : '') + fmtNum(s.hazard_house_net) + ' 🪙'),
       el('span', { className: 'fb-stat-val' }, s.hazard_house_net >= 0 ? 'spalone przez bank' : 'wyemitowane przez bank')
-    )
+    ),
+    (s.farm_tax_debt || 0) > 0 ? el('div', { className: 'fb-stat-chip' },
+      el('span', { className: 'fb-stat-label' }, '🏛️ Zaległy podatek od działek'),
+      el('span', { className: 'fb-stat-nick fb-profit-neg' }, '−' + fmtNum(s.farm_tax_debt) + ' 🪙'),
+      el('span', { className: 'fb-stat-val' }, 'dług graczy — pomniejsza ich net worth')
+    ) : ''
   );
 
   container.replaceChildren(
@@ -10977,6 +10982,13 @@ function renderNetWorthBreakdown(container, b) {
       )); });
     }
   });
+  const taxDebt = Math.round(+b.farm_tax_debt || 0);
+  if (taxDebt > 0) {
+    rows.push(el('tr', { className: 'nw-row' },
+      el('td', { className: 'nw-label' }, '🏛️ Podatek od działek (dług)'),
+      el('td', { className: 'nw-val', style: { color: 'var(--no)' } }, '−' + fmt(taxDebt))
+    ));
+  }
   rows.push(el('tr', { className: 'nw-total' },
     el('td', {}, '💎 Net Worth'),
     el('td', { className: 'nw-val' }, fmt(+b.total || 0))

@@ -16,6 +16,10 @@
 -- Note: marketplace_escrow + hero_auction_escrow are NOT part of any per-user
 -- net_worth (leaderboard view doesn't add them back), so total_supply ≥ SUM(holdings).
 -- This is expected and correct — those coins left profiles but haven't yet settled.
+-- Likewise farm land-tax debt: per-player net_worth (holdings/richest) is NET of
+-- each player's land_tax_debt (subtracted inside user_assets_value), while the
+-- supply buckets stay gross — the debt is a claim on future coins, not supply.
+-- The server-wide outstanding total is exposed as 'farm_tax_debt' (informational).
 --
 -- Idempotent: safe to re-run.
 
@@ -66,6 +70,8 @@ SET search_path = public
 AS $$
   WITH
   -- ── per-player net_worth, matching the leaderboard view formula ──────────
+  -- (user_assets_value already nets out farm land_tax_debt, so holdings and
+  -- richest reflect the liability just like the leaderboard does)
   player_nw AS (
     SELECT
       p.nick,
@@ -190,6 +196,15 @@ AS $$
          WHERE fus.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric) AS farm_assets,
 
+      -- outstanding farm land-tax debt (kataster) owed by non-admin players.
+      -- Informational only: subtracted from each player's net worth via
+      -- user_assets_value, but NOT from total_supply (see header note).
+      COALESCE((
+        SELECT sum(fus.land_tax_debt)
+          FROM public.farm_user_state fus
+         WHERE fus.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
+      ), 0::bigint)::numeric AS farm_tax_debt,
+
       -- leading bids on open Targowisko (marketplace) auctions
       COALESCE((
         SELECT sum(b.amount)
@@ -281,6 +296,7 @@ AS $$
     'hero_items',          round(b.hero_items)::bigint,
     'accessories',         round(b.accessories)::bigint,
     'farm_assets',         round(b.farm_assets)::bigint,
+    'farm_tax_debt',       round(b.farm_tax_debt)::bigint,
     'marketplace_escrow',  round(b.marketplace_escrow)::bigint,
     'hero_auction_escrow', round(b.hero_auction_escrow)::bigint,
     'total_supply',        round(b.total_cash + b.market_positions + b.football_open
