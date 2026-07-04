@@ -16,6 +16,16 @@ Production status after the June 14, 2026 hardening pass:
 - Leaked-password protection is still disabled because Supabase rejected that
   setting on the current plan; it requires Pro or higher.
 
+**2026-07-03 update: CAPTCHA disabled per product decision.** `index.html`
+hardcodes `CAPTCHA_ON = false` (see the constant's comment) — the Turnstile
+widget no longer renders and no token is sent on login/register/migrate.
+**Supabase Dashboard → Authentication → Attack Protection / Bot and Abuse
+Protection → CAPTCHA protection must also be turned off**, or every login
+(including production) will fail, since the server enforces the captcha
+independently of the frontend flag. The rate limits and 5-digit PIN length
+above are unaffected and still stand as the remaining anti-brute-force
+controls. Re-enabling captcha later requires reversing both sides together.
+
 ## 1. Cloudflare Turnstile CAPTCHA
 
 1. Cloudflare dashboard → **Turnstile** → add a widget for the site domain

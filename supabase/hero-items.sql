@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS public.hero_item_instances (
   created_at         timestamptz NOT NULL DEFAULT now()
 );
 
+-- ⚠️ SUPERSEDED by supabase/hero-items-always-active.sql, which drops this
+-- table entirely (items are always-active by ownership, no equip step).
+-- Re-running this file recreates it — re-run hero-items-always-active.sql
+-- afterward if you do.
 CREATE TABLE IF NOT EXISTS public.hero_equipment (
   user_id          uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   slot             text NOT NULL CHECK (slot IN ('head','chest','legs','hands','feet','trinket','weapon')),
@@ -278,6 +282,8 @@ BEGIN
 END;
 $$;
 
+-- ⚠️ SUPERSEDED (with unequip_hero_item below) by hero-items-always-active.sql,
+-- which drops both RPCs — see the note above CREATE TABLE hero_equipment.
 CREATE OR REPLACE FUNCTION public.equip_hero_item(p_instance_id uuid)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -567,6 +573,9 @@ BEGIN
 END;
 $$;
 
+-- ⚠️ SUPERSEDED by hero-items-always-active.sql, which drops the trailing
+-- "equipped" column (DROP VIEW + CREATE VIEW, since CREATE OR REPLACE VIEW
+-- can't remove a column) — re-run that file after this one if you re-run this.
 CREATE OR REPLACE VIEW public.my_hero_inventory WITH (security_invoker = true) AS
 SELECT
   i.id AS instance_id,
@@ -595,6 +604,8 @@ JOIN public.hero_item_defs d ON d.id = i.item_def_id
 LEFT JOIN public.hero_equipment e ON e.item_instance_id = i.id
 WHERE i.owner_id = auth.uid();
 
+-- ⚠️ SUPERSEDED by hero-items-always-active.sql, which DROPs this view
+-- (its only writer/reader, equip and the tavern, are both gone).
 CREATE OR REPLACE VIEW public.public_hero_equipment AS
 SELECT
   e.user_id,

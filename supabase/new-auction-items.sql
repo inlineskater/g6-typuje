@@ -95,6 +95,9 @@ GRANT SELECT ON public.hero_daily_interest_awards TO authenticated;
 
 DROP FUNCTION IF EXISTS public.award_daily_interest();
 
+-- ⚠️ SUPERSEDED by hero-items-always-active.sql, which redefines this function
+-- to pay every OWNER of an interest_ring instead of only whoever has it
+-- equipped — re-run that file after this one if you re-run this.
 CREATE OR REPLACE FUNCTION public.award_daily_interest()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE

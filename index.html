@@ -466,8 +466,7 @@
     .logo span { color: var(--accent); }
     .user-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .header-nick {
-      font-size: 13px; color: var(--muted); font-weight: 500;
-      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 140px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
     .coins-badge {
@@ -544,6 +543,20 @@
     .nav-dropdown .nav-tab:last-child  { border-radius: 0 0 8px 8px; }
     .nav-dropdown .nav-tab:hover { background: var(--surface); }
     .nav-dropdown .nav-tab.active { color: var(--accent); background: var(--surface); border-bottom: none; }
+    .nav-dropdown-label { padding: 8px 16px 3px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); user-select: none; }
+    .nav-dropdown-label + .nav-dropdown-label, .nav-tab + .nav-dropdown-label { border-top: 1px solid var(--border); margin-top: 4px; }
+    .nav-dropdown-right { left: auto; right: 0; }
+    .nav-dropdown .nav-menu-item {
+      display: block; width: 100%; text-align: left; background: none; border: none;
+      color: var(--text); cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600;
+      padding: 10px 16px; white-space: nowrap;
+    }
+    .nav-dropdown .nav-menu-item:first-child { border-radius: 8px 8px 0 0; }
+    .nav-dropdown .nav-menu-item:last-child  { border-radius: 0 0 8px 8px; }
+    .nav-dropdown .nav-menu-item:hover { background: var(--surface); }
+    .nav-menu-item.nav-menu-danger { color: var(--no); }
+    .nav-menu-item.nav-menu-danger:hover { background: var(--no-dim); }
+    .nav-menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
     @media (max-width: 760px) {
       .nav-tabs { flex-wrap: wrap; padding: 0 10px; }
@@ -1776,12 +1789,12 @@
       }
       .logo { flex: 1 1 100%; font-size: 16px; }
       .user-info { width: 100%; justify-content: space-between; gap: 8px; }
-      .header-nick { flex: 1 1 auto; text-align: right; }
       .coins-badge, .btn-ghost { flex: 0 0 auto; }
+      .header-nick { max-width: 90px; }
 
       .nav-tab { flex: 1 0 auto; text-align: center; }
       .nav-dropdown .nav-tab { flex: none; text-align: left; }
-      .nav-group-btn { flex: 1 0 auto; justify-content: center; }
+      .nav-tabs .nav-group-btn { flex: 1 0 auto; justify-content: center; }
 
       main { padding-top: 20px; padding-bottom: 20px; }
       .markets-toolbar { align-items: stretch; flex-direction: column; }
@@ -4814,204 +4827,6 @@
     .calib-na   { color: var(--dim); font-size: 12px; }
     .calib-sub  { color: var(--dim); font-size: 10px; font-weight: 400; }
 
-    /* ── HEROES & TAVERN ─────────────────────────────────────────────────── */
-    .heroes-wrap { max-width: 1200px; margin: 0 auto; padding: var(--page-pad); display: grid; grid-template-columns: 340px 1fr; grid-template-rows: 1fr; gap: 24px; align-items: stretch; height: calc(100dvh - 160px); min-height: 460px; box-sizing: border-box; overflow: hidden; }
-    .hero-side { display: grid; gap: 14px; min-height: 0; overflow-y: auto; padding-right: 4px; }
-    /* ── Hero panel (display mode) ─────────────────────────────────────── */
-    .hero-panel { background: linear-gradient(160deg,#1e1208 0%,#2d1b0e 100%); border: 2px solid #8b6914; border-radius: 14px; padding: 22px 20px; display: flex; flex-direction: column; align-items: center; gap: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(212,160,23,.12); }
-    .hero-panel-title { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8b6914; align-self: flex-start; }
-    .hero-avatar-lg { width: 128px; height: 128px; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse 80% 80% at 50% 90%,rgba(212,160,23,.18) 0%,transparent 70%), #0f0a05; border-radius: 50%; border: 2px solid #5a3e28; box-shadow: inset 0 2px 18px rgba(0,0,0,.6), 0 0 18px rgba(212,160,23,.08); }
-    .hero-name-display { font-size: 20px; font-weight: 900; color: #f0c050; text-align: center; text-shadow: 0 0 24px rgba(240,192,80,.35); letter-spacing: .03em; }
-    .hero-nick-display { font-size: 12px; color: #a08050; text-align: center; margin-top: -8px; }
-    .btn-edit-hero { background: #2d1b0e; border: 1.5px solid #5a3e28; border-radius: 7px; color: #c8a96a; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 700; min-height: 36px; padding: 6px 16px; transition: all .15s; width: 100%; }
-    .btn-edit-hero:hover { border-color: #d4a017; color: #f0c050; }
-    .hero-equipment-panel { background: linear-gradient(160deg,#1e1208 0%,#2d1b0e 100%); border: 2px solid #8b6914; border-radius: 14px; padding: 18px; display: grid; gap: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(212,160,23,.12); }
-    .hero-equip-title { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8b6914; }
-    .hero-equip-sub { font-size: 11px; color: #a08050; line-height: 1.45; }
-    .hero-slot-list, .hero-owned-list { display: grid; gap: 8px; }
-    .hero-slot-row, .hero-owned-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; background: rgba(15,10,5,.55); border: 1px solid #5a3e28; border-radius: 8px; padding: 8px 9px; min-width: 0; }
-    .hero-slot-main, .hero-item-main { display: grid; gap: 2px; min-width: 0; }
-    .hero-slot-label { font-size: 10px; font-weight: 800; color: #8b6914; text-transform: uppercase; letter-spacing: .08em; }
-    .hero-item-name { font-size: 12px; font-weight: 800; color: #f0c050; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .hero-item-effect, .hero-slot-empty { font-size: 11px; color: #a08050; line-height: 1.35; }
-    .hero-mini-btn { background: #2d1b0e; border: 1px solid #5a3e28; border-radius: 7px; color: #c8a96a; cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 700; min-height: 30px; padding: 5px 9px; white-space: nowrap; }
-    .hero-mini-btn:hover:not(:disabled) { border-color: #d4a017; color: #f0c050; }
-    .hero-mini-btn:disabled { opacity: .45; cursor: not-allowed; }
-    .hero-owned-item.equipped { border-color: #d4a017; box-shadow: inset 0 0 0 1px rgba(212,160,23,.18); }
-    .tavern-gear { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; max-width: 74px; justify-content: center; pointer-events: none; }
-    .tavern-gear span { width: 16px; height: 16px; border-radius: 50%; background: rgba(15,10,5,.86); border: 1px solid rgba(240,192,80,.55); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
-    .tavern-lane.fx-gold_aura { filter: drop-shadow(0 0 10px rgba(240,192,80,.95)); }
-    .tavern-lane.fx-cloak_aura { filter: drop-shadow(0 0 9px rgba(168,85,247,.85)); }
-    .tavern-lane.fx-coin_sparkle .tavern-gear span { animation: gear-sparkle 1.4s ease-in-out infinite; }
-    .tavern-lane.fx-disco_aura .tavern-gear span { animation: gear-disco .9s linear infinite; }
-    .tavern-lane.fx-fire_trail::before { content: '🔥'; position: absolute; left: 6px; bottom: 8px; font-size: 13px; opacity: .8; animation: gear-flicker .6s ease-in-out infinite alternate; }
-    .tavern-lane.fx-loud_speech .hero-speech { font-size: 12px; border: 2px solid rgba(240,192,80,.65); }
-    .tavern-lane.fx-kaiser_glow { animation: kaiser-pulse 2s ease-in-out infinite; }
-    .tavern-lane.fx-kaiser_glow::before { content: '✦'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 18px; color: #ffd700; animation: kaiser-star 3s linear infinite; text-shadow: 0 0 12px #ffd700, 0 0 28px #ff9900, 0 0 50px #ff6600; pointer-events: none; }
-    .tavern-lane.fx-kaiser_glow::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(255,210,0,.45); animation: kaiser-ring 2s ease-in-out infinite; pointer-events: none; }
-    @keyframes kaiser-pulse { 0%,100% { filter: drop-shadow(0 0 10px rgba(255,200,30,.9)) drop-shadow(0 0 24px rgba(255,140,0,.55)); } 50% { filter: drop-shadow(0 0 26px rgba(255,220,60,1)) drop-shadow(0 0 52px rgba(255,170,0,.85)) drop-shadow(0 0 80px rgba(255,80,0,.35)); } }
-    @keyframes kaiser-star { 0% { transform: translateX(-50%) rotate(0deg) scale(1); } 50% { transform: translateX(-50%) rotate(180deg) scale(1.5); } 100% { transform: translateX(-50%) rotate(360deg) scale(1); } }
-    @keyframes kaiser-ring { 0%,100% { opacity: .4; transform: scale(1); } 50% { opacity: .9; transform: scale(1.12); } }
-    @keyframes gear-sparkle { 0%,100% { transform: scale(1); box-shadow: 0 1px 4px rgba(0,0,0,.35); } 50% { transform: scale(1.18); box-shadow: 0 0 12px rgba(240,192,80,.9); } }
-    @keyframes gear-disco { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
-    @keyframes gear-flicker { from { transform: translateX(0) scale(.92); } to { transform: translateX(-4px) scale(1.08); } }
-
-    /* ── Hero wizard ────────────────────────────────────────────────────── */
-    .hero-wizard {
-      background: linear-gradient(160deg,#1e1208 0%,#2a1710 60%,#1a1208 100%);
-      border: 2px solid #8b6914;
-      border-radius: 14px;
-      padding: 0;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      box-shadow: 0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(212,160,23,.15);
-    }
-    .hero-wizard-head {
-      background: linear-gradient(90deg,transparent,rgba(212,160,23,.1),transparent);
-      border-bottom: 1px solid #5a3e28;
-      color: #f0c050;
-      font-size: 18px;
-      font-weight: 900;
-      letter-spacing: .04em;
-      padding: 18px 22px 12px;
-      text-align: center;
-      text-shadow: 0 0 28px rgba(240,192,80,.45);
-    }
-    .hero-wizard-sub { font-size: 12px; color: #a08050; text-align: center; padding: 10px 22px 0; line-height: 1.5; margin-bottom: 0; }
-    .hero-wizard-preview {
-      display: flex; justify-content: center;
-      margin: 16px 22px;
-      padding: 22px 20px 18px;
-      background: radial-gradient(ellipse 70% 80% at 50% 95%,rgba(212,160,23,.14) 0%,transparent 70%), #0d0905;
-      border-radius: 10px;
-      border: 1px solid #3d2b0e;
-      box-shadow: inset 0 2px 20px rgba(0,0,0,.55);
-      position: relative;
-    }
-    .hero-wizard-preview::after {
-      content: '';
-      position: absolute;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 64px;
-      height: 8px;
-      background: radial-gradient(ellipse,rgba(212,160,23,.4) 0%,transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-    }
-    .wizard-section-label {
-      font-size: 9px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: #8b6914;
-      margin: 18px 22px 8px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .wizard-section-label::before, .wizard-section-label::after {
-      content: ''; flex: 1; height: 1px;
-      background: linear-gradient(90deg,transparent,#4a2e10,transparent);
-    }
-    .wizard-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 22px 4px; }
-    .wizard-chip {
-      background: #2d1b0e;
-      border: 1.5px solid #5a3e28;
-      border-radius: 6px;
-      color: #c8a96a;
-      cursor: pointer;
-      font-size: 12px;
-      font-family: inherit;
-      font-weight: 700;
-      padding: 5px 13px;
-      transition: all .13s;
-      user-select: none;
-      letter-spacing: .015em;
-    }
-    .wizard-chip:hover { border-color: #c89020; color: #f0c050; background: #3d2410; }
-    .wizard-chip.selected {
-      background: linear-gradient(135deg,#6b3d08,#9b5e14);
-      border-color: #d4a017;
-      color: #f0c050;
-      box-shadow: 0 0 10px rgba(212,160,23,.25), inset 0 1px 0 rgba(255,255,255,.08);
-    }
-    .wizard-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 22px 4px; }
-    .wizard-swatch { width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid #5a3e28; cursor: pointer; transition: transform .15s, border-color .15s, box-shadow .15s; }
-    .wizard-swatch:hover { transform: scale(1.15); border-color: #a07020; }
-    .wizard-swatch.selected { border-color: #f0c050; transform: scale(1.18); box-shadow: 0 0 0 3px rgba(212,160,23,.3), 0 0 14px rgba(212,160,23,.22); }
-    .btn-save-hero {
-      margin: 20px 22px 22px;
-      width: calc(100% - 44px);
-      background: linear-gradient(135deg,#9a6a08 0%,#d4a017 40%,#f0c050 60%,#c89020 100%);
-      border: none;
-      border-radius: 8px;
-      color: #1a0e00;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 900;
-      font-family: inherit;
-      letter-spacing: .04em;
-      min-height: 50px;
-      padding: 13px;
-      transition: opacity .15s, box-shadow .15s;
-      box-shadow: 0 4px 18px rgba(212,160,23,.4), inset 0 1px 0 rgba(255,255,255,.18);
-      text-shadow: 0 1px 0 rgba(255,200,80,.2);
-    }
-    .btn-save-hero:hover { opacity: .92; box-shadow: 0 6px 28px rgba(212,160,23,.55); }
-    .btn-save-hero:disabled { opacity: .35; cursor: not-allowed; }
-    .hero-wizard .btn-edit-hero { margin: 0 22px 22px; width: calc(100% - 44px); }
-    .tavern-panel { background: linear-gradient(160deg,#1e1208 0%,#2d1b0e 100%); border: 2px solid #8b6914; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.45); display: flex; flex-direction: column; min-height: 0; }
-    .tavern-panel-title { padding: 14px 18px 0; font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8b6914; }
-    .tavern-scene {
-      position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; margin: 10px 12px 14px;
-      border-radius: 10px; border: 3px solid #6b4a1e;
-      background:
-        radial-gradient(ellipse 50% 80% at 12% 50%, rgba(255,90,10,.30) 0%, transparent 55%),
-        radial-gradient(ellipse 55% 35% at 50% 108%, rgba(255,140,40,.14) 0%, transparent 65%),
-        repeating-linear-gradient(90deg, #7a5230 0px, #7a5230 46px, #6a4525 46px, #6a4525 48px),
-        linear-gradient(180deg, #160a06 0%, #1e0f08 34%, #7a5230 34%, #7a5230 100%);
-    }
-    .tavern-scene::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 34%;
-      background:
-        repeating-linear-gradient(90deg, transparent, transparent 77px, rgba(0,0,0,.45) 77px, rgba(0,0,0,.45) 80px),
-        repeating-linear-gradient(0deg, transparent, transparent 13px, rgba(255,200,100,.04) 13px, rgba(255,200,100,.04) 14px);
-      pointer-events: none;
-    }
-    .tavern-scene::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 45% at 50% 100%, rgba(255,150,30,.12) 0%, transparent 65%); pointer-events: none; z-index: 3; }
-    /* interior furniture */
-    .tavern-beam { position:absolute; top:0; left:0; right:0; height:14px; background:linear-gradient(180deg,#0e0804 0%,#2d1b0e 100%); border-bottom:2px solid #3a2010; z-index:2; }
-    .tavern-lantern { position:absolute; top:18px; width:14px; height:20px; background:linear-gradient(180deg,#3a2010 0%,#5a3820 28%,rgba(255,160,40,.9) 29%,rgba(255,100,15,.75) 100%); border:1.5px solid #6a4830; border-radius:2px 2px 5px 5px; z-index:2; box-shadow:0 0 14px 4px rgba(255,130,20,.3); }
-    .tavern-lantern::before { content:''; position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:2px; height:10px; background:#3a2010; }
-    .tavern-lantern::after { content:''; position:absolute; inset:-10px; border-radius:50%; background:radial-gradient(circle,rgba(255,140,30,.28) 0%,transparent 65%); pointer-events:none; }
-    .tavern-bar { position:absolute; right:0; bottom:34px; width:88px; height:58px; background:linear-gradient(160deg,#3a2810 0%,#241608 100%); border:2px solid #5a3820; border-left-color:#7a5230; border-radius:5px 0 0 5px; z-index:1; box-shadow:inset -2px 0 6px rgba(0,0,0,.4); }
-    .tavern-bar::before { content:'🍶🥃🍷'; position:absolute; top:-18px; left:0; right:0; text-align:center; font-size:11px; letter-spacing:3px; }
-    .tavern-bar::after { content:''; position:absolute; top:0; left:0; right:0; height:7px; background:linear-gradient(180deg,#7a5230 0%,#4a2c18 100%); border-radius:5px 0 0 0; }
-    .tavern-barrel { position:absolute; width:22px; height:26px; background:linear-gradient(135deg,#8a6040 0%,#5a3820 45%,#3a2010 100%); border:2px solid #2a1408; border-radius:38% 38% 44% 44% / 30% 30% 50% 50%; z-index:1; box-shadow:2px 2px 5px rgba(0,0,0,.4); }
-    .tavern-barrel::before { content:''; position:absolute; top:8px; left:-2px; right:-2px; height:2px; background:#2a1408; border-radius:2px; }
-    .tavern-barrel::after { content:''; position:absolute; top:15px; left:-2px; right:-2px; height:2px; background:#2a1408; border-radius:2px; }
-    .tavern-fireplace { position: absolute; left: 8px; top: 0; width: 60px; height: 120px; background: #1e0e06; border: 2px solid #3a2010; border-radius: 0 0 4px 4px; z-index: 1; }
-    .tavern-fireplace::before { content: ''; position: absolute; left: 8px; right: 8px; bottom: 10px; height: 66px; background: linear-gradient(180deg, #ffca40 0%, #ff7010 40%, #ff2a00 72%, #7a0000 100%); border-radius: 3px 3px 0 0; animation: fire-flicker .55s ease-in-out infinite alternate; box-shadow: 0 0 22px rgba(255,90,0,.65); }
-    .tavern-fireplace::after { content: ''; position: absolute; left: -5px; right: -5px; top: 0; height: 20px; background: linear-gradient(180deg, #5a3820 0%, #3a2010 100%); border-radius: 3px 3px 0 0; border: 2px solid #6a4830; box-shadow: 0 3px 8px rgba(0,0,0,.5); }
-    @keyframes fire-flicker { 0% { opacity:.8; transform:scaleX(.94); } 100% { opacity:1; transform:scaleX(1.06); } }
-    .tavern-table { position: absolute; bottom: 42px; width: 80px; height: 18px; background: #5a3e28; border-radius: 4px; z-index: 1; }
-    .tavern-table::after { content: '🍺'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 14px; }
-    .tavern-lane { position: absolute; width: 84px; height: 104px; z-index: 2; cursor: pointer; }
-    .tavern-hero-body { width: 84px; transform-origin: center; transition: transform .25s ease; }
-    .tavern-lane.hero-mine { filter: drop-shadow(0 0 6px rgba(99,102,241,.75)); }
-    @keyframes leg-l { 0%,100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
-    @keyframes leg-r { 0%,100% { transform: translateX(2px); } 50% { transform: translateX(-2px); } }
-    @keyframes body-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-    .tavern-hero-name { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.65); color: #e8dcc8; font-size: 9px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; padding: 2px 6px; border-radius: 4px; pointer-events: none; z-index: 11; text-shadow: 0 1px 3px rgba(0,0,0,.9); border: 1px solid rgba(255,255,255,.1); }
-    .tavern-hero-name.is-mine { color: #93c5fd; border-color: rgba(99,102,241,.45); text-shadow: 0 0 8px rgba(99,102,241,.5), 0 1px 3px rgba(0,0,0,.9); }
-    .hero-speech { position: absolute; bottom: calc(100% + 20px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); color: #2d1b0e; border-radius: 8px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .4s ease; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
-    .hero-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(255,255,255,.95); }
-    .hero-tooltip { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: rgba(15,23,42,.9); color: #fff; border-radius: 7px; padding: 5px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
-    .hero-tooltip-rich { display: grid; gap: 3px; min-width: 150px; max-width: 220px; white-space: normal; text-align: left; }
-    .hero-tooltip-rich strong { color: #fff; font-size: 12px; }
-    .hero-tooltip-item { color: rgba(255,255,255,.82); font-size: 10px; line-height: 1.3; }
-    .hero-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(15,23,42,.9); }
-    .tavern-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: rgba(255,255,255,.5); font-size: 13px; font-weight: 600; pointer-events: none; z-index: 4; }
-    @media (max-width: 900px) { .heroes-wrap { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; min-height: 0; overflow: visible; } .hero-side { overflow: visible; padding-right: 0; } .tavern-scene { flex: none; height: 420px; } }
-    @media (max-width: 560px) { .tavern-scene { height: 320px; } }
     .cf-turnstile-box { margin: 10px 0 4px; min-height: 0; display: flex; justify-content: center; }
     .force-blame { margin: 4px 0 14px; padding: 10px 12px; border-radius: 10px; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #b91c1c; font-size: 12px; line-height: 1.5; font-weight: 600; text-align: center; }
     .force-blame-sub { display: inline-block; margin-top: 6px; font-weight: 500; opacity: .85; font-style: italic; }
@@ -5089,15 +4904,6 @@
       background: #16a34a; color: #fff; cursor: pointer; font: inherit; font-size: 10px; font-weight: 900;
     }
     .farm-starter-action:hover { filter: brightness(.96); }
-    .garden-update-modal { max-width: 430px; border-radius: 12px; padding: 0; overflow: hidden; }
-    .garden-update-card { padding: 18px; background: linear-gradient(180deg, #f0fdf4, #ffffff); color: #16351f; }
-    .garden-update-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 18px; font-weight: 900; color: #14532d; }
-    .garden-update-sub { margin-bottom: 12px; font-size: 12px; line-height: 1.45; color: #36583d; }
-    .garden-update-list { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
-    .garden-update-list li { padding: 9px 10px; border-radius: 8px; background: rgba(255,255,255,.78); border: 1px solid rgba(22,101,52,.14); font-size: 13px; line-height: 1.4; }
-    .garden-update-list b { color: #166534; }
-    .garden-update-note { margin-bottom: 14px; font-size: 11px; line-height: 1.4; color: #64748b; }
-    .garden-update-actions { display: flex; justify-content: flex-end; }
     .farm-field { position: relative; z-index: 2; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 10px; }
     .farm-board { display: flex; flex-direction: column; align-items: center; gap: 14px; --pot-scale: .6; }
     .fb-seg { display: grid; gap: 4px; }
@@ -5233,23 +5039,14 @@
     .farm-seasonal-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface); }
     .farm-seasonal-bonus { color: #15803d; font-weight: 900; }
     /* Ownership deeds (prawa własności) — one mini certificate per owned tile */
-    .farm-deed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
-    .farm-deed {
-      position: relative; padding: 9px 11px; border-radius: 8px;
-      background: linear-gradient(180deg, #fffdf5, #fbf3dd); border: 1px solid #d8c79a;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); color: #4a3a1d;
-    }
-    .farm-deed.mig { background: linear-gradient(180deg, #f3fbf2, #e6f5e3); border-color: #b8d8b0; color: #2f4a2a; }
-    .farm-deed-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .farm-deed-seal { font-size: 20px; line-height: 1; }
-    .farm-deed-title { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
-    .farm-deed-id { font-size: 15px; font-weight: 900; }
-    .farm-deed-type { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
-    .farm-deed-status { font-size: 11px; padding: 2px 6px; border-radius: 6px; display: inline-block; background: rgba(0,0,0,.05); }
-    .farm-deed-status.free { background: rgba(22,101,52,.12); color: #166534; }
-    .farm-deed-status.busy { background: rgba(180,120,30,.14); color: #92590e; }
-    .farm-deed-status.listed { background: rgba(202,138,4,.18); color: #a16207; }
-    .farm-deed-foot { display: flex; justify-content: space-between; gap: 6px; margin-top: 7px; padding-top: 6px; border-top: 1px dashed rgba(120,90,40,.3); font-size: 10px; opacity: .85; }
+    /* Territory deed cards — same .fcc skeleton as plant/NFT/item cards, framed
+       in a parchment-gold gradient (green for tiles inherited from the old
+       Ogródek) instead of the rarity colors used elsewhere. */
+    .fcc.deed { background: linear-gradient(160deg, #e9d8a6, #b8860b); }
+    .fcc.deed.deed-mig { background: linear-gradient(160deg, #bbf7d0, #16a34a); }
+    .fcc-rar.deed-status-free { background: rgba(22,101,52,.12); color: #166534; }
+    .fcc-rar.deed-status-busy { background: rgba(180,120,30,.14); color: #92590e; }
+    .fcc-rar.deed-status-listed { background: rgba(202,138,4,.18); color: #a16207; }
     .farm-sel-title { font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
     .farm-onboard-title { font-weight: 800; font-size: 13px; color: #14532d; margin-bottom: 4px; }
     .farm-onboard-steps { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.5; color: #5a4326; }
@@ -5446,7 +5243,6 @@
     .farm-pack-card.nft .farm-pack-front { background: linear-gradient(160deg, #fffaf0, #ffe8b0); box-shadow: 0 0 20px rgba(245,158,11,.55), 0 12px 28px rgba(0,0,0,.45); }
     /* NFT badges + collection grid */
     .farm-cat-nft-badge { color: #b45309; font-weight: 800; }
-    .farm-cat-nft-levels { font-size: 10px; color: var(--muted); background: var(--bg-mid); border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
     .farm-nft-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 2px 0 8px; }
     .farm-nft-item { width: 108px; padding: 11px 8px; border-radius: 12px; text-align: center; background: linear-gradient(160deg, #fffaf0, #ffe8b0); border: 2px solid #f59e0b; box-shadow: 0 2px 10px rgba(245,158,11,.3); cursor: pointer; transition: transform .12s, box-shadow .12s; }
     .farm-nft-item:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(245,158,11,.42); }
@@ -5471,8 +5267,27 @@
     .farm-cat-foot, .farm-inv-foot { margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.4; }
     .farm-inv-section-title { font-weight: 800; font-size: 13px; color: var(--text); margin: 14px 0 4px; }
     .farm-inv-section-title:first-child { margin-top: 2px; }
+    .farm-cat-divider { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+    /* The advisor's <details> summary is already a bordered box (.cosmetics-summary) —
+       just push it down from the section above, no extra divider line needed. */
+    details.farm-cat-divider { margin-top: 18px; padding-top: 0; border-top: none; }
     .farm-v2-body .farm-card-row, .farm-v2-body .farm-market-row { padding: 9px 2px; }
     .farm-v2-body .farm-card-name { color: var(--text); }
+    /* ── Mój Majątek: "Estate Ledger" ──────────────────────────────────────
+       Gold/amber ties into the app's existing rarity/rank-1 language — reserved
+       for ownership/value cues, never for interactive elements (accent stays indigo). */
+    .maj-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+    .maj-section-head:first-child { margin-top: 2px; }
+    .maj-section-head-left { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .maj-section-count { color: var(--dim); font-weight: 600; margin-left: 2px; }
+    .maj-section-right { color: #b45309; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; text-transform: none; letter-spacing: 0; }
+    .maj-ledger-box { border: 1px solid var(--border); border-radius: 10px; background: var(--card); padding: 0 10px; }
+    .maj-ledger-box .farm-market-row:first-of-type { border-top: none; }
+    .maj-crop-ico { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--surface); flex: 0 0 auto; }
+    .maj-crop-ico .farm-ico { width: 18px; height: 18px; }
+    .maj-crop-ico .farm-ico-emoji { font-size: 16px; }
+    .maj-num { font-variant-numeric: tabular-nums; }
+    .maj-empty { border: 1px dashed var(--border-hi); border-radius: 10px; padding: 16px 14px; text-align: center; background: var(--surface); }
     .farm-v2-body .farm-card-sub { color: var(--muted); }
     /* ── Ogródek farm overhaul: Twemoji icons + collectible cards + wood theme ── */
     /* Crisp Twemoji SVG plant icons (sized to the container's font-size; emoji fallback) */
@@ -5510,6 +5325,8 @@
     .fcc.pickable { cursor: pointer; transition: transform .12s, box-shadow .12s; }
     .fcc.pickable:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,.22); }
     .fcc-nft-serial { height: 13px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: #b45309; }
+    .fcc-item-effect { font-size: 9.5px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.25; width: 100%; min-height: 2.5em; display: flex; align-items: center; justify-content: center; word-break: break-word; }
+    .fcc-item-slot { width: 100%; margin-top: 1px; padding: 6px 4px; border-radius: 8px; font-size: 11px; font-weight: 800; text-align: center; background: var(--bg-mid); color: var(--muted); box-sizing: border-box; }
     .fcc-grid.compact { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
     .fcc-grid.compact .fcc-art .farm-ico { width: 42px; height: 42px; }
     .fcc-grid.compact .fcc-art .farm-ico-emoji { font-size: 34px; }
@@ -5642,7 +5459,7 @@
     .farm-chart-area { fill: rgba(136, 136, 136, 0.15); stroke: none; }
     .farm-chart-area.trend-up { fill: rgba(34, 197, 94, 0.15); }
     .farm-chart-area.trend-down { fill: rgba(239, 68, 68, 0.15); }
-    .farm-chart-line { fill: none; stroke: var(--muted); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+    .farm-chart-line { fill: none; stroke: var(--muted); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
     .farm-chart-line.trend-up { stroke: #22c55e; }
     .farm-chart-line.trend-down { stroke: #ef4444; }
     .farm-chart-base { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; opacity: .5; }
@@ -5829,52 +5646,58 @@
     <div class="logo">Rynek Proroctw <span>G6</span></div>
     <div class="user-info">
       <div class="coins-badge">🪙 <span id="header-coins">0</span></div>
-      <button class="btn-ghost" id="activity-btn">📋 Aktywność</button>
-      <button class="btn-ghost" id="wallet-btn">💼 Portfel</button>
-      <button class="btn-ghost hidden" id="documents-btn">📄 Moje Dokumenty</button>
-      <span class="header-nick" id="header-nick"></span>
-      <button class="btn-ghost" id="logout-btn">Wyloguj</button>
+      <div class="nav-group" data-group="account">
+        <button class="nav-group-btn">👤 <span class="header-nick" id="header-nick"></span> <span class="nav-chevron">▾</span></button>
+        <div class="nav-dropdown nav-dropdown-right">
+          <button class="nav-menu-item" id="wallet-btn">💼 Portfel</button>
+          <button class="nav-menu-item" id="activity-btn">📋 Aktywność</button>
+          <button class="nav-menu-item hidden" id="documents-btn">📄 Moje Dokumenty</button>
+          <div class="nav-menu-divider"></div>
+          <button class="nav-menu-item nav-menu-danger" id="logout-btn">🚪 Wyloguj</button>
+        </div>
+      </div>
     </div>
   </header>
 
   <nav class="nav-tabs">
-    <button class="nav-tab active" data-tab="markets">📊 Rynki</button>
+    <button class="nav-tab active" data-tab="farm">🌱 Ogródek</button>
 
-    <div class="nav-group" data-group="casino">
-      <button class="nav-group-btn">🃏 Kasyno <span class="nav-chevron">▾</span></button>
+    <div class="nav-group" data-group="bets">
+      <button class="nav-group-btn">🎯 Zakłady <span class="nav-chevron">▾</span></button>
       <div class="nav-dropdown">
-        <button class="nav-tab" data-tab="poker">♠️ Poker</button>
-        <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
-        <button class="nav-tab" data-tab="slots">🎰 Sloty</button>
-        <button class="nav-tab" data-tab="plinko">📌 Plinko G6</button>
-        <button class="nav-tab" data-tab="mines">💣 Miny G6</button>
-        <button class="nav-tab" data-tab="crash">🚀 Rakieta</button>
+        <button class="nav-tab" data-tab="markets">📊 Rynki</button>
+        <button class="nav-tab" data-tab="football">⚽ Mundial</button>
       </div>
     </div>
 
     <div class="nav-group" data-group="games">
       <button class="nav-group-btn">🎮 Gry <span class="nav-chevron">▾</span></button>
       <div class="nav-dropdown">
+        <div class="nav-dropdown-label">Kasyno</div>
+        <button class="nav-tab" data-tab="poker">♠️ Poker</button>
+        <button class="nav-tab" data-tab="roulette">🎲 Ruletka</button>
+        <button class="nav-tab" data-tab="slots">🎰 Sloty</button>
+        <button class="nav-tab" data-tab="plinko">📌 Plinko G6</button>
+        <button class="nav-tab" data-tab="mines">💣 Miny G6</button>
+        <button class="nav-tab" data-tab="crash">🚀 Rakieta</button>
+        <div class="nav-dropdown-label">Zręcznościowe</div>
         <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
         <button class="nav-tab" data-tab="all-games">🎮 Wszystkie Gry</button>
+        <button class="nav-tab" data-tab="canvas">🎨 Wspólne Płótno</button>
       </div>
     </div>
-    <button class="nav-tab" data-tab="football">⚽ Mundial</button>
-    <button class="nav-tab" data-tab="canvas">🎨 Wspólne Płótno</button>
 
     <div class="nav-group" data-group="shop">
       <button class="nav-group-btn">🛒 Targowisko <span class="nav-chevron">▾</span></button>
       <div class="nav-dropdown">
         <button class="nav-tab" data-shop-target="marketplace-section">🤝 Ogłoszenia</button>
         <button class="nav-tab" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
-        <button class="nav-tab" data-shop-target="hero-shop-section">🛡️ Herosi</button>
+        <button class="nav-tab" data-shop-target="hero-shop-section">🎒 Przedmioty specjalne</button>
         <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
         <button class="nav-tab" data-shop-target="zapps-shop-section">💎 Kup Zappsy</button>
       </div>
     </div>
-    <button class="nav-tab" data-tab="heroes">⚔️ Herosi</button>
-    <button class="nav-tab" data-tab="farm">🌱 Ogródek</button>
-    <button class="nav-tab" data-tab="leaderboard">📊 Statystyki</button>
+    <button class="nav-tab" data-tab="leaderboard">📈 Statystyki</button>
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
   </nav>
@@ -7260,7 +7083,7 @@
       <div class="shop-category-filters" id="shop-category-filters" aria-label="Kategorie sklepu">
         <button class="shop-category-filter active" type="button" data-shop-target="marketplace-section">🤝 Ogłoszenia</button>
         <button class="shop-category-filter" type="button" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
-        <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">🛡️ Herosi</button>
+        <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">🎒 Przedmioty specjalne</button>
         <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
         <button class="shop-category-filter" type="button" data-shop-target="zapps-shop-section">💎 Kup Zappsy</button>
       </div>
@@ -7303,7 +7126,7 @@
       <section class="shop-section" id="hero-auctions-section">
         <div class="shop-section-head">
           <div>
-            <div class="shop-section-title">🔨 Aukcje bohaterów</div>
+            <div class="shop-section-title">🔨 Aukcje przedmiotów</div>
             <div class="shop-section-sub">Limitowane przedmioty społecznościowe. Coiny z wygranej aukcji znikają z obiegu.</div>
           </div>
         </div>
@@ -7313,10 +7136,10 @@
       <section class="shop-section" id="hero-shop-section">
         <details class="cosmetics-details">
           <summary class="cosmetics-summary">
-            <span class="cosmetics-title">🛡️ Herosi</span>
+            <span class="cosmetics-title">🎒 Przedmioty specjalne</span>
             <span class="cosmetics-chev">▾</span>
           </summary>
-          <div class="shop-section-sub" style="margin-top:12px">Wyposażenie i kosmetyki dla Twojego bohatera (widoczne w profilu). Płacisz coinami (znikają z obiegu).</div>
+          <div class="shop-section-sub" style="margin-top:12px">Przedmioty z bonusami do gier — załóż je w 🎒 Mój Majątek (Ogródek), a efekty działają po stronie serwera. Płacisz coinami (znikają z obiegu).</div>
           <div class="shop-grid" id="hero-shop-grid"></div>
         </details>
       </section>
@@ -7398,14 +7221,6 @@
         <div class="farm-view-switch">
           <button class="farm-view-toggle" id="farm-view-toggle" type="button">📋 Widok tabeli</button>
         </div>
-      </div>
-    </main>
-  </div>
-
-  <div id="tab-heroes" class="hidden">
-    <main>
-      <div class="heroes-wrap" id="heroes-content">
-        <div class="loading-center"><div class="spinner"></div></div>
       </div>
     </main>
   </div>
@@ -7706,7 +7521,11 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADivG-iPzhotCS-S';
 // Skip the captcha on localhost only (local dev / automated screenshots); any
 // other hostname (production) still enforces it.
 const IS_LOCALHOST = ['localhost', '127.0.0.1', '[::1]', ''].includes(location.hostname);
-const CAPTCHA_ON = !!TURNSTILE_SITE_KEY && !TURNSTILE_SITE_KEY.startsWith('YOUR_') && !IS_LOCALHOST;
+// Captcha disabled 2026-07-03 per product decision (not needed right now).
+// Re-enable by dropping the `&& false` below — but only after also turning
+// CAPTCHA protection back on in Supabase Dashboard → Authentication → Attack
+// Protection, since the server enforces it independently of this flag.
+const CAPTCHA_ON = !!TURNSTILE_SITE_KEY && !TURNSTILE_SITE_KEY.startsWith('YOUR_') && !IS_LOCALHOST && false;
 const cfWidgets = { login: null, register: null, migrate: null };
 const CF_ELEMENT_IDS = { login: 'cf-login', register: 'cf-register', migrate: 'cf-migrate' };
 
@@ -7860,7 +7679,6 @@ let varPatrolRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 const lwCharts = new Map();
-const HERO_STYLE_CHANGE_PRICE = 1;
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
   'body_shape', 'outfit', 'outfit_color', 'weapon',
@@ -7875,10 +7693,11 @@ const HERO_ITEM_SLOTS = [
   { id: 'weapon', label: 'Broń' },
 ];
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
+// Masculine forms (przedmiot), unlike FARM_RARITY_PL's feminine forms (karta).
+const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki', legendary: 'legendarny' };
 const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch']);
 let heroItemDefs = [];
 let myHeroInventory = [];
-let publicHeroEquipment = [];
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
 let marketplaceListings = [];
@@ -8462,7 +8281,7 @@ function showApp() {
   setText(headerNick, me.nick);
   setText(headerCoins, me.coins);
   updateAdminTestTabs();
-  switchTab('markets');
+  switchTab('farm');   // Ogródek is the home tab
   setupRealtime();
   if (DOCUMENTS_ENABLED) loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
 }
@@ -8731,7 +8550,6 @@ function switchTab(tab) {
   const tWb = document.getElementById('tab-whack-boss');
   const tS = document.getElementById('tab-shop');
   const tG = document.getElementById('tab-garden');
-  const tH = document.getElementById('tab-heroes');
   const tAg = document.getElementById('tab-all-games');
   const tFp = document.getElementById('tab-flappy-test');
   const tBj = document.getElementById('tab-bug-jumper-test');
@@ -8751,70 +8569,67 @@ function switchTab(tab) {
   hide(tMi);
   hide(tCr);
   if (tab === 'markets') {
-    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     if (markets.length === 0) loadMarkets();
   } else if (tab === 'leaderboard') {
-    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     loadLeaderboard();
   } else if (tab === 'poker') {
-    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); show(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     setupPokerRealtime();
     loadPokerState();
   } else if (tab === 'roulette') {
-    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); show(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     setupRouletteRealtime();
     loadRouletteState();
   } else if (tab === 'slots') {
-    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); show(tSl); hide(tWb); hide(tS); hide(tG);
     loadSlotsHistory();
   } else if (tab === 'plinko') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tPl);
     loadPlinkoState();
   } else if (tab === 'mines') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tMi);
     loadMinesState();
   } else if (tab === 'crash') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCr);
     ensureCrashTab();
     loadCrashState();
   } else if (tab === 'whack-boss') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG);
     loadSeasonalTab();
   } else if (tab === 'all-games') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tAg);
     loadAllGamesTab();
   } else if (tab === 'shop') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); show(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); show(tS); hide(tG);
     loadShop();
   } else if (tab === 'garden') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); show(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); show(tG);
     loadGarden();
   } else if (tab === 'farm') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tFa);
     loadFarm();
     startFarmAtmosphere();
     startFarmTimer();
     startGardenHeartbeat();
-  } else if (tab === 'heroes') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); show(tH);
-    loadHeroes();
   } else if (tab === 'football') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tFb);
     loadFootball();
     startFootballCountdown();
   } else if (tab === 'canvas') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCv);
     loadCanvas();
     startCanvasCountdown();
   } else if (tab === 'flappy-test') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     const panel = document.getElementById('seasonal-game-flappy-pants');
     const testMain = document.getElementById('flappy-test-main');
     if (panel && testMain) {
@@ -8825,7 +8640,7 @@ function switchTab(tab) {
     show(tFp);
     loadFlappyPantsState();
   } else if (tab === 'bug-jumper-test') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     const panel = document.getElementById('seasonal-game-bug-jumper');
     const testMain = document.getElementById('bug-jumper-test-main');
     if (panel && testMain) {
@@ -8836,7 +8651,7 @@ function switchTab(tab) {
     show(tBj);
     prepareBugJumperAdminTest();
   } else if (tab === 'invoice-horde-test') {
-    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG); hide(tH);
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     const panel = document.getElementById('seasonal-game-invoice-horde');
     const testMain = document.getElementById('invoice-horde-test-main');
     if (panel && testMain) {
@@ -9607,11 +9422,11 @@ const ACT_COIN_REASONS = {
   farm_box_buy:               '📦 kupił skrzynkę z kartami',
   lootbox_open:               '🎁 otworzył skrzynkę z kartami',
   card_levelup:               '⭐ ulepszył kartę roślinną',
-  // Sklep / bohater
+  // Sklep / przedmioty specjalne
   store_purchase:             '🛒 kupił nagrodę w Sklepie',
-  hero_item_purchase:         '🦸 kupił przedmiot bohatera',
-  hero_auction_bid_reserved:  '🦸 podbił aukcję bohatera',
-  hero_auction_outbid_refund: '🦸 zwrot za przebicie aukcji',
+  hero_item_purchase:         '🎒 kupił przedmiot specjalny',
+  hero_auction_bid_reserved:  '🔨 podbił aukcję przedmiotu',
+  hero_auction_outbid_refund: '🔨 zwrot za przebicie aukcji',
   hero_appearance_change:     '🎭 zmienił wygląd bohatera',
   // Pozostałe
   arcade_entry:               '🕹️ wszedł do Arkady',
@@ -10755,7 +10570,7 @@ function _buildEconomyDetailContent(container, s) {
     chipRow('📈', 'Rynki (pozycje)', s.market_positions),
     chipRow('⚽', 'Mundial (zakłady)', s.football_open),
     chipRow('🃏', 'Poker (stosy)', s.poker_stacks),
-    chipRow('🦸', 'Przedmioty', s.hero_items),
+    chipRow('🎒', 'Przedmioty', s.hero_items),
     chipRow('🌱', 'Akcesoria', s.accessories),
     chipRow('🏷️', 'Aukcje+Targowisko', s.marketplace_escrow + s.hero_auction_escrow)
   );
@@ -12613,16 +12428,6 @@ async function loadMyGardenForCosmetics() {
   secondGardenUnlocked = prof?.second_garden_unlocked || false;
 }
 
-async function loadMyHeroForShop() {
-  if (!me?.id) { myHero = null; return; }
-  const { data, error } = await sb
-    .from('user_heroes')
-    .select('*')
-    .eq('user_id', me.id)
-    .maybeSingle();
-  if (!error) myHero = data || null;
-}
-
 function heroItemEffectLabel(item) {
   const value = Number(item?.effect_value || 0);
   if (item?.effect_type === 'score_bonus' && SEASONAL_SCORE_GAMES.has(item?.effect_game)) return `Gry sezonowe: +${value} do wyniku w każdej grze`;
@@ -12630,16 +12435,11 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'roulette' && item.effect_type === 'payout_bonus') return `Ruletka: +${value}% do wygranej wypłaty`;
   if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') { const pts = value === 1 ? 'punkt' : (value >= 2 && value <= 4) ? 'punkty' : 'punktów'; return `Sloty: +${value} ${pts} wagi symbolu G6`; }
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
-  if (item?.effect_game === 'tavern' && item.effect_type === 'gold_aura') return 'Karczma: królewska złota aura';
-  if (item?.effect_game === 'tavern' && item.effect_type === 'cloak_aura') return 'Karczma: efektowna peleryna';
-  if (item?.effect_game === 'tavern' && item.effect_type === 'coin_sparkle') return 'Karczma: błysk coinów';
-  if (item?.effect_game === 'tavern' && item.effect_type === 'disco_aura') return 'Karczma: disco aura';
-  if (item?.effect_game === 'tavern' && item.effect_type === 'fire_trail') return 'Karczma: płomienny ślad';
-  if (item?.effect_game === 'tavern' && item.effect_type === 'loud_speech') return 'Karczma: głośniejsza obecność';
+  if (item?.effect_game === 'tavern') return 'Kolekcjonerski (ozdobny)';
   if (item?.effect_type === 'daily_interest') return `Pasywne: +${value}% coinów dziennie`;
   if (item?.effect_game === 'poker' && item.effect_type === 'odds_view') return 'Poker: widoczna szansa wygranej';
   if (item?.effect_type === 'extra_garden_slot') return 'Ogródek: odblokuj drugi slot na roślinę';
-  return 'Efekt bohatera';
+  return 'Przedmiot specjalny';
 }
 
 function heroItemSerialLabel(item) {
@@ -12647,11 +12447,6 @@ function heroItemSerialLabel(item) {
   const size = item?.instance_edition_size ?? item?.edition_size;
   if (!serial) return '';
   return '#' + serial + (size ? '/' + size : '');
-}
-
-function heroItemDisplayName(item) {
-  const serial = heroItemSerialLabel(item);
-  return `${item?.emoji || '🎒'} ${item?.name || 'Przedmiot'}${serial ? ' ' + serial : ''}`;
 }
 
 function heroItemError(error) {
@@ -12743,23 +12538,6 @@ async function loadMyHeroInventory() {
   myHeroInventory = data || [];
 }
 
-async function loadPublicHeroEquipment() {
-  const { data, error } = await sb
-    .from('public_hero_equipment')
-    .select('*')
-    .order('equipped_at', { ascending: true });
-  if (error) {
-    console.warn('Public hero equipment unavailable:', error.message);
-    publicHeroEquipment = [];
-    return;
-  }
-  publicHeroEquipment = data || [];
-}
-
-function myEquippedItemForSlot(slot) {
-  return myHeroInventory.find(item => item.equipped && item.slot === slot) || null;
-}
-
 function firstOwnedHeroItem(slug) {
   return myHeroInventory.find(item => item.slug === slug) || null;
 }
@@ -12768,27 +12546,10 @@ function heroItemOwnedCount(slug) {
   return myHeroInventory.filter(item => item.slug === slug).length;
 }
 
-function heroItemEquippedForSlug(slug) {
-  return myHeroInventory.find(item => item.slug === slug && item.equipped) || null;
-}
-
-function equipmentForHero(userId) {
-  const order = Object.fromEntries(HERO_ITEM_SLOTS.map((slot, i) => [slot.id, i]));
-  return publicHeroEquipment
-    .filter(item => item.user_id === userId)
-    .sort((a, b) => (order[a.slot] ?? 99) - (order[b.slot] ?? 99));
-}
-
-function visualEffectsForGear(gear) {
-  return gear
-    .map(item => item.visual_effect)
-    .filter(Boolean)
-    .slice(0, 3);
-}
-
 async function refreshHeroItemSurface() {
-  if (activeTab === 'heroes') await loadHeroes();
-  else if (activeTab === 'shop') await loadShop();
+  if (activeTab === 'shop') await loadShop();
+  else await loadMyHeroInventory();
+  if (farmModalEl && farmHubTab === 'inventory') refreshFarmHub();
 }
 
 async function purchaseHeroItem(slug, price, btn) {
@@ -12829,34 +12590,6 @@ async function purchaseGardenCertificate(price, btn) {
   }
   secondGardenUnlocked = true;
   showToast('✅ Certyfikat aktywny! Wróć do Ogródka i zasadź drugi kwiatek.');
-  await refreshHeroItemSurface();
-}
-
-async function equipHeroItem(instanceId, btn) {
-  btn.disabled = true;
-  btn.textContent = 'Zakładam…';
-  const { error } = await sb.rpc('equip_hero_item', { p_instance_id: instanceId });
-  if (error) {
-    showToast('❌ ' + heroItemError(error));
-    btn.disabled = false;
-    btn.textContent = 'Załóż';
-    return;
-  }
-  showToast('✅ Przedmiot założony!');
-  await refreshHeroItemSurface();
-}
-
-async function unequipHeroItem(slot, btn) {
-  btn.disabled = true;
-  btn.textContent = 'Zdejmuję…';
-  const { error } = await sb.rpc('unequip_hero_item', { p_slot: slot });
-  if (error) {
-    showToast('❌ ' + heroItemError(error));
-    btn.disabled = false;
-    btn.textContent = 'Zdejmij';
-    return;
-  }
-  showToast('✅ Przedmiot zdjęty.');
   await refreshHeroItemSurface();
 }
 
@@ -13317,7 +13050,6 @@ async function loadShop() {
       .eq('is_active', true)
       .order('created_at', { ascending: false }),
     loadMyGardenForCosmetics(),
-    loadMyHeroForShop(),
     loadHeroItemCatalog(),
     loadHeroAuctionItemDefs(),
     loadHeroAuctions(),
@@ -13427,43 +13159,10 @@ function renderHeroShopGrid() {
   if (!grid) return;
   grid.replaceChildren();
 
-  const hasHero = !!myHero;
-  const canAfford = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
-  const appearanceCard = el('div', { className: 'shop-card' });
-  appearanceCard.appendChild(el('div', { className: 'shop-card-icon' }, '🎨'));
-  appearanceCard.appendChild(el('div', { className: 'shop-card-title' }, 'Zmiana wyglądu bohatera'));
-  appearanceCard.appendChild(el('div', { className: 'shop-card-desc' },
-    hasHero
-      ? 'Edytuj fryzurę, brodę, sylwetkę, strój i broń. Opłata pobierana jest przy zapisie każdej zmiany.'
-      : 'Stwórz pierwszego bohatera za darmo. Późniejsze zmiany wyglądu kosztują 1 coin przy zapisie.'
-  ));
-  appearanceCard.appendChild(el('div', { className: 'shop-card-price' }, hasHero ? HERO_STYLE_CHANGE_PRICE + ' 🪙' : '0 🪙'));
-  appearanceCard.appendChild(el('div', { className: 'shop-card-slots' },
-    hasHero ? 'Płatne za każde zapisanie zmienionego wyglądu' : 'Pierwszy bohater jest darmowy'
-  ));
-
-  const appearanceBtn = el('button', {
-    className: 'btn-primary shop-card-btn',
-    disabled: hasHero && !canAfford,
-    title: hasHero && !canAfford ? 'Za mało coinów' : '',
-  }, hasHero
-    ? (canAfford ? `Zmień za ${HERO_STYLE_CHANGE_PRICE} 🪙` : `Potrzebujesz ${HERO_STYLE_CHANGE_PRICE} 🪙`)
-    : 'Stwórz bohatera'
-  );
-  appearanceBtn.addEventListener('click', () => {
-    heroesEditMode = hasHero;
-    switchTab('heroes');
-  });
-  appearanceCard.appendChild(appearanceBtn);
-  grid.appendChild(appearanceCard);
-
-  // No "coming soon" placeholder — if there are no hero items, just show the
-  // appearance card above and nothing else.
   if (!heroItemDefs.length) return;
 
   heroItemDefs.forEach(item => {
     const owned = firstOwnedHeroItem(item.slug);
-    const equipped = heroItemEquippedForSlug(item.slug);
     const ownedCount = heroItemOwnedCount(item.slug);
     const itemPrice = Number(item.price || 0);
     const itemCanAfford = (me?.coins || 0) >= itemPrice;
@@ -13491,15 +13190,11 @@ function renderHeroShopGrid() {
         buyBtn.addEventListener('click', () => purchaseGardenCertificate(itemPrice, buyBtn));
         itemCard.appendChild(buyBtn);
       }
-    } else if (equipped) {
+    } else if (owned) {
       itemCard.appendChild(el('button', {
         className: 'btn-primary shop-card-btn',
         disabled: true,
-      }, 'Założone'));
-    } else if (owned) {
-      const equipBtn = el('button', { className: 'btn-primary shop-card-btn' }, 'Załóż');
-      equipBtn.addEventListener('click', () => equipHeroItem(owned.instance_id, equipBtn));
-      itemCard.appendChild(equipBtn);
+      }, '✅ Posiadasz'));
     } else {
       const buyBtn = el('button', {
         className: 'btn-primary shop-card-btn',
@@ -13807,12 +13502,16 @@ if (btnZappsSubmit) btnZappsSubmit.addEventListener('click', submitZappsRequest)
 
 function setupShopRealtime() {
   const reload = () => { if (activeTab === 'shop') loadShop(); };
+  // Item/equipment changes also refresh the 🎒 Mój Majątek hub section if open.
+  const reloadItems = async () => {
+    if (activeTab === 'shop') { loadShop(); return; }
+    await loadMyHeroInventory();
+    if (farmModalEl && farmHubTab === 'inventory') refreshFarmHub();
+  };
   const ch = sb.channel('shop-db-changes')
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'store_items'     }, reload)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'store_purchases' }, reload)
-    .on('postgres_changes', { event: '*',    schema: 'public', table: 'user_heroes'      }, reload)
-    .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_instances' }, reload)
-    .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_equipment'   }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_instances' }, reloadItems)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auctions' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auction_bids' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_listings' }, reload)
@@ -23188,7 +22887,7 @@ const GARDEN_ERR_PL = {
   invalid_accessory_size:'Nieprawidłowy rozmiar ozdoby.',
   no_accessory:         'Wybierz założoną ozdobę.',
   insufficient_coins:   'Za mało coinów.',
-  second_slot_locked:   'Kup Certyfikat Drugiego Ogródka w sklepie bohatera.',
+  second_slot_locked:   'Kup Certyfikat Drugiego Ogródka w Sklepie (🎒 Przedmioty specjalne).',
   no_first_garden:      'Najpierw zasadź pierwszą roślinę.',
   already_unlocked:     'Certyfikat jest już aktywny.',
   insufficient:         'Za mało coinów.',
@@ -23448,7 +23147,6 @@ const FARM_VOUCHER_ODDS_DIVISOR = 3;
 const FARM_TAX_PER_EXCESS_SQ = 1000;
 const FARM_TAX_FIRST_TAX_DAY = '2026-07-02';
 const FARM_TAX_FIRST_PAYMENT_DAY = '2026-07-03';
-const GARDEN_UPDATE_NOTICE_ID = '2026-07-ogrodek-wyzwanie-podlewanie';
 const FARM_RARITY_PL = { common: 'zwykła', rare: 'rzadka', epic: 'epicka', legendary: 'legendarna' };
 const FARM_ERR = {
   not_authenticated: 'Musisz być zalogowany.',
@@ -23510,8 +23208,6 @@ let fmTax = null;                // server quote: fair_cap / owned normal tiles 
 let fmSeasonalEvent = null;      // current/upcoming weekly crop contract
 let fmSeasonalLeaderboard = [];  // current event aggregate leaderboard
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
-let gardenUpdateNoticeOpen = false;
-let gardenUpdateNoticeDismissedSession = false;
 let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
 let fmRealtimeReady = false, fmTimer = null;
@@ -23671,45 +23367,6 @@ async function claimFarmStarter() {
     if (data && typeof data.boxes === 'number') fmBoxes = data.boxes;
     if (data && data.granted) showToast('🎁 Witaj w Ogródku! Dostajesz 3 skrzynki — otwórz je w 🎒 Moim Majątku.');
   } catch (e) { console.error('claimFarmStarter', e); }
-}
-
-function gardenUpdateNoticeKey() {
-  return 'rp:garden-update:' + GARDEN_UPDATE_NOTICE_ID + ':' + (me?.id || 'anon');
-}
-
-function gardenUpdateNoticeDismissed() {
-  if (gardenUpdateNoticeDismissedSession) return true;
-  try { return localStorage.getItem(gardenUpdateNoticeKey()) === '1'; }
-  catch { return false; }
-}
-
-function dismissGardenUpdateNotice() {
-  gardenUpdateNoticeDismissedSession = true;
-  try { localStorage.setItem(gardenUpdateNoticeKey(), '1'); } catch {}
-}
-
-function maybeShowGardenUpdateNotice() {
-  if (!me || activeTab !== 'farm' || gardenUpdateNoticeOpen || gardenUpdateNoticeDismissed()) return;
-  gardenUpdateNoticeOpen = true;
-  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
-  const close = () => {
-    dismissGardenUpdateNotice();
-    gardenUpdateNoticeOpen = false;
-    overlay.remove();
-  };
-  const btn = el('button', { className: 'btn-primary', type: 'button' }, 'Rozumiem, zamknij');
-  btn.addEventListener('click', close);
-  const modal = el('div', { className: 'modal garden-update-modal' },
-    el('div', { className: 'garden-update-card' },
-      el('div', { className: 'garden-update-title' }, '🌿 Zmiany w Ogródku'),
-      el('div', { className: 'garden-update-sub' }, 'Krótka informacja jednorazowa. Po zamknięciu nie będzie jej już w menu.'),
-      el('ul', { className: 'garden-update-list' },
-        el('li', {}, el('b', {}, '🏆 Nowe wyzwanie od poniedziałku 06.07'), 'Co tydzień jedna roślina będzie rośliną wyzwania. Sprzedawaj ją do skupu: top 3 graczy dostanie nagrody, a wspólny pasek może odblokować skrzynki dla uczestników.'),
-        el('li', {}, el('b', {}, '💧 Podlewanie roślinek'), 'Podlewanie starych roślinek będzie lepiej nagradzane, więc codzienne dbanie o Ogródek znowu ma większy sens.')),
-      el('div', { className: 'garden-update-note' }, 'To tylko ogłoszenie zmian. Nie ma osobnej zakładki ani archiwum tej wiadomości.'),
-      el('div', { className: 'garden-update-actions' }, btn)));
-  overlay.append(modal);
-  document.body.append(overlay);
 }
 
 function fmErr(error) {
@@ -24276,7 +23933,6 @@ async function loadFarm() {
       pendingFarmHubOpen = null;
       openFarmHub(hubTab);
     }
-    setTimeout(maybeShowGardenUpdateNotice, 250);
   } catch (e) {
     console.error('loadFarm', e);
   }
@@ -25404,10 +25060,11 @@ function farmCropRow(crop, qty, afterSell) {
   const def = [...fmDefs.values()].find(d => d.crop_type === crop);
   const eventQty = farmSeasonalEligibleQty(crop, qty);
   const row = el('div', { className: 'farm-market-row' },
-    el('div', { className: 'farm-card-emoji' }, def?.emoji || '🧺'),
+    el('div', { className: 'maj-crop-ico' }, farmIcon(def?.emoji || '🧺')),
     el('div', { className: 'farm-card-meta' },
       el('div', { className: 'farm-card-name' }, (def?.name || crop) + ' ×' + qty),
-      el('div', { className: 'farm-card-sub' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙',
+      el('div', { className: 'farm-card-sub' },
+        el('span', { className: 'maj-num' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙'),
         farmTrendChip(crop), farmRotChip(crop),
         eventQty > 0 ? el('span', { className: 'farm-seasonal-bonus', title: 'Tyle sztuk liczy się do kontraktu tygodnia' }, ' 🏆 +' + (eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0)) + ' 🪙') : '')));
   const sell = () => farmSellConfirm(crop, qty, afterSell);
@@ -25528,20 +25185,12 @@ function farmCatalogModel() {
   // myInstances: species -> the viewer's own {serial_no, level} list (NFT level
   // lives on the instance now, not on farm_collection — see nft-leveling-rework.sql).
   const myInstances = new Map();
-  // nftLevelCounts: species -> Map<level, count> across ALL owners, so the catalog
-  // can show "who's at what level" even for species the viewer doesn't own.
-  const nftLevelCounts = new Map();
   fmNft.forEach(n => {
-    if (n.owner_id === me?.id) {
-      if (!mySerials.has(n.species)) mySerials.set(n.species, []);
-      mySerials.get(n.species).push(n.serial_no);
-      if (!myInstances.has(n.species)) myInstances.set(n.species, []);
-      myInstances.get(n.species).push({ serial_no: n.serial_no, level: n.level || 1 });
-    }
-    if (!nftLevelCounts.has(n.species)) nftLevelCounts.set(n.species, new Map());
-    const lc = nftLevelCounts.get(n.species);
-    const lvl = n.level || 1;
-    lc.set(lvl, (lc.get(lvl) || 0) + 1);
+    if (n.owner_id !== me?.id) return;
+    if (!mySerials.has(n.species)) mySerials.set(n.species, []);
+    mySerials.get(n.species).push(n.serial_no);
+    if (!myInstances.has(n.species)) myInstances.set(n.species, []);
+    myInstances.get(n.species).push({ serial_no: n.serial_no, level: n.level || 1 });
   });
   const inPool = d => (d.draw_weight || 0) > 0 && (d.edition_size == null || (minted.get(d.species) || 0) < d.edition_size);
   const sorted = [...fmDefs.values()].sort((a, b) =>
@@ -25549,7 +25198,7 @@ function farmCatalogModel() {
   const myNftCount = farmOwnedNftCount();
   const effectiveWeight = d => farmEffectiveDrawWeight(d, myNftCount);
   const totalW = sorted.filter(inPool).reduce((s, d) => s + effectiveWeight(d), 0) || 1;
-  return { owned, minted, mySerials, myInstances, nftLevelCounts, inPool, sorted, totalW, myNftCount, effectiveWeight };
+  return { owned, minted, mySerials, myInstances, inPool, sorted, totalW, myNftCount, effectiveWeight };
 }
 
 // Per-card derived display facts (chance / supply / ownership).
@@ -25566,9 +25215,7 @@ function farmCardFacts(d, mdl) {
   const serials = isNft
     ? myInsts.slice().sort((a, b) => b.level - a.level || a.serial_no - b.serial_no).map(i => 'Lvl' + i.level + ' #' + i.serial_no).join(', ')
     : (mineOwned ? mine.slice().sort((a, b) => a - b).map(s => '#' + s).join(', ') : '');
-  const levelHisto = isNft ? (mdl.nftLevelCounts.get(d.species) || new Map()) : null;
-  const levelHistoLabel = levelHisto ? [...levelHisto.entries()].sort((a, b) => a[0] - b[0]).map(([lvl, cnt]) => 'L' + lvl + '×' + cnt).join(' ') : '';
-  return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, levelHistoLabel, price: fmMarket.get(d.crop_type)?.base_price, effWeight };
+  return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, price: fmMarket.get(d.crop_type)?.base_price, effWeight };
 }
 
 // Split the catalog into ordered, clearly separated groups so NFTs always get
@@ -25667,15 +25314,13 @@ function farmCatalogTable(mdl) {
         : (f.have ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · 🃏 ' + f.have.count + '/' + (2 * f.have.level))
                   : el('span', { className: 'farm-cat-stan locked' }, '🔒'));
       if (f.isNft) {
-        // Always-visible (not gated on ownership) level breakdown across ALL
-        // owners, so a player can see how leveled other people's copies are
-        // without owning one themselves.
-        const histChip = f.levelHistoLabel
-          ? el('span', { className: 'farm-cat-nft-levels', title: 'Rozkład poziomów wszystkich posiadanych egzemplarzy' }, '📊 ' + f.levelHistoLabel)
-          : '';
+        // Per-owner level breakdown lives one click away in openFarmNftExplorer
+        // (every serial slot + its owner), so the compact row only needs the
+        // action button — showing a global histogram here next to "my serials"
+        // read as duplicated info and forced the table to scroll horizontally.
         const btn = el('button', { className: 'farm-mini-btn', style: { padding: '2px 6px', fontSize: '10px' } }, 'Edycja 💎');
         btn.addEventListener('click', e => { e.stopPropagation(); openFarmNftExplorer(d.species); });
-        stanCell = el('div', { className: 'farm-cat-stan-wrap' }, stanCell, histChip, btn);
+        stanCell = el('div', { className: 'farm-cat-stan-wrap' }, stanCell, btn);
       }
       const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable' },
         el('td', { className: 'farm-cat-td-name' },
@@ -25713,18 +25358,52 @@ function farmCatalogTable(mdl) {
       tbody));
 }
 
+// Smooth Catmull-Rom → cubic-Bezier curve through every point (vs. straight
+// segments) so price charts read as flowing lines instead of jagged zig-zags.
+function smoothPathD(coords) {
+  if (coords.length < 2) return '';
+  if (coords.length === 2) {
+    return 'M' + coords[0][0].toFixed(1) + ' ' + coords[0][1].toFixed(1) +
+      ' L' + coords[1][0].toFixed(1) + ' ' + coords[1][1].toFixed(1);
+  }
+  let d = 'M' + coords[0][0].toFixed(1) + ' ' + coords[0][1].toFixed(1);
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i - 1] || coords[i];
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    const p3 = coords[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ' C' + c1x.toFixed(1) + ' ' + c1y.toFixed(1) + ' ' + c2x.toFixed(1) + ' ' + c2y.toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+  }
+  return d;
+}
+
 function farmPriceChart(points, base) {
   const W = 320, H = 96, padL = 26, padR = 6, padT = 12, padB = 10;
   const ps = points.slice();
-  const vals = ps.map(p => p.p).concat(typeof base === 'number' ? [base] : []);
+  // Scale to the REAL observed price range first. cur_price can never exceed
+  // base_price by construction, so folding `base` into the range unconditionally
+  // (old behavior) pinned the chart top to the theoretical max always — and
+  // since most rolls land well below it, real day-to-day/12h swings got
+  // compressed into a thin band near the bottom, looking flat even when the
+  // price WAS changing. Only stretch the scale to include the max reference
+  // line when it's reasonably close to the real range; otherwise skip drawing
+  // it for this crop (its numeric max is still shown in the card's footer).
+  const vals = ps.map(p => p.p);
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (hi === lo) { hi = lo + 1; lo = Math.max(0, lo - 1); }
-  const pd = (hi - lo) * 0.15; lo = Math.max(0, lo - pd); hi = hi + pd;
+  const dataRange = hi - lo;
+  const pd = dataRange * 0.15; lo = Math.max(0, lo - pd); hi = hi + pd;
+  if (typeof base === 'number' && base > hi && base - hi <= dataRange * 1.5) {
+    hi = base + dataRange * 0.08;
+  }
+  const showBase = typeof base === 'number' && base <= hi;
   const t0 = ps[0].t, t1 = ps[ps.length - 1].t;
   const xOf = t => t1 === t0 ? (W - padR) : padL + (t - t0) / (t1 - t0) * (W - padL - padR);
   const yOf = p => padT + (1 - (p - lo) / (hi - lo)) * (H - padT - padB);
   const svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'farm-chart-svg', preserveAspectRatio: 'none' });
-  
+
   const mid = (hi + lo) / 2;
   [lo + pd, mid, hi - pd].forEach(yVal => {
     const y = yOf(yVal).toFixed(1);
@@ -25732,7 +25411,7 @@ function farmPriceChart(points, base) {
     svg.append(svgEl('text', { x: padL - 6, y: +y + 3, 'text-anchor': 'end' }, Math.round(yVal) + ''));
   });
 
-  if (typeof base === 'number') {
+  if (showBase) {
     const by = yOf(base).toFixed(1);
     svg.append(svgEl('line', { x1: padL - 4, y1: by, x2: W - padR, y2: by, class: 'farm-chart-base' }));
   }
@@ -25740,7 +25419,7 @@ function farmPriceChart(points, base) {
   const coords = ps.map(p => [xOf(p.t), yOf(p.p)]);
   
   if (coords.length >= 2) {
-    const dline = 'M' + coords.map(c => c[0].toFixed(1) + ' ' + c[1].toFixed(1)).join(' L');
+    const dline = smoothPathD(coords);
     const x0 = coords[0][0].toFixed(1), xN = coords[coords.length - 1][0].toFixed(1), yB = (H - padB).toFixed(1);
     svg.append(svgEl('path', { d: dline + ' L' + xN + ' ' + yB + ' L' + x0 + ' ' + yB + ' Z', class: 'farm-chart-area' }));
     svg.append(svgEl('path', { d: dline, class: 'farm-chart-line' }));
@@ -25798,42 +25477,59 @@ function farmOwnedTilesSorted() {
   return mine;
 }
 
+// Same .fcc skeleton as plant/NFT/item cards (icon-forward, not a wall of
+// text), so territory sits in the same visual family instead of a cramped
+// bespoke box. Gold-parchment frame keeps the "ownership deed" identity;
+// owner isn't shown — every card in this tab is already yours. This is an
+// OWNERSHIP document, not a crop label — it never names what's planted
+// (that's the plant card's job); always the same document icon.
 function farmTileDeed({ x, y, tile }) {
   const isMig = tile.acquired_via === 'migration';
-  const def = tile.planted_species ? fmDefs.get(tile.planted_species) : null;
-  let status = '✅ Pusta — gotowa pod uprawę', statusCls = 'free';
-  if (tile.listed) { status = '🏷️ Wystawiona na sprzedaż'; statusCls = 'listed'; }
-  else if (def) { status = '🌱 Rośnie: ' + def.name; statusCls = 'busy'; }
-  else if (isMig) { status = '🌿 Roślina Ogródka'; statusCls = 'busy'; }
-  return el('div', { className: 'farm-deed' + (isMig ? ' mig' : '') },
-    el('div', { className: 'farm-deed-head' },
-      el('span', { className: 'farm-deed-seal' }, '📜'),
-      el('div', {},
-        el('div', { className: 'farm-deed-title' }, 'Akt własności'),
-        el('div', { className: 'farm-deed-id' }, 'Działka ' + farmTileDeedLabel(x, y)))),
-    el('div', { className: 'farm-deed-type' }, isMig ? '🌿 z dawnego Ogródka' : '🚜 Działka uprawna'),
-    el('div', { className: 'farm-deed-status ' + statusCls }, status),
-    el('div', { className: 'farm-deed-foot' },
-      el('span', {}, 'Właściciel: ' + (me?.nick || '—')),
-      el('span', {}, isMig ? 'poza limitem' : (tile.asset_value ? (tile.asset_value + ' 🪙') : 'w limicie'))));
+  const isPlanted = !!tile.planted_species || isMig;
+  let status = 'Wolna', statusCls = 'free';
+  if (tile.listed) { status = 'Na sprzedaż'; statusCls = 'listed'; }
+  else if (isPlanted) { status = 'Zajęta'; statusCls = 'busy'; }
+  const label = farmTileDeedLabel(x, y);
+  const valueText = isMig ? 'poza limitem' : (tile.asset_value ? (tile.asset_value + ' 🪙') : 'w limicie');
+  const tileEl = el('div', { className: 'fcc deed' + (isMig ? ' deed-mig' : ''), title: 'Działka ' + label });
+  tileEl.append(
+    el('div', { className: 'fcc-gem' }, label),
+    el('div', { className: 'fcc-inner' },
+      el('div', { className: 'fcc-art' }, farmIcon('📜')),
+      el('div', { className: 'fcc-name' }, 'Akt własności'),
+      el('div', { className: 'fcc-rar deed-status-' + statusCls }, status),
+      el('div', { className: 'fcc-item-effect maj-num' }, valueText)));
+  return tileEl;
+}
+
+// ── Mój Majątek: "Estate Ledger" helpers ────────────────────────────────
+// Eyebrow-style section header: icon+label+count on the left, an optional
+// muted/gold value on the right (e.g. crop total value). Scoped to Mój
+// Majątek only — the shared .farm-inv-section-title (used by other hub tabs)
+// is untouched.
+function majSectionHead(icon, label, count, rightText, opts = {}) {
+  const left = el('span', { className: 'maj-section-head-left' },
+    icon + ' ' + label,
+    (count != null) ? el('span', { className: 'maj-section-count' }, '· ' + count) : '');
+  const cls = 'maj-section-head' + (opts.divider === false ? '' : ' farm-cat-divider');
+  const head = el('div', { className: cls }, left);
+  if (rightText) head.append(el('span', { className: 'maj-section-right' }, rightText));
+  return head;
 }
 
 function buildFarmLandSection(container) {
   const tiles = farmOwnedTilesSorted();
-  container.append(el('div', { className: 'farm-inv-section-title' },
-    '🏡 Twoje działki — prawa własności' + (tiles.length ? ' (' + tiles.length + ')' : '')));
+  container.append(majSectionHead('🏡', 'Twoje działki', tiles.length, null, { divider: false }));
   if (!tiles.length) {
-    container.append(el('div', { className: 'farm-empty' },
+    container.append(el('div', { className: 'farm-empty maj-empty' },
       'Nie masz jeszcze żadnej działki. Kliknij puste pole na farmie, aby kupić (lub użyj 🎁 darmowej działki).'));
   } else {
-    const grid = el('div', { className: 'farm-deed-grid' });
+    const grid = el('div', { className: 'fcc-grid' });
     tiles.forEach(t => grid.append(farmTileDeed(t)));
     container.append(grid);
   }
-  // Land-tax status + price of the next tiles you could buy (moved here from Cennik).
+  // Land-tax status (the future-tile price table lives only in ❓ Jak to działa now).
   container.append(farmTaxStatusCard());
-  container.append(el('div', { className: 'farm-inv-section-title' }, '🧱 Ceny kolejnych działek'));
-  container.append(farmTerritoryPriceTable());
 }
 
 // „📈 Ceny" hub tab: per-crop current NPC price + trend + price-history chart.
@@ -25844,8 +25540,20 @@ async function buildFarmMarketBody(bodyEl) {
   const hist = {};
   try {
     const since = new Date(Date.now() - 7 * 864e5).toISOString();   // last 7 days
-    const { data } = await sb.from('farm_price_history').select('crop_type,price,recorded_at').gte('recorded_at', since).order('recorded_at');
-    (data || []).forEach(r => { (hist[r.crop_type] ||= []).push({ t: new Date(r.recorded_at).getTime(), p: +r.price }); });
+    // One query PER crop, not a single combined query: with ~13 crops logging
+    // ~10 points/day, the combined 7-day window comfortably exceeds Supabase's
+    // default 1000-row response cap. That shared query orders ascending, so the
+    // cap silently dropped the NEWEST ~2 days of every crop's history — charts
+    // looked stale/flat even though fresh data existed. Per-crop queries each
+    // get their own row budget, safely under any per-request cap.
+    const cropTypes = [...new Set([...fmDefs.values()].map(d => d.crop_type))];
+    const results = await Promise.all(cropTypes.map(ct =>
+      sb.from('farm_price_history').select('price,recorded_at')
+        .eq('crop_type', ct).gte('recorded_at', since).order('recorded_at').limit(300)
+    ));
+    results.forEach((res, i) => {
+      hist[cropTypes[i]] = (res.data || []).map(r => ({ t: new Date(r.recorded_at).getTime(), p: +r.price }));
+    });
   } catch (e) { console.error('price history', e); }
   bodyEl.replaceChildren();
   bodyEl.append(el('div', { className: 'farm-cat-head' }, el('div', { className: 'farm-cat-head-txt' },
@@ -26149,7 +25857,7 @@ async function openFarmHub(initialTab) {
   // brief spinner while ensureFarmData() loads (e.g. opened from Portfel).
   if (fmDefs.size) renderFarmHubBody();
   else body.append(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
-  await ensureFarmData({ force: true });
+  await Promise.all([ensureFarmData({ force: true }), loadMyHeroInventory()]);
   if (!farmModalEl) return;   // user closed it while loading
   renderFarmHubBody();
 }
@@ -26550,24 +26258,24 @@ function buildFarmInventoryBody(bodyEl) {
   // Always shown (with a hint when empty) so players learn NFTs exist.
   const myNft = fmNft.filter(n => n.owner_id === me?.id)
     .sort((a, b) => a.species.localeCompare(b.species) || a.serial_no - b.serial_no);
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '💎 Karty NFT' + (myNft.length ? ' (' + myNft.length + ')' : '')));
+  bodyEl.append(majSectionHead('💎', 'Karty NFT', myNft.length));
   if (!myNft.length) {
-    bodyEl.append(el('div', { className: 'farm-empty' }, 'Nie masz jeszcze kart NFT — to limitowane, numerowane okazy, które wypadają (rzadko) ze skrzynki za ' + FARM_BOX_PRICE + ' 🪙.'));
+    bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Nie masz jeszcze kart NFT — to limitowane, numerowane okazy, które wypadają (rzadko) ze skrzynki za ' + FARM_BOX_PRICE + ' 🪙.'));
   } else {
     const grid = el('div', { className: 'fcc-grid' });
     myNft.forEach(n => grid.append(farmNftTile(n)));
     bodyEl.append(grid);
   }
 
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🃏 Karty roślin'));
   // Fungible (non-NFT) species only — NFT species render above in 💎 Karty NFT.
   // farm_collection rows for already-merged/migrated NFT species can linger at
   // count=0 (the migration zeroes them rather than deleting them), and without
   // this guard they'd render a stray card whose ⬆ Ulepsz button calls the
   // fungible level_up_card RPC on a dead field.
   const fungibleCards = fmCollection.filter(card => fmDefs.get(card.species)?.edition_size == null);
+  bodyEl.append(majSectionHead('🃏', 'Karty roślin', fungibleCards.length));
   if (!fungibleCards.length) {
-    bodyEl.append(el('div', { className: 'farm-empty' }, 'Brak kart. Otwórz skrzynkę 📦 (sekcja powyżej / Sklep).'));
+    bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Brak kart. Otwórz skrzynkę 📦 (sekcja powyżej / Sklep).'));
   } else {
     const grid = el('div', { className: 'fcc-grid' });
     fungibleCards.slice()
@@ -26576,26 +26284,83 @@ function buildFarmInventoryBody(bodyEl) {
     bodyEl.append(grid);
   }
 
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🧺 Plony'));
   const crops = [...fmInventory.entries()].filter(([, q]) => q > 0);
+  let totalVal = 0;
+  crops.forEach(([crop, qty]) => { totalVal += (farmMarketEffectivePrice(fmMarket.get(crop)) || 0) * qty; });
+  bodyEl.append(majSectionHead('🧺', 'Plony', crops.length, crops.length ? ('≈' + Math.round(totalVal) + ' 🪙') : null));
   if (!crops.length) {
-    bodyEl.append(el('div', { className: 'farm-empty' }, 'Brak plonów. Zasadź i zbierz, aby sprzedać.'));
+    bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Brak plonów. Zasadź i zbierz, aby sprzedać.'));
   } else {
-    let totalVal = 0;
-    crops.forEach(([crop, qty]) => {
-      const mkt = fmMarket.get(crop);
-      totalVal += (farmMarketEffectivePrice(mkt) || 0) * qty;
-      bodyEl.append(farmCropRow(crop, qty, refreshFarmHub));
-    });
-    bodyEl.append(el('div', { className: 'farm-inv-foot' },
-      '🃏 ' + fmCollection.length + ' rodzajów kart • 🧺 plony warte ~' + Math.round(totalVal) + ' 🪙'));
+    const box = el('div', { className: 'maj-ledger-box' });
+    crops.forEach(([crop, qty]) => box.append(farmCropRow(crop, qty, refreshFarmHub)));
+    bodyEl.append(box);
   }
+
+  buildSpecialItemsSection(bodyEl);
 
   buildGardenAdvisorTable(bodyEl);
 }
 
+// A special item rendered with the SAME .fcc frame/size as a plant or NFT
+// card, so the three card families line up in Mój Majątek. No footer action —
+// ownership alone activates the effect — so the button is a static status pill.
+function farmSpecialItemTile(item) {
+  const rar = item.rarity || 'common';
+  const serial = heroItemSerialLabel(item);
+  const tile = el('div', { className: 'fcc rar-' + rar, title: item.description || heroItemEffectLabel(item) });
+  tile.append(
+    serial ? el('div', { className: 'fcc-pin' }, serial) : '',
+    el('div', { className: 'fcc-inner' },
+      el('div', { className: 'fcc-art' }, farmIcon(item.emoji || '🎒')),
+      el('div', { className: 'fcc-name', title: item.name || 'Przedmiot' }, item.name || 'Przedmiot'),
+      el('div', { className: 'fcc-rar farm-rar-' + rar }, HERO_ITEM_RARITY_PL[rar] || rar),
+      el('div', { className: 'fcc-prog' },
+        el('div', { className: 'fcc-item-effect' }, heroItemEffectLabel(item))),
+      el('div', { className: 'fcc-item-slot' }, HERO_ITEM_SLOT_LABELS[item.slot] || item.slot)));
+  return tile;
+}
+
+// ⚔️ Przedmioty specjalne — items z bonusami do gier (dawny ekwipunek bohatera).
+// Samo POSIADANIE przedmiotu wystarczy, żeby jego efekt działał w grach — nie
+// trzeba nic zakładać. Efekty stosuje serwer (Edge Functions czytają
+// hero_item_instances po owner_id); liczy się najsilniejszy posiadany
+// przedmiot na daną grę.
+function buildSpecialItemsSection(bodyEl) {
+  const count = myHeroInventory.length;
+  bodyEl.append(majSectionHead('⚔️', 'Przedmioty specjalne', count));
+  if (!count) {
+    bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Nie masz jeszcze przedmiotów specjalnych. Kupisz je w Sklepie (sekcja 🎒 Przedmioty specjalne) albo wygrasz na aukcjach 🔨.'));
+    return;
+  }
+  bodyEl.append(el('div', { className: 'farm-empty' }, 'Każdy posiadany przedmiot działa automatycznie — nic nie trzeba zakładać. Liczy się najsilniejszy posiadany przedmiot na daną grę, efekty stosuje serwer.'));
+  const slotOrder = Object.fromEntries(HERO_ITEM_SLOTS.map((s, i) => [s.id, i]));
+  const grid = el('div', { className: 'fcc-grid' });
+  myHeroInventory.slice()
+    .sort((a, b) => (slotOrder[a.slot] ?? 99) - (slotOrder[b.slot] ?? 99)
+      || String(a.name || '').localeCompare(String(b.name || ''), 'pl'))
+    .forEach(item => grid.append(farmSpecialItemTile(item)));
+  bodyEl.append(grid);
+}
+
+// Collapsed by default; the tables are only computed/rendered while the
+// dropdown is actually open (rebuilt fresh each time it's opened, cleared on close).
 function buildGardenAdvisorTable(container) {
-  container.append(el('div', { className: 'farm-inv-section-title', style: { marginTop: '20px' } }, '💡 Asystent Decyzyjny Ogródka'));
+  const details = el('details', { className: 'cosmetics-details farm-cat-divider' });
+  const summary = el('summary', { className: 'cosmetics-summary' },
+    el('span', { className: 'cosmetics-title' }, '💡 Asystent Decyzyjny Ogródka'),
+    el('span', { className: 'cosmetics-chev' }, '▾'));
+  const body = el('div', { className: 'cosmetics-sub' });
+  details.append(summary, body);
+  container.append(details);
+
+  details.addEventListener('toggle', () => {
+    if (details.open) renderGardenAdvisorBody(body);
+    else body.replaceChildren();
+  });
+}
+
+function renderGardenAdvisorBody(container) {
+  container.replaceChildren();
 
   const myNft = fmNft.filter(n => n.owner_id === me?.id);
   if (!fmCollection.length && !myNft.length) {
@@ -27739,7 +27504,7 @@ function renderZenGarden() {
     const board2 = el('div', { className: 'sign-board', style: { marginTop: '12px' } });
     board2.innerHTML = `<h3>🔒 Drugi slot</h3>
 <div class="my-plant-preview" style="font-size:48px;opacity:.35">🪴</div>
-<div class="my-summary"><div>Odblokuj drugi kwiatek kupując <b>Certyfikat Drugiego Ogródka</b> w sklepie bohatera.</div></div>`;
+<div class="my-summary"><div>Odblokuj drugi kwiatek kupując <b>Certyfikat Drugiego Ogródka</b> w Sklepie (🎒 Przedmioty specjalne).</div></div>`;
     const shopBtn = el('button', { className: 'btn-ghost', type: 'button', style: { marginTop: '8px', width: '100%' } }, '🛒 Przejdź do sklepu');
     shopBtn.addEventListener('click', () => switchTab('shop'));
     board2.appendChild(shopBtn);
@@ -28626,522 +28391,9 @@ function buildEmptyPot(slotIndex = 1) {
   return pot;
 }
 
-// ── Heroes & Tavern ───────────────────────────────────────────────────────
-let myHero = null;
-let allHeroes = [];
-let heroRealtimeReady = false;
-let heroesEditMode = false;
-let heroSuppressReloadUntil = 0;
-let tavernSpeechTimer = null;
-let tavernWalkRAF = null;
-
-const TAVERN_PHRASES = [
-  'Czas na piwko! 🍺', 'Obstawiam na TAK!', 'Gdzie mój miód?',
-  'Niezła karczma!', 'Stawiam wszystkim!', 'Jestem spragniony!',
-  'Kto mi postawi?', 'W lewo czy w prawo?', 'Mam system! 🎲',
-  'Dzisiaj mi idzie!', 'Za Rynek Proroctw!', 'Postawię wszystko!',
-];
-
-const SKIN_COLORS   = { light: '#fddbb4', medium: '#c68642', tan: '#8d5524', dark: '#4a2912' };
-const HAIR_COLORS   = { brown: '#6b3f2a', black: '#1a1a1a', blonde: '#f5d76e', red: '#b34700', gray: '#9e9e9e', white: '#f0f0f0' };
-const OUTFIT_COLORS = { blue: '#4a90d9', red: '#c0392b', green: '#27ae60', purple: '#8e44ad', gray: '#7f8c8d' };
-
-function buildHeroSVG(hero, { size = 64, walking = false, gear = [] } = {}) {
-  const skin   = '#c68642';
-  const hair   = HAIR_COLORS[hero.hair_color]     || HAIR_COLORS.brown;
-  const outfit = OUTFIT_COLORS[hero.outfit_color] || OUTFIT_COLORS.blue;
-  const bw = hero.body_shape === 'stocky' ? 24 : hero.body_shape === 'slim' ? 16 : 20;
-  const bx = 32 - bw / 2;
-
-  const hairSVG = ({
-    bald:     '',
-    short:    `<ellipse cx="32" cy="10" rx="12" ry="7" fill="${hair}"/>`,
-    medium:   `<ellipse cx="32" cy="10" rx="12" ry="8" fill="${hair}"/><rect x="20" y="10" width="4" height="10" rx="2" fill="${hair}"/><rect x="40" y="10" width="4" height="10" rx="2" fill="${hair}"/>`,
-    long:     `<ellipse cx="32" cy="10" rx="12" ry="8" fill="${hair}"/><rect x="20" y="10" width="4" height="18" rx="2" fill="${hair}"/><rect x="40" y="10" width="4" height="18" rx="2" fill="${hair}"/>`,
-    curly:    `<circle cx="24" cy="9" r="6" fill="${hair}"/><circle cx="32" cy="5" r="7" fill="${hair}"/><circle cx="40" cy="9" r="6" fill="${hair}"/><circle cx="28" cy="13" r="5" fill="${hair}"/><circle cx="36" cy="13" r="5" fill="${hair}"/>`,
-    mohawk:   `<rect x="29" y="2" width="6" height="14" rx="3" fill="${hair}"/>`,
-    ponytail: `<ellipse cx="32" cy="10" rx="12" ry="7" fill="${hair}"/><rect x="38" y="12" width="5" height="20" rx="2.5" fill="${hair}"/>`,
-    topknot:  `<ellipse cx="32" cy="12" rx="11" ry="6" fill="${hair}"/><ellipse cx="32" cy="4" rx="5" ry="4" fill="${hair}"/>`,
-    spiky:    `<polygon points="20,14 23,2 26,13 29,0 32,11 35,0 38,13 41,2 44,14" fill="${hair}"/>`,
-    wavy:     `<path d="M20,14 Q24,4 28,12 Q32,4 36,12 Q40,4 44,14" fill="none" stroke="${hair}" stroke-width="5" stroke-linecap="round"/>`,
-  })[hero.hair_style] || '';
-
-  const beardSVG = ({
-    none:      '',
-    stubble:   `<ellipse cx="32" cy="23" rx="8" ry="4" fill="${hair}" opacity="0.45"/>`,
-    goatee:    `<ellipse cx="32" cy="25" rx="5" ry="5" fill="${hair}"/>`,
-    full:      `<ellipse cx="32" cy="23" rx="10" ry="6" fill="${hair}"/>`,
-    mustache:  `<rect x="26" y="19" width="12" height="3" rx="1.5" fill="${hair}"/>`,
-    viking:    `<ellipse cx="32" cy="24" rx="10" ry="7" fill="${hair}"/><rect x="20" y="22" width="4" height="10" rx="2" fill="${hair}"/><rect x="40" y="22" width="4" height="10" rx="2" fill="${hair}"/>`,
-    sideburns: `<rect x="20" y="13" width="4" height="10" rx="2" fill="${hair}" opacity="0.8"/><rect x="40" y="13" width="4" height="10" rx="2" fill="${hair}" opacity="0.8"/>`,
-    chinstrap: `<path d="M22,19 Q20,28 32,30 Q44,28 42,19" fill="none" stroke="${hair}" stroke-width="3" stroke-linecap="round"/>`,
-  })[hero.beard] || '';
-
-  const outfitDetail = ({
-    armor: `<rect x="${bx+1}" y="28" width="${bw-2}" height="4" rx="1" fill="rgba(255,255,255,.25)"/><rect x="${bx+1}" y="36" width="${bw-2}" height="2" rx="1" fill="rgba(0,0,0,.2)"/>`,
-    robe:  `<line x1="32" y1="28" x2="32" y2="56" stroke="rgba(255,255,255,.2)" stroke-width="2"/>`,
-    cloak: `<path d="M${bx} 28 L${bx-4} 56 L${bx+bw+4} 56 L${bx+bw} 28 Z" fill="${outfit}" opacity="0.65"/>`,
-    tunic: `<rect x="${bx+2}" y="28" width="${bw-4}" height="5" rx="1" fill="rgba(255,255,255,.18)"/>`,
-  })[hero.outfit] || '';
-
-  const hasWeapon = hero.weapon && hero.weapon !== 'fists';
-  const wx = bx + bw + 10;
-  const weaponSVG = ({
-    sword: `<g transform="translate(${wx},30)"><rect x="-3" y="-30" width="6" height="34" rx="2" fill="#c0c0c0"/><rect x="-9" y="0" width="18" height="4" rx="2" fill="#8b6914"/><circle cx="0" cy="-34" r="4" fill="#f0b429"/><rect x="-2" y="-34" width="4" height="8" rx="1" fill="#d0d0d0"/></g>`,
-    axe:   `<g transform="translate(${wx},30)"><rect x="-2" y="-28" width="4" height="32" rx="1.5" fill="#8b6914"/><path d="M2,-28 C16,-32 18,-16 2,-12 Z" fill="#a0a0a0"/><path d="M2,-28 C-6,-24 -6,-18 2,-12 Z" fill="#888"/></g>`,
-    staff: `<g transform="translate(${wx},28)"><rect x="-2" y="-30" width="4" height="40" rx="2" fill="#8b6914"/><circle cx="0" cy="-30" r="7" fill="none" stroke="#8e44ad" stroke-width="2.5"/><circle cx="0" cy="-30" r="5" fill="#a855f7"/><circle cx="0" cy="-30" r="2.5" fill="#e9d5ff"/></g>`,
-    bow:   `<g transform="translate(${wx},32)"><path d="M0,-26 Q14,-13 0,4" fill="none" stroke="#8b6914" stroke-width="3.5"/><line x1="0" y1="-26" x2="0" y2="4" stroke="#c8a96a" stroke-width="1.5" stroke-dasharray="3,3"/></g>`,
-    fists: '',
-  })[hero.weapon] || '';
-
-  const bob = walking ? `style="animation: body-bob 0.4s ease-in-out infinite;"` : '';
-  const lL  = walking ? ` style="animation:leg-l .5s ease-in-out infinite;"` : '';
-  const lR  = walking ? ` style="animation:leg-r .5s ease-in-out infinite;"` : '';
-
-  const SLOT_BADGE_POS = {
-    head:    { x: 46, y: 8  },
-    trinket: { x: 10, y: 28 },
-    chest:   { x: 46, y: 38 },
-    hands:   { x: 10, y: 42 },
-    legs:    { x: 46, y: 52 },
-    feet:    { x: 32, y: 61 },
-  };
-  const gearBadges = gear.map(item => {
-    const pos = SLOT_BADGE_POS[item.slot];
-    if (!pos || !item.emoji) return '';
-    return `<circle cx="${pos.x}" cy="${pos.y}" r="6.5" fill="rgba(0,0,0,.55)" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>` +
-           `<text x="${pos.x}" y="${pos.y}" font-size="9" text-anchor="middle" dominant-baseline="middle">${escapeHtmlText(item.emoji)}</text>`;
-  }).join('');
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}" role="img">
-    <g ${bob}>
-      ${hairSVG}
-      <circle cx="32" cy="16" r="12" fill="${skin}"/>
-      <circle cx="28" cy="15" r="1.5" fill="#1a1a1a"/>
-      <circle cx="36" cy="15" r="1.5" fill="#1a1a1a"/>
-      <path d="M29 20 Q32 22 35 20" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
-      ${beardSVG}
-      <rect x="${bx}" y="28" width="${bw}" height="28" rx="4" fill="${outfit}"/>
-      ${outfitDetail}
-      <rect x="${bx-6}" y="29" width="6" height="18" rx="3" fill="${skin}"/>
-      ${hasWeapon ? '' : `<rect x="${bx+bw}" y="29" width="6" height="18" rx="3" fill="${skin}"/>`}
-      ${weaponSVG}
-      <rect x="23" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lL}/>
-      <rect x="29" y="56" width="12" height="6" rx="3" fill="#3d2b1a"${lR}/>
-      ${gearBadges}
-    </g>
-  </svg>`;
-}
-
+// ── Przedmioty specjalne (ekwipunek z bonusami do gier) ──────────────────
 function resetHeroState() {
-  myHero = null; allHeroes = []; heroRealtimeReady = false;
-  heroesEditMode = false; heroSuppressReloadUntil = 0;
-  myHeroInventory = []; publicHeroEquipment = [];
-  clearInterval(tavernSpeechTimer); tavernSpeechTimer = null;
-  if (tavernWalkRAF) { cancelAnimationFrame(tavernWalkRAF); tavernWalkRAF = null; }
-}
-
-function setupHeroesRealtime() {
-  if (heroRealtimeReady) return;
-  heroRealtimeReady = true;
-  const ch = sb.channel('heroes-rt')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'user_heroes' }, () => {
-      if (activeTab !== 'heroes' || Date.now() < heroSuppressReloadUntil) return;
-      loadHeroes();
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_equipment' }, () => {
-      if (activeTab !== 'heroes') return;
-      loadHeroes();
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_item_instances' }, () => {
-      if (activeTab !== 'heroes') return;
-      loadHeroes();
-    }).subscribe();
-  realtimeChannels.push(ch);
-}
-
-async function loadHeroes() {
-  setupHeroesRealtime();
-  const wrap = document.getElementById('heroes-content');
-  if (!wrap) return;
-  if (!wrap.querySelector('.tavern-panel, .hero-wizard, .hero-panel')) wrap.replaceChildren(makeSpinner());
-
-  const [{ data, error }] = await Promise.all([
-    sb.from('user_heroes').select('*, profiles(nick)'),
-    loadHeroItemCatalog(),
-    loadMyHeroInventory(),
-    loadPublicHeroEquipment(),
-  ]);
-  if (error) {
-    wrap.replaceChildren(el('div', { style: { color: 'var(--muted)', textAlign: 'center', padding: '32px' } }, 'Błąd ładowania bohaterów.'));
-    return;
-  }
-  allHeroes = data || [];
-  myHero = allHeroes.find(h => h.user_id === me.id) || null;
-  renderHeroesTab(wrap);
-}
-
-function renderHeroesTab(wrap) {
-  // wrap (#heroes-content) already has class heroes-wrap and the 2-column grid;
-  // adding another heroes-wrap inside would squash the tavern to 0px
-  const side = el('div', { className: 'hero-side' },
-    buildHeroInfoPanel(),
-    heroesEditMode || !myHero ? buildHeroWizard() : buildHeroDisplay(),
-    buildHeroEquipmentPanel()
-  );
-  wrap.replaceChildren(
-    side,
-    buildTavernPanel()
-  );
-}
-
-function buildHeroInfoPanel() {
-  const panel = el('div', { className: 'hero-equipment-panel' });
-  panel.appendChild(el('div', { className: 'hero-equip-title' }, 'Po co bohater?'));
-  panel.appendChild(el('div', { className: 'hero-equip-sub' },
-    'Bohater to Twój awatar — przesiaduje w karczmie razem z bohaterami innych graczy.'));
-  panel.appendChild(el('div', { className: 'hero-equip-sub' },
-    'Pierwszego stworzysz za darmo. Potem kupuj przedmioty w Sklepie i zakładaj je tutaj — każdy daje bonus działający po stronie serwera w grach (ruletka, sloty, poker, gry sezonowe, dzienny procent, ogród). Liczy się najsilniejszy przedmiot na grę, a założony ekwipunek widać na bohaterze w karczmie.'));
-  const shopBtn = el('button', { className: 'hero-mini-btn', type: 'button' }, 'Przejdź do sklepu');
-  shopBtn.addEventListener('click', () => switchTab('shop'));
-  panel.appendChild(shopBtn);
-  return panel;
-}
-
-function buildHeroDisplay() {
-  const panel = el('div', { className: 'hero-panel' });
-  panel.appendChild(el('div', { className: 'hero-panel-title' }, 'Twój Bohater'));
-  const av = el('div', { className: 'hero-avatar-lg' });
-  av.innerHTML = buildHeroSVG(myHero, { size: 128, gear: myHeroInventory.filter(i => i.equipped) });
-  panel.appendChild(av);
-  panel.appendChild(el('div', { className: 'hero-name-display' }, myHero.profiles?.nick || me.nick));
-  const canPayForEdit = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
-  const editBtn = el('button', {
-    className: 'btn-edit-hero',
-    disabled: !canPayForEdit,
-    title: canPayForEdit ? '' : 'Za mało coinów',
-  }, canPayForEdit ? `Edytuj bohatera (${HERO_STYLE_CHANGE_PRICE} 🪙)` : `Potrzebujesz ${HERO_STYLE_CHANGE_PRICE} 🪙`);
-  editBtn.addEventListener('click', () => {
-    heroesEditMode = true;
-    renderHeroesTab(document.getElementById('heroes-content'));
-  });
-  panel.appendChild(editBtn);
-  return panel;
-}
-
-function heroAppearanceChanged(draft, current) {
-  if (!current) return true;
-  return HERO_APPEARANCE_FIELDS.some(field => String(draft[field] || '') !== String(current[field] || ''));
-}
-
-function buildHeroWizard() {
-  const draft = myHero ? { ...myHero } : {
-    hero_name: me.nick, skin_tone: 'medium', hair_style: 'short', hair_color: 'brown',
-    beard: 'none', body_shape: 'average', outfit: 'tunic', outfit_color: 'blue', weapon: 'fists',
-  };
-  const wizard = el('div', { className: 'hero-wizard' });
-  wizard.appendChild(el('div', { className: 'hero-wizard-head' }, myHero ? 'Edytuj Bohatera' : 'Stwórz Bohatera'));
-  wizard.appendChild(el('div', { className: 'hero-wizard-sub' },
-    myHero ? `Zmiana wyglądu kosztuje ${HERO_STYLE_CHANGE_PRICE} coin przy zapisie.` : 'Pierwszy bohater jest darmowy.'
-  ));
-
-  const previewWrap = el('div', { className: 'hero-wizard-preview' });
-  const updatePreview = () => { previewWrap.innerHTML = buildHeroSVG(draft, { size: 96 }); };
-  updatePreview();
-  wizard.appendChild(previewWrap);
-
-  let saveBtn = null;
-  function updateSaveState() {
-    if (!saveBtn) return;
-    if (!myHero) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Stwórz bohatera!';
-      return;
-    }
-    const changed = heroAppearanceChanged(draft, myHero);
-    const canPay = (me?.coins || 0) >= HERO_STYLE_CHANGE_PRICE;
-    saveBtn.disabled = !changed || !canPay;
-    saveBtn.textContent = !changed
-      ? 'Brak zmian'
-      : canPay
-        ? `Zapisz za ${HERO_STYLE_CHANGE_PRICE} 🪙`
-        : `Potrzebujesz ${HERO_STYLE_CHANGE_PRICE} 🪙`;
-  }
-
-  function addChips(label, field, opts) {
-    wizard.appendChild(el('div', { className: 'wizard-section-label' }, label));
-    const row = el('div', { className: 'wizard-chips' });
-    opts.forEach(({ value, label: lbl }) => {
-      const chip = el('button', { className: 'wizard-chip' + (draft[field] === value ? ' selected' : '') }, lbl);
-      chip.addEventListener('click', () => {
-        draft[field] = value;
-        row.querySelectorAll('.wizard-chip').forEach(c => c.classList.toggle('selected', c === chip));
-        updatePreview();
-        updateSaveState();
-      });
-      row.appendChild(chip);
-    });
-    wizard.appendChild(row);
-  }
-
-  function addSwatches(label, field, colorMap) {
-    wizard.appendChild(el('div', { className: 'wizard-section-label' }, label));
-    const row = el('div', { className: 'wizard-swatches' });
-    Object.entries(colorMap).forEach(([value, hex]) => {
-      const sw = el('div', { className: 'wizard-swatch' + (draft[field] === value ? ' selected' : ''), title: value });
-      sw.style.background = hex;
-      sw.addEventListener('click', () => {
-        draft[field] = value;
-        row.querySelectorAll('.wizard-swatch').forEach(s => s.classList.toggle('selected', s === sw));
-        updatePreview();
-        updateSaveState();
-      });
-      row.appendChild(sw);
-    });
-    wizard.appendChild(row);
-  }
-
-  addChips('Sylwetka', 'body_shape', [{ value: 'slim', label: 'Szczupła' }, { value: 'average', label: 'Średnia' }, { value: 'stocky', label: 'Krępa' }]);
-  addChips('Fryzura', 'hair_style', [
-    { value: 'bald', label: 'Łysy' }, { value: 'short', label: 'Krótkie' }, { value: 'medium', label: 'Średnie' },
-    { value: 'long', label: 'Długie' }, { value: 'curly', label: 'Kędzierzawe' }, { value: 'mohawk', label: 'Mohawk' },
-    { value: 'ponytail', label: 'Kucyk' }, { value: 'topknot', label: 'Kok' }, { value: 'spiky', label: 'Kolce' },
-    { value: 'wavy', label: 'Falowane' },
-  ]);
-  addSwatches('Kolor włosów', 'hair_color', HAIR_COLORS);
-  addChips('Broda', 'beard', [
-    { value: 'none', label: 'Brak' }, { value: 'stubble', label: 'Zarost' }, { value: 'goatee', label: 'Kozioł' },
-    { value: 'full', label: 'Pełna' }, { value: 'mustache', label: 'Wąsy' }, { value: 'viking', label: 'Wikingów' },
-    { value: 'sideburns', label: 'Baki' }, { value: 'chinstrap', label: 'Opaska' },
-  ]);
-  addChips('Strój', 'outfit', [{ value: 'tunic', label: 'Tunika' }, { value: 'armor', label: 'Zbroja' }, { value: 'robe', label: 'Szata' }, { value: 'cloak', label: 'Peleryna' }]);
-  addSwatches('Kolor stroju', 'outfit_color', OUTFIT_COLORS);
-  addChips('Broń', 'weapon', [{ value: 'sword', label: 'Miecz' }, { value: 'axe', label: 'Topór' }, { value: 'staff', label: 'Laska' }, { value: 'bow', label: 'Łuk' }, { value: 'fists', label: 'Pięści' }]);
-
-  saveBtn = el('button', { className: 'btn-save-hero' }, myHero ? `Zapisz za ${HERO_STYLE_CHANGE_PRICE} 🪙` : 'Stwórz bohatera!');
-  updateSaveState();
-  saveBtn.addEventListener('click', async () => {
-    if (myHero && !heroAppearanceChanged(draft, myHero)) return;
-    if (myHero && (me?.coins || 0) < HERO_STYLE_CHANGE_PRICE) {
-      showToast('❌ Za mało coinów na zmianę wyglądu.');
-      updateSaveState();
-      return;
-    }
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Zapisuję…';
-    heroSuppressReloadUntil = Date.now() + 2500;
-    const { data, error } = await sb.rpc('save_hero', {
-      p_hero_name: me.nick, p_skin_tone: 'medium', p_hair_style: draft.hair_style,
-      p_hair_color: draft.hair_color, p_beard: draft.beard, p_body_shape: draft.body_shape,
-      p_outfit: draft.outfit, p_outfit_color: draft.outfit_color, p_weapon: draft.weapon,
-    });
-    if (error) {
-      const msg = error.message?.includes('insufficient') ? 'Za mało coinów na zmianę wyglądu.' : (error.message || 'Błąd zapisu.');
-      showToast('❌ ' + msg);
-      updateSaveState();
-      return;
-    }
-    const pricePaid = Number(data?.price_paid || 0);
-    if (data?.coins_left !== undefined) {
-      me.coins = data.coins_left;
-      setText(headerCoins, me.coins);
-    } else if (pricePaid > 0) {
-      me.coins -= pricePaid;
-      setText(headerCoins, me.coins);
-    }
-    showToast(myHero ? `✅ Bohater zaktualizowany${pricePaid > 0 ? ' za ' + pricePaid + ' 🪙' : ''}!` : '✅ Bohater stworzony!');
-    heroesEditMode = false;
-    await loadHeroes();
-  });
-  wizard.appendChild(saveBtn);
-
-  if (myHero && heroesEditMode) {
-    const cancelBtn = el('button', { className: 'btn-edit-hero', style: { marginTop: '8px' } }, 'Anuluj');
-    cancelBtn.addEventListener('click', () => {
-      heroesEditMode = false;
-      renderHeroesTab(document.getElementById('heroes-content'));
-    });
-    wizard.appendChild(cancelBtn);
-  }
-  return wizard;
-}
-
-function buildHeroEquipmentPanel() {
-  const panel = el('div', { className: 'hero-equipment-panel' });
-  panel.appendChild(el('div', { className: 'hero-equip-title' }, 'Ekwipunek'));
-  panel.appendChild(el('div', { className: 'hero-equip-sub' }, 'Założone przedmioty są widoczne w karczmie i działają w grach po stronie serwera. Działa najsilniejszy przedmiot na grę.'));
-
-  const slots = el('div', { className: 'hero-slot-list' });
-  HERO_ITEM_SLOTS.forEach(slot => {
-    const equipped = myEquippedItemForSlot(slot.id);
-    const row = el('div', { className: 'hero-slot-row' });
-    const main = el('div', { className: 'hero-slot-main' },
-      el('div', { className: 'hero-slot-label' }, slot.label)
-    );
-    if (equipped) {
-      main.appendChild(el('div', { className: 'hero-item-name' }, heroItemDisplayName(equipped)));
-      main.appendChild(el('div', { className: 'hero-item-effect' }, heroItemEffectLabel(equipped)));
-      const removeBtn = el('button', { className: 'hero-mini-btn', type: 'button' }, 'Zdejmij');
-      removeBtn.addEventListener('click', () => unequipHeroItem(slot.id, removeBtn));
-      row.append(main, removeBtn);
-    } else {
-      main.appendChild(el('div', { className: 'hero-slot-empty' }, 'Puste'));
-      row.appendChild(main);
-    }
-    slots.appendChild(row);
-  });
-  panel.appendChild(slots);
-
-  panel.appendChild(el('div', { className: 'hero-equip-title', style: { marginTop: '4px' } }, 'Plecak'));
-  const ownedList = el('div', { className: 'hero-owned-list' });
-  if (!myHeroInventory.length) {
-    const shopBtn = el('button', { className: 'hero-mini-btn', type: 'button' }, 'Przejdź do sklepu');
-    shopBtn.addEventListener('click', () => switchTab('shop'));
-    ownedList.appendChild(el('div', { className: 'hero-slot-row' },
-      el('div', { className: 'hero-slot-main' },
-        el('div', { className: 'hero-item-name' }, 'Brak przedmiotów'),
-        el('div', { className: 'hero-item-effect' }, heroItemDefs.length ? 'Kup ekwipunek w sklepie.' : 'Wdróż supabase/hero-items.sql, żeby odblokować ekwipunek.')
-      ),
-      shopBtn
-    ));
-  } else {
-    myHeroInventory.forEach(item => {
-      const row = el('div', { className: 'hero-owned-item' + (item.equipped ? ' equipped' : '') });
-      const main = el('div', { className: 'hero-item-main' },
-        el('div', { className: 'hero-item-name' }, heroItemDisplayName(item)),
-        el('div', { className: 'hero-item-effect' }, `${HERO_ITEM_SLOT_LABELS[item.slot] || item.slot} · ${heroItemEffectLabel(item)}`)
-      );
-      const btn = el('button', {
-        className: 'hero-mini-btn',
-        type: 'button',
-        disabled: !!item.equipped,
-      }, item.equipped ? 'Założone' : 'Załóż');
-      if (!item.equipped) btn.addEventListener('click', () => equipHeroItem(item.instance_id, btn));
-      row.append(main, btn);
-      ownedList.appendChild(row);
-    });
-  }
-  panel.appendChild(ownedList);
-  return panel;
-}
-
-function buildTavernPanel() {
-  clearInterval(tavernSpeechTimer);
-  tavernSpeechTimer = null;
-  if (tavernWalkRAF) { cancelAnimationFrame(tavernWalkRAF); tavernWalkRAF = null; }
-
-  const panel = el('div', { className: 'tavern-panel' });
-  panel.appendChild(el('div', { className: 'tavern-panel-title' }, 'Karczma'));
-  const scene = el('div', { className: 'tavern-scene' });
-
-  // Interior furniture
-  scene.appendChild(el('div', { className: 'tavern-fireplace' }));
-  scene.appendChild(el('div', { className: 'tavern-beam' }));
-  const tl1 = el('div', { className: 'tavern-lantern' }); tl1.style.left = '32%';
-  const tl2 = el('div', { className: 'tavern-lantern' }); tl2.style.left = '63%';
-  scene.appendChild(tl1); scene.appendChild(tl2);
-  const bar = el('div', { className: 'tavern-bar' }); scene.appendChild(bar);
-  const br1 = el('div', { className: 'tavern-barrel' }); br1.style.left = '74px'; br1.style.bottom = '36px';
-  const br2 = el('div', { className: 'tavern-barrel' }); br2.style.right = '94px'; br2.style.bottom = '36px';
-  scene.appendChild(br1); scene.appendChild(br2);
-  const t1 = el('div', { className: 'tavern-table' }); t1.style.left = '22%';
-  const t2 = el('div', { className: 'tavern-table' }); t2.style.left = '52%';
-  scene.appendChild(t1);
-  scene.appendChild(t2);
-
-  const heroes = myHero
-    ? [myHero, ...allHeroes.filter(h => h.user_id !== me.id)]
-    : allHeroes;
-  const bottoms  = ['58px', '72px', '60px', '76px', '54px'];
-  const lanes = [];
-
-  if (!heroes.length) {
-    const empty = el('div', { className: 'tavern-empty' });
-    empty.append('🍺');
-    empty.appendChild(el('span', null, 'Karczma świeci pustkami…'));
-    empty.appendChild(el('span', { style: { fontSize: '11px', fontWeight: '400' } }, 'Stwórz bohatera, żeby wejść do karczmy!'));
-    scene.appendChild(empty);
-  } else {
-    const HERO_W = 84;
-    const walkers = [];
-    heroes.forEach((hero, i) => {
-      const isMe = hero.user_id === me.id;
-      const lane = el('div', { className: 'tavern-lane' + (isMe ? ' hero-mine' : '') });
-      lane.style.bottom = bottoms[i % bottoms.length];
-      // The body wrapper carries the left/right facing flip; the name + speech are
-      // siblings (not inside it), so they never get mirrored when the hero walks left.
-      const body = el('div', { className: 'tavern-hero-body' });
-      body.innerHTML = buildHeroSVG(hero, { size: HERO_W, walking: true, gear: equipmentForHero(hero.user_id) });
-      lane.appendChild(body);
-      const gear = equipmentForHero(hero.user_id);
-      visualEffectsForGear(gear).forEach(effect => lane.classList.add('fx-' + effect));
-      const nameLabel = el('div', { className: 'tavern-hero-name' + (isMe ? ' is-mine' : '') }, hero.profiles?.nick || hero.nick || '?');
-      lane.appendChild(nameLabel);
-
-      const speech = el('div', { className: 'hero-speech' }, '');
-      lane.appendChild(speech);
-      lanes.push(speech);
-
-      let tip = null;
-      lane.addEventListener('click', () => {
-        if (tip) { tip.remove(); tip = null; return; }
-        const tipItems = gear.length
-          ? gear.map(item => el('div', { className: 'hero-tooltip-item' }, `${heroItemDisplayName(item)}: ${heroItemEffectLabel(item)}`))
-          : [el('div', { className: 'hero-tooltip-item' }, 'Bez ekwipunku')];
-        tip = el('div', { className: 'hero-tooltip hero-tooltip-rich' },
-          el('strong', null, hero.profiles?.nick || '?'),
-          ...tipItems
-        );
-        lane.appendChild(tip);
-        setTimeout(() => { if (tip) { tip.remove(); tip = null; } }, 3000);
-      });
-      scene.appendChild(lane);
-
-      walkers.push({
-        lane, body,
-        startFrac: Math.random(), targetFrac: Math.random(),
-        x: 0, target: 0,
-        speed: 9 + Math.random() * 15,     // px/s, slow random pace
-        facing: Math.random() < 0.5 ? 1 : -1,
-        pauseUntil: 0, init: true,
-      });
-    });
-
-    // Each hero wanders to random spots at its own pace, pausing briefly on arrival.
-    let last = performance.now();
-    const stepWalk = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      const maxX = Math.max(0, (scene.clientWidth || 600) - HERO_W);
-      for (const w of walkers) {
-        if (w.init) { w.x = w.startFrac * maxX; w.target = w.targetFrac * maxX; w.init = false; }
-        if (now >= w.pauseUntil) {
-          const dir = w.target > w.x ? 1 : -1;
-          if (Math.abs(w.target - w.x) > 1) w.facing = dir;
-          w.x += dir * w.speed * dt;
-          if (Math.abs(w.target - w.x) <= w.speed * dt + 0.5 || w.x <= 0 || w.x >= maxX) {
-            w.x = Math.max(0, Math.min(maxX, w.x));
-            w.target = Math.random() * maxX;
-            w.pauseUntil = now + 400 + Math.random() * 2400;
-          }
-        }
-        w.lane.style.left = w.x.toFixed(1) + 'px';
-        w.body.style.transform = 'scaleX(' + w.facing + ')';
-      }
-      tavernWalkRAF = requestAnimationFrame(stepWalk);
-    };
-    tavernWalkRAF = requestAnimationFrame(stepWalk);
-
-    tavernSpeechTimer = setInterval(() => {
-      const idx = Math.floor(Math.random() * lanes.length);
-      const bubble = lanes[idx];
-      bubble.textContent = TAVERN_PHRASES[Math.floor(Math.random() * TAVERN_PHRASES.length)];
-      bubble.style.opacity = '1';
-      setTimeout(() => { bubble.style.opacity = '0'; }, 3500);
-    }, 20000);
-  }
-
-  panel.appendChild(scene);
-  return panel;
+  myHeroInventory = [];
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────

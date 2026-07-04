@@ -176,11 +176,9 @@ async function getStrongestHeroEffect(tx, userId, game) {
   try {
     const rows = await tx`
       select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
-      from public.hero_equipment e
-      join public.hero_item_instances i on i.id = e.item_instance_id
+      from public.hero_item_instances i
       join public.hero_item_defs d on d.id = i.item_def_id
-      where e.user_id = ${userId}
-        and i.owner_id = ${userId}
+      where i.owner_id = ${userId}
         and d.is_active = true
         and d.effect_game = ${game}
       order by d.effect_value desc, d.price desc, d.slug
@@ -750,11 +748,9 @@ async function stateResponse(tx, userId) {
   const buyInCost = asInt(table.buy_in) + buyInBonus;
 
   const glassesRows = await tx`
-    SELECT 1 FROM public.hero_equipment he
-    JOIN public.hero_item_instances hii ON hii.id = he.item_instance_id
+    SELECT 1 FROM public.hero_item_instances hii
     JOIN public.hero_item_defs hid ON hid.id = hii.item_def_id
-    WHERE he.user_id = ${userId}
-      AND hii.owner_id = ${userId}
+    WHERE hii.owner_id = ${userId}
       AND hid.is_active = true
       AND hid.slug = 'poker_glasses'
     LIMIT 1

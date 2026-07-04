@@ -10,6 +10,10 @@
 -- Idempotent; safe to re-run. Apply via Supabase SQL Editor or the Management API.
 
 -- 1. Per-user leaderboard bonus (cross-game, strongest score_bonus item).
+-- ⚠️ SUPERSEDED by hero-items-always-active.sql, which redefines this view to
+-- read ownership (hero_item_instances) directly instead of equipped items via
+-- public_hero_equipment (that view is dropped there) — re-run that file after
+-- this one if you re-run this.
 CREATE OR REPLACE VIEW public.hero_score_bonus AS
 SELECT user_id, MAX(effect_value)::integer AS bonus
 FROM public.public_hero_equipment

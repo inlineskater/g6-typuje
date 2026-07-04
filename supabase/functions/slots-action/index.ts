@@ -87,11 +87,9 @@ async function getStrongestHeroEffect(tx, userId, game) {
   try {
     const rows = await tx`
       select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
-      from public.hero_equipment e
-      join public.hero_item_instances i on i.id = e.item_instance_id
+      from public.hero_item_instances i
       join public.hero_item_defs d on d.id = i.item_def_id
-      where e.user_id = ${userId}
-        and i.owner_id = ${userId}
+      where i.owner_id = ${userId}
         and d.is_active = true
         and d.effect_game = ${game}
       order by d.effect_value desc, d.price desc, d.slug
