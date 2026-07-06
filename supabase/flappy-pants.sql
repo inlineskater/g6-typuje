@@ -246,7 +246,7 @@ BEGIN
       nick_snapshot,
       rank,
       score,
-      CASE rank WHEN 1 THEN 100 WHEN 2 THEN 50 WHEN 3 THEN 25 END AS prize_coins
+      CASE rank WHEN 1 THEN 500 WHEN 2 THEN 250 WHEN 3 THEN 100 END AS prize_coins
     FROM ranked
     WHERE rank <= 3
   ),
