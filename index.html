@@ -7686,10 +7686,19 @@ let crashCountdownDigit = 0;    // digit currently shown (re-pops the slam anima
 let crashLaunching = false;     // start request in flight right after the countdown hit zero
 let crashVisibilityWired = false;
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
-// supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 10s.
-const CRASH_GROWTH = Math.log(2) / 10000;
+// supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 15s.
+const CRASH_GROWTH = Math.log(2) / 15000;
 const CRASH_POLL_MS = 250;      // solo: poll briskly so the crash/explosion is caught promptly
 const CRASH_MAX_FRAME_MS = 250; // RAF gap bigger than this = backgrounded/stalled → snap, don't integrate
+// Cap on the "half the round trip" latency guess used to anchor the local flight clock (see
+// applyCrashState). _rttMs covers the WHOLE request incl. the server's auth.getUser() network
+// call, which happens BEFORE elapsed_ms is sampled — so on a slow/cold invocation, rttMs/2 can be
+// a full second+ of pure auth latency that has nothing to do with clock staleness, and blindly
+// adding it front-loads the display's clock ahead of the real one for the whole flight (constant
+// ms offset → constant multiplicative display/real gap, since mult is exponential). Capping it
+// keeps the anchor within crash-action's CLIENT_AHEAD_TOL_MS (250 ms) tolerance instead of quietly
+// exceeding the one invariant the cash-out grace window relies on.
+const CRASH_LATENCY_COMP_CAP_MS = 120;
 const CRASH_COUNTDOWN_MS = 3000; // pre-launch 3-2-1; the server round starts only at zero
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
@@ -11443,7 +11452,12 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
   // Everything else (interest, awards, store redemptions, marketplace transfers, crop
   // sales, garden watering) is pure cash P/L that moves net worth.
   const NEUTRAL = { hero_item_purchase: 1, garden_accessory: 1, garden_certificate: 1, hero_auction_bid_reserved: 1, hero_auction_outbid_refund: 1, hero_auction_edition_refund: 1, farm_tile_buy: 1, farm_box_buy: 1, card_levelup: 1 };
+  // football_bet/football_win/football_refund are audit copies of the same events already
+  // reconstructed below from the `football_bets` table (with correct lockDelta handling for
+  // open stakes) — counting them here too would double the P/L.
+  const FOOTBALL_COIN_TX_REASONS = { football_bet: 1, football_win: 1, football_refund: 1 };
   coinTxs.forEach(t => {
+    if (FOOTBALL_COIN_TX_REASONS[t.reason]) return;
     const label = t.reason === 'garden_water'
       ? '🌱 Podlewanie' + (t.meta?.streak > 1 ? ' (streak ' + t.meta.streak + ')' : '')
       : t.reason === 'garden_accessory'
@@ -14499,14 +14513,19 @@ function applyCrashState(data) {
 
   const r = data.activeRound;
   if (r && r.status === 'running') {
+    // r.elapsedMs is already accurate as of the moment the server sampled it (that happens AFTER
+    // the auth.getUser() network call, so slow auth doesn't make it stale) — only the tail end of
+    // the round trip (final DB query + commit + network back) still needs compensating, hence the
+    // capped (not raw) latency guess.
+    const latencyComp = Math.min((Number(data._rttMs) || 0) / 2, CRASH_LATENCY_COMP_CAP_MS);
     if (crashActiveRoundId !== r.id) {
-      // New (or reload-resumed) flight → anchor the local clock ONCE. r.elapsedMs was sampled on
-      // the server one one-way trip ago, so push it forward by ~rtt/2 so the WYPŁAĆ multiplier we
-      // submit doesn't trail the server (which would cause under-payment / false "in time" rejects).
+      // New (or reload-resumed) flight → anchor the local clock ONCE, nudged forward by the
+      // capped latency guess so the WYPŁAĆ multiplier we submit doesn't trail the server (which
+      // would cause under-payment / false "in time" rejects).
       crashActiveRoundId = r.id;
       crashCashoutPending = null;
       crashExplodeStart = 0;
-      const serverElapsedNow = (r.elapsedMs || 0) + (Number(data._rttMs) || 0) / 2;
+      const serverElapsedNow = (r.elapsedMs || 0) + latencyComp;
       crashShownMs = serverElapsedNow;
       crashServerMs = serverElapsedNow;
       crashLastFrameTs = 0;
@@ -14515,7 +14534,7 @@ function applyCrashState(data) {
       // AND clamp any display lead: the local integrator must never run further ahead of the
       // server clock than crash-action's CLIENT_AHEAD_TOL_MS (250 ms), or a last-moment tap
       // would claim a multiplier the server refuses to honor in full.
-      crashServerMs = (r.elapsedMs || 0) + (Number(data._rttMs) || 0) / 2;
+      crashServerMs = (r.elapsedMs || 0) + latencyComp;
       if (crashShownMs > crashServerMs + 250) crashShownMs = crashServerMs + 250;
     }
     ensureCrashPoll(); // poll keeps running only to detect the crash promptly
@@ -14688,6 +14707,17 @@ function crashTick() {
     }
     crashLastFrameTs = now;
     const elapsed = crashShownMs;
+    if (elapsed < 0) {
+      // Launch hold: the server round exists but started_at is still in the future, so the
+      // multiplier is pinned at x1.00 — keep the engines-at-full-burn liftoff frame instead.
+      drawCrashScene('countdown', 0, 1, false, 1);
+      multEl.textContent = 'START! 🚀';
+      multEl.className = 'crash-multiplier is-liftoff';
+      statusEl.textContent = 'ODPALENIE!';
+      crashDisplayMult = 1;
+      updateCrashButtons('running', 1);
+      return;
+    }
     displayMult = Math.floor(Math.exp(CRASH_GROWTH * elapsed) * 100) / 100;
     drawCrashScene('running', elapsed, displayMult, false); // curve keeps climbing live
     if (crashCashoutPending != null) {
