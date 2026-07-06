@@ -14488,8 +14488,12 @@ function applyCrashState(data) {
       crashServerMs = serverElapsedNow;
       crashLastFrameTs = 0;
     } else {
-      // Same flight, a routine poll → just refresh the server sample used by the background-gap snap.
+      // Same flight, a routine poll → refresh the server sample used by the background-gap snap
+      // AND clamp any display lead: the local integrator must never run further ahead of the
+      // server clock than crash-action's CLIENT_AHEAD_TOL_MS (250 ms), or a last-moment tap
+      // would claim a multiplier the server refuses to honor in full.
       crashServerMs = (r.elapsedMs || 0) + (Number(data._rttMs) || 0) / 2;
+      if (crashShownMs > crashServerMs + 250) crashShownMs = crashServerMs + 250;
     }
     ensureCrashPoll(); // poll keeps running only to detect the crash promptly
   } else {

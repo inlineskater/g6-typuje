@@ -18,7 +18,15 @@ const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 10,
 // ── Tunables ──────────────────────────────────────────────────────────────────
 const HOUSE_EDGE = 0.05;        // 5% — instant-bust probability == the edge
 const MAX_MULT = 1000;          // hard cap on crash point
-const CASHOUT_GRACE_MS = 700;   // forgive network latency: honor an in-time tap that ARRIVES this late
+// Forgive network latency: honor an in-time tap that ARRIVES this late. This is ALSO the
+// bust-reveal delay: resolveDueRound() keeps a crashed round nominally 'running' (crash still
+// hidden) until the grace has fully closed, so a routine 250 ms state poll can never race a
+// legitimately-tapped cash_out to the row lock and void the forgiveness it deserved.
+const CASHOUT_GRACE_MS = 450;
+// The client's flight clock may run a hair AHEAD of the server clock (its rtt/2 anchor comp
+// overshoots by ~half the auth/db processing time). When the rocket is still flying, trust the
+// tapped button value up to this much display lead; mirrors the clamp in index.html.
+const CLIENT_AHEAD_TOL_MS = 250;
 const CRASH_STAKES = [1, 5, 10, 25, 50, 100, 250, 500]; // preset chips; any integer 1..MAX_BET is allowed
 const MAX_BET = 10_000_000;     // ceiling for a custom stake (balance is still enforced separately)
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
@@ -114,12 +122,18 @@ async function stateResponse(tx, userId, extra = {}) {
   };
 }
 
-// If the player's running round has reached its hidden crash time, resolve it as BUSTED:
-// record a 0-win spin and flip status. Returns the revealed outcome (or null). Locks the
-// round row FOR UPDATE so concurrent polls / a racing cash_out resolve it exactly once.
+// If the player's running round has reached its hidden crash time AND the cash-out grace
+// window after it has fully closed, resolve it as BUSTED: record a 0-win spin and flip status.
+// Returns the revealed outcome (or null). Locks the round row FOR UPDATE so concurrent polls /
+// a racing cash_out resolve it exactly once. The grace delay is the fix for "tapped in time,
+// still lost": without it, a state poll landing between crash_at and a latency-delayed tap
+// busted the round first and the tap found no running round to be forgiven on. Delaying the
+// reveal leaks nothing — while hidden, state reports only elapsed time (crash-independent),
+// and the cash_out grace still demands a claimed multiplier BELOW the unknowable crash point.
 async function resolveDueRound(tx, userId) {
   const [round] = await tx`
-    select r.id, r.bet, s.crash_point, (now() >= s.crash_at) as due
+    select r.id, r.bet, s.crash_point,
+           (now() >= s.crash_at + ${CASHOUT_GRACE_MS} * interval '1 millisecond') as due
     from public.crash_rounds r
     join public.crash_round_secrets s on s.round_id = r.id
     where r.user_id = ${userId} and r.status = 'running'
@@ -181,7 +195,20 @@ async function cashOut(userId, clientMultiplier) {
     const [round] = await tx`
       select id, bet, started_at from public.crash_rounds
       where user_id = ${userId} and status = 'running' for update`;
-    if (!round) return await stateResponse(tx, userId, { notice: "Nie masz aktywnego lotu." });
+    if (!round) {
+      // A state poll may have just revealed the bust (post-grace, so this tap was genuinely
+      // too late) — give the tap an honest verdict instead of a confusing "no active flight".
+      const [last] = await tx`
+        select crash_point from public.crash_spins
+        where user_id = ${userId} and total_won = 0 and cashout_multiplier is null
+          and created_at > now() - interval '5 seconds'
+        order by created_at desc limit 1`;
+      return await stateResponse(tx, userId, {
+        notice: last
+          ? `Za późno! 💥 Rakieta wybuchła przy x${Number(last.crash_point).toFixed(2)}.`
+          : "Nie masz aktywnego lotu.",
+      });
+    }
 
     const [sec] = await tx`select crash_point, crash_at from public.crash_round_secrets where round_id = ${round.id}`;
     if (!sec) return await stateResponse(tx, userId, { notice: "Brak danych lotu." });
@@ -199,10 +226,13 @@ async function cashOut(userId, clientMultiplier) {
 
     let mult = null;
     if (!crashed && serverM < cp) {
-      // Still flying on the server clock → pay what they saw on the button, capped at the
-      // server's authoritative value so the display matches the payout but nobody over-claims.
-      mult = floor2(serverM);
-      if (hasClient) mult = Math.max(1, Math.min(mult, clientFloor));
+      // Still flying on the server clock → pay EXACTLY what the WYPŁAĆ button showed. The
+      // display may legitimately lead the server clock a little (anchor comp overshoot), so
+      // trust the claim up to CLIENT_AHEAD_TOL_MS of lead — but never at/above the crash
+      // point, and a tampered over-claim stays capped by the server's own clock.
+      const cap = Math.min(floor2(multAt(Number(ms) + CLIENT_AHEAD_TOL_MS)),
+                           Math.round((cp - 0.01) * 100) / 100);
+      mult = hasClient ? Math.max(1, Math.min(clientFloor, cap)) : floor2(serverM);
     } else {
       // The request crossed the hidden crash IN FLIGHT. Forgive bounded network latency: if
       // the player committed (clientFloor) strictly BELOW the crash point they tapped in time
@@ -213,11 +243,16 @@ async function cashOut(userId, clientMultiplier) {
 
     if (mult == null) {
       // Too late → bust the round and record the loss so the client shows the explosion.
+      // Say WHERE it blew and, when the tapped value was already past it, make clear the
+      // click happened after the explosion (the reveal just hadn't reached the screen yet).
+      const lateNotice = hasClient && clientFloor >= cp
+        ? `💥 Rakieta wybuchła przy x${cp.toFixed(2)} — klik przy x${clientFloor.toFixed(2)} był już po wybuchu.`
+        : `Za późno! 💥 Rakieta wybuchła przy x${cp.toFixed(2)}.`;
       await tx`update public.crash_rounds set status = 'busted' where id = ${round.id}`;
       await tx`insert into public.crash_spins
                (user_id, round_id, total_bet, cashout_multiplier, total_won, crash_point)
                values (${userId}, ${round.id}, ${round.bet}, null, 0, ${cp})`;
-      return await stateResponse(tx, userId, { notice: "Za późno! 💥", busted: { roundId: round.id, crashPoint: cp } });
+      return await stateResponse(tx, userId, { notice: lateNotice, busted: { roundId: round.id, crashPoint: cp } });
     }
 
     const won = Math.floor(Number(round.bet) * mult);
