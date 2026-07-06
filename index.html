@@ -2626,6 +2626,23 @@
     }
     .crash-multiplier.is-crashed { color: #f87171; text-shadow: 0 4px 22px rgba(0,0,0,.7), 0 0 30px rgba(248,113,113,.6); }
     .crash-multiplier.is-cashed { color: #6ee7b7; }
+    /* Pre-launch 3-2-1: each digit slams in huge and settles; START! flashes green at zero. */
+    .crash-multiplier.is-countdown {
+      font-size: clamp(88px, 24vw, 170px); color: #fcd34d;
+      text-shadow: 0 6px 30px rgba(0,0,0,.8), 0 0 52px rgba(252,211,77,.55);
+      animation: crash-count-pop .92s cubic-bezier(.16,.9,.3,1) both;
+    }
+    .crash-multiplier.is-liftoff {
+      color: #6ee7b7; font-size: clamp(44px, 13vw, 96px);
+      text-shadow: 0 4px 22px rgba(0,0,0,.7), 0 0 44px rgba(110,231,183,.65);
+      animation: crash-count-pop .5s cubic-bezier(.16,.9,.3,1) both;
+    }
+    @keyframes crash-count-pop {
+      0%   { transform: translate(-50%,-50%) scale(2.1); opacity: 0; }
+      25%  { opacity: 1; }
+      60%  { transform: translate(-50%,-50%) scale(.96); }
+      100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    }
     .crash-status {
       position: absolute; left: 0; right: 0; bottom: 12px; text-align: center;
       font-weight: 800; font-size: 14px; color: #f5f0e0; text-shadow: 0 2px 6px rgba(0,0,0,.8);
@@ -7663,12 +7680,17 @@ let crashExplodeStart = 0;      // local ts the explosion animation began (0 = n
 let crashExplodeMult = 1;       // crash_point to freeze the display at during explosion
 let crashDisplayMult = 1;       // last multiplier shown on screen (sent on cash out)
 let crashCashoutPending = null; // tap registered, awaiting the server's verdict (null = none)
+let crashCountdownEnd = 0;      // performance.now() deadline of the pre-launch 3-2-1 (0 = none)
+let crashCountdownLastTick = 0; // RAF heartbeat; a frozen gap = backgrounded tab → abort launch
+let crashCountdownDigit = 0;    // digit currently shown (re-pops the slam animation on change)
+let crashLaunching = false;     // start request in flight right after the countdown hit zero
 let crashVisibilityWired = false;
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 10s.
 const CRASH_GROWTH = Math.log(2) / 10000;
 const CRASH_POLL_MS = 250;      // solo: poll briskly so the crash/explosion is caught promptly
 const CRASH_MAX_FRAME_MS = 250; // RAF gap bigger than this = backgrounded/stalled → snap, don't integrate
+const CRASH_COUNTDOWN_MS = 3000; // pre-launch 3-2-1; the server round starts only at zero
 let whackBossRuntime = null;
 let bugJumperRuntime = null;
 let flappyPantsRuntime = null;
@@ -8225,7 +8247,8 @@ async function doLogout() {
   rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null; stopRouletteHeartbeat();
   rouletteLocalBets = null; if (rouletteFlushTimer) { clearTimeout(rouletteFlushTimer); rouletteFlushTimer = null; }
   minesState = null; minesViewRound = null; minesBusy = false; minesLastTile = null; minesLastOutcome = '';
-  crashState = null; crashActiveRoundId = null; crashCashoutPending = null; crashExplodedNo = null; stopCrash();
+  crashState = null; crashActiveRoundId = null; crashCashoutPending = null; crashExplodedNo = null;
+  crashCountdownEnd = 0; crashLaunching = false; stopCrash();
   stopWhackBossRound();
   stopSnakeRound();
   stopInvoiceHordeRound();
@@ -14523,12 +14546,26 @@ function applyCrashState(data) {
   renderCrash();
 }
 
-async function crashPlaceBet() {
-  if (crashBusy || crashPhase() === 'running') return;
+// Postaw → theatrical 3-2-1 launch sequence. The coins are only committed (and the server
+// round with its hidden crash point only created) when the countdown hits zero, so backing
+// out mid-countdown (tab switch) costs nothing.
+function crashPlaceBet() {
+  if (crashBusy || crashLaunching || crashCountdownEnd || crashPhase() === 'running') return;
+  crashCountdownEnd = performance.now() + CRASH_COUNTDOWN_MS;
+  crashCountdownLastTick = performance.now();
+  crashCountdownDigit = 0;
+  ensureCrashRaf();
+  updateCrashButtons('idle', crashDisplayMult);
+}
+
+// Fired by crashTick() the frame the countdown reaches zero — this is the real bet.
+async function crashLaunch() {
+  if (crashBusy || crashLaunching || crashPhase() === 'running') return;
+  crashLaunching = true;
   setCrashBusy(true);
   try { applyCrashState(await invokeCrash({ action: 'start', bet: crashBet })); }
   catch (e) { showToast(e.message); }
-  finally { setCrashBusy(false); }
+  finally { crashLaunching = false; setCrashBusy(false); }
 }
 
 async function crashCashOut() {
@@ -14590,8 +14627,53 @@ function renderCrashMine() {
 function crashTick() {
   const multEl = document.getElementById('crash-multiplier');
   const statusEl = document.getElementById('crash-status');
-  if (!multEl || !crashState) { drawCrashScene('betting', 0, 1, false); return; }
-  const r = crashState.activeRound;
+  if (!multEl) { drawCrashScene('betting', 0, 1, false); return; }
+  const r = crashState && crashState.activeRound;
+
+  // Pre-launch 3-2-1 — owns the stage until zero (no server round exists yet).
+  if (crashCountdownEnd && !(r && r.status === 'running')) {
+    const nowP = performance.now();
+    if (crashCountdownLastTick && nowP - crashCountdownLastTick > 900) {
+      // RAF froze (tab switched/backgrounded) mid-countdown → abort instead of launching
+      // unwatched; no coins were committed yet. Falls through to the normal idle render.
+      crashCountdownEnd = 0;
+      showToast('Odliczanie przerwane — postaw jeszcze raz! 🚀');
+    } else {
+      crashCountdownLastTick = nowP;
+      const remain = crashCountdownEnd - nowP;
+      if (remain <= 0) {
+        crashCountdownEnd = 0;
+        crashLaunch(); // the real bet fires exactly at zero
+      } else {
+        const digit = Math.ceil(remain / 1000);
+        drawCrashScene('countdown', 0, 1, false, 1 - remain / CRASH_COUNTDOWN_MS);
+        multEl.textContent = String(digit);
+        multEl.className = 'crash-multiplier is-countdown';
+        if (digit !== crashCountdownDigit) {
+          crashCountdownDigit = digit;
+          // restart the slam-in animation for each new digit
+          multEl.style.animation = 'none'; void multEl.offsetWidth; multEl.style.animation = '';
+        }
+        statusEl.textContent = 'Sekwencja startowa… zapłon silników 🔥';
+        crashDisplayMult = 1;
+        updateCrashButtons('idle', 1);
+        return;
+      }
+    }
+  }
+
+  // Countdown hit zero, start request in flight → engines at full burn + START! flash.
+  if (crashLaunching && !(r && r.status === 'running')) {
+    drawCrashScene('countdown', 0, 1, false, 1);
+    multEl.textContent = 'START! 🚀';
+    multEl.className = 'crash-multiplier is-liftoff';
+    statusEl.textContent = 'ODPALENIE!';
+    crashDisplayMult = 1;
+    updateCrashButtons('idle', 1);
+    return;
+  }
+
+  if (!crashState) { drawCrashScene('betting', 0, 1, false); return; }
   const exploding = crashExplodeStart && (Date.now() - crashExplodeStart < 1000);
   let displayMult = 1;
 
@@ -14659,9 +14741,10 @@ function updateCrashButtons(phase, displayMult) {
     cashBtn.textContent = 'WYPŁAĆ';
   }
 
-  // Bet button launches a fresh rocket; locked (greyed) while one is in the air. The stake label
-  // (#crash-bet-label) is owned by the shared bet-bar, so only toggle disabled — never its text.
-  betBtn.disabled = running || crashBusy;
+  // Bet button launches a fresh rocket; locked (greyed) while one is in the air, counting
+  // down, or lifting off. The stake label (#crash-bet-label) is owned by the shared bet-bar,
+  // so only toggle disabled — never its text.
+  betBtn.disabled = running || crashBusy || crashCountdownEnd > 0 || crashLaunching;
 }
 
 // ── Canvas: starfield + rising multiplier curve + the branded G6 rocket ──
@@ -14761,7 +14844,7 @@ function drawCrashExplosion(ctx, x, y, prog) {
   ctx.restore();
 }
 
-function drawCrashScene(phase, elapsed, mult, exploding) {
+function drawCrashScene(phase, elapsed, mult, exploding, ignition = 0) {
   const canvas = document.getElementById('crash-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -14770,12 +14853,29 @@ function drawCrashScene(phase, elapsed, mult, exploding) {
   crashStarfield(ctx, W, H);
 
   const padX = 46, padTop = 34, padBot = 40;
-  if (phase === 'betting') {
+  if (phase === 'betting' || phase === 'countdown') {
     // axes
     ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(padX, H - padBot); ctx.lineTo(W - 20, H - padBot); ctx.stroke();
-    const bob = Math.sin(Date.now() / 320) * 4;
-    drawG6Rocket(ctx, padX + 10, H - padBot - 24 + bob, -Math.PI / 2.15, 1.05, 0.4);
+    const ign = phase === 'countdown' ? Math.min(1, Math.max(0, ignition)) : 0;
+    // launch-pad smoke billows sideways once the engines spool up
+    if (ign > 0.12) {
+      const puffs = Math.floor(ign * 9);
+      for (let i = 0; i < puffs; i++) {
+        const ph = (Date.now() / 700 + i * 1.7) % 3; // each puff loops on its own phase
+        const px = padX + 18 + i * 8 + ph * 26;
+        const py = H - padBot + 4 - ph * 6;
+        ctx.beginPath(); ctx.arc(px, py, 5 + ph * 9, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(203,213,225,' + (0.26 * ign * (1 - ph / 3)).toFixed(3) + ')';
+        ctx.fill();
+      }
+    }
+    const rumble = ign > 0.45 ? (ign - 0.45) * 7 : 0; // pad shake as liftoff nears
+    const jx = (Math.random() * 2 - 1) * rumble;
+    const jy = (Math.random() * 2 - 1) * rumble * 0.5;
+    const bob = phase === 'countdown' ? 0 : Math.sin(Date.now() / 320) * 4;
+    const flame = phase === 'countdown' ? 0.5 + ign * 1.5 + Math.random() * 0.35 * ign : 0.4;
+    drawG6Rocket(ctx, padX + 10 + jx, H - padBot - 24 + bob + jy, -Math.PI / 2.15, 1.05, flame);
     return;
   }
 
