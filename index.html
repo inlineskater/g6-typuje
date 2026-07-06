@@ -7685,6 +7685,8 @@ let crashCountdownLastTick = 0; // RAF heartbeat; a frozen gap = backgrounded ta
 let crashCountdownDigit = 0;    // digit currently shown (re-pops the slam animation on change)
 let crashLaunching = false;     // start request in flight right after the countdown hit zero
 let crashVisibilityWired = false;
+let crashBustChannel = null;    // realtime broadcast channel `crash_<roundId>` — server bust nudge
+let crashBustChannelRound = null; // round id the channel is subscribed for
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // supabase/functions/crash-action/index.ts. m(t)=exp(CRASH_GROWTH·elapsedMs); doubles every 15s.
 const CRASH_GROWTH = Math.log(2) / 15000;
@@ -14460,6 +14462,26 @@ function stopCrash() {
   if (crashPollTimer) { clearInterval(crashPollTimer); crashPollTimer = null; }
 }
 
+// Server-pushed bust nudge: the Edge Function broadcasts on `crash_<roundId>` the instant the
+// hidden crash time passes, so the explosion reaches the screen in ~150 ms instead of waiting
+// out a poll cycle. Payload is empty (no secrets on the wire) — we just pull `state`, which is
+// what actually resolves and reveals the bust. The 250 ms poll stays as the fallback.
+function crashSubscribeBustNudge(roundId) {
+  if (crashBustChannelRound === roundId && crashBustChannel) return;
+  crashUnsubscribeBustNudge();
+  crashBustChannelRound = roundId;
+  crashBustChannel = sb.channel('crash_' + roundId);
+  crashBustChannel
+    .on('broadcast', { event: 'bust' }, () => { if (activeTab === 'crash') loadCrashState(false); })
+    .subscribe();
+}
+
+function crashUnsubscribeBustNudge() {
+  if (crashBustChannel) { try { sb.removeChannel(crashBustChannel); } catch (e) {} }
+  crashBustChannel = null;
+  crashBustChannelRound = null;
+}
+
 function setCrashBusy(value) {
   crashBusy = value;
   if (crashState) updateCrashButtons(crashPhase(), crashDisplayMult);
@@ -14537,12 +14559,14 @@ function applyCrashState(data) {
       crashServerMs = (r.elapsedMs || 0) + latencyComp;
       if (crashShownMs > crashServerMs + 250) crashShownMs = crashServerMs + 250;
     }
+    crashSubscribeBustNudge(r.id); // websocket bust push; poll below stays as the fallback
     ensureCrashPoll(); // poll keeps running only to detect the crash promptly
   } else {
     // No running round → the flight ended (cashed/busted) or we're idle between flights.
     crashActiveRoundId = null;
     crashCashoutPending = null;
     crashLastFrameTs = 0;
+    crashUnsubscribeBustNudge();
     if (crashPollTimer) { clearInterval(crashPollTimer); crashPollTimer = null; }
   }
 

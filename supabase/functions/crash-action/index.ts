@@ -59,6 +59,30 @@ function genCrashPoint() {
 
 function gameError(msg) { return Object.assign(new Error(msg), { isGame: true }); }
 
+// After start commits, keep the worker alive until the hidden crash time and then nudge the
+// player's browser over a Realtime broadcast (topic `crash_<roundId>`, event `bust`). The
+// client reacts by pulling `state`, which resolves + reveals the bust — so the explosion
+// reaches the screen in ~150 ms instead of a full poll cycle. Pure accelerator: the payload
+// carries nothing (no secrets on the wire) and the 250 ms poll remains the fallback if the
+// worker is evicted mid-flight or the broadcast is lost.
+function scheduleBustNudge(roundId, crashAtMs) {
+  const fireInMs = Math.max(0, crashAtMs - Date.now() + 120); // +cushion so state sees now() ≥ crash_at
+  const nudge = (async () => {
+    await new Promise((resolve) => setTimeout(resolve, fireInMs));
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({ messages: [{ topic: `crash_${roundId}`, event: "bust", payload: {} }] }),
+    });
+  })().catch((err) => console.error("bust nudge failed", err));
+  try { EdgeRuntime.waitUntil(nudge); } catch { /* runtime without waitUntil: best effort */ }
+}
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -191,7 +215,9 @@ async function startRound(userId, rawBet) {
     await tx`insert into public.crash_round_secrets (round_id, crash_point, crash_at)
              values (${round.id}, ${cp}, ${crashAt})`;
 
-    return await stateResponse(tx, userId, { started: { id: round.id } });
+    const result = await stateResponse(tx, userId, { started: { id: round.id } });
+    scheduleBustNudge(round.id, crashAt.getTime());
+    return result;
   });
 }
 
@@ -225,29 +251,28 @@ async function cashOut(userId, clientMultiplier) {
     const hasClient = Number.isFinite(clientM) && clientM >= 1;
     const clientFloor = hasClient ? floor2(clientM) : 0;
 
+    // WYSIWYG payout: the number on the WYPŁAĆ button is a CONTRACT — a click on a shown
+    // green value is paid even when it lands a phantom cent or two ABOVE the hidden crash
+    // point (the display can only learn about the bust one reveal-latency later, and players
+    // shouldn't eat that physics). Two bounds keep it house-safe: the tap must ARRIVE within
+    // CASHOUT_GRACE_MS of the crash, and the claim is capped at what an honest display could
+    // have shown at tap time (server clock + CLIENT_AHEAD_TOL_MS of legitimate lead). Worst
+    // case — a bot claiming the cap every round — still loses ≈2%/round:
+    // (1-HOUSE_EDGE)·exp(CRASH_GROWTH·(GRACE+TOL)) ≈ 0.95·1.033 ≈ 0.981 < 1.
     let mult = null;
-    if (lateMs < 0) {
-      // Still flying on the server clock → pay EXACTLY what the WYPŁAĆ button showed. The
-      // display may legitimately lead the server clock a little (anchor comp overshoot), so
-      // trust the claim up to CLIENT_AHEAD_TOL_MS of lead — but never at/above the crash
-      // point, and a tampered over-claim stays capped by the server's own clock.
-      const cap = Math.min(floor2(multAt(Number(ms) + CLIENT_AHEAD_TOL_MS)),
-                           Math.round((cp - 0.01) * 100) / 100);
-      mult = hasClient ? Math.max(1, Math.min(clientFloor, cap)) : floor2(multAt(Number(ms)));
-    } else if (hasClient && clientFloor < cp && lateMs <= CASHOUT_GRACE_MS) {
-      // The tap crossed the hidden crash on the wire (or a poll busted the round a beat ago).
-      // Forgive bounded network latency: the player committed (clientFloor) strictly BELOW
-      // the crash point, so they tapped in time even though the packet ARRIVED a hop late →
-      // honor exactly what they saw.
-      mult = clientFloor;
+    if (lateMs <= CASHOUT_GRACE_MS) {
+      const cap = floor2(multAt(Number(ms) + CLIENT_AHEAD_TOL_MS));
+      if (hasClient) mult = Math.max(1, Math.min(clientFloor, cap));
+      // No committed claim (old/odd client): pay the server-clock multiplier while genuinely
+      // flying; a claimless tap that arrives after the crash has nothing shown to honor.
+      else if (lateMs < 0) mult = floor2(multAt(Number(ms)));
     }
 
     if (mult == null) {
-      // Too late → make sure the round is busted and give an honest verdict: say WHERE it
-      // blew and, when the tapped value was already past it, make clear the click happened
-      // after the explosion (the reveal just hadn't reached the screen yet).
-      const lateNotice = hasClient && clientFloor >= cp
-        ? `💥 Rakieta wybuchła przy x${cp.toFixed(2)} — klik przy x${clientFloor.toFixed(2)} był już po wybuchu.`
+      // The click ARRIVED more than the grace window after the crash (dead/frozen connection,
+      // or a tap long after the explosion) → honest verdict with the delay spelled out.
+      const lateNotice = hasClient
+        ? `💥 Rakieta wybuchła przy x${cp.toFixed(2)} — klik przy x${clientFloor.toFixed(2)} dotarł ${(lateMs / 1000).toFixed(1)}s po wybuchu.`
         : `Za późno! 💥 Rakieta wybuchła przy x${cp.toFixed(2)}.`;
       if (round.status === 'running') {
         await tx`update public.crash_rounds set status = 'busted' where id = ${round.id}`;
