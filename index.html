@@ -14874,38 +14874,23 @@ function drawG6Rocket(ctx, cx, cy, ang, scale, flame) {
   ctx.fillStyle = '#0ea5e9'; ctx.beginPath(); ctx.arc(9, 0, 4.4, 0, CRASH_TAU); ctx.fill();
   ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.4; ctx.stroke();
   ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(7.5, -1.5, 1.3, 0, CRASH_TAU); ctx.fill();
-  // German-style number plate (white, black border, blue "D" euro-band), mounted on the
-  // clear strip of fuselage between the porthole and the nose cone — everything from
-  // x=-11 to x=5 is covered by the "G6" roundel badge drawn afterward in world space.
+  // German-style number plate (white, black border, blue "D" euro-band), filling almost
+  // the whole clear fuselage strip left of the porthole (x=9, r=4.4) so the text is legible.
   ctx.save();
   ctx.fillStyle = '#f2f2f0';
-  ctx.fillRect(13.6, -3, 8.4, 6);
+  ctx.fillRect(-18, -9, 22, 18);
   ctx.fillStyle = '#0053a6';
-  ctx.fillRect(13.6, -3, 1.6, 6);
+  ctx.fillRect(-18, -9, 4, 18);
   ctx.fillStyle = '#fff';
-  ctx.font = '700 1.6px system-ui, -apple-system, sans-serif';
+  ctx.font = '700 4.6px system-ui, -apple-system, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('D', 14.4, 0);
+  ctx.fillText('D', -16, 0);
   ctx.fillStyle = '#111';
-  ctx.font = '900 2px Arial Narrow, system-ui, sans-serif';
-  ctx.fillText('MN CF7000', 18.7, 0);
-  ctx.strokeStyle = '#111'; ctx.lineWidth = 0.4;
-  ctx.strokeRect(13.6, -3, 8.4, 6);
+  ctx.font = '900 8px Arial Narrow, system-ui, sans-serif';
+  ctx.fillText('MN CF7000', -5, 0, 16);
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 0.7;
+  ctx.strokeRect(-18, -9, 22, 18);
   ctx.restore();
-  ctx.restore();
-
-  // "G6" badge — drawn upright in world space so the wordmark stays legible at any tilt.
-  const lx = -3, ly = 0;
-  const wx = cx + (lx * Math.cos(ang) - ly * Math.sin(ang)) * scale;
-  const wy = cy + (lx * Math.sin(ang) + ly * Math.cos(ang)) * scale;
-  ctx.save();
-  ctx.translate(wx, wy);
-  ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(0, 0, 8 * scale, 0, CRASH_TAU); ctx.fill();
-  ctx.fillStyle = '#f6c453'; ctx.beginPath(); ctx.arc(0, 0, 6.6 * scale, 0, CRASH_TAU); ctx.fill();
-  ctx.fillStyle = '#2b1708';
-  ctx.font = `900 ${9 * scale}px system-ui, -apple-system, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('G6', 0, 0.5 * scale);
   ctx.restore();
 }
 
