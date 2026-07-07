@@ -24564,10 +24564,11 @@ function farmTaxQuoteLocal() {
     interest_next: Number(fmTax?.interest_next || (debt > 0 ? Math.ceil(debt * 0.10) : 0)),
     first_tax_day: fmTax?.first_tax_day || FARM_TAX_FIRST_TAX_DAY,
     first_payment_day: fmTax?.first_payment_day || FARM_TAX_FIRST_PAYMENT_DAY,
-    // Soft cap: only an unpaid tax debt blocks buying/planting — owning past
-    // the fair share is allowed and simply taxed (mirrors farm_land_tax_quote_for).
+    // Soft cap: only an unpaid tax debt blocks buying — owning past the fair
+    // share is allowed and simply taxed (mirrors farm_land_tax_quote_for).
+    // Planting is never blocked.
     blocked_expansion: debt > 0,
-    blocked_planting: debt > 0,
+    blocked_planting: false,
   };
 }
 
@@ -24780,11 +24781,6 @@ function renderFarmSelectionBody() {
       openMarketplaceListingModal({ kind: 'farm_tile', ref });
     });
     box.append(sellTileBtn);
-    const tax = farmTaxQuoteLocal();
-    if (tax.blocked_planting) {
-      box.append(farmTaxStatusCard());
-      return;
-    }
     const plantedCounts = new Map();
     fmTiles.forEach(t => {
       if (t.owner_id === me?.id && t.planted_species) {

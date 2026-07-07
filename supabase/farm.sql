@@ -545,9 +545,9 @@ BEGIN
     'first_tax_day', v_first_tax_day,
     'first_payment_day', v_first_payment_day,
     -- Soft cap: buying/planting past the fair share is allowed (excess is taxed
-    -- daily); only an unpaid tax debt blocks expansion + new planting.
+    -- daily); only an unpaid tax debt blocks expansion. Planting is never blocked.
     'blocked_expansion', (v_debt > 0),
-    'blocked_planting', (v_debt > 0)
+    'blocked_planting', false
   );
 END;
 $$;
@@ -596,15 +596,11 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_debt integer := 0;
 BEGIN
-  -- Soft cap: planting is allowed at any size; only an unpaid tax debt freezes
-  -- new planting (pay the kataster tax to keep farming your excess tiles).
-  SELECT COALESCE(land_tax_debt, 0) INTO v_debt
-    FROM public.farm_user_state
-   WHERE user_id = p_uid;
-  IF COALESCE(v_debt, 0) > 0 THEN RAISE EXCEPTION 'land_tax_debt'; END IF;
+  -- Planting is never blocked by land tax debt — only buying more tiles is
+  -- (see farm_assert_can_expand). An unpaid debt still accrues daily interest
+  -- and is still autopaid from crop/marketplace proceeds.
+  RETURN;
 END;
 $$;
 
