@@ -24798,7 +24798,9 @@ function renderFarmSelectionBody() {
     fmCollection.forEach(c => {
       const def = fmDefs.get(c.species);
       if (def && def.edition_size == null) {
-        ownedCounts.set(c.species, Math.max(c.count || 0, c.level >= 2 ? 1 : 0));
+        // Lvl 2+ cards are an unlimited seed (matches plant_crop server-side) —
+        // no cap on simultaneous plantings, unlike Lvl 1 which is capped by count.
+        ownedCounts.set(c.species, c.level >= 2 ? Infinity : (c.count || 0));
       }
     });
     fmNft.forEach(n => {
