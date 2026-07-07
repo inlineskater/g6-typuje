@@ -25878,6 +25878,26 @@ function farmSeasonalMyRow() {
   return fmSeasonalLeaderboard.find(r => r.user_id === me?.id) || null;
 }
 
+// Mirrors farm_seasonal_species_for_week() in supabase/farm-seasonal-contracts.sql — keep in sync.
+const FARM_SEASONAL_ROTATION = ['carrot', 'potato', 'tomato', 'corn', 'chili', 'strawberry', 'pumpkin', 'grapes', 'pineapple'];
+const FARM_SEASONAL_ANCHOR_WEEK = '2026-07-06';
+function farmSeasonalSpeciesForWeek(weekStartStr) {
+  const anchor = new Date(FARM_SEASONAL_ANCHOR_WEEK + 'T00:00:00Z');
+  const week = new Date(weekStartStr + 'T00:00:00Z');
+  if (week < anchor) return null;
+  const days = Math.round((week - anchor) / 86400000);
+  return FARM_SEASONAL_ROTATION[Math.floor(days / 7) % FARM_SEASONAL_ROTATION.length];
+}
+// Info about next week's contract crop, shown as a small teaser while the current one is active.
+function farmSeasonalNextInfo(ev) {
+  if (!ev?.week_start) return null;
+  const nextWeek = new Date(new Date(ev.week_start + 'T00:00:00Z').getTime() + 7 * 86400000);
+  const species = farmSeasonalSpeciesForWeek(nextWeek.toISOString().slice(0, 10));
+  if (!species) return null;
+  const def = fmDefs.get(species);
+  return { species, name: def?.name || species, emoji: def?.emoji || '🌱', from: nextWeek };
+}
+
 function farmSeasonalPrizeList(ev) {
   return el('div', { className: 'farm-seasonal-prizes' },
     el('div', { className: 'farm-seasonal-prize' }, el('b', {}, '1. miejsce'), ': ' + ev.rank1_coins + ' 🪙 + losowa karta NFT'),
@@ -25913,6 +25933,12 @@ async function buildFarmSeasonalBody(bodyEl) {
       el('div', { className: 'farm-seasonal-status' + statusCls }, farmSeasonalStatusText(ev))),
     el('div', { className: 'farm-seasonal-sub' },
       farmSeasonalDateRange(ev), ' · aktywna roślina: ', el('b', {}, cropName)),
+    (ev.status === 'active' && farmSeasonalNextInfo(ev)) ? (function () {
+      const nx = farmSeasonalNextInfo(ev);
+      return el('div', { className: 'farm-seasonal-sub farm-seasonal-next' },
+        '👉 Następny tydzień (od ', nx.from.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' }), '): ',
+        el('b', {}, farmIcon(nx.emoji), ' ' + nx.name));
+    })() : null,
     el('div', { className: 'farm-seasonal-goals' },
       el('div', { className: 'farm-seasonal-goal' },
         el('b', {}, '1. Ranking'),
