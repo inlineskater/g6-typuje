@@ -11929,6 +11929,21 @@ function playCoinRace(canvas, opts = {}) {
   ro.observe(canvas);
 }
 
+// PostgREST caps every response at the server's max-rows (1000) no matter what
+// .limit() asks for, so full-history reads must page through .range() windows.
+// `makeQuery` must return a FRESH query each call (builders are single-use) with
+// a deterministic ORDER BY (ts column + id tie-break) or pages can skip/repeat rows.
+async function sbFetchAll(makeQuery, pageSize = 1000) {
+  const rows = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await makeQuery().range(from, from + pageSize - 1);
+    if (error) return { data: rows, error };
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return { data: rows, error: null };
+}
+
 // Bulk-reconstruct every non-admin player's balance history and animate the
 // preview card. `seasonPromise` is loadSeasonHistory()'s promise so awards are
 // included in the reconstruction.
@@ -11940,10 +11955,10 @@ async function loadCoinRace(seasonPromise) {
 
   const [profRes, tradesRes, coinTxRes, gameRes, footballRes, lbRes] = await Promise.all([
     sb.from('profiles').select('id,nick,is_admin,coins,created_at').neq('is_admin', true),
-    sb.from('trades').select('user_id,created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').order('created_at', { ascending: true }).limit(10000),
-    sb.from('coin_transactions').select('user_id,created_at,delta,reason,meta').order('created_at', { ascending: true }).limit(10000),
-    sb.from('game_transactions').select('user_id,created_at,game,bet,won,is_admin').neq('is_admin', true).order('created_at', { ascending: true }).limit(10000),
-    sb.from('football_bets').select('user_id,created_at,settled_at,pick,stake,potential_payout,status').order('created_at', { ascending: true }).limit(10000),
+    sbFetchAll(() => sb.from('trades').select('user_id,created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').order('created_at', { ascending: true }).order('id', { ascending: true })),
+    sbFetchAll(() => sb.from('coin_transactions').select('user_id,created_at,delta,reason,meta').order('created_at', { ascending: true }).order('id', { ascending: true })),
+    sbFetchAll(() => sb.from('game_transactions').select('user_id,created_at,game,bet,won,is_admin').neq('is_admin', true).order('created_at', { ascending: true }).order('id', { ascending: true })),
+    sbFetchAll(() => sb.from('football_bets').select('user_id,created_at,settled_at,pick,stake,potential_payout,status').order('created_at', { ascending: true }).order('id', { ascending: true })),
     sb.from('leaderboard').select('id,coins,net_worth'),
   ]);
 
@@ -12428,11 +12443,11 @@ function renderCoinRaceDetail(container) {
 
     try {
       const [gamesRes, tradesRes, profileRes, coinTxRes, footballRes, breakdownRes] = await Promise.all([
-        sb.from('game_transactions').select('created_at,game,bet,won').eq('user_id', userId).order('created_at', { ascending: true }),
-        sb.from('trades').select('created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at)').eq('user_id', userId).order('created_at', { ascending: true }),
+        sbFetchAll(() => sb.from('game_transactions').select('created_at,game,bet,won,id').eq('user_id', userId).order('created_at', { ascending: true }).order('id', { ascending: true })),
+        sbFetchAll(() => sb.from('trades').select('created_at,amount,shares,side,market_id,markets(title,resolved,resolution,resolved_at),id').eq('user_id', userId).order('created_at', { ascending: true }).order('id', { ascending: true })),
         sb.from('profiles').select('created_at').eq('id', userId).single(),
-        sb.from('coin_transactions').select('created_at,delta,reason,meta').eq('user_id', userId).order('created_at', { ascending: true }),
-        sb.from('football_bets').select('created_at,settled_at,pick,stake,potential_payout,status').eq('user_id', userId).order('created_at', { ascending: true }),
+        sbFetchAll(() => sb.from('coin_transactions').select('created_at,delta,reason,meta,id').eq('user_id', userId).order('created_at', { ascending: true }).order('id', { ascending: true })),
+        sbFetchAll(() => sb.from('football_bets').select('created_at,settled_at,pick,stake,potential_payout,status,id').eq('user_id', userId).order('created_at', { ascending: true }).order('id', { ascending: true })),
         sb.rpc('user_net_worth_breakdown', { p_uid: userId }),
       ]);
       const games = gamesRes.data || [];
