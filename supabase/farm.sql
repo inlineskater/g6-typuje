@@ -437,8 +437,11 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT greatest(1, 13 * 4 - COALESCE(count(*) FILTER (WHERE acquired_via = 'migration'), 0))::integer
-    FROM public.farm_tiles;
+  -- Purchasable cells only: data rows 1-3 (13×3) + the single row-0 tile (0,0)
+  -- the frontend exposes (FARM_EXTRA_TILES in index.html). The rest of row 0 is
+  -- hidden farmland reserved by the zen split (garden-zen-split.sql) and rejected
+  -- by buy_farm_tile, so it must not inflate the land-tax fair share.
+  SELECT 13 * 3 + 1;
 $$;
 
 CREATE OR REPLACE FUNCTION public.farm_fair_cap()
@@ -863,12 +866,20 @@ DECLARE
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_x < 0 OR p_x >= 13 OR p_y < 0 OR p_y >= 4 THEN RAISE EXCEPTION 'bad_coords'; END IF;
+  -- Row 0 is the legacy zen row, hidden by the frontend since the zen split —
+  -- only (0,0) (FARM_EXTRA_TILES in index.html) is purchasable, so a crafted RPC
+  -- call can't buy an invisible tile that still counts for pricing/tax.
+  IF p_y = 0 AND p_x <> 0 THEN RAISE EXCEPTION 'bad_coords'; END IF;
 
   INSERT INTO public.farm_user_state (user_id) VALUES (v_user)
   ON CONFLICT (user_id) DO NOTHING;
   PERFORM public.farm_assert_can_expand(v_user);
 
-  SELECT count(*) INTO v_tiles FROM public.farm_tiles WHERE owner_id = v_user;
+  -- Exclude legacy zen 'migration' tiles: they were never bought, and the client
+  -- price quote (farmTilePrice/farmOwnedTileCount in index.html) doesn't count
+  -- them — counting them here would double the charged price vs the shown one.
+  SELECT count(*) INTO v_tiles FROM public.farm_tiles
+   WHERE owner_id = v_user AND acquired_via <> 'migration';
   v_price := least(50000::numeric, floor(350::numeric * power(2::numeric, v_tiles)))::integer;
 
   -- A free-tile voucher (dropped by a seed box) claims a tile for 0 coins.
@@ -1488,28 +1499,31 @@ BEGIN
 END $$;
 
 -- ── Migration: place every existing Ogródek plant on one tile ──────────────
--- One tile per gardens row (all slots), packed into the first cells in reading
--- order (13 per row). The tile (acquired_via='migration') displays that plant
--- and is plant-only (no crops). Delete+recreate is deterministic so re-running
--- is idempotent. Purchased tiles (acquired_via='purchase'/'lootbox') untouched.
-DO $$
-DECLARE
-  rec  record;
-  v_i  integer := 0;
-BEGIN
-  IF to_regclass('public.gardens') IS NULL THEN RETURN; END IF;
-  DELETE FROM public.farm_tiles WHERE acquired_via = 'migration';
-  FOR rec IN
-    SELECT g.id, g.user_id
-      FROM public.gardens g
-     ORDER BY g.created_at NULLS FIRST, g.id
-  LOOP
-    INSERT INTO public.farm_tiles (x, y, owner_id, acquired_via, zen_garden_id)
-    VALUES (v_i % 13, v_i / 13, rec.user_id, 'migration', rec.id)
-    ON CONFLICT (x, y) DO NOTHING;
-    v_i := v_i + 1;
-  END LOOP;
-END $$;
+-- ⚠️ SUPERSEDED by supabase/garden-zen-split.sql. The zen garden is now rendered
+-- as its own left-hand panel driven by the `gardens` table (🧘 Ogród Zen), NOT as
+-- `acquired_via='migration'` tiles on the crop board. This block used to pack one
+-- migration tile per gardens row into row 0; it is intentionally DISABLED so a
+-- re-run of farm.sql won't recreate tiles that garden-zen-split.sql removes. Run
+-- garden-zen-split.sql after this file. (Original body kept below, commented out.)
+--
+-- DO $$
+-- DECLARE
+--   rec  record;
+--   v_i  integer := 0;
+-- BEGIN
+--   IF to_regclass('public.gardens') IS NULL THEN RETURN; END IF;
+--   DELETE FROM public.farm_tiles WHERE acquired_via = 'migration';
+--   FOR rec IN
+--     SELECT g.id, g.user_id
+--       FROM public.gardens g
+--      ORDER BY g.created_at NULLS FIRST, g.id
+--   LOOP
+--     INSERT INTO public.farm_tiles (x, y, owner_id, acquired_via, zen_garden_id)
+--     VALUES (v_i % 13, v_i / 13, rec.user_id, 'migration', rec.id)
+--     ON CONFLICT (x, y) DO NOTHING;
+--     v_i := v_i + 1;
+--   END LOOP;
+-- END $$;
 
 -- ── Backfill: (re)name every NFT instance from its persona pool, by per-pool order ──
 -- Overwrites existing names so any older (wrong-pool) names are corrected.

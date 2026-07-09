@@ -9,7 +9,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://rjovhmepanwbdgdkvylr.supabase.co wss://rjovhmepanwbdgdkvylr.supabase.co https://challenges.cloudflare.com https://api.open-meteo.com; frame-src https://challenges.cloudflare.com; base-uri 'none'; object-src 'none'; form-action 'self'">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%236366f1'/%3E%3Ccircle cx='22' cy='22' r='5' fill='white'/%3E%3Ccircle cx='32' cy='32' r='5' fill='white'/%3E%3Ccircle cx='42' cy='42' r='5' fill='white'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -3560,6 +3560,30 @@
       box-shadow: 0 4px 14px rgba(90,60,20,.3), inset 0 2px 0 rgba(255,255,255,.5);
     }
     .ec-arena canvas { width: 100%; height: 100%; display: block; }
+    /* ── Super Mariusz (super_mariusz) — NES-style hardmode platformer ── */
+    .sm-arena {
+      border-radius: 4px; overflow: hidden;
+      aspect-ratio: 16 / 9; width: 100%; max-width: 720px; margin: 0 auto;
+      user-select: none; touch-action: none; cursor: pointer;
+      border: 4px solid #000;
+      box-shadow: 0 0 0 3px rgba(92,148,252,.55), 0 4px 14px rgba(0,0,0,.45);
+      background: #5c94fc;
+    }
+    .sm-arena canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+    #seasonal-game-super-mariusz #sm-time,
+    #seasonal-game-super-mariusz #sm-progress,
+    #seasonal-game-super-mariusz #sm-status-stat {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    #seasonal-game-super-mariusz #sm-status {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
     .sn-prompt {
       background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.24);
       border-radius: 8px; padding: 9px 12px; color: var(--muted);
@@ -4899,7 +4923,9 @@
     /* Ogródek-style scene: grass field with a sky band on top + weather overlay. */
     .farm-stage { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid rgba(62,95,55,.28); height: auto; max-height: calc(100dvh - 170px); padding: 0; display: flex; flex-direction: column;
       background: linear-gradient(180deg, var(--g-grass-a, #cbe9bf) 0%, var(--g-grass-b, #b7d7a8) 100%); transition: background 1.5s linear; }
-    .farm-stage > .garden-sky { position: relative; flex: 0 0 auto; height: 128px; margin: 0; border-radius: 11px 11px 0 0; overflow: hidden; box-shadow: inset 0 -9px 16px -8px rgba(0,0,0,.14);
+    /* Sky band scales with the viewport so short screens (MacBook Air) spend the
+       height on tiles, not decoration; min keeps the starter chip readable. */
+    .farm-stage > .garden-sky { position: relative; flex: 0 0 auto; height: clamp(76px, 12vh, 128px); margin: 0; border-radius: 11px 11px 0 0; overflow: hidden; box-shadow: inset 0 -9px 16px -8px rgba(0,0,0,.14);
       background: linear-gradient(180deg, var(--g-sky-a, #bfe6f6) 0%, var(--g-sky-b, #a6d6ee) 100%); }
     .farm-stage > .garden-sky::before { content: ''; position: absolute; left: -4%; right: -4%; bottom: -2px; height: 44px; opacity: .7; filter: blur(.4px);
       background: radial-gradient(58% 150% at 24% 100%, var(--g-grass-b, #aed79e) 0 56%, transparent 58%), radial-gradient(66% 150% at 72% 100%, var(--g-grass-a, #cbe9bf) 0 54%, transparent 56%); }
@@ -4925,6 +4951,67 @@
     .farm-starter-action:hover { filter: brightness(.96); }
     .farm-field { position: relative; z-index: 2; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 10px; }
     .farm-board { display: flex; flex-direction: column; align-items: center; gap: 14px; --pot-scale: .6; }
+    /* 🧘 Ogródek Zen (left) + 🌾 Farma crop board (right) side-by-side split.
+       One shared cell size (scaleFarmPots) and a fixed 3-row zen grid keep the two
+       halves reading as one aligned field — no internal scrollbars. */
+    .farm-split { position: relative; z-index: 2; flex: 0 0 auto; min-height: 0; display: flex; gap: 12px; align-items: flex-start; justify-content: center; padding: 8px 8px 12px; }
+    .farm-split .farm-field { flex: 0 1 auto; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: flex-start; padding: 6px; overflow-x: auto; overflow-y: visible; }
+    /* The farm's two stacked 7/6-column bands read as ONE continuous grid: same
+       4px gap between the bands as between cells, left-aligned (not centered —
+       the 6-col band would sit staggered under the 7-col one). */
+    .farm-split .farm-board { gap: 4px; align-items: flex-start; }
+    /* Just a whisper of separation from the crop board — same grass, same grid,
+       barely-there tint so it still reads as one continuous field. */
+    .zen-zone { flex: 0 0 auto; min-width: 0; display: flex; flex-direction: column; gap: 0; overflow: visible;
+      border-radius: 10px; padding: 6px;
+      background: rgba(255,255,255,.08); }
+    /* Low wooden fence separating the zen garden from the farmland. */
+    .farm-divider { flex: 0 0 10px; align-self: stretch; position: relative; margin: 4px 0; }
+    .farm-divider::before {
+      content: ''; position: absolute; left: 3px; top: 2px; bottom: 2px; width: 4px; border-radius: 2px;
+      background:
+        repeating-linear-gradient(180deg, rgba(60,30,10,.28) 0 2px, transparent 2px 14px),
+        linear-gradient(90deg, #b07c46 0%, #d9a86a 45%, #a8713d 100%);
+      box-shadow: 0 1px 3px rgba(60,30,10,.3), inset 0 0 0 1px rgba(90,55,20,.25);
+    }
+    /* Small wooden sign labelling the panel — same wood tone as the rest of the
+       Ogródek, but tiny/plain (a plank, not the ornate rules board). */
+    .plot-sign {
+      position: relative; align-self: flex-start;
+      margin: 0 0 6px 2px; padding: 4px 12px;
+      font-size: 11px; font-weight: 800; color: #3d2810; letter-spacing: .2px; white-space: nowrap;
+      border-radius: 4px; border: 1px solid rgba(90,55,20,.5);
+      background: linear-gradient(180deg, #e9c58e 0%, #d9a86a 55%, #c08c52 100%);
+      box-shadow: 0 2px 4px rgba(60,30,10,.22), inset 0 1px 0 rgba(255,255,255,.35);
+    }
+    .plot-sign::before, .plot-sign::after {
+      content: ''; position: absolute; top: 3px; width: 3px; height: 3px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #6b4a2a, #1f1108 75%);
+    }
+    .plot-sign::before { left: 4px; }
+    .plot-sign::after { right: 4px; }
+    /* Zen renders with the SAME grid as the crop board (.farm-board/.fb-seg + the
+       .farm-cell/.farm-plant-cell rules below), so both halves look identical. */
+    .zen-board { flex: 0 0 auto; overflow: visible; justify-content: flex-start; gap: 0; padding: 0; }
+    .farm-cell.zen-invite { flex-direction: column; gap: 1px; background: rgba(120,165,80,.22); border-style: dashed; border-color: rgba(80,110,45,.4); text-align: center; }
+    .farm-cell.zen-invite:hover { outline: 2px dashed var(--accent); outline-offset: -2px; }
+    .zen-invite-emoji { font-size: clamp(15px, 4.2vmin, 26px); line-height: 1; }
+    .zen-invite-title { font-size: 10px; font-weight: 800; color: #14532d; }
+    .zen-invite-sub { font-size: 9px; font-weight: 700; color: rgba(20,83,45,.75); }
+    /* Empty reserved zen plot: a waiting doniczka (placeholder pot) + owner nick. */
+    .farm-plant-cell.zen-reserved { cursor: default; }
+    .farm-plant-cell.zen-reserved .garden-pot.placeholder { opacity: .55; }
+    .farm-plant-cell.zen-reserved .farm-cell-owner { opacity: .8; }
+    .zen-modal-pot { display: flex; justify-content: center; padding: 4px 0 12px; }
+    .zen-modal-pot .garden-pot { flex: 0 0 auto; width: 190px; }
+    .zen-picker .zen-picker-note { font-size: 12px; color: #92400e; background: rgba(251,191,36,.16); border: 1px solid rgba(251,191,36,.4); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+    @media (max-width: 760px) {
+      /* Stacked mobile layout: three same-size grid parts (zen + two farm halves). */
+      .farm-split { flex-direction: column; align-items: center; }
+      .zen-zone { flex: 0 0 auto; max-height: none; align-items: center; }
+      .farm-divider { display: none; }
+      .farm-split .farm-field { flex: 0 0 auto; align-items: center; overflow: visible; }
+    }
     .fb-seg { display: grid; gap: 4px; }
     .farm-cell { position: relative; background: rgba(95,140,55,.16); border: 1px solid rgba(80,110,45,.12); border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; min-width: 0; min-height: 0; overflow: visible; }
     .farm-cell.mine { background: rgba(120,165,80,.3); border-color: rgba(255,255,255,.16); box-shadow: inset 0 0 0 2px rgba(255,205,100,.55); }
@@ -6807,6 +6894,84 @@
         </div>
       </div>
 
+      <!-- Super Mariusz panel (one-life hardmode speedrun platformer; gameType super_mariusz) -->
+      <div id="seasonal-game-super-mariusz" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">„Super Mariusz" 🧢</h2>
+                <p class="page-sub">Hardmode speedrun po biurowym korytarzu. Trasa jest BRUTALNA — kolce, krążące teczki i przepaście zabijają od razu, a większość podejść kończy się śmiercią. Wynik to czas ukończenia trasy: im szybciej, tym wyżej w rankingu.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 500 🪙</span>
+                <span class="bj-prize">🥈 250 🪙</span>
+                <span class="bj-prize">🥉 100 🪙</span>
+              </div>
+            </div>
+
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać</div>
+              <ul>
+                <li><strong>← / →</strong> (albo A/D) — bieg. <strong>Spacja / W / ↑</strong> — skok (dłużej trzymasz, wyżej skaczesz).</li>
+                <li><strong>Jedno życie.</strong> Dotknięcie kolców, wroga albo wpadnięcie w przepaść kończy rundę natychmiast.</li>
+                <li><strong>Wynik = czas ukończenia trasy.</strong> Im szybciej dobiegniesz do flagi, tym wyższy wynik w rankingu.</li>
+                <li>Nie dobiegniesz do końca (śmierć albo limit 5 minut) = <strong>DNF</strong>, wynik 0.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙.</li>
+              </ul>
+            </div>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Czas</div>
+                <div class="bj-stat-value" id="sm-time">0:00.00</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Postęp</div>
+                <div class="bj-stat-value" id="sm-progress">0%</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Stan</div>
+                <div class="bj-stat-value" id="sm-status-stat">—</div>
+              </div>
+            </div>
+
+            <div class="sm-arena" id="sm-arena">
+              <canvas id="sm-canvas"></canvas>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="sm-start-btn">Start rundy</button>
+              <div class="bj-status" id="sm-status">←→/AD bieg, Spacja/W/↑ skok. Jedno życie — wynik to czas ukończenia.</div>
+            </div>
+          </section>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="sm-week-label"></span>
+              </div>
+              <div id="sm-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="sm-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
+              </div>
+              <div class="bj-awards" id="sm-awards"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
+
       <!-- Najazd Ticketów panel (IT-helpdesk survival season; gameType invoice_horde) -->
       <div id="seasonal-game-invoice-horde" class="hidden">
         <div class="bj-layout">
@@ -7056,6 +7221,17 @@
             </div>
           </div>
         </button>
+        <button class="ag-card" data-game="super_mariusz">
+          <div class="ag-card-banner">🧢</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">„Super Mariusz"</div>
+            <div class="ag-card-desc">Brutalny hardmode speedrun po biurowym korytarzu. Jedno życie — kolce, teczki i przepaście zabijają od razu. Wynik to czas ukończenia trasy.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">PLATFORMÓWKA</span>
+            </div>
+          </div>
+        </button>
       </div>
     </div>
     <div id="ag-game-slot" class="hidden">
@@ -7237,7 +7413,11 @@
             </div>
           </div>
           <div class="garden-weather"></div>
-          <div class="farm-field"><div class="farm-board" id="farm-board"></div></div>
+          <div class="farm-split">
+            <div class="zen-zone" id="zen-zone"></div>
+            <div class="farm-divider" aria-hidden="true"></div>
+            <div class="farm-field"><div class="plot-sign">🌾 Farma</div><div class="farm-board" id="farm-board"></div></div>
+          </div>
         </div>
         <div class="farm-table-wrap hidden" id="farm-table-wrap"></div>
         <div class="farm-view-switch">
@@ -7714,6 +7894,7 @@ let snakeRuntime = null;
 let eggCatchRuntime = null;
 let invoiceHordeRuntime = null;
 let varPatrolRuntime = null;
+let superMariuszRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 const lwCharts = new Map();
@@ -7971,6 +8152,12 @@ const ecStatus        = document.getElementById('ec-status');
 const ecScoreEl       = document.getElementById('ec-score');
 const ecMissesEl      = document.getElementById('ec-misses');
 const ecLevelEl       = document.getElementById('ec-level');
+const smArena         = document.getElementById('sm-arena');
+const smStartBtn      = document.getElementById('sm-start-btn');
+const smStatus        = document.getElementById('sm-status');
+const smTimeEl        = document.getElementById('sm-time');
+const smProgressEl    = document.getElementById('sm-progress');
+const smStatusStatEl  = document.getElementById('sm-status-stat');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
@@ -8436,6 +8623,7 @@ const AG_PANEL_IDS = {
   invoice_horde: 'seasonal-game-invoice-horde',
   var_patrol:    'seasonal-game-var-patrol',
   egg_catch:     'seasonal-game-egg-catch',
+  super_mariusz: 'seasonal-game-super-mariusz',
 };
 let agPanelHome = {};
 
@@ -8456,7 +8644,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
   allGamesSelectedGame = null;
@@ -8465,7 +8653,7 @@ function leaveAllGamesTab() {
 function selectAllGame(gameType) {
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound();
 
   allGamesSelectedGame = gameType;
   allGamesMode = true;
@@ -8549,7 +8737,7 @@ document.querySelectorAll('.ag-card').forEach(btn => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -8562,7 +8750,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -9440,7 +9628,7 @@ const ACT_GAME_LABELS = {
   whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
-  egg_catch: '🥚 Łap Jajka', arcade: '🕹️ Arkada',
+  egg_catch: '🥚 Łap Jajka', super_mariusz: '🧢 Super Mariusz', arcade: '🕹️ Arkada',
 };
 // Casino games whose rapid plays are collapsed into one session row; an idle gap
 // longer than SESSION_GAP_MS closes a session (poker buy-ins/cashouts are not grouped).
@@ -9511,7 +9699,7 @@ async function buildActivityFeed() {
   const scoreSel = 'user_id,nick_snapshot,score,submitted_at';
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
-    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, eggCatchRes, arcadeRes, nftRes,
+    whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, eggCatchRes, superMariuszRes, arcadeRes, nftRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -9525,6 +9713,7 @@ async function buildActivityFeed() {
     ranged(sb.from('invoice_horde_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('var_patrol_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('egg_catch_scores').select(scoreSel), 'submitted_at'),
+    ranged(sb.from('super_mariusz_scores').select('user_id,nick_snapshot,completion_ms,completed,submitted_at'), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
     ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
@@ -9611,6 +9800,11 @@ async function buildActivityFeed() {
   pushScores(invoiceRes.data, 'invoice_horde');
   pushScores(varPatrolRes.data, 'var_patrol');
   pushScores(eggCatchRes.data, 'egg_catch');
+  (superMariuszRes.data || []).forEach(s => {
+    const tail = s.completed ? 'ukończył trasę w ' + smFormatTime(s.completion_ms) : 'DNF';
+    entries.push({ nick: nickOf(s), ts: s.submitted_at, cat: 'game',
+      desc: (ACT_GAME_LABELS['super_mariusz'] || '🕹️ super_mariusz') + ' — ' + tail });
+  });
   (arcadeRes.data || []).forEach(s => {
     entries.push({ nick: nickOf(s), ts: s.created_at, cat: 'game',
       desc: (ACT_GAME_LABELS[s.game_type] || '🕹️ ' + s.game_type) + ' — wynik ' + s.score });
@@ -9907,6 +10101,13 @@ function setupRealtime() {
       if (activeTab === 'whack-boss') loadEggCatchState(false);
       await refreshMeCoins();
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_scores' }, () => {
+      if (activeTab === 'whack-boss') loadSuperMariuszState(false);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') loadSuperMariuszState(false);
+      await refreshMeCoins();
+    })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, () => {
       if (activeTab === 'whack-boss') loadInvoiceHordeState(false);
     })
@@ -10136,6 +10337,7 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_scores' }, scheduleActivityRebuild)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'farm_nft_transfers' }, scheduleActivityRebuild)
@@ -10383,8 +10585,11 @@ async function loadSeasonHistory() {
   try {
     const current = getCurrentSeasonalEntry();
     const currentDbWeekStart = current.weekStart; // DB now also Monday-start
+    const isSuperMariusz = current.gameType === 'super_mariusz';
     const liveScoreColumns = current.gameType === 'bug_jumper'
       ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
+      : isSuperMariusz
+      ? 'user_id,nick_snapshot,score,submitted_at,client_meta,completion_ms,completed'
       : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
     let liveScoresQuery = sb.from(current.gameType + '_scores')
       .select(liveScoreColumns)
@@ -10395,7 +10600,11 @@ async function loadSeasonHistory() {
         .eq('course_id', BUG_JUMPER_HARD_COURSE_ID)
         .order('completion_ms', { ascending: true, nullsFirst: false });
     }
-    if (current.gameType !== 'bug_jumper') {
+    if (isSuperMariusz) {
+      liveScoresQuery = liveScoresQuery
+        .order('completion_ms', { ascending: true, nullsFirst: false });
+    }
+    if (current.gameType !== 'bug_jumper' && !isSuperMariusz) {
       liveScoresQuery = liveScoresQuery
         .order('accuracy', { ascending: false });
     }
@@ -10403,7 +10612,7 @@ async function loadSeasonHistory() {
       .order('submitted_at', { ascending: true })
       .limit(20);
 
-    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, liveRes] = await Promise.all([
+    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, smRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_weekly_awards').select('week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
@@ -10411,6 +10620,7 @@ async function loadSeasonHistory() {
       sb.from('invoice_horde_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('var_patrol_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('egg_catch_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from('super_mariusz_recent_awards').select('week_start,user_id,nick,rank,score,completion_ms,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       liveScoresQuery,
     ]);
 
@@ -10424,12 +10634,13 @@ async function loadSeasonHistory() {
       const rank = pendingEntries.length + 1;
       const cm = r.client_meta || {};
       const isBugJumper = current.gameType === 'bug_jumper';
-      const baseScore = !isBugJumper && cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
-      const itemBonus = !isBugJumper && cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
+      const baseScore = !isBugJumper && !isSuperMariusz && cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
+      const itemBonus = !isBugJumper && !isSuperMariusz && cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
       pendingEntries.push({
         user_id: r.user_id, nick: r.nick_snapshot,
         week_start: current.weekStart, rank,
         score: r.score, base_score: baseScore, item_bonus: itemBonus,
+        completion_ms: r.completion_ms, completed: r.completed,
         prize_coins: PENDING_PRIZES[rank - 1] || 0,
         isPending: true, gameType: current.gameType,
       });
@@ -10443,6 +10654,7 @@ async function loadSeasonHistory() {
       ...mapSeasonAwardRows(ihRes.data, 'invoice_horde'),
       ...mapSeasonAwardRows(vpRes.data, 'var_patrol'),
       ...mapSeasonAwardRows(ecRes.data, 'egg_catch'),
+      ...mapSeasonAwardRows(smRes.data, 'super_mariusz'),
       ...pendingEntries,
     ];
     if (wrap) {
@@ -16578,6 +16790,7 @@ const SEASONAL_ROTATION = [
   { gameType: 'invoice_horde', displayName: 'Najazd Ticketów 🎫' },
   { gameType: 'var_patrol', displayName: 'VAR Patrol 📺' },
   { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },
+  { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
@@ -16585,6 +16798,7 @@ const SEASONAL_OVERRIDES = {
   '2026-06-22': { gameType: 'var_patrol', displayName: 'VAR Patrol 📺' },
   '2026-06-29': { gameType: 'invoice_horde', displayName: 'Najazd Ticketów 🎫' },
   '2026-07-06': { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },  // debut
+  '2026-07-13': { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },  // debut
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -17012,6 +17226,7 @@ function loadSeasonalTab(showSpinner = true) {
   const ihPanel       = document.getElementById('seasonal-game-invoice-horde');
   const vpPanel       = document.getElementById('seasonal-game-var-patrol');
   const ecPanel       = document.getElementById('seasonal-game-egg-catch');
+  const smPanel       = document.getElementById('seasonal-game-super-mariusz');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -17021,6 +17236,7 @@ function loadSeasonalTab(showSpinner = true) {
   const isIH = current.gameType === 'invoice_horde';
   const isVP = current.gameType === 'var_patrol';
   const isEC = current.gameType === 'egg_catch';
+  const isSM = current.gameType === 'super_mariusz';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
@@ -17028,6 +17244,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (ihPanel) { if (isIH) show(ihPanel); else hide(ihPanel); }
   if (vpPanel) { if (isVP) show(vpPanel); else hide(vpPanel); }
   if (ecPanel) { if (isEC) show(ecPanel); else hide(ecPanel); }
+  if (smPanel) { if (isSM) show(smPanel); else hide(smPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -17036,6 +17253,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isIH && invoiceHordeRuntime?.playing) stopInvoiceHordeRound();
   if (!isVP && varPatrolRuntime?.playing) stopVarPatrolRound();
   if (!isEC && eggCatchRuntime?.playing) stopEggCatchRound();
+  if (!isSM && superMariuszRuntime?.playing) stopSuperMariuszRound();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
@@ -17043,6 +17261,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (invoiceHordeRuntime) invoiceHordeRuntime.archiveMode = false;
   if (varPatrolRuntime) varPatrolRuntime.archiveMode = false;
   if (eggCatchRuntime) eggCatchRuntime.archiveMode = false;
+  if (superMariuszRuntime) superMariuszRuntime.archiveMode = false;
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) loadBugJumperState(showSpinner);
   if (isFP) loadFlappyPantsState(showSpinner);
@@ -17050,6 +17269,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (isIH) loadInvoiceHordeState(showSpinner);
   if (isVP) loadVarPatrolState(showSpinner);
   if (isEC) loadEggCatchState(showSpinner);
+  if (isSM) loadSuperMariuszState(showSpinner);
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
@@ -18588,6 +18808,9 @@ function whackBossRankLabel(rank) {
 // client_meta) — NOT the player's currently equipped item, so the split stays
 // stable whether or not the item is worn now.
 function lbScoreCell(row) {
+  if (row.gameType === 'super_mariusz') {
+    return el('td', { className: 'lb-net' }, row.completed === false ? 'DNF' : smFormatTime(row.completion_ms));
+  }
   const bonus = Number(row.item_bonus);
   const base  = Number(row.base_score);
   if (Number.isFinite(bonus) && bonus > 0 && Number.isFinite(base)) {
@@ -22191,6 +22414,859 @@ if (ecArena) {
   });
 }
 
+// ── „Super Mariusz" (super_mariusz) — hardmode one-life speedrun platformer ──
+// PARITY CONTRACT: the SM_* constants, SM_COURSE, and the
+// smParseCourse/smInitState/smAdvanceTick/replaySuperMariusz functions below
+// must stay byte-for-byte equivalent to the block in
+// supabase/functions/super-mariusz-action/index.ts — the course is fixed (no
+// RNG), and the server replays the input log to derive the trusted result.
+const SM_TICK_MS = 50;
+const SM_MAX_TICKS = 6000;          // 5 min hard cap -> DNF
+const SM_SCORE_CAP_SECONDS = 600;   // score = cap - floor(completion_ms/1000)
+const SM_MAX_MOVES = 3000;
+const SM_SUB = 256;                 // sub-units per tile
+const SM_COURSE_ID = 'super_mariusz_v2';
+
+const SM_RUN_ACCEL = 14;
+const SM_FRICTION = 14;
+const SM_MAX_SPEED = 88;
+const SM_GRAVITY = 18;
+const SM_JUMP_VY = -180;
+const SM_JUMP_CUT_VY = -60;
+const SM_MAX_FALL = 200;
+const SM_COYOTE_TICKS = 2;
+const SM_JUMP_BUFFER_TICKS = 2;
+
+const SM_PLAYER_W = 192;
+const SM_PLAYER_H = 224;
+const SM_ENEMY_SPEED = 32;
+const SM_ENEMY_W = 208;
+const SM_ENEMY_H = 192;
+const SM_SPIKE_INSET = 48;
+
+// Fixed shared course: '#' solid, '^' spike, 'E' enemy spawn, 'S' start,
+// 'F' flag, '.' empty. S/E markers sit one row above the surface they stand
+// on (see smParseCourse), so the surface row itself stays a plain '#'.
+const SM_COURSE = [
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................",
+  ".......................................................................................................................................................................................................................###..........##...........###.........###...........###.........####...........####..................................................................................................................................................................",
+  "................................................................................................................................................................................................................####..........###.........####..........##..........####..........##...........###...............................................................################################################...........................................................",
+  "..S.......^.......^........^....................^^.^^..^^.^^..^^.^^..^^.^^..^^............................................................................................^.............................................................................................................................................E.......E...E......E.......E...E..................^^......^^........^^.......^^.............^...E...^^............E...^....^^....E.............F....",
+  "################################...#####...#############################################################################....###.....###....###.....###....###.....###.....###################################................................................................................................###############...#######...#####....#######...#####################################################################.....#######################.....##########",
+];
+
+// Client-only rendering constants (not part of the parity contract).
+const SM_CS_W = 640, SM_CS_H = 360, SM_MAX_DPR = 2;
+const SM_VISIBLE_ROWS = 7;
+const SM_TILE_PX = SM_CS_H / SM_VISIBLE_ROWS;
+const SM_CAMERA_ROW0 = SM_COURSE.length - SM_VISIBLE_ROWS; // fixed vertical window
+
+let _smParsed = null;
+function smParseCourse() {
+  if (_smParsed) return _smParsed;
+  const rows = SM_COURSE;
+  const height = rows.length;
+  const width = rows[0].length;
+  const solid = new Uint8Array(width * height);
+  const spike = new Uint8Array(width * height);
+  let startX = 2 * SM_SUB, startY = 0;
+  let flagX = (width - 2) * SM_SUB;
+  const enemySpawns = [];
+  for (let r = 0; r < height; r += 1) {
+    const row = rows[r];
+    for (let c = 0; c < width; c += 1) {
+      const ch = row[c];
+      if (ch === '#') solid[r * width + c] = 1;
+      else if (ch === '^') spike[r * width + c] = 1;
+      else if (ch === 'S') { startX = c * SM_SUB; startY = (r + 1) * SM_SUB - SM_PLAYER_H; }
+      else if (ch === 'F') { flagX = c * SM_SUB; }
+      else if (ch === 'E') { enemySpawns.push({ x: c * SM_SUB, row: r + 1 }); }
+    }
+  }
+  _smParsed = { width, height, solid, spike, startX, startY, flagX, enemySpawns, courseBottom: height * SM_SUB };
+  return _smParsed;
+}
+
+function smTileSolid(course, tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= course.width || ty >= course.height) return ty >= course.height ? false : true;
+  return course.solid[ty * course.width + tx] === 1;
+}
+
+function smTileSpike(course, tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= course.width || ty >= course.height) return false;
+  return course.spike[ty * course.width + tx] === 1;
+}
+
+function smAabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+function smInitState() {
+  const course = smParseCourse();
+  const enemies = course.enemySpawns.map(e => ({ x: e.x, y: e.row * SM_SUB - SM_ENEMY_H, dir: 1 }));
+  return {
+    tick: 0,
+    x: course.startX,
+    y: course.startY,
+    vx: 0,
+    vy: 0,
+    onGround: false,
+    coyote: 0,
+    jumpBuf: 0,
+    prevJumpHeld: false,
+    enemies,
+    dead: false,
+    finished: false,
+  };
+}
+
+function smResolveAxis(course, px, py, w, h, dx, dy) {
+  let x = px, y = py;
+  if (dx !== 0) {
+    x += dx;
+    const dir = dx > 0 ? 1 : -1;
+    const edgeX = dir > 0 ? x + w : x;
+    const tx = Math.floor(edgeX / SM_SUB) - (dir > 0 ? 0 : 1);
+    const topRow = Math.floor(y / SM_SUB);
+    const botRow = Math.floor((y + h - 1) / SM_SUB);
+    for (let ty = topRow; ty <= botRow; ty += 1) {
+      if (smTileSolid(course, tx, ty)) {
+        x = dir > 0 ? tx * SM_SUB - w : (tx + 1) * SM_SUB;
+        break;
+      }
+    }
+    return { x, y, landed: false };
+  }
+  if (dy !== 0) {
+    y += dy;
+    const dir = dy > 0 ? 1 : -1;
+    let landed = false;
+    const edgeY = dir > 0 ? y + h : y;
+    const ty = Math.floor(edgeY / SM_SUB) - (dir > 0 ? 0 : 1);
+    const leftCol = Math.floor(x / SM_SUB);
+    const rightCol = Math.floor((x + w - 1) / SM_SUB);
+    for (let tx = leftCol; tx <= rightCol; tx += 1) {
+      if (smTileSolid(course, tx, ty)) {
+        y = dir > 0 ? ty * SM_SUB - h : (ty + 1) * SM_SUB;
+        if (dir > 0) landed = true;
+        break;
+      }
+    }
+    return { x, y, landed };
+  }
+  return { x, y, landed: false };
+}
+
+// One simulation tick. keys is a bitmask: bit0 LEFT, bit1 RIGHT, bit2 JUMP.
+function smAdvanceTick(st, keys) {
+  const course = smParseCourse();
+  st.tick += 1;
+  const left = (keys & 1) !== 0;
+  const right = (keys & 2) !== 0;
+  const jump = (keys & 4) !== 0;
+  const jumpPressed = jump && !st.prevJumpHeld;
+  st.prevJumpHeld = jump;
+
+  if (jumpPressed) st.jumpBuf = SM_JUMP_BUFFER_TICKS;
+  else if (st.jumpBuf > 0) st.jumpBuf -= 1;
+
+  if (left && !right) st.vx = Math.max(-SM_MAX_SPEED, st.vx - SM_RUN_ACCEL);
+  else if (right && !left) st.vx = Math.min(SM_MAX_SPEED, st.vx + SM_RUN_ACCEL);
+  else {
+    if (st.vx > 0) st.vx = Math.max(0, st.vx - SM_FRICTION);
+    else if (st.vx < 0) st.vx = Math.min(0, st.vx + SM_FRICTION);
+  }
+
+  const canJump = st.onGround || st.coyote > 0;
+  let jumped = false;
+  if (st.jumpBuf > 0 && canJump) {
+    st.vy = SM_JUMP_VY;
+    st.onGround = false;
+    st.coyote = 0;
+    st.jumpBuf = 0;
+    jumped = true;
+  } else if (!jump && st.vy < SM_JUMP_CUT_VY) {
+    st.vy = SM_JUMP_CUT_VY;
+  }
+
+  st.vy = Math.min(SM_MAX_FALL, st.vy + SM_GRAVITY);
+
+  const rx = smResolveAxis(course, st.x, st.y, SM_PLAYER_W, SM_PLAYER_H, st.vx, 0);
+  if (rx.x !== st.x + st.vx) st.vx = 0;
+  st.x = rx.x;
+
+  const ry = smResolveAxis(course, st.x, st.y, SM_PLAYER_W, SM_PLAYER_H, 0, st.vy);
+  if (ry.landed) {
+    st.onGround = true;
+    st.coyote = SM_COYOTE_TICKS;
+    st.vy = 0;
+  } else {
+    if (st.onGround) st.coyote = SM_COYOTE_TICKS;
+    else if (st.coyote > 0) st.coyote -= 1;
+    st.onGround = false;
+  }
+  st.y = ry.y;
+
+  for (const en of st.enemies) {
+    const nx = en.x + en.dir * SM_ENEMY_SPEED;
+    const dir = en.dir;
+    const leadX = dir > 0 ? nx + SM_ENEMY_W : nx;
+    const tx = Math.floor(leadX / SM_SUB) - (dir > 0 ? 0 : 1);
+    const ty = Math.floor((en.y + SM_ENEMY_H - 1) / SM_SUB);
+    const wallAhead = smTileSolid(course, dir > 0 ? tx + 1 : tx - 1, Math.floor(en.y / SM_SUB));
+    const floorAhead = smTileSolid(course, tx, ty + 1);
+    if (wallAhead || !floorAhead) en.dir = -en.dir;
+    else en.x = nx;
+  }
+
+  const feetRow = Math.floor((st.y + SM_PLAYER_H - 1) / SM_SUB);
+  const headRow = Math.floor(st.y / SM_SUB);
+  const leftCol = Math.floor((st.x + SM_SPIKE_INSET) / SM_SUB);
+  const rightCol = Math.floor((st.x + SM_PLAYER_W - 1 - SM_SPIKE_INSET) / SM_SUB);
+  let spiked = false;
+  for (let ty = headRow; ty <= feetRow && !spiked; ty += 1) {
+    for (let tx = leftCol; tx <= rightCol; tx += 1) {
+      if (smTileSpike(course, tx, ty)) { spiked = true; break; }
+    }
+  }
+  let enemyHit = false;
+  for (const en of st.enemies) {
+    if (smAabbOverlap(st.x + SM_SPIKE_INSET, st.y, SM_PLAYER_W - 2 * SM_SPIKE_INSET, SM_PLAYER_H, en.x, en.y, SM_ENEMY_W, SM_ENEMY_H)) {
+      enemyHit = true;
+      break;
+    }
+  }
+  const fell = st.y > course.courseBottom;
+  if (spiked || enemyHit || fell) st.dead = true;
+
+  if (!st.dead && st.x + SM_PLAYER_W / 2 >= course.flagX) st.finished = true;
+
+  return { jumped, landed: ry.landed, died: st.dead, finished: st.finished };
+}
+
+function smFormatTime(ms) {
+  if (ms == null || !Number.isFinite(ms)) return '—';
+  const totalCs = Math.round(ms / 10);
+  const m = Math.floor(totalCs / 6000);
+  const s = Math.floor((totalCs % 6000) / 100);
+  const cs = totalCs % 100;
+  return m + ':' + String(s).padStart(2, '0') + '.' + String(cs).padStart(2, '0');
+}
+
+function newSuperMariuszRuntime() {
+  return {
+    playing: false, submitting: false, archiveMode: false,
+    roundId: null,
+    timer: null,
+    sim: smInitState(),
+    heldKeys: 0,
+    loggedKeys: 0,
+    moveLog: [],
+    endedReason: '',
+  };
+}
+
+let smCtx = null;
+let smStatTimeText = null;
+let smStatProgressText = null;
+let smStatStatusText = null;
+
+function smInitCanvas() {
+  const canvas = document.getElementById('sm-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const DPR = Math.min(window.devicePixelRatio || 1, SM_MAX_DPR);
+  const w = Math.round((rect.width || SM_CS_W) * DPR);
+  const h = Math.round((rect.height || SM_CS_H) * DPR);
+  if (!smCtx || canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+    smCtx = canvas.getContext('2d');
+  }
+  smCtx.setTransform(w / SM_CS_W, 0, 0, h / SM_CS_H, 0, 0);
+  smCtx.imageSmoothingEnabled = false;
+}
+
+function smResetBoard() {
+  const rt = superMariuszRuntime || newSuperMariuszRuntime();
+  rt.sim = smInitState();
+  rt.heldKeys = 0;
+  rt.loggedKeys = 0;
+  rt.moveLog = [];
+  rt.endedReason = '';
+  superMariuszRuntime = rt;
+  return rt;
+}
+
+function smResetStatCache() {
+  smStatTimeText = null;
+  smStatProgressText = null;
+  smStatStatusText = null;
+}
+
+function smSetStats(force = false) {
+  const rt = superMariuszRuntime || newSuperMariuszRuntime();
+  const st = rt.sim;
+  const course = smParseCourse();
+  const timeText = smFormatTime(st.tick * SM_TICK_MS);
+  const progressPct = Math.max(0, Math.min(100, Math.round((st.x / course.flagX) * 100)));
+  const progressText = progressPct + '%';
+  const statusText = st.dead ? 'DNF' : st.finished ? 'META!' : rt.playing ? 'W BIEGU' : '—';
+  if (smTimeEl && (force || timeText !== smStatTimeText)) { smTimeEl.textContent = timeText; smStatTimeText = timeText; }
+  if (smProgressEl && (force || progressText !== smStatProgressText)) { smProgressEl.textContent = progressText; smStatProgressText = progressText; }
+  if (smStatusStatEl && (force || statusText !== smStatStatusText)) { smStatusStatEl.textContent = statusText; smStatStatusText = statusText; }
+}
+
+// ── NES pixel-art rendering (client-only; free of the parity contract) ─────
+const SM_PX = SM_TILE_PX / 8; // one virtual 8x8 NES pixel, in CSS px
+
+function smDrawGroundTile(ctx, sx, sy) {
+  // SMB1-style ground block: two-tone orange/brown brick with dark mortar
+  // lines and a light top-edge highlight, drawn as an 8x8 pixel pattern.
+  const s = SM_PX;
+  const w = SM_TILE_PX + 1, h = SM_TILE_PX + 1;
+  ctx.fillStyle = '#c84c0c';
+  ctx.fillRect(Math.round(sx), Math.round(sy), w, h);
+  ctx.fillStyle = '#e0691c';
+  ctx.fillRect(Math.round(sx), Math.round(sy), w, Math.round(s));
+  ctx.fillStyle = '#3f1500';
+  // mortar cross lines (NES brick pattern)
+  ctx.fillRect(Math.round(sx), Math.round(sy + s * 3), w, Math.max(1, Math.round(s * 0.5)));
+  ctx.fillRect(Math.round(sx + s * 3.5), Math.round(sy), Math.max(1, Math.round(s * 0.5)), Math.round(s * 3.5));
+  ctx.fillRect(Math.round(sx + s * 1.5), Math.round(sy + s * 3.5), Math.max(1, Math.round(s * 0.5)), Math.round(s * 4.5));
+  ctx.fillRect(Math.round(sx + s * 5.5), Math.round(sy + s * 3.5), Math.max(1, Math.round(s * 0.5)), Math.round(s * 4.5));
+}
+
+function smDrawSpikeTile(ctx, sx, sy) {
+  // pixel-stepped triangle: stacked shrinking rects, bone-grey with dark outline
+  const s = SM_PX;
+  const steps = [
+    [0, 6, 8, 2], [1, 4, 6, 2], [2, 2, 4, 2], [3, 0, 2, 2],
+  ];
+  ctx.fillStyle = '#1a1a1a';
+  for (const [px, py, pw, ph] of steps) {
+    ctx.fillRect(Math.round(sx + (px - 0.5) * s), Math.round(sy + (py - 0.5) * s), Math.ceil((pw + 1) * s), Math.ceil((ph + 1) * s));
+  }
+  ctx.fillStyle = '#e0e0e0';
+  for (const [px, py, pw, ph] of steps) {
+    ctx.fillRect(Math.round(sx + px * s), Math.round(sy + py * s), Math.ceil(pw * s), Math.ceil(ph * s));
+  }
+}
+
+// deterministic cosmetic sky decorations (no RNG — derived from tile column)
+function smDrawSky(ctx, cameraTileX, visibleCols) {
+  ctx.fillStyle = '#5c94fc';
+  ctx.fillRect(0, 0, SM_CS_W, SM_CS_H);
+  const firstCol = Math.floor(cameraTileX) - 2;
+  const lastCol = Math.ceil(cameraTileX + visibleCols) + 2;
+  const groundSy = (SM_COURSE.length - 1 - SM_CAMERA_ROW0) * SM_TILE_PX;
+  // pixel clouds every ~17 cols at rows 1.2-2.2 (virtual "sky" band)
+  for (let base = Math.floor(firstCol / 17) * 17; base <= lastCol; base += 17) {
+    const cx = (base + 8 - cameraTileX) * SM_TILE_PX;
+    const cy = SM_TILE_PX * 0.9;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(cx), Math.round(cy + SM_PX * 2), Math.round(SM_TILE_PX * 1.6), Math.round(SM_PX * 3));
+    ctx.fillRect(Math.round(cx + SM_TILE_PX * 0.3), Math.round(cy), Math.round(SM_TILE_PX * 0.9), Math.round(SM_PX * 4));
+    ctx.fillRect(Math.round(cx + SM_TILE_PX * 0.9), Math.round(cy + SM_PX), Math.round(SM_TILE_PX * 0.7), Math.round(SM_PX * 3.5));
+    ctx.fillStyle = '#b5efef';
+    ctx.fillRect(Math.round(cx), Math.round(cy + SM_PX * 4), Math.round(SM_TILE_PX * 1.6), Math.round(SM_PX));
+  }
+  // green bushes every ~13 cols along the floor line (behind tiles)
+  for (let base = Math.floor(firstCol / 13) * 13; base <= lastCol; base += 13) {
+    const bx = (base - cameraTileX) * SM_TILE_PX;
+    const by = groundSy - SM_PX * 2;
+    ctx.fillStyle = '#1fae4a';
+    ctx.fillRect(Math.round(bx), Math.round(by), Math.round(SM_TILE_PX * 2.2), Math.round(SM_PX * 2));
+    ctx.fillStyle = '#2fd15f';
+    ctx.fillRect(Math.round(bx + SM_TILE_PX * 0.3), Math.round(by - SM_PX), Math.round(SM_TILE_PX * 1.6), Math.round(SM_PX));
+  }
+}
+
+function smDrawFlag(ctx, sx, sy, groundSy) {
+  const s = SM_PX;
+  ctx.fillStyle = '#c9c9c9';
+  ctx.fillRect(Math.round(sx + SM_TILE_PX * 0.42), Math.round(sy), Math.max(2, Math.round(s * 0.6)), Math.round(groundSy - sy));
+  ctx.fillStyle = '#e8e8e8';
+  ctx.beginPath();
+  ctx.arc(Math.round(sx + SM_TILE_PX * 0.42 + s * 0.3), Math.round(sy), Math.round(s * 0.9), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.moveTo(Math.round(sx + SM_TILE_PX * 0.42 + s * 0.6), Math.round(sy + s * 1.5));
+  ctx.lineTo(Math.round(sx + SM_TILE_PX * 0.42 + s * 4.5), Math.round(sy + s * 2.7));
+  ctx.lineTo(Math.round(sx + SM_TILE_PX * 0.42 + s * 0.6), Math.round(sy + s * 4));
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#8a6540';
+  ctx.fillRect(Math.round(sx + SM_TILE_PX * 0.15), Math.round(groundSy - s * 1.5), Math.round(SM_TILE_PX * 0.7), Math.round(s * 1.5));
+}
+
+function smDrawEnemy(ctx, sx, sy, w, h, tick, dir) {
+  // pixel "walking briefcase goomba": brown body + handle, angry eyes, 2-frame feet
+  const s = h / 8;
+  ctx.fillStyle = '#5a3a1e';
+  ctx.fillRect(Math.round(sx), Math.round(sy + s * 1.5), Math.round(w), Math.round(h * 0.72));
+  ctx.fillStyle = '#8a5a2e';
+  ctx.fillRect(Math.round(sx), Math.round(sy + s * 1.5), Math.round(w), Math.round(s));
+  // handle
+  ctx.fillStyle = '#2a1a0e';
+  ctx.fillRect(Math.round(sx + w * 0.35), Math.round(sy), Math.round(w * 0.3), Math.round(s * 1.6));
+  // eyes (angry)
+  ctx.fillStyle = '#fff';
+  const eyeY = sy + h * 0.42;
+  ctx.fillRect(Math.round(sx + w * 0.2), Math.round(eyeY), Math.round(s * 1.2), Math.round(s * 1.2));
+  ctx.fillRect(Math.round(sx + w * 0.6), Math.round(eyeY), Math.round(s * 1.2), Math.round(s * 1.2));
+  ctx.fillStyle = '#000';
+  ctx.fillRect(Math.round(sx + w * 0.2 + (dir > 0 ? s * 0.5 : 0)), Math.round(eyeY), Math.round(s * 0.7), Math.round(s * 1.2));
+  ctx.fillRect(Math.round(sx + w * 0.6 + (dir > 0 ? s * 0.5 : 0)), Math.round(eyeY), Math.round(s * 0.7), Math.round(s * 1.2));
+  // angry brows
+  ctx.fillStyle = '#000';
+  ctx.fillRect(Math.round(sx + w * 0.15), Math.round(eyeY - s * 0.6), Math.round(s * 1.4), Math.round(s * 0.5));
+  ctx.fillRect(Math.round(sx + w * 0.55), Math.round(eyeY - s * 0.6), Math.round(s * 1.4), Math.round(s * 0.5));
+  // 2-frame stubby feet
+  const frame = Math.floor(tick / 4) % 2;
+  ctx.fillStyle = '#1a1a1a';
+  const footY = sy + h * 0.94;
+  if (frame === 0) {
+    ctx.fillRect(Math.round(sx + w * 0.1), Math.round(footY), Math.round(s * 1.4), Math.round(s));
+    ctx.fillRect(Math.round(sx + w * 0.6), Math.round(footY), Math.round(s * 1.4), Math.round(s));
+  } else {
+    ctx.fillRect(Math.round(sx + w * 0.2), Math.round(footY), Math.round(s * 1.4), Math.round(s));
+    ctx.fillRect(Math.round(sx + w * 0.5), Math.round(footY), Math.round(s * 1.4), Math.round(s));
+  }
+}
+
+function smDrawPlayer(ctx, sx, sy, w, h, rt, st) {
+  const s = h / 8; // virtual pixel size for a ~6x7-pixel-tall sprite
+  const dead = st.dead;
+  const capCol = dead ? '#5c1414' : '#d21f1f';
+  const skinCol = dead ? '#7a5a3a' : '#f1c27d';
+  const overallsCol = dead ? '#1a2440' : '#2f5fd6';
+  const shirtCol = dead ? '#5c1414' : '#d21f1f';
+  const shoeCol = dead ? '#2a1a0e' : '#5a3a1e';
+
+  ctx.save();
+  if (dead) {
+    // death pose: upside-down, desaturated (cosmetic only, sim already ended)
+    ctx.translate(sx + w / 2, sy + h / 2);
+    ctx.scale(1, -1);
+    ctx.translate(-(sx + w / 2), -(sy + h / 2));
+  }
+
+  const jumping = !st.onGround;
+  const walking = !jumping && st.vx !== 0;
+  const walkFrame = walking ? Math.floor(Math.abs(st.x) / 128) % 2 : 0;
+  const facing = rt.facing || 1;
+
+  // legs / shoes
+  ctx.fillStyle = shoeCol;
+  if (jumping) {
+    // tucked legs
+    ctx.fillRect(Math.round(sx + w * 0.2), Math.round(sy + h * 0.78), Math.round(w * 0.25), Math.round(h * 0.2));
+    ctx.fillRect(Math.round(sx + w * 0.55), Math.round(sy + h * 0.78), Math.round(w * 0.25), Math.round(h * 0.2));
+  } else if (walking && walkFrame === 1) {
+    ctx.fillRect(Math.round(sx + w * 0.1), Math.round(sy + h * 0.82), Math.round(w * 0.3), Math.round(h * 0.18));
+    ctx.fillRect(Math.round(sx + w * 0.6), Math.round(sy + h * 0.78), Math.round(w * 0.3), Math.round(h * 0.2));
+  } else {
+    ctx.fillRect(Math.round(sx + w * 0.15), Math.round(sy + h * 0.8), Math.round(w * 0.3), Math.round(h * 0.2));
+    ctx.fillRect(Math.round(sx + w * 0.55), Math.round(sy + h * 0.8), Math.round(w * 0.3), Math.round(h * 0.2));
+  }
+
+  // overalls (legs + body)
+  ctx.fillStyle = overallsCol;
+  ctx.fillRect(Math.round(sx), Math.round(sy + h * 0.55), Math.round(w), Math.round(h * 0.3));
+  ctx.fillRect(Math.round(sx + w * 0.15), Math.round(sy + h * 0.4), Math.round(w * 0.7), Math.round(h * 0.2));
+
+  // shirt sleeves / arms
+  ctx.fillStyle = shirtCol;
+  if (jumping) {
+    // arms up
+    ctx.fillRect(Math.round(sx - w * 0.05), Math.round(sy + h * 0.28), Math.round(w * 0.22), Math.round(h * 0.22));
+    ctx.fillRect(Math.round(sx + w * 0.83), Math.round(sy + h * 0.28), Math.round(w * 0.22), Math.round(h * 0.22));
+  } else {
+    ctx.fillRect(Math.round(sx - w * 0.03), Math.round(sy + h * 0.42), Math.round(w * 0.2), Math.round(h * 0.18));
+    ctx.fillRect(Math.round(sx + w * 0.83), Math.round(sy + h * 0.42), Math.round(w * 0.2), Math.round(h * 0.18));
+  }
+
+  // face / skin
+  ctx.fillStyle = skinCol;
+  ctx.fillRect(Math.round(sx + w * 0.22), Math.round(sy + h * 0.18), Math.round(w * 0.56), Math.round(h * 0.24));
+
+  // eye (faces direction of travel)
+  ctx.fillStyle = '#000';
+  const eyeX = facing >= 0 ? sx + w * 0.58 : sx + w * 0.3;
+  ctx.fillRect(Math.round(eyeX), Math.round(sy + h * 0.24), Math.round(s * 0.9), Math.round(s * 0.9));
+
+  // cap with brim
+  ctx.fillStyle = capCol;
+  ctx.fillRect(Math.round(sx + w * 0.12), Math.round(sy), Math.round(w * 0.76), Math.round(h * 0.2));
+  ctx.fillRect(Math.round(facing >= 0 ? sx + w * 0.5 : sx - w * 0.08), Math.round(sy + h * 0.14), Math.round(w * 0.5), Math.round(h * 0.08));
+
+  ctx.restore();
+}
+
+function smDraw() {
+  if (!smCtx) return;
+  const rt = superMariuszRuntime || newSuperMariuszRuntime();
+  const st = rt.sim;
+  const course = smParseCourse();
+  const ctx = smCtx;
+
+  // track cosmetic facing off the last nonzero vx
+  if (st.vx > 0) rt.facing = 1;
+  else if (st.vx < 0) rt.facing = -1;
+
+  ctx.clearRect(0, 0, SM_CS_W, SM_CS_H);
+
+  const visibleCols = SM_CS_W / SM_TILE_PX;
+  const playerTileX = st.x / SM_SUB;
+  let cameraTileX = playerTileX - visibleCols * 0.35;
+  cameraTileX = Math.max(0, Math.min(course.width - visibleCols, cameraTileX));
+
+  smDrawSky(ctx, cameraTileX, visibleCols);
+
+  const toScreenX = worldTileX => (worldTileX - cameraTileX) * SM_TILE_PX;
+  const toScreenY = worldTileY => (worldTileY - SM_CAMERA_ROW0) * SM_TILE_PX;
+
+  const firstCol = Math.max(0, Math.floor(cameraTileX) - 1);
+  const lastCol = Math.min(course.width - 1, Math.ceil(cameraTileX + visibleCols) + 1);
+  for (let ty = SM_CAMERA_ROW0; ty < course.height; ty += 1) {
+    for (let tx = firstCol; tx <= lastCol; tx += 1) {
+      const sx = toScreenX(tx), sy = toScreenY(ty);
+      if (course.solid[ty * course.width + tx]) {
+        smDrawGroundTile(ctx, sx, sy);
+      } else if (course.spike[ty * course.width + tx]) {
+        smDrawSpikeTile(ctx, sx, sy);
+      }
+    }
+  }
+
+  // flag
+  const flagSx = toScreenX(course.flagX / SM_SUB);
+  const flagSy = toScreenY(SM_CAMERA_ROW0);
+  const groundSy = toScreenY(course.height - 1);
+  smDrawFlag(ctx, flagSx, flagSy, groundSy + SM_TILE_PX);
+
+  // enemies
+  st.enemies.forEach(en => {
+    const sx = toScreenX(en.x / SM_SUB);
+    const sy = toScreenY(en.y / SM_SUB);
+    const w = SM_ENEMY_W / SM_SUB * SM_TILE_PX;
+    const h = SM_ENEMY_H / SM_SUB * SM_TILE_PX;
+    smDrawEnemy(ctx, sx, sy, w, h, st.tick, en.dir);
+  });
+
+  // player (Mariusz)
+  const psx = toScreenX(st.x / SM_SUB);
+  const psy = toScreenY(st.y / SM_SUB);
+  const pw = SM_PLAYER_W / SM_SUB * SM_TILE_PX;
+  const ph = SM_PLAYER_H / SM_SUB * SM_TILE_PX;
+  smDrawPlayer(ctx, psx, psy, pw, ph, rt, st);
+
+  // scanline overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.10)';
+  for (let y = 0; y < SM_CS_H; y += 3) {
+    ctx.fillRect(0, y, SM_CS_W, 1);
+  }
+}
+
+async function invokeSuperMariusz(payload) {
+  const { data, error } = await sb.functions.invoke('super-mariusz-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z Super Mariuszem.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Super Mariusza.');
+  return data;
+}
+
+async function loadSuperMariuszState(showSpinner = true) {
+  smInitCanvas();
+  if (!superMariuszRuntime) smResetBoard();
+  smDraw();
+  const weeklyWrap  = document.getElementById('sm-weekly-board');
+  const allTimeWrap = document.getElementById('sm-alltime-board');
+  const awardsWrap  = document.getElementById('sm-awards');
+  if (showSpinner) {
+    if (weeklyWrap)  weeklyWrap.replaceChildren(makeSpinner());
+    if (allTimeWrap) allTimeWrap.replaceChildren(makeSpinner());
+    if (awardsWrap)  awardsWrap.replaceChildren();
+  }
+  try {
+    const data = await invokeSuperMariusz({ action: 'state' });
+    renderSuperMariuszState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać gry.';
+    if (weeklyWrap)  weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, msg));
+    if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Brak danych.'));
+    if (awardsWrap)  awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+    if (smStatus) smStatus.textContent = '„Super Mariusz" nie jest jeszcze aktywny.';
+  }
+}
+
+function renderSuperMariuszState(data) {
+  if (data.profile) { me.coins = data.profile.coins; setText(headerCoins, me.coins); }
+  const weekLabel = document.getElementById('sm-week-label');
+  if (weekLabel) {
+    const range = whackBossWeekRange(data.weekStart);
+    weekLabel.textContent = range ? range.short : '';
+  }
+  renderSuperMariuszTable(document.getElementById('sm-weekly-board'), data.weekly || [], 'weekly');
+  renderSuperMariuszTable(document.getElementById('sm-alltime-board'), data.allTime || [], 'allTime');
+  renderSuperMariuszAwards(document.getElementById('sm-awards'), data.awards || []);
+  if (!superMariuszRuntime?.playing && smStatus) {
+    smStatus.textContent = data.myWeekly
+      ? (data.myWeekly.completed
+          ? 'Twój najlepszy czas w tym tygodniu: ' + smFormatTime(data.myWeekly.completion_ms) + '.'
+          : 'Jeszcze nie ukończyłeś trasy w tym tygodniu.')
+      : '←→/AD bieg, Spacja/W/↑ skok. Jedno życie — wynik to czas ukończenia.';
+  }
+}
+
+function renderSuperMariuszTable(wrap, rows, mode) {
+  if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie ukończył trasy w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+  const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
+    el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-net' }, row.completed === false ? 'DNF' : smFormatTime(row.completion_ms))
+  ));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Czas ukończenia trasy' }, 'Czas'))),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderSuperMariuszAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  wrap.replaceChildren(...awards.slice(0, 6).map(row => {
+    const label = whackBossWeekRange(row.week_start)?.short || '';
+    return el('div', { className: 'bj-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  }));
+}
+
+function stopSuperMariuszRound() {
+  const rt = superMariuszRuntime;
+  if (rt?.timer) clearTimeout(rt.timer);
+  const wasArchive = rt?.archiveMode || false;
+  superMariuszRuntime = newSuperMariuszRuntime();
+  smResetBoard();
+  superMariuszRuntime.playing = false;
+  superMariuszRuntime.archiveMode = wasArchive;
+  if (smStartBtn) { smStartBtn.disabled = false; smStartBtn.textContent = 'Start rundy'; }
+  smResetStatCache();
+  smSetStats(true);
+  smInitCanvas();
+  smDraw();
+}
+
+function beginSuperMariuszRound(round, options = {}) {
+  stopSuperMariuszRound();
+  superMariuszRuntime = newSuperMariuszRuntime();
+  const rt = smResetBoard();
+  rt.playing = true;
+  rt.archiveMode = !!options.archiveMode;
+  rt.roundId = round.id;
+  if (smStartBtn) { smStartBtn.disabled = true; smStartBtn.textContent = 'Runda trwa'; }
+  if (smStatus) {
+    smStatus.textContent = rt.archiveMode
+      ? 'Demo — wynik nie zostanie zapisany.'
+      : 'Jedno życie — kolce, teczki i przepaście zabijają od razu.';
+  }
+  if (smArena) {
+    if (!smArena.hasAttribute('tabindex')) smArena.tabIndex = 0;
+    try { smArena.focus({ preventScroll: true }); } catch { smArena.focus(); }
+  }
+  smResetStatCache();
+  smSetStats(true);
+  smDraw();
+  rt.timer = setTimeout(smTick, SM_TICK_MS);
+}
+
+function smTick() {
+  const rt = superMariuszRuntime;
+  if (!rt?.playing) return;
+  const st = rt.sim;
+  const nextTick = st.tick + 1;
+  if (rt.heldKeys !== rt.loggedKeys) {
+    rt.moveLog.push({ tick: nextTick, keys: rt.heldKeys });
+    rt.loggedKeys = rt.heldKeys;
+    if (rt.moveLog.length > SM_MAX_MOVES) rt.moveLog.shift();
+  }
+  const ev = smAdvanceTick(st, rt.heldKeys);
+  smSetStats();
+  smDraw();
+  if (ev.died) {
+    rt.endedReason = 'śmierć';
+    finishSuperMariuszRound();
+    return;
+  }
+  if (ev.finished) {
+    rt.endedReason = 'meta';
+    finishSuperMariuszRound();
+    return;
+  }
+  if (st.tick >= SM_MAX_TICKS) {
+    rt.endedReason = 'limit czasu';
+    finishSuperMariuszRound();
+    return;
+  }
+  rt.timer = setTimeout(smTick, SM_TICK_MS);
+}
+
+async function startSuperMariuszRound() {
+  const rt = superMariuszRuntime;
+  if (rt?.playing || rt?.submitting) return;
+  if (allGamesMode) {
+    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+  }
+  if (smStartBtn) { smStartBtn.disabled = true; smStartBtn.textContent = 'Ładuję...'; }
+  if (smStatus) smStatus.textContent = 'Przygotowuję rundę...';
+  try {
+    const data = await invokeSuperMariusz({ action: 'start' });
+    renderSuperMariuszState(data);
+    beginSuperMariuszRound(data.round);
+    if (allGamesMode) superMariuszRuntime.archiveMode = true;
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (smStatus) smStatus.textContent = 'Nie udało się wystartować rundy.';
+    if (smStartBtn) { smStartBtn.disabled = false; smStartBtn.textContent = 'Start rundy'; }
+  }
+}
+
+async function finishSuperMariuszRound() {
+  const rt = superMariuszRuntime;
+  if (!rt || rt.submitting) return;
+  rt.playing = false;
+  rt.submitting = true;
+  if (rt.timer) clearTimeout(rt.timer);
+  smSetStats(true);
+  smDraw();
+
+  const finished = rt.sim.finished;
+  const completionMs = finished ? rt.sim.tick * SM_TICK_MS : null;
+  const clientScore = finished ? Math.max(0, SM_SCORE_CAP_SECONDS - Math.floor(completionMs / 1000)) : 0;
+
+  if (rt.archiveMode) {
+    rt.submitting = false;
+    if (smStartBtn) { smStartBtn.disabled = false; smStartBtn.textContent = 'Zagraj ponownie'; }
+    if (allGamesMode) {
+      try {
+        await sb.rpc('record_arcade_score', { p_game_type: 'super_mariusz', p_score: clientScore });
+        if (smStatus) smStatus.textContent = finished ? 'Czas: ' + smFormatTime(completionMs) + ' · zapisano w rankingu arcade!' : 'DNF · zapisano w rankingu arcade.';
+        loadArcadeScores('super_mariusz');
+      } catch (e) { if (smStatus) smStatus.textContent = 'Wynik: ' + clientScore + ' (błąd zapisu).'; }
+    } else {
+      if (smStatus) smStatus.textContent = finished ? 'Demo — czas: ' + smFormatTime(completionMs) + ' (nie zapisano).' : 'Demo — DNF (nie zapisano).';
+    }
+    return;
+  }
+
+  if (smStartBtn) { smStartBtn.disabled = true; smStartBtn.textContent = 'Zapisuję...'; }
+  if (smStatus) smStatus.textContent = 'Zapisuję wynik...';
+  try {
+    const data = await invokeSuperMariusz({
+      action: 'submit',
+      roundId: rt.roundId,
+      moves: rt.moveLog,
+      elapsedTicks: rt.sim.tick,
+      score: clientScore,
+    });
+    renderSuperMariuszState(data);
+    if (data.score.completed) {
+      showToast('✅ Ukończono w ' + smFormatTime(data.score.completion_ms));
+      if (smStatus) smStatus.textContent = 'Ostatni czas: ' + smFormatTime(data.score.completion_ms) + '.';
+    } else {
+      showToast('💀 DNF — wynik 0 zapisany');
+      if (smStatus) smStatus.textContent = 'DNF (' + rt.endedReason + ') — wynik 0.';
+    }
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (smStatus) smStatus.textContent = 'Nie udało się zapisać wyniku.';
+  } finally {
+    rt.submitting = false;
+    if (smStartBtn) { smStartBtn.disabled = false; smStartBtn.textContent = 'Zagraj ponownie'; }
+  }
+}
+
+if (smStartBtn) smStartBtn.addEventListener('click', startSuperMariuszRound);
+
+document.addEventListener('keydown', evt => {
+  const rt = superMariuszRuntime;
+  if (!rt?.playing) return;
+  let bit = 0;
+  const key = evt.key.toLowerCase();
+  if (key === 'arrowleft' || key === 'a') bit = 1;
+  else if (key === 'arrowright' || key === 'd') bit = 2;
+  else if (key === ' ' || key === 'arrowup' || key === 'w') bit = 4;
+  if (!bit) return;
+  evt.preventDefault();
+  rt.heldKeys |= bit;
+});
+document.addEventListener('keyup', evt => {
+  const rt = superMariuszRuntime;
+  if (!rt) return;
+  let bit = 0;
+  const key = evt.key.toLowerCase();
+  if (key === 'arrowleft' || key === 'a') bit = 1;
+  else if (key === 'arrowright' || key === 'd') bit = 2;
+  else if (key === ' ' || key === 'arrowup' || key === 'w') bit = 4;
+  if (!bit) return;
+  rt.heldKeys &= ~bit;
+});
+
+if (smArena) {
+  const smPointers = new Map(); // pointerId -> bit contributed
+  smArena.addEventListener('pointerdown', evt => {
+    evt.preventDefault();
+    const rt = superMariuszRuntime;
+    if (!rt?.playing && !rt?.submitting) {
+      startSuperMariuszRound();
+      return;
+    }
+    if (!rt?.playing) return;
+    const rect = smArena.getBoundingClientRect();
+    const relX = (evt.clientX - rect.left) / rect.width;
+    const relY = (evt.clientY - rect.top) / rect.height;
+    let bit;
+    if (relY < 0.45) bit = 4; // upper zone = jump
+    else bit = relX < 0.5 ? 1 : 2; // lower-left run left, lower-right run right
+    smPointers.set(evt.pointerId, bit);
+    rt.heldKeys |= bit;
+    try { smArena.setPointerCapture(evt.pointerId); } catch {}
+  });
+  const releasePointer = evt => {
+    const rt = superMariuszRuntime;
+    const bit = smPointers.get(evt.pointerId);
+    smPointers.delete(evt.pointerId);
+    if (!rt || !bit) return;
+    let stillHeld = false;
+    smPointers.forEach(b => { if (b === bit) stillHeld = true; });
+    if (!stillHeld) rt.heldKeys &= ~bit;
+  };
+  smArena.addEventListener('pointerup', releasePointer);
+  smArena.addEventListener('pointercancel', releasePointer);
+}
+
 // ── Najazd Faktur (Invoice Horde) — canvas ───────────────────────────────────
 // Deterministic integer arena-survivor. The simulation here is replayed 1:1 by
 // the invoice-horde-action Edge Function, so every constant below must match it.
@@ -23322,6 +24398,29 @@ function setupGardenRealtime() {
 // ── Farma (farm grid + collectible plant-card economy) ──────────────────────
 // Grid bounds mirror supabase/farm.sql (FARM_W/FARM_H) — keep in sync.
 const FARM_W = 13, FARM_H = 4;
+// Row 0 held only legacy zen-migration tiles (now shown in the 🧘 Ogród Zen panel
+// instead, see garden-zen-split.sql) — confirmed empty of real crop/NFT tiles, so
+// the crop board simply doesn't render it. Data model / capacity math is untouched.
+const FARM_DISPLAY_Y_START = 1;
+const FARM_DISPLAY_ROWS = FARM_H - FARM_DISPLAY_Y_START;
+// One REAL tile completing the farm's 8×5 display rectangle (13×3 data cells = 39,
+// so one more makes 40). It uses a coordinate from the freed zen row 0 — a fully
+// functional plot (buy/plant/harvest/list all work; the DB grid is still 13×4).
+// NOTE: it becomes buyable only after garden-zen-split.sql clears the legacy
+// migration tiles that still occupy row 0 in the DB; until then buying reports
+// "tile_taken".
+const FARM_EXTRA_TILES = [{ x: 0, y: 0 }];
+// Shared visual height of the Ogródek: both the zen grid and the farm grid render
+// this many rows on desktop, so the two panels always align top and bottom.
+const OGRODEK_DESKTOP_ROWS = 5;
+// Column count of the farm display grid: 40 cells reflow as 8×5 on desktop and
+// as 7 columns on stacked mobile (matching the zen part's width).
+function farmDisplayCols() {
+  if (window.innerWidth <= 760) return Math.ceil(FARM_W / 2);
+  return Math.ceil((FARM_W * FARM_DISPLAY_ROWS + FARM_EXTRA_TILES.length) / OGRODEK_DESKTOP_ROWS);
+}
+// Nicks intentionally excluded from the 🧘 Ogród Zen reserved-slot grid (test/inactive accounts).
+const ZEN_EXCLUDED_NICKS = ['Maks', 'dupa_szefa'];
 const FARM_BOX_PRICE = 100;
 const FARM_BOX_DRAWS = 3;   // distinct cards per lootbox — mirror open_farm_lootbox v_draws
 const FARM_TILE_BASE_PRICE = 350;
@@ -23378,7 +24477,11 @@ const FARM_ERR = {
 
 let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, listed, asset_value, planted_species, planted_level, planted_at, ready_at, nick, zen }
 let fmDefs = new Map();         // species -> def row
-let fmZen = new Map();          // owner_id -> { type, stage, name } (existing Ogródek plant shown on the home tile)
+let fmZen = new Map();          // gardens.id -> gardens row (zen plants shown in the 🧘 Ogród Zen panel)
+let fmProfiles = [];            // [{id,nick,is_admin}] — active users, for reserving 2 zen slots each
+let fmZenReloadTimer = null;    // debounces farm reload on gardens realtime changes
+let farmCellPx = 60;            // last cell size scaleFarmPots computed — scaleZenBoard reuses it so both grids match
+let zenSlotCount = 0;           // slots rendered in the zen grid (users×2) — drives zenColsFor()
 let fmCollection = [];          // [{species,count,level}]
 let fmInventory = new Map();    // crop_type -> qty (sum of non-expired lots)
 let fmInventoryExp = new Map(); // crop_type -> soonest expires_at (ISO) of its lots (rot countdown)
@@ -23568,9 +24671,12 @@ function setupFarmOnce() {
   window.addEventListener('resize', () => {
     if (activeTab !== 'farm') return;
     const board = document.getElementById('farm-board');
-    const want = farmSegments().length;
-    const have = board ? board.querySelectorAll('.fb-seg').length : 0;
-    if (board && want !== have) renderFarmBoard(); else scaleFarmPots();
+    const seg = board && board.querySelector('.fb-seg');
+    // Re-render when the display column count changes (crossing the mobile
+    // breakpoint); otherwise just rescale in place.
+    if (seg && +seg.dataset.cols !== farmDisplayCols()) { renderFarmBoard(); renderZenZone(); }
+    else scaleFarmPots();
+    scaleZenBoard();
   });
   const viewToggle = document.getElementById('farm-view-toggle');
   if (viewToggle) viewToggle.addEventListener('click', toggleFarmView);
@@ -23772,14 +24878,15 @@ function farmTableBuildRow(x, y, now) {
 }
 
 function farmTableRows(now) {
+  // Mirror the visual board: farmland rows 1-3 plus the FARM_EXTRA_TILES (row-0
+  // coords completing the display rectangle). The rest of row 0 stays hidden.
   const rows = [];
-  for (let y = 0; y < FARM_H; y++) {
+  for (let y = FARM_DISPLAY_Y_START; y < FARM_H; y++) {
     for (let x = 0; x < FARM_W; x++) {
-      const tile = fmTiles.get(x + ',' + y);
-      if (tile && tile.zenCover) continue;
       rows.push(farmTableBuildRow(x, y, now));
     }
   }
+  FARM_EXTRA_TILES.forEach(ex => rows.push(farmTableBuildRow(ex.x, ex.y, now)));
   return rows;
 }
 
@@ -24074,7 +25181,7 @@ async function loadFarm() {
   await claimFarmStarter();   // grant the welcome boxes before we read box state
   const seq = ++fmLoadSeq;
   try {
-    const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes, taxRes] = await Promise.all([
+    const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes, taxRes, profRes] = await Promise.all([
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
@@ -24084,6 +25191,7 @@ async function loadFarm() {
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
       sb.from('farm_user_state').select('boxes,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
       sb.rpc('farm_land_tax_quote'),
+      sb.from('profiles').select('id,nick,is_admin,second_garden_unlocked'),
     ]);
     if (seq !== fmLoadSeq) return;
     applyFarmUserState(stateRes.data);
@@ -24092,9 +25200,18 @@ async function loadFarm() {
     maybeGateFarmDocument();
     fmNft = nftRes.data || [];
     fmZen = new Map();
-    (zenRes.data || []).forEach(g => fmZen.set(g.id, g));   // keyed by gardens.id (one block per plant)
+    (zenRes.data || []).forEach(g => fmZen.set(g.id, g));   // keyed by gardens.id (one row per zen plant)
+    // Drive the 🧘 Ogród Zen panel from the gardens table (see renderZenZone).
+    fmProfiles = profRes.data || [];
+    allGardens = [...fmZen.values()];
+    myGarden  = allGardens.find(g => g.user_id === me.id && (g.slot_index || 1) === 1) || null;
+    myGarden2 = allGardens.find(g => g.user_id === me.id && g.slot_index === 2) || null;
+    secondGardenUnlocked = (fmProfiles.find(p => p.id === me.id) || {}).second_garden_unlocked || false;
+    // Zen plants live in their own panel now, NOT on the crop board — drop any legacy
+    // `acquired_via='migration'` tiles so the board is pure farmland (garden-zen-split.sql
+    // removes them server-side; this keeps the client correct before/after that runs).
     fmTiles = new Map();
-    (tilesRes.data || []).forEach(t => fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)));
+    (tilesRes.data || []).forEach(t => { if (t.acquired_via === 'migration') return; fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)); });
     fmOwnedTileCountHint = 0;
     fmNormalTileCountHint = 0;
     fmTiles.forEach(t => {
@@ -24113,6 +25230,7 @@ async function loadFarm() {
     await refreshFarmSeasonalState();
     renderFarmPanels();
     renderFarmBoard();
+    renderZenZone();
     if (pendingFarmHubOpen && activeTab === 'farm') {
       const hubTab = pendingFarmHubOpen;
       pendingFarmHubOpen = null;
@@ -24121,6 +25239,228 @@ async function loadFarm() {
   } catch (e) {
     console.error('loadFarm', e);
   }
+}
+
+// Reload whichever Ogródek view is active. The zen pot builders (buildPot /
+// buildEmptyPot) are shared with the hidden garden tab; on the farm we must
+// refresh the farm (which re-renders the zen panel), not the old garden tab.
+function reloadGardenView() {
+  if (activeTab === 'farm') loadFarm(); else loadGarden();
+}
+
+// 🧘 Ogród Zen — the left-hand panel of the Ogródek tab. Driven directly by the
+// `gardens` table (fmZen) rather than farm_tiles: it reserves TWO slots per active
+// user (users×2). Rendered with the SAME square-tile grid as the crop board
+// (.farm-board/.fb-seg/.farm-plant-cell/.farm-cell) so both halves look identical.
+// My empty slots are click-to-plant invites (1st free, 2nd for the 800🪙 certificate),
+// everyone else's are reserved tiles.
+function renderZenZone() {
+  const host = document.getElementById('zen-zone');
+  if (!host) return;
+  const viewerAdmin = isAdmin();
+  const bySlot = new Map();
+  [...fmZen.values()].forEach(g => bySlot.set(g.user_id + ':' + (g.slot_index || 1), g));
+
+  // Active users: all profiles, hiding the admin system account from non-admins
+  // (mirrors renderZenGarden) and a small explicit exclusion list. Me first, then
+  // alphabetical (Polish collation).
+  const users = (fmProfiles || [])
+    .filter(p => (viewerAdmin || !p.is_admin) && !ZEN_EXCLUDED_NICKS.includes(p.nick))
+    .slice()
+    .sort((a, b) => {
+      if (a.id === me?.id) return -1;
+      if (b.id === me?.id) return 1;
+      return (a.nick || '').localeCompare(b.nick || '', 'pl');
+    });
+
+  // Flatten to an ordered slot list (slot 1 then 2 per user), reading order.
+  const slots = [];
+  users.forEach(p => { for (let s = 1; s <= 2; s++) slots.push({ p, slot: s, g: bySlot.get(p.id + ':' + s), hasFirst: bySlot.has(p.id + ':1') }); });
+
+  host.replaceChildren();
+  host.appendChild(el('div', { className: 'plot-sign' }, '🧘 Ogródek Zen'));
+
+  // Same grid stack as the crop board: a .farm-board with one .fb-seg; auto-flow
+  // fills row-by-row, so we don't set explicit grid positions (scaleZenBoard picks
+  // the column count + square cell size to match the farm cells).
+  const board = el('div', { className: 'farm-board zen-board' });
+  const seg = el('div', { className: 'fb-seg' });
+  board.appendChild(seg);
+
+  slots.forEach(({ p, slot, g, hasFirst }) => {
+    const isMe = p.id === me?.id;
+    let cell;
+    if (g) {
+      const isOwnReady = isMe && farmPlantSnapshot(g).canWater;
+      cell = el('div', { className: 'farm-plant-cell' + (isMe ? ' mine' : '') + (isOwnReady ? ' can-water' : ''), title: farmPlantTileTitle(g) });
+      cell.appendChild(el('span', { className: 'farm-cell-name' }, g.plant_name || 'Roślina'));
+      cell.appendChild(el('span', { className: 'farm-cell-owner' }, g.profiles?.nick || g.nick || (isMe ? 'Ty' : '?')));
+      cell.appendChild(buildPot(g, false));
+      const wl = farmPlantWaterLine(g);
+      if (wl) cell.appendChild(wl);
+      cell.addEventListener('click', () => {
+        if (isMe && farmPlantSnapshot(g).canWater) waterFarmPlantFromCell(g, cell);
+        else openZenPlantModal(g);
+      });
+    } else if (isMe && slot === 1) {
+      cell = zenInviteCell('🌱', 'Zasadź', 'Za darmo', () => openZenPlantPickerModal(1, false));
+    } else if (isMe && slot === 2) {
+      const locked = !secondGardenUnlocked;
+      if (hasFirst) {
+        cell = zenInviteCell(locked ? '📜' : '🌱', 'Drugi kwiatek', locked ? '800 🪙' : 'Gotowe', () => openZenPlantPickerModal(2, locked));
+      } else {
+        // No first plant yet: the server requires slot 1 before slot 2
+        // (create_garden → no_first_garden), so guide the user into the free
+        // first-plant picker instead of leaving a dead click.
+        cell = zenInviteCell(locked ? '📜' : '🌱', 'Drugi kwiatek', locked ? '800 🪙' : 'Gotowe', () => {
+          showToast('🌱 Najpierw zasadź pierwszą roślinkę — jest za darmo!');
+          openZenPlantPickerModal(1, false);
+        });
+      }
+    } else {
+      // Empty reserved plot: a real (empty) doniczka waiting for its plant.
+      cell = el('div', { className: 'farm-plant-cell zen-reserved', title: (isMe ? 'Ty' : (p.nick || '')) + ' — puste miejsce' });
+      cell.appendChild(buildPlaceholderPot());
+      cell.appendChild(el('span', { className: 'farm-cell-owner' }, isMe ? 'Ty' : (p.nick || '—')));
+    }
+    seg.appendChild(cell);
+  });
+
+  zenSlotCount = slots.length;
+  // Fill the remaining grid rectangle with unassigned doniczki (no nick) — free
+  // room for future gardeners, and the panel reads as a complete block.
+  const padCols = zenColsFor();
+  const padTotal = padCols * Math.max(
+    Math.ceil(slots.length / padCols),
+    window.innerWidth > 760 ? OGRODEK_DESKTOP_ROWS : 0,
+  );
+  for (let i = slots.length; i < padTotal; i++) {
+    const cell = el('div', { className: 'farm-plant-cell zen-reserved zen-open', title: 'Wolne miejsce' });
+    cell.appendChild(buildPlaceholderPot());
+    seg.appendChild(cell);
+  }
+  host.appendChild(board);
+  scaleZenBoard();
+}
+
+// Zen column count: on desktop just enough columns that the zen grid has the same
+// number of visual rows as the farm block (OGRODEK_DESKTOP_ROWS), so both halves
+// are equally tall and read as one aligned field; on mobile match the stacked
+// farm part's width (7 columns) so the stacked grid parts share the same size.
+function zenColsFor() {
+  if (window.innerWidth <= 760) return Math.ceil(FARM_W / 2);
+  // Min 4 columns: the extra unassigned plots keep the panel from looking cramped
+  // and show newcomers there's room to grow.
+  return Math.max(4, Math.ceil((zenSlotCount || 1) / OGRODEK_DESKTOP_ROWS));
+}
+
+// An empty, plantable zen tile (my own slot) — styled like a free crop cell.
+function zenInviteCell(emoji, title, sub, onClick) {
+  const cell = el('div', { className: 'farm-cell zen-invite', title: title + ' · ' + sub });
+  cell.appendChild(el('span', { className: 'zen-invite-emoji' }, emoji));
+  cell.appendChild(el('span', { className: 'zen-invite-title' }, title));
+  cell.appendChild(el('span', { className: 'zen-invite-sub' }, sub));
+  cell.addEventListener('click', onClick);
+  return cell;
+}
+
+// Size the zen grid: same square cell as the crop board (farmCellPx, computed by
+// scaleFarmPots) and a FIXED column count from zenColsFor() — desktop gets exactly
+// FARM_DISPLAY_ROWS rows so zen and farm grids are the same height, top-aligned,
+// with no internal scrollbar; the panel's own width is set to fit its columns.
+function scaleZenBoard() {
+  const host = document.getElementById('zen-zone');
+  const board = host && host.querySelector('.zen-board');
+  const seg = board && board.querySelector('.fb-seg');
+  if (!seg || !seg.children.length) return;
+  requestAnimationFrame(() => {
+    const gap = 4;
+    const cell = farmCellPx || 60;
+    const cols = zenColsFor();
+    const rows = Math.max(1, Math.ceil(seg.children.length / cols));
+    seg.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+    seg.style.gridAutoRows = `${cell}px`;
+    seg.style.width = (cols * cell + (cols - 1) * gap) + 'px';
+    seg.style.height = (rows * cell + (rows - 1) * gap) + 'px';
+    board.style.setProperty('--pot-scale', Math.max(0.4, Math.min(1.25, cell / 134)).toFixed(3));
+    // Panel width hugs its grid on desktop; full width when stacked on mobile.
+    host.style.flex = window.innerWidth > 760
+      ? ('0 0 ' + (cols * cell + (cols - 1) * gap + 12) + 'px')
+      : '0 0 auto';
+  });
+}
+
+// Modal plant picker for an empty zen tile (grid cells are too small for the inline
+// form). Handles the free 1st slot, the unlocked 2nd slot, and — when `needsCert` —
+// buys the 800🪙 certificate first, then plants. Mirrors buildEmptyPot's flow.
+function openZenPlantPickerModal(slotIndex, needsCert) {
+  closeFarmPlantModal();
+  const overlay = el('div', { className: 'modal-overlay farm-plant-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const modal = el('div', { className: 'modal farm-plant-modal' });
+  const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeBtn.addEventListener('click', closeFarmPlantModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeFarmPlantModal(); });
+  farmPlantModalEsc = e => { if (e.key === 'Escape') closeFarmPlantModal(); };
+  window.addEventListener('keydown', farmPlantModalEsc);
+
+  const body = el('div', { className: 'farm-plant-modal-body zen-picker' });
+  let selectedType = null;
+
+  if (needsCert) {
+    body.append(el('div', { className: 'zen-picker-note' }, '📜 Drugi kwiatek wymaga Certyfikatu Drugiego Ogródka (800 🪙). Zostanie kupiony przy sadzeniu.'));
+  }
+
+  body.append(el('div', { className: 'gp-form-label' }, 'Wybierz roślinę'));
+  const typeRow = el('div', { className: 'gp-type-row' });
+  Object.entries(PLANT_PICK_EMOJI).forEach(([type, emoji]) => {
+    const btn = el('button', { className: 'gp-type-btn', type: 'button', title: PLANT_LABELS[type] }, emoji);
+    btn.addEventListener('click', () => {
+      typeRow.querySelectorAll('.gp-type-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      selectedType = type;
+      plantBtn.disabled = !(selectedType && nameInp.value.trim());
+    });
+    typeRow.appendChild(btn);
+  });
+  body.append(typeRow);
+
+  body.append(el('div', { className: 'gp-form-label' }, 'Nazwa rośliny'));
+  const nameInp = el('input', { className: 'gp-name-inp', placeholder: 'np. Stefan', maxLength: 20 });
+  nameInp.oninput = () => { plantBtn.disabled = !(selectedType && nameInp.value.trim()); };
+  nameInp.onkeydown = (e) => { if (e.key === 'Enter' && !plantBtn.disabled) plantBtn.click(); };
+  body.append(nameInp);
+
+  const plantBtn = el('button', { className: 'gp-plant-btn', type: 'button', disabled: true },
+    needsCert ? '📜 Kup (800🪙) i zasadź' : '🌱 Zasadź');
+  plantBtn.addEventListener('click', async () => {
+    plantBtn.disabled = true; plantBtn.textContent = '...';
+    if (needsCert && !secondGardenUnlocked) {
+      const { error } = await sb.rpc('activate_garden_certificate');
+      if (error) { showToast('❌ ' + gardenErr(error)); plantBtn.disabled = false; plantBtn.textContent = '📜 Kup (800🪙) i zasadź'; return; }
+      secondGardenUnlocked = true;
+      await refreshMeCoins();
+    }
+    const { error } = await sb.rpc('create_garden', { p_plant_type: selectedType, p_plant_name: nameInp.value.trim(), p_slot_index: slotIndex });
+    // Label must reflect the CURRENT cert state: if the 800🪙 purchase above
+    // succeeded but planting failed, the retry only plants (no second charge).
+    if (error) { showToast('❌ ' + gardenErr(error)); plantBtn.disabled = false; plantBtn.textContent = (needsCert && !secondGardenUnlocked) ? '📜 Kup (800🪙) i zasadź' : '🌱 Zasadź'; return; }
+    showToast('🌱 Zasadzono! Pamiętaj, by podlewać codziennie.');
+    closeFarmPlantModal();
+    reloadGardenView();
+  });
+  body.append(plantBtn);
+
+  modal.append(
+    el('div', { className: 'modal-header' },
+      el('span', { className: 'modal-title' }, slotIndex === 2 ? '🌱 Drugi kwiatek' : '🌱 Nowa roślinka'),
+      closeBtn,
+    ),
+    body,
+  );
+  overlay.append(modal);
+  document.body.append(overlay);
+  farmPlantModalEl = overlay;
+  setTimeout(() => nameInp.focus(), 30);
 }
 
 // Group each plant's 2x2 migration block (linked by zen_garden_id): the top-left
@@ -24272,6 +25612,47 @@ function openFarmPlantModal(g) {
   farmPlantModalEl = overlay;
 }
 
+// Full details + care controls for a zen plant, opened from the 🧘 Ogród Zen
+// panel. For my own plant it also exposes change-type + decorate — the crop board
+// no longer hosts zen tiles, so this modal is the only place to reach them.
+function openZenPlantModal(g) {
+  if (!g) return;
+  closeFarmPlantModal();
+  const isMine = g.user_id === me?.id;
+  const overlay = el('div', { className: 'modal-overlay farm-plant-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const modal = el('div', { className: 'modal farm-plant-modal' });
+  const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeBtn.addEventListener('click', closeFarmPlantModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeFarmPlantModal(); });
+  farmPlantModalEsc = e => { if (e.key === 'Escape') closeFarmPlantModal(); };
+  window.addEventListener('keydown', farmPlantModalEsc);
+
+  const body = el('div', { className: 'farm-plant-modal-body' });
+  const potWrap = el('div', { className: 'zen-modal-pot' });
+  potWrap.append(buildPot(g, isMine));   // interactive: own ready plant waters here too
+  body.append(potWrap);
+  if (isMine) {
+    body.append(buildPlantTypeChanger(g));
+    body.append(buildDecorateCard(g));
+    const decoBtn = body.querySelector('.btn-decorate');
+    if (decoBtn) {                        // rewire to refresh the farm on close
+      const fresh = decoBtn.cloneNode(true);
+      decoBtn.replaceWith(fresh);
+      fresh.addEventListener('click', () => openAccessoryEditor(g, () => reloadGardenView()));
+    }
+  }
+  modal.append(
+    el('div', { className: 'modal-header' },
+      el('span', { className: 'modal-title' }, '🌱 Roślinka (Ogródek)'),
+      closeBtn,
+    ),
+    body,
+  );
+  overlay.append(modal);
+  document.body.append(overlay);
+  farmPlantModalEl = overlay;
+}
+
 async function waterFarmPlantFromCell(g, cell) {
   if (!g || g.user_id !== me?.id || cell?.classList.contains('busy')) return;
   const snap = farmPlantSnapshot(g);
@@ -24294,18 +25675,11 @@ async function waterFarmPlantFromCell(g, cell) {
   setTimeout(() => loadFarm(), 650);
 }
 
-// DOM grid board (10x10), sized to fit the screen. Each plant is one cell with a
-// display-only mini Ogródek pot (real buildPot, scaled to the cell — keeps the
-// accessories/size/look); own ready plants water on click, others open details.
-// Mobile: split the 13-wide board into two stacked grids so tiles stay readable.
-function farmSegments() {
-  if (window.innerWidth <= 760) {
-    const half = Math.ceil(FARM_W / 2);
-    return [{ start: 0, end: half - 1 }, { start: half, end: FARM_W - 1 }];
-  }
-  return [{ start: 0, end: FARM_W - 1 }];
-}
-
+// DOM grid board sized to fit the screen. Each plant is one cell; own ready
+// plants water on click, others open details. The 13×3 data grid + the extra
+// row-0 tile REFLOW in reading order into a display rectangle (8×5 desktop,
+// 7 cols mobile) — a tile's data (x,y) no longer dictates its screen position,
+// which is fine: plot adjacency has no gameplay meaning.
 function renderFarmBoard() {
   const board = document.getElementById('farm-board');
   if (!board) return;
@@ -24315,81 +25689,74 @@ function renderFarmBoard() {
   gardenCooldownTimers.forEach(id => clearInterval(id));
   gardenCooldownTimers = [];
   board.replaceChildren();
-  const segs = farmSegments();
-  const segEls = segs.map(s => { const e = el('div', { className: 'fb-seg' }); e.dataset.cols = String(s.end - s.start + 1); board.appendChild(e); return e; });
-  const colOf = x => { for (let i = 0; i < segs.length; i++) if (x >= segs[i].start && x <= segs[i].end) return { el: segEls[i], start: segs[i].start }; return { el: segEls[0], start: 0 }; };
+  const seg = el('div', { className: 'fb-seg' });
+  seg.dataset.cols = String(farmDisplayCols());
+  board.appendChild(seg);
   const now = Date.now();
-  for (let y = 0; y < FARM_H; y++) {
-    for (let x = 0; x < FARM_W; x++) {
-      const key = x + ',' + y;
-      const tile = fmTiles.get(key);
-      const cx = x, cy = y;
-      const seg = colOf(x);
-      if (tile && tile.zenAnchor) {
-        const g = tile.zenAnchor;
-        const snap = farmPlantSnapshot(g);
-        const isOwnReady = g.user_id === me?.id && snap.canWater;
-        const cell = el('div', { className: 'farm-plant-cell' + (g.user_id === me?.id ? ' mine' : '') + (isOwnReady ? ' can-water' : ''), 'data-xy': key, title: farmPlantTileTitle(g) });
-        cell.style.gridColumn = (x - seg.start + 1);
-        cell.style.gridRow = (y + 1);
-        // Keep farm cells visual-first; detailed watering controls stay in the side panel.
-        cell.appendChild(el('span', { className: 'farm-cell-name' }, g.plant_name || 'Roślina'));
-        cell.appendChild(el('span', { className: 'farm-cell-owner' }, g.profiles?.nick || g.nick || '?'));
-        cell.appendChild(buildPot(g, false));
-        const waterLine = farmPlantWaterLine(g);
-        if (waterLine) cell.appendChild(waterLine);
-        cell.addEventListener('click', () => {
-          fmSel = { x: cx, y: cy };
-          markFarmSel();
-          if (g.user_id === me?.id && farmPlantSnapshot(g).canWater) waterFarmPlantFromCell(g, cell);
-          else openFarmPlantModal(g);
-        });
-        seg.el.appendChild(cell);
-        continue;
+  // Builds one interactive farm cell for data coords (cx, cy) — used both for the
+  // main 13×3 grid and the FARM_EXTRA_TILES completing the display rectangle.
+  const buildFarmDisplayCell = (cx, cy) => {
+    const key = cx + ',' + cy;
+    const tile = fmTiles.get(key);
+    const cell = el('div', { className: 'farm-cell', 'data-xy': key });
+    if (!tile) {
+      cell.classList.add('unowned');
+      cell.title = 'Wolna działka — kliknij, by kupić';
+    } else {
+      cell.classList.add(tile.owner_id === me?.id ? 'mine' : 'other');
+      if (tile.listed) {
+        cell.classList.add('listed');
+        cell.title = 'Działka wystawiona na sprzedaż';
       }
-      const cell = el('div', { className: 'farm-cell', 'data-xy': key });
-      cell.style.gridColumn = (x - seg.start + 1);
-      cell.style.gridRow = (y + 1);
-      if (!tile) {
-        cell.classList.add('unowned');
-        cell.title = 'Wolna działka — kliknij, by kupić';
+      if (tile.planted_species) {
+        cell.classList.add('crop');
+        const def = fmDefs.get(tile.planted_species);
+        cell.appendChild(el('span', { className: 'farm-cell-name' }, def ? def.name : tile.planted_species));
+        cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.nick || '?'));
+        cell.appendChild(el('span', { className: 'farm-cell-emoji' }));
+        const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
+        let pct = 1;
+        if (tile.planted_at && tile.ready_at) {
+          const t0 = new Date(tile.planted_at).getTime(), t1 = new Date(tile.ready_at).getTime();
+          pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
+          const bar = el('div', { className: 'farm-cell-bar' + (ready ? ' ready' : '') });
+          bar.appendChild(el('div', { className: 'farm-cell-bar-fill', style: { width: (pct * 100) + '%' } }));
+          cell.appendChild(bar);
+        }
+        applyFarmCropVisual(cell, def, pct, ready);
+        if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
       } else {
-        cell.classList.add(tile.owner_id === me?.id ? 'mine' : 'other');
-        if (tile.listed) {
-          cell.classList.add('listed');
-          cell.title = 'Działka wystawiona na sprzedaż';
-        }
-        if (tile.planted_species) {
-          cell.classList.add('crop');
-          const def = fmDefs.get(tile.planted_species);
-          cell.appendChild(el('span', { className: 'farm-cell-name' }, def ? def.name : tile.planted_species));
-          cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.nick || '?'));
-          cell.appendChild(el('span', { className: 'farm-cell-emoji' }));
-          const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
-          let pct = 1;
-          if (tile.planted_at && tile.ready_at) {
-            const t0 = new Date(tile.planted_at).getTime(), t1 = new Date(tile.ready_at).getTime();
-            pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
-            const bar = el('div', { className: 'farm-cell-bar' + (ready ? ' ready' : '') });
-            bar.appendChild(el('div', { className: 'farm-cell-bar-fill', style: { width: (pct * 100) + '%' } }));
-            cell.appendChild(bar);
-          }
-          applyFarmCropVisual(cell, def, pct, ready);
-          if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
-        } else {
-          cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.owner_id === me?.id ? 'Ty' : (tile.nick || '?')));
-        }
-        if (tile.listed) {
-          cell.appendChild(el('span', { className: 'farm-sale-sign', 'aria-label': 'For sale' }, el('span', {}, 'FOR SALE')));
-        }
+        cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.owner_id === me?.id ? 'Ty' : (tile.nick || '?')));
       }
-      cell.addEventListener('click', () => {
-        fmSel = { x: cx, y: cy }; markFarmSel();
-        openFarmTileModal(cx, cy);
-      });
-      seg.el.appendChild(cell);
+      if (tile.listed) {
+        cell.appendChild(el('span', { className: 'farm-sale-sign', 'aria-label': 'For sale' }, el('span', {}, 'FOR SALE')));
+      }
     }
+    cell.addEventListener('click', () => {
+      fmSel = { x: cx, y: cy }; markFarmSel();
+      openFarmTileModal(cx, cy);
+    });
+    return cell;
+  };
+  // Row 0 stays hidden (legacy zen row, see FARM_DISPLAY_Y_START) except for the
+  // FARM_EXTRA_TILES. Since a tile's data (x,y) no longer dictates its screen
+  // position, PACK the display: planted tiles first, then owned-but-empty, then
+  // free plots — no empty gaps between plants. Stable data reading order within
+  // each group, so tiles don't shuffle between renders; realtime tile changes
+  // re-render the whole board (applyFarmTileChange), which re-packs.
+  const coords = [];
+  for (let y = FARM_DISPLAY_Y_START; y < FARM_H; y++) {
+    for (let x = 0; x < FARM_W; x++) coords.push({ x, y });
   }
+  FARM_EXTRA_TILES.forEach(ex => coords.push({ x: ex.x, y: ex.y }));
+  const groupOf = c => {
+    const t = fmTiles.get(c.x + ',' + c.y);
+    return !t ? 2 : (t.planted_species ? 0 : 1);
+  };
+  coords
+    .map((c, i) => ({ c, i, g: groupOf(c) }))
+    .sort((a, b) => a.g - b.g || a.i - b.i)
+    .forEach(({ c }) => seg.appendChild(buildFarmDisplayCell(c.x, c.y)));
   markFarmSel();
   scaleFarmPots();
   if (farmViewMode === 'table') renderFarmTable();   // keep the table mirror in sync
@@ -24403,25 +25770,60 @@ function scaleFarmPots() {
   if (!board || !field) return;
   requestAnimationFrame(() => {
     const gap = 4;
-    const fw = field.clientWidth;
-    if (!fw) return;
     const segEls = board.querySelectorAll('.fb-seg');
     if (!segEls.length) return;
     // Square cells; size to the widest segment so every segment shares one cell size.
     let maxCols = 1;
     segEls.forEach(s => { maxCols = Math.max(maxCols, +s.dataset.cols || FARM_W); });
-    const byW = (fw - (maxCols - 1) * gap) / maxCols;
-    const byH = (window.innerHeight - 300) / (FARM_H * segEls.length);
+    const split = field.closest('.farm-split');
+    const desktop = window.innerWidth > 760;
+    let byW;
+    if (desktop && split) {
+      // Side-by-side: ONE shared cell size must fit the zen grid + divider + farm
+      // grid across the split's width, so the whole tab reads as a single aligned
+      // field with no scrollbars. Fixed budget: split padding (16) + panel paddings
+      // (12+12) + two flex gaps (24) + divider (10) = 74, plus 8px slack: an
+      // exact-fit width overflows by 1px at fractional browser zoom (e.g. 90%,
+      // where Chrome rounds CSS px to 1.8 device px), summoning a horizontal
+      // scrollbar on the field.
+      const zc = zenColsFor();
+      const usable = split.clientWidth - 74 - 8 - (zc - 1) * gap - (maxCols - 1) * gap;
+      byW = usable / (zc + maxCols);
+    } else {
+      // Stacked mobile layout: budget from the split container, NOT the field —
+      // the field shrinks to fit its content there, so measuring it would just
+      // echo back the previous cell size and lock the tiles small.
+      const fw = (split ? split.clientWidth - 28 : field.clientWidth);
+      if (!fw || fw < 0) return;
+      byW = (fw - (maxCols - 1) * gap) / maxCols;
+    }
+    // Height budget: viewport minus the chrome actually above the grids —
+    // MEASURED (board's document top), not a fixed guess, so any header/nav/
+    // topbar/sky height (the sky band is vh-based) yields a clean no-scroll fit
+    // on every screen, from a MacBook Air to a 1080p monitor. The reserve below
+    // the grids covers stage padding + the "Widok tabeli" switch. Stacked mobile
+    // scrolls the page naturally, so width alone decides there.
+    let byH = Infinity;
+    if (desktop) {
+      const boardTopDoc = board.getBoundingClientRect().top + window.scrollY;
+      const bottomReserve = 88;
+      byH = (window.innerHeight - boardTopDoc - bottomReserve) / OGRODEK_DESKTOP_ROWS;
+    }
     const minCell = window.innerWidth <= 520 ? 34 : 46;
     const cell = Math.max(minCell, Math.min(140, Math.floor(Math.min(byW, byH))));
     segEls.forEach(s => {
       const cols = +s.dataset.cols || FARM_W;
+      const rows = Math.max(1, Math.ceil(s.children.length / cols));
       s.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
-      s.style.gridTemplateRows = `repeat(${FARM_H}, ${cell}px)`;
+      s.style.gridAutoRows = `${cell}px`;
       s.style.width = (cols * cell + (cols - 1) * gap) + 'px';
-      s.style.height = (FARM_H * cell + (FARM_H - 1) * gap) + 'px';
+      s.style.height = (rows * cell + (rows - 1) * gap) + 'px';
     });
     board.style.setProperty('--pot-scale', Math.max(0.4, Math.min(1.25, cell / 134)).toFixed(3));
+    // Zen grid uses the SAME cell size as the crop board (see scaleZenBoard) so
+    // both halves of the Ogródek tab look like one continuous grid.
+    farmCellPx = cell;
+    scaleZenBoard();
   });
 }
 
@@ -24547,7 +25949,9 @@ function farmNormalTileCount() {
 }
 
 function farmTaxQuoteLocal() {
-  const normalCapacity = Math.max(1, FARM_W * FARM_H - [...fmTiles.values()].filter(t => t.acquired_via === 'migration').length);
+  // Purchasable cells only: display rows + the FARM_EXTRA_TILES — mirrors
+  // farm_normal_tile_capacity() in farm.sql/garden-zen-split.sql.
+  const normalCapacity = FARM_W * FARM_DISPLAY_ROWS + FARM_EXTRA_TILES.length;
   const owners = new Set();
   fmTiles.forEach(t => { if (t.owner_id && t.acquired_via !== 'migration') owners.add(t.owner_id); });
   if (me?.id) owners.add(me.id);
@@ -25321,7 +26725,8 @@ async function ensureFarmData(opts = {}) {
     fmMarket = new Map(); (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, normalizeFarmMarket(m)));
     fmNft = nftRes.data || [];
     fmTiles = new Map();
-    (tilesRes.data || []).forEach(t => fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)));
+    // Zen plants render in the 🧘 Ogród Zen panel, not on the crop board — drop legacy migration tiles.
+    (tilesRes.data || []).forEach(t => { if (t.acquired_via === 'migration') return; fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)); });
     fmOwnedTileCountHint = 0;
     fmNormalTileCountHint = 0;
     fmTiles.forEach(t => {
@@ -27331,6 +28736,12 @@ function setupFarmRealtime() {
         if (farmModalEl) refreshFarmHub();
       });
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, () => {
+      // Someone planted/watered a zen plant — refresh the 🧘 Ogród Zen panel (debounced).
+      if (activeTab !== 'farm') return;
+      clearTimeout(fmZenReloadTimer);
+      fmZenReloadTimer = setTimeout(() => { if (activeTab === 'farm') loadFarm(); }, 350);
+    })
     .subscribe();
   realtimeChannels.push(ch);
 }
@@ -27340,6 +28751,9 @@ function applyFarmTileChange(payload) {
   if (!r || r.x == null || r.y == null) return;
   const key = r.x + ',' + r.y;
   if (payload.eventType === 'DELETE') {
+    fmTiles.delete(key);
+  } else if (r.acquired_via === 'migration') {
+    // Legacy zen tile — never shown on the crop board (renders in 🧘 Ogród Zen).
     fmTiles.delete(key);
   } else {
     const prev = fmTiles.get(key) || {};
@@ -27811,7 +29225,7 @@ function buildPlantTypeChanger(garden) {
     }
     garden.plant_type = newType;
     showToast('🌱 Typ rośliny zmieniony');
-    loadGarden();
+    reloadGardenView();
   });
   row.appendChild(select);
   return row;
@@ -28493,7 +29907,7 @@ function buildPot(g, isMine) {
       const timerDiv = el('div', { className: 'gp-timer' });
       const updateTimer = () => {
         const diff = cooldownEnd - Date.now();
-        if (diff <= 0) { loadGarden(); return; }
+        if (diff <= 0) { reloadGardenView(); return; }
         const h = Math.floor(diff / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
         const s = Math.floor((diff % 60000) / 1000);
@@ -28525,12 +29939,13 @@ function buildPlaceholderPot() {
   return pot;
 }
 
-function buildEmptyPot(slotIndex = 1) {
+function buildEmptyPot(slotIndex = 1, opts = {}) {
+  const needsCert = !!opts.needsCert;
   const pot = el('div', { className: 'garden-pot empty' });
   let creating = false;
 
   const plantArea = el('div', { className: 'gp-plant-area' });
-  plantArea.appendChild(el('div', { className: 'gp-empty-label' }, '➕'));
+  plantArea.appendChild(el('div', { className: 'gp-empty-label' }, needsCert ? '📜' : '➕'));
   pot.appendChild(plantArea);
 
   const potBody = el('div', { className: 'gp-pot-body' });
@@ -28539,11 +29954,13 @@ function buildEmptyPot(slotIndex = 1) {
 
   const info = el('div', { className: 'gp-info' });
   info.appendChild(el('div', { className: 'gp-empty-text' }, slotIndex === 2 ? 'Drugi kwiatek!' : 'Zasadź roślinę!'));
-  info.appendChild(el('div', { className: 'gp-owner' }, slotIndex === 2 ? 'Certyfikat aktywny' : 'Bezpłatnie · 1× na konto'));
+  info.appendChild(el('div', { className: 'gp-owner' },
+    slotIndex === 2 ? (needsCert ? 'Certyfikat 800 🪙' : 'Certyfikat aktywny') : 'Bezpłatnie · 1× na konto'));
   pot.appendChild(info);
 
-  pot.onclick = () => {
-    if (creating) return;
+  // Reveal the inline plant-type/name picker — shared by the free 1st slot, an
+  // already-unlocked 2nd slot, and (after the purchase below) a locked 2nd slot.
+  function openForm() {
     creating = true;
     pot.replaceChildren();
     pot.classList.remove('empty');
@@ -28599,16 +30016,32 @@ function buildEmptyPot(slotIndex = 1) {
         return;
       }
       showToast('🌱 Zasadzono! Pamiętaj, by podlewać codziennie.');
-      loadGarden();
+      reloadGardenView();
     };
     form.appendChild(plantBtn);
 
     const cancel = el('button', { className: 'gp-cancel-btn' }, 'Anuluj');
-    cancel.onclick = (e) => { e.stopPropagation(); loadGarden(); };
+    cancel.onclick = (e) => { e.stopPropagation(); reloadGardenView(); };
     form.appendChild(cancel);
 
     pot.appendChild(form);
     setTimeout(() => nameInp.focus(), 30);
+  }
+
+  pot.onclick = async () => {
+    if (creating) return;
+    // Locked 2nd slot: buy the 800🪙 certificate first, then drop into the picker.
+    if (needsCert && !secondGardenUnlocked) {
+      if (!confirm('Kupić Certyfikat Drugiego Ogródka za 800 🪙 i zasadzić drugą roślinę?')) return;
+      creating = true;
+      const { error } = await sb.rpc('activate_garden_certificate');
+      if (error) { creating = false; showToast('❌ ' + gardenErr(error)); return; }
+      secondGardenUnlocked = true;
+      await refreshMeCoins();
+      showToast('📜 Certyfikat aktywny! Wybierz drugą roślinę.');
+      creating = false;
+    }
+    openForm();
   };
 
   return pot;
