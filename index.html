@@ -25776,21 +25776,15 @@ function renderFarmBoard() {
     return cell;
   };
   // Row 0 stays hidden (legacy zen row, see FARM_DISPLAY_Y_START) except for the
-  // FARM_EXTRA_TILES. Since a tile's data (x,y) no longer dictates its screen
-  // position, PACK the display: owned tiles first, then free plots. Grouping is
-  // by ownership only — NOT by planted state — so harvesting (which clears
-  // planted_species and triggers a realtime re-render) never moves a tile to a
-  // different slot. Stable data reading order within each group.
+  // FARM_EXTRA_TILES. Keep the coordinate order permanent: ownership, planting,
+  // harvesting and listing changes must update a cell in place, never move the
+  // plot to another visible grid slot.
   const coords = [];
   for (let y = FARM_DISPLAY_Y_START; y < FARM_H; y++) {
     for (let x = 0; x < FARM_W; x++) coords.push({ x, y });
   }
   FARM_EXTRA_TILES.forEach(ex => coords.push({ x: ex.x, y: ex.y }));
-  const groupOf = c => fmTiles.has(c.x + ',' + c.y) ? 0 : 1;
-  coords
-    .map((c, i) => ({ c, i, g: groupOf(c) }))
-    .sort((a, b) => a.g - b.g || a.i - b.i)
-    .forEach(({ c }) => seg.appendChild(buildFarmDisplayCell(c.x, c.y)));
+  coords.forEach(c => seg.appendChild(buildFarmDisplayCell(c.x, c.y)));
   markFarmSel();
   scaleFarmPots();
   if (farmViewMode === 'table') renderFarmTable();   // keep the table mirror in sync
