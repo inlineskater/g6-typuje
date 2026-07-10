@@ -24,9 +24,47 @@ CREATE INDEX gardens_user_id_idx ON public.gardens(user_id);
 
 ALTER TABLE public.gardens ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "gardens_update_own" ON public.gardens;
+DROP POLICY IF EXISTS "gardens_delete_own" ON public.gardens;
+DROP POLICY IF EXISTS "gardens_admin_update_own" ON public.gardens;
+DROP POLICY IF EXISTS "gardens_admin_delete_own" ON public.gardens;
+DROP POLICY IF EXISTS "gardens_select" ON public.gardens;
 CREATE POLICY "gardens_select" ON public.gardens FOR SELECT USING (true);
 
+-- The frontend's garden admin panel edits only the admin's stage/streak. Older
+-- deployments allowed every user to update every column of their own row,
+-- which also let them reset last_watered_at/waters_today and bypass coin limits.
+CREATE POLICY "gardens_admin_update_own" ON public.gardens
+  FOR UPDATE TO authenticated
+  USING (
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.is_admin
+    )
+  )
+  WITH CHECK (
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.is_admin
+    )
+  );
+
+CREATE POLICY "gardens_admin_delete_own" ON public.gardens
+  FOR DELETE TO authenticated
+  USING (
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.is_admin
+    )
+  );
+
+REVOKE ALL ON public.gardens FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.gardens TO anon, authenticated;
+GRANT UPDATE (stage, streak_days) ON public.gardens TO authenticated;
+GRANT DELETE ON public.gardens TO authenticated;
 
 -- ── Realtime ───────────────────────────────────────────────────────────────
 

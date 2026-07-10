@@ -15,6 +15,7 @@ There is no build step. Push to `main` → GitHub Actions copies `index.html` to
 To apply database changes: paste the relevant SQL into the Supabase SQL Editor (Dashboard → SQL Editor → Run). There is no migration runner.
 
 - `supabase/schema.sql` — core prediction-market schema, run once on a fresh project
+- `supabase/arcade.sql` — paid „Wszystkie Gry" archive scores; clients have SELECT-only table access, while the payment-linked score RPC validates the game/score cap and serializes submissions so one entry cannot be reused concurrently
 - `supabase/store.sql` — reward shop tables/RPCs used by the Sklep tab
 - `supabase/marketplace.sql` — peer-to-peer marketplace ("Targowisko") tables/RPCs; any user can list IRL goods/services; winning/buy coins transfer from buyer to seller (not burned)
 - `supabase/poker.sql` — poker tables, RLS, realtime publication, and leaderboard stack accounting
@@ -70,7 +71,7 @@ Everything lives in `index.html`: HTML structure, all CSS (CSS variables for the
 
 ### Auth
 
-Nick + 4-digit PIN. Implemented as Supabase email/password auth using the synthetic email `nick@typuje.local`. A Postgres trigger (`handle_new_user`) creates the `profiles` row on first signup. All writes go through RPCs — there are no direct table inserts from the frontend.
+Nick + 5-digit PIN. Implemented as Supabase email/password auth using the synthetic email `nick@typuje.local`. A Postgres trigger (`handle_new_user`) creates the `profiles` row on first signup. Economy writes go through RPCs or Edge Functions; the admin-only garden stage/streak controls use column-limited direct updates protected by RLS.
 
 ### CPMM pricing
 

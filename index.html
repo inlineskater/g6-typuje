@@ -7227,7 +7227,7 @@
             <div class="ag-card-name">„Super Mariusz"</div>
             <div class="ag-card-desc">Brutalny hardmode speedrun po biurowym korytarzu. Jedno życie — kolce, teczki i przepaście zabijają od razu. Liczy się dystans, a wśród finisherów czas.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">Bezpłatnie</span>
+              <span class="ag-card-cost">1 🪙 / runda</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
             </div>
           </div>
@@ -8682,6 +8682,14 @@ async function payArcadeEntry(gameType) {
   if (error) throw error;
   me.coins = data;
   setText(headerCoins, me.coins);
+}
+
+async function recordArcadeScore(gameType, score) {
+  const { error } = await sb.rpc('record_arcade_score', {
+    p_game_type: gameType,
+    p_score: score,
+  });
+  if (error) throw error;
 }
 
 async function loadArcadeScores(gameType) {
@@ -19013,7 +19021,7 @@ async function finishWhackBossRound() {
     if (wbStartBtn) { wbStartBtn.disabled = false; wbStartBtn.textContent = 'Zagraj ponownie'; }
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'whack_boss', p_score: rt.score });
+        await recordArcadeScore('whack_boss', rt.score);
         if (wbStatus) wbStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
         loadArcadeScores('whack_boss');
       } catch(e) { if (wbStatus) wbStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
@@ -20114,7 +20122,7 @@ async function finishVarPatrolRound() {
     if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Zagraj ponownie'; }
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'var_patrol', p_score: rt.correct });
+        await recordArcadeScore('var_patrol', rt.correct);
         if (status) status.textContent = 'Wynik: ' + rt.correct + ' · błędy: ' + rt.wrong + ' · zapisano w rankingu arcade!';
         loadArcadeScores('var_patrol');
       } catch (e) { if (status) status.textContent = 'Wynik: ' + rt.correct + ' · błędy: ' + rt.wrong + ' (błąd zapisu).'; }
@@ -20856,7 +20864,7 @@ async function finishBugJumperRound() {
     if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Zagraj ponownie'; }
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'bug_jumper', p_score: rt.score });
+        await recordArcadeScore('bug_jumper', rt.score);
         if (bjStatus) bjStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
         loadArcadeScores('bug_jumper');
       } catch(e) { if (bjStatus) bjStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
@@ -21271,7 +21279,7 @@ async function finishFlappyPantsRound() {
     if (fpStartBtn) { fpStartBtn.disabled = false; fpStartBtn.textContent = 'Zagraj ponownie'; }
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'flappy_pants', p_score: rt.score });
+        await recordArcadeScore('flappy_pants', rt.score);
         if (fpStatus) fpStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
         loadArcadeScores('flappy_pants');
       } catch(e) { if (fpStatus) fpStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
@@ -21773,7 +21781,7 @@ async function finishSnakeRound() {
     if (snStartBtn) { snStartBtn.disabled = false; snStartBtn.textContent = 'Zagraj ponownie'; }
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'snake', p_score: rt.score });
+        await recordArcadeScore('snake', rt.score);
         if (snStatus) snStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
         loadArcadeScores('snake');
       } catch(e) { if (snStatus) snStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }
@@ -22356,7 +22364,7 @@ async function finishEggCatchRound() {
     const finalScore = Math.min(EC_MAX_SCORE, rt.sim.caught);
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'egg_catch', p_score: finalScore });
+        await recordArcadeScore('egg_catch', finalScore);
         if (ecStatus) ecStatus.textContent = 'Wynik: ' + finalScore + ' · zapisano w rankingu arcade!';
         loadArcadeScores('egg_catch');
       } catch (e) { if (ecStatus) ecStatus.textContent = 'Wynik: ' + finalScore + ' (błąd zapisu).'; }
@@ -23207,7 +23215,7 @@ async function finishSuperMariuszRound() {
     if (smStartBtn) { smStartBtn.disabled = false; smStartBtn.textContent = 'Zagraj ponownie'; }
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'super_mariusz', p_score: clientScore });
+        await recordArcadeScore('super_mariusz', clientScore);
         if (smStatus) smStatus.textContent = finished ? 'Czas: ' + smFormatTime(completionMs) + ' · zapisano w rankingu arcade!' : 'DNF — ' + clientPct + '% trasy · zapisano w rankingu arcade.';
         loadArcadeScores('super_mariusz');
       } catch (e) { if (smStatus) smStatus.textContent = 'Wynik: ' + clientScore + ' (błąd zapisu).'; }
@@ -24055,7 +24063,7 @@ async function finishInvoiceHordeRound() {
     if (ihStartBtn) { ihStartBtn.disabled = false; ihStartBtn.textContent = 'Zagraj ponownie'; }
     if (allGamesMode) {
       try {
-        await sb.rpc('record_arcade_score', { p_game_type: 'invoice_horde', p_score: rt.score });
+        await recordArcadeScore('invoice_horde', rt.score);
         if (ihStatus) ihStatus.textContent = 'Wynik: ' + rt.score + ' · zapisano w rankingu arcade!';
         loadArcadeScores('invoice_horde');
       } catch(e) { if (ihStatus) ihStatus.textContent = 'Wynik: ' + rt.score + ' (błąd zapisu).'; }

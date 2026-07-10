@@ -34,6 +34,12 @@ CREATE INDEX IF NOT EXISTS markets_resolved_created_at_idx
 CREATE INDEX IF NOT EXISTS markets_resolved_by_idx
   ON public.markets(resolved_by);
 
+-- Supabase grants broad table privileges by default. RLS blocks ordinary DML,
+-- but the browser roles do not need these write privileges at all.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+  ON public.profiles, public.markets, public.trades
+  FROM PUBLIC, anon, authenticated;
+
 REVOKE SELECT ON public.markets, public.trades, public.positions, public.leaderboard
   FROM anon;
 REVOKE SELECT ON public.profiles FROM anon;
@@ -41,6 +47,56 @@ GRANT SELECT (nick) ON public.profiles TO anon;
 GRANT SELECT ON public.profiles TO authenticated;
 GRANT SELECT ON public.markets, public.trades, public.positions, public.leaderboard
   TO authenticated;
+
+-- Repair legacy garden policies without making the garden feature mandatory
+-- for a core-only installation.
+DO $garden_hardening$
+BEGIN
+  IF to_regclass('public.gardens') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "gardens_update_own" ON public.gardens';
+    EXECUTE 'DROP POLICY IF EXISTS "gardens_delete_own" ON public.gardens';
+    EXECUTE 'DROP POLICY IF EXISTS "gardens_admin_update_own" ON public.gardens';
+    EXECUTE 'DROP POLICY IF EXISTS "gardens_admin_delete_own" ON public.gardens';
+    EXECUTE $policy$
+      CREATE POLICY "gardens_admin_update_own" ON public.gardens
+      FOR UPDATE TO authenticated
+      USING (
+        user_id = auth.uid()
+        AND EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() AND p.is_admin
+        )
+      )
+      WITH CHECK (
+        user_id = auth.uid()
+        AND EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() AND p.is_admin
+        )
+      )
+    $policy$;
+    EXECUTE $policy$
+      CREATE POLICY "gardens_admin_delete_own" ON public.gardens
+      FOR DELETE TO authenticated
+      USING (
+        user_id = auth.uid()
+        AND EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() AND p.is_admin
+        )
+      )
+    $policy$;
+    EXECUTE 'REVOKE ALL ON public.gardens FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT SELECT ON public.gardens TO anon, authenticated';
+    EXECUTE 'GRANT UPDATE (stage, streak_days) ON public.gardens TO authenticated';
+    EXECUTE 'GRANT DELETE ON public.gardens TO authenticated';
+  END IF;
+
+  IF to_regclass('public.garden_admires') IS NOT NULL THEN
+    EXECUTE 'REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON public.garden_admires FROM PUBLIC, anon, authenticated';
+  END IF;
+END
+$garden_hardening$;
 
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.is_admin(uuid) FROM PUBLIC, anon, authenticated;

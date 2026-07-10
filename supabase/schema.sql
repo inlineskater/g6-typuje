@@ -179,6 +179,9 @@ CREATE POLICY "markets_select"  ON public.markets FOR SELECT USING (true);
 CREATE POLICY "trades_select"   ON public.trades  FOR SELECT USING (true);
 
 -- Data API privileges: expose only the read surface and authenticated RPCs.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+  ON public.profiles, public.markets, public.trades
+  FROM PUBLIC, anon, authenticated;
 REVOKE SELECT ON public.profiles FROM anon;
 GRANT SELECT (nick) ON public.profiles TO anon;
 GRANT SELECT ON public.profiles TO authenticated;
