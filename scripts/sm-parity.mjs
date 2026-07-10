@@ -9,7 +9,6 @@
 // ── CLIENT side (from index.html) ────────────────────────────────────────────
 const SM_TICK_MSClient = 50;
 const SM_MAX_TICKSClient = 6000;          // 5 min hard cap -> DNF
-const SM_SCORE_CAP_SECONDSClient = 600;   // score = cap - floor(completion_ms/1000)
 const SM_MAX_MOVESClient = 3000;
 const SM_SUBClient = 256;                 // sub-units per tile
 const SM_COURSE_IDClient = 'super_mariusz_v2';
@@ -97,12 +96,19 @@ function smAabbOverlapClient(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
+function smProgressScoreClient(st) {
+  const course = smParseCourseClient();
+  const flagCol = Math.floor(course.flagX / SM_SUBClient);
+  return Math.max(0, Math.min(flagCol, Math.floor((st.maxX + SM_PLAYER_WClient / 2) / SM_SUBClient)));
+}
+
 function smInitStateClient() {
   const course = smParseCourseClient();
   const enemies = course.enemySpawns.map(e => ({ x: e.x, y: e.row * SM_SUBClient - SM_ENEMY_HClient, dir: 1 }));
   return {
     tick: 0,
     x: course.startX,
+    maxX: course.startX,
     y: course.startY,
     vx: 0,
     vy: 0,
@@ -190,6 +196,7 @@ function smAdvanceTickClient(st, keys) {
   const rx = smResolveAxisClient(course, st.x, st.y, SM_PLAYER_WClient, SM_PLAYER_HClient, st.vx, 0);
   if (rx.x !== st.x + st.vx) st.vx = 0;
   st.x = rx.x;
+  if (st.x > st.maxX) st.maxX = st.x;
 
   const ry = smResolveAxisClient(course, st.x, st.y, SM_PLAYER_WClient, SM_PLAYER_HClient, 0, st.vy);
   if (ry.landed) {
@@ -243,7 +250,6 @@ function smAdvanceTickClient(st, keys) {
 // ── SERVER side (from supabase/functions/super-mariusz-action/index.ts) ─────
 const SM_TICK_MSServer = 50;
 const SM_MAX_TICKSServer = 6000;          // 5 min hard cap -> DNF
-const SM_SCORE_CAP_SECONDSServer = 600;   // score = cap - floor(completion_ms/1000)
 const SM_MAX_MOVESServer = 3000;
 const SM_SUBServer = 256;                 // sub-units per tile
 const SM_COURSE_IDServer = "super_mariusz_v2";
@@ -325,12 +331,19 @@ function smAabbOverlapServer(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
+function smProgressScoreServer(st) {
+  const course = smParseCourseServer();
+  const flagCol = Math.floor(course.flagX / SM_SUBServer);
+  return Math.max(0, Math.min(flagCol, Math.floor((st.maxX + SM_PLAYER_WServer / 2) / SM_SUBServer)));
+}
+
 function smInitStateServer() {
   const course = smParseCourseServer();
   const enemies = course.enemySpawns.map((e) => ({ x: e.x, y: e.row * SM_SUBServer - SM_ENEMY_HServer, dir: 1 }));
   return {
     tick: 0,
     x: course.startX,
+    maxX: course.startX,
     y: course.startY,
     vx: 0,
     vy: 0,
@@ -420,6 +433,7 @@ function smAdvanceTickServer(st, keys) {
   const rx = smResolveAxisServer(course, st.x, st.y, SM_PLAYER_WServer, SM_PLAYER_HServer, st.vx, 0);
   if (rx.x !== st.x + st.vx) st.vx = 0;
   st.x = rx.x;
+  if (st.x > st.maxX) st.maxX = st.x;
 
   const ry = smResolveAxisServer(course, st.x, st.y, SM_PLAYER_WServer, SM_PLAYER_HServer, 0, st.vy);
   if (ry.landed) {
@@ -492,14 +506,14 @@ function replaySuperMariusz(moves, untilTick) {
     if (ev.finished) { finished = true; endTick = st.tick; break; }
   }
   const completionMs = finished ? endTick * SM_TICK_MSServer : null;
-  const score = finished ? Math.max(0, SM_SCORE_CAP_SECONDSServer - Math.floor(completionMs / 1000)) : 0;
+  const score = smProgressScoreServer(st);
   return { finished, died, endTick, completionMs, score };
 }
 
 // ── shared replay driver (both sides' smInitState/smAdvanceTick are identical
 //    in shape, so a single driver called against each namespace is enough to
 //    catch any divergence in the transition functions themselves) ───────────
-function replay(initState, advanceTick, tickMs, scoreCapSeconds, maxTicks, moves, untilTick) {
+function replay(initState, advanceTick, progressScore, tickMs, maxTicks, moves, untilTick) {
   const st = initState();
   const capped = Math.max(0, Math.min(maxTicks, untilTick));
   let moveIndex = 0;
@@ -518,15 +532,15 @@ function replay(initState, advanceTick, tickMs, scoreCapSeconds, maxTicks, moves
     if (ev.finished) { finished = true; endTick = st.tick; break; }
   }
   const completionMs = finished ? endTick * tickMs : null;
-  const score = finished ? Math.max(0, scoreCapSeconds - Math.floor(completionMs / 1000)) : 0;
+  const score = progressScore(st);
   return { finished, died, endTick, completionMs, score };
 }
 
 function clientReplay(moves, untilTick) {
-  return replay(smInitStateClient, smAdvanceTickClient, SM_TICK_MSClient, SM_SCORE_CAP_SECONDSClient, SM_MAX_TICKSClient, moves, untilTick);
+  return replay(smInitStateClient, smAdvanceTickClient, smProgressScoreClient, SM_TICK_MSClient, SM_MAX_TICKSClient, moves, untilTick);
 }
 function serverReplay(moves, untilTick) {
-  return replay(smInitStateServer, smAdvanceTickServer, SM_TICK_MSServer, SM_SCORE_CAP_SECONDSServer, SM_MAX_TICKSServer, moves, untilTick);
+  return replay(smInitStateServer, smAdvanceTickServer, smProgressScoreServer, SM_TICK_MSServer, SM_MAX_TICKSServer, moves, untilTick);
 }
 
 // ── course sanity checks ─────────────────────────────────────────────────────
@@ -560,6 +574,7 @@ const GOLDEN_MOVES = [{"tick":1,"keys":2},{"tick":12,"keys":6},{"tick":19,"keys"
   const b = serverReplay(GOLDEN_MOVES, SM_MAX_TICKSServer);
   if (!a.finished || !b.finished) throw new Error('golden run did not finish: ' + JSON.stringify({a, b}));
   if (a.endTick !== 1320 || a.completionMs !== 66000) throw new Error('golden run result drifted: ' + JSON.stringify(a));
+  if (a.score !== 455) throw new Error('golden run finisher score must equal the flag column (455): ' + JSON.stringify(a));
   if (a.endTick < 1200 || a.endTick > 1800) throw new Error('golden run completion time outside the 60-90s brutal-course band: ' + JSON.stringify(a));
   if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error('golden run mismatch between client/server: ' + JSON.stringify({a, b}));
   console.log('golden run passed: finished at tick', a.endTick, '=', (a.completionMs / 1000).toFixed(2) + 's, score', a.score);
@@ -570,7 +585,7 @@ const GOLDEN_MOVES = [{"tick":1,"keys":2},{"tick":12,"keys":6},{"tick":19,"keys"
   const a = clientReplay([], SM_MAX_TICKSClient);
   const b = serverReplay([], SM_MAX_TICKSServer);
   if (a.finished || a.died) throw new Error('empty-input run unexpectedly ended early: ' + JSON.stringify(a));
-  if (a.endTick !== SM_MAX_TICKSClient || a.score !== 0) throw new Error('empty-input DNF result unexpected: ' + JSON.stringify(a));
+  if (a.endTick !== SM_MAX_TICKSClient || a.score !== 2) throw new Error('empty-input DNF result unexpected (standing still = start-column progress score 2): ' + JSON.stringify(a));
   if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error('empty-input mismatch between client/server: ' + JSON.stringify({a, b}));
   console.log('empty-input DNF passed: capped at tick', a.endTick, 'score', a.score);
 }

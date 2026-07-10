@@ -16,7 +16,6 @@
 
 const SM_TICK_MS = 50;
 const SM_MAX_TICKS = 6000;
-const SM_SCORE_CAP_SECONDS = 600;
 const SM_SUB = 256;
 const SM_COURSE_ID = 'super_mariusz_v2';
 

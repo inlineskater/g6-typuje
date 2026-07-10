@@ -6901,7 +6901,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">„Super Mariusz" 🧢</h2>
-                <p class="page-sub">Hardmode speedrun po biurowym korytarzu. Trasa jest BRUTALNA — kolce, krążące teczki i przepaście zabijają od razu, a większość podejść kończy się śmiercią. Wynik to czas ukończenia trasy: im szybciej, tym wyżej w rankingu.</p>
+                <p class="page-sub">Hardmode speedrun po biurowym korytarzu. Trasa jest BRUTALNA — kolce, krążące teczki i przepaście zabijają od razu, a większość podejść kończy się śmiercią. W rankingu liczy się najpierw dystans (jak daleko dotarłeś), a czas ukończenia rozstrzyga dopiero między tymi, którzy dobiegli do flagi.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 500 🪙</span>
@@ -6915,8 +6915,8 @@
               <ul>
                 <li><strong>← / →</strong> (albo A/D) — bieg. <strong>Spacja / W / ↑</strong> — skok (dłużej trzymasz, wyżej skaczesz).</li>
                 <li><strong>Jedno życie.</strong> Dotknięcie kolców, wroga albo wpadnięcie w przepaść kończy rundę natychmiast.</li>
-                <li><strong>Wynik = czas ukończenia trasy.</strong> Im szybciej dobiegniesz do flagi, tym wyższy wynik w rankingu.</li>
-                <li>Nie dobiegniesz do końca (śmierć albo limit 5 minut) = <strong>DNF</strong>, wynik 0.</li>
+                <li><strong>Wynik = dystans.</strong> Im dalej dotrzesz na trasie, tym wyżej w rankingu — nawet po śmierci twój najdalszy zasięg (%) się liczy.</li>
+                <li>Dobiegniesz do flagi? Finisherzy zawsze stoją nad resztą, a między sobą rywalizują <strong>czasem ukończenia</strong> (krótszy = lepszy).</li>
                 <li>Nagrody po zamknięciu tygodnia: 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙.</li>
               </ul>
             </div>
@@ -6942,7 +6942,7 @@
 
             <div class="bj-actions">
               <button class="btn-primary bj-start-btn" id="sm-start-btn">Start rundy</button>
-              <div class="bj-status" id="sm-status">←→/AD bieg, Spacja/W/↑ skok. Jedno życie — wynik to czas ukończenia.</div>
+              <div class="bj-status" id="sm-status">←→/AD bieg, Spacja/W/↑ skok. Liczy się dystans; wśród finisherów — czas.</div>
             </div>
           </section>
 
@@ -7225,7 +7225,7 @@
           <div class="ag-card-banner">🧢</div>
           <div class="ag-card-body">
             <div class="ag-card-name">„Super Mariusz"</div>
-            <div class="ag-card-desc">Brutalny hardmode speedrun po biurowym korytarzu. Jedno życie — kolce, teczki i przepaście zabijają od razu. Wynik to czas ukończenia trasy.</div>
+            <div class="ag-card-desc">Brutalny hardmode speedrun po biurowym korytarzu. Jedno życie — kolce, teczki i przepaście zabijają od razu. Liczy się dystans, a wśród finisherów czas.</div>
             <div class="ag-card-meta">
               <span class="ag-card-cost">Bezpłatnie</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
@@ -9713,7 +9713,7 @@ async function buildActivityFeed() {
     ranged(sb.from('invoice_horde_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('var_patrol_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('egg_catch_scores').select(scoreSel), 'submitted_at'),
-    ranged(sb.from('super_mariusz_scores').select('user_id,nick_snapshot,completion_ms,completed,submitted_at'), 'submitted_at'),
+    ranged(sb.from('super_mariusz_scores').select('user_id,nick_snapshot,score,completion_ms,completed,submitted_at'), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
     ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
@@ -9801,7 +9801,7 @@ async function buildActivityFeed() {
   pushScores(varPatrolRes.data, 'var_patrol');
   pushScores(eggCatchRes.data, 'egg_catch');
   (superMariuszRes.data || []).forEach(s => {
-    const tail = s.completed ? 'ukończył trasę w ' + smFormatTime(s.completion_ms) : 'DNF';
+    const tail = s.completed ? 'ukończył trasę w ' + smFormatTime(s.completion_ms) : 'DNF — ' + smProgressPct(s.score) + '% trasy';
     entries.push({ nick: nickOf(s), ts: s.submitted_at, cat: 'game',
       desc: (ACT_GAME_LABELS['super_mariusz'] || '🕹️ super_mariusz') + ' — ' + tail });
   });
@@ -18824,7 +18824,8 @@ function whackBossRankLabel(rank) {
 // stable whether or not the item is worn now.
 function lbScoreCell(row) {
   if (row.gameType === 'super_mariusz') {
-    return el('td', { className: 'lb-net' }, row.completed === false ? 'DNF' : smFormatTime(row.completion_ms));
+    // finisher rows carry completion_ms; DNF rows rank by progress (% of course)
+    return el('td', { className: 'lb-net' }, row.completion_ms != null ? '🏁 ' + smFormatTime(row.completion_ms) : smProgressPct(row.score) + '%');
   }
   const bonus = Number(row.item_bonus);
   const base  = Number(row.base_score);
@@ -22431,13 +22432,12 @@ if (ecArena) {
 
 // ── „Super Mariusz" (super_mariusz) — hardmode one-life speedrun platformer ──
 // PARITY CONTRACT: the SM_* constants, SM_COURSE, and the
-// smParseCourse/smInitState/smAdvanceTick/replaySuperMariusz functions below
-// must stay byte-for-byte equivalent to the block in
+// smParseCourse/smProgressScore/smInitState/smAdvanceTick/replaySuperMariusz
+// functions below must stay byte-for-byte equivalent to the block in
 // supabase/functions/super-mariusz-action/index.ts — the course is fixed (no
 // RNG), and the server replays the input log to derive the trusted result.
 const SM_TICK_MS = 50;
 const SM_MAX_TICKS = 6000;          // 5 min hard cap -> DNF
-const SM_SCORE_CAP_SECONDS = 600;   // score = cap - floor(completion_ms/1000)
 const SM_MAX_MOVES = 3000;
 const SM_SUB = 256;                 // sub-units per tile
 const SM_COURSE_ID = 'super_mariusz_v2';
@@ -22525,12 +22525,23 @@ function smAabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
+// Progress score: tile column reached by the player's center (peak x), capped
+// at the flag column — every finisher scores exactly the cap, so the shared
+// ORDER BY score DESC, completion_ms ASC NULLS LAST ranks distance first and
+// decides by time only among finishers.
+function smProgressScore(st) {
+  const course = smParseCourse();
+  const flagCol = Math.floor(course.flagX / SM_SUB);
+  return Math.max(0, Math.min(flagCol, Math.floor((st.maxX + SM_PLAYER_W / 2) / SM_SUB)));
+}
+
 function smInitState() {
   const course = smParseCourse();
   const enemies = course.enemySpawns.map(e => ({ x: e.x, y: e.row * SM_SUB - SM_ENEMY_H, dir: 1 }));
   return {
     tick: 0,
     x: course.startX,
+    maxX: course.startX,
     y: course.startY,
     vx: 0,
     vy: 0,
@@ -22618,6 +22629,7 @@ function smAdvanceTick(st, keys) {
   const rx = smResolveAxis(course, st.x, st.y, SM_PLAYER_W, SM_PLAYER_H, st.vx, 0);
   if (rx.x !== st.x + st.vx) st.vx = 0;
   st.x = rx.x;
+  if (st.x > st.maxX) st.maxX = st.x;
 
   const ry = smResolveAxis(course, st.x, st.y, SM_PLAYER_W, SM_PLAYER_H, 0, st.vy);
   if (ry.landed) {
@@ -22677,6 +22689,15 @@ function smFormatTime(ms) {
   return m + ':' + String(s).padStart(2, '0') + '.' + String(cs).padStart(2, '0');
 }
 
+// Maps a stored progress score (tile columns, 0..flagCol) to a display percent.
+function smProgressPct(score) {
+  const course = smParseCourse();
+  const flagCol = Math.floor(course.flagX / SM_SUB);
+  const n = Number(score);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round((n / flagCol) * 100)));
+}
+
 function newSuperMariuszRuntime() {
   return {
     playing: false, submitting: false, archiveMode: false,
@@ -22731,9 +22752,8 @@ function smResetStatCache() {
 function smSetStats(force = false) {
   const rt = superMariuszRuntime || newSuperMariuszRuntime();
   const st = rt.sim;
-  const course = smParseCourse();
   const timeText = smFormatTime(st.tick * SM_TICK_MS);
-  const progressPct = Math.max(0, Math.min(100, Math.round((st.x / course.flagX) * 100)));
+  const progressPct = smProgressPct(smProgressScore(st));
   const progressText = progressPct + '%';
   const statusText = st.dead ? 'DNF' : st.finished ? 'META!' : rt.playing ? 'W BIEGU' : '—';
   if (smTimeEl && (force || timeText !== smStatTimeText)) { smTimeEl.textContent = timeText; smStatTimeText = timeText; }
@@ -23039,8 +23059,8 @@ function renderSuperMariuszState(data) {
     smStatus.textContent = data.myWeekly
       ? (data.myWeekly.completed
           ? 'Twój najlepszy czas w tym tygodniu: ' + smFormatTime(data.myWeekly.completion_ms) + '.'
-          : 'Jeszcze nie ukończyłeś trasy w tym tygodniu.')
-      : '←→/AD bieg, Spacja/W/↑ skok. Jedno życie — wynik to czas ukończenia.';
+          : 'Twój najdalszy zasięg w tym tygodniu: ' + smProgressPct(data.myWeekly.score) + '% trasy.')
+      : '←→/AD bieg, Spacja/W/↑ skok. Liczy się dystans; wśród finisherów — czas.';
   }
 }
 
@@ -23048,17 +23068,17 @@ function renderSuperMariuszTable(wrap, rows, mode) {
   if (!wrap) return;
   rows = rows.filter(r => r.nick !== 'admin');
   if (!rows.length) {
-    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie ukończył trasy w tym tygodniu.' : 'Brak rekordów.'));
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
     return;
   }
   const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
     el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
-    el('td', { className: 'lb-net' }, row.completed === false ? 'DNF' : smFormatTime(row.completion_ms))
+    el('td', { className: 'lb-net' }, row.completed === false ? smProgressPct(row.score) + '%' : '🏁 ' + smFormatTime(row.completion_ms))
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Czas ukończenia trasy' }, 'Czas'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Meta: czas ukończenia · DNF: % pokonanej trasy' }, 'Wynik'))),
       el('tbody', {}, ...bodyRows)
     )
   );
@@ -23179,7 +23199,8 @@ async function finishSuperMariuszRound() {
 
   const finished = rt.sim.finished;
   const completionMs = finished ? rt.sim.tick * SM_TICK_MS : null;
-  const clientScore = finished ? Math.max(0, SM_SCORE_CAP_SECONDS - Math.floor(completionMs / 1000)) : 0;
+  const clientScore = smProgressScore(rt.sim);
+  const clientPct = smProgressPct(clientScore);
 
   if (rt.archiveMode) {
     rt.submitting = false;
@@ -23187,11 +23208,11 @@ async function finishSuperMariuszRound() {
     if (allGamesMode) {
       try {
         await sb.rpc('record_arcade_score', { p_game_type: 'super_mariusz', p_score: clientScore });
-        if (smStatus) smStatus.textContent = finished ? 'Czas: ' + smFormatTime(completionMs) + ' · zapisano w rankingu arcade!' : 'DNF · zapisano w rankingu arcade.';
+        if (smStatus) smStatus.textContent = finished ? 'Czas: ' + smFormatTime(completionMs) + ' · zapisano w rankingu arcade!' : 'DNF — ' + clientPct + '% trasy · zapisano w rankingu arcade.';
         loadArcadeScores('super_mariusz');
       } catch (e) { if (smStatus) smStatus.textContent = 'Wynik: ' + clientScore + ' (błąd zapisu).'; }
     } else {
-      if (smStatus) smStatus.textContent = finished ? 'Demo — czas: ' + smFormatTime(completionMs) + ' (nie zapisano).' : 'Demo — DNF (nie zapisano).';
+      if (smStatus) smStatus.textContent = finished ? 'Demo — czas: ' + smFormatTime(completionMs) + ' (nie zapisano).' : 'Demo — DNF, ' + clientPct + '% trasy (nie zapisano).';
     }
     return;
   }
@@ -23211,8 +23232,9 @@ async function finishSuperMariuszRound() {
       showToast('✅ Ukończono w ' + smFormatTime(data.score.completion_ms));
       if (smStatus) smStatus.textContent = 'Ostatni czas: ' + smFormatTime(data.score.completion_ms) + '.';
     } else {
-      showToast('💀 DNF — wynik 0 zapisany');
-      if (smStatus) smStatus.textContent = 'DNF (' + rt.endedReason + ') — wynik 0.';
+      const pct = smProgressPct(data.score.score);
+      showToast('💀 DNF — zapisano ' + pct + '% trasy');
+      if (smStatus) smStatus.textContent = 'DNF (' + rt.endedReason + ') — dotarłeś do ' + pct + '% trasy.';
     }
   } catch (err) {
     showToast('❌ ' + err.message);

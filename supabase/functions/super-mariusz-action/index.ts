@@ -14,13 +14,12 @@ const db = databaseUrl
   : null;
 
 // PARITY CONTRACT: the SM_* constants, SM_COURSE, and the
-// smParseCourse/smInitState/smAdvanceTick/replaySuperMariusz functions below
-// must stay byte-for-byte equivalent to the SM_* block in index.html — the
+// smParseCourse/smProgressScore/smInitState/smAdvanceTick/replaySuperMariusz
+// functions below must stay byte-for-byte equivalent to the SM_* block in index.html — the
 // client plays this exact deterministic simulation (a fixed shared course, no
 // RNG) and the server replays the input log to derive the trusted result.
 const SM_TICK_MS = 50;
 const SM_MAX_TICKS = 6000;          // 5 min hard cap -> DNF
-const SM_SCORE_CAP_SECONDS = 600;   // score = cap - floor(completion_ms/1000)
 const SM_MAX_MOVES = 3000;
 const SM_SUB = 256;                 // sub-units per tile
 const SM_COURSE_ID = "super_mariusz_v2";
@@ -123,12 +122,23 @@ function smAabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
+// Progress score: tile column reached by the player's center (peak x), capped
+// at the flag column — every finisher scores exactly the cap, so the shared
+// ORDER BY score DESC, completion_ms ASC NULLS LAST ranks distance first and
+// decides by time only among finishers.
+function smProgressScore(st) {
+  const course = smParseCourse();
+  const flagCol = Math.floor(course.flagX / SM_SUB);
+  return Math.max(0, Math.min(flagCol, Math.floor((st.maxX + SM_PLAYER_W / 2) / SM_SUB)));
+}
+
 function smInitState() {
   const course = smParseCourse();
   const enemies = course.enemySpawns.map((e) => ({ x: e.x, y: e.row * SM_SUB - SM_ENEMY_H, dir: 1 }));
   return {
     tick: 0,
     x: course.startX,
+    maxX: course.startX,
     y: course.startY,
     vx: 0,
     vy: 0,
@@ -218,6 +228,7 @@ function smAdvanceTick(st, keys) {
   const rx = smResolveAxis(course, st.x, st.y, SM_PLAYER_W, SM_PLAYER_H, st.vx, 0);
   if (rx.x !== st.x + st.vx) st.vx = 0;
   st.x = rx.x;
+  if (st.x > st.maxX) st.maxX = st.x;
 
   const ry = smResolveAxis(course, st.x, st.y, SM_PLAYER_W, SM_PLAYER_H, 0, st.vy);
   if (ry.landed) {
@@ -290,7 +301,7 @@ function replaySuperMariusz(moves, untilTick) {
     if (ev.finished) { finished = true; endTick = st.tick; break; }
   }
   const completionMs = finished ? endTick * SM_TICK_MS : null;
-  const score = finished ? Math.max(0, SM_SCORE_CAP_SECONDS - Math.floor(completionMs / 1000)) : 0;
+  const score = smProgressScore(st);
   return { finished, died, endTick, completionMs, score };
 }
 
@@ -380,7 +391,6 @@ async function loadState(userId) {
     weekStart: weekRow?.week_start,
     tickMs: SM_TICK_MS,
     courseId: SM_COURSE_ID,
-    scoreCap: SM_SCORE_CAP_SECONDS,
     prizes: PRIZES,
     weekly: mapRows(weekly),
     allTime: mapRows(allTime),

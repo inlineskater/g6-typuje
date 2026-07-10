@@ -1,11 +1,14 @@
 -- „Super Mariusz" (super_mariusz) seasonal game support for Rynek Proroctw G6.
 -- A Mario-style HARDMODE one-life speedrun platformer on a fixed shared course
--- (course_id = 'super_mariusz_v2'). Score = completion time, LOWER IS BETTER,
--- but the stored `score` column is an INVERTED value (score = 600 - seconds)
--- so all the existing ORDER BY score DESC leaderboard/award machinery works
--- unchanged; the true tie-break is `completion_ms ASC` (Bug Jumper pattern).
--- A death (spike/enemy/pit) or hitting the 5-minute cap is a DNF: score = 0,
--- completed = false, completion_ms = NULL. DNFs can never win a weekly award.
+-- (course_id = 'super_mariusz_v2'). Score = PROGRESS: the stored `score` is
+-- the tile column reached by the player's center (peak x, capped at the flag
+-- column = 455), so the existing ORDER BY score DESC leaderboard/award
+-- machinery ranks distance first; every finisher scores exactly the cap and
+-- `completion_ms ASC NULLS LAST` (Bug Jumper pattern) decides only among
+-- finishers. A death (spike/enemy/pit) or the 5-minute cap is a DNF:
+-- completed = false, completion_ms = NULL — but the progress score still
+-- counts, so DNFs rank below finishers yet CAN win weekly awards when few
+-- (or no) players finish the brutal course.
 -- Run after supabase/schema.sql and supabase/hero-items.sql.
 -- After running this file, re-run supabase/season-award-gating.sql (updated
 -- with the super_mariusz rotation entry) so seasonal_game_for_week() knows it.
