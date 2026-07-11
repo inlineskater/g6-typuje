@@ -88,6 +88,33 @@ function validateBet(raw) {
   return bet;
 }
 
+// Timed COMMUNAL „Amulet Fortuny" (casino-luck-item.sql): while ANY unexpired
+// instance exists (any owner — the buyer pays for everyone), every payout is
+// ×CASINO_LUCK_MULT. The richest config (8 rows / medium) is already 98.13%
+// RTP, so 1.01 lands it at 99.1% — never raise this without recomputing every
+// config's RTP.
+const CASINO_LUCK_MULT = 1.01;
+
+async function hasCasinoLuck(tx) {
+  try {
+    const rows = await tx`
+      select 1
+      from public.hero_item_instances i
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where d.is_active = true
+        and d.effect_game = 'casino'
+        and d.effect_type = 'casino_luck'
+        and i.expires_at is not null
+        and i.expires_at > now()
+      limit 1
+    `;
+    return rows.length > 0;
+  } catch (err) {
+    console.warn("Casino luck lookup unavailable:", err?.message ?? err);
+    return false;
+  }
+}
+
 function validateRows(raw) {
   const rows = Math.trunc(Number(raw ?? DEFAULT_ROWS));
   if (!PAYOUTS[rows]) throw gameError("Nieprawidłowa liczba rzędów.");
@@ -175,6 +202,7 @@ async function dropBatch(userId, rawBet, rawRows, rawRisk, rawCount = 1) {
     if (!profile) throw gameError("Profil nie istnieje.");
     if (profile.coins < bet) throw gameError("Za mało coinów!");
 
+    const luck = await hasCasinoLuck(tx);
     let balance = Number(profile.coins || 0);
     const spins = [];
 
@@ -183,7 +211,7 @@ async function dropBatch(userId, rawBet, rawRows, rawRisk, rawCount = 1) {
 
       const { path, bucket } = generatePath(rows);
       const multiplier = PAYOUTS[rows][risk][bucket];
-      const totalWon = Math.floor(bet * multiplier);
+      const totalWon = Math.floor(bet * multiplier * (luck ? CASINO_LUCK_MULT : 1));
       balance = balance - bet + totalWon;
 
       const [spin] = await tx`
@@ -199,6 +227,7 @@ async function dropBatch(userId, rawBet, rawRows, rawRisk, rawCount = 1) {
     return await stateResponse(tx, userId, {
       drop: spins[spins.length - 1] ?? null,
       drops: spins,
+      casinoLuck: luck,
       skipped,
       warning: skipped > 0 ? `Zabrakło coinów na ${skipped} dropów.` : "",
     });

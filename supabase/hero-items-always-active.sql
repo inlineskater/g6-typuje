@@ -16,6 +16,8 @@ DROP FUNCTION IF EXISTS public.unequip_hero_item(text);
 
 -- my_hero_inventory: drop the "equipped" column. CREATE OR REPLACE VIEW can't
 -- remove a trailing column, so this needs a real DROP + CREATE (re-grant after).
+-- ⚠️ SUPERSEDED by supabase/casino-luck-item.sql (adds duration_hours/expires_at
+-- and hides expired timed instances) — re-run that file after this one.
 DROP VIEW IF EXISTS public.my_hero_inventory;
 CREATE VIEW public.my_hero_inventory WITH (security_invoker = true) AS
 SELECT
@@ -47,6 +49,7 @@ GRANT SELECT ON public.my_hero_inventory TO authenticated;
 
 -- hero_score_bonus used to read equipped items via public_hero_equipment;
 -- now reads ownership directly, since public_hero_equipment is being dropped.
+-- ⚠️ SUPERSEDED by supabase/casino-luck-item.sql (ignores expired timed items).
 CREATE OR REPLACE VIEW public.hero_score_bonus AS
 SELECT i.owner_id AS user_id, MAX(d.effect_value)::integer AS bonus
 FROM public.hero_item_instances i

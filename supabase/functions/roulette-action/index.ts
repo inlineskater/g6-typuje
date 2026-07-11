@@ -151,6 +151,7 @@ async function getStrongestHeroEffect(tx, userId, game) {
       where i.owner_id = ${userId}
         and d.is_active = true
         and d.effect_game = ${game}
+        and (i.expires_at is null or i.expires_at > now())
       order by d.effect_value desc, d.price desc, d.slug
       limit 1
     `;
@@ -158,6 +159,43 @@ async function getStrongestHeroEffect(tx, userId, game) {
   } catch (err) {
     console.warn("Hero item effects unavailable:", err?.message ?? err);
     return null;
+  }
+}
+
+// Timed COMMUNAL „Amulet Fortuny" (casino-luck-item.sql): while ANY unexpired
+// instance exists (any owner — the buyer pays for everyone), every winning
+// payout gets +CASINO_LUCK_PAYOUT_PCT% (RTP 97.3% -> 98.3%). It stacks with a
+// personal roulette item (rescue or payout_bonus); the worst stack — straight
+// bets + lucky_trousers + amulet — sits at 99.25% RTP with the constants
+// below. 2% here would push that stack to 100.2% (+EV); never raise any of
+// CASINO_LUCK_PAYOUT_PCT / MAX_RESCUE_CHANCE_PCT / the stake-refund rescue cap
+// without redoing the joint math.
+const CASINO_LUCK_PAYOUT_PCT = 1;
+
+// win_chance_bonus (lucky_trousers) hard server-side ceiling. The rescue used
+// to pay full multipliers, which made single straight-number betting +32% EV
+// (1% of losses turned into a 36x win) — a grindable coin printer. The rescue
+// now refunds AT MOST the round's total stake (loss -> money back), and the
+// trigger chance is clamped here regardless of the item's effect_value.
+const MAX_RESCUE_CHANCE_PCT = 1;
+
+async function hasCasinoLuck(tx) {
+  try {
+    const rows = await tx`
+      select 1
+      from public.hero_item_instances i
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where d.is_active = true
+        and d.effect_game = 'casino'
+        and d.effect_type = 'casino_luck'
+        and i.expires_at is not null
+        and i.expires_at > now()
+      limit 1
+    `;
+    return rows.length > 0;
+  } catch (err) {
+    console.warn("Casino luck lookup unavailable:", err?.message ?? err);
+    return false;
   }
 }
 
@@ -228,28 +266,37 @@ function outcomeForBets(bets, tableNumber, effect) {
   }
 
   let itemEffect = null;
-  if (effect?.effect_type === "win_chance_bonus" && totalWon === 0 && chancePercent(effect.effect_value)) {
+  const rescueChance = Math.min(Number(effect?.effect_value ?? 0), MAX_RESCUE_CHANCE_PCT);
+  if (effect?.effect_type === "win_chance_bonus" && totalWon === 0 && chancePercent(rescueChance)) {
     const winners = [];
     for (let n = 0; n <= 36; n++) {
       if (bets.some((b) => betWins(b, n))) winners.push(n);
     }
     const rescuedNumber = randomFrom(winners);
     if (rescuedNumber !== null) {
-      totalWon = 0;
+      // Stake refund, not a multiplier win: pay the rescued number's winnings
+      // capped at the round's total stake. Uncapped, a straight-only bettor
+      // gets a 36x rescue and the item turns +EV (see MAX_RESCUE_CHANCE_PCT).
+      const totalStake = bets.reduce((s, b) => s + b.amount, 0);
+      let rescueWin = 0;
       for (const b of bets) {
-        if (betWins(b, rescuedNumber)) totalWon += b.amount * betMultiplier(b.type);
+        if (betWins(b, rescuedNumber)) rescueWin += b.amount * betMultiplier(b.type);
       }
+      totalWon = Math.min(rescueWin, totalStake);
       itemEffect = {
         slug: effect.slug,
         name: effect.name,
         type: effect.effect_type,
-        value: Number(effect.effect_value),
+        value: rescueChance,
         rescuedNumber,
         rescuedColor: numberColor(rescuedNumber),
+        refund: totalWon,
       };
     }
   } else if (effect?.effect_type === "payout_bonus" && totalWon > 0) {
-    const bonus = Math.ceil(totalWon * Number(effect.effect_value) / 100);
+    // floor, not ceil: ceil paid a full bonus coin on tiny wins (a 1-coin
+    // even-money win got ceil(2*1%) = +1 coin = +50% EV — min-stake grind).
+    const bonus = Math.floor(totalWon * Number(effect.effect_value) / 100);
     if (bonus > 0) {
       totalWon += bonus;
       itemEffect = {
@@ -474,6 +521,7 @@ async function resolveRound(tx, table, round, triggerUserId, force = false) {
 
   const number = randomNumber();
   const color = numberColor(number);
+  const casinoLuck = await hasCasinoLuck(tx);
   let roundTotalBet = 0;
   let roundTotalWon = 0;
 
@@ -481,7 +529,21 @@ async function resolveRound(tx, table, round, triggerUserId, force = false) {
     const playerBets = betsByUser.get(seat.user_id) ?? [];
     const totalBet = sumBets(playerBets);
     const effect = await getStrongestHeroEffect(tx, seat.user_id, "roulette");
-    const { totalWon, itemEffect } = outcomeForBets(playerBets, number, effect);
+    let { totalWon, itemEffect } = outcomeForBets(playerBets, number, effect);
+    if (totalWon > 0 && casinoLuck) {
+      // floor (see payout_bonus note in outcomeForBets): ceil is +EV at 1-coin stakes.
+      const luckBonus = Math.floor(totalWon * CASINO_LUCK_PAYOUT_PCT / 100);
+      if (luckBonus > 0) {
+        totalWon += luckBonus;
+        itemEffect = itemEffect ?? {
+          slug: "lucky_amulet",
+          name: "Amulet Fortuny",
+          type: "casino_luck",
+          value: CASINO_LUCK_PAYOUT_PCT,
+          bonus: luckBonus,
+        };
+      }
+    }
     roundTotalBet += totalBet;
     roundTotalWon += totalWon;
 

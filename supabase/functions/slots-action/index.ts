@@ -92,6 +92,7 @@ async function getStrongestHeroEffect(tx, userId, game) {
       where i.owner_id = ${userId}
         and d.is_active = true
         and d.effect_game = ${game}
+        and (i.expires_at is null or i.expires_at > now())
       order by d.effect_value desc, d.price desc, d.slug
       limit 1
     `;
@@ -99,6 +100,40 @@ async function getStrongestHeroEffect(tx, userId, game) {
   } catch (err) {
     console.warn("Hero item effects unavailable:", err?.message ?? err);
     return null;
+  }
+}
+
+// Timed COMMUNAL „Amulet Fortuny" (casino-luck-item.sql): while ANY unexpired
+// instance exists (any owner — the buyer pays for everyone), it acts here as a
+// rare_symbol_bonus of CASINO_LUCK_SYMBOL_SHIFT (RTP 89.1% -> 97.2% — shift 3
+// would cross 100%, never raise this without redoing the math).
+const CASINO_LUCK_SYMBOL_SHIFT = 2;
+const CASINO_LUCK_EFFECT = {
+  slug: "lucky_amulet",
+  name: "Amulet Fortuny",
+  emoji: "🍀",
+  effect_game: "casino",
+  effect_type: "rare_symbol_bonus",
+  effect_value: CASINO_LUCK_SYMBOL_SHIFT,
+};
+
+async function hasCasinoLuck(tx) {
+  try {
+    const rows = await tx`
+      select 1
+      from public.hero_item_instances i
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where d.is_active = true
+        and d.effect_game = 'casino'
+        and d.effect_type = 'casino_luck'
+        and i.expires_at is not null
+        and i.expires_at > now()
+      limit 1
+    `;
+    return rows.length > 0;
+  } catch (err) {
+    console.warn("Casino luck lookup unavailable:", err?.message ?? err);
+    return false;
   }
 }
 
@@ -132,7 +167,11 @@ function validateBet(raw) {
 
 async function spin(userId, rawBet) {
   const bet = validateBet(rawBet ?? DEFAULT_BET);
-  const effect = await getStrongestHeroEffect(db, userId, "slots");
+  let effect = await getStrongestHeroEffect(db, userId, "slots");
+  if (await hasCasinoLuck(db)) {
+    const ownShift = effect?.effect_type === "rare_symbol_bonus" ? Number(effect.effect_value) : 0;
+    if (ownShift < CASINO_LUCK_SYMBOL_SHIFT) effect = CASINO_LUCK_EFFECT;
+  }
 
   return await db.begin(async (tx) => {
     const [profile] = await tx`select coins from public.profiles where id = ${userId} for update`;

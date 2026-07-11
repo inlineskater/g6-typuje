@@ -93,7 +93,7 @@ INSERT INTO public.hero_item_defs
   (slug, name, emoji, slot, price, rarity, description, effect_game, effect_type, effect_value, sale_type, edition_size, visual_effect, is_active)
 VALUES
   ('lucky_trousers', 'Szczęśliwe Majtki', '🩳', 'legs', 450, 'rare',
-   'Dają małą szansę ratunku przy przegranej w ruletce.',
+   'Dają małą szansę (1%) na zwrot całej stawki po przegranej w ruletce.',
    'roulette', 'win_chance_bonus', 1, 'shop', null, null, true),
   ('dealer_hat', 'Kapelusz Krupiera', '🎩', 'head', 100, 'common',
    'Delikatnie podbija wypłatę, gdy ruletka już wygra.',
@@ -114,8 +114,10 @@ VALUES
    'Mocniej przyciąga symbol G6 w slotach.',
    'slots', 'rare_symbol_bonus', 2, 'shop', null, null, false),
   ('fate_die', 'Kość Przeznaczenia', '🎲', 'trinket', 450, 'rare',
-   'Daje dodatkową szansę ratunku przy przegranej w ruletce.',
+   'Daje szansę na zwrot stawki po przegranej w ruletce.',
    'roulette', 'win_chance_bonus', 1, 'shop', null, null, false),
+  -- effect_value 2 is clamped to MAX_RESCUE_CHANCE_PCT (1%) in roulette-action;
+  -- rework the rescue math before ever re-activating this as a "stronger" item.
   ('fortune_eye', 'Oko Fortuny', '🧿', 'head', 800, 'epic',
    'Silniejszy talizman ruletki dla hazardzistów z nerwami.',
    'roulette', 'win_chance_bonus', 2, 'shop', null, null, false),
@@ -235,6 +237,8 @@ REVOKE ALL ON public.hero_item_auctions, public.hero_item_auction_bids
   FROM anon, authenticated;
 GRANT SELECT ON public.hero_item_auctions, public.hero_item_auction_bids TO anon, authenticated;
 
+-- ⚠️ SUPERSEDED by supabase/casino-luck-item.sql, which adds timed-item
+-- (duration_hours/expires_at) handling — re-run that file after this one.
 CREATE OR REPLACE FUNCTION public.purchase_hero_item(p_item_slug text)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE

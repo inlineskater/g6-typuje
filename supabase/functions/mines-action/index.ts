@@ -22,6 +22,10 @@ const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, 
 
 const BOARD_SIZE = 25;
 const HOUSE_FACTOR = 0.95;
+// Timed COMMUNAL „Amulet Fortuny" (casino-luck-item.sql): while ANY unexpired
+// instance exists (any owner — the buyer pays for everyone), multipliers are
+// computed with this factor instead (RTP 95% -> 98%). Never set ≥1.
+const CASINO_LUCK_HOUSE_FACTOR = 0.98;
 const MAX_MULT = 1000;
 const STAKES = [1, 5, 10, 25, 50, 100, 250, 500]; // preset chips; any integer 1..MAX_BET is allowed
 const MAX_BET = 10_000_000;               // ceiling for a custom stake (balance enforced separately)
@@ -87,7 +91,7 @@ function floor2(value) {
   return Math.floor(Number(value) * 100) / 100;
 }
 
-function multiplierFor(mineCount, safeRevealed) {
+function multiplierFor(mineCount, safeRevealed, houseFactor = HOUSE_FACTOR) {
   const k = Math.max(0, Math.trunc(Number(safeRevealed)));
   const mines = validateMineCount(mineCount);
   const safeTiles = BOARD_SIZE - mines;
@@ -98,7 +102,27 @@ function multiplierFor(mineCount, safeRevealed) {
   for (let i = 0; i < k; i += 1) {
     fair *= (BOARD_SIZE - i) / (BOARD_SIZE - mines - i);
   }
-  return Math.min(MAX_MULT, floor2(fair * HOUSE_FACTOR));
+  return Math.min(MAX_MULT, floor2(fair * houseFactor));
+}
+
+async function casinoLuckFactor(tx) {
+  try {
+    const rows = await tx`
+      select 1
+      from public.hero_item_instances i
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where d.is_active = true
+        and d.effect_game = 'casino'
+        and d.effect_type = 'casino_luck'
+        and i.expires_at is not null
+        and i.expires_at > now()
+      limit 1
+    `;
+    return rows.length > 0 ? CASINO_LUCK_HOUSE_FACTOR : HOUSE_FACTOR;
+  } catch (err) {
+    console.warn("Casino luck lookup unavailable:", err?.message ?? err);
+    return HOUSE_FACTOR;
+  }
 }
 
 function potentialPayout(bet, multiplier) {
@@ -120,14 +144,14 @@ function generateMines(count) {
   return tiles.slice(0, count).sort((a, b) => a - b);
 }
 
-function roundOut(row) {
+function roundOut(row, houseFactor = HOUSE_FACTOR) {
   if (!row) return null;
   const revealedTiles = asArray(row.revealed_tiles).map(Number).filter(Number.isInteger);
   const safeRevealed = Number(row.safe_revealed || 0);
   const currentMultiplier = Number(row.current_multiplier || 1);
   const safeTiles = BOARD_SIZE - Number(row.mine_count);
   const nextMultiplier = row.status === "active" && safeRevealed < safeTiles
-    ? multiplierFor(Number(row.mine_count), safeRevealed + 1)
+    ? multiplierFor(Number(row.mine_count), safeRevealed + 1, houseFactor)
     : null;
   return {
     id: row.id,
@@ -168,7 +192,8 @@ function completedRoundOut(round, secret, result) {
   };
 }
 
-async function stateResponse(tx, userId, extra = {}) {
+async function stateResponse(tx, userId, extra = {}, houseFactor = null) {
+  const factor = houseFactor ?? await casinoLuckFactor(tx);
   const [profile] = await tx`select coins, nick from public.profiles where id = ${userId}`;
   const [active] = await tx`
     select *
@@ -185,12 +210,13 @@ async function stateResponse(tx, userId, extra = {}) {
   return {
     coins: profile?.coins ?? 0,
     nick: profile?.nick ?? "",
-    activeRound: roundOut(active),
+    activeRound: roundOut(active, factor),
     history: historyOut(history),
     stakes: STAKES,
     boardSize: BOARD_SIZE,
     maxMultiplier: MAX_MULT,
-    houseFactor: HOUSE_FACTOR,
+    houseFactor: factor,
+    casinoLuck: factor !== HOUSE_FACTOR,
     ...extra,
   };
 }
@@ -261,6 +287,7 @@ async function revealTile(userId, roundId, rawTile) {
 
     const mineTiles = asArray(secret.mine_tiles).map(Number);
     const nextRevealed = [...revealed, tile].sort((a, b) => a - b);
+    const factor = await casinoLuckFactor(tx);
 
     if (mineTiles.includes(tile)) {
       const [updated] = await tx`
@@ -275,11 +302,11 @@ async function revealTile(userId, roundId, rawTile) {
       await insertSpin(tx, updated, secret, "bust");
       return await stateResponse(tx, userId, {
         completedRound: completedRoundOut(updated, secret, "bust"),
-      });
+      }, factor);
     }
 
     const safeRevealed = Number(round.safe_revealed) + 1;
-    const multiplier = multiplierFor(round.mine_count, safeRevealed);
+    const multiplier = multiplierFor(round.mine_count, safeRevealed, factor);
     const safeTiles = BOARD_SIZE - Number(round.mine_count);
     const autoCash = safeRevealed >= safeTiles || multiplier >= MAX_MULT;
     const won = autoCash ? potentialPayout(round.bet, multiplier) : 0;
@@ -300,7 +327,7 @@ async function revealTile(userId, roundId, rawTile) {
       await insertSpin(tx, updated, secret, "auto_cashout");
       return await stateResponse(tx, userId, {
         completedRound: completedRoundOut(updated, secret, "auto_cashout"),
-      });
+      }, factor);
     }
 
     const [updated] = await tx`
@@ -311,7 +338,7 @@ async function revealTile(userId, roundId, rawTile) {
       where id = ${round.id}
       returning *`;
 
-    return await stateResponse(tx, userId);
+    return await stateResponse(tx, userId, {}, factor);
   });
 }
 
@@ -330,7 +357,8 @@ async function cashOut(userId, roundId) {
     const [secret] = await tx`select mine_tiles from public.mines_round_secrets where round_id = ${round.id}`;
     if (!secret) throw gameError("Brak sekretu rundy.");
 
-    const multiplier = multiplierFor(round.mine_count, round.safe_revealed);
+    const factor = await casinoLuckFactor(tx);
+    const multiplier = multiplierFor(round.mine_count, round.safe_revealed, factor);
     const won = potentialPayout(round.bet, multiplier);
     await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
     const [updated] = await tx`
@@ -345,7 +373,7 @@ async function cashOut(userId, roundId) {
     return await stateResponse(tx, userId, {
       completedRound: completedRoundOut(updated, secret, "cashout"),
       cashedOut: { multiplier, won },
-    });
+    }, factor);
   });
 }
 

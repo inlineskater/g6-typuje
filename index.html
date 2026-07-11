@@ -7993,6 +7993,7 @@ const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id,
 const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki', legendary: 'legendarny' };
 const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch']);
 let heroItemDefs = [];
+let casinoLuckGlobalUntil = null; // shared „Amulet Fortuny" buff end (casino_luck_status view)
 let myHeroInventory = [];
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
@@ -12787,15 +12788,29 @@ async function loadMyGardenForCosmetics() {
 function heroItemEffectLabel(item) {
   const value = Number(item?.effect_value || 0);
   if (item?.effect_type === 'score_bonus' && SEASONAL_SCORE_GAMES.has(item?.effect_game)) return `Gry sezonowe: +${value} do wyniku w każdej grze`;
-  if (item?.effect_game === 'roulette' && item.effect_type === 'win_chance_bonus') return `Ruletka: +${value}% szansy ratunku po przegranej`;
+  if (item?.effect_game === 'roulette' && item.effect_type === 'win_chance_bonus') return `Ruletka: ${Math.min(value, 1)}% szansy na zwrot stawki po przegranej`;
   if (item?.effect_game === 'roulette' && item.effect_type === 'payout_bonus') return `Ruletka: +${value}% do wygranej wypłaty`;
   if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') { const pts = value === 1 ? 'punkt' : (value >= 2 && value <= 4) ? 'punkty' : 'punktów'; return `Sloty: +${value} ${pts} wagi symbolu G6`; }
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
+  if (item?.effect_game === 'casino' && item.effect_type === 'casino_luck') return 'Kasyno: więcej szczęścia DLA WSZYSTKICH graczy (Sloty, Ruletka, Plinko, Miny)' + (item.duration_hours ? ` przez ${Math.round(item.duration_hours / 24)} dni` : '');
   if (item?.effect_game === 'tavern') return 'Kolekcjonerski (ozdobny)';
   if (item?.effect_type === 'daily_interest') return `Pasywne: +${value}% coinów dziennie`;
   if (item?.effect_game === 'poker' && item.effect_type === 'odds_view') return 'Poker: widoczna szansa wygranej';
   if (item?.effect_type === 'extra_garden_slot') return 'Ogródek: odblokuj drugi slot na roślinę';
   return 'Przedmiot specjalny';
+}
+
+// Remaining time of a timed (expires_at) item, e.g. "6 dni 4 godz." — the
+// server is the source of truth; this is display-only.
+function heroItemExpiryLabel(item) {
+  if (!item?.expires_at) return '';
+  const ms = new Date(item.expires_at).getTime() - Date.now();
+  if (ms <= 0) return 'wygasł';
+  const hours = Math.ceil(ms / 3600000);
+  const days = Math.floor(hours / 24);
+  const restH = hours - days * 24;
+  if (days > 0) return `${days} dni${restH > 0 ? ` ${restH} godz.` : ''}`;
+  return `${hours} godz.`;
 }
 
 function heroItemSerialLabel(item) {
@@ -12849,6 +12864,13 @@ async function loadHeroItemCatalog() {
     return;
   }
   heroItemDefs = data || [];
+  // Shared casino-luck buff status (communal — everyone sees the same clock).
+  // The view may not exist until casino-luck-item.sql is applied; fail soft.
+  const { data: luck, error: luckError } = await sb
+    .from('casino_luck_status')
+    .select('active_until')
+    .maybeSingle();
+  casinoLuckGlobalUntil = (!luckError && luck?.active_until) ? luck.active_until : null;
 }
 
 async function loadHeroAuctionItemDefs() {
@@ -12922,7 +12944,7 @@ async function purchaseHeroItem(slug, price, btn) {
     me.coins = data.coins_left;
     setText(headerCoins, me.coins);
   }
-  showToast('✅ Przedmiot kupiony!');
+  showToast(data?.extended ? '✅ Czas działania przedłużony!' : '✅ Przedmiot kupiony!');
   await refreshHeroItemSurface();
 }
 
@@ -13546,6 +13568,25 @@ function renderHeroShopGrid() {
         buyBtn.addEventListener('click', () => purchaseGardenCertificate(itemPrice, buyBtn));
         itemCard.appendChild(buyBtn);
       }
+    } else if (item.duration_hours) {
+      // Timed item: casino_luck is COMMUNAL — one shared clock for everyone,
+      // and buying while active queues +duration onto the shared window.
+      const isCommunal = item.effect_type === 'casino_luck';
+      const activeUntil = isCommunal ? casinoLuckGlobalUntil : owned?.expires_at;
+      if (activeUntil) {
+        itemCard.appendChild(el('div', { className: 'shop-card-slots' },
+          `⏳ Aktywny${isCommunal ? ' dla wszystkich' : ''} jeszcze: ${heroItemExpiryLabel({ expires_at: activeUntil })}`));
+      }
+      const days = Math.round(item.duration_hours / 24);
+      const buyBtn = el('button', {
+        className: 'btn-primary shop-card-btn',
+        disabled: !itemCanAfford,
+        title: itemCanAfford ? '' : 'Za mało coinów',
+      }, !itemCanAfford ? `Potrzebujesz ${itemPrice.toLocaleString('pl-PL')} 🪙`
+        : activeUntil ? `Przedłuż o ${days} dni za ${itemPrice.toLocaleString('pl-PL')} 🪙`
+        : `Kup ${days} dni${isCommunal ? ' dla wszystkich' : ''} za ${itemPrice.toLocaleString('pl-PL')} 🪙`);
+      buyBtn.addEventListener('click', () => purchaseHeroItem(item.slug, itemPrice, buyBtn));
+      itemCard.appendChild(buyBtn);
     } else if (owned) {
       itemCard.appendChild(el('button', {
         className: 'btn-primary shop-card-btn',
@@ -15735,7 +15776,9 @@ function renderRouletteResult() {
     msgChildren.push(el('div', { className: `roulette-result-msg ${msgClass}` }, msgText));
     if (mine.itemEffect) {
       const effect = mine.itemEffect;
-      const bonusText = effect.bonus ? ` (+${effect.bonus} 🪙)` : effect.rescuedNumber != null ? ` (ratunek: ${effect.rescuedNumber})` : '';
+      const bonusText = effect.bonus ? ` (+${effect.bonus} 🪙)`
+        : effect.rescuedNumber != null ? ` (ratunek — zwrot${effect.refund ? ` ${effect.refund} 🪙` : ' stawki'})`
+        : '';
       msgChildren.push(el('div', { className: 'roulette-result-msg win' }, `${effect.name}${bonusText}`));
     }
   } else {
@@ -28129,7 +28172,10 @@ function farmSpecialItemTile(item) {
       el('div', { className: 'fcc-rar farm-rar-' + rar }, HERO_ITEM_RARITY_PL[rar] || rar),
       el('div', { className: 'fcc-prog' },
         el('div', { className: 'fcc-item-effect' }, heroItemEffectLabel(item))),
-      el('div', { className: 'fcc-item-slot' }, HERO_ITEM_SLOT_LABELS[item.slot] || item.slot)));
+      el('div', { className: 'fcc-item-slot' },
+        item.expires_at
+          ? `⏳ jeszcze ${heroItemExpiryLabel(item)}`
+          : (HERO_ITEM_SLOT_LABELS[item.slot] || item.slot))));
   return tile;
 }
 
