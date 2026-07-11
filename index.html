@@ -5437,6 +5437,40 @@
     .maj-crop-ico .farm-ico-emoji { font-size: 16px; }
     .maj-num { font-variant-numeric: tabular-nums; }
     .maj-empty { border: 1px dashed var(--border-hi); border-radius: 10px; padding: 16px 14px; text-align: center; background: var(--surface); }
+    /* ── 🧺 Plony hero — prominent sell panel pinned to the top of Mój Majątek ── */
+    .maj-crops-hero { position: relative; overflow: hidden; border: 1px solid rgba(245,158,11,.45); border-radius: 14px; padding: 12px 12px 11px; margin-bottom: 6px; background: linear-gradient(160deg, color-mix(in srgb, #f59e0b 14%, var(--card)), var(--card) 72%); box-shadow: 0 4px 18px rgba(245,158,11,.12); }
+    .maj-crops-hero::after { content: ''; position: absolute; top: 0; left: -60%; width: 45%; height: 100%; background: linear-gradient(105deg, transparent, rgba(255,255,255,.2), transparent); transform: skewX(-18deg); animation: majHeroShine 1.3s ease-out .3s 1 both; pointer-events: none; }
+    @keyframes majHeroShine { from { left: -60%; } to { left: 135%; } }
+    .maj-crops-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .maj-crops-title { font-size: 14px; font-weight: 900; color: var(--text); }
+    .maj-crops-total { font-size: 22px; font-weight: 900; color: #b45309; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+    .maj-crops-sub { font-size: 11px; color: var(--muted); margin: 3px 0 10px; line-height: 1.35; }
+    .maj-crop-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 9px 10px; margin-top: 8px; animation: majCardIn .45s ease-out backwards; }
+    @keyframes majCardIn { from { opacity: 0; transform: translateY(9px); } }
+    .maj-crop-art { grid-row: span 2; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--surface); }
+    .maj-crop-art .farm-ico { width: 30px; height: 30px; }
+    .maj-crop-art .farm-ico-emoji { font-size: 26px; }
+    .maj-crop-main { min-width: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .maj-crop-name { font-weight: 800; font-size: 13.5px; color: var(--text); }
+    .maj-crop-qty { font-weight: 900; font-size: 13.5px; color: #b45309; font-variant-numeric: tabular-nums; }
+    .maj-crop-side { grid-row: span 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .maj-crop-value { font-size: 15px; font-weight: 900; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .maj-crop-sell { border: none; border-radius: 9px; padding: 7px 14px; font-weight: 800; font-size: 12.5px; cursor: pointer; color: #3a2a06; background: linear-gradient(180deg, #fbbf24, #f59e0b); box-shadow: 0 2px 6px rgba(245,158,11,.35); transition: transform .12s ease, box-shadow .12s ease, filter .12s ease; }
+    .maj-crop-sell:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(245,158,11,.45); filter: brightness(1.04); }
+    .maj-crop-sell:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(245,158,11,.35); }
+    .maj-crop-meta { min-width: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+    .maj-crop-bar { position: relative; height: 7px; border-radius: 4px; background: var(--surface); border: 1px solid var(--border); flex: 1 1 90px; min-width: 70px; max-width: 160px; overflow: hidden; }
+    .maj-crop-bar i { position: absolute; top: 0; bottom: 0; left: 0; display: block; border-radius: 4px; animation: majBarGrow .9s cubic-bezier(.2,.8,.3,1) .2s backwards; }
+    @keyframes majBarGrow { from { width: 0; } }
+    .maj-crop-bar i.up { background: linear-gradient(90deg, #4ade80, #16a34a); }
+    .maj-crop-bar i.flat { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
+    .maj-crop-bar i.down { background: linear-gradient(90deg, #fca5a5, #dc2626); }
+    .maj-crops-empty { text-align: center; padding: 12px 8px 10px; }
+    .maj-crops-empty .mce-ico { display: inline-block; font-size: 34px; transform-origin: 50% 0; animation: majBasketSway 2.6s ease-in-out infinite; }
+    @keyframes majBasketSway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+    .maj-crops-empty b { display: block; margin-top: 6px; font-size: 13px; color: var(--text); }
+    .maj-crops-empty .mce-steps { margin-top: 7px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+    @media (prefers-reduced-motion: reduce) { .maj-crops-hero::after, .maj-crop-card, .maj-crop-bar i, .maj-crops-empty .mce-ico { animation: none !important; } }
     .farm-v2-body .farm-card-sub { color: var(--muted); }
     /* ── Ogródek farm overhaul: Twemoji icons + collectible cards + wood theme ── */
     /* Crisp Twemoji SVG plant icons (sized to the container's font-size; emoji fallback) */
@@ -27951,8 +27985,91 @@ async function openFarmNftExplorer(species) {
   }
 }
 
+// ── 🧺 Plony hero — the sell panel pinned to the top of Mój Majątek ─────────
+// Values every crop with farmSellQuote (the client replica of sell_crop_to_npc,
+// including the per-transaction price drop), so the totals are the REAL payout
+// for selling everything now — not a naive price×qty.
+function majCountUp(node, target) {
+  if (plinkoReducedMotion() || target <= 0) return;
+  const t0 = performance.now(), dur = 750;
+  const tick = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    node.textContent = '≈' + Math.round(target * eased) + ' 🪙';
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function majCropCard(crop, qty, q, now, idx) {
+  const def = [...fmDefs.values()].find(d => d.crop_type === crop);
+  const mkt = fmMarket.get(crop);
+  const price = q ? q.startPrice : Number(farmMarketEffectivePrice(mkt) || 0);
+  const base = q ? q.base : Number(mkt?.base_price || 0);
+  const pct = base > 0 ? Math.round(price / base * 100) : 0;
+  // Price-position bar: the NPC price lives between the 30%-of-max floor and MAX.
+  const fillPct = Math.max(4, Math.min(100, Math.round((pct - 30) / 70 * 100)));
+  const cls = pct >= 80 ? 'up' : (pct <= 50 ? 'down' : 'flat');
+  const eventQty = farmSeasonalEligibleQty(crop, qty);
+
+  const sellBtn = el('button', { className: 'maj-crop-sell', type: 'button' }, '💰 Sprzedaj');
+  sellBtn.addEventListener('click', () => farmSellConfirm(crop, qty, refreshFarmHub));
+
+  return el('div', { className: 'maj-crop-card', style: { animationDelay: (0.05 + idx * 0.07) + 's' } },
+    el('div', { className: 'maj-crop-art' }, farmIcon(def?.emoji || '🧺')),
+    el('div', { className: 'maj-crop-main' },
+      el('span', { className: 'maj-crop-name' }, def?.name || crop),
+      el('span', { className: 'maj-crop-qty' }, '×' + qty)),
+    el('div', { className: 'maj-crop-side' },
+      el('span', { className: 'maj-crop-value', title: 'Realna wypłata za sprzedaż całości teraz (z wpływem na cenę)' }, '≈' + now + ' 🪙'),
+      sellBtn),
+    el('div', { className: 'maj-crop-meta' },
+      el('span', { className: 'maj-num' }, price.toFixed(1) + ' 🪙/szt'),
+      el('span', { className: 'maj-crop-bar', title: 'NPC płaci teraz ' + pct + '% ceny maks. (' + base + ' 🪙) — zakres 30–100%' },
+        el('i', { className: cls, style: { width: fillPct + '%' } })),
+      farmTrendChip(crop), farmRotChip(crop),
+      eventQty > 0 ? el('span', { className: 'farm-seasonal-bonus', title: 'Tyle sztuk liczy się do kontraktu tygodnia' }, '🏆 +' + (eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0)) + ' 🪙') : ''));
+}
+
+function majCropsHero() {
+  const crops = [...fmInventory.entries()].filter(([, q]) => q > 0);
+  const hero = el('div', { className: 'maj-crops-hero' });
+
+  if (!crops.length) {
+    hero.append(el('div', { className: 'maj-crops-empty' },
+      el('span', { className: 'mce-ico' }, '🧺'),
+      el('b', {}, 'Brak plonów do sprzedaży'),
+      el('div', { className: 'mce-steps' }, '🌱 Zasadź kartę na działce → ⏳ poczekaj na wzrost → 🧺 zbierz → 💰 wróć tu i sprzedaj')));
+    return hero;
+  }
+
+  let totalNow = 0, totalMax = 0, totalQty = 0;
+  const rows = crops.map(([crop, qty]) => {
+    const q = farmSellQuote(crop, qty);
+    const now = q ? q.totalProceeds : Math.round(Number(farmMarketEffectivePrice(fmMarket.get(crop)) || 0) * qty);
+    totalNow += now; totalMax += q ? Math.round(q.base * qty) : now; totalQty += qty;
+    return { crop, qty, q, now };
+  }).sort((a, b) => b.now - a.now);
+
+  const totalEl = el('span', { className: 'maj-crops-total' }, '≈' + totalNow + ' 🪙');
+  hero.append(
+    el('div', { className: 'maj-crops-head' },
+      el('span', { className: 'maj-crops-title' }, '🧺 Plony do sprzedaży ',
+        el('span', { className: 'maj-section-count' }, '· ' + totalQty + ' szt.')),
+      totalEl),
+    el('div', { className: 'maj-crops-sub' },
+      'Realna wypłata za sprzedaż wszystkiego teraz (uwzględnia spadek ceny przy dużej sprzedaży) · przy cenach maks. to ≈' + totalMax + ' 🪙'));
+
+  rows.forEach((r, i) => hero.append(majCropCard(r.crop, r.qty, r.q, r.now, i)));
+  majCountUp(totalEl, totalNow);
+  return hero;
+}
+
 function buildFarmInventoryBody(bodyEl) {
   bodyEl.replaceChildren();
+
+  // 🧺 Plony first — selling is the page's most common action.
+  bodyEl.append(majCropsHero());
 
   if (fmVouchers > 0) {
     bodyEl.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left', marginBottom: '8px' } },
@@ -27990,18 +28107,6 @@ function buildFarmInventoryBody(bodyEl) {
       .sort((a, b) => (fmDefs.get(b.species)?.draw_weight || 0) - (fmDefs.get(a.species)?.draw_weight || 0))
       .forEach(card => { if (fmDefs.get(card.species)) grid.append(farmCardTile(card, { afterLevel: refreshFarmHub })); });
     bodyEl.append(grid);
-  }
-
-  const crops = [...fmInventory.entries()].filter(([, q]) => q > 0);
-  let totalVal = 0;
-  crops.forEach(([crop, qty]) => { totalVal += (farmMarketEffectivePrice(fmMarket.get(crop)) || 0) * qty; });
-  bodyEl.append(majSectionHead('🧺', 'Plony', crops.length, crops.length ? ('≈' + Math.round(totalVal) + ' 🪙') : null));
-  if (!crops.length) {
-    bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Brak plonów. Zasadź i zbierz, aby sprzedać.'));
-  } else {
-    const box = el('div', { className: 'maj-ledger-box' });
-    crops.forEach(([crop, qty]) => box.append(farmCropRow(crop, qty, refreshFarmHub)));
-    bodyEl.append(box);
   }
 
   buildSpecialItemsSection(bodyEl);
