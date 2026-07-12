@@ -5306,6 +5306,7 @@
     .farm-cat-table tr.farm-cat-group-row td { background: var(--acc-dim); font-weight: 900; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--text); padding: 8px 9px; white-space: normal; }
     .farm-cat-table tr.farm-cat-group-row.nft td { color: #b45309; }
     .farm-cat-table td.farm-cat-perday { font-weight: 800; color: var(--accent); }
+    .farm-cat-perday-note { display: block; font-weight: 600; color: var(--text-dim); font-size: 9px; white-space: nowrap; }
     .farm-help-intro { font-size: 13px; color: var(--text); margin: 2px 0 4px; }
     .farm-help-sec { margin-top: 14px; }
     .farm-help-sec h4 { margin: 0 0 4px; font-size: 14px; color: var(--text); }
@@ -26973,12 +26974,28 @@ function farmCatalogGroups(mdl) {
     .map(k => ({ key: k, title: meta[k].title, sub: meta[k].sub, cards: byKey.get(k) }));
 }
 
-// Approx. daily income at level 1: yield × NPC price ÷ grow days (floor 1 day).
+// Yield/grow-time at a given card level. Mirrors level_up_card / plant_crop /
+// harvest_crop (farm.sql): yield ×(1+0.5·(L−1)), grow time ×0.92^(L−1) floored
+// at 24h. Shared by the level table and the catalog's per-day estimate.
+function farmYieldAtLevel(d, L) { return Math.round(d.base_yield * (1 + (L - 1) * 0.5)); }
+function farmGrowMinAtLevel(d, L) { return Math.max(1440, d.base_grow_minutes * Math.pow(0.92, L - 1)); }
+
+// Approx. daily income at a given level and NPC price: yield × price ÷ grow days.
 // Lets players compare which crop is actually worth planting per tile per day.
-function farmPerDayIncome(d, price) {
+function farmPerDayIncome(d, price, level = 1) {
   if (price == null) return null;
-  const days = Math.max(1, d.base_grow_minutes / 1440);
-  return Math.round(d.base_yield * price / days);
+  const yld = farmYieldAtLevel(d, level);
+  const growMin = farmGrowMinAtLevel(d, level);
+  return Math.round(yld * price / Math.max(1, growMin / 1440));
+}
+
+// Tiles the viewer currently has planted with this species, as their levels —
+// used to turn "≈ zysk/doba" from a generic level-1 estimate into the actual
+// projected income from what the player already owns.
+function farmMyPlantedLevels(species) {
+  const levels = [];
+  fmTiles.forEach(t => { if (t.owner_id === me?.id && t.planted_species === species) levels.push(t.planted_level || 1); });
+  return levels;
 }
 
 // Single aligned table (grouped by rarity) so every card's stats line up in
@@ -26995,9 +27012,9 @@ function farmCardLevelTable(d, price, ownedLevel) {
   const startL = (ownedLevel && ownedLevel >= 1) ? ownedLevel + 1 : 1;
   const endL = startL + 4;
   for (let L = startL; L <= endL; L++) {
-    const yld = Math.round(d.base_yield * (1 + (L - 1) * 0.5));
-    const growMin = Math.max(1440, d.base_grow_minutes * Math.pow(0.92, L - 1));
-    const perDay = price != null ? Math.round(yld * price / Math.max(1, growMin / 1440)) : null;
+    const yld = farmYieldAtLevel(d, L);
+    const growMin = farmGrowMinAtLevel(d, L);
+    const perDay = farmPerDayIncome(d, price, L);
     const cost = L === 1 ? '—' : (2 * (L - 1)) + ' kart + ' + (50 * (L - 1) * (L - 1)) + ' 🪙';
     body.append(el('tr', {},
       el('td', {}, 'poz. ' + L),
@@ -27047,8 +27064,32 @@ function farmCatalogTable(mdl) {
       el('td', { className: 'farm-cat-group-cell', colSpan: 7 }, g.title)));
     g.cards.forEach(d => {
       const f = farmCardFacts(d, mdl);
-      const perDay = farmPerDayIncome(d, f.price);
       const ownedNow = f.have || f.mineOwned;
+      const myInsts = mdl.myInstances.get(d.species) || [];
+      const ownedLvl = f.isNft
+        ? (myInsts.length ? Math.max(...myInsts.map(i => i.level)) : undefined)
+        : (f.have ? f.have.level : undefined);
+      // ≈ Zysk/doba: NPC price swings 30–100% of the max, so a single number
+      // is misleading — show the real low–high range instead. Levels come
+      // from what's ACTUALLY planted (farmMyPlantedLevels): a player with
+      // three level-2 tiles of this crop sees their real combined income,
+      // not a generic level-1 single-plant guess.
+      const myPlanted = farmMyPlantedLevels(d.species);
+      const floorPrice = f.price != null ? f.price * 0.30 : null;
+      let perDayLow = null, perDayHigh = null, perDayNote = '';
+      if (f.price != null) {
+        if (myPlanted.length) {
+          perDayLow = myPlanted.reduce((s, L) => s + farmPerDayIncome(d, floorPrice, L), 0);
+          perDayHigh = myPlanted.reduce((s, L) => s + farmPerDayIncome(d, f.price, L), 0);
+          perDayNote = ' (' + myPlanted.length + ' szt. zasadz.)';
+        } else {
+          const L = ownedLvl || 1;
+          perDayLow = farmPerDayIncome(d, floorPrice, L);
+          perDayHigh = farmPerDayIncome(d, f.price, L);
+        }
+      }
+      const perDayTxt = perDayHigh == null ? '—'
+        : (perDayLow === perDayHigh ? ('≈ ' + perDayHigh + ' 🪙') : ('≈ ' + perDayLow + '–' + perDayHigh + ' 🪙'));
       let stanCell = f.isNft
         ? (f.mineOwned
             ? el('span', { className: 'farm-cat-stan owned' }, '✅ ' + f.serials)
@@ -27076,12 +27117,9 @@ function farmCatalogTable(mdl) {
         el('td', {}, farmGrowLabel(d.base_grow_minutes)),
         el('td', {}, d.base_yield + ' szt.'),
         el('td', {}, f.price != null ? (f.price + ' 🪙') : '—'),
-        el('td', { className: 'farm-cat-perday' }, perDay != null ? ('≈ ' + perDay + ' 🪙') : '—'),
+        el('td', { className: 'farm-cat-perday' },
+          perDayTxt, perDayNote ? el('small', { className: 'farm-cat-perday-note' }, perDayNote) : ''),
         el('td', {}, stanCell));
-      const myInsts = mdl.myInstances.get(d.species) || [];
-      const ownedLvl = f.isNft
-        ? (myInsts.length ? Math.max(...myInsts.map(i => i.level)) : undefined)
-        : (f.have ? f.have.level : undefined);
       const detailTr = el('tr', { className: 'farm-cat-detail-row hidden' },
         el('td', { className: 'farm-cat-detail-cell', colSpan: 7 }, farmCardLevelTable(d, f.price, ownedLvl)));
       if (f.isNft) {
@@ -27100,7 +27138,7 @@ function farmCatalogTable(mdl) {
         el('th', {}, 'Roślina'), el('th', {}, 'Szansa'), el('th', {}, 'Wzrost'),
         el('th', {}, 'Plon'),
         el('th', { title: 'Cena maksymalna (pułap). NPC płaci 30–100% tej kwoty; cena zmienia się 2×/dobę.' }, 'Cena maks.'),
-        el('th', { title: 'Maksymalny przychód na dobę (poz. 1) przy cenie maks.: plon × cena maks. ÷ dni wzrostu. W praktyce zwykle mniej.' }, '≈ Zysk/doba (maks.)'),
+        el('th', { title: 'Zakres dobowego przychodu: plon × cena ÷ dni wzrostu, liczony przy cenie od 30% do 100% pułapu. Jeśli masz zasadzone rośliny tego gatunku, liczy realny plon na ich poziomach i sumuje wszystkie sztuki — inaczej pokazuje szacunek dla jednej rośliny na Twoim poziomie karty (lub poz. 1).' }, '≈ Zysk/doba'),
         el('th', {}, 'Stan'))),
       tbody));
 }
