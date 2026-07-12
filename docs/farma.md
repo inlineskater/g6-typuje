@@ -53,6 +53,17 @@ Bazowe wagi (suma 133, z czego NFT 5):
 
 Czasy wzrostu/plony bazowe: zwykłe 1 dzień, rzadkie 2 dni, epickie 3–4 dni; dokładne statystyki i aktualne ceny pokazuje w aplikacji **📖 Katalog** (liczone na żywo z `farm_card_defs`/`farm_market`).
 
+### Złota Skrzynia ⭐ (premium)
+
+Druga, droższa skrzynka (`supabase/farm-goldbox.sql`), całkowicie niezależna od zwykłej — osobny licznik `boxes_gold`, osobne RPC (`buy_farm_goldbox`, `open_farm_goldbox`/`open_farm_goldboxes`). Kupowana w Sklepie, otwierana w **🎒 Mój Majątek → 📦 Skrzynki**, tak samo jak zwykła skrzynka.
+
+- Cena: **500 🪙** za sztukę (BURN `farm_goldbox_buy`).
+- Otwarcie losuje **5 kart** (zamiast 3), z gwarancją, że przynajmniej jedno trafienie będzie **rzadkie lub lepsze** (rare/epic/legendary), jeśli taka karta jest w ogóle losowalna.
+- Szansa na voucher na działkę jest wyższa: baza **0.15** (zamiast 0.07), dzielona tak samo przez posiadane pola/vouchery.
+- Waga kolejnych NFT tego samego gatunku maleje szybciej — dzielona przez `2^liczba_posiadanych_NFT` (zamiast przez 3 jak w zwykłej skrzynce).
+- Nie bierze udziału w starterowym gwarantowanym voucherze (`claim_farm_starter`) — to tylko dla zwykłych skrzynek.
+- W wycenie majątku (Net Worth) każda nieotworzona Złota Skrzynia liczy się jako **500 🪙**.
+
 ## Karty roślin i poziomy
 
 Karta to trwały „przepis" — sadzenie jej nie zużywa. Duplikaty służą do ulepszania (`level_up_card`, BURN `card_levelup`):

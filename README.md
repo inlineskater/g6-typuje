@@ -28,7 +28,7 @@ The public anon key in `index.html` is intentional for Supabase browser apps; th
 Fresh project setup:
 
 1. Create a Supabase project.
-2. In SQL Editor, run `supabase/schema.sql` (core prediction market), then the feature SQL files you want — arcade, poker, store, marketplace, garden, heroes, casino games (`plinko`, `mines`, `roulette`, `crash`, `slots`), seasonal games (`whack-boss`, `bug-jumper`, `flappy-pants`, `snake`, `invoice-horde`, `var-patrol`, `egg-catch`, `super-mariusz` + `season-award-gating.sql`), `football.sql` (Mundial), `canvas.sql`, `documents.sql`, and the farm stack in the order above.
+2. In SQL Editor, run `supabase/schema.sql` (core prediction market), then the feature SQL files you want — arcade, poker, store, marketplace, garden, hero items (`hero-items.sql` → `hero-items-always-active.sql`; the cosmetic „Herosi" system itself is removed — also run `supabase/remove-heroes.sql` — surviving hero items are „Przedmioty specjalne"), casino games (`plinko`, `mines`, `roulette`, `crash`, `slots`), seasonal games (`whack-boss`, `bug-jumper`, `flappy-pants`, `snake`, `invoice-horde`, `var-patrol`, `egg-catch`, `super-mariusz` + `season-award-gating.sql`), `football.sql` (Mundial), `canvas.sql`, `documents.sql`, and the farm stack in the order above.
 3. Run the stats views last: `hazard-views.sql`, `coin-inflow-stats.sql`, `economy-stats.sql`, `leaderboard-net-worth-items.sql`.
 4. Deploy the Edge Functions in `supabase/functions/` (one per server-owned game: poker, roulette, crash, slots, plinko, mines, football, garden, and all eight seasonal `*-action` functions).
 5. Run `supabase/prod-hardening.sql`.

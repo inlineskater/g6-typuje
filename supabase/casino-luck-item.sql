@@ -1,4 +1,4 @@
--- „Amulet Fortuny" 🍀 — timed (7-day) COMMUNAL casino-luck shop item: while any
+-- „Amulet Bezwstydnego Fartu" 🍀 (dawniej „Amulet Fortuny") — timed (7-day) COMMUNAL casino-luck shop item: while any
 -- unexpired instance exists, EVERY player gets the luck boost (the buyer pays
 -- for the whole office). Each purchase queues +7 days onto the shared window.
 -- Run AFTER hero-items.sql and hero-items-always-active.sql (this file
@@ -12,6 +12,7 @@
 --     make straight bets + lucky_trousers' stake-refund rescue stack +EV)
 --   * plinko-action:   winning payout ×1.01 (worst config RTP 98.1% -> 99.1%)
 --   * mines-action:    house factor 0.95 -> 0.98 (RTP 95% -> 98%)
+--   * wheel-action:    winning payout ×1.01 (base tiers 96%/95%/95% -> 96.96%/95.95%/95.95%)
 --   * crash-action:    EXCLUDED — the cash-out grace contract already lets a
 --     perfectly-timed bot reach ≈98.1% RTP; any boost would tip Rakieta +EV.
 --   * poker: excluded (player-vs-player; a boost would take coins from others).
