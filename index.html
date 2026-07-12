@@ -2298,12 +2298,12 @@
       50% { filter: brightness(1.12) saturate(1.18); }
     }
 
-    /* ── Koło Fortuny G6 ── */
+    /* ── Koło Żubra G6 (Żubrówka bison-grass theme: bottle green + gold) ── */
     #tab-wheel.casino {
       background:
-        radial-gradient(circle at 18% 0%, rgba(217,70,239,.14), transparent 28%),
+        radial-gradient(circle at 18% 0%, rgba(74,124,44,.16), transparent 28%),
         radial-gradient(circle at 84% 8%, rgba(245,158,11,.16), transparent 24%),
-        linear-gradient(180deg, #f8fafc 0%, #fdf4ff 48%, #fff7ed 100%);
+        linear-gradient(180deg, #f8fafc 0%, #f1f8ea 48%, #fff7e6 100%);
       min-height: calc(100vh - 132px);
     }
     #tab-wheel main { color: #0f172a; }
@@ -2312,15 +2312,15 @@
       display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap;
       padding: 14px 16px; margin-bottom: 12px; border: 1px solid rgba(15,23,42,.1); border-radius: 8px;
       background:
-        linear-gradient(120deg, rgba(255,255,255,.98), rgba(253,244,255,.95) 54%, rgba(255,247,237,.96)),
+        linear-gradient(120deg, rgba(255,255,255,.98), rgba(240,250,232,.95) 54%, rgba(255,247,230,.96)),
         repeating-linear-gradient(90deg, rgba(15,23,42,.035) 0 1px, transparent 1px 18px);
       box-shadow: 0 12px 30px rgba(15,23,42,.08);
     }
     .wheel-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; line-height: 1; }
     .wheel-title-mark {
       display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px;
-      background: linear-gradient(145deg, #fce7f3, #d946ef 58%, #86198f);
-      color: #2b0a29; box-shadow: inset 0 2px 8px rgba(255,255,255,.46), 0 4px 16px rgba(15,23,42,.22);
+      background: linear-gradient(145deg, #d9f2c4, #6a9a2d 58%, #14361f);
+      color: #fefce8; box-shadow: inset 0 2px 8px rgba(255,255,255,.36), 0 4px 16px rgba(15,23,42,.22);
       transform: rotate(-6deg);
     }
     .wheel-subtitle { color: #475569; font-size: 13px; margin: 7px 0 0; max-width: 660px; }
@@ -2328,7 +2328,7 @@
     .wheel-hero-pills span {
       display: inline-flex; align-items: center; min-height: 30px; padding: 5px 9px;
       border: 1px solid rgba(15,23,42,.1); border-radius: 999px; background: rgba(255,255,255,.82);
-      font-size: 12px; color: #a21caf; font-weight: 900;
+      font-size: 12px; color: #3f6212; font-weight: 900;
       box-shadow: 0 4px 12px rgba(15,23,42,.06);
     }
     .wheel-shell { display: grid; grid-template-columns: 262px minmax(0, 1fr) 236px; gap: 14px; align-items: start; }
@@ -2347,7 +2347,7 @@
     .wheel-toolbar { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 13px; }
     .wheel-control { display: grid; gap: 7px; min-width: 0; }
     .wheel-control > span {
-      color: #a21caf; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0;
+      color: #3f6212; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0;
     }
     .wheel-spin-btn { width: 100%; min-height: 50px; font-size: 14px; font-weight: 900; }
     .wheel-machine { display: flex; flex-direction: column; gap: 0; }
@@ -2356,7 +2356,7 @@
       display: grid; place-items: center;
       border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
       background:
-        linear-gradient(180deg, rgba(217,70,239,.1), rgba(15,23,42,.03)),
+        linear-gradient(180deg, rgba(74,124,44,.12), rgba(15,23,42,.03)),
         radial-gradient(circle at 50% 42%, rgba(250,204,21,.18), transparent 55%),
         #f8fafc;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -18px 28px rgba(15,23,42,.05);
@@ -2370,10 +2370,10 @@
       position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
       width: 0; height: 0; z-index: 3;
       border-left: 13px solid transparent; border-right: 13px solid transparent;
-      border-top: 22px solid #ef4444;
-      filter: drop-shadow(0 3px 6px rgba(15,23,42,.35));
+      border-top: 22px solid #d4af37;
+      filter: drop-shadow(0 3px 6px rgba(15,23,42,.4));
     }
-    .wheel-stage.is-spinning { box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -18px 28px rgba(15,23,42,.05), 0 0 0 3px rgba(217,70,239,.14); }
+    .wheel-stage.is-spinning { box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -18px 28px rgba(15,23,42,.05), 0 0 0 3px rgba(74,124,44,.2); }
     .wheel-stage.is-win { box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 3px rgba(34,197,94,.14), 0 0 32px rgba(34,197,94,.18); }
     .wheel-stage.is-jackpot { animation: plinko-jackpot-pulse .9s ease-in-out 3; }
     .wheel-result { position: absolute; left: 14px; right: 14px; bottom: 12px; top: auto; }
@@ -2394,7 +2394,91 @@
     .wheel-payout-chip.is-hot { background: #fef3c7; border-color: rgba(245,158,11,.35); color: #92400e; }
     .wheel-history-wrap { margin-top: 14px; }
     .wheel-scoreboard + .wheel-history-wrap { margin-top: 14px; }
-    /* Fit the whole Koło Fortuny tab in one viewport (no page scroll) on desktop,
+    .wheel-recent-wrap { margin-bottom: 14px; }
+
+    /* „NOWOŚĆ" pill — gold-on-green, subtle pulse (same animation recipe as
+       .seasonal-dot, scaled up into a tiny text pill instead of a dot). */
+    .wheel-nowosc-badge {
+      display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px;
+      border-radius: 999px; background: linear-gradient(135deg, #4d7c0f, #14361f);
+      color: #fde68a; font-size: 9px; font-weight: 900; letter-spacing: .03em;
+      vertical-align: middle; animation: seasonal-pulse 2.4s ease-in-out infinite;
+    }
+    .wheel-nowosc-badge.is-title { font-size: 11px; padding: 2px 8px; }
+
+    /* Big countdown overlay in the middle of the wheel stage — mm:ss.d,
+       swapping to a huge pulsing single digit under 5s, crash-vibe. */
+    .wheel-countdown {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 4;
+      padding: 4px 14px; border-radius: 999px; background: rgba(15,23,42,.82);
+      color: #fde68a; font-weight: 900; font-variant-numeric: tabular-nums;
+      font-size: 15px; letter-spacing: .02em; box-shadow: 0 6px 18px rgba(15,23,42,.3);
+      transition: font-size .15s ease;
+    }
+    .wheel-countdown.is-big {
+      top: 50%; transform: translate(-50%, -50%);
+      font-size: clamp(64px, 16vw, 128px); padding: 0; background: none; box-shadow: none;
+      color: #fbbf24; text-shadow: 0 0 22px rgba(250,204,21,.65), 0 4px 10px rgba(15,23,42,.5);
+      animation: wheel-countdown-pop .5s ease;
+    }
+    @keyframes wheel-countdown-pop { 0% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+    .wheel-pointer.kick { animation: wheel-pointer-kick .14s ease; }
+    @keyframes wheel-pointer-kick {
+      0% { transform: translateX(-50%) rotate(0deg); }
+      35% { transform: translateX(-50%) rotate(-9deg); }
+      100% { transform: translateX(-50%) rotate(0deg); }
+    }
+
+    .wheel-my-bet {
+      margin-top: 8px; padding: 6px 9px; border-radius: 8px; text-align: center;
+      background: rgba(74,124,44,.12); border: 1px solid rgba(74,124,44,.32);
+      color: #3f6212; font-size: 12px; font-weight: 800;
+    }
+
+    /* Persistent gold-tinted chip for the communal casino-luck amulet —
+       small, doesn't disturb the toolbar layout, shown only while active. */
+    .wheel-luck-chip {
+      padding: 6px 9px; border-radius: 8px; text-align: center;
+      background: linear-gradient(120deg, rgba(250,204,21,.16), rgba(74,124,44,.1));
+      border: 1px solid rgba(212,175,55,.45);
+      color: #92400e; font-size: 11px; font-weight: 800; line-height: 1.3;
+    }
+
+    .wheel-bets-wrap { margin-top: 4px; }
+    .wheel-bets-list {
+      display: flex; flex-direction: column; gap: 5px; max-height: 220px; overflow-y: auto;
+      padding-right: 2px;
+    }
+    .wheel-bet-row {
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px;
+      padding: 5px 8px; border-radius: 7px; background: rgba(15,23,42,.04);
+      border: 1px solid rgba(15,23,42,.06); font-size: 11.5px;
+    }
+    .wheel-bet-row.is-mine { border-color: rgba(74,124,44,.4); background: rgba(74,124,44,.08); }
+    .wheel-bet-row.is-win { background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.3); }
+    .wheel-bet-row.is-jackpot { background: rgba(250,204,21,.16); border-color: rgba(212,175,55,.5); }
+    .wheel-bet-row.is-loss { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.24); }
+    .wheel-bet-row .wbr-nick { font-weight: 800; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wheel-bet-row .wbr-stake { font-weight: 700; color: #475569; font-variant-numeric: tabular-nums; }
+    .wheel-bet-row .wbr-result {
+      grid-column: 1 / -1; justify-self: start; font-weight: 800; font-variant-numeric: tabular-nums;
+    }
+    .wheel-bet-row.is-win .wbr-result { color: #15803d; }
+    .wheel-bet-row.is-jackpot .wbr-result { color: #92400e; }
+    .wheel-bet-row.is-loss .wbr-result { color: #b91c1c; }
+
+    .wheel-recent-rounds { display: flex; flex-direction: column; gap: 5px; }
+    .wheel-round-chip {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 5px 9px; border-radius: 7px; background: rgba(15,23,42,.04);
+      border: 1px solid rgba(15,23,42,.06); font-size: 11.5px;
+    }
+    .wheel-round-chip .wrc-seg { font-weight: 900; color: #3f6212; }
+    .wheel-round-chip .wrc-winner { font-weight: 700; color: #0f172a; }
+    .wheel-round-chip .wrc-winner.is-muted { color: var(--muted); font-weight: 500; }
+
+    /* Fit the whole Koło Żubra tab in one viewport (no page scroll) on desktop,
        same recipe as Plinko (see the #tab-plinko min-width:900px block). */
     @media (min-width: 900px) {
       #tab-wheel main { box-sizing: border-box; height: calc(100dvh - 108px); padding: 12px 24px; overflow: hidden; }
@@ -2413,6 +2497,7 @@
       #wheel-canvas { height: 100%; min-height: 0; }
       .wheel-help { flex: 0 0 auto; margin-top: 8px; }
       .wheel-side { min-height: 0; overflow: auto; }
+      .wheel-bets-list { max-height: 30vh; }
     }
 
     /* ── Miny G6 ── */
@@ -5996,7 +6081,7 @@
         <button class="nav-tab" data-tab="plinko">📌 Plinko G6</button>
         <button class="nav-tab" data-tab="mines">💣 Miny G6</button>
         <button class="nav-tab" data-tab="crash">🚀 Rakieta</button>
-        <button class="nav-tab" data-tab="wheel">🎡 Koło Fortuny</button>
+        <button class="nav-tab" data-tab="wheel">🦬 Koło Żubra <span class="wheel-nowosc-badge">NOWOŚĆ</span></button>
         <div class="nav-dropdown-label">Zręcznościowe</div>
         <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
         <button class="nav-tab" data-tab="all-games">🎮 Wszystkie Gry</button>
@@ -6699,13 +6784,13 @@
       <div class="wheel-wrap">
         <div class="wheel-hero">
           <div>
-            <h2 class="wheel-title"><span class="wheel-title-mark">🎡</span><span>Koło Fortuny G6</span></h2>
-            <p class="wheel-subtitle">Postaw stawkę, wybierz poziom ryzyka i zakręć kołem. Serwer losuje segment, na którym koło wyląduje — przeglądarka tylko odtwarza zwalniający obrót aż do tego pola.</p>
+            <h2 class="wheel-title"><span class="wheel-title-mark">🦬</span><span>Koło Żubra G6</span><span class="wheel-nowosc-badge is-title">NOWOŚĆ</span></h2>
+            <p class="wheel-subtitle">Trawiaste koło fortuny — jedno koło, wspólna runda, kręcą wszyscy. Postaw stawkę w 15-sekundowym oknie zakładów — gdy czas minie, serwer losuje JEDEN segment i wypłaca każdego naraz.</p>
           </div>
           <div class="wheel-hero-pills">
-            <span>🏦 RTP 95–96%</span>
-            <span>20 segmentów</span>
-            <span>server-side spin</span>
+            <span>🏦 RTP 95%</span>
+            <span>20 pól, jedno koło</span>
+            <span>wspólna runda</span>
           </div>
         </div>
 
@@ -6733,36 +6818,40 @@
                   </div>
                 </div>
               </div>
-              <div class="wheel-control">
-                <span>Ryzyko</span>
-                <div class="plinko-segments" id="wheel-risk-control">
-                  <button data-risk="low">Bezpiecznie</button>
-                  <button data-risk="medium" class="active">Normalnie</button>
-                  <button data-risk="high">Ryzyko</button>
-                </div>
-              </div>
+              <div id="wheel-luck-chip" class="wheel-luck-chip hidden"></div>
               <div class="wheel-control wheel-spin-control">
-                <button id="wheel-spin-btn" class="rl-btn is-gold wheel-spin-btn" type="button">ZAKRĘĆ · 10 🪙</button>
+                <button id="wheel-spin-btn" class="rl-btn is-gold wheel-spin-btn" type="button">POSTAW · 10 🪙</button>
+                <div id="wheel-my-bet" class="wheel-my-bet hidden"></div>
+              </div>
+              <div class="wheel-control wheel-bets-wrap">
+                <span>Zakłady tej rundy</span>
+                <div id="wheel-bets-list" class="wheel-bets-list"></div>
               </div>
             </div>
           </aside>
 
           <section class="wheel-machine">
             <div class="wheel-stage">
-              <canvas id="wheel-canvas" aria-label="Koło Fortuny G6"></canvas>
+              <canvas id="wheel-canvas" aria-label="Koło Żubra G6"></canvas>
               <div class="wheel-pointer" aria-hidden="true"></div>
-              <div id="wheel-result" class="wheel-result plinko-result">Wybierz stawkę i ryzyko, potem zakręć kołem.</div>
+              <div id="wheel-countdown" class="wheel-countdown hidden"></div>
+              <div id="wheel-result" class="wheel-result plinko-result">Czekamy na pierwszy zakład…</div>
             </div>
 
             <details class="plinko-help wheel-help">
               <summary>Jak to działa?</summary>
-              <p class="plinko-note">Stawka schodzi z konta przy każdym zakręceniu. Serwer losuje segment koła, zapisuje wynik i odsyła gotowy numer — przeglądarka tylko animuje obrót do tego pola.</p>
-              <p class="plinko-note">Koło ma 20 pól podzielonych na 3 poziomy ryzyka. Wyższe ryzyko = rzadsze, ale znacznie wyższe mnożniki (do ×10); niższe ryzyko = częstsze, małe wygrane.</p>
+              <p class="plinko-note">To JEDNO wspólne koło dla wszystkich graczy. Gdy ktoś postawi pierwszy zakład, otwiera się 15-sekundowe okno — każdy może w nim postawić własną stawkę (jeden zakład na rundę). Gdy czas minie, serwer losuje JEDEN segment i wypłaca każdego gracza tym samym mnożnikiem.</p>
+              <p class="plinko-note">Koło ma 20 pól: 1× ×10 (jackpot 🦬), 3× ×2, 2× ZWROT stawki, 2× ×0,5 (pół stawki wraca) i 12× pudło. RTP całego koła to 95%.</p>
+              <p class="plinko-note">Komunalny bonus 🍀 Amulet Bezwstydnego Fartu ×1,01 na wygrane, kupowany w Sklepie — jeśli ktokolwiek w biurze go aktualnie posiada, podbija wypłaty wszystkich graczy.</p>
               <div id="wheel-payout-tables" class="wheel-payout-tables"></div>
             </details>
           </section>
 
           <aside class="wheel-side">
+            <div class="wheel-recent-wrap">
+              <h3 class="plinko-side-h">Ostatnie rundy</h3>
+              <div id="wheel-recent-rounds" class="wheel-recent-rounds"></div>
+            </div>
             <div class="plinko-scoreboard wheel-scoreboard">
               <div class="psb-head">
                 <h3>Ta sesja</h3>
@@ -6771,7 +6860,7 @@
               <button id="wheel-session-reset" type="button" class="rl-btn is-primary psb-newbtn" title="Wyzeruj statystyki tej sesji">🔄 Nowa sesja</button>
             </div>
             <div class="wheel-history-wrap">
-              <h3 class="plinko-side-h">Ostatnie zakręcenia</h3>
+              <h3 class="plinko-side-h">Twoje zakręcenia</h3>
               <div id="wheel-history" class="plinko-history"></div>
             </div>
           </aside>
@@ -8104,35 +8193,57 @@ const PLINKO_PAYOUTS = {
 };
 const PLINKO_RISK_LABELS = { low: 'Low', medium: 'Medium', high: 'High' };
 
-// ── Koło Fortuny G6 state ──
-// PARITY CONTRACT: WHEEL_SEGMENTS must be byte-for-byte identical (per risk
-// tier, in order) to SEGMENTS in supabase/functions/wheel-action/index.ts —
-// this ordered array literally IS the wheel; the server draws an index
-// 0..19 and the client spins to that exact segment. RTP before flooring is
-// low 96.0% / medium 95.0% / high 95.0%.
-const WHEEL_SEGMENTS = {
-  low:    [0, 1.2, 1.2, 1.2, 1.2, 0, 1.2, 1.2, 1.2, 1.2, 0, 1.2, 1.2, 1.2, 1.2, 0, 1.2, 1.2, 1.2, 1.2],
-  medium: [0, 1.5, 0, 2, 0, 0, 3, 0, 1.5, 0, 3, 0, 0, 2, 0, 1.5, 0, 3, 0, 1.5],
-  high:   [10, 0, 0, 0, 0, 2, 0, 0, 0, 0, 5, 0, 0, 0, 0, 2, 0, 0, 0, 0],
-};
+// ── Koło Żubra G6 state (SHARED ROUNDS — one communal wheel) ──
+// PARITY CONTRACT: WHEEL_SEGMENTS must be byte-for-byte identical (single
+// ordered array — no risk tiers, everyone spins the same wheel) to SEGMENTS
+// in supabase/functions/wheel-action/index.ts — this array literally IS the
+// wheel; the server draws an index 0..19 and the client spins to that exact
+// segment. Composition: 1× 10x (jackpot), 3× 2x, 2× 1x (zwrot stawki),
+// 2× 0.5x (pół stawki wraca), 12× 0x. Sum = 19.0 -> RTP 95.0% before
+// flooring/luck. Layout: the three 2x cluster at idx 0-2; the 10x sits at
+// idx 11, exactly opposite the cluster's center; the 1x/0.5x pairs are
+// spread symmetrically around the 10x; zeros fill the gaps in runs of 2.
+const WHEEL_SEGMENTS = [10, 0, 0, 2, 0, 0.5, 0, 2, 0, 1, 0, 0, 2, 0, 0.5, 0, 1, 0, 0, 0];
 const WHEEL_SEGMENT_COUNT = 20;
-const WHEEL_RTP = { low: 0.96, medium: 0.95, high: 0.95 };
-const WHEEL_RISK_LABELS = { low: 'Bezpiecznie', medium: 'Normalnie', high: 'Ryzyko' };
+const WHEEL_RTP = 0.95;
 const WHEEL_STAKES = [1, 5, 10, 25, 50, 100, 250, 500];
 const WHEEL_REQUEST_TIMEOUT_MS = 12000;
+// PARITY CONTRACT: mirrors WHEEL_BETTING_WINDOW_MS in wheel-action — only used
+// client-side as a fallback/reference; the authoritative window end is always
+// round.spinAt from the server.
+const WHEEL_BETTING_WINDOW_MS = 15000;
+const WHEEL_LANDING_DURATION_MS = 3500;
+const WHEEL_BLIND_SPEED = Math.PI * 2 * 2.5; // rad/s — ~2.5 rev/s blind spin
 let wheelState = null;
 let wheelBet = 10;
-let wheelRisk = 'medium';
-let wheelBusy = false;
+let wheelBetBusy = false;         // a bet request is in flight
 let wheelSession = { spins: 0, wagered: 0, won: 0, best: 0 };
-let wheelHistory = [];
+let wheelHistory = [];            // personal wheel_spins history
 let wheelResizeBound = false;
+let wheelRound = null;            // current/last round from the server {id,status,spinAt,segmentIndex,resolvedAt}
+let wheelBets = [];               // all bets on wheelRound (communal, live)
+let wheelRecentRounds = [];       // last 10 resolved rounds (communal history strip)
+let wheelCasinoLuck = false;      // „Amulet Bezwstydnego Fartu" communal buff active?
+let wheelCasinoLuckUntil = null;  // aggregate MAX(expires_at) across active instances
+let wheelClockOffsetMs = 0;       // Date.parse(serverNow) - Date.now(), for synchronized countdown/spin
+let wheelPollTimer = null;
+let wheelRealtimeReady = false;
+let wheelLastStateMs = 0;
+let wheelPhaseAnim = 'idle';      // 'idle' | 'countdown' | 'blind' | 'landing' | 'result'
+let wheelRafActive = false;
+let wheelLastFrameAt = 0;
+let wheelBlindRoundId = null;     // round id currently doing the blind constant-speed spin
+let wheelLandingRoundId = null;   // round id currently tweening into its landing
+let wheelLandedRoundId = null;    // round id whose landing has fully completed
+let wheelResultShownFor = null;   // round id whose result banner/session tally has been applied
+let wheelLandingFrom = 0, wheelLandingTo = 0, wheelLandingStart = 0, wheelLandingDur = WHEEL_LANDING_DURATION_MS;
+let wheelLastSegBucket = null;    // for the pointer "kick" impulse
 let wheelRaf = null;
 // Named wheelBoardRotation (not wheelRotation) — the roulette wheel already
 // owns a global `wheelRotation` (degrees) for its spin animation; this one is
-// radians and drives the Koło Fortuny G6 canvas board.
+// radians and drives the Koło Żubra G6 canvas board.
 let wheelBoardRotation = 0;
-let wheelSpinAnim = null; // { startedAt, duration, from, to, drop }
+let wheelPointerTop = null;      // cached px offset of the DOM pointer pin
 
 // ── Miny G6 state ──
 let minesState = null;
@@ -9140,6 +9251,8 @@ function switchTab(tab) {
   } else if (tab === 'wheel') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tWl);
+    setupWheelRealtime();
+    startWheelPoll();
     loadWheelState();
   } else if (tab === 'whack-boss') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); show(tWb); hide(tS); hide(tG);
@@ -9940,7 +10053,7 @@ function buildCardStats(marketId) {
 // ── Activity feed ─────────────────────────────────────────────────────────
 // Maps for the cross-source feed.
 const ACT_GAME_LABELS = {
-  roulette: '🎡 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', wheel: '🎡 Koło Fortuny', poker: '🃏 Poker',
+  roulette: '🎡 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', wheel: '🦬 Koło Żubra', poker: '🃏 Poker',
   whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
@@ -11491,7 +11604,7 @@ function buildHazardHistoryRows(gameTransactions) {
     plinko: { icon: '📌', title: 'Plinko G6', sideLabel: 'Drop' },
     mines: { icon: '💣', title: 'Miny G6', sideLabel: 'Runda' },
     crash: { icon: '🚀', title: 'Rakieta', sideLabel: 'Lot' },
-    wheel: { icon: '🎡', title: 'Koło Fortuny G6', sideLabel: 'Spin' },
+    wheel: { icon: '🦬', title: 'Koło Żubra G6', sideLabel: 'Spin' },
     poker_buy_in: { icon: '🃏', title: 'Poker', sideLabel: 'Buy-in' },
     poker_cashout: { icon: '🃏', title: 'Poker', sideLabel: 'Cashout' },
   };
@@ -11905,7 +12018,7 @@ function drawCoinChart(canvas, points) {
 // `allMarketTrades` holds every trade (any user) for the resolved markets this user won,
 // needed for the pro-rata payout math.
 function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [], coinTxs = [], awards = [], allMarketTrades = [], footballBets = [] }) {
-  const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', wheel: '🎡 Koło Fortuny', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
+  const GAME_NAMES = { roulette: '🎰 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', wheel: '🦬 Koło Żubra', poker_buy_in: '🃏 Poker buy-in', poker_cashout: '🃏 Poker cashout' };
   const resolvedWinningMarketIds = [...new Set(
     trades.filter(t => t.markets?.resolved && t.side === t.markets?.resolution).map(t => t.market_id)
   )];
@@ -12914,7 +13027,7 @@ function renderCoinRaceDetail(container) {
       return el('div', { style: { marginBottom: '16px' } },
         el('div', { className: 'hazardista-col-title' }, ttl),
         el('table', { className: 'lb-table' },
-          el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Ruletka'), el('th', {}, 'Sloty'), el('th', {}, 'Plinko'), el('th', {}, 'Miny'), el('th', {}, 'Rakieta'), el('th', {}, 'Koło'), el('th', {}, 'Poker'), el('th', {}, 'Suma'))),
+          el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Ruletka'), el('th', {}, 'Sloty'), el('th', {}, 'Plinko'), el('th', {}, 'Miny'), el('th', {}, 'Rakieta'), el('th', {}, 'Żubr'), el('th', {}, 'Poker'), el('th', {}, 'Suma'))),
           el('tbody', {}, ...rows)
         )
       );
@@ -12969,7 +13082,7 @@ function renderCoinRaceDetail(container) {
   function renderFullHazardHistory(container) {
     const fSearch = el('input', { className: 'history-filter-input', type: 'search', placeholder: 'Gracz lub gra' });
     const fGame = el('select', { className: 'history-filter-select' });
-    fGame.innerHTML = '<option value="">Gra: wszystkie</option><option value="roulette">Ruletka</option><option value="slots">Sloty</option><option value="plinko">Plinko G6</option><option value="mines">Miny G6</option><option value="crash">Rakieta</option><option value="wheel">Koło Fortuny</option><option value="poker">Poker</option>';
+    fGame.innerHTML = '<option value="">Gra: wszystkie</option><option value="roulette">Ruletka</option><option value="slots">Sloty</option><option value="plinko">Plinko G6</option><option value="mines">Miny G6</option><option value="crash">Rakieta</option><option value="wheel">Koło Żubra</option><option value="poker">Poker</option>';
     const fClear = el('button', { className: 'btn-ghost history-clear', type: 'button' }, 'Wyczyść');
     const filters = el('div', { className: 'history-filters', style: { gridTemplateColumns: '1fr 160px auto' } }, fSearch, fGame, fClear);
     const tableWrap = el('div', { className: 'history-wrap' });
@@ -13024,7 +13137,7 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'roulette' && item.effect_type === 'payout_bonus') return `Ruletka: +${value}% do wygranej wypłaty`;
   if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') { const pts = value === 1 ? 'punkt' : (value >= 2 && value <= 4) ? 'punkty' : 'punktów'; return `Sloty: +${value} ${pts} wagi symbolu G6`; }
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
-  if (item?.effect_game === 'casino' && item.effect_type === 'casino_luck') return 'Kasyno: bezwstydnie OP fart DLA WSZYSTKICH graczy (Sloty, Ruletka, Plinko, Miny, Rakieta, Koło Fortuny)' + (item.duration_hours ? ` przez ${Math.round(item.duration_hours / 24)} dni` : '');
+  if (item?.effect_game === 'casino' && item.effect_type === 'casino_luck') return 'Kasyno: bezwstydnie OP fart DLA WSZYSTKICH graczy (Sloty, Ruletka, Plinko, Miny, Rakieta, Koło Żubra)' + (item.duration_hours ? ` przez ${Math.round(item.duration_hours / 24)} dni` : '');
   if (item?.effect_game === 'tavern') return 'Kolekcjonerski (ozdobny)';
   if (item?.effect_type === 'daily_interest') return `Pasywne: +${value}% coinów dziennie`;
   if (item?.effect_game === 'poker' && item.effect_type === 'odds_view') return 'Poker: widoczna szansa wygranej';
@@ -16244,8 +16357,8 @@ function wireBetBar(kind, cfg) {
       }),
       wireBetBar('wheel', {
         get: () => wheelBet,
-        canSet: () => !wheelBusy,
-        set: v => { if (wheelBusy) return false; wheelBet = v; renderWheelControls(); },
+        canSet: () => !wheelBetBusy && !wheelHasMyBet(),
+        set: v => { if (wheelBetBusy || wheelHasMyBet()) return false; wheelBet = v; renderWheelControls(); },
       }),
     ];
     return wired.every(Boolean);
@@ -17159,33 +17272,48 @@ function startPlinkoDrop(n = 1) {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════
-//  Koło Fortuny G6 — solo spinning prize wheel (modeled on Plinko G6)
+//  Koło Żubra G6 — SHARED ROUNDS: one communal wheel, everyone watches the
+//  same spin. A round opens when the first player bets, runs a 15 s betting
+//  window (round.spinAt from the server), then the server draws ONE segment
+//  and pays every bet by its own stake × risk tier. Coin timing follows the
+//  roulette convention (charged at resolve, not at bet time); resolution is
+//  lazy-on-read crash-style, so the 1 s `state` poll below is what actually
+//  fires a due spin — do not remove it in favor of realtime alone.
 // ════════════════════════════════════════════════════════════════════════════
 
-const WHEEL_SPIN_DURATION_MS = 4500;
-let wheelRunId = 0;
+function wheelNow() { return Date.now() + wheelClockOffsetMs; }
 
-function wheelPayouts(risk = wheelRisk) {
-  return WHEEL_SEGMENTS[risk] || WHEEL_SEGMENTS.medium;
-}
-
+// 0.5x and 1x get their own wording per the design brief: 1x is just the
+// stake coming back ("ZWROT"), 0.5x is a half-stake consolation ("×0,5").
+// 10x (jackpot) carries a tiny 🦬 in its label per the Żubrówka theme.
 function wheelMultLabel(value) {
   const n = Number(value || 0);
-  if (n >= 100 || Number.isInteger(n)) return 'x' + String(n);
-  return 'x' + n.toFixed(n < 1 ? 2 : 1).replace(/\.0$/, '');
+  if (n === 1) return 'ZWROT';
+  if (n === 0.5) return '×0,5';
+  if (n >= 100 || Number.isInteger(n)) return '×' + String(n);
+  return '×' + n.toFixed(n < 1 ? 2 : 1).replace(/\.0$/, '');
 }
 
+// Żubrówka (bison-grass vodka) palette: 0x is deep bottle green (bust), 0.5x
+// a dried-straw/hay tone (consolation), 1x a pale meadow green (stake back),
+// 2x the vivid bison-grass chartreuse, and 10x molten gold (drawWheelBoard
+// paints anything flagged `hot` with a radial glow instead of a flat fill).
 function wheelColorFor(mult) {
-  const table = {
-    0:    { fill: '#94a3b8', text: '#f8fafc' },
-    1.2:  { fill: '#fde68a', text: '#78350f' },
-    1.5:  { fill: '#fbbf24', text: '#78350f' },
-    2:    { fill: '#fb923c', text: '#7c2d12' },
-    3:    { fill: '#f97316', text: '#fff7ed' },
-    5:    { fill: '#ef4444', text: '#fff1f2' },
-    10:   { fill: '#dc2626', text: '#fff1f2' },
-  };
-  return table[Number(mult)] || { fill: '#94a3b8', text: '#f8fafc' };
+  const n = Number(mult);
+  if (n === 0)   return { fill: '#1b4d2e', text: '#dcefdc', hot: false };
+  if (n === 0.5) return { fill: '#c9a24b', text: '#3d2c05', hot: false };
+  if (n === 1)   return { fill: '#b7d98c', text: '#2f4a1a', hot: false };
+  if (n >= 10)   return { fill: '#f5b301', text: '#3d2c05', hot: true };
+  if (n >= 2)    return { fill: '#9fb832', text: '#1f2b06', hot: false };
+  return { fill: '#334155', text: '#e2e8f0', hot: false };
+}
+
+function wheelHasMyBet() {
+  return !!(wheelRound && me && wheelBets.some(b => b.userId === me.id));
+}
+
+function wheelMyBet() {
+  return (me && wheelBets.find(b => b.userId === me.id)) || null;
 }
 
 async function invokeWheel(payload) {
@@ -17207,14 +17335,14 @@ async function invokeWheel(payload) {
     const text = await response.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (_) {}
-    if (!response.ok) throw new Error(data?.error || `Błąd Koła Fortuny (${response.status}).`);
-    if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Koła Fortuny.');
+    if (!response.ok) throw new Error(data?.error || `Błąd Koła Żubra (${response.status}).`);
+    if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Koła Żubra.');
     return data;
   } catch (err) {
     if (err?.name === 'AbortError') {
-      throw new Error('Serwer Koła Fortuny nie odpowiedział przez 12 s. Spróbuj ponownie.');
+      throw new Error('Serwer Koła Żubra nie odpowiedział przez 12 s. Spróbuj ponownie.');
     }
-    throw err instanceof Error ? err : new Error('Błąd połączenia z Kołem Fortuny.');
+    throw err instanceof Error ? err : new Error('Błąd połączenia z Kołem Żubra.');
   } finally {
     clearTimeout(timer);
   }
@@ -17231,13 +17359,31 @@ async function loadWheelState(showToastOnError = true) {
 }
 
 function applyWheelState(data) {
+  wheelLastStateMs = Date.now();
   wheelState = data;
+  if (data.serverNow) wheelClockOffsetMs = Date.parse(data.serverNow) - Date.now();
+  wheelRound = data.round || null;
+  wheelBets = Array.isArray(data.bets) ? data.bets : [];
+  wheelRecentRounds = Array.isArray(data.recentRounds) ? data.recentRounds : [];
+  wheelCasinoLuck = !!data.casinoLuck;
+  wheelCasinoLuckUntil = data.casinoLuckUntil || null;
   if (Array.isArray(data.history)) wheelHistory = data.history;
   if (typeof data.coins === 'number' && me) {
     me.coins = data.coins;
     setText(headerCoins, me.coins);
   }
   renderWheel();
+}
+
+// Persistent gold chip near the controls, shown only while the communal
+// „Amulet Bezwstydnego Fartu" is active — mirrors casinoLuckGlobalUntil's
+// pl-PL date formatting (fmtDateTime) used elsewhere in the app.
+function renderWheelLuckChip() {
+  const chip = document.getElementById('wheel-luck-chip');
+  if (!chip) return;
+  if (!wheelCasinoLuck) { chip.classList.add('hidden'); return; }
+  chip.classList.remove('hidden');
+  chip.textContent = `🍀 Amulet Bezwstydnego Fartu aktywny — wygrane ×1.01 (do ${fmtDateTime(wheelCasinoLuckUntil)})`;
 }
 
 function setWheelResult(text, tone = '') {
@@ -17249,31 +17395,44 @@ function setWheelResult(text, tone = '') {
 
 function renderWheel() {
   renderWheelControls();
+  renderWheelLuckChip();
   renderWheelSession();
+  renderWheelBetsList();
+  renderWheelRecentRounds();
   renderWheelHistory();
   renderWheelPayoutTables();
-  drawWheelBoard();
+  startWheelRaf();
   if (!wheelResizeBound) {
     wheelResizeBound = true;
-    window.addEventListener('resize', () => { if (activeTab === 'wheel' && !wheelSpinAnim) drawWheelBoard(); });
+    window.addEventListener('resize', () => { if (activeTab === 'wheel') drawWheelBoard(); });
   }
 }
 
 function renderWheelControls() {
+  const iBet = wheelHasMyBet();
+  const disabled = wheelBetBusy || iBet;
   document.querySelectorAll('[data-bet="wheel"] .casino-chip').forEach(btn => {
-    btn.disabled = wheelBusy;
+    btn.disabled = disabled;
     btn.classList.toggle('active', Number(btn.dataset.stake) === wheelBet);
   });
-  setBetBarDisabled('wheel', wheelBusy);
+  setBetBarDisabled('wheel', disabled);
   syncBetBar('wheel', wheelBet, { keepInput: true });
-  document.querySelectorAll('#wheel-risk-control button').forEach(btn => {
-    btn.disabled = wheelBusy;
-    btn.classList.toggle('active', btn.dataset.risk === wheelRisk);
-  });
   const spinBtn = document.getElementById('wheel-spin-btn');
   if (spinBtn) {
-    spinBtn.disabled = wheelBusy || !me || Number(me.coins || 0) < wheelBet;
-    spinBtn.innerHTML = wheelBusy ? 'Kręcimy…' : `ZAKRĘĆ · ${wheelBet} 🪙`;
+    spinBtn.disabled = disabled || !me || Number(me.coins || 0) < wheelBet;
+    if (wheelBetBusy) spinBtn.innerHTML = 'Stawiamy…';
+    else if (iBet) spinBtn.innerHTML = '✅ Zakład przyjęty';
+    else spinBtn.innerHTML = `POSTAW · ${wheelBet} 🪙`;
+  }
+  const myBetChip = document.getElementById('wheel-my-bet');
+  if (myBetChip) {
+    const mine = wheelMyBet();
+    if (mine && wheelRound?.status === 'betting') {
+      myBetChip.classList.remove('hidden');
+      myBetChip.textContent = `✅ Twój zakład: ${mine.bet} 🪙`;
+    } else {
+      myBetChip.classList.add('hidden');
+    }
   }
 }
 
@@ -17283,7 +17442,7 @@ function renderWheelSession() {
   const s = wheelSession;
   const net = s.won - s.wagered;
   box.replaceChildren(
-    plinkoStatCell('Zakręceń', String(s.spins)),
+    plinkoStatCell('Rund', String(s.spins)),
     plinkoStatCell('Najlepszy', s.best ? wheelMultLabel(s.best) : '—'),
     plinkoStatCell('Postawiono', `${s.wagered} 🪙`),
     plinkoStatCell('Wygrano', `${s.won} 🪙`),
@@ -17294,6 +17453,54 @@ function renderWheelSession() {
 function wheelResetSession() {
   wheelSession = { spins: 0, wagered: 0, won: 0, best: 0 };
   renderWheelSession();
+}
+
+function wheelIsJackpot(mult) { return Number(mult || 0) >= 10; }
+
+// Live "everyone's bets this round" panel — communal, updates as players
+// join (poll/realtime) and gains a per-row result once the round resolves.
+function renderWheelBetsList() {
+  const box = document.getElementById('wheel-bets-list');
+  if (!box) return;
+  if (!wheelRound || !wheelBets.length) {
+    box.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', margin: 0 } }, 'Czekamy na pierwszy zakład…'));
+    return;
+  }
+  const resolved = wheelRound.status === 'resolved';
+  box.replaceChildren(...wheelBets.map(b => {
+    const cls = ['wheel-bet-row'];
+    if (me && b.userId === me.id) cls.push('is-mine');
+    let resultNode = null;
+    if (resolved) {
+      const won = Number(b.totalWon || 0);
+      const net = won - Number(b.bet || 0);
+      cls.push(wheelIsJackpot(b.multiplier) ? 'is-jackpot' : net > 0 ? 'is-win' : net === 0 ? 'is-flat' : 'is-loss');
+      resultNode = el('span', { className: 'wbr-result' }, `${wheelMultLabel(b.multiplier)} · ${net >= 0 ? '+' : ''}${net} 🪙`);
+    }
+    return el('div', { className: cls.join(' ') },
+      el('span', { className: 'wbr-nick' }, b.nick),
+      el('span', { className: 'wbr-stake' }, `${b.bet} 🪙`),
+      ...(resultNode ? [resultNode] : [])
+    );
+  }));
+}
+
+// Communal "Ostatnie rundy" strip — the sector that hit + biggest winner.
+function renderWheelRecentRounds() {
+  const box = document.getElementById('wheel-recent-rounds');
+  if (!box) return;
+  if (!wheelRecentRounds.length) {
+    box.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', margin: 0 } }, 'Brak rund.'));
+    return;
+  }
+  box.replaceChildren(...wheelRecentRounds.map(r => {
+    return el('div', { className: 'wheel-round-chip' },
+      el('span', { className: 'wrc-seg' }, `#${Number(r.segmentIndex) + 1}`),
+      r.winnerNick
+        ? el('span', { className: 'wrc-winner' }, `🏆 ${r.winnerNick} +${r.winnerWon} 🪙`)
+        : el('span', { className: 'wrc-winner is-muted' }, '—')
+    );
+  }));
 }
 
 function renderWheelHistory() {
@@ -17307,111 +17514,243 @@ function renderWheelHistory() {
     const bet = Number(h.bet || 0);
     const won = Number(h.totalWon || 0);
     const net = won - bet;
-    const jackpot = Number(h.multiplier) >= 5;
+    const jackpot = wheelIsJackpot(h.multiplier);
     const tone = jackpot ? 'jackpot' : net > 0 ? 'win' : net === 0 ? 'flat' : 'loss';
     return el('div', { className: 'plinko-hrow ' + tone },
       el('div', { className: 'ph-mult' }, wheelMultLabel(h.multiplier)),
-      el('div', { className: 'ph-mid' }, WHEEL_RISK_LABELS[h.risk] || h.risk),
+      el('div', { className: 'ph-mid' }, `${bet} 🪙`),
       el('div', { className: 'ph-net' }, `${net >= 0 ? '+' : ''}${net} 🪙`)
     );
   }));
 }
 
+// Single shared payout table — one wheel, one segment set, no risk tiers.
 function renderWheelPayoutTables() {
   const box = document.getElementById('wheel-payout-tables');
   if (!box) return;
-  box.replaceChildren(...['low', 'medium', 'high'].map(risk => {
-    const segs = WHEEL_SEGMENTS[risk];
-    const counts = {};
-    segs.forEach(m => { counts[m] = (counts[m] || 0) + 1; });
-    const rtpPct = Math.round(WHEEL_RTP[risk] * 1000) / 10;
-    const chips = Object.keys(counts).map(Number).sort((a, b) => a - b).map(mult =>
-      el('span', { className: 'wheel-payout-chip' + (mult === 0 ? ' is-zero' : '') + (mult >= 5 ? ' is-hot' : '') },
-        `${wheelMultLabel(mult)} ×${counts[mult]}`)
-    );
-    return el('div', { className: 'wheel-payout-table' },
+  const counts = {};
+  WHEEL_SEGMENTS.forEach(m => { counts[m] = (counts[m] || 0) + 1; });
+  const rtpPct = Math.round(WHEEL_RTP * 1000) / 10;
+  const chips = Object.keys(counts).map(Number).sort((a, b) => a - b).map(mult =>
+    el('span', { className: 'wheel-payout-chip' + (mult === 0 ? ' is-zero' : '') + (wheelIsJackpot(mult) ? ' is-hot' : '') },
+      `${wheelMultLabel(mult)} ×${counts[mult]}`)
+  );
+  box.replaceChildren(
+    el('div', { className: 'wheel-payout-table' },
       el('div', { className: 'wheel-payout-table-head' },
-        el('span', {}, WHEEL_RISK_LABELS[risk]),
+        el('span', {}, 'Koło Żubra G6'),
         el('span', { className: 'wpt-rtp' }, `RTP ${rtpPct}%`)
       ),
       el('div', { className: 'wheel-payout-rows' }, ...chips)
-    );
-  }));
+    )
+  );
 }
 
 function wheelCanvasContext() {
   const canvas = document.getElementById('wheel-canvas');
   if (!canvas) return null;
   const rect = canvas.getBoundingClientRect();
-  const size = Math.max(240, Math.round(Math.min(rect.width || canvas.clientWidth || 480, rect.height || canvas.clientHeight || 480)));
+  // The buffer matches the element's actual (possibly non-square) CSS box and
+  // the wheel is letterboxed inside it — a square buffer on a stretched
+  // element renders the wheel as an oval.
+  const w = Math.max(240, Math.round(rect.width || canvas.clientWidth || 480));
+  const h = Math.max(240, Math.round(rect.height || canvas.clientHeight || 480));
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const px = Math.round(size * DPR);
-  if (canvas.width !== px || canvas.height !== px) {
-    canvas.width = px;
-    canvas.height = px;
+  const pw = Math.round(w * DPR), ph = Math.round(h * DPR);
+  if (canvas.width !== pw || canvas.height !== ph) {
+    canvas.width = pw;
+    canvas.height = ph;
   }
   const ctx = canvas.getContext('2d');
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  return { canvas, ctx, size };
+  return { canvas, ctx, w, h, size: Math.min(w, h) };
 }
 
+// One wheel, one segment set, no risk tiers — the whole visual budget goes
+// into a single ring: big bezel, prize-only radial labels, and the
+// LED/glow/pointer-kick treatment. `highlightIndex` (the resolved round's
+// segment, or null) flashes the winning wedge and dims the rest.
 function drawWheelBoard(rotation = wheelBoardRotation) {
   const cc = wheelCanvasContext();
   if (!cc) return;
-  const { ctx, size } = cc;
-  const cx = size / 2, cy = size / 2;
-  const r = size / 2 - 6;
-  const segs = wheelPayouts();
-  const segAngle = (Math.PI * 2) / segs.length;
-  ctx.clearRect(0, 0, size, size);
+  const { ctx, w, h, size } = cc;
+  const cx = w / 2, cy = h / 2;
+  const r = size / 2 - 10;
+  const segAngle = (Math.PI * 2) / WHEEL_SEGMENT_COUNT;
+  const twoPi = Math.PI * 2;
+  const nowMs = performance.now();
+  const phase = wheelPhaseAnim;
+  const highlightIndex = (phase === 'result' && wheelRound && wheelRound.segmentIndex != null)
+    ? Number(wheelRound.segmentIndex) : null;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // The wheel is letterboxed inside a possibly non-square canvas, so the
+  // DOM pointer pin must track the actual rim, not the stage top.
+  const pointerEl = document.querySelector('#tab-wheel .wheel-pointer');
+  if (pointerEl) {
+    const topPx = Math.round(cc.canvas.offsetTop + (cy - r) - 14);
+    if (wheelPointerTop !== topPx) {
+      wheelPointerTop = topPx;
+      pointerEl.style.top = topPx + 'px';
+    }
+  }
+
+  const hubR = r * 0.20;
+  const ringR0 = hubR + r * 0.02;
+  const ringR1 = r * 0.94;
+
+  // Decorative dark bezel behind the ring, so the segments read as an inset
+  // wheel rather than floating flat on the stage background.
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, twoPi);
+  ctx.fillStyle = '#0c2416';
+  ctx.fill();
+
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rotation);
-  for (let i = 0; i < segs.length; i += 1) {
-    const mult = segs[i];
+
+  for (let i = 0; i < WHEEL_SEGMENTS.length; i += 1) {
+    const mult = WHEEL_SEGMENTS[i];
     const start = -Math.PI / 2 + i * segAngle - segAngle / 2;
     const end = start + segAngle;
+    const isHighlight = highlightIndex === i;
     const color = wheelColorFor(mult);
+
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.arc(0, 0, r, start, end);
+    ctx.moveTo(Math.cos(start) * ringR0, Math.sin(start) * ringR0);
+    ctx.arc(0, 0, ringR1, start, end);
+    ctx.arc(0, 0, ringR0, end, start, true);
     ctx.closePath();
-    ctx.fillStyle = color.fill;
+
+    if (color.hot) {
+      const mid = start + segAngle / 2;
+      const midR = (ringR0 + ringR1) / 2;
+      const grad = ctx.createRadialGradient(
+        Math.cos(mid) * midR, Math.sin(mid) * midR, 2,
+        Math.cos(mid) * midR, Math.sin(mid) * midR, ringR1 - ringR0
+      );
+      grad.addColorStop(0, '#fff7ed');
+      grad.addColorStop(0.45, color.fill);
+      grad.addColorStop(1, '#a16207');
+      ctx.fillStyle = grad;
+    } else if (mult === 0) {
+      // Alternate two bottle-green shades so adjacent zero wedges read as
+      // separate segments instead of one dark blob.
+      ctx.fillStyle = i % 2 ? '#16412a' : '#1b4d2e';
+    } else {
+      ctx.fillStyle = color.fill;
+    }
+    if (isHighlight) { ctx.shadowColor = '#facc15'; ctx.shadowBlur = 30; }
+    else if (highlightIndex != null) { ctx.globalAlpha = 0.32; }
     ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(212,175,55,.55)'; // brass/gold metallic separators
     ctx.stroke();
-    const mid = start + segAngle / 2;
-    // Keep the label upright for a viewer: on the on-screen bottom half the
-    // tangential +90° orientation reads upside down, so flip it +180° there.
-    let screenAngle = (mid + rotation) % (Math.PI * 2);
-    if (screenAngle > Math.PI) screenAngle -= Math.PI * 2;
-    if (screenAngle < -Math.PI) screenAngle += Math.PI * 2;
-    const flip = screenAngle > 0 && screenAngle < Math.PI;
-    ctx.save();
-    ctx.rotate(mid);
-    ctx.translate(r * 0.62, 0);
-    ctx.rotate(flip ? -Math.PI / 2 : Math.PI / 2);
-    ctx.fillStyle = color.text;
-    ctx.font = '700 ' + Math.max(11, Math.round(size * 0.032)) + 'px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(wheelMultLabel(mult), 0, 0);
-    ctx.restore();
+
+    // Prize labels only — the 12 zero segments stay quiet dark wedges, which
+    // is what keeps the wheel readable. Text runs along the radius reading
+    // outward, fixed to the wheel like a physical prize wheel (one uniform
+    // rule for every label; no per-frame screen-space flipping, which made
+    // orientations disagree and jump mid-spin).
+    if (mult > 0) {
+      const mid = start + segAngle / 2;
+      const isJackpot = mult >= 10;
+      ctx.save();
+      ctx.rotate(mid);
+      ctx.fillStyle = color.text;
+      const label = wheelMultLabel(mult);
+      const fontScale = isJackpot ? 0.06 : label.length > 3 ? 0.038 : 0.054;
+      ctx.font = '800 ' + Math.max(11, Math.round(size * fontScale)) + 'px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.globalAlpha = (highlightIndex != null && !isHighlight) ? 0.4 : 1;
+      ctx.fillText(label, ringR0 + (ringR1 - ringR0) * (isJackpot ? 0.36 : 0.55), 0);
+      if (isJackpot) {
+        ctx.font = Math.round(size * 0.052) + 'px system-ui, sans-serif';
+        ctx.fillText('🦬', ringR0 + (ringR1 - ringR0) * 0.75, 0);
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
   }
   ctx.restore();
+
+  // Gold bezel ring framing the segments.
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = 'rgba(15,23,42,.18)';
+  ctx.arc(cx, cy, ringR1, 0, twoPi);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(250,204,21,.5)';
   ctx.stroke();
+
+  // LED bulb ring around the rim: idle-pulses slowly, and CHASES (marquee)
+  // during a blind/landing spin — driven purely by `rotation`/`nowMs`, no
+  // extra timers.
+  const ledCount = 40;
+  const ledR = r * 0.985;
+  const spinning = phase === 'blind' || phase === 'landing';
+  for (let i = 0; i < ledCount; i += 1) {
+    const a = (i / ledCount) * twoPi - Math.PI / 2;
+    const x = cx + Math.cos(a) * ledR, y = cy + Math.sin(a) * ledR;
+    let bright = spinning
+      ? 0.4 + 0.6 * Math.sin(a * 3 - rotation * 4)
+      : 0.32 + 0.32 * Math.sin(nowMs / 900 + i * 0.5);
+    bright = Math.max(0.12, bright);
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(2, r * 0.016), 0, twoPi);
+    ctx.fillStyle = `rgba(250,204,21,${bright.toFixed(2)})`;
+    ctx.shadowColor = 'rgba(250,204,21,.9)';
+    ctx.shadowBlur = 7 * bright;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Center hub: dark bottle-green disc + a single tapered blade of grass
+  // laid diagonally across it (the classic żubrówka-bottle motif) + gold
+  // rim + a 🦬 mark.
+  ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, Math.max(14, size * 0.045), 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
+  ctx.arc(cx, cy, hubR, 0, twoPi);
+  ctx.clip();
+  const hubGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, hubR);
+  hubGrad.addColorStop(0, '#1b4d2e');
+  hubGrad.addColorStop(1, '#0c2416');
+  ctx.fillStyle = hubGrad;
+  ctx.fillRect(cx - hubR, cy - hubR, hubR * 2, hubR * 2);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-Math.PI / 5);
+  const bladeLen = hubR * 1.9, bladeW = hubR * 0.16;
+  const bladeGrad = ctx.createLinearGradient(-bladeLen / 2, 0, bladeLen / 2, 0);
+  bladeGrad.addColorStop(0, '#3f6212');
+  bladeGrad.addColorStop(0.5, '#d9f2c4');
+  bladeGrad.addColorStop(1, '#8fae3a');
+  ctx.fillStyle = bladeGrad;
+  ctx.beginPath();
+  ctx.moveTo(-bladeLen / 2, 0);
+  ctx.quadraticCurveTo(0, -bladeW, bladeLen / 2, 0);
+  ctx.quadraticCurveTo(0, bladeW, -bladeLen / 2, 0);
+  ctx.closePath();
   ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(15,23,42,.18)';
+  ctx.restore();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, hubR, 0, twoPi);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#facc15';
   ctx.stroke();
+
+  // The bison is the hub medallion — sized to nearly fill the hub so the
+  // blade of grass peeks out on both sides behind it.
+  ctx.font = Math.max(18, Math.round(hubR * 1.15)) + 'px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🦬', cx, cy + hubR * 0.04);
 }
 
 function wheelWinAnimation(netWon, jackpot = false) {
@@ -17419,7 +17758,7 @@ function wheelWinAnimation(netWon, jackpot = false) {
   const container = document.createElement('div');
   container.className = 'plinko-burst-layer';
   const count = jackpot ? 72 : netWon >= 500 ? 46 : netWon >= 100 ? 30 : 16;
-  const emojis = ['🪙', '🎉', '✨', '💰', '🎡', '⭐'];
+  const emojis = ['🪙', '🎉', '✨', '💰', '🦬', '⭐'];
   for (let i = 0; i < count; i += 1) {
     const p = document.createElement('div');
     p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -17432,125 +17771,232 @@ function wheelWinAnimation(netWon, jackpot = false) {
   setTimeout(() => { container.remove(); document.body.style.animation = ''; }, 3600);
 }
 
-function ensureWheelRaf() {
-  if (wheelRaf != null) return;
-  const step = (now) => {
-    wheelRaf = null;
-    const anim = wheelSpinAnim;
-    if (!anim) return;
-    const t = Math.min(1, (now - anim.startedAt) / anim.duration);
-    const eased = 1 - Math.pow(1 - t, 3);
-    wheelBoardRotation = anim.from + (anim.to - anim.from) * eased;
-    drawWheelBoard(wheelBoardRotation);
-    if (t >= 1) {
-      wheelSpinAnim = null;
-      settleWheelSpin(anim);
-      return;
-    }
-    wheelRaf = requestAnimationFrame(step);
-  };
-  wheelRaf = requestAnimationFrame(step);
+// Cosmetic "kick" impulse on the pointer pin each time a segment separator
+// passes underneath it — purely visual, computed from the rotation delta.
+function wheelMaybeKickPointer(rotation) {
+  const segAngle = (Math.PI * 2) / WHEEL_SEGMENT_COUNT;
+  const bucket = Math.floor((((rotation % (Math.PI * 2)) + Math.PI * 4)) / segAngle);
+  if (wheelLastSegBucket !== null && bucket !== wheelLastSegBucket) {
+    const pointer = document.querySelector('#tab-wheel .wheel-pointer');
+    if (pointer) { pointer.classList.remove('kick'); void pointer.offsetWidth; pointer.classList.add('kick'); }
+  }
+  wheelLastSegBucket = bucket;
 }
 
-function playWheelSpin(drop, runId, nextHistory) {
-  if (!drop) { wheelBusy = false; renderWheelControls(); return; }
+// Begins the ease-out-cubic landing tween into the resolved round's exact
+// segment. If we were already blind-spinning this round, only a couple of
+// extra turns are needed to decelerate into place; if the result arrived
+// already known (tab loaded mid-spin, or a poll caught the resolve before
+// the countdown ever hit zero locally), play the full multi-turn reveal
+// spin like the old solo mode. Whole-turn math is load-bearing here — the
+// extraTurns*twoPi term must vanish exactly under mod twoPi, or its
+// fractional part leaks into the landing angle and the wheel stops short
+// of (or past) the target segment.
+function wheelBeginLanding(round) {
   const reduced = plinkoReducedMotion();
-  const duration = reduced ? 300 : WHEEL_SPIN_DURATION_MS;
+  wheelLandingRoundId = round.id;
+  const duration = reduced ? 300 : WHEEL_LANDING_DURATION_MS;
   const segAngle = (Math.PI * 2) / WHEEL_SEGMENT_COUNT;
   const twoPi = Math.PI * 2;
-  const normalizedTarget = (((-drop.segmentIndex * segAngle) % twoPi) + twoPi * 2) % twoPi;
+  const normalizedTarget = (((-round.segmentIndex * segAngle) % twoPi) + twoPi * 2) % twoPi;
   const from = wheelBoardRotation;
   const currentMod = ((from % twoPi) + twoPi * 2) % twoPi;
   const delta = (((normalizedTarget - currentMod) % twoPi) + twoPi * 2) % twoPi;
-  // Must be a WHOLE number of turns — extraTurns*twoPi has to vanish exactly
-  // under mod twoPi, otherwise its fractional part leaks into the landing
-  // angle and the wheel stops short of (or past) the target segment.
-  const extraTurns = reduced ? 0 : (4 + Math.floor(Math.random() * 3));
-  const to = from + extraTurns * twoPi + delta;
+  const wasBlind = wheelBlindRoundId === round.id;
+  const extraTurns = reduced ? 0 : (wasBlind ? (1 + Math.floor(Math.random() * 2)) : (4 + Math.floor(Math.random() * 3)));
+  wheelLandingFrom = from;
+  wheelLandingTo = from + extraTurns * twoPi + delta;
+  wheelLandingStart = performance.now();
+  wheelLandingDur = duration;
   document.querySelector('#tab-wheel .wheel-stage')?.classList.add('is-spinning');
-  wheelSpinAnim = { startedAt: performance.now(), duration, from, to, drop, runId, nextHistory };
-  ensureWheelRaf();
 }
 
-function settleWheelSpin(anim) {
-  const { drop, runId, nextHistory } = anim;
-  document.querySelector('#tab-wheel .wheel-stage')?.classList.remove('is-spinning');
-  wheelBusy = false;
-  if (runId !== wheelRunId || activeTab !== 'wheel') { renderWheelControls(); return; }
-  if (Array.isArray(nextHistory)) wheelHistory = nextHistory;
-  const bet = Number(drop.bet || 0);
-  const won = Number(drop.totalWon || 0);
-  const net = won - bet;
-  const jackpot = Number(drop.multiplier) >= 5;
-  wheelSession.spins += 1;
-  wheelSession.wagered += bet;
-  wheelSession.won += won;
-  wheelSession.best = Math.max(wheelSession.best, Number(drop.multiplier || 0));
-  const stage = document.querySelector('#tab-wheel .wheel-stage');
-  if (stage) {
-    stage.classList.remove('is-win', 'is-jackpot');
-    if (net > 0) stage.classList.add('is-win');
-    if (jackpot) stage.classList.add('is-jackpot');
+// Advances the animation state machine one frame: idle (no round) →
+// countdown (betting, spin_at in the future) → blind (spin_at passed,
+// server hasn't drawn yet — constant-velocity spin) → landing (segment
+// known — eased tween) → result (landed, static). Reduced motion skips the
+// blind spin/LED chase entirely and jumps straight to a short 300 ms settle.
+function wheelUpdateAnimState(nowP, dt) {
+  const round = wheelRound;
+  if (!round) { wheelPhaseAnim = 'idle'; return; }
+  const reduced = plinkoReducedMotion();
+
+  if (round.status === 'betting') {
+    const spinAtMs = Date.parse(round.spinAt);
+    if (wheelNow() < spinAtMs) { wheelPhaseAnim = 'countdown'; return; }
+    if (reduced) { wheelPhaseAnim = 'countdown'; return; } // no blind spin/chase in reduced motion
+    wheelBlindRoundId = round.id;
+    wheelPhaseAnim = 'blind';
+    wheelBoardRotation += WHEEL_BLIND_SPEED * dt;
+    return;
   }
-  const tone = jackpot ? 'jackpot' : net > 0 ? 'win' : 'loss';
-  const label = `${wheelMultLabel(drop.multiplier)} → ${won} 🪙 (${net >= 0 ? '+' : ''}${net})`;
-  setWheelResult(jackpot ? 'JACKPOT: ' + label : label, tone);
-  if (jackpot || net >= 100) wheelWinAnimation(net, jackpot);
+
+  // status === 'resolved'
+  if (wheelLandedRoundId === round.id) { wheelPhaseAnim = 'result'; return; }
+  if (wheelLandingRoundId !== round.id) wheelBeginLanding(round);
+  wheelPhaseAnim = 'landing';
+  const t = Math.min(1, (nowP - wheelLandingStart) / wheelLandingDur);
+  const eased = 1 - Math.pow(1 - t, 3);
+  wheelBoardRotation = wheelLandingFrom + (wheelLandingTo - wheelLandingFrom) * eased;
+  if (t >= 1) {
+    wheelLandedRoundId = round.id;
+    wheelPhaseAnim = 'result';
+    wheelOnLanded(round);
+  }
+}
+
+// Called exactly once per round, the instant its landing tween completes:
+// applies the personal result banner + session tally + coinburst, and
+// refreshes the communal bets/recent-rounds panels to show every winner.
+function wheelOnLanded(round) {
+  document.querySelector('#tab-wheel .wheel-stage')?.classList.remove('is-spinning');
+  if (wheelResultShownFor === round.id) return;
+  wheelResultShownFor = round.id;
+
+  const stage = document.querySelector('#tab-wheel .wheel-stage');
+  stage?.classList.remove('is-win', 'is-jackpot');
+  const mine = wheelMyBet();
+  if (mine && mine.totalWon != null) {
+    const bet = Number(mine.bet || 0);
+    const won = Number(mine.totalWon || 0);
+    const net = won - bet;
+    const jackpot = wheelIsJackpot(mine.multiplier);
+    wheelSession.spins += 1;
+    wheelSession.wagered += bet;
+    wheelSession.won += won;
+    wheelSession.best = Math.max(wheelSession.best, Number(mine.multiplier || 0));
+    const tone = jackpot ? 'jackpot' : net > 0 ? 'win' : net === 0 ? 'flat' : 'loss';
+    const label = `${wheelMultLabel(mine.multiplier)} → ${won} 🪙 (${net >= 0 ? '+' : ''}${net})`;
+    setWheelResult(jackpot ? 'JACKPOT: ' + label : label, tone);
+    if (jackpot) stage?.classList.add('is-jackpot');
+    else if (net > 0) stage?.classList.add('is-win');
+    if (jackpot || net >= 100) wheelWinAnimation(net, jackpot);
+  } else {
+    setWheelResult('Runda rozstrzygnięta — dołącz do następnej!', '');
+  }
   renderWheelSession();
+  renderWheelBetsList();
+  renderWheelRecentRounds();
   renderWheelHistory();
   renderWheelControls();
 }
 
-function stopWheelAnimation() {
-  wheelRunId += 1;
+function updateWheelCountdownUI() {
+  const box = document.getElementById('wheel-countdown');
+  if (!box) return;
+  const round = wheelRound;
+  if (!round || round.status !== 'betting') { box.classList.add('hidden'); box.classList.remove('is-big'); return; }
+  box.classList.remove('hidden');
+  const remain = Math.max(0, Date.parse(round.spinAt) - wheelNow());
+  if (remain <= 0) {
+    box.classList.remove('is-big');
+    box.textContent = 'LOSOWANIE…';
+    return;
+  }
+  const totalSec = remain / 1000;
+  if (totalSec < 5) {
+    box.classList.add('is-big');
+    box.textContent = String(Math.ceil(totalSec));
+  } else {
+    box.classList.remove('is-big');
+    const m = Math.floor(totalSec / 60);
+    const s = Math.floor(totalSec % 60);
+    const d = Math.floor((totalSec - Math.floor(totalSec)) * 10);
+    box.textContent = `${m}:${String(s).padStart(2, '0')}.${d}`;
+  }
+}
+
+function wheelFrame(nowP) {
+  if (!wheelRafActive) return;
+  const dt = Math.min(0.1, (nowP - (wheelLastFrameAt || nowP)) / 1000);
+  wheelLastFrameAt = nowP;
+  wheelUpdateAnimState(nowP, dt);
+  wheelMaybeKickPointer(wheelBoardRotation);
+  drawWheelBoard(wheelBoardRotation);
+  updateWheelCountdownUI();
+  wheelRaf = requestAnimationFrame(wheelFrame);
+}
+
+function startWheelRaf() {
+  if (wheelRafActive) return;
+  wheelRafActive = true;
+  wheelLastFrameAt = performance.now();
+  wheelRaf = requestAnimationFrame(wheelFrame);
+}
+
+function stopWheelRaf() {
+  wheelRafActive = false;
   if (wheelRaf != null) { cancelAnimationFrame(wheelRaf); wheelRaf = null; }
-  wheelSpinAnim = null;
-  wheelBusy = false;
+}
+
+// Lazy-resolve poll: while a round is open (betting, whether or not spin_at
+// has already passed), pull `state` every second so the server has a chance
+// to resolve it on read. This is what actually fires a due spin — realtime
+// alone only tells us something changed, it never drives the resolve.
+function startWheelPoll() {
+  stopWheelPoll();
+  wheelPollTimer = setInterval(() => {
+    if (activeTab !== 'wheel') return;
+    if (document.hidden) return;
+    if (!wheelRound || wheelRound.status !== 'betting') return;
+    loadWheelState(false);
+  }, 1000);
+}
+
+function stopWheelPoll() {
+  if (wheelPollTimer) clearInterval(wheelPollTimer);
+  wheelPollTimer = null;
+}
+
+function setupWheelRealtime() {
+  if (wheelRealtimeReady) return;
+  wheelRealtimeReady = true;
+  const reload = () => {
+    if (activeTab !== 'wheel') return;
+    if (Date.now() - wheelLastStateMs < 900) return;
+    loadWheelState(false);
+  };
+  const ch = sb.channel('wheel-db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'wheel_rounds' }, reload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'wheel_round_bets' }, reload)
+    .subscribe();
+  realtimeChannels.push(ch);
+}
+
+function stopWheelAnimation() {
+  stopWheelRaf();
+  stopWheelPoll();
   document.querySelector('#tab-wheel .wheel-stage')?.classList.remove('is-spinning', 'is-win', 'is-jackpot');
 }
 
-async function startWheelSpin() {
-  if (wheelBusy) return;
+async function placeWheelBet() {
+  if (wheelBetBusy) return;
   if (!me) { showToast('❌ Zaloguj się.'); return; }
+  if (wheelHasMyBet()) { showToast('Już postawiłeś w tej rundzie.'); return; }
   const bet = wheelBet;
   if (bet > Number(me.coins || 0)) { showToast('❌ Za mało coinów!'); return; }
-  wheelBusy = true;
-  wheelRunId += 1;
-  const runId = wheelRunId;
+  wheelBetBusy = true;
   renderWheelControls();
-  setWheelResult('Serwer losuje segment…', '');
-  document.querySelector('#tab-wheel .wheel-stage')?.classList.remove('is-win', 'is-jackpot');
 
   let data;
   try {
-    data = await invokeWheel({ action: 'spin', bet, risk: wheelRisk });
+    data = await invokeWheel({ action: 'bet', bet });
   } catch (err) {
-    if (runId !== wheelRunId) return;
-    wheelBusy = false;
+    wheelBetBusy = false;
     renderWheelControls();
-    setWheelResult(err.message || 'Nie udało się zakręcić kołem.', 'loss');
     showToast('❌ ' + err.message);
     return;
   }
 
-  wheelState = data;
-  if (typeof data.coins === 'number' && me) {
-    me.coins = data.coins;
-    setText(headerCoins, me.coins);
+  wheelBetBusy = false;
+  applyWheelState(data);
+  if (wheelRound?.status === 'betting') {
+    setWheelResult(`Zakład przyjęty — losowanie za ${Math.max(0, Math.round((Date.parse(wheelRound.spinAt) - wheelNow()) / 1000))} s…`, '');
   }
-  if (runId !== wheelRunId || activeTab !== 'wheel') { wheelBusy = false; return; }
-  playWheelSpin(data.spin, runId, Array.isArray(data.history) ? data.history : wheelHistory);
 }
 
 (function wireWheelControls() {
-  document.querySelectorAll('#wheel-risk-control button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (wheelBusy) return;
-      wheelRisk = btn.dataset.risk || 'medium';
-      renderWheel();
-    });
-  });
-  document.getElementById('wheel-spin-btn')?.addEventListener('click', startWheelSpin);
+  document.getElementById('wheel-spin-btn')?.addEventListener('click', placeWheelBet);
   document.getElementById('wheel-session-reset')?.addEventListener('click', wheelResetSession);
   renderWheelSession();
 })();

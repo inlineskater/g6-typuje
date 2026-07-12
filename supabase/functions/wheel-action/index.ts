@@ -2,6 +2,18 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
+// „Koło Fortuny G6" — SHARED-ROUNDS house casino game. There is ONE communal
+// wheel with a SINGLE ordered set of 20 segments — no risk tiers, every
+// player spins the same wheel, a bet is just a stake. A round opens the
+// moment the first player bets, runs a 15 s betting window, then draws ONE
+// segment_index server-side and pays every bet on that round by that one
+// shared multiplier. Coin timing follows the ROULETTE convention (nothing
+// deducted at bet time, only validated — coins move only at resolve).
+// Resolution is lazy-on-read, crash-style: resolveDueRound runs on every
+// `state`/`bet` call, so the client's 1 s poll on `state` is what actually
+// fires a due spin. wheel_spins keeps writing one row per resolved bet,
+// unchanged, so hazard/economy views need no changes.
+
 const ALLOWED_ORIGINS = new Set([
   "https://inlineskater.github.io",
   "http://127.0.0.1:8000",
@@ -34,20 +46,25 @@ const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, 
 const STAKES = [1, 5, 10, 25, 50, 100, 250, 500]; // preset chips; any integer 1..MAX_BET is allowed
 const MAX_BET = 10_000_000;                  // ceiling for a custom stake (balance enforced separately)
 const DEFAULT_BET = 10;
-const DEFAULT_RISK = "medium";
+
+// First bet on a fresh round opens this window; PARITY CONTRACT with
+// WHEEL_BETTING_WINDOW_MS in index.html (used for the client-side countdown).
+const WHEEL_BETTING_WINDOW_MS = 15_000;
+// How many resolved rounds `state` returns in `recentRounds`.
+const RECENT_ROUNDS = 10;
 
 // Keep byte-for-byte in sync with index.html (WHEEL_SEGMENTS) — this is the
-// parity contract: the ordered multiplier array per risk tier IS the wheel.
-// Segment count is fixed at 20 per tier. RTP before flooring/luck:
-//   low    -> 96.0%  (16x 1.2, 4x 0)
-//   medium -> 95.0%  (11x 0, 4x 1.5, 2x 2, 3x 3)
-//   high   -> 95.0%  (16x 0, 2x 2, 1x 5, 1x 10)
-const SEGMENTS = {
-  low:    [0, 1.2, 1.2, 1.2, 1.2, 0, 1.2, 1.2, 1.2, 1.2, 0, 1.2, 1.2, 1.2, 1.2, 0, 1.2, 1.2, 1.2, 1.2],
-  medium: [0, 1.5, 0, 2, 0, 0, 3, 0, 1.5, 0, 3, 0, 0, 2, 0, 1.5, 0, 3, 0, 1.5],
-  high:   [10, 0, 0, 0, 0, 2, 0, 0, 0, 0, 5, 0, 0, 0, 0, 2, 0, 0, 0, 0],
-};
+// parity contract: this ordered 20-element array literally IS the wheel (one
+// shared set — no risk tiers). Composition: 1× 10x (jackpot), 3× 2x,
+// 2× 1x (zwrot stawki), 2× 0.5x (pół stawki wraca), 12× 0x. Sum = 19.0 ->
+// RTP 95.0% before flooring/luck (×1.01 amulet lands it at 95.95%, still
+// below 100%). Layout: the three 2x sit clustered (idx 0-2); the 10x sits at
+// idx 11, exactly opposite the cluster's center (idx 1 + 10 = 11); the two
+// 1x and two 0.5x are spread symmetrically around the 10x; zeros fill the
+// gaps in runs of exactly 2 (never more than 3, per design brief).
+const SEGMENTS = [10, 0, 0, 2, 0, 0.5, 0, 2, 0, 1, 0, 0, 2, 0, 0.5, 0, 1, 0, 0, 0];
 const SEGMENT_COUNT = 20;
+const WHEEL_RTP = 0.95;
 
 function gameError(message) {
   return Object.assign(new Error(message), { isGame: true });
@@ -79,16 +96,10 @@ function validateBet(raw) {
   return bet;
 }
 
-function validateRisk(raw) {
-  const risk = String(raw ?? DEFAULT_RISK);
-  if (!SEGMENTS[risk]) throw gameError("Nieprawidłowe ryzyko.");
-  return risk;
-}
-
 // Timed COMMUNAL „Amulet Bezwstydnego Fartu" (casino-luck-item.sql): while ANY unexpired
 // instance exists (any owner — the buyer pays for everyone), every payout is
-// ×CASINO_LUCK_MULT. The lowest tier RTP is 95%, so 1.01 lands it at 95.95%,
-// still below 100% — never raise this without recomputing every tier's RTP.
+// ×CASINO_LUCK_MULT. RTP is 95%, so 1.01 lands it at 95.95%, still below
+// 100% — never raise this without recomputing WHEEL_RTP.
 const CASINO_LUCK_MULT = 1.01;
 
 async function hasCasinoLuck(tx) {
@@ -111,6 +122,30 @@ async function hasCasinoLuck(tx) {
   }
 }
 
+// Same eligibility as hasCasinoLuck, plus the aggregate MAX(expires_at) so
+// the frontend can show "aktywny do {date}" without seeing any instance
+// ownership details. Only used by stateResponse (display) — resolveOneRound
+// keeps using the plain hasCasinoLuck boolean for the payout multiplier.
+async function casinoLuckStatus(tx) {
+  try {
+    const rows = await tx`
+      select max(i.expires_at) as until
+      from public.hero_item_instances i
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where d.is_active = true
+        and d.effect_game = 'casino'
+        and d.effect_type = 'casino_luck'
+        and i.expires_at is not null
+        and i.expires_at > now()
+    `;
+    const until = rows[0]?.until ?? null;
+    return { active: !!until, until: until ? new Date(until).toISOString() : null };
+  } catch (err) {
+    console.warn("Casino luck status lookup unavailable:", err?.message ?? err);
+    return { active: false, until: null };
+  }
+}
+
 function randomByte() {
   const buf = new Uint8Array(1);
   crypto.getRandomValues(buf);
@@ -130,7 +165,6 @@ function spinOut(row) {
   return {
     id: row.id,
     bet: Number(row.total_bet),
-    risk: row.risk,
     segmentIndex: Number(row.segment_index),
     multiplier: Number(row.multiplier || 0),
     totalWon: Number(row.total_won || 0),
@@ -140,7 +174,7 @@ function spinOut(row) {
 
 async function historyRows(tx, userId, limit = 12) {
   const rows = await tx`
-    select id, total_bet, risk, segment_index, multiplier, total_won, created_at
+    select id, total_bet, segment_index, multiplier, total_won, created_at
     from public.wheel_spins
     where user_id = ${userId}
     order by created_at desc
@@ -148,53 +182,237 @@ async function historyRows(tx, userId, limit = 12) {
   return rows.map(spinOut);
 }
 
+function roundOut(round) {
+  if (!round) return null;
+  return {
+    id: round.id,
+    status: round.status,
+    spinAt: round.spin_at,
+    segmentIndex: round.segment_index != null ? Number(round.segment_index) : null,
+    resolvedAt: round.resolved_at,
+  };
+}
+
+function betOut(row) {
+  return {
+    userId: row.user_id,
+    nick: row.nick_snapshot,
+    bet: Number(row.total_bet),
+    multiplier: row.multiplier != null ? Number(row.multiplier) : null,
+    totalWon: row.total_won != null ? Number(row.total_won) : null,
+    createdAt: row.created_at,
+  };
+}
+
+// The round the client should be looking at: the current open (betting)
+// round if one exists, otherwise the most recently resolved round (so the
+// tab always shows a live result banner for a beat after landing). Returns
+// its bets ordered by join time (oldest first — first-in reads top-down).
+async function currentRoundWithBets(tx) {
+  const [openRound] = await tx`
+    select * from public.wheel_rounds
+    where status = 'betting'
+    order by created_at desc
+    limit 1`;
+  let round = openRound || null;
+  if (!round) {
+    const [lastResolved] = await tx`
+      select * from public.wheel_rounds
+      where status = 'resolved'
+      order by resolved_at desc
+      limit 1`;
+    round = lastResolved || null;
+  }
+  if (!round) return { round: null, bets: [] };
+  const bets = await tx`
+    select user_id, nick_snapshot, total_bet, multiplier, total_won, created_at
+    from public.wheel_round_bets
+    where round_id = ${round.id}
+    order by created_at asc`;
+  return { round, bets };
+}
+
+async function recentRounds(tx, limit = RECENT_ROUNDS) {
+  const rows = await tx`
+    select r.id, r.segment_index, r.resolved_at,
+           w.nick_snapshot as winner_nick, w.total_won as winner_won
+    from public.wheel_rounds r
+    left join lateral (
+      select nick_snapshot, total_won
+      from public.wheel_round_bets
+      where round_id = r.id
+      order by total_won desc nulls last
+      limit 1
+    ) w on true
+    where r.status = 'resolved'
+    order by r.resolved_at desc
+    limit ${limit}`;
+  return rows.map((r) => ({
+    id: r.id,
+    segmentIndex: Number(r.segment_index),
+    resolvedAt: r.resolved_at,
+    winnerNick: r.winner_nick || null,
+    winnerWon: r.winner_won != null ? Number(r.winner_won) : null,
+  }));
+}
+
+// Build the full snapshot the client renders. `extra` carries any one-shot
+// outcome from the action that just ran.
 async function stateResponse(tx, userId, extra = {}) {
   const [profile] = await tx`select coins, nick from public.profiles where id = ${userId}`;
-  const luck = await hasCasinoLuck(tx);
+  const luck = await casinoLuckStatus(tx);
+  const { round, bets } = await currentRoundWithBets(tx);
+  const [{ now: serverNow }] = await tx`select now() as now`;
   return {
     coins: profile?.coins ?? 0,
     nick: profile?.nick ?? "",
     stakes: STAKES,
-    risks: ["low", "medium", "high"],
     segments: SEGMENTS,
-    casinoLuck: luck,
+    rtp: WHEEL_RTP,
+    casinoLuck: luck.active,
+    casinoLuckUntil: luck.until,
+    round: roundOut(round),
+    bets: bets.map(betOut),
+    recentRounds: await recentRounds(tx),
     history: await historyRows(tx, userId),
+    serverNow: new Date(serverNow).toISOString(),
     ...extra,
   };
 }
 
-async function spin(userId, rawBet, rawRisk) {
-  const bet = validateBet(rawBet);
-  const risk = validateRisk(rawRisk);
+// Resolve exactly the rounds whose betting window has closed. FOR UPDATE
+// SKIP LOCKED means a concurrent call never blocks on / double-resolves a
+// round another request is already finishing. In steady state there is at
+// most one due round at a time (only one round is ever 'betting').
+async function resolveDueRound(tx) {
+  const due = await tx`
+    select id from public.wheel_rounds
+    where status = 'betting' and spin_at <= now()
+    for update skip locked`;
+  for (const row of due) {
+    await resolveOneRound(tx, row.id);
+  }
+}
 
-  return await db.begin(async (tx) => {
-    const [profile] = await tx`select coins from public.profiles where id = ${userId} for update`;
-    if (!profile) throw gameError("Profil nie istnieje.");
-    if (profile.coins < bet) throw gameError("Za mało coinów!");
+// Draw the segment, pay every bet on the round by that one shared
+// multiplier, mirror each payout into wheel_spins (unchanged shape —
+// hazard/economy views keep working), then flip the round to 'resolved'.
+// Lock ORDER: the round row is already locked (via resolveDueRound's FOR
+// UPDATE) before we touch any profiles row here — same order `bet()` uses
+// (round, then profile), so the two paths can never deadlock on each other.
+async function resolveOneRound(tx, roundId) {
+  const segmentIndex = randomSegmentIndex();
+  const multiplier = SEGMENTS[segmentIndex];
+  const luck = await hasCasinoLuck(tx);
+  const bets = await tx`
+    select id, user_id, total_bet
+    from public.wheel_round_bets
+    where round_id = ${roundId}
+    order by created_at asc`;
 
-    const luck = await hasCasinoLuck(tx);
-    const segmentIndex = randomSegmentIndex();
-    const multiplier = SEGMENTS[risk][segmentIndex];
-    const totalWon = Math.floor(bet * multiplier * (luck ? CASINO_LUCK_MULT : 1));
-    const balance = Number(profile.coins || 0) - bet + totalWon;
+  for (const bet of bets) {
+    const [profile] = await tx`select coins from public.profiles where id = ${bet.user_id} for update`;
+    if (!profile || Number(profile.coins) < Number(bet.total_bet)) {
+      // The player spent their coins elsewhere between betting and the draw —
+      // they dodge the charge, but also the payout: no money moves.
+      await tx`update public.wheel_round_bets set multiplier = 0, total_won = 0 where id = ${bet.id}`;
+      continue;
+    }
+    const totalWon = Math.floor(Number(bet.total_bet) * multiplier * (luck ? CASINO_LUCK_MULT : 1));
+    const balance = Number(profile.coins) - Number(bet.total_bet) + totalWon;
+    await tx`update public.profiles set coins = ${balance} where id = ${bet.user_id}`;
+    await tx`update public.wheel_round_bets set multiplier = ${multiplier}, total_won = ${totalWon} where id = ${bet.id}`;
+    await tx`
+      insert into public.wheel_spins (user_id, total_bet, segment_index, multiplier, total_won)
+      values (${bet.user_id}, ${bet.total_bet}, ${segmentIndex}, ${multiplier}, ${totalWon})`;
+  }
 
-    const [row] = await tx`
-      insert into public.wheel_spins (user_id, total_bet, risk, segment_index, multiplier, total_won)
-      values (${userId}, ${bet}, ${risk}, ${segmentIndex}, ${multiplier}, ${totalWon})
-      returning id, total_bet, risk, segment_index, multiplier, total_won, created_at`;
+  await tx`
+    update public.wheel_rounds
+    set status = 'resolved', segment_index = ${segmentIndex}, resolved_at = now()
+    where id = ${roundId}`;
+}
 
-    await tx`update public.profiles set coins = ${balance} where id = ${userId}`;
-
-    return await stateResponse(tx, userId, {
-      spin: spinOut(row),
-      coins: balance,
-      casinoLuck: luck,
+// Find the open betting round (FOR UPDATE — this lock is taken BEFORE any
+// profile lock in `bet()`), or open a fresh one if none exists. The INSERT
+// itself is effectively the lock for the "first bettor of a new round" race;
+// wheel_rounds_single_betting_idx (a partial unique index) backstops the
+// rare interleave where two concurrent bets both see no open round, turning
+// the loser's insert into a 23505 that we recover from by re-selecting.
+// The INSERT runs inside a SAVEPOINT: a failed statement poisons a plain
+// Postgres transaction (every later query would die with 25P02), so without
+// the savepoint the recovery SELECT could never actually run.
+async function findOrCreateOpenRound(tx) {
+  const [openRound] = await tx`
+    select * from public.wheel_rounds
+    where status = 'betting' and spin_at > now()
+    order by created_at desc
+    limit 1
+    for update`;
+  if (openRound) return openRound;
+  try {
+    return await tx.savepoint(async (sp) => {
+      const [round] = await sp`
+        insert into public.wheel_rounds (spin_at)
+        values (now() + ${WHEEL_BETTING_WINDOW_MS} * interval '1 millisecond')
+        returning *`;
+      return round;
     });
+  } catch (err) {
+    if (String(err?.code) === "23505") {
+      const [round] = await tx`
+        select * from public.wheel_rounds
+        where status = 'betting'
+        order by created_at desc
+        limit 1
+        for update`;
+      if (round) return round;
+    }
+    throw err;
+  }
+}
+
+// state / history → resolve any due round, then return the snapshot.
+async function getState(userId) {
+  return await db.begin(async (tx) => {
+    await tx`set local lock_timeout = '4s'`;
+    await resolveDueRound(tx);
+    return await stateResponse(tx, userId);
   });
 }
 
-async function getState(userId) {
-  return await db.begin((tx) => stateResponse(tx, userId));
+// bet → join the current (or a freshly-opened) round with one stake. Coins
+// are only VALIDATED here, never deducted — they move for everyone at once
+// when the round resolves (see resolveOneRound).
+async function placeBet(userId, rawBet) {
+  const bet = validateBet(rawBet);
+
+  return await db.begin(async (tx) => {
+    await tx`set local lock_timeout = '4s'`;
+    // Resolve anything already due first, so a bet never lands inside a
+    // round whose window has technically already closed.
+    await resolveDueRound(tx);
+
+    // Lock ORDER: round row first, then the caller's profile row — mirrors
+    // resolveOneRound so bet() can never deadlock against a concurrent
+    // resolve of a DIFFERENT round.
+    const round = await findOrCreateOpenRound(tx);
+
+    const [profile] = await tx`select coins, nick from public.profiles where id = ${userId} for update`;
+    if (!profile) throw gameError("Profil nie istnieje.");
+    if (Number(profile.coins) < bet) throw gameError("Za mało coinów!");
+
+    try {
+      await tx`
+        insert into public.wheel_round_bets (round_id, user_id, nick_snapshot, total_bet)
+        values (${round.id}, ${userId}, ${String(profile.nick || "Gracz")}, ${bet})`;
+    } catch (err) {
+      if (String(err?.code) === "23505") throw gameError("Już postawiłeś w tej rundzie.");
+      throw err;
+    }
+
+    return await stateResponse(tx, userId);
+  });
 }
 
 Deno.serve(async (req) => {
@@ -208,7 +426,7 @@ Deno.serve(async (req) => {
 
     let result;
     if (action === "state" || action === "history") result = await getState(user.id);
-    else if (action === "spin") result = await spin(user.id, body.bet, body.risk);
+    else if (action === "bet") result = await placeBet(user.id, body.bet);
     else throw gameError("Nieznana akcja.");
 
     return json(req, { ok: true, ...result });
