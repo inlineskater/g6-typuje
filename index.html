@@ -27587,26 +27587,6 @@ function farmTimeAgo(iso) {
 function buildFarmCatalogBody(bodyEl) {
   bodyEl.replaceChildren();
   const mdl = farmCatalogModel();
-
-  const head = el('div', { className: 'farm-cat-head' },
-    el('div', { className: 'farm-cat-head-txt' },
-      el('div', { className: 'farm-cat-head-title' }, '📦 Skrzynka z nasionami — ' + FARM_BOX_PRICE + ' 🪙'),
-      el('div', { className: 'farm-cat-head-sub' }, 'Każda skrzynka losuje ' + FARM_BOX_DRAWS + ' różne karty. Karty 💎 NFT to limitowane, numerowane okazy.')));
-  const openLink = el('button', { className: 'farm-mini-btn primary' }, '🛒 Skrzynki w Sklepie');
-  openLink.addEventListener('click', () => { closeFarmModal(); openShopSection('farm-lootbox-section'); });
-  head.append(openLink);
-  bodyEl.append(head);
-
-  // One-line hint only; the full level mechanics live in „❓ Jak to działa".
-  bodyEl.append(el('div', { className: 'farm-cat-foot farm-cat-levels-note' },
-    'ℹ️ ', el('strong', {}, 'Kliknij roślinę'), ', aby rozwinąć jej poziomy 1–5. Jak działają poziomy i łączenie kart — zakładka ',
-    el('strong', {}, '❓ Jak to działa'), '.'));
-
-  bodyEl.append(el('div', { className: 'farm-cat-legend' },
-    'Kolumny: Szansa = Twoja obecna szansa w skrzynce po karze za posiadane NFT • Wzrost = czas do zbioru (min. 24 h) • Plon = sztuk z jednego zbioru • ',
-    el('strong', {}, 'Cena maks.'), ' = górny pułap; NPC płaci od ~30% do 100% tej kwoty, a cena zmienia się 2×/dobę (00:00 i 12:00) • ',
-    el('strong', {}, '≈ Zysk/doba (maks.)'), ' = maksymalny dzienny zysk z pola przy cenie maks. (plon × cena maks. ÷ dni wzrostu, poziom 1) — w praktyce zwykle mniej. Plony psują się 5 dni po zbiorze.'));
-
   bodyEl.append(farmCatalogTable(mdl));
 }
 
