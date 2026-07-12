@@ -13251,7 +13251,7 @@ function renderCasinoLuckBanners() {
       el('div', { className: 'casino-luck-copy' },
         el('div', { className: 'casino-luck-heading' },
           el('span', { className: 'casino-luck-name' }, 'Amulet Bezwstydnego Fartu'),
-          el('span', { className: 'casino-luck-state' }, active ? 'AKTYWNY' : 'UŚPIONY')
+          el('span', { className: 'casino-luck-state' }, active ? 'AKTYWNY' : 'NIEAKTYWNY')
         ),
         el('div', { className: 'casino-luck-effect' },
           el('b', {}, config.game), document.createTextNode(` · ${config.effect}`)
