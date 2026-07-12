@@ -12757,7 +12757,7 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'roulette' && item.effect_type === 'payout_bonus') return `Ruletka: +${value}% do wygranej wypłaty`;
   if (item?.effect_game === 'slots' && item.effect_type === 'rare_symbol_bonus') { const pts = value === 1 ? 'punkt' : (value >= 2 && value <= 4) ? 'punkty' : 'punktów'; return `Sloty: +${value} ${pts} wagi symbolu G6`; }
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
-  if (item?.effect_game === 'casino' && item.effect_type === 'casino_luck') return 'Kasyno: więcej szczęścia DLA WSZYSTKICH graczy (Sloty, Ruletka, Plinko, Miny)' + (item.duration_hours ? ` przez ${Math.round(item.duration_hours / 24)} dni` : '');
+  if (item?.effect_game === 'casino' && item.effect_type === 'casino_luck') return 'Kasyno: bezwstydnie OP fart DLA WSZYSTKICH graczy (Sloty, Ruletka, Plinko, Miny, Rakieta)' + (item.duration_hours ? ` przez ${Math.round(item.duration_hours / 24)} dni` : '');
   if (item?.effect_game === 'tavern') return 'Kolekcjonerski (ozdobny)';
   if (item?.effect_type === 'daily_interest') return `Pasywne: +${value}% coinów dziennie`;
   if (item?.effect_game === 'poker' && item.effect_type === 'odds_view') return 'Poker: widoczna szansa wygranej';

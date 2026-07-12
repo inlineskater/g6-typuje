@@ -38,8 +38,8 @@ ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_effect_game_chec
 INSERT INTO public.hero_item_defs
   (slug, name, emoji, slot, price, rarity, description, effect_game, effect_type, effect_value, sale_type, edition_size, visual_effect, is_active, duration_hours)
 VALUES
-  ('lucky_amulet', 'Amulet Fortuny', '🍀', 'trinket', 10000, 'legendary',
-   'Kupujesz dla całego biura: przez 7 dni kasyno sprzyja WSZYSTKIM graczom — Sloty: częstszy symbol G6, Ruletka: +1% do wygranych, Plinko: +1% do wypłat, Miny: wyższe mnożniki. Nie działa w Rakiecie ani w Pokerze. Kolejny zakup (kogokolwiek) przedłuża wspólny bonus o kolejne 7 dni.',
+  ('lucky_amulet', 'Amulet Bezwstydnego Fartu', '🍀', 'trinket', 10000, 'legendary',
+   'Kupujesz dla całego biura! Ten bezwstydnie OP talizman sprawia, że przez 7 dni fortuna sprzyja WSZYSTKIM graczom w KAŻDEJ grze kasynowej — Sloty, Ruletka, Plinko, Miny, a nawet Rakieta. Kolejny zakup (kogokolwiek) przedłuża wspólny bonus o kolejne 7 dni.',
    'casino', 'casino_luck', 1, 'shop', null, null, true, 168)
 ON CONFLICT (slug) DO UPDATE SET
   name           = EXCLUDED.name,

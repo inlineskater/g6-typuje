@@ -36,6 +36,31 @@ const MAX_BET = 10_000_000;     // ceiling for a custom stake (balance is still 
 // PARITY CONTRACT: CRASH_GROWTH must equal the constant of the same name in
 // index.html. Multiplier m(t) = exp(CRASH_GROWTH · elapsedMs); doubles every 15 s.
 const CRASH_GROWTH = Math.log(2) / 15000;
+// „Amulet Bezwstydnego Fartu" (communal casino_luck buff): while any unexpired instance
+// exists, every player's crash cash-out win is multiplied by this factor. Deliberately
+// makes Rakieta +EV — the item is meant to be OVERPOWERED and cover every casino game.
+const CASINO_LUCK_CRASH_FACTOR = 1.03;
+
+// True while any unexpired communal casino-luck amulet exists (any owner). Fails soft (false)
+// so a lookup hiccup never blocks a legit cash-out.
+async function hasCasinoLuck(tx) {
+  try {
+    const rows = await tx`
+      select 1
+      from public.hero_item_instances i
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where d.is_active = true
+        and d.effect_game = 'casino'
+        and d.effect_type = 'casino_luck'
+        and i.expires_at is not null
+        and i.expires_at > now()
+      limit 1`;
+    return rows.length > 0;
+  } catch (err) {
+    console.warn("Casino luck lookup unavailable:", err?.message ?? err);
+    return false;
+  }
+}
 
 function multAt(ms) { return Math.exp(CRASH_GROWTH * Math.max(0, ms)); }
 function durationFor(cp) { return Math.log(cp) / CRASH_GROWTH; } // ms; 0 for cp=1.00
@@ -283,7 +308,8 @@ async function cashOut(userId, clientMultiplier) {
       return await stateResponse(tx, userId, { notice: lateNotice, busted: { roundId: round.id, crashPoint: cp } });
     }
 
-    const won = Math.floor(Number(round.bet) * mult);
+    const luckFactor = (await hasCasinoLuck(tx)) ? CASINO_LUCK_CRASH_FACTOR : 1;
+    const won = Math.floor(Number(round.bet) * mult * luckFactor);
     await tx`update public.profiles set coins = coins + ${won} where id = ${userId}`;
     await tx`update public.crash_rounds set status = 'cashed' where id = ${round.id}`;
     if (round.status === 'busted') {
