@@ -5877,7 +5877,6 @@
         <button class="nav-tab" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
         <button class="nav-tab" data-shop-target="hero-shop-section">🎒 Przedmioty specjalne</button>
         <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
-        <button class="nav-tab" data-shop-target="zapps-shop-section">💎 Kup Zappsy</button>
       </div>
     </div>
     <button class="nav-tab" data-tab="leaderboard">📈 Statystyki</button>
@@ -7360,7 +7359,6 @@
         <button class="shop-category-filter" type="button" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
         <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">🎒 Przedmioty specjalne</button>
         <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
-        <button class="shop-category-filter" type="button" data-shop-target="zapps-shop-section">💎 Kup Zappsy</button>
       </div>
       <section class="shop-section" id="marketplace-section">
         <div class="shop-section-head">
@@ -7409,7 +7407,7 @@
         <div class="shop-grid" id="hero-auction-grid"></div>
       </section>
       <section class="shop-section" id="hero-shop-section">
-        <details class="cosmetics-details">
+        <details class="cosmetics-details" open>
           <summary class="cosmetics-summary">
             <span class="cosmetics-title">🎒 Przedmioty specjalne</span>
             <span class="cosmetics-chev">▾</span>
@@ -7430,39 +7428,6 @@
         </details>
       </section>
 
-      <section class="shop-section" id="zapps-shop-section">
-        <details class="cosmetics-details">
-        <summary class="cosmetics-summary">
-          <span class="cosmetics-title">💎 Kup Zappsy za coiny</span>
-          <span class="cosmetics-chev">▾</span>
-        </summary>
-        <div class="shop-section-sub" style="margin-top:12px">Wymień swoje coiny na prawdziwe <strong>Zappsy</strong> — kurs stały <strong>1 coin = 1 zapps</strong>. Pula jest ograniczona: do rozdania jest łącznie <strong id="zapps-pool-total">1500</strong> Zappsów (<strong id="zapps-pool-remaining">…</strong> pozostało). Wypełnij zgłoszenie, a admin po zatwierdzeniu odejmie coiny z Twojego konta i przekaże Ci Zappsy.</div>
-
-        <div class="topup-wrap">
-          <div class="topup-card">
-            <div class="topup-card-title">🛒 Nowe zamówienie</div>
-            <ol class="topup-how">
-              <li>Wpisz, ile Zappsów chcesz kupić (= tyle samo coinów).</li>
-              <li>Wy&#347;lij zg&#322;oszenie — coiny zostan&#261; pobrane dopiero po zatwierdzeniu.</li>
-              <li>Admin zatwierdzi i przeka&#380;e Ci Zappsy. 💎</li>
-            </ol>
-            <label class="field-label" for="zapps-amount">Ile Zappsów (= coinów)</label>
-            <input type="number" id="zapps-amount" min="1" step="1" value="100" inputmode="numeric" autocomplete="off">
-            <button class="btn-primary" id="btn-zapps-submit" style="margin-top:12px">Wyślij zamówienie</button>
-          </div>
-
-          <div class="topup-card">
-            <div class="topup-card-title">📋 Twoje zamówienia</div>
-            <div id="zapps-my-list"><div class="loading-center"><div class="spinner"></div></div></div>
-          </div>
-        </div>
-
-        <div id="zapps-admin" class="topup-admin hidden">
-          <div class="topup-card-title">🛠️ Konsola admina — oczekujące zamówienia</div>
-          <div id="zapps-admin-list"><div class="loading-center"><div class="spinner"></div></div></div>
-        </div>
-        </details>
-      </section>
     </main>
   </div>
 
