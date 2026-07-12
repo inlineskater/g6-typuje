@@ -2436,8 +2436,7 @@
       color: #3f6212; font-size: 12px; font-weight: 800;
     }
 
-    /* Persistent gold-tinted chip for the communal casino-luck amulet —
-       small, doesn't disturb the toolbar layout, shown only while active. */
+    /* Compact mount for the communal casino-luck card in the wheel toolbar. */
     .wheel-luck-chip {
       padding: 6px 9px; border-radius: 8px; text-align: center;
       background: linear-gradient(120deg, rgba(250,204,21,.16), rgba(74,124,44,.1));
@@ -2445,24 +2444,89 @@
       color: #92400e; font-size: 11px; font-weight: 800; line-height: 1.3;
     }
     .casino-luck-banner {
-      display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 10px;
-      margin: 0 0 10px; padding: 7px 10px; border: 1px solid rgba(100,116,139,.22);
-      border-radius: 10px; background: rgba(248,250,252,.9); color: #475569;
-      font-size: 12px; line-height: 1.35;
+      position: relative; isolation: isolate; overflow: hidden;
+      display: grid; flex: 0 0 auto; grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center; gap: 10px; margin: 0 0 10px; padding: 8px 10px;
+      border: 1px solid rgba(217,184,83,.38); border-radius: 12px;
+      background:
+        radial-gradient(circle at 8% 10%, rgba(250,204,21,.15), transparent 32%),
+        linear-gradient(125deg, #0b2b1b 0%, #123c26 62%, #0b2719 100%);
+      color: #ecfccb; box-shadow: 0 5px 18px rgba(6,28,17,.16), inset 0 1px 0 rgba(255,255,255,.06);
+      font-size: 12px; line-height: 1.25;
+    }
+    .casino-luck-banner::after {
+      content: ""; position: absolute; z-index: -1; right: 46px; top: -34px;
+      width: 115px; height: 115px; border: 1px solid rgba(250,204,21,.08);
+      border-radius: 50%; box-shadow: 0 0 0 18px rgba(250,204,21,.025), 0 0 0 38px rgba(250,204,21,.018);
     }
     .casino-luck-banner.is-active {
-      border-color: rgba(202,138,4,.38);
-      background: linear-gradient(135deg, rgba(254,243,199,.92), rgba(236,252,203,.88));
-      color: #713f12; box-shadow: 0 2px 10px rgba(161,98,7,.08);
+      border-color: rgba(250,204,21,.72);
+      background:
+        radial-gradient(circle at 8% 10%, rgba(250,204,21,.28), transparent 34%),
+        linear-gradient(125deg, #103b22 0%, #25652f 60%, #123c23 100%);
+      box-shadow: 0 6px 22px rgba(21,128,61,.2), 0 0 0 1px rgba(250,204,21,.08), inset 0 1px 0 rgba(255,255,255,.1);
     }
-    .casino-luck-banner strong { color: inherit; }
+    .casino-luck-emblem {
+      position: relative; display: grid; place-items: center; width: 36px; height: 36px;
+      border: 1px solid rgba(250,204,21,.42); border-radius: 50%;
+      background: radial-gradient(circle at 35% 28%, #fff7c2, #d6a91d 48%, #72510a 100%);
+      box-shadow: 0 3px 10px rgba(0,0,0,.24), inset 0 1px 2px rgba(255,255,255,.72);
+      font-size: 19px; filter: saturate(.82); transition: filter .2s, transform .2s;
+    }
+    .casino-luck-banner.is-active .casino-luck-emblem { filter: saturate(1.15); transform: rotate(-4deg); }
+    .casino-luck-emblem::after {
+      content: ""; position: absolute; inset: 3px; border: 1px solid rgba(74,59,8,.28); border-radius: 50%;
+    }
+    .casino-luck-copy { min-width: 0; display: grid; gap: 3px; }
+    .casino-luck-heading { display: flex; align-items: center; gap: 7px; min-width: 0; }
+    .casino-luck-name {
+      overflow: hidden; color: #fef9c3; font-size: 11.5px; font-weight: 900;
+      letter-spacing: .01em; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .casino-luck-state {
+      flex: 0 0 auto; padding: 2px 6px; border: 1px solid rgba(203,213,225,.24);
+      border-radius: 999px; background: rgba(15,23,42,.26); color: #cbd5e1;
+      font-size: 8px; font-weight: 950; letter-spacing: .1em;
+    }
+    .casino-luck-banner.is-active .casino-luck-state {
+      border-color: rgba(190,242,100,.42); background: rgba(132,204,22,.17); color: #d9f99d;
+      box-shadow: 0 0 9px rgba(163,230,53,.12);
+    }
+    .casino-luck-effect { color: #d5e7d7; font-size: 10.5px; }
+    .casino-luck-effect b { color: #fef08a; font-weight: 900; }
+    .casino-luck-meta { color: #91ad98; font-size: 9.5px; }
+    .casino-luck-banner.is-active .casino-luck-meta { color: #bbd8be; }
     .casino-luck-store-link {
-      flex: 0 0 auto; border: 0; background: transparent; color: #4d7c0f;
-      padding: 2px 0; font: inherit; font-weight: 900; text-decoration: underline;
-      text-underline-offset: 2px; cursor: pointer;
+      position: relative; flex: 0 0 auto; border: 1px solid rgba(250,204,21,.44);
+      border-radius: 999px; background: rgba(250,204,21,.1); color: #fef08a;
+      padding: 6px 9px; font: inherit; font-size: 9.5px; font-weight: 900;
+      white-space: nowrap; cursor: pointer; transition: background .16s, border-color .16s, transform .16s;
     }
-    #wheel-luck-chip.casino-luck-banner { margin: 0; }
+    .casino-luck-store-link:hover { background: rgba(250,204,21,.19); border-color: rgba(250,204,21,.7); transform: translateY(-1px); }
+    .shop-card.is-amulet-target {
+      border-color: rgba(202,138,4,.8) !important;
+      box-shadow: 0 0 0 3px rgba(250,204,21,.18), 0 12px 32px rgba(113,63,18,.18) !important;
+      animation: amulet-target-arrive .7s ease-out;
+    }
+    @keyframes amulet-target-arrive {
+      0% { transform: translateY(8px) scale(.985); }
+      55% { transform: translateY(-2px) scale(1.012); }
+      100% { transform: none; }
+    }
+    #wheel-luck-chip.casino-luck-banner { margin: 0; text-align: left; }
+    #wheel-luck-chip.casino-luck-banner,
+    #tab-slots [data-casino-luck-game="slots"] { grid-template-columns: auto minmax(0, 1fr); }
+    #wheel-luck-chip .casino-luck-heading,
+    #tab-slots [data-casino-luck-game="slots"] .casino-luck-heading { display: grid; justify-items: start; gap: 3px; }
+    #wheel-luck-chip .casino-luck-name,
+    #tab-slots [data-casino-luck-game="slots"] .casino-luck-name { white-space: normal; overflow: visible; font-size: 10.5px; }
+    #wheel-luck-chip .casino-luck-store-link,
+    #tab-slots [data-casino-luck-game="slots"] .casino-luck-store-link { grid-column: 1 / -1; width: 100%; }
     #tab-slots [data-casino-luck-game="slots"] { grid-column: 1; grid-row: 1; align-self: start; }
+    @media (max-width: 640px) {
+      .casino-luck-banner { grid-template-columns: auto minmax(0, 1fr); padding: 8px; }
+      .casino-luck-store-link { grid-column: 1 / -1; width: 100%; }
+    }
 
     .wheel-bets-wrap { margin-top: 4px; }
     .wheel-bets-list {
@@ -6862,7 +6926,7 @@
               <p class="plinko-note">To JEDNO wspólne koło dla wszystkich graczy. Gdy ktoś postawi pierwszy zakład, otwiera się 15-sekundowe okno — każdy może w nim postawić własną stawkę (jeden zakład na rundę). Gdy czas minie, serwer losuje JEDEN segment i wypłaca każdego gracza tym samym mnożnikiem.</p>
               <p class="plinko-note">Po postawieniu kliknij <b>JESTEM GOTOWY</b>. Gdy zrobią to wszyscy obstawiający, licznik skraca się do 3 sekund, żeby urządzenia zdążyły zsynchronizować obrót.</p>
               <p class="plinko-note">Koło ma 20 pól: 1× ×10 (jackpot 🦬), 3× ×2, 2× ZWROT stawki, 2× ×0,5 (pół stawki wraca) i 12× pudło. RTP całego koła to 95%.</p>
-              <p class="plinko-note">Komunalny bonus 🍀 Amulet Bezwstydnego Fartu ×1,01 na wygrane, kupowany w Sklepie — jeśli ktokolwiek w biurze go aktualnie posiada, podbija wypłaty wszystkich graczy.</p>
+              <p class="plinko-note">Komunalny bonus 🍀 Amulet Bezwstydnego Fartu, kupowany w Sklepie — jeśli ktokolwiek w biurze go aktualnie posiada, fortuna mocniej sprzyja wszystkim graczom.</p>
               <div id="wheel-payout-tables" class="wheel-payout-tables"></div>
             </details>
           </section>
@@ -8350,13 +8414,14 @@ const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants'
 let heroItemDefs = [];
 let casinoLuckGlobalUntil = null; // shared „Amulet Bezwstydnego Fartu" buff end (casino_luck_status view)
 let casinoLuckStatusLoadedAt = 0;
+let pendingHeroShopTarget = null;
 const CASINO_LUCK_EFFECT_LABELS = {
-  roulette: '+1% do wygranej wypłaty',
-  slots: 'większa szansa na symbol G6',
-  plinko: 'wygrane ×1,01',
-  mines: 'lepsze mnożniki (RTP ok. 98%)',
-  crash: 'wygrane ×1,03',
-  wheel: 'wygrane ×1,01',
+  roulette: { game: 'Ruletka', effect: 'wzmacnia zwycięskie wypłaty' },
+  slots: { game: 'Sloty', effect: 'sprzyja symbolom premium' },
+  plinko: { game: 'Plinko', effect: 'podkręca szczęśliwe trafienia' },
+  mines: { game: 'Miny', effect: 'poprawia mnożniki wypłat' },
+  crash: { game: 'Rakieta', effect: 'wzmacnia udane wypłaty' },
+  wheel: { game: 'Koło Żubra', effect: 'wzmacnia zwycięskie pola' },
 };
 let myHeroInventory = [];
 let heroAuctionItemDefs = [];
@@ -13174,18 +13239,54 @@ function ensureCasinoLuckBanner(game) {
 function renderCasinoLuckBanners() {
   const untilMs = Date.parse(casinoLuckGlobalUntil || '');
   const active = Number.isFinite(untilMs) && untilMs > Date.now();
-  Object.entries(CASINO_LUCK_EFFECT_LABELS).forEach(([game, effect]) => {
+  Object.entries(CASINO_LUCK_EFFECT_LABELS).forEach(([game, config]) => {
     const banner = ensureCasinoLuckBanner(game);
     if (!banner) return;
     banner.classList.remove('hidden');
     banner.classList.toggle('is-active', active);
-    const message = active
-      ? `🍀 Amulet Bezwstydnego Fartu aktywny do ${fmtDateTime(casinoLuckGlobalUntil)} — ${effect}.`
-      : `🍀 Amulet Bezwstydnego Fartu jest nieaktywny — po aktywacji dla wszystkich: ${effect}.`;
-    const storeBtn = el('button', { className: 'casino-luck-store-link', type: 'button' }, active ? 'Przedłuż w Sklepie' : 'Zobacz w Sklepie');
-    storeBtn.addEventListener('click', () => switchTab('shop'));
-    banner.replaceChildren(el('strong', {}, message), storeBtn);
+    const storeBtn = el('button', { className: 'casino-luck-store-link', type: 'button' }, active ? 'PRZEDŁUŻ W SKLEPIE →' : 'ZOBACZ W SKLEPIE →');
+    storeBtn.addEventListener('click', () => openHeroItemInShop('lucky_amulet'));
+    banner.replaceChildren(
+      el('div', { className: 'casino-luck-emblem', 'aria-hidden': 'true' }, '🍀'),
+      el('div', { className: 'casino-luck-copy' },
+        el('div', { className: 'casino-luck-heading' },
+          el('span', { className: 'casino-luck-name' }, 'Amulet Bezwstydnego Fartu'),
+          el('span', { className: 'casino-luck-state' }, active ? 'AKTYWNY' : 'UŚPIONY')
+        ),
+        el('div', { className: 'casino-luck-effect' },
+          el('b', {}, config.game), document.createTextNode(` · ${config.effect}`)
+        ),
+        el('div', { className: 'casino-luck-meta' }, active
+          ? `Wspólny fart działa do ${fmtDateTime(casinoLuckGlobalUntil)}`
+          : 'Wspólny bonus dla całego kasyna czeka na aktywację')
+      ),
+      storeBtn
+    );
   });
+}
+
+function focusPendingHeroShopTarget() {
+  if (!pendingHeroShopTarget || activeTab !== 'shop') return false;
+  const card = document.querySelector(`[data-hero-item-slug="${pendingHeroShopTarget}"]`);
+  if (!card) return false;
+  pendingHeroShopTarget = null;
+  card.scrollIntoView({ behavior: plinkoReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+  card.classList.remove('is-amulet-target');
+  void card.offsetWidth;
+  card.classList.add('is-amulet-target');
+  setTimeout(() => card.classList.remove('is-amulet-target'), 2600);
+  return true;
+}
+
+function openHeroItemInShop(slug) {
+  pendingHeroShopTarget = slug;
+  switchTab('shop');
+  if (focusPendingHeroShopTarget()) return;
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts += 1;
+    if (focusPendingHeroShopTarget() || attempts >= 40) clearInterval(timer);
+  }, 100);
 }
 
 async function loadCasinoLuckStatus(force = false) {
@@ -13875,6 +13976,7 @@ async function loadShop() {
   }
   renderCosmeticsGrid();
   renderHeroShopGrid();
+  requestAnimationFrame(focusPendingHeroShopTarget);
   renderHeroAuctionAdmin();
   renderHeroAuctionGrid();
   renderMarketplaceGrid();
@@ -13974,6 +14076,7 @@ function renderHeroShopGrid() {
     const itemPrice = Number(item.price || 0);
     const itemCanAfford = (me?.coins || 0) >= itemPrice;
     const itemCard = el('div', { className: 'shop-card' });
+    itemCard.dataset.heroItemSlug = item.slug;
     itemCard.appendChild(el('div', { className: 'shop-card-icon' }, item.emoji || '🎒'));
     itemCard.appendChild(el('div', { className: 'shop-card-title' }, item.name));
     itemCard.appendChild(el('div', { className: 'shop-card-desc' }, item.description || heroItemEffectLabel(item)));
@@ -17467,8 +17570,7 @@ function applyWheelState(data) {
 }
 
 // Persistent gold chip near the controls, shown only while the communal
-// „Amulet Bezwstydnego Fartu" is active — mirrors casinoLuckGlobalUntil's
-// pl-PL date formatting (fmtDateTime) used elsewhere in the app.
+// Keep the shared amulet card in sync with wheel-action's authoritative status.
 function renderWheelLuckChip() {
   casinoLuckGlobalUntil = wheelCasinoLuck && wheelCasinoLuckUntil ? wheelCasinoLuckUntil : null;
   casinoLuckStatusLoadedAt = Date.now();
