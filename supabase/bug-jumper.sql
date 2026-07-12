@@ -378,8 +378,12 @@ BEGIN
 
     PERFORM cron.schedule(
       'bug_jumper_weekly_awards',
-      '5 0 * * 1',
-      $cron$SELECT public.award_bug_jumper_week(public.bug_jumper_week_start(now() - interval '7 days'));$cron$
+      '0 22,23 * * 0',
+      $cron$SELECT CASE
+        WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer = 0
+          THEN public.award_bug_jumper_week(public.bug_jumper_week_start(now() - interval '7 days'))
+        ELSE json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      END;$cron$
     );
   END IF;
 END;

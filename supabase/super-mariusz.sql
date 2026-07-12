@@ -345,8 +345,11 @@ BEGIN
 
     PERFORM cron.schedule(
       'super_mariusz_weekly_awards',
-      '5 0 * * 1',
-      $cron$SELECT CASE WHEN public.seasonal_game_for_week(public.super_mariusz_week_start(now() - interval '7 days')) = 'super_mariusz'
+      '0 22,23 * * 0',
+      $cron$SELECT CASE
+        WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+          THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+        WHEN public.seasonal_game_for_week(public.super_mariusz_week_start(now() - interval '7 days')) = 'super_mariusz'
           THEN public.award_super_mariusz_week(public.super_mariusz_week_start(now() - interval '7 days'))
           ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$cron$
     );

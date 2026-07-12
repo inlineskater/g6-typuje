@@ -36,67 +36,86 @@ AS $$
   END;
 $$;
 
+-- pg_cron runs in UTC/GMT. Warsaw midnight is 22:00 UTC in summer and
+-- 23:00 UTC in winter, so each job tries both and the first CASE arm keeps
+-- only the invocation that lands at local 00:00.
 -- cron.schedule() with an existing jobname replaces that job's command.
 SELECT cron.schedule(
   'whack_boss_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.whack_boss_week_start(now() - interval '7 days')) = 'whack_boss'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.whack_boss_week_start(now() - interval '7 days')) = 'whack_boss'
       THEN public.award_whack_boss_week(public.whack_boss_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
 SELECT cron.schedule(
   'bug_jumper_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.bug_jumper_week_start(now() - interval '7 days')) = 'bug_jumper'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.bug_jumper_week_start(now() - interval '7 days')) = 'bug_jumper'
       THEN public.award_bug_jumper_week(public.bug_jumper_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
 SELECT cron.schedule(
   'flappy_pants_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.flappy_pants_week_start(now() - interval '7 days')) = 'flappy_pants'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.flappy_pants_week_start(now() - interval '7 days')) = 'flappy_pants'
       THEN public.award_flappy_pants_week(public.flappy_pants_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
 SELECT cron.schedule(
   'snake_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.snake_week_start(now() - interval '7 days')) = 'snake'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.snake_week_start(now() - interval '7 days')) = 'snake'
       THEN public.award_snake_week(public.snake_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
 SELECT cron.schedule(
   'invoice_horde_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.invoice_horde_week_start(now() - interval '7 days')) = 'invoice_horde'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.invoice_horde_week_start(now() - interval '7 days')) = 'invoice_horde'
       THEN public.award_invoice_horde_week(public.invoice_horde_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
 SELECT cron.schedule(
   'var_patrol_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.var_patrol_week_start(now() - interval '7 days')) = 'var_patrol'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.var_patrol_week_start(now() - interval '7 days')) = 'var_patrol'
       THEN public.award_var_patrol_week(public.var_patrol_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
 SELECT cron.schedule(
   'egg_catch_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.egg_catch_week_start(now() - interval '7 days')) = 'egg_catch'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.egg_catch_week_start(now() - interval '7 days')) = 'egg_catch'
       THEN public.award_egg_catch_week(public.egg_catch_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
 SELECT cron.schedule(
   'super_mariusz_weekly_awards',
-  '5 0 * * 1',
-  $$SELECT CASE WHEN public.seasonal_game_for_week(public.super_mariusz_week_start(now() - interval '7 days')) = 'super_mariusz'
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.super_mariusz_week_start(now() - interval '7 days')) = 'super_mariusz'
       THEN public.award_super_mariusz_week(public.super_mariusz_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );

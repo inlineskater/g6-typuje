@@ -53,7 +53,7 @@ RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_user        uuid := p_user;
   v_garden      public.gardens%ROWTYPE;
-  v_today       date := CURRENT_DATE;
+  v_today       date := (now() AT TIME ZONE 'Europe/Warsaw')::date;
   v_streak      integer;
   v_waters      integer;
   v_reward      integer;

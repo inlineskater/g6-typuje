@@ -900,10 +900,16 @@ BEGIN
     IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'farm_seasonal_weekly_awards') THEN
       PERFORM cron.unschedule('farm_seasonal_weekly_awards');
     END IF;
+    -- pg_cron is UTC/GMT. Try the two UTC hours that can be Warsaw midnight
+    -- and let the command's Warsaw-hour gate select exactly one (DST-safe).
     PERFORM cron.schedule(
       'farm_seasonal_weekly_awards',
-      '5 0 * * 1',
-      $cron$SELECT public.award_farm_seasonal_week(public.farm_seasonal_week_start(now() - interval '7 days'));$cron$
+      '0 22,23 * * 0',
+      $cron$SELECT CASE
+        WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer = 0
+          THEN public.award_farm_seasonal_week(public.farm_seasonal_week_start(now() - interval '7 days'))
+        ELSE json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      END;$cron$
     );
   END IF;
 EXCEPTION WHEN invalid_schema_name OR undefined_function THEN

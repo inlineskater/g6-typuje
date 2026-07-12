@@ -14,7 +14,7 @@ Nawigacja: drewniany pasek nad polem ma przyciski **🎒 Mój Majątek / 📖 Ka
 
 ## Siatka i działki
 
-Plansza ma **13 × 4 = 52 pola**. Typy: wolne (brak wpisu w `farm_tiles`), migracyjne (`acquired_via='migration'` — rośliny zen z dawnego Ogródka, podlewane co 5 h / maks. 3× dziennie, nie da się na nich sadzić upraw), kupione (`purchase`), z vouchera (`lootbox`), z Targowiska (`marketplace`).
+Plansza ma **13 × 4 = 52 pola**. Typy: wolne (brak wpisu w `farm_tiles`), migracyjne (`acquired_via='migration'` — rośliny zen z dawnego Ogródka, podlewane co 5 h / maks. 3× dziennie; limit dnia resetuje się o **00:00 Europe/Warsaw**, nie według UTC; nie da się na nich sadzić upraw), kupione (`purchase`), z vouchera (`lootbox`), z Targowiska (`marketplace`).
 
 Cena kolejnej działki podwaja się (`buy_farm_tile`, BURN `farm_tile_buy`):
 
@@ -114,6 +114,8 @@ Nagrody tygodnia:
 - 2. miejsce: **1500 🪙 + 5 skrzynek**.
 - 3. miejsce: **1000 🪙 + 2 skrzynki**.
 - Jeśli wspólny pasek się zapełni, każdy kontrybutor z **min. 1 sprzedaną sztuką** dostaje **5 skrzynek**.
+
+Nagrody są rozliczane w poniedziałek dokładnie o **00:00 Europe/Warsaw**. Harmonogram próbuje oba możliwe przesunięcia UTC i wykonuje wypłatę tylko wtedy, gdy lokalna godzina Warszawy wynosi 00, więc zmiana czasu letni/zimowy nie przesuwa wypłaty.
 
 ## Karty NFT (legendarne, numerowane)
 

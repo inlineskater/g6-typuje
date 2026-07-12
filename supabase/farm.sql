@@ -1474,7 +1474,14 @@ BEGIN
     IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'farm_rot_cleanup') THEN
       PERFORM cron.unschedule('farm_rot_cleanup');
     END IF;
-    PERFORM cron.schedule('farm_rot_cleanup', '20 0 * * *', $cron$SELECT public.farm_rot_cleanup();$cron$);
+    -- pg_cron is UTC/GMT. Try both UTC offsets used by Warsaw and execute
+    -- only at local 00:00, so this remains correct across DST changes.
+    PERFORM cron.schedule(
+      'farm_rot_cleanup',
+      '0 22,23 * * *',
+      $cron$SELECT public.farm_rot_cleanup()
+        WHERE EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer = 0;$cron$
+    );
   END IF;
 END $$;
 

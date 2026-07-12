@@ -18608,9 +18608,13 @@ function recentSeasonalEntries(limit = null) {
   });
 }
 
+function warsawCalendarDateStr(date = new Date()) {
+  return date.toLocaleDateString('sv', { timeZone: 'Europe/Warsaw' });
+}
+
 function currentSeasonWeekStartStr() {
   const now = new Date();
-  const warsawDateStr = now.toLocaleDateString('sv', { timeZone: 'Europe/Warsaw' });
+  const warsawDateStr = warsawCalendarDateStr(now);
   const [y, m, d] = warsawDateStr.split('-').map(Number);
   const warsawDate = new Date(Date.UTC(y, m - 1, d, 12));
   const dow = warsawDate.getUTCDay();
@@ -26971,7 +26975,7 @@ let farmPlantModalEsc = null;
 
 function farmPlantSnapshot(g) {
   const totalWaters = Math.max(0, Number(g?.total_waters || 0));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = warsawCalendarDateStr();
   const watersToday = (g?.last_water_date === today) ? Math.max(0, Number(g?.waters_today || 0)) : 0;
   const dailyFull = watersToday >= 3;
   let canWater = !dailyFull;
@@ -30975,7 +30979,7 @@ function renderZenGarden() {
 
   function buildPlantBoard(garden, label) {
     const board = el('div', { className: 'sign-board', style: { marginTop: '12px' } });
-    const today = new Date().toISOString().slice(0, 10);
+    const today = warsawCalendarDateStr();
     const watersToday = (garden.last_water_date === today) ? (garden.waters_today || 0) : 0;
     const streak = garden.streak_days || 0;
     const emoji = getPlantEmoji(garden.plant_type, garden.stage);
@@ -31713,7 +31717,7 @@ function buildPot(g, isMine) {
   }
 
   // Cooldown / daily-cap state
-  const today = new Date().toISOString().slice(0, 10);
+  const today = warsawCalendarDateStr();
   const dailyFull = g.waters_today >= 3 && g.last_water_date === today;
   const watersToday = (g.last_water_date === today) ? (g.waters_today || 0) : 0;
   const activeAccessoryCount = gardenActiveEquippedCount(equipped);
