@@ -5027,8 +5027,9 @@
     .farm-cell.crop.ready .farm-cell-emoji { transform: scale(1); opacity: 1; filter: drop-shadow(0 1px 4px rgba(34,197,94,.7)); animation: farmCropBob 1.9s ease-in-out infinite; }
     @keyframes farmCropBob { 0%, 100% { transform: scale(1) translateY(0); } 50% { transform: scale(1.06) translateY(-2px); } }
     @media (prefers-reduced-motion: reduce) { .farm-cell.crop.ready .farm-cell-emoji { animation: none; } }
-    .farm-cell-name { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; text-align: center; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+    .farm-cell-name { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; display: flex; align-items: baseline; justify-content: center; gap: 2px; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; pointer-events: none; }
     @media (max-width: 520px) { .farm-cell-name { font-size: 7px; } }
+    .farm-cell-name-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .farm-cell-owner { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; text-align: center; font-size: 9px; font-weight: 800; color: #ffd97a; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     @media (max-width: 520px) { .farm-cell-owner { font-size: 7px; } }
     .farm-cell.crop .farm-cell-name, .farm-plant-cell .farm-cell-name { bottom: 12px; }
@@ -5036,6 +5037,7 @@
     .farm-cell-bar-fill { height: 100%; background: linear-gradient(90deg, #fbbf24, #f59e0b); border-radius: 999px; transition: width .3s linear, background .3s; }
     .farm-cell-bar.ready .farm-cell-bar-fill { background: linear-gradient(90deg, #34d399, #16a34a); }
     .farm-cell-ready { position: absolute; top: 2px; right: 4px; color: #16a34a; font-weight: 800; font-size: 13px; }
+    .farm-cell-level { flex: 0 0 auto; font-weight: 800; opacity: .85; }
     .farm-sale-sign { position: absolute; top: 5px; right: 5px; z-index: 9; display: flex; flex-direction: column; align-items: center; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); transform: rotate(-4deg); }
     .farm-sale-sign::after { content: ""; width: 2px; height: 12px; background: #7c3f13; border-radius: 2px; margin-top: -1px; }
     .farm-sale-sign span { display: block; padding: 2px 4px; border: 1px solid #7c2d12; border-radius: 2px; background: #fff7ed; color: #9a3412; font-size: 7px; line-height: 1; font-weight: 900; letter-spacing: 0; box-shadow: inset 0 0 0 1px rgba(251,146,60,.35); white-space: nowrap; }
@@ -25861,7 +25863,10 @@ function renderFarmBoard() {
       if (tile.planted_species) {
         cell.classList.add('crop');
         const def = fmDefs.get(tile.planted_species);
-        cell.appendChild(el('span', { className: 'farm-cell-name' }, def ? def.name : tile.planted_species));
+        cell.appendChild(el('span', { className: 'farm-cell-name' },
+          el('span', { className: 'farm-cell-name-text' }, def ? def.name : tile.planted_species),
+          el('span', { className: 'farm-cell-level' }, 'lvl ' + (tile.planted_level || 1))
+        ));
         cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.nick || '?'));
         cell.appendChild(el('span', { className: 'farm-cell-emoji' }));
         const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
