@@ -72,11 +72,18 @@ CREATE TABLE IF NOT EXISTS public.wheel_round_bets (
   user_id       uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   nick_snapshot text NOT NULL,
   total_bet     integer NOT NULL CHECK (total_bet > 0),
+  ready         boolean NOT NULL DEFAULT false, -- fast-start vote: when EVERY
+                                                -- bet in the round is ready,
+                                                -- wheel-action pulls spin_at in
   multiplier    numeric(12,2), -- NULL until the round resolves
   total_won     integer,       -- NULL until the round resolves
   created_at    timestamptz NOT NULL DEFAULT now(),
   UNIQUE (round_id, user_id) -- one bet per player per round
 );
+
+-- Idempotent upgrade for a table created by an earlier run of this file.
+ALTER TABLE public.wheel_round_bets
+  ADD COLUMN IF NOT EXISTS ready boolean NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS wheel_round_bets_round_idx
   ON public.wheel_round_bets(round_id, created_at);

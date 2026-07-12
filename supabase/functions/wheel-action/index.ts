@@ -50,6 +50,10 @@ const DEFAULT_BET = 10;
 // First bet on a fresh round opens this window; PARITY CONTRACT with
 // WHEEL_BETTING_WINDOW_MS in index.html (used for the client-side countdown).
 const WHEEL_BETTING_WINDOW_MS = 15_000;
+// Fast-start: when EVERY bettor in the round has voted ready, spin_at is
+// pulled in to now + this grace (never pushed out) — long enough for the
+// other clients' poll/realtime to sync the accelerated countdown.
+const WHEEL_READY_GRACE_MS = 3_000;
 // How many resolved rounds `state` returns in `recentRounds`.
 const RECENT_ROUNDS = 10;
 
@@ -58,10 +62,9 @@ const RECENT_ROUNDS = 10;
 // shared set — no risk tiers). Composition: 1× 10x (jackpot), 3× 2x,
 // 2× 1x (zwrot stawki), 2× 0.5x (pół stawki wraca), 12× 0x. Sum = 19.0 ->
 // RTP 95.0% before flooring/luck (×1.01 amulet lands it at 95.95%, still
-// below 100%). Layout: the three 2x sit clustered (idx 0-2); the 10x sits at
-// idx 11, exactly opposite the cluster's center (idx 1 + 10 = 11); the two
-// 1x and two 0.5x are spread symmetrically around the 10x; zeros fill the
-// gaps in runs of exactly 2 (never more than 3, per design brief).
+// below 100%). Layout: no two prizes adjacent — the 10x stands alone at
+// idx 0, the 2x at 3/7/12, 0.5x at 5/14, 1x at 9/16; zeros fill the gaps
+// (longest run 3, at idx 17-19 leading into the jackpot).
 const SEGMENTS = [10, 0, 0, 2, 0, 0.5, 0, 2, 0, 1, 0, 0, 2, 0, 0.5, 0, 1, 0, 0, 0];
 const SEGMENT_COUNT = 20;
 const WHEEL_RTP = 0.95;
@@ -198,6 +201,7 @@ function betOut(row) {
     userId: row.user_id,
     nick: row.nick_snapshot,
     bet: Number(row.total_bet),
+    ready: !!row.ready,
     multiplier: row.multiplier != null ? Number(row.multiplier) : null,
     totalWon: row.total_won != null ? Number(row.total_won) : null,
     createdAt: row.created_at,
@@ -225,7 +229,7 @@ async function currentRoundWithBets(tx) {
   }
   if (!round) return { round: null, bets: [] };
   const bets = await tx`
-    select user_id, nick_snapshot, total_bet, multiplier, total_won, created_at
+    select user_id, nick_snapshot, total_bet, ready, multiplier, total_won, created_at
     from public.wheel_round_bets
     where round_id = ${round.id}
     order by created_at asc`;
@@ -415,6 +419,48 @@ async function placeBet(userId, rawBet) {
   });
 }
 
+// ready → fast-start vote. Marks the caller's bet ready; when EVERY bet in
+// the open round is ready, spin_at is pulled in to now + WHEEL_READY_GRACE_MS
+// (LEAST() — never pushed out, so voting near the natural deadline is a
+// no-op). A bettor joining AFTER acceleration simply joins the short window;
+// their un-ready flag does not revert spin_at. Lock ORDER: round row first
+// (FOR UPDATE), profile never — same first lock as bet()/resolveOneRound.
+async function markReady(userId) {
+  return await db.begin(async (tx) => {
+    await tx`set local lock_timeout = '4s'`;
+    await resolveDueRound(tx);
+
+    const [round] = await tx`
+      select * from public.wheel_rounds
+      where status = 'betting' and spin_at > now()
+      order by created_at desc
+      limit 1
+      for update`;
+    // Window already closed (or nothing open): nothing to accelerate — the
+    // snapshot below simply shows the caller whatever is current.
+    if (round) {
+      const updated = await tx`
+        update public.wheel_round_bets
+        set ready = true
+        where round_id = ${round.id} and user_id = ${userId}
+        returning id`;
+      if (!updated.length) throw gameError("Najpierw postaw zakład.");
+      const [{ waiting }] = await tx`
+        select count(*)::int as waiting
+        from public.wheel_round_bets
+        where round_id = ${round.id} and ready = false`;
+      if (waiting === 0) {
+        await tx`
+          update public.wheel_rounds
+          set spin_at = least(spin_at, now() + ${WHEEL_READY_GRACE_MS} * interval '1 millisecond')
+          where id = ${round.id}`;
+      }
+    }
+
+    return await stateResponse(tx, userId);
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   if (req.method !== "POST") return json(req, { ok: false, error: "Method not allowed." }, 405);
@@ -427,6 +473,7 @@ Deno.serve(async (req) => {
     let result;
     if (action === "state" || action === "history") result = await getState(user.id);
     else if (action === "bet") result = await placeBet(user.id, body.bet);
+    else if (action === "ready") result = await markReady(user.id);
     else throw gameError("Nieznana akcja.");
 
     return json(req, { ok: true, ...result });

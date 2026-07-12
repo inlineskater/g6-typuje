@@ -2444,6 +2444,25 @@
       border: 1px solid rgba(212,175,55,.45);
       color: #92400e; font-size: 11px; font-weight: 800; line-height: 1.3;
     }
+    .casino-luck-banner {
+      display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 10px;
+      margin: 0 0 10px; padding: 7px 10px; border: 1px solid rgba(100,116,139,.22);
+      border-radius: 10px; background: rgba(248,250,252,.9); color: #475569;
+      font-size: 12px; line-height: 1.35;
+    }
+    .casino-luck-banner.is-active {
+      border-color: rgba(202,138,4,.38);
+      background: linear-gradient(135deg, rgba(254,243,199,.92), rgba(236,252,203,.88));
+      color: #713f12; box-shadow: 0 2px 10px rgba(161,98,7,.08);
+    }
+    .casino-luck-banner strong { color: inherit; }
+    .casino-luck-store-link {
+      flex: 0 0 auto; border: 0; background: transparent; color: #4d7c0f;
+      padding: 2px 0; font: inherit; font-weight: 900; text-decoration: underline;
+      text-underline-offset: 2px; cursor: pointer;
+    }
+    #wheel-luck-chip.casino-luck-banner { margin: 0; }
+    #tab-slots [data-casino-luck-game="slots"] { grid-column: 1; grid-row: 1; align-self: start; }
 
     .wheel-bets-wrap { margin-top: 4px; }
     .wheel-bets-list {
@@ -6785,7 +6804,7 @@
         <div class="wheel-hero">
           <div>
             <h2 class="wheel-title"><span class="wheel-title-mark">🦬</span><span>Koło Żubra G6</span><span class="wheel-nowosc-badge is-title">NOWOŚĆ</span></h2>
-            <p class="wheel-subtitle">Trawiaste koło fortuny — jedno koło, wspólna runda, kręcą wszyscy. Postaw stawkę w 15-sekundowym oknie zakładów — gdy czas minie, serwer losuje JEDEN segment i wypłaca każdego naraz.</p>
+            <p class="wheel-subtitle">Trawiaste koło fortuny — jedno koło, wspólna runda, kręcą wszyscy. Postaw stawkę w 15-sekundowym oknie; jeśli wszyscy gracze zgłoszą gotowość, losowanie ruszy wcześniej.</p>
           </div>
           <div class="wheel-hero-pills">
             <span>🏦 RTP 95%</span>
@@ -6818,7 +6837,7 @@
                   </div>
                 </div>
               </div>
-              <div id="wheel-luck-chip" class="wheel-luck-chip hidden"></div>
+              <div id="wheel-luck-chip" class="wheel-luck-chip casino-luck-banner hidden" data-casino-luck-game="wheel"></div>
               <div class="wheel-control wheel-spin-control">
                 <button id="wheel-spin-btn" class="rl-btn is-gold wheel-spin-btn" type="button">POSTAW · 10 🪙</button>
                 <div id="wheel-my-bet" class="wheel-my-bet hidden"></div>
@@ -6841,6 +6860,7 @@
             <details class="plinko-help wheel-help">
               <summary>Jak to działa?</summary>
               <p class="plinko-note">To JEDNO wspólne koło dla wszystkich graczy. Gdy ktoś postawi pierwszy zakład, otwiera się 15-sekundowe okno — każdy może w nim postawić własną stawkę (jeden zakład na rundę). Gdy czas minie, serwer losuje JEDEN segment i wypłaca każdego gracza tym samym mnożnikiem.</p>
+              <p class="plinko-note">Po postawieniu kliknij <b>JESTEM GOTOWY</b>. Gdy zrobią to wszyscy obstawiający, licznik skraca się do 3 sekund, żeby urządzenia zdążyły zsynchronizować obrót.</p>
               <p class="plinko-note">Koło ma 20 pól: 1× ×10 (jackpot 🦬), 3× ×2, 2× ZWROT stawki, 2× ×0,5 (pół stawki wraca) i 12× pudło. RTP całego koła to 95%.</p>
               <p class="plinko-note">Komunalny bonus 🍀 Amulet Bezwstydnego Fartu ×1,01 na wygrane, kupowany w Sklepie — jeśli ktokolwiek w biurze go aktualnie posiada, podbija wypłaty wszystkich graczy.</p>
               <div id="wheel-payout-tables" class="wheel-payout-tables"></div>
@@ -8217,6 +8237,7 @@ const WHEEL_BLIND_SPEED = Math.PI * 2 * 2.5; // rad/s — ~2.5 rev/s blind spin
 let wheelState = null;
 let wheelBet = 10;
 let wheelBetBusy = false;         // a bet request is in flight
+let wheelReadyBusy = false;       // a fast-start vote is in flight
 let wheelSession = { spins: 0, wagered: 0, won: 0, best: 0 };
 let wheelHistory = [];            // personal wheel_spins history
 let wheelResizeBound = false;
@@ -8328,6 +8349,15 @@ const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki',
 const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch']);
 let heroItemDefs = [];
 let casinoLuckGlobalUntil = null; // shared „Amulet Bezwstydnego Fartu" buff end (casino_luck_status view)
+let casinoLuckStatusLoadedAt = 0;
+const CASINO_LUCK_EFFECT_LABELS = {
+  roulette: '+1% do wygranej wypłaty',
+  slots: 'większa szansa na symbol G6',
+  plinko: 'wygrane ×1,01',
+  mines: 'lepsze mnożniki (RTP ok. 98%)',
+  crash: 'wygrane ×1,03',
+  wheel: 'wygrane ×1,01',
+};
 let myHeroInventory = [];
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
@@ -9182,6 +9212,7 @@ function switchTab(tab) {
   if (previousTab === 'crash' && tab !== 'crash') stopCrash();
   if (previousTab === 'wheel' && tab !== 'wheel') stopWheelAnimation();
   activeTab = tab;
+  if (CASINO_LUCK_EFFECT_LABELS[tab]) loadCasinoLuckStatus();
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.nav-group').forEach(g => {
     const isActive = g.dataset.group === 'shop' ? tab === 'shop' : !!g.querySelector('.nav-tab.active');
@@ -13118,6 +13149,57 @@ function renderCoinRaceDetail(container) {
 })();
 
 // ── Shop ──────────────────────────────────────────────────────────────────
+function ensureCasinoLuckBanner(game) {
+  const tab = document.getElementById(`tab-${game}`);
+  if (!tab) return null;
+  let banner = tab.querySelector(`[data-casino-luck-game="${game}"]`);
+  if (banner) return banner;
+  const main = tab.querySelector('main');
+  if (!main) return null;
+  banner = el('div', { className: 'casino-luck-banner', 'data-casino-luck-game': game });
+  if (game === 'roulette') {
+    main.children[0]?.after(banner);
+  } else {
+    const roots = {
+      slots: '.slots-machine',
+      plinko: '.plinko-wrap',
+      mines: '.mines-wrap',
+      crash: '.crash-wrap',
+    };
+    (tab.querySelector(roots[game]) || main).prepend(banner);
+  }
+  return banner;
+}
+
+function renderCasinoLuckBanners() {
+  const untilMs = Date.parse(casinoLuckGlobalUntil || '');
+  const active = Number.isFinite(untilMs) && untilMs > Date.now();
+  Object.entries(CASINO_LUCK_EFFECT_LABELS).forEach(([game, effect]) => {
+    const banner = ensureCasinoLuckBanner(game);
+    if (!banner) return;
+    banner.classList.remove('hidden');
+    banner.classList.toggle('is-active', active);
+    const message = active
+      ? `🍀 Amulet Bezwstydnego Fartu aktywny do ${fmtDateTime(casinoLuckGlobalUntil)} — ${effect}.`
+      : `🍀 Amulet Bezwstydnego Fartu jest nieaktywny — po aktywacji dla wszystkich: ${effect}.`;
+    const storeBtn = el('button', { className: 'casino-luck-store-link', type: 'button' }, active ? 'Przedłuż w Sklepie' : 'Zobacz w Sklepie');
+    storeBtn.addEventListener('click', () => switchTab('shop'));
+    banner.replaceChildren(el('strong', {}, message), storeBtn);
+  });
+}
+
+async function loadCasinoLuckStatus(force = false) {
+  renderCasinoLuckBanners();
+  if (!force && Date.now() - casinoLuckStatusLoadedAt < 30_000) return;
+  casinoLuckStatusLoadedAt = Date.now();
+  const { data, error } = await sb
+    .from('casino_luck_status')
+    .select('active_until')
+    .maybeSingle();
+  if (!error) casinoLuckGlobalUntil = data?.active_until || null;
+  renderCasinoLuckBanners();
+}
+
 async function loadMyGardenForCosmetics() {
   if (!me?.id) { myGarden = null; myGarden2 = null; secondGardenUnlocked = false; return; }
   const [{ data: gardens }, { data: prof }] = await Promise.all([
@@ -13216,6 +13298,8 @@ async function loadHeroItemCatalog() {
     .select('active_until')
     .maybeSingle();
   casinoLuckGlobalUntil = (!luckError && luck?.active_until) ? luck.active_until : null;
+  casinoLuckStatusLoadedAt = Date.now();
+  renderCasinoLuckBanners();
 }
 
 async function loadHeroAuctionItemDefs() {
@@ -13920,9 +14004,16 @@ function renderHeroShopGrid() {
       const activeUntil = isCommunal ? casinoLuckGlobalUntil : owned?.expires_at;
       if (activeUntil) {
         itemCard.appendChild(el('div', { className: 'shop-card-slots' },
-          `⏳ Aktywny${isCommunal ? ' dla wszystkich' : ''} jeszcze: ${heroItemExpiryLabel({ expires_at: activeUntil })}`));
+          `⏳ Aktywny${isCommunal ? ' dla wszystkich' : ''} do ${fmtDateTime(activeUntil)} (${heroItemExpiryLabel({ expires_at: activeUntil })})`));
       }
       const days = Math.round(item.duration_hours / 24);
+      if (isCommunal) {
+        const currentEndMs = Date.parse(activeUntil || '');
+        const purchaseBaseMs = Number.isFinite(currentEndMs) && currentEndMs > Date.now() ? currentEndMs : Date.now();
+        const purchaseUntil = new Date(purchaseBaseMs + Number(item.duration_hours) * 3600000).toISOString();
+        itemCard.appendChild(el('div', { className: 'shop-card-slots' },
+          `Kupując teraz: amulet będzie aktywny dla wszystkich do ${fmtDateTime(purchaseUntil)}.`));
+      }
       const buyBtn = el('button', {
         className: 'btn-primary shop-card-btn',
         disabled: !itemCanAfford,
@@ -17275,7 +17366,7 @@ function startPlinkoDrop(n = 1) {
 //  Koło Żubra G6 — SHARED ROUNDS: one communal wheel, everyone watches the
 //  same spin. A round opens when the first player bets, runs a 15 s betting
 //  window (round.spinAt from the server), then the server draws ONE segment
-//  and pays every bet by its own stake × risk tier. Coin timing follows the
+//  and pays every bet by its own stake × the shared segment multiplier. Coin timing follows the
 //  roulette convention (charged at resolve, not at bet time); resolution is
 //  lazy-on-read crash-style, so the 1 s `state` poll below is what actually
 //  fires a due spin — do not remove it in favor of realtime alone.
@@ -17309,7 +17400,7 @@ function wheelColorFor(mult) {
 }
 
 function wheelHasMyBet() {
-  return !!(wheelRound && me && wheelBets.some(b => b.userId === me.id));
+  return !!(wheelRound?.status === 'betting' && me && wheelBets.some(b => b.userId === me.id));
 }
 
 function wheelMyBet() {
@@ -17379,11 +17470,9 @@ function applyWheelState(data) {
 // „Amulet Bezwstydnego Fartu" is active — mirrors casinoLuckGlobalUntil's
 // pl-PL date formatting (fmtDateTime) used elsewhere in the app.
 function renderWheelLuckChip() {
-  const chip = document.getElementById('wheel-luck-chip');
-  if (!chip) return;
-  if (!wheelCasinoLuck) { chip.classList.add('hidden'); return; }
-  chip.classList.remove('hidden');
-  chip.textContent = `🍀 Amulet Bezwstydnego Fartu aktywny — wygrane ×1.01 (do ${fmtDateTime(wheelCasinoLuckUntil)})`;
+  casinoLuckGlobalUntil = wheelCasinoLuck && wheelCasinoLuckUntil ? wheelCasinoLuckUntil : null;
+  casinoLuckStatusLoadedAt = Date.now();
+  renderCasinoLuckBanners();
 }
 
 function setWheelResult(text, tone = '') {
@@ -17410,7 +17499,9 @@ function renderWheel() {
 
 function renderWheelControls() {
   const iBet = wheelHasMyBet();
-  const disabled = wheelBetBusy || iBet;
+  const mine = wheelMyBet();
+  const isReady = iBet && !!mine?.ready;
+  const disabled = wheelBetBusy || wheelReadyBusy || iBet;
   document.querySelectorAll('[data-bet="wheel"] .casino-chip').forEach(btn => {
     btn.disabled = disabled;
     btn.classList.toggle('active', Number(btn.dataset.stake) === wheelBet);
@@ -17419,17 +17510,18 @@ function renderWheelControls() {
   syncBetBar('wheel', wheelBet, { keepInput: true });
   const spinBtn = document.getElementById('wheel-spin-btn');
   if (spinBtn) {
-    spinBtn.disabled = disabled || !me || Number(me.coins || 0) < wheelBet;
+    spinBtn.disabled = wheelBetBusy || wheelReadyBusy || !me || (iBet ? isReady : Number(me.coins || 0) < wheelBet);
     if (wheelBetBusy) spinBtn.innerHTML = 'Stawiamy…';
-    else if (iBet) spinBtn.innerHTML = '✅ Zakład przyjęty';
+    else if (wheelReadyBusy) spinBtn.innerHTML = 'Zgłaszam gotowość…';
+    else if (isReady) spinBtn.innerHTML = '✅ GOTOWY · CZEKAMY NA INNYCH';
+    else if (iBet) spinBtn.innerHTML = '⚡ JESTEM GOTOWY · KRĘĆMY';
     else spinBtn.innerHTML = `POSTAW · ${wheelBet} 🪙`;
   }
   const myBetChip = document.getElementById('wheel-my-bet');
   if (myBetChip) {
-    const mine = wheelMyBet();
     if (mine && wheelRound?.status === 'betting') {
       myBetChip.classList.remove('hidden');
-      myBetChip.textContent = `✅ Twój zakład: ${mine.bet} 🪙`;
+      myBetChip.textContent = `${isReady ? '⚡ Gotowy' : '✅ Zakład przyjęty'}: ${mine.bet} 🪙`;
     } else {
       myBetChip.classList.add('hidden');
     }
@@ -17476,6 +17568,8 @@ function renderWheelBetsList() {
       const net = won - Number(b.bet || 0);
       cls.push(wheelIsJackpot(b.multiplier) ? 'is-jackpot' : net > 0 ? 'is-win' : net === 0 ? 'is-flat' : 'is-loss');
       resultNode = el('span', { className: 'wbr-result' }, `${wheelMultLabel(b.multiplier)} · ${net >= 0 ? '+' : ''}${net} 🪙`);
+    } else if (b.ready) {
+      resultNode = el('span', { className: 'wbr-result' }, '⚡ GOTOWY');
     }
     return el('div', { className: cls.join(' ') },
       el('span', { className: 'wbr-nick' }, b.nick),
@@ -17970,7 +18064,7 @@ function stopWheelAnimation() {
 }
 
 async function placeWheelBet() {
-  if (wheelBetBusy) return;
+  if (wheelBetBusy || wheelReadyBusy) return;
   if (!me) { showToast('❌ Zaloguj się.'); return; }
   if (wheelHasMyBet()) { showToast('Już postawiłeś w tej rundzie.'); return; }
   const bet = wheelBet;
@@ -17995,8 +18089,37 @@ async function placeWheelBet() {
   }
 }
 
+async function markWheelReady() {
+  if (wheelBetBusy || wheelReadyBusy) return;
+  if (!me) { showToast('❌ Zaloguj się.'); return; }
+  const mine = wheelMyBet();
+  if (!wheelHasMyBet() || !mine) { showToast('Najpierw postaw zakład.'); return; }
+  if (mine.ready) return;
+
+  wheelReadyBusy = true;
+  renderWheelControls();
+  try {
+    const data = await invokeWheel({ action: 'ready' });
+    applyWheelState(data);
+    const waiting = wheelBets.filter(b => !b.ready).length;
+    if (waiting === 0) {
+      setWheelResult('⚡ Wszyscy gotowi — przyspieszamy losowanie!', '');
+    } else {
+      setWheelResult(`Gotowy — czekamy jeszcze na ${waiting} ${waiting === 1 ? 'osobę' : 'osoby'}…`, '');
+    }
+  } catch (err) {
+    showToast('❌ ' + err.message);
+  } finally {
+    wheelReadyBusy = false;
+    renderWheelControls();
+  }
+}
+
 (function wireWheelControls() {
-  document.getElementById('wheel-spin-btn')?.addEventListener('click', placeWheelBet);
+  document.getElementById('wheel-spin-btn')?.addEventListener('click', () => {
+    if (wheelHasMyBet()) markWheelReady();
+    else placeWheelBet();
+  });
   document.getElementById('wheel-session-reset')?.addEventListener('click', wheelResetSession);
   renderWheelSession();
 })();
