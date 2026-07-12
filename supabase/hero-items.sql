@@ -92,24 +92,26 @@ ALTER TABLE public.hero_item_instances ADD CONSTRAINT hero_item_instances_editio
 INSERT INTO public.hero_item_defs
   (slug, name, emoji, slot, price, rarity, description, effect_game, effect_type, effect_value, sale_type, edition_size, visual_effect, is_active)
 VALUES
+  -- ⚠️ These six are hidden from the shop by supabase/hide-legacy-hero-items.sql
+  -- (sale_type flipped to 'hidden' on prod) — re-run that file after this one.
   ('lucky_trousers', 'Szczęśliwe Majtki', '🩳', 'legs', 450, 'rare',
    'Dają małą szansę (1%) na zwrot całej stawki po przegranej w ruletce.',
-   'roulette', 'win_chance_bonus', 1, 'shop', null, null, true),
+   'roulette', 'win_chance_bonus', 1, 'hidden', null, null, true),
   ('dealer_hat', 'Kapelusz Krupiera', '🎩', 'head', 100, 'common',
    'Delikatnie podbija wypłatę, gdy ruletka już wygra.',
-   'roulette', 'payout_bonus', 1, 'shop', null, null, true),
+   'roulette', 'payout_bonus', 1, 'hidden', null, null, true),
   ('luck_brooch', 'Broszka Farta', '🍀', 'trinket', 150, 'rare',
    'Lekko zwiększa szansę na symbol G6 w slotach.',
-   'slots', 'rare_symbol_bonus', 1, 'shop', null, null, true),
+   'slots', 'rare_symbol_bonus', 1, 'hidden', null, null, true),
   ('reflex_gloves', 'Rękawice Refleksu', '🧤', 'hands', 150, 'common',
    'Dodają jeden punkt do wyniku Gry Sezonowej.',
-   'whack_boss', 'score_bonus', 1, 'shop', null, null, true),
+   'whack_boss', 'score_bonus', 1, 'hidden', null, null, true),
   ('jumper_boots', 'Buty Skoczka', '🥾', 'feet', 150, 'common',
    'Dodają jeden punkt do wyniku Bug Jumpera.',
-   'bug_jumper', 'score_bonus', 1, 'shop', null, null, true),
+   'bug_jumper', 'score_bonus', 1, 'hidden', null, null, true),
   ('bluff_dagger', 'Sztylet Blefu', '🗡️', 'weapon', 300, 'epic',
    'Pozwala wejść do pokera z większym stackiem; pełny stack jest pobierany jako buy-in.',
-   'poker', 'buy_in_bonus', 10, 'shop', null, null, true),
+   'poker', 'buy_in_bonus', 10, 'hidden', null, null, true),
   ('g6_magnet', 'Magnes na G6', '🧲', 'trinket', 300, 'epic',
    'Mocniej przyciąga symbol G6 w slotach.',
    'slots', 'rare_symbol_bonus', 2, 'shop', null, null, false),
