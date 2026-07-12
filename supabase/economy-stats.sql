@@ -9,7 +9,7 @@
 --              + poker_stacks    (chips on active seats)
 --              + hero_items      (owned items at settled auction bid or shop price)
 --              + accessories     (garden accessory spend, from coin ledger)
---              + farm_assets     (farm land + card-level spend + crop inventory at market + plant cards by rarity + NFT cards by scarcity + sealed boxes + tile vouchers)
+--              + farm_assets     (farm land + card-level spend + crop inventory at market + plant cards by rarity + NFT cards by scarcity + sealed seed/gold boxes + tile vouchers)
 --              + marketplace_escrow  (leading bids on open Targowisko auctions)
 --              + hero_auction_escrow (leading bids on open hero-item auctions)
 --
@@ -189,9 +189,10 @@ AS $$
           FROM public.farm_nft_instances ni
          WHERE ni.owner_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric)
-      -- sealed (unopened) seed boxes at cost (100) + free-tile vouchers at base tile price (350)
+      -- sealed (unopened) seed boxes at cost (100) + gold boxes at cost (500)
+      -- + free-tile vouchers at base tile price (350)
       + COALESCE((
-        SELECT sum(fus.boxes * 100 + fus.tile_vouchers * 350)
+        SELECT sum(fus.boxes * 100 + fus.boxes_gold * 500 + fus.tile_vouchers * 350)
           FROM public.farm_user_state fus
          WHERE fus.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric) AS farm_assets,
@@ -261,7 +262,7 @@ AS $$
            AND ct.reason IN ('garden_accessory','hero_item_purchase','store_purchase',
                              'garden_certificate','arcade_entry','hero_appearance_change',
                              'canvas_pixel','canvas_pixel_adjustment',
-                             'farm_tile_buy','farm_box_buy','lootbox_open','card_levelup',
+                             'farm_tile_buy','farm_box_buy','farm_goldbox_buy','lootbox_open','card_levelup',
                              'farm_land_tax_pay','farm_land_tax_autopay',
                              'zapps_purchase')
       ), 0::numeric) AS shop_burned,

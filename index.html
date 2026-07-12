@@ -5575,6 +5575,15 @@
     .lootbox-chev { transition: transform .18s; }
     .lootbox-odds-toggle.open .lootbox-chev { transform: rotate(180deg); }
     .lootbox-odds-wrap { margin-top: 10px; }
+    /* „Złota Skrzynia" ⭐ premium lootbox — gold accent on the shared .lootbox-* card */
+    .lootbox-card.is-gold { border-color: rgba(217,164,6,.45); box-shadow: 0 12px 32px rgba(161,98,7,.18); }
+    .lootbox-card.is-gold .lootbox-hero { background: radial-gradient(130% 150% at 50% 0%, #4a3a12 0%, #2a2007 58%, #16110a 100%); }
+    .lootbox-card.is-gold .lootbox-glow { background: radial-gradient(circle, rgba(250,204,21,.55), transparent 65%); }
+    .lootbox-card.is-gold .lootbox-tag { color: #a16207; background: rgba(217,164,6,.14); }
+    .lootbox-card.is-gold .lootbox-buy { background: linear-gradient(180deg, #facc15, #d97706); box-shadow: 0 4px 14px rgba(217,119,6,.35); }
+    .lootbox-card.is-gold .lootbox-owned.has { background: rgba(217,164,6,.10); border-color: rgba(217,164,6,.32); }
+    .lootbox-card.is-gold .lootbox-owned-txt b { color: #a16207; }
+    .lootbox-card.is-gold .lootbox-open-btn { border-color: #d97706; background: #d97706; }
     /* Marketplace: big "list something" CTA + sale-history table */
     .ml-add-big { width: 100%; margin: 4px 0 16px; padding: 14px 18px; border: none; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #fff; background: linear-gradient(180deg, #6366f1, #4f46e5); box-shadow: 0 6px 18px rgba(79,70,229,.35); transition: filter .15s, transform .05s; }
     .ml-add-big:hover { filter: brightness(1.07); }
@@ -8579,7 +8588,7 @@ async function refreshFarmStarterBanner() {
   if (!me?.id) return;
   try {
     const { data, error } = await sb.from('farm_user_state')
-      .select('boxes,starter_granted,starter_opens_left')
+      .select('boxes,boxes_gold,starter_granted,starter_opens_left')
       .eq('user_id', me.id)
       .maybeSingle();
     if (seq !== farmStarterBannerSeq) return;
@@ -24556,6 +24565,10 @@ const FARM_BOX_PRICE = 100;
 const FARM_BOX_DRAWS = 3;   // distinct cards per lootbox — mirror open_farm_lootbox v_draws
 const FARM_BOX_BULK_BUY_MAX = 50;   // mirror buy_farm_lootbox p_qty cap (farm.sql)
 const FARM_BOX_BULK_OPEN_MAX = 20;  // mirror open_farm_lootboxes v_max (farm-bulk-lootbox.sql)
+const FARM_GOLDBOX_PRICE = 500;
+const FARM_GOLDBOX_DRAWS = 5;       // mirror open_farm_goldbox v_draws (farm-goldbox.sql)
+const FARM_GOLDBOX_BULK_BUY_MAX = 50;   // mirror buy_farm_goldbox p_qty cap (farm-goldbox.sql)
+const FARM_GOLDBOX_BULK_OPEN_MAX = 20;  // mirror open_farm_goldboxes v_max (farm-goldbox.sql)
 const FARM_TILE_BASE_PRICE = 350;
 const FARM_TILE_PRICE_CAP = 50000;
 const FARM_NFT_ODDS_DIVISOR = 3;
@@ -24622,6 +24635,7 @@ let fmInventoryLots = [];       // non-expired lots with harvested_at, for event
 let fmMarket = new Map();       // crop_type -> { base_price, anchor_price, cur_price, last_decay_at }
 let fmNft = [];                 // all farm_nft_instances: [{species,serial_no,edition_size,owner_id}]
 let fmBoxes = 0;                // owned sealed (unopened) seed boxes
+let fmGoldBoxes = 0;            // owned sealed (unopened) ⭐ gold boxes
 let fmVouchers = 0;             // owned free-tile vouchers
 let fmOwnedTileCountHint = 0;    // used when Sklep loads before the full farm board
 let fmNormalTileCountHint = 0;   // same, but excludes migration Ogródek plant tiles
@@ -24638,7 +24652,7 @@ function resetFarmState() {
   stopFarmTimer();
   fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmInventoryLots = []; fmMarket = new Map();
   fmNft = [];
-  fmBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmStarterClaimed = false;
+  fmBoxes = 0; fmGoldBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmStarterClaimed = false;
   fmSel = null;
 }
 
@@ -24713,6 +24727,7 @@ function farmIcon(emoji, extraCls) {
 function applyFarmUserState(s) {
   if (!s) return;
   if (typeof s.boxes === 'number') fmBoxes = s.boxes;
+  if (typeof s.boxes_gold === 'number') fmGoldBoxes = s.boxes_gold;
   if (typeof s.tile_vouchers === 'number') fmVouchers = s.tile_vouchers;
   if (typeof s.land_tax_debt === 'number') {
     fmTax = Object.assign({}, fmTax || {}, { debt: Number(s.land_tax_debt || 0) });
@@ -25322,7 +25337,7 @@ async function loadFarm() {
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('gardens').select('*, profiles(nick)'),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
-      sb.from('farm_user_state').select('boxes,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
+      sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
       sb.rpc('farm_land_tax_quote'),
       sb.from('profiles').select('id,nick,is_admin,second_garden_unlocked'),
     ]);
@@ -26840,7 +26855,7 @@ async function ensureFarmData(opts = {}) {
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
-      me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
+      me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
     ]);
     fmDefs = new Map(); (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
@@ -28394,9 +28409,37 @@ function buildFarmBoxesBody(bodyEl) {
     const hiddenNow = oddsWrap.classList.toggle('hidden');
     oddsBtn.classList.toggle('open', !hiddenNow);
   });
-  
+
   container.append(oddsBtn, oddsWrap);
+
   bodyEl.append(container);
+  bodyEl.append(el('div', { className: 'farm-inv-section-title', style: { marginTop: '20px' } }, '⭐ Złota Skrzynia'));
+
+  const goldContainer = el('div', { className: 'lootbox-tab-wrap', style: { padding: '10px 4px' } });
+
+  if ((fmGoldBoxes || 0) > 0) {
+    const maxOpenGold = Math.max(1, Math.min(FARM_GOLDBOX_BULK_OPEN_MAX, fmGoldBoxes || 0));
+    const openBtnGold = el('button', { className: 'lootbox-buy', style: { background: 'linear-gradient(180deg, #facc15, #d97706)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' } }, '⭐ Otwórz 1 skrzynię');
+    const openStepperGold = farmQtyStepper({ max: maxOpenGold, onChange: q => {
+      openBtnGold.textContent = q > 1 ? ('🎆 Otwórz ' + plBoxes(q) + ' naraz!') : '⭐ Otwórz 1 skrzynię';
+    } });
+    openBtnGold.addEventListener('click', () => openFarmGoldbox(openBtnGold, openStepperGold.get()));
+    const openCardGold = el('div', { className: 'lootbox-card is-gold', style: { marginBottom: '16px' } },
+      el('div', { className: 'lootbox-hero' },
+        el('div', { className: 'lootbox-glow' }),
+        el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, '⭐')
+      ),
+      el('div', { className: 'lootbox-body' },
+        el('div', { className: 'lootbox-name', style: { fontSize: '16px', fontWeight: 'bold' } }, 'Masz Złote Skrzynie do otwarcia!'),
+        el('div', { className: 'lootbox-tag', style: { margin: '4px 0 12px' } }, `Posiadasz: ⭐ ×${fmGoldBoxes}`),
+        el('div', { className: 'farm-qty-row', style: { marginTop: '0' } }, openStepperGold.node, openBtnGold)
+      )
+    );
+    goldContainer.append(openCardGold);
+  }
+
+  goldContainer.append(farmGoldBoxCardEl());
+  bodyEl.append(goldContainer);
 }
 
 function farmHelpSection(title, ...nodes) {
@@ -28496,7 +28539,8 @@ function renderFarmHelpInto(bodyEl) {
     farmHelpSection('📦 2. Skrzynka z nasionami',
       P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w ', b('🎒 Moim Majątku'), ' (z animowanym odkrywaniem kart).'),
       P('Karty mają rzadkość: ', b('zwykłe'), ' są częste i szybkie, ', b('epickie'), ' są rzadkie, ale dają dużo więcej plonu. Szanse teraz: ', b(oddsTxt), '.'),
-      P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.')),
+      P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.'),
+      P('⭐ ', b('Złota Skrzynia'), ' (', b(FARM_GOLDBOX_PRICE + ' 🪙'), ') daje ', b(FARM_GOLDBOX_DRAWS + ' kart'), ' z ', b('gwarancją min. 1 rzadkiej'), ' i większą szansą na ', b('💎 NFT'), ' oraz ', b('🎁 działkę'), '.')),
 
     farmHelpSection('🃏 3. Karty i łączenie (poziomy)',
       P('Karta to ', b('przepis na roślinę'), ' — sadzisz ją ile chcesz, ', b('nie znika'), ' po posadzeniu. Powtórki tej samej karty (np. drugą Marchewkę) nazywamy ', b('duplikatami'), '.'),
@@ -28589,7 +28633,7 @@ async function loadFarmLootbox() {
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
       me ? sb.from('farm_tiles').select('owner_id,acquired_via').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
-      me ? sb.from('farm_user_state').select('boxes,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
+      me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
     ]);
     fmDefs = new Map();
@@ -28662,6 +28706,22 @@ function farmBoxBuyControls() {
   return el('div', { className: 'farm-qty-row' }, stepper.node, buyBtn);
 }
 
+// Buy controls for the ⭐ premium „Złota Skrzynia" — clone of farmBoxBuyControls
+// using FARM_GOLDBOX_PRICE/FARM_GOLDBOX_BULK_BUY_MAX and buy_farm_goldbox.
+function farmGoldBoxBuyControls() {
+  const maxBuy = Math.max(1, Math.min(FARM_GOLDBOX_BULK_BUY_MAX, Math.floor((me?.coins || 0) / FARM_GOLDBOX_PRICE)));
+  const label = el('span', {}, '🛒 Kup 1 skrzynkę');
+  const price = el('span', { className: 'lootbox-buy-price' }, FARM_GOLDBOX_PRICE + ' 🪙');
+  const buyBtn = el('button', { className: 'lootbox-buy' }, label, price);
+  buyBtn.disabled = !(me && (me.coins || 0) >= FARM_GOLDBOX_PRICE);
+  const stepper = farmQtyStepper({ max: maxBuy, onChange: q => {
+    label.textContent = '🛒 Kup ' + plBoxes(q);
+    price.textContent = (q * FARM_GOLDBOX_PRICE) + ' 🪙';
+  } });
+  buyBtn.addEventListener('click', () => buyFarmGoldbox(buyBtn, stepper.get()));
+  return el('div', { className: 'farm-qty-row' }, stepper.node, buyBtn);
+}
+
 function renderFarmLootboxStore() {
   const box = document.getElementById('farm-lootbox-content');
   if (!box) return;
@@ -28709,7 +28769,43 @@ function renderFarmLootboxStore() {
       owned,
       oddsBtn,
       oddsWrap));
-  box.append(card);
+  box.append(card, farmGoldBoxCardEl());
+}
+
+// ⭐ „Złota Skrzynia" premium lootbox card — second card below the standard
+// box in the Sklep store. Same catalog/art/pack-opening animation, boosted odds.
+function farmGoldBoxCardEl() {
+  const feat = (icon, text) => el('li', { className: 'lootbox-feat' },
+    el('span', { className: 'lootbox-feat-ic' }, icon), el('span', {}, text));
+
+  const owned = el('div', { className: 'lootbox-owned' + (fmGoldBoxes > 0 ? ' has' : '') });
+  if (fmGoldBoxes > 0) {
+    const openBtn = el('button', { className: 'lootbox-open-btn' }, '🎒 Otwórz w Majątku');
+    openBtn.addEventListener('click', () => openFarmHub('inventory'));
+    owned.append(
+      el('div', { className: 'lootbox-owned-txt' }, el('b', {}, '⭐ ×' + fmGoldBoxes), ' do otwarcia'),
+      openBtn);
+  } else {
+    owned.append(el('div', { className: 'lootbox-owned-txt muted' }, 'Po zakupie otworzysz skrzynię w 🎒 Moim Majątku (Ogródek).'));
+  }
+
+  return el('div', { className: 'lootbox-card is-gold', style: { marginTop: '16px' } },
+    el('div', { className: 'lootbox-hero' },
+      el('div', { className: 'lootbox-glow' }),
+      el('div', { className: 'lootbox-box' }, '⭐')),
+    el('div', { className: 'lootbox-body' },
+      el('div', { className: 'lootbox-head' },
+        el('div', {},
+          el('div', { className: 'lootbox-name' }, 'Złota Skrzynia'),
+          el('div', { className: 'lootbox-tag' }, 'Premium')),
+        el('div', { className: 'lootbox-pricetag' }, FARM_GOLDBOX_PRICE + ' 🪙')),
+      el('ul', { className: 'lootbox-feats' },
+        feat('🃏', FARM_GOLDBOX_DRAWS + ' kart naraz'),
+        feat('🔒', 'gwarantowana min. 1 rzadka karta'),
+        feat('💎', 'większa szansa na kartę NFT'),
+        feat('🎁', 'większa szansa na darmową działkę')),
+      farmGoldBoxBuyControls(),
+      owned));
 }
 
 // Shared −/+ quantity stepper for box buy/open controls. `onChange(qty)` fires
@@ -28760,6 +28856,21 @@ async function buyFarmLootbox(btn, qty) {
   if (farmModalEl) refreshFarmHub();
 }
 
+// Step 1 (gold): buy sealed ⭐ gold boxes (BURN 500 each). Clone of buyFarmLootbox.
+async function buyFarmGoldbox(btn, qty) {
+  qty = Math.min(FARM_GOLDBOX_BULK_BUY_MAX, Math.max(1, Math.floor(qty || 1)));
+  const cost = qty * FARM_GOLDBOX_PRICE;
+  if ((me?.coins || 0) < cost) { showToast('Za mało coinów — ' + plBoxes(qty) + ' kosztuje ' + cost + ' 🪙.'); return; }
+  if (btn) btn.disabled = true;
+  const { data, error } = await sb.rpc('buy_farm_goldbox', { p_qty: qty });
+  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
+  if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
+  if (typeof data.boxes_gold === 'number') fmGoldBoxes = data.boxes_gold;
+  showToast('⭐ Kupiono ' + plBoxes(qty) + '! Otwórz w 🎒 Moim Majątku.');
+  renderFarmLootboxStore();
+  if (farmModalEl) refreshFarmHub();
+}
+
 // Applies one box's cards[] payload to local state (collection counts, defs, NFTs).
 // Boxes are opened sequentially server-side, so applying packs in order leaves
 // new_count correct (later boxes carry the cumulative count).
@@ -28789,6 +28900,32 @@ async function openFarmLootbox(btn, qty) {
     : await sb.rpc('open_farm_lootbox');
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   if (typeof data.boxes === 'number') fmBoxes = data.boxes;
+  if (typeof data.tile_vouchers === 'number') fmVouchers = data.tile_vouchers;
+  // Single open returns cards[] directly; bulk returns packs:[{cards,got_voucher}].
+  const packs = Array.isArray(data.packs)
+    ? data.packs.map(p => Array.isArray(p.cards) ? p.cards : [])
+    : [Array.isArray(data.cards) ? data.cards : (data.species ? [data] : [])];
+  packs.forEach(farmApplyPackCards);
+  renderFarmLootboxStore();
+  if (packs.length > 1) playFarmMultiPackOpening(packs);
+  else playFarmPackOpening(packs[0]);
+  renderFarmCollection(); renderFarmSelection();
+  if (farmModalEl) refreshFarmHub();
+  refreshFarmStarterBanner();
+  if (data.got_voucher) showToast('🎁 Trafiła Ci się darmowa działka! Postaw ją na pustym polu farmy.');
+}
+
+// Step 2 (gold): open owned ⭐ gold boxes. Clone of openFarmLootbox routed at
+// the gold RPCs/state; reuses the same pack-opening animation unchanged.
+async function openFarmGoldbox(btn, qty) {
+  qty = Math.min(FARM_GOLDBOX_BULK_OPEN_MAX, Math.max(1, Math.floor(qty || 1)));
+  if ((fmGoldBoxes || 0) < qty) { showToast(qty > 1 ? ('Masz tylko ' + plBoxes(fmGoldBoxes || 0) + '.') : ('Nie masz Złotych Skrzyń — kup w Sklepie (' + FARM_GOLDBOX_PRICE + ' 🪙).')); return; }
+  if (btn) btn.disabled = true;
+  const { data, error } = qty > 1
+    ? await sb.rpc('open_farm_goldboxes', { p_qty: qty })
+    : await sb.rpc('open_farm_goldbox');
+  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
+  if (typeof data.boxes_gold === 'number') fmGoldBoxes = data.boxes_gold;
   if (typeof data.tile_vouchers === 'number') fmVouchers = data.tile_vouchers;
   // Single open returns cards[] directly; bulk returns packs:[{cards,got_voucher}].
   const packs = Array.isArray(data.packs)

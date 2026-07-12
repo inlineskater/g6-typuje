@@ -73,9 +73,10 @@ AS $$
              FROM public.farm_nft_instances ni
             WHERE ni.owner_id = p_uid
          ), 0)
-       -- sealed (unopened) seed boxes (100 each) + free-tile vouchers (350 each)
+       -- sealed (unopened) seed boxes (100 each) + gold boxes (500 each)
+       -- + free-tile vouchers (350 each)
        + COALESCE((
-           SELECT fus.boxes * 100 + fus.tile_vouchers * 350
+           SELECT fus.boxes * 100 + fus.boxes_gold * 500 + fus.tile_vouchers * 350
              FROM public.farm_user_state fus
             WHERE fus.user_id = p_uid
          ), 0)
@@ -175,7 +176,7 @@ AS $$
                   FROM public.farm_inventory fi
                   JOIN public.farm_market fm ON fm.crop_type = fi.crop_type
                  WHERE fi.user_id = p_uid AND fi.expires_at > now()), 0) AS farm_crops,
-      COALESCE((SELECT fus.boxes * 100 + fus.tile_vouchers * 350
+      COALESCE((SELECT fus.boxes * 100 + fus.boxes_gold * 500 + fus.tile_vouchers * 350
                   FROM public.farm_user_state fus
                  WHERE fus.user_id = p_uid), 0) AS farm_boxes,
       -- liability: outstanding land-tax debt (kataster), reported positive here,
