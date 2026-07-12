@@ -5545,6 +5545,8 @@
     .farm-box-odds-title { font-weight: 800; font-size: 13px; color: var(--text); margin-bottom: 6px; }
     /* Polished lootbox storefront card */
     .lootbox-card { max-width: 384px; margin: 4px 0; background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: 0 12px 32px rgba(15,23,42,.10); }
+    .lootbox-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+    .lootbox-row .lootbox-card { flex: 1 1 300px; margin: 0; }
     .lootbox-hero { position: relative; height: 134px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: radial-gradient(130% 150% at 50% 0%, #244536 0%, #16261f 58%, #0e1813 100%); }
     .lootbox-glow { position: absolute; width: 230px; height: 230px; border-radius: 50%; background: radial-gradient(circle, rgba(74,222,128,.45), transparent 65%); filter: blur(10px); }
     .lootbox-box { position: relative; font-size: 78px; line-height: 1; filter: drop-shadow(0 8px 16px rgba(0,0,0,.55)); animation: lootboxFloat 3.2s ease-in-out infinite; }
@@ -28352,9 +28354,10 @@ function renderGardenAdvisorBody(container) {
 function buildFarmBoxesBody(bodyEl) {
   bodyEl.replaceChildren();
 
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '📦 Skrzynki z nasionami'));
+  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '📦 Skrzynki'));
 
-  const container = el('div', { className: 'lootbox-tab-wrap', style: { padding: '10px 4px' } });
+  // "Open owned boxes" row — one card per box type you currently hold, side by side.
+  const openRow = el('div', { className: 'lootbox-row', style: { padding: '10px 4px 0' } });
 
   if ((fmBoxes || 0) > 0) {
     const maxOpen = Math.max(1, Math.min(FARM_BOX_BULK_OPEN_MAX, fmBoxes || 0));
@@ -28363,7 +28366,7 @@ function buildFarmBoxesBody(bodyEl) {
       openBtn.textContent = q > 1 ? ('🎆 Otwórz ' + plBoxes(q) + ' naraz!') : '📦 Otwórz 1 skrzynkę';
     } });
     openBtn.addEventListener('click', () => openFarmLootbox(openBtn, openStepper.get()));
-    const openCard = el('div', { className: 'lootbox-card', style: { marginBottom: '16px', background: 'var(--surface)', border: '1px solid var(--accent)' } },
+    const openCard = el('div', { className: 'lootbox-card', style: { background: 'var(--surface)', border: '1px solid var(--accent)' } },
       el('div', { className: 'lootbox-hero' },
         el('div', { className: 'lootbox-glow' }),
         el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, '📦')
@@ -28374,9 +28377,33 @@ function buildFarmBoxesBody(bodyEl) {
         el('div', { className: 'farm-qty-row', style: { marginTop: '0' } }, openStepper.node, openBtn)
       )
     );
-    container.append(openCard);
+    openRow.append(openCard);
   }
 
+  if ((fmGoldBoxes || 0) > 0) {
+    const maxOpenGold = Math.max(1, Math.min(FARM_GOLDBOX_BULK_OPEN_MAX, fmGoldBoxes || 0));
+    const openBtnGold = el('button', { className: 'lootbox-buy', style: { background: 'linear-gradient(180deg, #facc15, #d97706)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' } }, '⭐ Otwórz 1 skrzynię');
+    const openStepperGold = farmQtyStepper({ max: maxOpenGold, onChange: q => {
+      openBtnGold.textContent = q > 1 ? ('🎆 Otwórz ' + plBoxes(q) + ' naraz!') : '⭐ Otwórz 1 skrzynię';
+    } });
+    openBtnGold.addEventListener('click', () => openFarmGoldbox(openBtnGold, openStepperGold.get()));
+    const openCardGold = el('div', { className: 'lootbox-card is-gold' },
+      el('div', { className: 'lootbox-hero' },
+        el('div', { className: 'lootbox-glow' }),
+        el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, '⭐')
+      ),
+      el('div', { className: 'lootbox-body' },
+        el('div', { className: 'lootbox-name', style: { fontSize: '16px', fontWeight: 'bold' } }, 'Masz Złote Skrzynie do otwarcia!'),
+        el('div', { className: 'lootbox-tag', style: { margin: '4px 0 12px' } }, `Posiadasz: ⭐ ×${fmGoldBoxes}`),
+        el('div', { className: 'farm-qty-row', style: { marginTop: '0' } }, openStepperGold.node, openBtnGold)
+      )
+    );
+    openRow.append(openCardGold);
+  }
+
+  if (openRow.children.length) bodyEl.append(openRow);
+
+  // Buy row — the standard box and the ⭐ Złota Skrzynia side by side.
   const buyCard = el('div', { className: 'lootbox-card' },
     el('div', { className: 'lootbox-hero' },
       el('div', { className: 'lootbox-glow' }),
@@ -28399,47 +28426,18 @@ function buildFarmBoxesBody(bodyEl) {
     )
   );
 
-  container.append(buyCard);
+  bodyEl.append(el('div', { className: 'lootbox-row', style: { padding: '10px 4px' } }, buyCard, farmGoldBoxCardEl()));
 
-  const oddsWrap = el('div', { className: 'lootbox-odds-wrap hidden', style: { marginTop: '8px' } }, farmBoxOddsTable());
-  const oddsBtn = el('button', { className: 'lootbox-odds-toggle', style: { width: '100%', marginTop: '8px' } },
-    el('span', {}, 'ℹ️ Szanse i zawartość'), el('span', { className: 'lootbox-chev' }, '▾')
+  const oddsWrap = el('div', { className: 'lootbox-odds-wrap hidden', style: { margin: '8px 4px 0' } }, farmBoxOddsTable());
+  const oddsBtn = el('button', { className: 'lootbox-odds-toggle', style: { width: 'calc(100% - 8px)', margin: '8px 4px 0' } },
+    el('span', {}, 'ℹ️ Szanse i zawartość (Skrzynka z nasionami)'), el('span', { className: 'lootbox-chev' }, '▾')
   );
   oddsBtn.addEventListener('click', () => {
     const hiddenNow = oddsWrap.classList.toggle('hidden');
     oddsBtn.classList.toggle('open', !hiddenNow);
   });
 
-  container.append(oddsBtn, oddsWrap);
-
-  bodyEl.append(container);
-  bodyEl.append(el('div', { className: 'farm-inv-section-title', style: { marginTop: '20px' } }, '⭐ Złota Skrzynia'));
-
-  const goldContainer = el('div', { className: 'lootbox-tab-wrap', style: { padding: '10px 4px' } });
-
-  if ((fmGoldBoxes || 0) > 0) {
-    const maxOpenGold = Math.max(1, Math.min(FARM_GOLDBOX_BULK_OPEN_MAX, fmGoldBoxes || 0));
-    const openBtnGold = el('button', { className: 'lootbox-buy', style: { background: 'linear-gradient(180deg, #facc15, #d97706)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' } }, '⭐ Otwórz 1 skrzynię');
-    const openStepperGold = farmQtyStepper({ max: maxOpenGold, onChange: q => {
-      openBtnGold.textContent = q > 1 ? ('🎆 Otwórz ' + plBoxes(q) + ' naraz!') : '⭐ Otwórz 1 skrzynię';
-    } });
-    openBtnGold.addEventListener('click', () => openFarmGoldbox(openBtnGold, openStepperGold.get()));
-    const openCardGold = el('div', { className: 'lootbox-card is-gold', style: { marginBottom: '16px' } },
-      el('div', { className: 'lootbox-hero' },
-        el('div', { className: 'lootbox-glow' }),
-        el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, '⭐')
-      ),
-      el('div', { className: 'lootbox-body' },
-        el('div', { className: 'lootbox-name', style: { fontSize: '16px', fontWeight: 'bold' } }, 'Masz Złote Skrzynie do otwarcia!'),
-        el('div', { className: 'lootbox-tag', style: { margin: '4px 0 12px' } }, `Posiadasz: ⭐ ×${fmGoldBoxes}`),
-        el('div', { className: 'farm-qty-row', style: { marginTop: '0' } }, openStepperGold.node, openBtnGold)
-      )
-    );
-    goldContainer.append(openCardGold);
-  }
-
-  goldContainer.append(farmGoldBoxCardEl());
-  bodyEl.append(goldContainer);
+  bodyEl.append(oddsBtn, oddsWrap);
 }
 
 function farmHelpSection(title, ...nodes) {
@@ -28769,11 +28767,12 @@ function renderFarmLootboxStore() {
       owned,
       oddsBtn,
       oddsWrap));
-  box.append(card, farmGoldBoxCardEl());
+  box.append(el('div', { className: 'lootbox-row' }, card, farmGoldBoxCardEl()));
 }
 
-// ⭐ „Złota Skrzynia" premium lootbox card — second card below the standard
-// box in the Sklep store. Same catalog/art/pack-opening animation, boosted odds.
+// ⭐ „Złota Skrzynia" premium lootbox card — sits next to the standard box
+// in the Sklep store (side by side in a .lootbox-row). Same catalog/art/
+// pack-opening animation, boosted odds.
 function farmGoldBoxCardEl() {
   const feat = (icon, text) => el('li', { className: 'lootbox-feat' },
     el('span', { className: 'lootbox-feat-ic' }, icon), el('span', {}, text));
@@ -28789,7 +28788,7 @@ function farmGoldBoxCardEl() {
     owned.append(el('div', { className: 'lootbox-owned-txt muted' }, 'Po zakupie otworzysz skrzynię w 🎒 Moim Majątku (Ogródek).'));
   }
 
-  return el('div', { className: 'lootbox-card is-gold', style: { marginTop: '16px' } },
+  return el('div', { className: 'lootbox-card is-gold' },
     el('div', { className: 'lootbox-hero' },
       el('div', { className: 'lootbox-glow' }),
       el('div', { className: 'lootbox-box' }, '⭐')),
