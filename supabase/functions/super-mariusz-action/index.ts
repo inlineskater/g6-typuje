@@ -64,6 +64,12 @@ const SM_COURSE = [
 const ROUND_EXPIRES_SECONDS = 900;
 const PRIZES = [500, 250, 100];
 
+// Progress can't be item-boosted (it would credit tiles the player never
+// reached), so score_bonus items convert to a completion-time bonus instead:
+// -400 ms off completion_ms per bonus point, FINISHED runs only
+// (e.g. kaiser_helm +5 -> -2.0 s). DNFs are unaffected.
+const SM_ITEM_TIME_BONUS_MS_PER_POINT = 400;
+
 function json(body, status = 200, cors = corsHeaders) {
   return new Response(JSON.stringify(body), {
     status,
@@ -336,6 +342,33 @@ async function requireUser(req) {
   return data.user;
 }
 
+async function getStrongestHeroEffect(tx, userId, game) {
+  try {
+    const rows = await tx`
+      select d.slug, d.name, d.emoji, d.effect_game, d.effect_type, d.effect_value
+      from public.hero_item_instances i
+      join public.hero_item_defs d on d.id = i.item_def_id
+      where i.owner_id = ${userId}
+        and d.is_active = true
+        and (i.expires_at is null or i.expires_at > now())
+        and (
+          d.effect_game = ${game}
+          or (
+            ${game} in ('whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz')
+            and d.effect_type = 'score_bonus'
+            and d.effect_game in ('whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz')
+          )
+        )
+      order by d.effect_value desc, d.price desc, d.slug
+      limit 1
+    `;
+    return rows[0] ?? null;
+  } catch (err) {
+    console.warn("Hero item effects unavailable:", err?.message ?? err);
+    return null;
+  }
+}
+
 function mapRows(rows) {
   return (rows || []).map((row) => ({
     ...row,
@@ -437,7 +470,9 @@ async function submitRound(userId, body) {
   const requestedTick = asInt(body.elapsedTicks, 0);
   if (requestedTick < 1 || requestedTick > SM_MAX_TICKS) throw gameError("Nieprawidłowy koniec rundy.");
 
-  const inserted = await db.begin(async (tx) => {
+  const effect = await getStrongestHeroEffect(db, userId, "super_mariusz");
+
+  const result = await db.begin(async (tx) => {
     const [round] = await tx`
       select r.*, p.nick
       from public.super_mariusz_rounds r
@@ -460,6 +495,22 @@ async function submitRound(userId, body) {
     if (replay.endTick !== endTick) throw gameError("Runda zakończyła się wcześniej.");
     if (!replay.died && !replay.finished && endTick < SM_MAX_TICKS) throw gameError("Runda jeszcze trwa.");
 
+    const bonusPoints = effect?.effect_type === "score_bonus"
+      ? Math.max(0, asInt(effect.effect_value, 0))
+      : 0;
+    const bonusMs = replay.finished && replay.completionMs != null
+      ? Math.min(replay.completionMs, bonusPoints * SM_ITEM_TIME_BONUS_MS_PER_POINT)
+      : 0;
+    const completionMs = replay.completionMs == null ? null : replay.completionMs - bonusMs;
+    const itemEffect = bonusMs > 0 ? {
+      slug: effect.slug,
+      name: effect.name,
+      type: effect.effect_type,
+      value: Number(effect.effect_value),
+      bonus_ms: bonusMs,
+      base_completion_ms: replay.completionMs,
+    } : null;
+
     await tx`
       update public.super_mariusz_rounds
          set submitted_at = now()
@@ -477,7 +528,7 @@ async function submitRound(userId, body) {
           public.super_mariusz_week_start(now()),
           ${SM_COURSE_ID},
           ${replay.score},
-          ${replay.completionMs},
+          ${completionMs},
           ${replay.finished},
           ${moves.length},
           ${replay.endTick * SM_TICK_MS},
@@ -490,24 +541,25 @@ async function submitRound(userId, body) {
             died: replay.died,
             completed: replay.finished,
             base_score: replay.score,
-            item_effect: null,
+            item_effect: itemEffect,
           })}::jsonb
         )
       returning *
     `;
 
-    return row;
+    return { row, itemEffect };
   });
 
   return {
     ...(await loadState(userId)),
     score: {
-      id: inserted.id,
-      score: asInt(inserted.score),
-      completion_ms: inserted.completion_ms == null ? null : asInt(inserted.completion_ms),
-      completed: !!inserted.completed,
-      moves: asInt(inserted.moves),
-      submitted_at: inserted.submitted_at,
+      id: result.row.id,
+      score: asInt(result.row.score),
+      completion_ms: result.row.completion_ms == null ? null : asInt(result.row.completion_ms),
+      completed: !!result.row.completed,
+      moves: asInt(result.row.moves),
+      submitted_at: result.row.submitted_at,
+      itemEffect: result.itemEffect,
     },
   };
 }
