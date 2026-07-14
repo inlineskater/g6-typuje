@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/serve.mjs",
     "test:coin-pusher": "node --test scripts/coin-pusher-physics.test.mjs"
   },
   "dependencies": {
