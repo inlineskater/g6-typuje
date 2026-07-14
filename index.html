@@ -2396,16 +2396,6 @@
     .wheel-scoreboard + .wheel-history-wrap { margin-top: 14px; }
     .wheel-recent-wrap { margin-bottom: 14px; }
 
-    /* „NOWOŚĆ" pill — gold-on-green, subtle pulse (same animation recipe as
-       .seasonal-dot, scaled up into a tiny text pill instead of a dot). */
-    .wheel-nowosc-badge {
-      display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px;
-      border-radius: 999px; background: linear-gradient(135deg, #4d7c0f, #14361f);
-      color: #fde68a; font-size: 9px; font-weight: 900; letter-spacing: .03em;
-      vertical-align: middle; animation: seasonal-pulse 2.4s ease-in-out infinite;
-    }
-    .wheel-nowosc-badge.is-title { font-size: 11px; padding: 2px 8px; }
-
     /* Big countdown overlay in the middle of the wheel stage — mm:ss.d,
        swapping to a huge pulsing single digit under 5s, crash-vibe. */
     .wheel-countdown {
@@ -5172,7 +5162,6 @@
     .cv-swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--acc-dim); transform: scale(1.12); }
     .cv-bar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .cv-status { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: var(--yes-dim); color: var(--yes); border: 1px solid var(--yes-line); white-space: nowrap; }
-    .cv-status.cv-status-cooldown { background: var(--acc-dim); color: var(--accent); border-color: rgba(99,102,241,.22); }
     .cv-ctrl { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .cv-ctrl:hover { border-color: var(--border-hi); background: var(--bg); }
     .cv-stage { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); touch-action: none; }
@@ -6164,16 +6153,16 @@
         <button class="nav-tab" data-tab="plinko">📌 Plinko G6</button>
         <button class="nav-tab" data-tab="mines">💣 Miny G6</button>
         <button class="nav-tab" data-tab="crash">🚀 Rakieta</button>
-        <button class="nav-tab" data-tab="wheel">🦬 Koło Żubra <span class="wheel-nowosc-badge">NOWOŚĆ</span></button>
+        <button class="nav-tab" data-tab="wheel">🦬 Koło Żubra</button>
         <div class="nav-dropdown-label">Zręcznościowe</div>
         <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
         <button class="nav-tab" data-tab="all-games">🎮 Wszystkie Gry</button>
-        <button class="nav-tab" data-tab="canvas">🎨 Wspólne Płótno</button>
+        <button class="nav-tab" data-tab="canvas">🎨 Wspólne Płótno <span class="nav-new-badge">Nowość</span></button>
       </div>
     </div>
 
     <div class="nav-group" data-group="shop">
-      <button class="nav-group-btn">🛒 Targowisko <span class="nav-new-badge">Nowość</span> <span class="nav-chevron">▾</span></button>
+      <button class="nav-group-btn">🛒 Targowisko <span class="nav-chevron">▾</span></button>
       <div class="nav-dropdown">
         <button class="nav-tab" data-shop-target="marketplace-section">🤝 Ogłoszenia</button>
         <button class="nav-tab" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
@@ -6264,7 +6253,7 @@
       <div class="cv-bar">
         <div class="cv-bar-info">
           <span class="cv-title">🎨 Wspólne Płótno</span>
-          <span class="cv-hint">Klikaj, by malować • <strong>1 darmowy piksel co 2 h</strong>, potem <strong>1 🪙/piksel</strong> • przeciągnij = przesuń, kółko / szczypta = zoom</span>
+          <span class="cv-hint">Klikaj, by malować • <strong>zawsze za darmo</strong> • przeciągnij = przesuń, kółko / szczypta = zoom</span>
         </div>
         <div class="cv-palette" id="cv-palette"></div>
         <div class="cv-bar-actions">
@@ -6867,7 +6856,7 @@
       <div class="wheel-wrap">
         <div class="wheel-hero">
           <div>
-            <h2 class="wheel-title"><span class="wheel-title-mark">🦬</span><span>Koło Żubra G6</span><span class="wheel-nowosc-badge is-title">NOWOŚĆ</span></h2>
+            <h2 class="wheel-title"><span class="wheel-title-mark">🦬</span><span>Koło Żubra G6</span></h2>
             <p class="wheel-subtitle">Trawiaste koło fortuny — jedno koło, wspólna runda, kręcą wszyscy. Postaw stawkę w 15-sekundowym oknie; jeśli wszyscy gracze zgłoszą gotowość, losowanie ruszy wcześniej.</p>
           </div>
           <div class="wheel-hero-pills">
@@ -9271,7 +9260,6 @@ function switchTab(tab) {
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
   if (previousTab === 'invoice-horde-test' && tab !== 'invoice-horde-test') { stopInvoiceHordeRound(); restoreInvoiceHordePanelHome(); }
   if (previousTab === 'football' && tab !== 'football') stopFootballCountdown();
-  if (previousTab === 'canvas' && tab !== 'canvas') stopCanvasCountdown();
   if (previousTab === 'farm' && tab !== 'farm') { stopFarmTimer(); stopFarmAtmosphere(); closeFarmPlantModal(); stopGardenHeartbeat(); }
   if (previousTab === 'plinko' && tab !== 'plinko') stopPlinkoAnimation();
   if (previousTab === 'crash' && tab !== 'crash') stopCrash();
@@ -9379,7 +9367,6 @@ function switchTab(tab) {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCv);
     loadCanvas();
-    startCanvasCountdown();
   } else if (tab === 'flappy-test') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     const panel = document.getElementById('seasonal-game-flappy-pants');
@@ -18916,7 +18903,6 @@ async function loadFootball(showSpinner = true) {
 // ── Wspólne Płótno (collaborative pixel canvas) ─────────────────────────────
 // Grid bounds mirror supabase/canvas.sql (CANVAS_W/CANVAS_H) — keep in sync.
 const CANVAS_W = 192, CANVAS_H = 108;
-const CANVAS_COOLDOWN_MS = 2 * 60 * 60 * 1000; // display only; server is source of truth
 const CANVAS_PALETTE = [
   '#000000', '#3b3f46', '#787f8c', '#ffffff',
   '#e4002b', '#ff8a00', '#ffd400', '#7bc043',
@@ -18927,18 +18913,15 @@ const CANVAS_ERR = {
   not_authenticated: 'Musisz być zalogowany.',
   bad_coords: 'Piksel poza planszą.',
   bad_color: 'Niedozwolony kolor.',
-  insufficient_coins: 'Za mało coinów — w trakcie cooldownu piksel kosztuje 1 🪙.',
   no_profile: 'Brak profilu.',
 };
 
 let cvPixels = new Map();          // "x,y" -> color
-let cvNextFreeAt = 0;              // ms epoch of next free pixel
 let cvSelColor = CANVAS_PALETTE[4];
 let cvView = { scale: 1, offsetX: 0, offsetY: 0 };
 let cvHover = null;                // {x,y} or null
 let cvCtx = null;
 let cvLoadSeq = 0;
-let cvCountdownTimer = null;
 let cvSetupDone = false;
 
 function cvEl() { return document.getElementById('cv-canvas'); }
@@ -18958,16 +18941,10 @@ async function loadCanvas() {
   renderCanvasPalette();
   const seq = ++cvLoadSeq;
   try {
-    const [pixRes, cdRes] = await Promise.all([
-      sb.from('canvas_pixels').select('x,y,color'),
-      me ? sb.from('canvas_cooldowns').select('last_free_at').eq('user_id', me.id).maybeSingle()
-         : Promise.resolve({ data: null }),
-    ]);
+    const pixRes = await sb.from('canvas_pixels').select('x,y,color');
     if (seq !== cvLoadSeq) return;
     cvPixels = new Map();
     (pixRes.data || []).forEach(p => cvPixels.set(p.x + ',' + p.y, p.color));
-    const lastFree = cdRes && cdRes.data && cdRes.data.last_free_at;
-    cvNextFreeAt = lastFree ? new Date(lastFree).getTime() + CANVAS_COOLDOWN_MS : 0;
     fitCanvasView();
     drawCanvas();
     updateCanvasStatus();
@@ -19187,52 +19164,25 @@ function renderCanvasPalette() {
 
 async function onCanvasTap(cell) {
   if (!me) { showToast('Musisz być zalogowany.'); return; }
-  const onCooldown = cvNextFreeAt > Date.now();
-  if (onCooldown && (me.coins || 0) < 1) {
-    showToast('⏳ Cooldown trwa, a nie masz coinów na płatny piksel.');
-    return;
-  }
   try {
     const res = await placePixelRpc(cell.x, cell.y, cvSelColor);
     cvPixels.set(cell.x + ',' + cell.y, cvSelColor);
-    if (res && res.next_free_at) cvNextFreeAt = new Date(res.next_free_at).getTime();
-    if (res && typeof res.coins === 'number') { me.coins = res.coins; setText(headerCoins, me.coins); }
-    if (res && res.paid) showToast('🎨 Piksel za 1 🪙 — cooldown wciąż trwa.');
     drawCanvas();
-    updateCanvasStatus();
   } catch (e) {
     showToast('❌ ' + e.message);
   }
 }
 
-// ── Cooldown status / countdown ─────────────────────────────────────────────
+function updateCanvasStatus() {
+  const badge = document.getElementById('cv-status');
+  if (!badge) return;
+  badge.textContent = '✅ Zawsze za darmo — kliknij planszę!';
+}
+
 function cvFmtDur(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
   return (h ? h + 'h ' : '') + (h || m ? m + 'm ' : '') + ss + 's';
-}
-
-function updateCanvasStatus() {
-  const badge = document.getElementById('cv-status');
-  if (!badge) return;
-  const now = Date.now();
-  if (cvNextFreeAt > now) {
-    badge.textContent = '⏳ Darmowy piksel za ' + cvFmtDur(cvNextFreeAt - now) + ' · teraz 1 🪙/piksel';
-    badge.classList.add('cv-status-cooldown');
-  } else {
-    badge.textContent = '✅ Darmowy piksel gotowy — kliknij planszę!';
-    badge.classList.remove('cv-status-cooldown');
-  }
-}
-
-function startCanvasCountdown() {
-  stopCanvasCountdown();
-  cvCountdownTimer = setInterval(updateCanvasStatus, 1000);
-  updateCanvasStatus();
-}
-
-function stopCanvasCountdown() {
-  if (cvCountdownTimer) { clearInterval(cvCountdownTimer); cvCountdownTimer = null; }
 }
 
 function updateFootballHero() {
