@@ -34,6 +34,9 @@ verify_jwt = true
 [functions.wheel-action]
 verify_jwt = true
 
+[functions.coin-pusher-action]
+verify_jwt = true
+
 [functions.super-mariusz-action]
 verify_jwt = true
 

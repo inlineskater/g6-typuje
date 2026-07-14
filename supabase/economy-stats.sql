@@ -284,6 +284,7 @@ AS $$
         + public.hazard_house_net_from_spins(to_regclass('public.mines_spins'), 'bet', NULL::integer)
         + public.hazard_house_net_from_spins(to_regclass('public.crash_spins'), 'total_bet', NULL::integer)
         + public.hazard_house_net_from_spins(to_regclass('public.wheel_spins'), 'total_bet', NULL::integer)
+        + public.hazard_house_net_from_spins(to_regclass('public.coin_pusher_spins'), 'bet', NULL::integer)
         AS hazard_house_net
   )
   SELECT json_build_object(

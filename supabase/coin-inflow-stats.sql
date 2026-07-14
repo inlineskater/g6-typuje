@@ -155,6 +155,10 @@ AS $$
       SELECT user_id, total_won AS amount, created_at
       FROM public.wheel_spins
       WHERE total_won > 0
+      UNION ALL
+      SELECT user_id, total_won AS amount, created_at
+      FROM public.coin_pusher_spins
+      WHERE total_won > 0 AND ends_at <= now()
     ) h
     GROUP BY user_id
   ),

@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
+    "postgres": "npm:postgres@3.4.5",
+    "matter-js": "npm:matter-js@0.20.0"
+  }
+}

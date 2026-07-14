@@ -28,9 +28,9 @@ The public anon key in `index.html` is intentional for Supabase browser apps; th
 Fresh project setup:
 
 1. Create a Supabase project.
-2. In SQL Editor, run `supabase/schema.sql` (core prediction market), then the feature SQL files you want — arcade, poker, store, marketplace, garden, hero items (`hero-items.sql` → `hero-items-always-active.sql`; the cosmetic „Herosi" system itself is removed — also run `supabase/remove-heroes.sql` — surviving hero items are „Przedmioty specjalne"), casino games (`plinko`, `mines`, `roulette`, `crash`, `slots`), seasonal games (`whack-boss`, `bug-jumper`, `flappy-pants`, `snake`, `invoice-horde`, `var-patrol`, `egg-catch`, `super-mariusz` + `season-award-gating.sql`), `football.sql` (Mundial), `canvas.sql`, `documents.sql`, and the farm stack in the order above. Run `polish-midnight-schedules.sql` after the garden, seasonal, and farm SQL so daily resets and weekly awards follow Europe/Warsaw across DST.
+2. In SQL Editor, run `supabase/schema.sql` (core prediction market), then the feature SQL files you want — arcade, poker, store, marketplace, garden, hero items (`hero-items.sql` → `hero-items-always-active.sql`; the cosmetic „Herosi" system itself is removed — also run `supabase/remove-heroes.sql` — surviving hero items are „Przedmioty specjalne"), casino games (`plinko`, `mines`, `roulette`, `crash`, `slots`, `wheel`, `coin-pusher`), seasonal games (`whack-boss`, `bug-jumper`, `flappy-pants`, `snake`, `invoice-horde`, `var-patrol`, `egg-catch`, `super-mariusz` + `season-award-gating.sql`), `football.sql` (Mundial), `canvas.sql`, `documents.sql`, and the farm stack in the order above. Run `polish-midnight-schedules.sql` after the garden, seasonal, and farm SQL so daily resets and weekly awards follow Europe/Warsaw across DST.
 3. Run the stats views last: `hazard-views.sql`, `coin-inflow-stats.sql`, `economy-stats.sql`, `leaderboard-net-worth-items.sql`.
-4. Deploy the Edge Functions in `supabase/functions/` (one per server-owned game: poker, roulette, crash, slots, plinko, mines, wheel, football, garden, and all eight seasonal `*-action` functions).
+4. Deploy the Edge Functions in `supabase/functions/` (one per server-owned game: poker, roulette, crash, slots, plinko, mines, wheel, coin-pusher, football, garden, and all eight seasonal `*-action` functions).
 5. Run `supabase/prod-hardening.sql`.
 6. Authentication → Providers → Email: disable email confirmation (PIN signups use synthetic emails).
 7. Authentication → URL Configuration: set the site URL to the GitHub Pages URL.
@@ -44,7 +44,7 @@ Function secrets used by `football-action`: `ODDS_API_KEY`, `FOOTBALL_CRON_SECRE
 - Markets: anyone can create prediction markets; CPMM pricing; one side per user per market; creator or admin resolves.
 - Mundial: fixed-odds World Cup 2026 betting vs the house; odds come from The Odds API and are locked at bet time; one bet per match.
 - Poker: one shared Hold'em table, 100 coin buy-in, server-owned state.
-- Casino (house games): Plinko, Miny (5×5 mines), Ruletka (shared table), Rakieta (solo crash), Sloty, and Koło Żubra (shared 15-second rounds with unanimous ready-to-start acceleration) — all RNG and payouts are server-owned; the browser only animates trusted results.
+- Casino (house games): Plinko, Miny (5×5 mines), Ruletka (shared table), Rakieta (solo crash), Sloty, Koło Żubra (shared 15-second rounds), and Coin Pusher G6 (one persistent shared physics cabinet, fixed 100-coin drops, three-slot communal queue) — all outcomes and payouts are server-owned; the browser only animates trusted results.
 - Seasonal games: one rotating arcade game per Monday-start week (Whack-a-Boss, Bug Jumper, „3 Pary Spodni", Snake, „Najazd Ticketów", VAR Patrol, „Łap Jajka", „Super Mariusz"); server-validated rounds with game-specific weekly prizes.
 - Wspólne Płótno: shared 192×108 pixel canvas; one free pixel per 2 h, then 1 coin per pixel.
 - Targowisko: peer-to-peer marketplace (fixed price or auction with escrow); coins transfer buyer → seller.
