@@ -2557,60 +2557,6 @@
     .cp-stat.wide { border-left-color: var(--cp-yellow); }
     .cp-history { max-height: 285px; }
 
-    /* Full-HD cabinet mode: the complete game stays inside a 1920×1080 viewport. */
-    @media (min-width: 1101px) and (min-height: 900px) {
-      #tab-coin-pusher:not(.hidden) {
-        height: calc(100dvh - 102px);
-        min-height: 0;
-        overflow: hidden;
-      }
-      #tab-coin-pusher main { height: 100%; padding: 8px 18px; overflow: hidden; }
-      .cp-wrap { display: flex; flex-direction: column; width: min(100%, 1125px); height: 100%; }
-      .cp-hero { flex: 0 0 auto; margin-bottom: 8px; padding: 8px 12px; }
-      .cp-title { font-size: 23px; }
-      .cp-title-mark { width: 34px; height: 34px; font-size: 16px; }
-      .cp-subtitle { margin-top: 2px; line-height: 1.3; }
-      .cp-pills span { padding: 4px 7px; }
-      .cp-shell {
-        flex: 1 1 auto;
-        min-height: 0;
-        grid-template-columns: minmax(0, 1fr) 270px;
-        grid-template-rows: auto minmax(0, 1fr);
-        grid-template-areas: 'controls side' 'machine side';
-        gap: 10px;
-      }
-      .cp-controls {
-        grid-template-columns: 220px minmax(260px, 1fr) 140px;
-        gap: 8px;
-        padding: 8px;
-      }
-      .cp-console-block { padding: 7px; }
-      .cp-action-block { min-height: 0; }
-      .cp-drop-btn { min-height: 48px; }
-      .cp-fixed-stake { height: 38px; margin-top: 5px; padding: 7px; }
-      .cp-fixed-stake strong { font-size: 18px; }
-      .cp-lanes { margin-top: 5px; }
-      .cp-lane { height: 42px; }
-      .cp-machine-status { min-height: 40px; padding: 7px 10px; }
-      .cp-machine {
-        align-self: stretch;
-        display: grid;
-        grid-template-rows: 34px minmax(0, 1fr) auto;
-        min-height: 0;
-        height: 100%;
-      }
-      .cp-cabinet-topbar { min-height: 34px; }
-      .cp-stage { min-height: 0; height: 100%; aspect-ratio: auto; }
-      .cp-machine-footer span { padding: 6px 5px; }
-      .cp-help { display: none; }
-      .cp-side { position: static; height: 100%; overflow: hidden; gap: 10px; padding: 11px; }
-      .cp-side-section { padding-bottom: 9px; }
-      .cp-queue { gap: 5px; }
-      .cp-queue-row { padding: 6px; }
-      .cp-history { max-height: 178px; }
-      .cp-history-row { padding: 6px; }
-    }
-
     @media (max-width: 1100px) {
       .cp-shell { grid-template-columns: 1fr; grid-template-areas: 'machine' 'controls' 'side'; }
       .cp-side { position: static; display: grid; grid-template-columns: 1fr 1fr 1fr; }
@@ -7300,14 +7246,15 @@
             <span>100 🪙 za wrzut</span>
             <span>5 torów</span>
             <span>kolejka 3 graczy</span>
-            <span>warstwowy stos</span>
+            <span>fizyka v2</span>
           </div>
         </div>
 
         <div class="cp-shell">
           <aside class="cp-controls" aria-label="Konsola sterowania Coin Pusher">
-            <div class="cp-action-block">
-              <button id="coin-pusher-drop" class="rl-btn is-gold cp-drop-btn" type="button">WRZUĆ MONETĘ · 100</button>
+            <div class="cp-console-block">
+              <div class="cp-label">Nominał</div>
+              <div class="cp-fixed-stake"><span>Jedna moneta</span><strong>100</strong></div>
             </div>
             <div class="cp-console-block">
               <div class="cp-label" style="margin-bottom:7px">Tor zrzutu</div>
@@ -7319,9 +7266,8 @@
                 <button class="cp-lane" type="button" data-lane="4" title="Tor skrajnie po prawej">5<br>▼</button>
               </div>
             </div>
-            <div class="cp-console-block">
-              <div class="cp-label">Nominał</div>
-              <div class="cp-fixed-stake"><span>Jedna moneta</span><strong>100</strong></div>
+            <div class="cp-action-block">
+              <button id="coin-pusher-drop" class="rl-btn is-gold cp-drop-btn" type="button">WRZUĆ MONETĘ · 100</button>
             </div>
             <div id="coin-pusher-status" class="cp-machine-status" aria-live="polite"><strong>Łączenie z maszyną…</strong>Stan wspólnej półki pojawi się za chwilę.</div>
           </aside>
@@ -7345,7 +7291,7 @@
             </div>
             <details class="plinko-help cp-help">
               <summary>Jak to działa?</summary>
-              <p class="plinko-note">Każdy wrzut kosztuje dokładnie 100 coinów. Moneta przechodzi przez wybrany tor, ląduje na ruchomej półce i fizycznie naciska na wspólny, warstwowy stos. Maszyna przyjmuje do trzech wrzutów w kolejce, po jednym na gracza.</p>
+              <p class="plinko-note">Każdy wrzut kosztuje dokładnie 100 coinów. Moneta przechodzi przez wybrany tor, ląduje na ruchomej półce i fizycznie naciska na wspólny stos. Maszyna przyjmuje do trzech wrzutów w kolejce, po jednym na gracza.</p>
               <p class="plinko-note">Za każdą monetę wypchniętą przez przednią krawędź dostajesz 100 coinów. Boczne rynny nie płacą. Gdy zapas spadnie poniżej 24 monet, operator widocznie uzupełnia maszynę do 40 — te monety są zwykłą częścią fizycznego stosu.</p>
             </details>
           </section>
@@ -19080,45 +19026,21 @@ function coinPusherCoinVariant(id) {
   return Math.abs(hash % 1000) / 1000;
 }
 
-function coinPusherLayeredCoins(coins) {
-  const list = Array.isArray(coins) ? coins : [];
-  return list.map((coin, index) => {
-    let neighbours = 0;
-    for (let otherIndex = 0; otherIndex < list.length; otherIndex += 1) {
-      if (otherIndex === index) continue;
-      const other = list[otherIndex];
-      const dx = Number(other.x) - Number(coin.x);
-      const dy = Number(other.y) - Number(coin.y);
-      if (Math.abs(dx) <= 62 && Math.abs(dy) <= 62 && dx * dx + dy * dy <= 4356) neighbours += 1;
-    }
-    const variant = coinPusherCoinVariant(coin.id);
-    let visualLayer = 0;
-    if (neighbours >= 2 && variant > .28) visualLayer = 1;
-    if (neighbours >= 4 && variant > .76) visualLayer = 2;
-    return { ...coin, visualLayer };
-  }).sort((a, b) => Number(a.y) - Number(b.y) || Number(a.visualLayer) - Number(b.visualLayer));
-}
-
 function drawIndustrialCoin(ctx, coin, highlighted = false) {
   const projected = coinPusherProject(coin.x, coin.y);
   const radius = 27 * projected.scale;
   const squash = .67;
   const variant = coinPusherCoinVariant(coin.id);
-  const visualLayer = Math.max(0, Math.min(2, Number(coin.visualLayer || 0)));
-  const lift = visualLayer * 8 * projected.scale;
-  const edgeDepth = (6 + visualLayer * 4) * projected.scale;
   ctx.save();
-  ctx.translate(projected.x, projected.y - lift);
+  ctx.translate(projected.x, projected.y);
   ctx.rotate((variant - .5) * .26);
   ctx.shadowColor = highlighted ? 'rgba(255,224,92,.9)' : 'rgba(0,0,0,.48)';
   ctx.shadowBlur = highlighted ? 16 : 7;
-  ctx.shadowOffsetY = 7 + visualLayer * 2;
-  for (let depth = edgeDepth; depth >= 2; depth -= 2) {
-    ctx.beginPath();
-    ctx.ellipse(0, depth, radius, radius * squash, 0, 0, Math.PI * 2);
-    ctx.fillStyle = depth % 4 < 2 ? '#5f3505' : '#81500b';
-    ctx.fill();
-  }
+  ctx.shadowOffsetY = 6;
+  ctx.beginPath();
+  ctx.ellipse(0, 6, radius, radius * squash, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#70460b';
+  ctx.fill();
   ctx.shadowColor = 'transparent';
   const face = ctx.createRadialGradient(-radius * .34, -radius * .32, 2, 0, 0, radius);
   face.addColorStop(0, highlighted ? '#fffbd2' : '#fff0a0');
@@ -19300,7 +19222,7 @@ function drawCoinPusherBoard() {
   ctx.beginPath(); ctx.moveTo(930, 585); ctx.lineTo(868, 612); ctx.lineTo(850, 735); ctx.lineTo(930, 735); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#e33c48';
   ctx.fillRect(70, 585, 50, 7); ctx.fillRect(880, 585, 50, 7);
-  coinPusherLayeredCoins(frame.coins).forEach(coin => drawIndustrialCoin(ctx, coin, coin.id === '__drop__'));
+  [...frame.coins].sort((a, b) => Number(a.y) - Number(b.y)).forEach(coin => drawIndustrialCoin(ctx, coin, coin.id === '__drop__'));
   drawCoinPusherAirCoin(ctx, frame.drop);
 
   // Prize edge and collection tray.
@@ -19459,7 +19381,7 @@ function renderCoinPusherControls() {
   if (active && end > coinPusherNow()) {
     const waiting = start > coinPusherNow();
     status.classList.add(waiting ? 'is-queued' : 'is-active');
-    status.innerHTML = `<strong>${waiting ? 'Moneta w mechanizmie' : 'Popychacz pracuje'}</strong>${escapeHtmlText(active.nick || 'Gracz')} · tor ${Number(active.lane) + 1}${waiting ? ` · start za ${Math.max(0, (start - coinPusherNow()) / 1000).toFixed(1)} s` : ` · ${coinPusherQueue.length} w maszynie`}`;
+    status.innerHTML = `<strong>${waiting ? 'Moneta w mechanizmie' : 'Popychacz pracuje'}</strong>${escapeHtml(active.nick || 'Gracz')} · tor ${Number(active.lane) + 1}${waiting ? ` · start za ${Math.max(0, (start - coinPusherNow()) / 1000).toFixed(1)} s` : ` · ${coinPusherQueue.length} w maszynie`}`;
   } else {
     const stock = Number(coinPusherState?.machine?.stockCount ?? coinPusherState?.machine?.state?.coins?.length ?? 0);
     status.innerHTML = `<strong>Maszyna gotowa</strong>${stock} monet na wspólnej półce · wybierz tor i obserwuj ruch popychacza.`;

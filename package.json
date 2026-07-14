@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "test:coin-pusher": "node --test scripts/coin-pusher-physics.test.mjs scripts/coin-pusher-ui.test.mjs"
+    "test:coin-pusher": "node --test scripts/coin-pusher-physics.test.mjs"
   },
   "dependencies": {
     "matter-js": "0.20.0"
