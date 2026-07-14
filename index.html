@@ -868,6 +868,151 @@
     .fb-lottery-note { background: var(--acc-dim); border: 1px solid var(--border-hi); border-radius: 10px;
       padding: 10px 12px; font-size: 12px; color: var(--muted); font-weight: 650; line-height: 1.45; }
     .fb-lottery-note strong { font-weight: 900; }
+
+    /* ═══ 🎟️ Loteria po Mundialu ═══ */
+    .lot { --lot-gold: #b7791f; --lot-gold-soft: rgba(183,121,31,.09);
+      max-width: 720px; margin: 0 auto; padding: 8px 4px 48px; }
+    .lot-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--muted); }
+    .lot-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .lot-title { font-size: 28px; font-weight: 800; letter-spacing: -.025em; line-height: 1.08; margin: 7px 0 0; }
+    .lot-badge { flex: none; margin-top: 9px; font-size: 10px; font-weight: 800; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--lot-gold); border: 1px solid var(--lot-gold);
+      border-radius: 999px; padding: 3px 10px; }
+    .lot-lede { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 12px 0 26px; max-width: 56ch; }
+    .lot-num { font-variant-numeric: tabular-nums; }
+    .lot-coin { font-size: .5em; font-weight: 700; vertical-align: .12em; -webkit-text-fill-color: initial; }
+
+    /* Ticket */
+    .lot-ticket { display: grid; grid-template-columns: 1fr minmax(148px, auto);
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
+    .lot-ticket-face { padding: 26px 28px; }
+    .lot-pool-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .lot-pool { font-size: clamp(38px, 8.5vw, 56px); font-weight: 800; letter-spacing: -.035em;
+      line-height: 1; color: var(--lot-gold); margin: 8px 0 10px; }
+    .lot-pool-note { font-size: 12.5px; color: var(--muted); line-height: 1.45; max-width: 34ch; }
+    .lot-ticket-stub { position: relative; padding: 24px 26px; display: flex; flex-direction: column;
+      justify-content: center; gap: 15px; border-left: 2px dashed var(--border-hi); }
+    .lot-ticket-stub::before, .lot-ticket-stub::after { content: ''; position: absolute; left: -10px;
+      width: 18px; height: 18px; border-radius: 50%; background: var(--bg); }
+    .lot-ticket-stub::before { top: -10px; } .lot-ticket-stub::after { bottom: -10px; }
+    .lot-fact-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .lot-fact-val { font-size: 15px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+    /* Sections */
+    .lot-section { margin-top: 34px; }
+    .lot-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      border-bottom: 1px solid var(--border); padding-bottom: 9px; margin-bottom: 14px; }
+    .lot-section-title { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .lot-section-hint { font-size: 11.5px; color: var(--muted); }
+    .lot-note { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 14px 0 0; }
+
+    /* Podział puli */
+    .lot-split { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .lot-split td { padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .lot-split tr:last-child td { border-bottom: 0; }
+    .lot-split .rk { font-weight: 500; }
+    .lot-split .sh { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; width: 64px; }
+    .lot-split .amt { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; width: 128px; }
+    .lot-split .is-top .rk, .lot-split .is-top .amt { color: var(--lot-gold); font-weight: 700; }
+    .lot-split .is-div td { border-top: 1px solid var(--border-hi); border-bottom: 0; padding-top: 12px; }
+    .lot-split .is-div .rk { font-weight: 600; }
+    .lot-explain { margin-top: 16px; display: flex; flex-direction: column; gap: 9px; }
+    .lot-explain p { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 0; }
+    .lot-explain b { color: var(--text); font-weight: 700; }
+
+    /* Twoje bilety (personal breakdown) */
+    .lot-mine .lot-section-head { border-bottom-color: var(--lot-gold); }
+    .lot-mine-total { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 10px; flex-wrap: wrap; }
+    .lot-mine-num { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--lot-gold); font-variant-numeric: tabular-nums; }
+    .lot-mine-lbl { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+    .lot-mine-room { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--lot-gold);
+      background: var(--lot-gold-soft); border-radius: 999px; padding: 3px 9px; }
+    /* compact one-line-per-category breakdown */
+    .lot-tick { display: flex; flex-direction: column; }
+    .lot-tick-row { display: flex; align-items: baseline; gap: 10px; padding: 5px 0;
+      border-bottom: 1px solid var(--border); font-size: 12.5px; line-height: 1.3; }
+    .lot-tick-row:last-child { border-bottom: 0; }
+    .lot-tick-cat { font-weight: 600; width: 130px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lot-tick-val { width: 48px; flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+    .lot-tick-val b { font-weight: 800; }
+    .lot-tick-val .sl { color: var(--dim); }
+    .lot-tick-how { flex: 1; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lot-tick-how b { color: var(--lot-gold); font-weight: 800; }
+    .lot-tick-how.done { color: var(--yes); font-weight: 600; }
+    .lot-tick-row.is-full { color: var(--dim); }
+    .lot-tick-row.is-full .lot-tick-val b { color: var(--muted); font-weight: 700; }
+
+    /* Ranking view toggle + matrix */
+    .lot-view-toggle { display: inline-flex; gap: 2px; padding: 2px; background: var(--surface); border-radius: 8px; }
+    .lot-view-btn { font-family: inherit; font-size: 11.5px; font-weight: 700; color: var(--muted);
+      background: none; border: 0; border-radius: 6px; padding: 4px 11px; cursor: pointer; }
+    .lot-view-btn:hover { color: var(--text); }
+    .lot-view-btn.is-on { background: var(--card); color: var(--lot-gold); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+    .lot-matrix-wrap { overflow-x: auto; margin: 0 -4px; }
+    .lot-matrix { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+    .lot-matrix th, .lot-matrix td { padding: 7px 6px; border-bottom: 1px solid var(--border); text-align: center; }
+    .lot-matrix th.nk, .lot-matrix td.nk { text-align: left; white-space: nowrap; position: sticky; left: 0;
+      background: var(--card); padding-left: 2px; }
+    .lot-matrix .mp { display: inline-block; width: 18px; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .lot-matrix th.ct { font-size: 14px; cursor: help; }
+    .lot-matrix td.ct { font-variant-numeric: tabular-nums; color: var(--text); }
+    .lot-matrix td.ct.zero { color: var(--border-hi); }
+    .lot-matrix td.ct.full { color: var(--lot-gold); font-weight: 700; }
+    .lot-matrix th.tot, .lot-matrix td.tot { font-weight: 800; font-variant-numeric: tabular-nums;
+      border-left: 1px solid var(--border); }
+    .lot-matrix tbody tr.is-me { background: var(--lot-gold-soft); }
+    .lot-matrix tbody tr.is-me .nk { background: #fdf6e8; color: var(--lot-gold); font-weight: 700; }
+    .lot-earn-group { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--muted); margin: 20px 0 4px; }
+    .lot-earn-group:first-child { margin-top: 6px; }
+
+    /* Jak zdobyć bilety */
+    .lot-earn { display: flex; flex-direction: column; }
+    .lot-earn-row { display: flex; align-items: baseline; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+    .lot-earn-row:last-child { border-bottom: 0; }
+    .lot-earn-name { font-weight: 600; min-width: 128px; flex: none; }
+    .lot-earn-rule { color: var(--muted); font-size: 13px; flex: 1; line-height: 1.4; }
+    .lot-earn-cap { flex: none; font-size: 11px; font-weight: 700; color: var(--muted);
+      font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .lot-earn-row.is-bonus .lot-earn-name { color: var(--lot-gold); }
+    .lot-earn-row.is-bonus .lot-earn-cap { color: var(--lot-gold); }
+
+    /* Ranking */
+    .lot-rank { display: flex; flex-direction: column; }
+    .lot-rank-row { padding: 13px 12px; margin: 0 -12px; border-bottom: 1px solid var(--border); }
+    .lot-rank-row:last-child { border-bottom: 0; }
+    .lot-rank-row.is-me { background: var(--lot-gold-soft); border-radius: 10px; border-bottom-color: transparent; }
+    .lot-rank-top { display: flex; align-items: baseline; gap: 12px; }
+    .lot-rank-pos { width: 20px; flex: none; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .lot-rank-nick { font-weight: 600; }
+    .lot-rank-row.is-me .lot-rank-nick { color: var(--lot-gold); }
+    .lot-rank-you { font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--lot-gold); border: 1px solid var(--lot-gold); border-radius: 4px; padding: 1px 5px; margin-left: 7px; }
+    .lot-rank-spacer { flex: 1; }
+    .lot-rank-tickets { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .lot-rank-tickets small { color: var(--muted); font-weight: 500; margin-left: 4px; font-size: 11px; }
+    .lot-rank-chance { width: 52px; flex: none; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .lot-rank-bar { height: 3px; margin-top: 10px; border-radius: 2px; background: var(--surface); overflow: hidden; }
+    .lot-rank-bar > span { display: block; height: 100%; border-radius: 2px; background: var(--lot-gold);
+      transform-origin: left center; transition: transform .7s cubic-bezier(.22,1,.36,1); }
+    .lot-rank-row.is-me .lot-rank-bar { background: rgba(183,121,31,.18); }
+
+    .lot-refresh { margin-top: 24px; font-size: 12.5px; font-weight: 600; color: var(--muted);
+      background: none; border: 0; cursor: pointer; padding: 6px 0; font-family: inherit; }
+    .lot-refresh:hover { color: var(--text); }
+
+    @media (prefers-reduced-motion: reduce) { .lot-rank-bar > span { transition: none; } }
+    @media (max-width: 560px) {
+      .lot-title { font-size: 24px; }
+      .lot-ticket { grid-template-columns: 1fr; }
+      .lot-ticket-stub { border-left: 0; border-top: 2px dashed var(--border-hi);
+        flex-direction: row; flex-wrap: wrap; gap: 18px 28px; padding: 20px 28px; }
+      .lot-ticket-stub::before { top: -10px; left: -10px; }
+      .lot-ticket-stub::after { top: -10px; bottom: auto; left: auto; right: -10px; }
+      .lot-earn-name { min-width: 100%; }
+      .lot-earn-row { flex-wrap: wrap; gap: 4px 12px; }
+    }
     @media (max-width: 560px) {
       .fb-rewards-prizes { border-radius: 8px; text-align: left; }
       .fb-podium-row { grid-template-columns: 30px minmax(0, 1fr); }
@@ -6140,6 +6285,7 @@
       <div class="nav-dropdown">
         <button class="nav-tab" data-tab="markets">📊 Rynki</button>
         <button class="nav-tab" data-tab="football">⚽ Mundial</button>
+        <button class="nav-tab" data-tab="lottery">🎟️ Loteria <span class="nav-new-badge">Nowość</span></button>
       </div>
     </div>
 
@@ -6243,6 +6389,14 @@
       </details>
 
       <div class="markets-grid" id="football-grid">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-lottery" class="hidden">
+    <main>
+      <div id="lottery-body">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
     </main>
@@ -9287,6 +9441,7 @@ function switchTab(tab) {
   const tBj = document.getElementById('tab-bug-jumper-test');
   const tIh = document.getElementById('tab-invoice-horde-test');
   const tFb = document.getElementById('tab-football');
+  const tLot = document.getElementById('tab-lottery');
   const tCv = document.getElementById('tab-canvas');
   const tFa = document.getElementById('tab-farm');
   const tCr = document.getElementById('tab-crash');
@@ -9296,6 +9451,7 @@ function switchTab(tab) {
   hide(tBj);
   hide(tIh);
   hide(tFb);
+  hide(tLot);
   hide(tCv);
   hide(tFa);
   hide(tPl);
@@ -9363,6 +9519,10 @@ function switchTab(tab) {
     show(tFb);
     loadFootball();
     startFootballCountdown();
+  } else if (tab === 'lottery') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    show(tLot);
+    renderLottery();
   } else if (tab === 'canvas') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCv);
@@ -18898,6 +19058,265 @@ async function loadFootball(showSpinner = true) {
     if (seq !== footballLoadSeq) return;
     footballGrid.replaceChildren(el('p', { className: 'fb-no-odds' }, err.message || 'Nie udało się wczytać meczów.'));
   }
+}
+
+// ── 🎟️ Loteria po Mundialu (activity raffle) ───────────────────────────────
+// Its own tab (#tab-lottery). Prize pool = 10 × the Bank's Mundial net; tickets
+// earned across the whole portal. Caps mirror supabase/lottery.sql — keep in sync.
+const LOTTERY_TIERS = [
+  { place: '1.', pct: 0.30 },
+  { place: '2.', pct: 0.20 },
+  { place: '3.', pct: 0.14 },
+  { place: '4.', pct: 0.10 },
+  { place: '5.', pct: 0.08 },
+  { place: '6.', pct: 0.06 },
+];
+const LOTTERY_DIVIDEND_PCT = 0.12; // reszta puli — po równo dla każdego z biletem
+
+// Every ticket category, mapped to its field on a player row. `how` tells the
+// player exactly what to do to earn more — shown in the "Twoje bilety" table.
+const LOTTERY_CATS = [
+  { key: 'mundial',  label: 'Mundial',        icon: '⚽', cap: 15, how: 'Postaw zakład na mecz' },
+  { key: 'rynek',    label: 'Rynek Proroctw', icon: '📊', cap: 10, how: 'Obstawiaj rynki predykcyjne' },
+  { key: 'kasyno',   label: 'Kasyno',         icon: '🎰', cap: 10, how: 'Zagraj w grę losową (dzień)' },
+  { key: 'sezonowe', label: 'Gra tygodnia',   icon: '🕹️', cap: 8,  how: 'Zagraj w grę tygodnia (tydzień)' },
+  { key: 'farma',    label: 'Farma',          icon: '🌱', cap: 8,  how: 'Zbieraj plony (dzień)' },
+  { key: 'targ',     label: 'Targowisko',     icon: '🛍️', cap: 6,  how: 'Sfinalizuj transakcję' },
+  { key: 'plotno',   label: 'Wspólne Płótno', icon: '🎨', cap: 6,  how: 'Maluj piksele (dzień)' },
+  { key: 'ogrod',    label: 'Ogród Zen',      icon: '🪴', cap: 5,  how: 'Załóż 2 rośliny zen' },
+  { key: 'ozdoby',   label: 'Ozdoby roślin',  icon: '🎀', cap: 4,  how: 'Dodaj ozdobę do rośliny' },
+  { key: 'dzialki',  label: 'Działki',        icon: '🚜', cap: 12, how: 'Kup działkę (+2 za każdą)' },
+  { key: 'breadth',  label: 'Wszechstronność',icon: '🌈', cap: 14, how: '+2 za każdą aktywność z punktem' },
+];
+let lotteryRankView = 'list'; // 'list' | 'matrix'
+function setLotteryRankView(v) { lotteryRankView = v; renderLottery(); }
+const LOTTERY_ACTIVITY_KEYS = ['mundial','rynek','kasyno','sezonowe','farma','targ','plotno'];
+const LOTTERY_OWNER_KEYS = ['ogrod','ozdoby','dzialki'];
+
+let lotteryData = null;
+let lotteryLoading = false;
+
+async function renderLottery(force) {
+  const body = document.getElementById('lottery-body');
+  if (!body) return;
+  if (lotteryData && !force) { body.replaceChildren(buildLotteryPanel(lotteryData)); return; }
+  if (lotteryLoading) return;
+  lotteryLoading = true;
+  if (!lotteryData) body.replaceChildren(makeSpinner());
+  try {
+    const { data, error } = await sb.rpc('mundial_lottery_standings');
+    if (error) throw error;
+    lotteryData = data;
+    body.replaceChildren(buildLotteryPanel(data));
+  } catch (_e) {
+    body.replaceChildren(el('div', { className: 'lot' },
+      el('p', { className: 'lot-lede' }, 'Nie udało się wczytać loterii. Spróbuj odświeżyć stronę.')));
+  } finally {
+    lotteryLoading = false;
+  }
+}
+
+// Polish thousands grouping (80 290) for the lottery's headline figures only —
+// the rest of the app uses plain fmtNum.
+function lotNum(n) { return Math.round(+n || 0).toLocaleString('pl-PL'); }
+function lotCoins(n) {
+  return el('span', { className: 'lot-num' }, lotNum(n),
+    el('span', { className: 'lot-coin' }, ' 🪙'));
+}
+function lotCatValue(p, key) {
+  return key === 'breadth' ? (+p.breadth || 0) : (+p[key] || 0);
+}
+
+function buildLotteryPanel(d) {
+  const pool = Math.max(0, +d.prize_pool || 0);
+  const bankNet = +d.bank_net || 0;
+  const total = +d.total_tickets || 0;
+  const players = Array.isArray(d.players) ? d.players : [];
+  const live = bankNet > 0 && pool > 0;
+  const maxTk = players.reduce((m, p) => Math.max(m, +p.tickets || 0), 0) || 1;
+  const mine = me ? players.find(p => p.id === me.id) : null;
+
+  // ── Header ──
+  const header = el('div', { className: 'lot-head' },
+    el('div', {},
+      el('div', { className: 'lot-eyebrow' }, 'Mistrzostwa Świata 2026'),
+      el('h1', { className: 'lot-title' }, 'Loteria po Mundialu'),
+    ),
+    el('span', { className: 'lot-badge' }, 'Nowość'),
+  );
+  const lede = el('p', { className: 'lot-lede' },
+    'Cały zysk Banku z Mundialu wraca do graczy. Bilety zbierasz za aktywność na całym portalu — a pod koniec lipca losujemy zwycięzców. Im więcej biletów, tym większa szansa.');
+
+  // ── Ticket ──
+  const face = el('div', { className: 'lot-ticket-face' },
+    el('div', { className: 'lot-pool-label' }, 'Pula nagród'),
+    el('div', { className: 'lot-pool' }, live ? lotCoins(pool) : '—'),
+    el('div', { className: 'lot-pool-note' }, live
+      ? '10× wynik Banku w Mundialu (obecnie +' + lotNum(bankNet) + ' 🪙)'
+      : 'Pula to 10× zysk Banku z Mundialu. Rośnie z każdym przegranym zakładem gracza.'),
+  );
+  const stubFact = (label, val) => el('div', { className: 'lot-fact' },
+    el('div', { className: 'lot-fact-label' }, label),
+    el('div', { className: 'lot-fact-val' }, val));
+  const stub = el('div', { className: 'lot-ticket-stub' },
+    stubFact('Zbieramy do', '31 lipca'),
+    stubFact('Losowanie', '1 sierpnia'),
+    stubFact('Biletów w puli', lotNum(total)),
+  );
+  const ticket = el('div', { className: 'lot-ticket' }, face, stub);
+
+  // ── Twoje bilety (personal breakdown — exactly why you have your total) ──
+  let mineSection = '';
+  if (mine) {
+    const myTotal = +mine.tickets || 0;
+    const tickRow = (icon, label, have, cap, full, hint) => el('div', { className: 'lot-tick-row' + (full ? ' is-full' : '') },
+      el('span', { className: 'lot-tick-cat' }, (icon ? icon + ' ' : '') + label),
+      el('span', { className: 'lot-tick-val' }, el('b', {}, String(have)), el('span', { className: 'sl' }, ' / ' + cap)),
+      full ? el('span', { className: 'lot-tick-how done' }, '✓ komplet') : el('span', { className: 'lot-tick-how' }, el('b', {}, '+' + (cap - have)), ' ' + hint),
+    );
+    const catRows = LOTTERY_CATS.map(c => {
+      const v = lotCatValue(mine, c.key);
+      return tickRow(c.icon, c.label, v, c.cap, v >= c.cap, c.how);
+    });
+    catRows.push(tickRow('🎁', 'Bilet powitalny', 1, 1, true, ''));
+    const myRoom = LOTTERY_CATS.reduce((s, c) => s + Math.max(0, c.cap - lotCatValue(mine, c.key)), 0);
+    mineSection = el('section', { className: 'lot-section lot-mine' },
+      el('div', { className: 'lot-section-head' },
+        el('div', { className: 'lot-section-title' }, 'Twoje bilety'),
+        el('div', { className: 'lot-section-hint' },
+          total > 0 ? 'szansa ' + ((myTotal / total * 100) < 1 ? (myTotal / total * 100).toFixed(1) : Math.round(myTotal / total * 100)) + '%' : ''),
+      ),
+      el('div', { className: 'lot-mine-total' },
+        el('span', { className: 'lot-mine-num' }, String(myTotal)),
+        el('span', { className: 'lot-mine-lbl' }, myTotal === 1 ? 'bilet' : 'biletów'),
+        myRoom > 0 ? el('span', { className: 'lot-mine-room' }, '+' + myRoom + ' do zdobycia') : '',
+      ),
+      el('div', { className: 'lot-tick' }, ...catRows),
+    );
+  }
+
+  // ── Podział puli ──
+  const splitRows = LOTTERY_TIERS.map((t, i) => el('tr', { className: i === 0 ? 'is-top' : '' },
+    el('td', { className: 'rk' }, t.place + ' miejsce'),
+    el('td', { className: 'sh' }, Math.round(t.pct * 100) + '%'),
+    el('td', { className: 'amt' }, live ? lotNum(Math.round(pool * t.pct)) + ' 🪙' : '—'),
+  ));
+  const divAmt = Math.round(pool * LOTTERY_DIVIDEND_PCT);
+  const pc = +d.player_count || players.length || 0;
+  const divEach = pc ? Math.floor(divAmt / pc) : 0;
+  splitRows.push(el('tr', { className: 'is-div' },
+    el('td', { className: 'rk' }, 'Dywidenda dla wszystkich'),
+    el('td', { className: 'sh' }, Math.round(LOTTERY_DIVIDEND_PCT * 100) + '%'),
+    el('td', { className: 'amt' }, live ? lotNum(divAmt) + ' 🪙' : '—'),
+  ));
+  const drawPct = Math.round((1 - LOTTERY_DIVIDEND_PCT) * 100);
+  const splitSection = el('section', { className: 'lot-section' },
+    el('div', { className: 'lot-section-head' },
+      el('div', { className: 'lot-section-title' }, 'Podział puli'),
+      el('div', { className: 'lot-section-hint' }, '6 nagród + dywidenda'),
+    ),
+    el('table', { className: 'lot-split' }, el('tbody', {}, ...splitRows)),
+    el('div', { className: 'lot-explain' },
+      el('p', {}, el('b', {}, 'Losowanie (' + drawPct + '% puli): '),
+        'sześć nagród losujemy ważnie liczbą biletów i bez powtórzeń — więcej biletów to większa szansa, a jedna osoba nie zajmie dwóch miejsc.'),
+      el('p', {}, el('b', {}, 'Dywidenda (' + Math.round(LOTTERY_DIVIDEND_PCT * 100) + '% puli): '),
+        live && divEach
+          ? lotNum(divAmt) + ' 🪙 ÷ ' + pc + ' graczy z biletem = ok. ' + lotNum(divEach) + ' 🪙 dla każdego. To gwarantowana wypłata — dostajesz ją niezależnie od losowania.'
+          : 'równa działka dla każdego, kto ma choć jeden bilet — gwarantowana, niezależnie od losowania.'),
+    ),
+  );
+
+  // ── Jak zdobyć bilety (full catalog, grouped) ──
+  const earnRow = c => {
+    const bonus = c.key === 'breadth';
+    return el('div', { className: 'lot-earn-row' + (bonus ? ' is-bonus' : '') },
+      el('div', { className: 'lot-earn-name' }, c.label),
+      el('div', { className: 'lot-earn-rule' }, c.how),
+      el('div', { className: 'lot-earn-cap' }, 'max ' + c.cap),
+    );
+  };
+  const catByKey = k => LOTTERY_CATS.find(c => c.key === k);
+  const earnSection = el('section', { className: 'lot-section' },
+    el('div', { className: 'lot-section-head' },
+      el('div', { className: 'lot-section-title' }, 'Za co zdobywasz bilety'),
+      el('div', { className: 'lot-section-hint' }, 'graj szeroko, nie tylko dużo'),
+    ),
+    el('div', { className: 'lot-earn-group' }, 'Za aktywność'),
+    el('div', { className: 'lot-earn' }, ...LOTTERY_ACTIVITY_KEYS.map(k => earnRow(catByKey(k)))),
+    el('div', { className: 'lot-earn-group' }, 'Za rozwój i posiadanie'),
+    el('div', { className: 'lot-earn' }, ...LOTTERY_OWNER_KEYS.map(k => earnRow(catByKey(k)))),
+    el('div', { className: 'lot-earn-group' }, 'Bonusy'),
+    el('div', { className: 'lot-earn' },
+      earnRow(catByKey('breadth')),
+      el('div', { className: 'lot-earn-row is-bonus' },
+        el('div', { className: 'lot-earn-name' }, 'Bilet powitalny'),
+        el('div', { className: 'lot-earn-rule' }, 'Każdy gracz dostaje jeden na start'),
+        el('div', { className: 'lot-earn-cap' }, '+1'),
+      ),
+    ),
+  );
+
+  // ── Ranking ──
+  const rankRows = players.map((p, i) => {
+    const tk = +p.tickets || 0;
+    const chance = total > 0 ? (tk / total) * 100 : 0;
+    const isMe = me && p.id === me.id;
+    const breakdown = LOTTERY_CATS.map(c => c.label + ' ' + lotCatValue(p, c.key)).join(' · ');
+    const bar = el('span', {});
+    const row = el('div', { className: 'lot-rank-row' + (isMe ? ' is-me' : ''), title: breakdown },
+      el('div', { className: 'lot-rank-top' },
+        el('div', { className: 'lot-rank-pos' }, String(i + 1)),
+        el('div', { className: 'lot-rank-nick' }, p.nick || '—',
+          isMe ? el('span', { className: 'lot-rank-you' }, 'Ty') : ''),
+        el('div', { className: 'lot-rank-spacer' }),
+        el('div', { className: 'lot-rank-tickets' }, String(tk), el('small', {}, 'bil.')),
+        el('div', { className: 'lot-rank-chance' }, (chance < 1 ? chance.toFixed(1) : Math.round(chance)) + '%'),
+      ),
+      el('div', { className: 'lot-rank-bar' }, bar),
+    );
+    const frac = tk / maxTk;
+    if (plinkoReducedMotion && plinkoReducedMotion()) { bar.style.transform = 'scaleX(' + frac + ')'; }
+    else { bar.style.transform = 'scaleX(0)'; requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transform = 'scaleX(' + frac + ')'; })); }
+    return row;
+  });
+  // Matrix: every player's points across every category.
+  const matrixCols = LOTTERY_CATS;
+  const matrix = el('div', { className: 'lot-matrix-wrap' },
+    el('table', { className: 'lot-matrix' },
+      el('thead', {}, el('tr', {},
+        el('th', { className: 'nk' }, 'Gracz'),
+        ...matrixCols.map(c => el('th', { className: 'ct', title: c.label }, c.icon)),
+        el('th', { className: 'tot', title: 'Razem biletów' }, 'Σ'),
+      )),
+      el('tbody', {}, ...players.map((p, i) => el('tr', { className: (me && p.id === me.id) ? 'is-me' : '' },
+        el('td', { className: 'nk' }, el('span', { className: 'mp' }, String(i + 1)), (p.nick || '—')),
+        ...matrixCols.map(c => {
+          const v = lotCatValue(p, c.key);
+          return el('td', { className: 'ct' + (v === 0 ? ' zero' : (v >= c.cap ? ' full' : '')) }, String(v));
+        }),
+        el('td', { className: 'tot' }, String(+p.tickets || 0)),
+      ))),
+    ),
+  );
+
+  const viewBtn = (v, label) => {
+    const b = el('button', { className: 'lot-view-btn' + (lotteryRankView === v ? ' is-on' : '') }, label);
+    b.addEventListener('click', () => { if (lotteryRankView !== v) setLotteryRankView(v); });
+    return b;
+  };
+  const rankSection = el('section', { className: 'lot-section' },
+    el('div', { className: 'lot-section-head' },
+      el('div', { className: 'lot-section-title' }, 'Ranking biletów'),
+      el('div', { className: 'lot-view-toggle' }, viewBtn('list', 'Lista'), viewBtn('matrix', 'Macierz')),
+    ),
+    lotteryRankView === 'matrix' ? matrix : el('div', { className: 'lot-rank' }, ...rankRows),
+  );
+
+  const refresh = el('button', { className: 'lot-refresh' }, 'Odśwież');
+  refresh.addEventListener('click', () => renderLottery(true));
+
+  return el('div', { className: 'lot' },
+    header, lede, ticket, splitSection, earnSection, rankSection, refresh, mineSection);
 }
 
 // ── Wspólne Płótno (collaborative pixel canvas) ─────────────────────────────
