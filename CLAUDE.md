@@ -184,7 +184,7 @@ The `🎨 Wspólne Płótno` tab is a shared **r/place-style pixel board** — o
 
 Unlike Mundial/poker, the write path is a **direct `SECURITY DEFINER` RPC** (`place_pixel(p_x, p_y, p_color)`), not an Edge Function — it mirrors the garden `water_plant()` cooldown pattern (minus the cooldown, now). The browser has SELECT-only access to `canvas_pixels`/`canvas_cooldowns` and calls `sb.rpc('place_pixel', …)`; the RPC validates bounds + hex color, then upserts the pixel `ON CONFLICT (x,y) DO UPDATE` (last-write-wins, so simultaneous clicks resolve to one final color).
 
-The **grid bounds (192×108) are duplicated** between `supabase/canvas.sql` (the RPC) and `index.html` (`CANVAS_W`/`CANVAS_H`) — keep them in sync. Frontend: `loadCanvas`/`drawCanvas`/`placePixelRpc`/`onCanvasTap` + `cvSetup` pan/zoom pointer handling (`cv*` helpers), wired into `switchTab('canvas')` and a `canvas_pixels` realtime subscription (`applyCanvasPixelChange`) that patches single cells without a full reload.
+The **grid bounds (192×108) are duplicated** between `supabase/canvas.sql` (the RPC) and `index.html` (`CANVAS_W`/`CANVAS_H`) — keep them in sync. Frontend: `loadCanvas`/`drawCanvas`/`placePixelRpc`/`onCanvasTap` + `cvSetup` pan/zoom pointer handling (`cv*` helpers), wired into `switchTab('canvas')` and a `canvas_pixels` realtime subscription (`applyCanvasPixelChange`) that patches single cells without a full reload. `fetchAllCanvasPixels` paginates the initial SELECT in deterministic `(x,y)` order because Supabase caps one Data API response at 1,000 rows; changes arriving during that multi-request load are replayed onto the completed snapshot so fresh pixels are not lost.
 
 ### Farma (farm grid + card economy)
 

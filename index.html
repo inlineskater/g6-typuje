@@ -19324,6 +19324,7 @@ function buildLotteryPanel(d) {
 // ── Wspólne Płótno (collaborative pixel canvas) ─────────────────────────────
 // Grid bounds mirror supabase/canvas.sql (CANVAS_W/CANVAS_H) — keep in sync.
 const CANVAS_W = 192, CANVAS_H = 108;
+const CANVAS_PAGE_SIZE = 1000; // Supabase Data API default max rows per response
 const CANVAS_PALETTE = [
   '#000000', '#3b3f46', '#787f8c', '#ffffff',
   '#e4002b', '#ff8a00', '#ffd400', '#7bc043',
@@ -19343,6 +19344,7 @@ let cvView = { scale: 1, offsetX: 0, offsetY: 0 };
 let cvHover = null;                // {x,y} or null
 let cvCtx = null;
 let cvLoadSeq = 0;
+let cvLoadChanges = null;           // realtime/local changes received during a paginated load
 let cvSetupDone = false;
 
 function cvEl() { return document.getElementById('cv-canvas'); }
@@ -19357,26 +19359,53 @@ async function placePixelRpc(x, y, color) {
   return data;
 }
 
+async function fetchAllCanvasPixels() {
+  const pixels = [];
+  for (let from = 0; from < CANVAS_W * CANVAS_H;) {
+    const { data, error } = await sb.from('canvas_pixels')
+      .select('x,y,color')
+      .order('x', { ascending: true })
+      .order('y', { ascending: true })
+      .range(from, from + CANVAS_PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = data || [];
+    if (!page.length) break;
+    pixels.push(...page);
+    from += page.length;
+  }
+  return pixels;
+}
+
 async function loadCanvas() {
   cvSetup();
   renderCanvasPalette();
   const seq = ++cvLoadSeq;
+  const loadChanges = new Map();
+  cvLoadChanges = { seq, pixels: loadChanges };
   try {
-    const pixRes = await sb.from('canvas_pixels').select('x,y,color');
+    const pixels = await fetchAllCanvasPixels();
     if (seq !== cvLoadSeq) return;
-    cvPixels = new Map();
-    (pixRes.data || []).forEach(p => cvPixels.set(p.x + ',' + p.y, p.color));
+    const nextPixels = new Map();
+    pixels.forEach(p => nextPixels.set(p.x + ',' + p.y, p.color));
+    loadChanges.forEach((color, key) => nextPixels.set(key, color));
+    cvPixels = nextPixels;
+    if (cvLoadChanges?.seq === seq) cvLoadChanges = null;
     fitCanvasView();
     drawCanvas();
     updateCanvasStatus();
   } catch (e) {
+    if (seq !== cvLoadSeq) return;
+    if (cvLoadChanges?.seq === seq) cvLoadChanges = null;
     console.error('loadCanvas', e);
+    showToast('❌ Nie udało się załadować Płótna. Spróbuj ponownie.');
   }
 }
 
 function applyCanvasPixelChange(row) {
   if (!row || row.x == null || row.y == null) return;
-  cvPixels.set(row.x + ',' + row.y, row.color);
+  const key = row.x + ',' + row.y;
+  cvPixels.set(key, row.color);
+  if (cvLoadChanges) cvLoadChanges.pixels.set(key, row.color);
   if (activeTab === 'canvas') drawCanvas();
 }
 
@@ -19586,9 +19615,8 @@ function renderCanvasPalette() {
 async function onCanvasTap(cell) {
   if (!me) { showToast('Musisz być zalogowany.'); return; }
   try {
-    const res = await placePixelRpc(cell.x, cell.y, cvSelColor);
-    cvPixels.set(cell.x + ',' + cell.y, cvSelColor);
-    drawCanvas();
+    await placePixelRpc(cell.x, cell.y, cvSelColor);
+    applyCanvasPixelChange({ x: cell.x, y: cell.y, color: cvSelColor });
   } catch (e) {
     showToast('❌ ' + e.message);
   }
