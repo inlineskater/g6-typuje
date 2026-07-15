@@ -1001,6 +1001,7 @@
     .lot-refresh { margin-top: 24px; font-size: 12.5px; font-weight: 600; color: var(--muted);
       background: none; border: 0; cursor: pointer; padding: 6px 0; font-family: inherit; }
     .lot-refresh:hover { color: var(--text); }
+    .lot-refresh:disabled { cursor: default; opacity: .6; }
 
     @media (prefers-reduced-motion: reduce) { .lot-rank-bar > span { transition: none; } }
     @media (max-width: 560px) {
@@ -9522,7 +9523,7 @@ function switchTab(tab) {
   } else if (tab === 'lottery') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tLot);
-    renderLottery();
+    renderLottery(true);
   } else if (tab === 'canvas') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCv);
@@ -19103,6 +19104,7 @@ async function renderLottery(force) {
   if (lotteryLoading) return;
   lotteryLoading = true;
   if (!lotteryData) body.replaceChildren(makeSpinner());
+  else body.replaceChildren(buildLotteryPanel(lotteryData)); // keep showing stale data with a spinning refresh button
   try {
     const { data, error } = await sb.rpc('mundial_lottery_standings');
     if (error) throw error;
@@ -19312,7 +19314,7 @@ function buildLotteryPanel(d) {
     lotteryRankView === 'matrix' ? matrix : el('div', { className: 'lot-rank' }, ...rankRows),
   );
 
-  const refresh = el('button', { className: 'lot-refresh' }, 'Odśwież');
+  const refresh = el('button', { className: 'lot-refresh', disabled: lotteryLoading }, lotteryLoading ? 'Odświeżanie…' : 'Odśwież');
   refresh.addEventListener('click', () => renderLottery(true));
 
   return el('div', { className: 'lot' },
