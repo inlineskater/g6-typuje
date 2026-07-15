@@ -76,7 +76,7 @@ canvas AS (
 garden AS (
   SELECT user_id,
     LEAST(5, (CASE WHEN count(*) >= 1 THEN 2 ELSE 0 END) + (CASE WHEN count(*) >= 2 THEN 3 ELSE 0 END)) t_ogrod,
-    LEAST(4, count(*) FILTER (WHERE COALESCE(array_length(accessories, 1), 0) > 0) * 2) t_ozdoby
+    LEAST(4, count(*) FILTER (WHERE COALESCE(equipped, '{}'::jsonb) <> '{}'::jsonb) * 2) t_ozdoby
   FROM gardens GROUP BY user_id),
 tiles AS (
   SELECT owner_id user_id,
