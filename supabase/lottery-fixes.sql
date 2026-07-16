@@ -2,8 +2,8 @@
 -- Run after lottery.sql + canvas-paint-log.sql. Idempotent (CREATE OR REPLACE).
 --
 -- Supersedes the mundial_lottery_standings() copies in lottery.sql and
--- canvas-paint-log.sql (both carry ⚠️ notes). Two CTE fixes, found by auditing
--- every category against the underlying data lifecycle:
+-- canvas-paint-log.sql (both carry ⚠️ notes). Three CTE fixes, found by
+-- auditing every category against the underlying data lifecycle:
 --
 -- 1. Targowisko OVERCOUNT: every cancel path (cancel_marketplace_listing,
 --    no-bid settle, unpaid-tax void in nft-merge-fixes.sql) sets
@@ -19,6 +19,12 @@
 --    evidence of farming activity (a sale happens within 5 days of its harvest,
 --    matching the "Zbieraj plony (dzień)" label; tile/box purchases stay
 --    excluded — buying isn't farming).
+--
+-- 3. Płótno HISTORICAL RECOVERY: canvas_paint_log only records paints from
+--    2026-07-16 onward, but pre-free-for-all paid pixels (1 coin on cooldown,
+--    until 2026-07-14) wrote immutable `reason='canvas_pixel'` ledger rows —
+--    unioned in to restore painting days whose pixels were painted over
+--    before the log existed (e.g. Yurii 3→6, Mariusz's lost June days).
 --
 -- Everything else was verified correct: mundial/rynek/kasyno/sezonowe counts,
 -- ogrod/ozdoby/dzialki ownership math (ozdoby checks `equipped` jsonb — a
@@ -77,6 +83,12 @@ canvas AS (
     UNION
     SELECT user_id, (painted_at AT TIME ZONE 'Europe/Warsaw')::date d
     FROM canvas_paint_log
+    UNION
+    -- pre-2026-07-14 paid pixels (1 coin when on cooldown) left immutable
+    -- ledger rows — recovers historical painting days whose pixels have
+    -- since been painted over (free-tier pixels from that era left no trace)
+    SELECT user_id, (created_at AT TIME ZONE 'Europe/Warsaw')::date d
+    FROM coin_transactions WHERE reason = 'canvas_pixel'
   ) s GROUP BY user_id),
 garden AS (
   SELECT user_id,
