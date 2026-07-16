@@ -1,41 +1,30 @@
--- Loteria po Mundialu — activity-based raffle.
+-- Loteria po Mundialu — calculation fixes (2026-07-16 audit).
+-- Run after lottery.sql + canvas-paint-log.sql. Idempotent (CREATE OR REPLACE).
 --
--- The prize pool = 10 × the Bank's net profit from settled Mundial bets (the
--- same `realizedProfit` shown in the Mundial tab). Tickets are earned across the
--- WHOLE portal (Mundial, prediction markets, casino, seasonal games, farm,
--- marketplace, canvas) plus ownership rewards (zen garden, plant decorations,
--- owned farm plots) and a "wszechstronność" (breadth) bonus for touching many
--- of the core activities — this promotes broad engagement, not grinding one game.
+-- Supersedes the mundial_lottery_standings() copies in lottery.sql and
+-- canvas-paint-log.sql (both carry ⚠️ notes). Two CTE fixes, found by auditing
+-- every category against the underlying data lifecycle:
 --
--- This file ships the read-only standings function used by the 🎟️ Loteria tab.
--- The actual draw runs at the end of July (separate job); until then this is a
--- live leaderboard of who holds how many tickets, with a full per-category split.
+-- 1. Targowisko OVERCOUNT: every cancel path (cancel_marketplace_listing,
+--    no-bid settle, unpaid-tax void in nft-merge-fixes.sql) sets
+--    settled_at = now() with status='cancelled', so filtering on
+--    `settled_at IS NOT NULL` handed sellers a ticket per CANCELLED listing.
+--    Now filters status = 'settled' (real completed trades only).
 --
--- Idempotent (CREATE OR REPLACE). Clients call it via sb.rpc('mundial_lottery_standings').
+-- 2. Farma UNDERCOUNT (same lost-history class as the canvas bug):
+--    farm_inventory lots are DELETEd when fully sold (sell_crop_to_npc) and
+--    purged when rotten (farm_rot_cleanup, 5 days), so "days harvested" quietly
+--    vanished — two active farmers showed 0/8. The coin_transactions ledger is
+--    immutable, so `reason = 'farm_crop_sale'` days are unioned in as durable
+--    evidence of farming activity (a sale happens within 5 days of its harvest,
+--    matching the "Zbieraj plony (dzień)" label; tile/box purchases stay
+--    excluded — buying isn't farming).
 --
--- ⚠️ This file's mundial_lottery_standings() copy is superseded TWICE — re-run
--- canvas-paint-log.sql then lottery-fixes.sql after re-running this file:
---   • canvas-paint-log.sql: the `canvas` CTE here reads only canvas_pixels'
---     current-owner column, which is last-write-wins and loses a player's days
---     once their pixels get painted over; the fix unions in canvas_paint_log.
---   • lottery-fixes.sql: the `market_p` CTE here counts CANCELLED listings
---     (cancel paths also set settled_at), and the `farm` CTE loses days when
---     crop lots are sold/rotted out of farm_inventory.
-
--- Per-source caps (keep in sync with LOTTERY_EARN / LOTTERY_OWNER in index.html):
---   Mundial (settled bets)          1 / bet          cap 15
---   Rynek (prediction-market bets)  1 / bet          cap 10
---   Kasyno (any house game)         1 / day played   cap 10
---   Sezonowe (weekly arcade)        1 / week scored  cap  8
---   Farma (farming activity)        1 / active day   cap  8
---   Targowisko (completed trades)   1 / trade        cap  6
---   Wspólne Płótno                  1 / day painted  cap  6
---   Bonus wszechstronności          +2 / of the 7 categories above with >=1 ticket (max +14)
---   Ogród Zen                       +2 for >=1 zen plant, +3 more for a 2nd    cap  5
---   Ozdoby (decorated plants)       +2 / plant that has an accessory           cap  4
---   Działki (owned farm plots)      +2 / owned non-migration farm tile         cap 12
---   Base                            +1 for every (non-admin) account
--- Admin accounts (is_admin = true) are excluded from the raffle entirely.
+-- Everything else was verified correct: mundial/rynek/kasyno/sezonowe counts,
+-- ogrod/ozdoby/dzialki ownership math (ozdoby checks `equipped` jsonb — a
+-- decorated plant — NOT the owned-accessories array), breadth ×2 over the 7
+-- activity categories, the +1 welcome ticket, and bank_net parity with
+-- computeFootballHouseStats().realizedProfit in index.html.
 
 CREATE OR REPLACE FUNCTION public.mundial_lottery_standings()
 RETURNS jsonb
@@ -73,15 +62,22 @@ farm AS (
   SELECT user_id, LEAST(8, count(DISTINCT d)) t FROM (
     SELECT user_id, (sold_at AT TIME ZONE 'Europe/Warsaw')::date d FROM farm_seasonal_event_sales
     UNION ALL SELECT user_id, (harvested_at AT TIME ZONE 'Europe/Warsaw')::date FROM farm_inventory
+    UNION ALL SELECT user_id, (created_at AT TIME ZONE 'Europe/Warsaw')::date
+      FROM coin_transactions WHERE reason = 'farm_crop_sale'
   ) s GROUP BY user_id),
 market_p AS (
   SELECT uid user_id, LEAST(6, count(*)) t FROM (
-    SELECT seller_id uid FROM marketplace_listings WHERE settled_at IS NOT NULL
-    UNION ALL SELECT buyer_id FROM marketplace_listings WHERE settled_at IS NOT NULL AND buyer_id IS NOT NULL
+    SELECT seller_id uid FROM marketplace_listings WHERE status = 'settled'
+    UNION ALL SELECT buyer_id FROM marketplace_listings WHERE status = 'settled' AND buyer_id IS NOT NULL
   ) s GROUP BY uid),
 canvas AS (
-  SELECT last_user_id user_id, LEAST(6, count(DISTINCT (updated_at AT TIME ZONE 'Europe/Warsaw')::date)) t
-  FROM canvas_pixels WHERE last_user_id IS NOT NULL GROUP BY last_user_id),
+  SELECT user_id, LEAST(6, count(DISTINCT d)) t FROM (
+    SELECT last_user_id user_id, (updated_at AT TIME ZONE 'Europe/Warsaw')::date d
+    FROM canvas_pixels WHERE last_user_id IS NOT NULL
+    UNION
+    SELECT user_id, (painted_at AT TIME ZONE 'Europe/Warsaw')::date d
+    FROM canvas_paint_log
+  ) s GROUP BY user_id),
 garden AS (
   SELECT user_id,
     LEAST(5, (CASE WHEN count(*) >= 1 THEN 2 ELSE 0 END) + (CASE WHEN count(*) >= 2 THEN 3 ELSE 0 END)) t_ogrod,
@@ -142,3 +138,5 @@ $$;
 
 REVOKE ALL ON FUNCTION public.mundial_lottery_standings() FROM public;
 GRANT EXECUTE ON FUNCTION public.mundial_lottery_standings() TO anon, authenticated;
+
+NOTIFY pgrst, 'reload schema';

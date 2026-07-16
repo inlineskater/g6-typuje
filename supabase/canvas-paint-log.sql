@@ -66,6 +66,10 @@ GRANT EXECUTE ON FUNCTION public.place_pixel(integer, integer, text) TO authenti
 -- (only the `canvas` CTE changes: union canvas_pixels' current-owner days
 -- with canvas_paint_log's logged days, so no one's existing tally regresses
 -- and every day painted from here on counts correctly)
+--
+-- ⚠️ This copy is in turn superseded by supabase/lottery-fixes.sql (targ
+-- cancelled-listing overcount + farm sold/rotted-lot undercount) — re-run
+-- lottery-fixes.sql after re-running this file.
 
 CREATE OR REPLACE FUNCTION public.mundial_lottery_standings()
 RETURNS jsonb
