@@ -5,6 +5,10 @@
 -- entirely — every placed pixel is now free for every user, always. The
 -- canvas_cooldowns table is left in place (harmless, just unused) to avoid a
 -- destructive DDL change; last_free_at is simply no longer read or written.
+--
+-- ⚠️ This file's place_pixel() copy is superseded by supabase/canvas-paint-log.sql
+-- (adds a canvas_paint_log insert for Loteria ticket history). Re-run that file
+-- after re-running this one.
 
 CREATE OR REPLACE FUNCTION public.place_pixel(p_x integer, p_y integer, p_color text)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$

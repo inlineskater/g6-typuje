@@ -1,39 +1,71 @@
--- Loteria po Mundialu — activity-based raffle.
+-- „Wspólne Płótno" — per-paint history log for accurate Loteria ticket counting.
+-- Run after canvas.sql + canvas-free-for-all.sql + lottery.sql. Idempotent.
 --
--- The prize pool = 10 × the Bank's net profit from settled Mundial bets (the
--- same `realizedProfit` shown in the Mundial tab). Tickets are earned across the
--- WHOLE portal (Mundial, prediction markets, casino, seasonal games, farm,
--- marketplace, canvas) plus ownership rewards (zen garden, plant decorations,
--- owned farm plots) and a "wszechstronność" (breadth) bonus for touching many
--- of the core activities — this promotes broad engagement, not grinding one game.
+-- Why: the Loteria's "days painted" ticket count previously read canvas_pixels,
+-- but that table is last-write-wins (place_pixel does ON CONFLICT (x,y) DO
+-- UPDATE) — it only reflects each pixel's CURRENT painter, so a player's
+-- earlier painting days vanish the moment someone else paints over that pixel.
+-- This under-counts real activity with no way to reconstruct the lost days.
 --
--- This file ships the read-only standings function used by the 🎟️ Loteria tab.
--- The actual draw runs at the end of July (separate job); until then this is a
--- live leaderboard of who holds how many tickets, with a full per-category split.
---
--- Idempotent (CREATE OR REPLACE). Clients call it via sb.rpc('mundial_lottery_standings').
---
--- ⚠️ This file's `canvas` CTE (counting distinct days from canvas_pixels'
--- current-owner column) is superseded by supabase/canvas-paint-log.sql, which
--- unions in a proper canvas_paint_log history table — canvas_pixels alone
--- under-counts because it's last-write-wins and loses days once a pixel gets
--- painted over by someone else. Re-run canvas-paint-log.sql after re-running
--- this file.
+-- canvas_paint_log fixes this going forward by recording every place_pixel
+-- call as its own row, independent of what happens to that pixel afterwards.
+-- It is written only by place_pixel() and read only by
+-- mundial_lottery_standings() (both SECURITY DEFINER) — no client grants.
 
--- Per-source caps (keep in sync with LOTTERY_EARN / LOTTERY_OWNER in index.html):
---   Mundial (settled bets)          1 / bet          cap 15
---   Rynek (prediction-market bets)  1 / bet          cap 10
---   Kasyno (any house game)         1 / day played   cap 10
---   Sezonowe (weekly arcade)        1 / week scored  cap  8
---   Farma (farming activity)        1 / active day   cap  8
---   Targowisko (completed trades)   1 / trade        cap  6
---   Wspólne Płótno                  1 / day painted  cap  6
---   Bonus wszechstronności          +2 / of the 7 categories above with >=1 ticket (max +14)
---   Ogród Zen                       +2 for >=1 zen plant, +3 more for a 2nd    cap  5
---   Ozdoby (decorated plants)       +2 / plant that has an accessory           cap  4
---   Działki (owned farm plots)      +2 / owned non-migration farm tile         cap 12
---   Base                            +1 for every (non-admin) account
--- Admin accounts (is_admin = true) are excluded from the raffle entirely.
+CREATE TABLE IF NOT EXISTS public.canvas_paint_log (
+  id         bigserial PRIMARY KEY,
+  user_id    uuid NOT NULL REFERENCES public.profiles(id),
+  painted_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS canvas_paint_log_user_idx ON public.canvas_paint_log(user_id);
+
+ALTER TABLE public.canvas_paint_log ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON public.canvas_paint_log FROM PUBLIC, anon, authenticated;
+
+-- ── RPC: place_pixel — supersedes canvas.sql / canvas-free-for-all.sql's copy ──
+-- (adds one canvas_paint_log insert; everything else unchanged)
+
+CREATE OR REPLACE FUNCTION public.place_pixel(p_x integer, p_y integer, p_color text)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user uuid := auth.uid();
+  v_nick text;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+
+  -- Bounds (mirrors CANVAS_W=192 / CANVAS_H=108 in index.html)
+  IF p_x < 0 OR p_x >= 192 OR p_y < 0 OR p_y >= 108 THEN RAISE EXCEPTION 'bad_coords'; END IF;
+  IF p_color !~ '^#[0-9A-Fa-f]{6}$' THEN RAISE EXCEPTION 'bad_color'; END IF;
+
+  SELECT nick INTO v_nick FROM public.profiles WHERE id = v_user;
+  IF v_nick IS NULL THEN RAISE EXCEPTION 'no_profile'; END IF;
+
+  INSERT INTO public.canvas_pixels (x, y, color, last_user_id, last_nick, updated_at)
+  VALUES (p_x, p_y, p_color, v_user, v_nick, now())
+  ON CONFLICT (x, y) DO UPDATE
+    SET color = EXCLUDED.color,
+        last_user_id = EXCLUDED.last_user_id,
+        last_nick = EXCLUDED.last_nick,
+        updated_at = EXCLUDED.updated_at;
+
+  INSERT INTO public.canvas_paint_log (user_id, painted_at) VALUES (v_user, now());
+
+  RETURN json_build_object(
+    'paid', false,
+    'pixel', json_build_object('x', p_x, 'y', p_y, 'color', p_color)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.place_pixel(integer, integer, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.place_pixel(integer, integer, text) TO authenticated;
+
+-- ── RPC: mundial_lottery_standings — supersedes lottery.sql's copy ──────────
+-- (only the `canvas` CTE changes: union canvas_pixels' current-owner days
+-- with canvas_paint_log's logged days, so no one's existing tally regresses
+-- and every day painted from here on counts correctly)
 
 CREATE OR REPLACE FUNCTION public.mundial_lottery_standings()
 RETURNS jsonb
@@ -78,8 +110,13 @@ market_p AS (
     UNION ALL SELECT buyer_id FROM marketplace_listings WHERE settled_at IS NOT NULL AND buyer_id IS NOT NULL
   ) s GROUP BY uid),
 canvas AS (
-  SELECT last_user_id user_id, LEAST(6, count(DISTINCT (updated_at AT TIME ZONE 'Europe/Warsaw')::date)) t
-  FROM canvas_pixels WHERE last_user_id IS NOT NULL GROUP BY last_user_id),
+  SELECT user_id, LEAST(6, count(DISTINCT d)) t FROM (
+    SELECT last_user_id user_id, (updated_at AT TIME ZONE 'Europe/Warsaw')::date d
+    FROM canvas_pixels WHERE last_user_id IS NOT NULL
+    UNION
+    SELECT user_id, (painted_at AT TIME ZONE 'Europe/Warsaw')::date d
+    FROM canvas_paint_log
+  ) s GROUP BY user_id),
 garden AS (
   SELECT user_id,
     LEAST(5, (CASE WHEN count(*) >= 1 THEN 2 ELSE 0 END) + (CASE WHEN count(*) >= 2 THEN 3 ELSE 0 END)) t_ogrod,
@@ -140,3 +177,5 @@ $$;
 
 REVOKE ALL ON FUNCTION public.mundial_lottery_standings() FROM public;
 GRANT EXECUTE ON FUNCTION public.mundial_lottery_standings() TO anon, authenticated;
+
+NOTIFY pgrst, 'reload schema';
