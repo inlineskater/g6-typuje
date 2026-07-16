@@ -2,7 +2,7 @@
 -- Run after lottery.sql + canvas-paint-log.sql. Idempotent (CREATE OR REPLACE).
 --
 -- Supersedes the mundial_lottery_standings() copies in lottery.sql and
--- canvas-paint-log.sql (both carry ⚠️ notes). Three CTE fixes, found by
+-- canvas-paint-log.sql (both carry ⚠️ notes). Four CTE fixes, found by
 -- auditing every category against the underlying data lifecycle:
 --
 -- 1. Targowisko OVERCOUNT: every cancel path (cancel_marketplace_listing,
@@ -25,6 +25,12 @@
 --    until 2026-07-14) wrote immutable `reason='canvas_pixel'` ledger rows —
 --    unioned in to restore painting days whose pixels were painted over
 --    before the log existed (e.g. Yurii 3→6, Mariusz's lost June days).
+--
+-- 4. Sezonowe pre-June exclusion: one player has a `week_start = 2026-05-31`
+--    row from the Flappy Pants launch/test Sunday, stamped under the old
+--    Sunday-based week convention (fixed to Monday–Sunday in a0da871) before
+--    the weekly cadence properly started — a head-start week nobody else
+--    could have earned. Weeks before 2026-06-01 are excluded.
 --
 -- Everything else was verified correct: mundial/rynek/kasyno/sezonowe counts,
 -- ogrod/ozdoby/dzialki ownership math (ozdoby checks `equipped` jsonb — a
@@ -63,7 +69,7 @@ seasonal AS (
     UNION ALL SELECT user_id, week_start FROM var_patrol_scores
     UNION ALL SELECT user_id, week_start FROM egg_catch_scores
     UNION ALL SELECT user_id, week_start FROM super_mariusz_scores
-  ) s GROUP BY user_id),
+  ) s WHERE wk >= '2026-06-01' GROUP BY user_id),
 farm AS (
   SELECT user_id, LEAST(8, count(DISTINCT d)) t FROM (
     SELECT user_id, (sold_at AT TIME ZONE 'Europe/Warsaw')::date d FROM farm_seasonal_event_sales
