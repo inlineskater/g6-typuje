@@ -8027,6 +8027,17 @@
             </div>
           </div>
         </button>
+        <button class="ag-card" data-game="popup_panic">
+          <div class="ag-card-banner">🖱️</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">„Zamknij Popupy!"</div>
+            <div class="ag-card-desc">30 sekund biurowego koszmaru: zamykaj popupy zanim zasypią ekran. Czerwony malware ma zegar — nie zdążysz, łapiesz wirusa.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-tag">REFLEKS</span>
+            </div>
+          </div>
+        </button>
       </div>
     </div>
     <div id="ag-game-slot" class="hidden">
@@ -8729,7 +8740,7 @@ const HERO_ITEM_SLOTS = [
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
 // Masculine forms (przedmiot), unlike FARM_RARITY_PL's feminine forms (karta).
 const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki', legendary: 'legendarny' };
-const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch']);
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic']);
 let heroItemDefs = [];
 let casinoLuckGlobalUntil = null; // shared „Amulet Bezwstydnego Fartu" buff end (casino_luck_status view)
 let casinoLuckStatusLoadedAt = 0;
