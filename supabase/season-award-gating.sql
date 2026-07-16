@@ -29,9 +29,10 @@ AS $$
     WHEN '2026-06-29' THEN 'invoice_horde'  -- Najazd Ticketów
     WHEN '2026-07-06' THEN 'egg_catch'  -- Łap Jajka debut
     WHEN '2026-07-13' THEN 'super_mariusz'  -- Super Mariusz debut
+    WHEN '2026-07-20' THEN 'popup_panic'  -- Zamknij Popupy! debut
     -- SEASONAL_ROTATION from SEASONAL_ANCHOR_WEEK_START (2026-05-18, a Monday)
-    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','egg_catch','super_mariusz'])[
-      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 8) + 1
+    ELSE (ARRAY['whack_boss','bug_jumper','flappy_pants','snake','invoice_horde','var_patrol','egg_catch','super_mariusz','popup_panic'])[
+      (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 9) + 1
     ]
   END;
 $$;
@@ -117,5 +118,15 @@ SELECT cron.schedule(
       THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
       WHEN public.seasonal_game_for_week(public.super_mariusz_week_start(now() - interval '7 days')) = 'super_mariusz'
       THEN public.award_super_mariusz_week(public.super_mariusz_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+SELECT cron.schedule(
+  'popup_panic_weekly_awards',
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.popup_panic_week_start(now() - interval '7 days')) = 'popup_panic'
+      THEN public.award_popup_panic_week(public.popup_panic_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
