@@ -31115,14 +31115,15 @@ async function loadFarmLootboxStats(host) {
   try {
     // Full history (paged past the 1000-row cap) — we aggregate per player.
     const { data, error } = await sbFetchAll(() => sb.from('farm_lootbox_opens')
-      .select('user_id,nick_snapshot,box_type,got_nft')
+      .select('user_id,nick_snapshot,box_type,got_nft,nft_p')
       .order('created_at', { ascending: true }).order('id', { ascending: true }));
     if (error) throw error;
     const rows = data || [];
 
-    // Static per-box P(≥1 NFT), from the current pool (mirrors the documented
-    // 6.9% / 16.4% headline). Editions selling out shifts these slightly over
-    // time, so expected/fart is a close estimate, not an exact ledger.
+    // Static per-box P(≥1 NFT) from the current pool (mirrors the documented
+    // 6.9% / 16.4% headline). Each open's EXPECTED NFT prob is nft_p when set
+    // (historical backfill rows carry the OLD-era odds so cross-era luck stays
+    // fair); real opens logged going forward leave it NULL → use the static rate.
     const pStd = farmAnyNftChancePct(FARM_BOX_DRAWS, false) / 100;
     const pGold = farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true) / 100;
 
@@ -31130,14 +31131,14 @@ async function loadFarmLootboxStats(host) {
     rows.forEach(r => {
       const key = r.user_id || r.nick_snapshot;
       let s = stats.get(key);
-      if (!s) { s = { nick: r.nick_snapshot || '???', uid: r.user_id, std: 0, gold: 0, nfts: 0 }; stats.set(key, s); }
+      if (!s) { s = { nick: r.nick_snapshot || '???', uid: r.user_id, std: 0, gold: 0, nfts: 0, expected: 0 }; stats.set(key, s); }
       if (r.nick_snapshot) s.nick = r.nick_snapshot;
       if (r.box_type === 'gold') s.gold++; else s.std++;
       if (r.got_nft) s.nfts++;
+      s.expected += (r.nft_p != null ? Number(r.nft_p) : (r.box_type === 'gold' ? pGold : pStd));
     });
     const list = [...stats.values()].map(s => {
       s.total = s.std + s.gold;
-      s.expected = s.std * pStd + s.gold * pGold;
       return s;
     }).sort((a, b) => b.total - a.total);
 
@@ -31170,10 +31171,12 @@ async function loadFarmLootboxStats(host) {
     host.append(table);
 
     host.append(el('div', { className: 'farm-cat-legend', style: { marginTop: '10px' } },
-      'Fart = zdobyte NFT ÷ oczekiwane. Oczekiwane liczymy ze ',
+      'Fart = zdobyte NFT ÷ oczekiwane. Nowe otwarcia liczymy ze ',
       el('b', {}, 'stałej szansy'), ' na NFT: ',
       el('b', {}, farmChanceLabel(pStd * 100)), ' za zwykłą skrzynkę i ',
-      el('b', {}, farmChanceLabel(pGold * 100)), ' za ⭐ Złotą. 🍀 = fart powyżej normy, 🧊 = poniżej. Przy małej liczbie otwarć wynik to loteria — potrzeba dużo otwarć, żeby fart się „wyrównał". Liczone od wdrożenia licznika (wcześniejsze otwarcia nie są ujęte).'));
+      el('b', {}, farmChanceLabel(pGold * 100)), ' za ⭐ Złotą. 🍀 = fart powyżej normy, 🧊 = poniżej. Przy małej liczbie otwarć wynik to loteria — potrzeba dużo otwarć, żeby fart się „wyrównał". ',
+      el('b', {}, 'Otwarcia sprzed 17.07.2026'), ' są odtworzone z historii i liczone według ',
+      el('b', {}, 'ówczesnych (wyższych) szans'), ', żeby porównanie było uczciwe.'));
   } catch (e) {
     console.error('lootbox stats', e);
     host.replaceChildren(el('div', { className: 'farm-price-empty' }, 'Nie udało się wczytać statystyk.'));
