@@ -5592,8 +5592,44 @@
     .farm-plant-modal-stat { min-width: 0; padding: 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
     .farm-plant-modal-stat span { display: block; margin-bottom: 3px; font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; }
     .farm-plant-modal-stat b { display: block; min-width: 0; color: var(--text); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .farm-plant-modal-stat.wrap b { white-space: normal; overflow: visible; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-    .farm-plant-modal-range { margin: -2px 0 2px; padding: 8px 10px; border-radius: 8px; background: var(--acc-dim); color: var(--accent); font-size: 12px; font-weight: 800; text-align: center; }
+    /* Redesigned plant/card popup blocks (harvest timeline, chip facts, price panel,
+       collapsible level table) — additive to the .farm-plant-modal* base above. */
+    .farm-pm-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--muted); }
+    .farm-pm-rarity { font-size: 10px; font-weight: 900; letter-spacing: .02em; text-transform: uppercase; }
+    .farm-pm-dot { opacity: .45; }
+    .farm-pm-harvest { padding: 12px 14px; border-radius: 10px; background: var(--acc-dim); border: 1px solid var(--border); }
+    .farm-pm-harvest.ready { background: rgba(14,165,233,.10); }
+    .farm-pm-harvest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .farm-pm-eta-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--muted); }
+    .farm-pm-eta { font-size: 15px; font-weight: 900; color: var(--text); }
+    .farm-pm-progress { margin-top: 8px; height: 6px; border-radius: 999px; background: rgba(0,0,0,.08); overflow: hidden; }
+    .farm-pm-progress-fill { height: 100%; border-radius: inherit; background: var(--accent); transition: width .4s ease; }
+    .farm-pm-harvest.ready .farm-pm-progress-fill { background: #0284c7; }
+    .farm-pm-rel { margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--accent); }
+    .farm-pm-harvest.ready .farm-pm-rel { color: #0369a1; }
+    .farm-pm-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .farm-pm-chip { flex: 1 1 76px; min-width: 76px; padding: 8px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); text-align: center; }
+    .farm-pm-chip span { display: block; margin-bottom: 2px; font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--muted); }
+    .farm-pm-chip b { font-size: 13px; color: var(--text); }
+    .farm-pm-caption { margin-top: -4px; font-size: 11px; text-align: center; color: var(--muted); }
+    .farm-pm-price { display: grid; gap: 8px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); }
+    .farm-pm-price-row { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+    .farm-pm-price-row b { font-size: 15px; font-weight: 900; color: var(--text); }
+    .farm-pm-pricebar { position: relative; height: 6px; border-radius: 999px; background: rgba(0,0,0,.08); }
+    .farm-pm-pricebar-fill { height: 100%; border-radius: inherit; }
+    .farm-pm-pricebar-fill.up { background: #16a34a; } .farm-pm-pricebar-fill.down { background: #dc2626; } .farm-pm-pricebar-fill.flat { background: #d97706; }
+    .farm-pm-pricebar-marker { position: absolute; top: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--text); border: 2px solid var(--card); transform: translateY(-50%); }
+    .farm-pm-pricebar-labels { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--muted); }
+    .farm-pm-earn { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 12px; font-weight: 700; color: var(--muted); }
+    .farm-pm-earn b { font-size: 14px; font-weight: 900; color: var(--accent); }
+    .farm-pm-earn-range { margin-top: -4px; font-size: 11px; color: var(--muted); text-align: right; }
+    .farm-pm-details { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow: hidden; }
+    .farm-pm-details summary { padding: 10px 12px; cursor: pointer; font-size: 12px; font-weight: 800; color: var(--text); list-style: none; user-select: none; }
+    .farm-pm-details summary::-webkit-details-marker { display: none; }
+    .farm-pm-details summary::marker { content: ''; }
+    .farm-pm-details summary::after { content: ' \25be'; color: var(--muted); font-weight: 700; }
+    .farm-pm-details[open] summary { border-bottom: 1px solid var(--border); }
+    .farm-pm-details[open] summary::after { content: ' \25b4'; }
     .farm-card-row, .farm-market-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); }
     .farm-card-row:first-of-type, .farm-market-row:first-of-type { border-top: none; }
     .farm-card-emoji { font-size: 22px; width: 28px; text-align: center; flex: 0 0 auto; }
@@ -5675,7 +5711,7 @@
     .farm-plant-pick:hover { border-color: var(--accent); }
     @media (max-width: 760px) { .farm-stage { height: auto; max-height: none; } .farm-hint { display: none; } }
     @media (max-width: 560px) { .farm-starter-chip { top: 10px; left: 10px; right: 10px; max-width: none; justify-content: space-between; } .farm-starter-text { flex-direction: column; align-items: flex-start; gap: 0; } }
-    @media (max-width: 520px) { .farm-plant-water-line { left: 16%; right: 16%; bottom: 12px; height: 3px; } .farm-plant-modal-hero { grid-template-columns: 74px minmax(0, 1fr); } .farm-plant-modal-emoji { width: 74px; height: 74px; font-size: 46px; } .farm-plant-modal-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 520px) { .farm-plant-water-line { left: 16%; right: 16%; bottom: 12px; height: 3px; } .farm-plant-modal-hero { grid-template-columns: 74px minmax(0, 1fr); } .farm-plant-modal-emoji { width: 74px; height: 74px; font-size: 46px; } .farm-plant-modal-grid { grid-template-columns: 1fr; } .farm-pm-chip { flex-basis: calc(50% - 4px); } .farm-pm-earn { flex-direction: column; align-items: flex-start; gap: 2px; } .farm-pm-earn-range { text-align: left; } }
     /* Farm lootbox in the Sklep tab */
     .farm-box-card { max-width: 360px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
     .farm-box-emoji { font-size: 56px; line-height: 1; }
@@ -30187,10 +30223,84 @@ async function mergeFarmNft(heroId, fuelId, btn) {
   return true;
 }
 
-// Detail overview for a planted crop tile on the farm board: owner, level, sow/
-// harvest times with a live countdown, current vs max NPC price, estimated harvest
-// value, the value range across levels, and the full L1–5 level table. Reuses the
-// farm-plant-modal* look so it matches the migrated-plant modal.
+// Friendly harvest date/time label used by the harvest timeline: "dziś, HH:MM" /
+// "jutro, HH:MM" for the next two calendar days, else a full fmtDateTime() date.
+function farmHarvestWhen(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '—';
+  const time = d.toLocaleString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+  const now = new Date();
+  const sameDay = a => a.getFullYear() === d.getFullYear() && a.getMonth() === d.getMonth() && a.getDate() === d.getDate();
+  if (sameDay(now)) return 'dziś, ' + time;
+  const tmr = new Date(now); tmr.setDate(tmr.getDate() + 1);
+  if (sameDay(tmr)) return 'jutro, ' + time;
+  return fmtDateTime(ts);
+}
+
+// 0–100 maturity percent between plantedAt and readyAt, for the harvest progress bar.
+function farmGrowthPct(plantedAt, readyAt) {
+  const p = plantedAt ? new Date(plantedAt).getTime() : NaN;
+  const r = readyAt ? new Date(readyAt).getTime() : NaN;
+  if (!Number.isFinite(p) || !Number.isFinite(r) || r <= p) return 100;
+  return Math.max(0, Math.min(100, (Date.now() - p) / (r - p) * 100));
+}
+
+// Shared price + earnings block for the planted-crop and inventory-card popups:
+// current NPC price with its trend chip, a min(floor)–max(base) price bar with a
+// marker at the live price, and the coin value of `yieldQty` units at that price
+// (plus the min/max range across the whole 30–100% swing). Reuses the same
+// farmMarketEffectivePrice/farmPriceLabel/farmTrendChip helpers as the rest of Farma.
+function farmPricePanel(def, mkt, opts) {
+  const yieldQty = Math.max(0, opts?.yieldQty || 0);
+  const wrap = el('div', { className: 'farm-pm-price' });
+  const base = mkt ? +mkt.base_price : null;
+  const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
+  if (!base || cur == null) {
+    wrap.append(el('div', { className: 'farm-pm-price-row' }, el('span', {}, 'Cena (NPC)'), el('b', {}, '—')));
+    return wrap;
+  }
+  const floor = base * 0.30;
+  const pct = Math.max(0, Math.min(100, (cur - floor) / (base - floor) * 100));
+  const trendCls = pct >= 80 ? 'up' : pct <= 50 ? 'down' : 'flat';
+  wrap.append(
+    el('div', { className: 'farm-pm-price-row' },
+      el('span', {}, 'Cena teraz (NPC)'),
+      el('b', {}, farmPriceLabel(cur) + ' 🪙/szt'),
+      farmTrendChip(def.crop_type)),
+    el('div', { className: 'farm-pm-pricebar' },
+      el('div', { className: 'farm-pm-pricebar-fill ' + trendCls, style: { width: pct + '%' } }),
+      el('div', { className: 'farm-pm-pricebar-marker', style: { left: pct + '%' } })),
+    el('div', { className: 'farm-pm-pricebar-labels' },
+      el('span', {}, 'min ' + farmPriceLabel(floor) + ' 🪙'),
+      el('span', {}, 'maks. ' + farmPriceLabel(base) + ' 🪙')));
+  if (yieldQty > 0) {
+    const now = Math.round(yieldQty * cur);
+    const min = Math.round(yieldQty * floor);
+    const max = Math.round(yieldQty * base);
+    wrap.append(
+      el('div', { className: 'farm-pm-earn' },
+        el('span', {}, 'Zarobek ze zbioru (' + yieldQty + ' szt.)'),
+        el('b', {}, '~' + now + ' 🪙')),
+      el('div', { className: 'farm-pm-earn-range' }, 'zakres ' + min + '–' + max + ' 🪙'));
+  }
+  return wrap;
+}
+
+// Wraps the existing L1–5 level-up table (farmCardLevelTable) in a native <details>
+// disclosure so the popup opens clean by default; power users expand it to see the
+// leveling math. No change to the table logic itself.
+function farmCollapsibleLevels(def, price, level) {
+  return el('details', { className: 'farm-pm-details' },
+    el('summary', {}, 'Poziomy karty'),
+    farmCardLevelTable(def, price, level));
+}
+
+// Detail overview for a planted crop tile on the farm board: owner, level, a
+// harvest timeline (date/time + live countdown + maturity bar), current NPC price
+// with a min–max range and estimated harvest value, and the full L1–5 level table
+// tucked behind a collapsible disclosure. Reuses the farm-plant-modal* look so it
+// matches the migrated-plant modal.
 function openFarmPlantedModal(tile, x, y) {
   if (!tile || !tile.planted_species) return;
   const def = fmDefs.get(tile.planted_species);
@@ -30198,14 +30308,12 @@ function openFarmPlantedModal(tile, x, y) {
   const rar = def.rarity || 'common';
   const level = tile.planted_level || 1;
   const mkt = fmMarket.get(def.crop_type);
-  const cur = farmMarketEffectivePrice(mkt);
+  const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
   const base = mkt ? +mkt.base_price : null;
   const yieldNow = Math.round(def.base_yield * (1 + (level - 1) * 0.5));
   const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level - 1));
   const isMine = tile.owner_id === me?.id;
-  const valAt = L => cur != null ? Math.round(def.base_yield * (1 + (L - 1) * 0.5) * cur) : null;
   const isReady = () => tile.ready_at && Date.now() >= new Date(tile.ready_at).getTime();
-  const fmtCoins = v => v != null ? (Math.round(v * 10) / 10) : '—';
 
   let timer = null;
   const overlay = el('div', { className: 'modal-overlay farm-plant-overlay', role: 'dialog', 'aria-modal': 'true' });
@@ -30220,31 +30328,26 @@ function openFarmPlantedModal(tile, x, y) {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
 
-  // Owner label, status line, and a live countdown cell that ticks each second.
   const ownerTxt = isMine ? 'Ty' : (tile.nick || 'inny gracz');
-  const statusEl = el('div', { className: 'farm-plant-modal-status' });
-  const harvestSlot = el('div', {});
-  const countdownVal = el('b', {});
-  const priceNow = el('span', {}, (cur != null ? fmtCoins(cur) + ' 🪙/szt' : '—') + ' ', farmTrendChip(def.crop_type));
 
-  const grid = el('div', { className: 'farm-plant-modal-grid' },
-    farmPlantStat('Właściciel', ownerTxt),
-    farmPlantStat('Rzadkość', FARM_RARITY_PL[rar] || rar),
-    farmPlantStat('Poziom', String(level)),
-    farmPlantStat('Zasadzono', tile.planted_at ? fmtDateTime(tile.planted_at) : '—'),
-    el('div', { className: 'farm-plant-modal-stat' }, el('span', {}, 'Zbiór'), countdownVal),
-    farmPlantStat('Wzrost (ten poziom)', farmGrowLabel(growNow)),
-    farmPlantStat('Plon (ten poziom)', yieldNow + ' szt.'),
-    el('div', { className: 'farm-plant-modal-stat wrap' }, el('span', {}, 'Cena teraz (NPC)'), el('b', {}, priceNow)),
-    farmPlantStat('Cena maks.', base != null ? fmtCoins(base) + ' 🪙/szt' : '—'),
-    farmPlantStat('Szac. wartość zbioru', cur != null ? (Math.round(yieldNow * cur) + ' 🪙') : '—'),
+  // Signature harvest-timeline block: date/time + live countdown + a maturity bar
+  // that fills as the crop grows. Refreshed every second below.
+  const etaVal = el('span', { className: 'farm-pm-eta' });
+  const relVal = el('div', { className: 'farm-pm-rel' });
+  const progressFill = el('div', { className: 'farm-pm-progress-fill' });
+  const harvestBox = el('div', { className: 'farm-pm-harvest' },
+    el('div', { className: 'farm-pm-harvest-head' }, el('span', { className: 'farm-pm-eta-label' }, 'Zbiór'), etaVal),
+    el('div', { className: 'farm-pm-progress' }, progressFill),
+    relVal,
   );
 
-  const rangeLine = cur != null
-    ? el('div', { className: 'farm-plant-modal-range' },
-        'Wartość zbioru: poz. 1 ≈ ' + valAt(1) + ' 🪙 → poz. 5 ≈ ' + valAt(5) + ' 🪙 (obecna cena)')
-    : '';
+  const chips = el('div', { className: 'farm-pm-chips' },
+    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Poziom'), el('b', {}, String(level))),
+    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Plon'), el('b', {}, yieldNow + ' szt.')),
+    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Wzrost'), el('b', {}, farmGrowLabel(growNow))),
+  );
 
+  const harvestSlot = el('div', {});
   let removeSlot = '';
   if (isMine) {
     const rmBtn = el('button', { className: 'farm-mini-btn', style: { marginTop: '6px' } }, '🗑️ Wykop roślinę');
@@ -30257,13 +30360,18 @@ function openFarmPlantedModal(tile, x, y) {
       el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(def.emoji || '🌱')),
       el('div', {},
         el('div', { className: 'farm-plant-modal-name', title: def.name }, def.name),
-        el('div', { className: 'farm-plant-modal-owner farm-rar-' + rar }, ownerTxt),
-        statusEl,
+        el('div', { className: 'farm-pm-meta' },
+          el('span', { className: 'farm-pm-rarity farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar),
+          el('span', { className: 'farm-pm-dot' }, '·'),
+          el('span', {}, ownerTxt),
+        ),
       ),
     ),
-    grid,
-    rangeLine,
-    farmCardLevelTable(def, cur != null ? cur : base, level),
+    harvestBox,
+    chips,
+    el('div', { className: 'farm-pm-caption' }, 'Zasadzono: ' + (tile.planted_at ? fmtDateTime(tile.planted_at) : '—')),
+    farmPricePanel(def, mkt, { yieldQty: yieldNow }),
+    farmCollapsibleLevels(def, cur != null ? cur : base, level),
     harvestSlot,
     removeSlot,
   );
@@ -30274,17 +30382,19 @@ function openFarmPlantedModal(tile, x, y) {
   overlay.append(modal);
   document.body.append(overlay);
 
-  // Render the maturity-dependent bits (status, countdown, harvest button) and
-  // keep them fresh each second; swap in the harvest button the moment it matures.
+  // Render the maturity-dependent bits (harvest timeline, harvest button) and keep
+  // them fresh each second; swap in the harvest button the moment it matures.
   const refresh = () => {
     const ready = isReady();
-    statusEl.className = 'farm-plant-modal-status' + (ready ? ' ready' : '');
-    statusEl.textContent = ready ? '✅ Gotowe do zbioru!' : '⏳ Dojrzewa';
+    harvestBox.className = 'farm-pm-harvest' + (ready ? ' ready' : '');
+    etaVal.textContent = tile.ready_at ? farmHarvestWhen(tile.ready_at) : '—';
     if (ready) {
-      countdownVal.textContent = tile.ready_at ? '✅ Gotowe! (' + fmtDateTime(tile.ready_at) + ')' : '✅ Gotowe!';
+      relVal.textContent = '✅ Gotowe do zbioru!';
+      progressFill.style.width = '100%';
     } else {
       const left = tile.ready_at ? new Date(tile.ready_at).getTime() - Date.now() : 0;
-      countdownVal.textContent = '⏳ ' + cvFmtDur(left);
+      relVal.textContent = '⏳ za ' + cvFmtDur(left);
+      progressFill.style.width = farmGrowthPct(tile.planted_at, tile.ready_at) + '%';
     }
     if (isMine && ready && !harvestSlot.firstChild) {
       const btn = el('button', { className: 'farm-mini-btn primary', style: { marginTop: '10px' } }, '🧺 Zbierz plon');
@@ -30301,17 +30411,23 @@ function openFarmPlantedModal(tile, x, y) {
 function openFarmCardModal(card) {
   const def = fmDefs.get(card.species); if (!def) return;
   const rar = def.rarity || 'common';
-  const price = fmMarket.get(def.crop_type)?.base_price;
+  const mkt = fmMarket.get(def.crop_type);
+  const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
+  const base = mkt ? +mkt.base_price : null;
   const dupesNeeded = 2 * card.level;
   const yieldNow = Math.round(def.base_yield * (1 + (card.level - 1) * 0.5));
   const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, card.level - 1));
-  const perDayNow = price != null ? Math.round(yieldNow * price / Math.max(1, growNow / 1440)) : null;
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
   const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
   closeX.addEventListener('click', close);
-  const stat = (label, val) => el('div', { className: 'farm-plant-modal-stat' }, el('span', {}, label), el('b', {}, val));
+  const chips = el('div', { className: 'farm-pm-chips' },
+    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Poziom'), el('b', {}, String(card.level))),
+    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Duplikaty'), el('b', {}, card.count + ' / ' + dupesNeeded)),
+    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Plon'), el('b', {}, yieldNow + ' szt.')),
+    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Wzrost'), el('b', {}, farmGrowLabel(growNow))),
+  );
   const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Szczegóły karty'), closeX),
     el('div', { className: 'farm-plant-modal-body' },
@@ -30319,15 +30435,13 @@ function openFarmCardModal(card) {
         el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(def.emoji)),
         el('div', {},
           el('div', { className: 'farm-plant-modal-name' }, def.name),
-          el('div', { className: 'farm-plant-modal-owner farm-rar-' + rar }, (FARM_RARITY_PL[rar] || rar) + (def.edition_size != null ? ' • NFT' : '')))),
-      el('div', { className: 'farm-plant-modal-grid' },
-        stat('Poziom', String(card.level)),
-        stat('Duplikaty', card.count + ' / ' + dupesNeeded),
-        stat('Plon (teraz)', yieldNow + ' szt.'),
-        stat('Czas wzrostu', farmGrowLabel(Math.round(growNow))),
-        stat('Cena maks.', price != null ? (price + ' 🪙/szt') : '—'),
-        stat('≈ Zysk/doba (maks.)', perDayNow != null ? (perDayNow + ' 🪙') : '—')),
-      farmCardLevelTable(def, price, card.level)));
+          el('div', { className: 'farm-pm-meta' },
+            el('span', { className: 'farm-pm-rarity farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar),
+            def.edition_size != null ? el('span', { className: 'farm-pm-dot' }, '·') : '',
+            def.edition_size != null ? el('span', {}, 'NFT') : ''))),
+      chips,
+      farmPricePanel(def, mkt, { yieldQty: yieldNow }),
+      farmCollapsibleLevels(def, cur != null ? cur : base, card.level)));
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
