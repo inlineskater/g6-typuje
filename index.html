@@ -28678,35 +28678,56 @@ function farmEffectiveDrawWeight(d, ownedNfts = 0) {
   return Number(d?.draw_weight || 0);
 }
 
-// Exact per-box chance of drawing AT LEAST ONE NFT, mirroring the server draw
-// in supabase/farm-static-nft-odds.sql: `draws` distinct weighted picks without
-// replacement over the currently in-pool cards, with an optional rare-or-better
-// floor forced on the first draw (gold box). Static — no per-owned-NFT scaling.
-// Returns a percentage. Cheap enough for the occasional info/help render.
-function farmAnyNftChancePct(draws, rareFloor) {
+// The current in-pool draw set: active, weighted, and (for NFTs) edition not
+// sold out. Shared by the per-box chance helpers below. Uses minted_count when
+// present (merges burn instances, so a live count would undercount).
+function farmDrawPool() {
   const minted = new Map();
   fmNft.forEach(n => minted.set(n.species, (minted.get(n.species) || 0) + 1));
   fmDefs.forEach(d => { if (d.minted_count != null) minted.set(d.species, Math.max(minted.get(d.species) || 0, d.minted_count)); });
-  const pool = [...fmDefs.values()].filter(d => (d.draw_weight || 0) > 0 &&
+  return [...fmDefs.values()].filter(d => (d.draw_weight || 0) > 0 &&
     (d.edition_size == null || (minted.get(d.species) || 0) < d.edition_size));
-  const isNft = d => d.edition_size != null;
-  const isRarePlus = d => d.rarity === 'rare' || d.rarity === 'epic' || d.rarity === 'legendary';
-  const rareEligible = pool.some(isRarePlus);
-  const noNft = (picked, left, first) => {
+}
+
+const farmIsRarePlus = d => d.rarity === 'rare' || d.rarity === 'epic' || d.rarity === 'legendary';
+
+// Exact per-BOX chance that a predicate matches AT LEAST ONE of the `draws`
+// distinct weighted picks (without replacement), mirroring the server draw in
+// supabase/farm-static-nft-odds.sql. Optional rare-or-better floor on the first
+// draw (gold box). Static — no per-owned-NFT scaling. Returns a percentage.
+function farmBoxChancePct(match, draws, rareFloor) {
+  const pool = farmDrawPool();
+  const rareEligible = pool.some(farmIsRarePlus);
+  // P(match never picked) over the distinct draws; complement = at-least-one.
+  const noMatch = (picked, left, first) => {
     if (left === 0) return 1;
     let avail = pool.filter(d => !picked.has(d.species));
-    if (first && rareFloor && rareEligible) avail = avail.filter(isRarePlus);
+    if (first && rareFloor && rareEligible) avail = avail.filter(farmIsRarePlus);
+    if (!avail.length) return 1;                 // draw stops early (< draws eligible)
     const tot = avail.reduce((s, d) => s + Number(d.draw_weight), 0);
     if (tot <= 0) return 1;
     let p = 0;
     for (const d of avail) {
-      if (isNft(d)) continue;               // "no NFT" path: only draw normals here
+      if (match(d)) continue;                    // "never match" path: only draw non-matching cards
       const nk = new Set(picked); nk.add(d.species);
-      p += (Number(d.draw_weight) / tot) * noNft(nk, left - 1, false);
+      p += (Number(d.draw_weight) / tot) * noMatch(nk, left - 1, false);
     }
     return p;
   };
-  return (1 - noNft(new Set(), draws, true)) * 100;
+  return (1 - noMatch(new Set(), draws, true)) * 100;
+}
+
+// Per-box chance of drawing AT LEAST ONE NFT of any kind.
+function farmAnyNftChancePct(draws, rareFloor) {
+  return farmBoxChancePct(d => d.edition_size != null, draws, rareFloor);
+}
+
+// Per-box chance of drawing a SPECIFIC card at least once (0 if sold out / out
+// of pool). This is the number players actually care about: "if I open one box,
+// how likely am I to get this card?" — not the per-single-draw weight share.
+function farmCardBoxChancePct(species, draws, rareFloor) {
+  if (!farmDrawPool().some(d => d.species === species)) return 0;
+  return farmBoxChancePct(d => d.species === species, draws, rareFloor);
 }
 
 // Price of the (owned+1)-th tile for a player who already owns `owned` tiles.
@@ -29463,7 +29484,10 @@ function farmCardFacts(d, mdl) {
   const mine = mdl.mySerials.get(d.species);
   const mineOwned = !!(mine && mine.length);
   const effWeight = mdl.effectiveWeight(d);
-  const chance = mdl.inPool(d) ? farmChanceLabel(effWeight / mdl.totalW * 100) : (soldOut ? 'wyprzedane' : '—');
+  // Show the per-BOX chance (chance to get this card when opening one standard
+  // box = at least one of FARM_BOX_DRAWS distinct draws), not the per-single-draw
+  // weight share — the former is what players actually experience.
+  const chance = mdl.inPool(d) ? farmChanceLabel(farmCardBoxChancePct(d.species, FARM_BOX_DRAWS, false)) : (soldOut ? 'wyprzedane' : '—');
   const myInsts = mdl.myInstances.get(d.species) || [];
   const serials = isNft
     ? myInsts.slice().sort((a, b) => b.level - a.level || a.serial_no - b.serial_no).map(i => 'Lvl' + i.level + ' #' + i.serial_no).join(', ')
@@ -31390,7 +31414,8 @@ function farmBoxOddsTable() {
           el('th', {}, 'Roślina'), el('th', {}, 'Szansa'), el('th', {}, 'Edycja NFT'))),
         tbody)),
     el('div', { className: 'farm-cat-legend', style: { marginTop: '8px' } },
-      'Szansa = szansa na kartę w pojedynczym z ' + FARM_BOX_DRAWS + ' losowań skrzynki. Jest ' +
+      'Szansa = szansa na tę kartę przy otwarciu ', el('b', {}, 'jednej skrzynki'),
+      ' (' + FARM_BOX_DRAWS + ' losowania). Jest ' +
       'stała dla wszystkich i nie zależy od tego, ile NFT już masz. Karty 💎 NFT wypadają, dopóki edycja się nie wyprzeda. Naturalna szansa na 🎁 darmową działkę teraz: '
       + farmChanceLabel(farmVoucherChance() * 100) + ' — maleje z każdą posiadaną działką albo voucherem.'));
 }
