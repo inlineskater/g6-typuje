@@ -287,12 +287,15 @@ async function loadState(userId) {
   // SELECT-to-all). The frontend marks the caller's own via user_id. Team names
   // are joined in so bets on older finished matches (no longer in `matches`
   // above) still render as "Home — Away" instead of the raw hex event id.
+  // NO low limit here: the ranking (typy/trafione/ROI/bilans) is computed
+  // client-side from THIS list, so cutting old bets silently shrinks every
+  // player's stats (that bug shipped as `limit 500` and hit at 525 bets).
   const bets = await db`
     select b.*, m.home_team as match_home, m.away_team as match_away, m.kickoff as match_kickoff
     from public.football_bets b
     left join public.football_matches m on m.id = b.match_id
     order by b.created_at desc
-    limit 500
+    limit 20000
   `;
 
   let profile = null;
