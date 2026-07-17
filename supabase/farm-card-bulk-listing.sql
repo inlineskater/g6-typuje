@@ -168,12 +168,14 @@ SELECT
   END AS next_min_bid,
   tb.top_bidders,
   -- item linkage (NULL for plain IRL goods)
-  l.item_kind, l.nft_instance_id, l.card_species, l.farm_tile_x, l.farm_tile_y, l.qty,
+  l.item_kind, l.nft_instance_id, l.card_species, l.farm_tile_x, l.farm_tile_y,
   ni.serial_no    AS nft_serial,
   ni.edition_size AS nft_edition,
   ni.nft_name     AS nft_name,
   ni.level        AS nft_level,
-  ft.asset_value  AS farm_tile_asset_value
+  ft.asset_value  AS farm_tile_asset_value,
+  -- new columns must be APPENDED (CREATE OR REPLACE VIEW can't reorder existing ones)
+  l.qty
 FROM public.marketplace_listings l
 JOIN public.profiles sp ON sp.id = l.seller_id
 LEFT JOIN public.profiles bp ON bp.id = l.buyer_id
