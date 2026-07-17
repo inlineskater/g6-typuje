@@ -6223,15 +6223,16 @@
     .farm-sales-time { color: var(--muted); white-space: nowrap; }
     .farm-sales-crop { display: flex; align-items: center; gap: 4px; font-weight: 600; }
     .farm-sales-more { margin-top: 10px; text-align: center; }
-    /* Lootbox opening log feed */
-    .farm-log-emojis { display: flex; flex-wrap: wrap; gap: 2px; }
-    .farm-log-emoji { font-size: 16px; line-height: 1.1; }
-    .farm-log-emoji.is-nft { filter: drop-shadow(0 0 3px #f59e0b); }
-    .farm-log-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
-    .farm-log-badge { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
-    .farm-log-badge.is-nft { background: linear-gradient(180deg, #fde68a, #f59e0b); color: #7c2d12; }
-    .farm-log-badge.is-vch { background: #dcfce7; color: #166534; }
-    .farm-sales-table tr.farm-log-nft-row td { background: rgba(245, 158, 11, 0.08); }
+    /* Lootbox stats + luck table */
+    .farm-luck-opens { display: flex; align-items: baseline; gap: 6px; }
+    .farm-luck-sub { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .farm-luck-nft { font-weight: 800; color: #b45309; white-space: nowrap; }
+    .farm-luck { font-weight: 800; white-space: nowrap; padding: 1px 7px; border-radius: 999px; font-size: 12px; }
+    .farm-luck-hot { background: #dcfce7; color: #15803d; }
+    .farm-luck-cold { background: #e0f2fe; color: #0369a1; }
+    .farm-luck-mid { background: var(--surface-2, #f1f5f9); color: var(--muted); }
+    .farm-luck-na { color: var(--muted); }
+    .farm-luck-table tr.farm-luck-me td { background: rgba(245, 158, 11, 0.10); font-weight: 700; }
     /* Voucher reveal card in the pack opening */
     .farm-pack-card.voucher .farm-pack-front { background: linear-gradient(160deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
     .farm-pack-card.voucher .farm-pack-glow { background: radial-gradient(circle, #22c55e, transparent 70%); }
@@ -31082,91 +31083,100 @@ function buildFarmBoxesBody(bodyEl) {
 
   bodyEl.append(oddsBtn, oddsWrap);
 
-  // Global opening log — a popup feed of every box opened on the server.
+  // Global lootbox stats + luck popup (per-player opens / NFTs / fart).
   const logBtn = el('button', { className: 'lootbox-odds-toggle', style: { width: 'calc(100% - 8px)', margin: '8px 4px 0' } },
-    el('span', {}, '🧾 Historia otwarć skrzynek'), el('span', { className: 'lootbox-chev' }, '›'));
-  logBtn.addEventListener('click', () => openFarmLootboxLog());
+    el('span', {}, '📊 Statystyki skrzynek i fart'), el('span', { className: 'lootbox-chev' }, '›'));
+  logBtn.addEventListener('click', () => openFarmLootboxStats());
   bodyEl.append(logBtn);
 }
 
-// Popup: global feed of recent lootbox openings (who opened what), from the
-// public farm_lootbox_opens table (supabase/farm-static-nft-odds.sql). Doubles
-// as a transparency/fairness view — anyone can see every NFT that dropped.
-function openFarmLootboxLog() {
-  const body = openFarmModalShell('🧾 Historia otwarć skrzynek');
-  loadFarmLootboxOpensFeed(body);
+// Popup: per-player lootbox statistics with a "luck factor" (fart). Aggregated
+// from the public farm_lootbox_opens table (supabase/farm-static-nft-odds.sql).
+// Since NFT odds are now flat/static, expected NFTs per player is exact:
+// Σ per-box P(≥1 NFT) with P by box type, so luck = observed ÷ expected.
+function openFarmLootboxStats() {
+  const body = openFarmModalShell('📊 Statystyki skrzynek i fart');
+  loadFarmLootboxStats(body);
 }
 
-async function loadFarmLootboxOpensFeed(host) {
+// Colour + label for a luck ratio (observed/expected). Grey when the sample is
+// too small to mean anything yet.
+function farmLuckCell(observed, expected) {
+  if (expected < 0.5) return el('span', { className: 'farm-luck farm-luck-na', title: 'Za mało otwarć, by ocenić fart' }, '—');
+  const ratio = observed / expected;
+  const cls = ratio >= 1.15 ? 'farm-luck-hot' : (ratio <= 0.85 ? 'farm-luck-cold' : 'farm-luck-mid');
+  const icon = ratio >= 1.15 ? '🍀' : (ratio <= 0.85 ? '🧊' : '≈');
+  return el('span', { className: 'farm-luck ' + cls, title: observed + ' NFT / oczekiwane ' + expected.toFixed(2) },
+    icon + ' ' + ratio.toFixed(2) + '×');
+}
+
+async function loadFarmLootboxStats(host) {
   host.replaceChildren(el('div', { className: 'farm-price-empty' }, 'Wczytuję…'));
   try {
-    const { data, error } = await sb.from('farm_lootbox_opens')
-      .select('nick_snapshot,box_type,card_count,got_nft,got_voucher,nft_species,nft_serial,cards,created_at')
-      .order('created_at', { ascending: false }).limit(200);
+    // Full history (paged past the 1000-row cap) — we aggregate per player.
+    const { data, error } = await sbFetchAll(() => sb.from('farm_lootbox_opens')
+      .select('user_id,nick_snapshot,box_type,got_nft')
+      .order('created_at', { ascending: true }).order('id', { ascending: true }));
     if (error) throw error;
     const rows = data || [];
+
+    // Static per-box P(≥1 NFT), from the current pool (mirrors the documented
+    // 6.9% / 16.4% headline). Editions selling out shifts these slightly over
+    // time, so expected/fart is a close estimate, not an exact ledger.
+    const pStd = farmAnyNftChancePct(FARM_BOX_DRAWS, false) / 100;
+    const pGold = farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true) / 100;
+
+    const stats = new Map();  // user_id -> aggregate
+    rows.forEach(r => {
+      const key = r.user_id || r.nick_snapshot;
+      let s = stats.get(key);
+      if (!s) { s = { nick: r.nick_snapshot || '???', uid: r.user_id, std: 0, gold: 0, nfts: 0 }; stats.set(key, s); }
+      if (r.nick_snapshot) s.nick = r.nick_snapshot;
+      if (r.box_type === 'gold') s.gold++; else s.std++;
+      if (r.got_nft) s.nfts++;
+    });
+    const list = [...stats.values()].map(s => {
+      s.total = s.std + s.gold;
+      s.expected = s.std * pStd + s.gold * pGold;
+      return s;
+    }).sort((a, b) => b.total - a.total);
+
     host.replaceChildren();
 
-    // Summary strip: total opens + NFTs dropped in this window.
-    const nftCount = rows.filter(r => r.got_nft).length;
+    const totOpens = rows.length;
+    const totNfts = rows.filter(r => r.got_nft).length;
+    const totExpected = list.reduce((s, r) => s + r.expected, 0);
     host.append(el('div', { className: 'farm-sales-title' },
-      '🧾 Ostatnie otwarcia — ' + rows.length + ' skrzynek, ' + nftCount + '× 💎 NFT'));
+      '📊 ' + totOpens + ' otwarć · ' + totNfts + '× 💎 NFT · ogólny fart ' +
+      (totExpected >= 0.5 ? (totNfts / totExpected).toFixed(2) + '×' : '—')));
 
-    if (!rows.length) { host.append(el('div', { className: 'farm-price-empty' }, 'Jeszcze nikt nie otworzył skrzynki.')); return; }
+    if (!list.length) { host.append(el('div', { className: 'farm-price-empty' }, 'Jeszcze nikt nie otworzył skrzynki — statystyki pojawią się po pierwszych otwarciach.')); return; }
 
-    const table = el('table', { className: 'farm-sales-table' });
+    const table = el('table', { className: 'farm-sales-table farm-luck-table' });
     const thead = el('thead', {}, el('tr', {},
-      el('th', {}, 'Data i czas'), el('th', {}, 'Gracz'), el('th', {}, 'Skrzynka'), el('th', {}, 'Wynik')));
+      el('th', {}, 'Gracz'), el('th', {}, 'Otwarte'), el('th', {}, '💎 NFT'), el('th', {}, 'Oczek.'), el('th', {}, 'Fart')));
     const tbody = el('tbody');
-
-    rows.forEach((r, i) => {
-      const d = new Date(r.created_at);
-      const dateStr = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
-      const timeStr = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-      const boxLabel = r.box_type === 'gold' ? '⭐ Złota' : '📦 Zwykła';
-
-      // Result cell: card emojis, NFT badge, voucher badge.
-      const resultCell = el('td', {});
-      const cards = Array.isArray(r.cards) ? r.cards : [];
-      const emojiRow = el('div', { className: 'farm-log-emojis' });
-      cards.forEach(c => {
-        if (c.voucher) return; // voucher shown as its own badge below
-        emojiRow.append(el('span', { className: 'farm-log-emoji' + (c.nft ? ' is-nft' : '') }, c.emoji || '🃏'));
-      });
-      resultCell.append(emojiRow);
-      const badges = el('div', { className: 'farm-log-badges' });
-      if (r.got_nft) {
-        const def = fmDefs.get(r.nft_species);
-        const nm = def?.name || r.nft_species || 'NFT';
-        badges.append(el('span', { className: 'farm-log-badge is-nft' },
-          '💎 ' + nm + (r.nft_serial != null ? ' #' + r.nft_serial : '')));
-      }
-      if (r.got_voucher) badges.append(el('span', { className: 'farm-log-badge is-vch' }, '🎁 działka'));
-      if (badges.children.length) resultCell.append(badges);
-
-      const tr = el('tr', { className: (i >= 25 ? 'hidden' : '') + (r.got_nft ? ' farm-log-nft-row' : '') },
-        el('td', { className: 'farm-sales-time' }, dateStr + ', ' + timeStr),
-        el('td', { className: 'farm-sales-who' }, r.nick_snapshot || '???'),
-        el('td', {}, boxLabel),
-        resultCell);
+    list.forEach(s => {
+      const boxBreak = el('span', { className: 'farm-luck-sub' }, '📦' + s.std + (s.gold ? ' ⭐' + s.gold : ''));
+      const tr = el('tr', { className: (s.uid && me && s.uid === me.id) ? 'farm-luck-me' : '' },
+        el('td', { className: 'farm-sales-who' }, s.nick),
+        el('td', {}, el('div', { className: 'farm-luck-opens' }, el('b', {}, String(s.total)), boxBreak)),
+        el('td', { className: 'farm-luck-nft' }, s.nfts ? ('💎 ' + s.nfts) : '0'),
+        el('td', { className: 'farm-sales-time' }, s.expected.toFixed(2)),
+        el('td', {}, farmLuckCell(s.nfts, s.expected)));
       tbody.append(tr);
     });
-
     table.append(thead, tbody);
     host.append(table);
 
-    if (rows.length > 25) {
-      const btn = el('button', { className: 'farm-mini-btn' }, 'Pokaż wszystkie (' + rows.length + ')');
-      const moreDiv = el('div', { className: 'farm-sales-more' }, btn);
-      btn.addEventListener('click', () => {
-        tbody.querySelectorAll('tr.hidden').forEach(tr => tr.classList.remove('hidden'));
-        moreDiv.remove();
-      });
-      host.append(moreDiv);
-    }
+    host.append(el('div', { className: 'farm-cat-legend', style: { marginTop: '10px' } },
+      'Fart = zdobyte NFT ÷ oczekiwane. Oczekiwane liczymy ze ',
+      el('b', {}, 'stałej szansy'), ' na NFT: ',
+      el('b', {}, farmChanceLabel(pStd * 100)), ' za zwykłą skrzynkę i ',
+      el('b', {}, farmChanceLabel(pGold * 100)), ' za ⭐ Złotą. 🍀 = fart powyżej normy, 🧊 = poniżej. Przy małej liczbie otwarć wynik to loteria — potrzeba dużo otwarć, żeby fart się „wyrównał". Liczone od wdrożenia licznika (wcześniejsze otwarcia nie są ujęte).'));
   } catch (e) {
-    console.error('lootbox opens feed', e);
-    host.replaceChildren(el('div', { className: 'farm-price-empty' }, 'Nie udało się wczytać historii.'));
+    console.error('lootbox stats', e);
+    host.replaceChildren(el('div', { className: 'farm-price-empty' }, 'Nie udało się wczytać statystyk.'));
   }
 }
 
