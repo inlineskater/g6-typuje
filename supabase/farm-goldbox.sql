@@ -77,6 +77,11 @@ BEGIN
 END;
 $$;
 
+-- ⚠️ SUPERSEDED (2026-07-17): supabase/farm-static-nft-odds.sql carries the
+-- LIVE open_farm_goldbox — it removes the per-owned-NFT weight penalty (flat NFT
+-- odds) and adds the farm_lootbox_opens logging call. RE-RUN
+-- farm-static-nft-odds.sql after re-running this file. (buy_farm_goldbox /
+-- open_farm_goldboxes here are unchanged and remain canonical.)
 -- ── A3. RPC: open_farm_goldbox ───────────────────────────────────────────────
 -- Copied verbatim from the LIVE open_farm_lootbox in nft-merge-fixes.sql
 -- (minted_count-driven serials/supply/persona index — the fix for the serial-

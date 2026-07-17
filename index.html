@@ -6223,6 +6223,15 @@
     .farm-sales-time { color: var(--muted); white-space: nowrap; }
     .farm-sales-crop { display: flex; align-items: center; gap: 4px; font-weight: 600; }
     .farm-sales-more { margin-top: 10px; text-align: center; }
+    /* Lootbox opening log feed */
+    .farm-log-emojis { display: flex; flex-wrap: wrap; gap: 2px; }
+    .farm-log-emoji { font-size: 16px; line-height: 1.1; }
+    .farm-log-emoji.is-nft { filter: drop-shadow(0 0 3px #f59e0b); }
+    .farm-log-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+    .farm-log-badge { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+    .farm-log-badge.is-nft { background: linear-gradient(180deg, #fde68a, #f59e0b); color: #7c2d12; }
+    .farm-log-badge.is-vch { background: #dcfce7; color: #166534; }
+    .farm-sales-table tr.farm-log-nft-row td { background: rgba(245, 158, 11, 0.08); }
     /* Voucher reveal card in the pack opening */
     .farm-pack-card.voucher .farm-pack-front { background: linear-gradient(160deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
     .farm-pack-card.voucher .farm-pack-glow { background: radial-gradient(circle, #22c55e, transparent 70%); }
@@ -27052,7 +27061,7 @@ const FARM_GOLDBOX_BULK_BUY_MAX = 50;   // mirror buy_farm_goldbox p_qty cap (fa
 const FARM_GOLDBOX_BULK_OPEN_MAX = 20;  // mirror open_farm_goldboxes v_max (farm-goldbox.sql)
 const FARM_TILE_BASE_PRICE = 350;
 const FARM_TILE_PRICE_CAP = 50000;
-const FARM_NFT_ODDS_DIVISOR = 3;
+const FARM_NFT_ODDS_DIVISOR = 3;   // DEPRECATED 2026-07-17: NFT odds are now static (no per-owned penalty). Kept only to avoid churn; not read anywhere.
 const FARM_VOUCHER_BASE_CHANCE = 0.07;
 const FARM_VOUCHER_ODDS_DIVISOR = 3;
 const FARM_TAX_PER_EXCESS_SQ = 1000;
@@ -28661,10 +28670,43 @@ function farmVoucherChance() {
   return farmVoucherChanceFor(farmTerritoryCount());
 }
 
-function farmEffectiveDrawWeight(d, ownedNfts = farmOwnedNftCount()) {
-  const w = Number(d?.draw_weight || 0);
-  if (!w) return 0;
-  return d.edition_size != null ? w / Math.pow(FARM_NFT_ODDS_DIVISOR, Math.max(0, ownedNfts || 0)) : w;
+// NFT drop odds are now STATIC — identical for every player regardless of how
+// many NFTs they own (see supabase/farm-static-nft-odds.sql). The raw
+// draw_weight IS the chance; the old per-owned-NFT penalty was removed. The
+// ownedNfts arg is kept for call-site compatibility but no longer used.
+function farmEffectiveDrawWeight(d, ownedNfts = 0) {
+  return Number(d?.draw_weight || 0);
+}
+
+// Exact per-box chance of drawing AT LEAST ONE NFT, mirroring the server draw
+// in supabase/farm-static-nft-odds.sql: `draws` distinct weighted picks without
+// replacement over the currently in-pool cards, with an optional rare-or-better
+// floor forced on the first draw (gold box). Static — no per-owned-NFT scaling.
+// Returns a percentage. Cheap enough for the occasional info/help render.
+function farmAnyNftChancePct(draws, rareFloor) {
+  const minted = new Map();
+  fmNft.forEach(n => minted.set(n.species, (minted.get(n.species) || 0) + 1));
+  fmDefs.forEach(d => { if (d.minted_count != null) minted.set(d.species, Math.max(minted.get(d.species) || 0, d.minted_count)); });
+  const pool = [...fmDefs.values()].filter(d => (d.draw_weight || 0) > 0 &&
+    (d.edition_size == null || (minted.get(d.species) || 0) < d.edition_size));
+  const isNft = d => d.edition_size != null;
+  const isRarePlus = d => d.rarity === 'rare' || d.rarity === 'epic' || d.rarity === 'legendary';
+  const rareEligible = pool.some(isRarePlus);
+  const noNft = (picked, left, first) => {
+    if (left === 0) return 1;
+    let avail = pool.filter(d => !picked.has(d.species));
+    if (first && rareFloor && rareEligible) avail = avail.filter(isRarePlus);
+    const tot = avail.reduce((s, d) => s + Number(d.draw_weight), 0);
+    if (tot <= 0) return 1;
+    let p = 0;
+    for (const d of avail) {
+      if (isNft(d)) continue;               // "no NFT" path: only draw normals here
+      const nk = new Set(picked); nk.add(d.species);
+      p += (Number(d.draw_weight) / tot) * noNft(nk, left - 1, false);
+    }
+    return p;
+  };
+  return (1 - noNft(new Set(), draws, true)) * 100;
 }
 
 // Price of the (owned+1)-th tile for a player who already owns `owned` tiles.
@@ -30997,7 +31039,7 @@ function buildFarmBoxesBody(bodyEl) {
       el('ul', { className: 'lootbox-feats', style: { margin: '10px 0' } },
         el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🃏'), el('span', {}, FARM_BOX_DRAWS + ' różne karty roślin')),
         el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🎁'), el('span', {}, 'darmowa działka: ' + farmChanceLabel(farmVoucherChance() * 100) + ' teraz')),
-        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '💎'), el('span', {}, farmOwnedNftCount() ? 'NFT trudniejsze po posiadanych NFT' : 'szansa na limitowaną kartę NFT'))
+        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '💎'), el('span', {}, 'szansa na limitowaną kartę NFT (stała dla wszystkich)'))
       ),
       farmBoxBuyControls()
     )
@@ -31015,6 +31057,93 @@ function buildFarmBoxesBody(bodyEl) {
   });
 
   bodyEl.append(oddsBtn, oddsWrap);
+
+  // Global opening log — a popup feed of every box opened on the server.
+  const logBtn = el('button', { className: 'lootbox-odds-toggle', style: { width: 'calc(100% - 8px)', margin: '8px 4px 0' } },
+    el('span', {}, '🧾 Historia otwarć skrzynek'), el('span', { className: 'lootbox-chev' }, '›'));
+  logBtn.addEventListener('click', () => openFarmLootboxLog());
+  bodyEl.append(logBtn);
+}
+
+// Popup: global feed of recent lootbox openings (who opened what), from the
+// public farm_lootbox_opens table (supabase/farm-static-nft-odds.sql). Doubles
+// as a transparency/fairness view — anyone can see every NFT that dropped.
+function openFarmLootboxLog() {
+  const body = openFarmModalShell('🧾 Historia otwarć skrzynek');
+  loadFarmLootboxOpensFeed(body);
+}
+
+async function loadFarmLootboxOpensFeed(host) {
+  host.replaceChildren(el('div', { className: 'farm-price-empty' }, 'Wczytuję…'));
+  try {
+    const { data, error } = await sb.from('farm_lootbox_opens')
+      .select('nick_snapshot,box_type,card_count,got_nft,got_voucher,nft_species,nft_serial,cards,created_at')
+      .order('created_at', { ascending: false }).limit(200);
+    if (error) throw error;
+    const rows = data || [];
+    host.replaceChildren();
+
+    // Summary strip: total opens + NFTs dropped in this window.
+    const nftCount = rows.filter(r => r.got_nft).length;
+    host.append(el('div', { className: 'farm-sales-title' },
+      '🧾 Ostatnie otwarcia — ' + rows.length + ' skrzynek, ' + nftCount + '× 💎 NFT'));
+
+    if (!rows.length) { host.append(el('div', { className: 'farm-price-empty' }, 'Jeszcze nikt nie otworzył skrzynki.')); return; }
+
+    const table = el('table', { className: 'farm-sales-table' });
+    const thead = el('thead', {}, el('tr', {},
+      el('th', {}, 'Data i czas'), el('th', {}, 'Gracz'), el('th', {}, 'Skrzynka'), el('th', {}, 'Wynik')));
+    const tbody = el('tbody');
+
+    rows.forEach((r, i) => {
+      const d = new Date(r.created_at);
+      const dateStr = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+      const timeStr = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      const boxLabel = r.box_type === 'gold' ? '⭐ Złota' : '📦 Zwykła';
+
+      // Result cell: card emojis, NFT badge, voucher badge.
+      const resultCell = el('td', {});
+      const cards = Array.isArray(r.cards) ? r.cards : [];
+      const emojiRow = el('div', { className: 'farm-log-emojis' });
+      cards.forEach(c => {
+        if (c.voucher) return; // voucher shown as its own badge below
+        emojiRow.append(el('span', { className: 'farm-log-emoji' + (c.nft ? ' is-nft' : '') }, c.emoji || '🃏'));
+      });
+      resultCell.append(emojiRow);
+      const badges = el('div', { className: 'farm-log-badges' });
+      if (r.got_nft) {
+        const def = fmDefs.get(r.nft_species);
+        const nm = def?.name || r.nft_species || 'NFT';
+        badges.append(el('span', { className: 'farm-log-badge is-nft' },
+          '💎 ' + nm + (r.nft_serial != null ? ' #' + r.nft_serial : '')));
+      }
+      if (r.got_voucher) badges.append(el('span', { className: 'farm-log-badge is-vch' }, '🎁 działka'));
+      if (badges.children.length) resultCell.append(badges);
+
+      const tr = el('tr', { className: (i >= 25 ? 'hidden' : '') + (r.got_nft ? ' farm-log-nft-row' : '') },
+        el('td', { className: 'farm-sales-time' }, dateStr + ', ' + timeStr),
+        el('td', { className: 'farm-sales-who' }, r.nick_snapshot || '???'),
+        el('td', {}, boxLabel),
+        resultCell);
+      tbody.append(tr);
+    });
+
+    table.append(thead, tbody);
+    host.append(table);
+
+    if (rows.length > 25) {
+      const btn = el('button', { className: 'farm-mini-btn' }, 'Pokaż wszystkie (' + rows.length + ')');
+      const moreDiv = el('div', { className: 'farm-sales-more' }, btn);
+      btn.addEventListener('click', () => {
+        tbody.querySelectorAll('tr.hidden').forEach(tr => tr.classList.remove('hidden'));
+        moreDiv.remove();
+      });
+      host.append(moreDiv);
+    }
+  } catch (e) {
+    console.error('lootbox opens feed', e);
+    host.replaceChildren(el('div', { className: 'farm-price-empty' }, 'Nie udało się wczytać historii.'));
+  }
 }
 
 function farmHelpSection(title, ...nodes) {
@@ -31114,6 +31243,7 @@ function renderFarmHelpInto(bodyEl) {
     farmHelpSection('📦 2. Skrzynka z nasionami',
       P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w ', b('🎒 Moim Majątku'), ' (z animowanym odkrywaniem kart).'),
       P('Karty mają rzadkość: ', b('zwykłe'), ' są częste i szybkie, ', b('epickie'), ' są rzadkie, ale dają dużo więcej plonu. Szanse teraz: ', b(oddsTxt), '.'),
+      P('💎 ', b('Karty NFT: '), 'stała szansa dla wszystkich — ', b('nie maleje'), ', gdy masz już jakieś NFT. Na jedną skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na dowolne NFT'), ' (zwykła) i ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true))), ' (⭐ Złota). Edycje są limitowane — gdy się wyprzedadzą, znikają z puli.'),
       P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.'),
       P('⭐ ', b('Złota Skrzynia'), ' (', b(FARM_GOLDBOX_PRICE + ' 🪙'), ') daje ', b(FARM_GOLDBOX_DRAWS + ' kart'), ' z ', b('gwarancją min. 1 rzadkiej'), ' i większą szansą na ', b('💎 NFT'), ' oraz ', b('🎁 działkę'), '.')),
 
@@ -31155,8 +31285,8 @@ function renderFarmHelpInto(bodyEl) {
       P(b('Jak działa kolekcja:')),
       el('ul', { className: 'farm-help-list' },
         step(b('Numer seryjny: '), 'każdy egzemplarz ma własny numer, np. „#3 / 25" — trzecia wybita sztuka z całej edycji 25.'),
-        step(b('Skąd: '), 'zdobywasz je tylko ze zwykłej skrzynki za ' + FARM_BOX_PRICE + ' 🪙 (te same 3 losowania) — wypadają bardzo rzadko, nie ma osobnego zakupu.'),
-        step(b('Malejące szanse: '), 'każde NFT, które już posiadasz, dzieli wagę kolejnych NFT przez ' + FARM_NFT_ODDS_DIVISOR + ', więc kolekcjonerom coraz trudniej trafiać następne okazy.'),
+        step(b('Skąd: '), 'zdobywasz je ze zwykłej skrzynki za ' + FARM_BOX_PRICE + ' 🪙 (te same 3 losowania) albo z ⭐ Złotej Skrzyni — wypadają rzadko, nie ma osobnego zakupu.'),
+        step(b('Stała szansa dla wszystkich: '), 'szansa na NFT jest ', b('taka sama dla każdego'), ' i ', b('nie zmienia się'), ' od tego, ile NFT już masz. Na skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na jakiekolwiek NFT'), ' (zwykła), ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true)) + '') + ' (⭐ Złota). Dokładne szanse per karta są w 📖 Katalogu.'),
         step(b('Wyprzedaż edycji: '), 'gdy edycja się wyczerpie, karta znika z puli losowań i w Katalogu ma status „wyprzedane".'),
         step(b('Sadzenie: '), 'sadzisz je jak każdą kartę i mają najmocniejsze staty (największy plon i cena NPC). Uwaga: ', b('poziom siedzi na konkretnym egzemplarzu'), ' — sadzisz wybrany numer, a rośnie zgodnie z jego poziomem.'),
         step(b('Wartość w majątku'), ' (Net Worth, 💼 Portfel) = ', b('20000 ÷ wielkość edycji × poziom'), ' za egzemplarz — mniejsza edycja i wyższy poziom = cenniejsza karta.'))),
@@ -31260,8 +31390,8 @@ function farmBoxOddsTable() {
           el('th', {}, 'Roślina'), el('th', {}, 'Szansa'), el('th', {}, 'Edycja NFT'))),
         tbody)),
     el('div', { className: 'farm-cat-legend', style: { marginTop: '8px' } },
-      'Szansa = Twoja obecna szansa w pojedynczym z ' + FARM_BOX_DRAWS + ' losowań skrzynki. Każde posiadane NFT dzieli wagę kolejnych NFT przez '
-      + FARM_NFT_ODDS_DIVISOR + '. Karty 💎 NFT wypadają, dopóki edycja się nie wyprzeda. Naturalna szansa na 🎁 darmową działkę teraz: '
+      'Szansa = szansa na kartę w pojedynczym z ' + FARM_BOX_DRAWS + ' losowań skrzynki. Jest ' +
+      'stała dla wszystkich i nie zależy od tego, ile NFT już masz. Karty 💎 NFT wypadają, dopóki edycja się nie wyprzeda. Naturalna szansa na 🎁 darmową działkę teraz: '
       + farmChanceLabel(farmVoucherChance() * 100) + ' — maleje z każdą posiadaną działką albo voucherem.'));
 }
 
@@ -31339,7 +31469,7 @@ function renderFarmLootboxStore() {
       el('ul', { className: 'lootbox-feats' },
         feat('🃏', FARM_BOX_DRAWS + ' różne karty roślin'),
         feat('🎁', 'darmowa działka: ' + farmChanceLabel(farmVoucherChance() * 100) + ' teraz'),
-        feat('💎', farmOwnedNftCount() ? 'NFT trudniejsze po posiadanych NFT' : 'szansa na limitowaną kartę NFT')),
+        feat('💎', 'szansa na limitowaną kartę NFT (stała dla wszystkich)')),
       farmBoxBuyControls(),
       owned,
       oddsBtn,

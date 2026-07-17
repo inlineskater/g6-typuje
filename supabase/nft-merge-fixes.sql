@@ -55,6 +55,11 @@ DO $$ BEGIN
     FOREIGN KEY (instance_id) REFERENCES public.farm_nft_instances(id) ON DELETE SET NULL;
 END $$;
 
+-- ⚠️ SUPERSEDED (2026-07-17): supabase/farm-static-nft-odds.sql carries the
+-- LIVE open_farm_lootbox — it removes the per-owned-NFT weight penalty (flat NFT
+-- odds for everyone) and adds the farm_lootbox_opens logging call. This copy is
+-- kept for its minted_count history; RE-RUN farm-static-nft-odds.sql after
+-- re-running this file so the live function is restored.
 -- ── 1b. open_farm_lootbox on minted_count ───────────────────────────────────
 -- Reproduces the nft-leveling-rework.sql version verbatim except that every
 -- edition-supply read (eligibility, weights, the locked re-check, the serial,

@@ -237,16 +237,19 @@ CREATE INDEX IF NOT EXISTS farm_land_tax_events_user_time_idx
 -- base_grow_minutes are in MINUTES: commons = 1 day (1440), rares = 2 days,
 -- epics = 3-4 days. plant_crop floors the actual grow time at 24h (GROW_FLOOR_MIN),
 -- so leveling can speed harvests up but NEVER below once-a-day.
+-- Non-NFT draw weights were DOUBLED (2026-07-17, supabase/farm-static-nft-odds.sql)
+-- so the fixed NFT weights (2/1/1/1 below) are ~half the pool vs the original
+-- values. See that file for the resulting static per-box NFT chances.
 INSERT INTO public.farm_card_defs (species, name, emoji, rarity, draw_weight, base_grow_minutes, base_yield, crop_type) VALUES
-  ('carrot',     'Marchewka',  '🥕', 'common', 30, 1440,  4,  'carrot'),
-  ('potato',     'Ziemniak',   '🥔', 'common', 28, 1440,  5,  'potato'),
-  ('tomato',     'Pomidor',    '🍅', 'common', 24, 1440,  6,  'tomato'),
-  ('corn',       'Kukurydza',  '🌽', 'rare',   13, 2880, 12,  'corn'),
-  ('chili',      'Papryczka',  '🌶️', 'rare',   12, 2880, 11,  'chili'),
-  ('strawberry', 'Truskawka',  '🍓', 'rare',    9, 2880, 15,  'strawberry'),
-  ('pumpkin',    'Dynia',      '🎃', 'epic',    5, 4320, 30,  'pumpkin'),
-  ('grapes',     'Winogrona',  '🍇', 'epic',    4, 4320, 35,  'grapes'),
-  ('pineapple',  'Ananas',     '🍍', 'epic',    3, 5760, 45,  'pineapple')
+  ('carrot',     'Marchewka',  '🥕', 'common', 60, 1440,  4,  'carrot'),
+  ('potato',     'Ziemniak',   '🥔', 'common', 56, 1440,  5,  'potato'),
+  ('tomato',     'Pomidor',    '🍅', 'common', 48, 1440,  6,  'tomato'),
+  ('corn',       'Kukurydza',  '🌽', 'rare',   26, 2880, 12,  'corn'),
+  ('chili',      'Papryczka',  '🌶️', 'rare',   24, 2880, 11,  'chili'),
+  ('strawberry', 'Truskawka',  '🍓', 'rare',   18, 2880, 15,  'strawberry'),
+  ('pumpkin',    'Dynia',      '🎃', 'epic',   10, 4320, 30,  'pumpkin'),
+  ('grapes',     'Winogrona',  '🍇', 'epic',    8, 4320, 35,  'grapes'),
+  ('pineapple',  'Ananas',     '🍍', 'epic',    6, 5760, 45,  'pineapple')
 ON CONFLICT (species) DO UPDATE SET
   name = EXCLUDED.name, emoji = EXCLUDED.emoji, rarity = EXCLUDED.rarity,
   draw_weight = EXCLUDED.draw_weight, base_grow_minutes = EXCLUDED.base_grow_minutes,
