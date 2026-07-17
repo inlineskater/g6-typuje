@@ -8445,6 +8445,11 @@
       <select id="ml-item-select" class="nick-select"></select>
       <div class="farm-hint" id="ml-item-hint" style="margin-top:4px"></div>
     </div>
+    <div class="nm-field" id="ml-qty-field" style="display:none">
+      <label class="field-label" for="ml-qty">Ile sztuk sprzedajesz?</label>
+      <input type="number" id="ml-qty" min="1" value="1">
+      <div class="farm-hint" id="ml-qty-hint" style="margin-top:4px"></div>
+    </div>
     <div class="nm-field">
       <label class="field-label">Typ ogłoszenia</label>
       <div style="display:flex;gap:8px" id="ml-type-toggle">
@@ -14001,6 +14006,7 @@ async function createMarketplaceListing(emoji, title, desc, listingType, price, 
 const ML_FARM_ERR = {
   not_owner: 'To nie twój przedmiot.', already_listed: 'Ten przedmiot jest już wystawiony.',
   no_duplicate: 'Nie masz wolnego duplikatu tej karty.', nft_not_found: 'Nie znaleziono karty NFT.',
+  not_enough_cards: 'Nie masz tylu wolnych duplikatów tej karty.', card_planted: 'Wszystkie kopie tej karty są zasadzone.',
   tile_not_owned: 'To nie jest kupiona działka.', tile_occupied: 'Ta działka nie jest pusta.',
   zen_tile: 'Roślinki z Ogródka nie można wystawić jako działki.', bad_coords: 'Pole poza farmą.',
   bad_price: 'Podaj cenę większą od 0.', use_nft_listing: 'Tę kartę wystaw jako NFT.',
@@ -14008,7 +14014,7 @@ const ML_FARM_ERR = {
   territory_cap: 'Masz limit działek — nie możesz kupić kolejnej.',
   territory_over_cap: 'Jesteś ponad limitem działek — sprzedaj nadmiar.',
 };
-async function createFarmListing(kind, ref, listingType, price, hours, incr, btn) {
+async function createFarmListing(kind, ref, listingType, price, hours, incr, btn, qty = 1) {
   btn.disabled = true; btn.textContent = 'Wystawiam…';
   const fn = kind === 'farm_nft' ? 'create_farm_nft_listing'
            : kind === 'farm_tile' ? 'create_farm_tile_listing'
@@ -14017,7 +14023,7 @@ async function createFarmListing(kind, ref, listingType, price, hours, incr, btn
     ? { p_instance_id: ref, p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr }
     : kind === 'farm_tile'
       ? { p_x: Number(ref.x), p_y: Number(ref.y), p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr }
-      : { p_species: ref, p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr };
+      : { p_species: ref, p_listing_type: listingType, p_price: price, p_duration_hours: hours, p_min_increment: incr, p_qty: qty };
   const { error } = await sb.rpc(fn, args);
   btn.disabled = false; btn.textContent = 'Wystaw ogłoszenie';
   if (error) {
@@ -14164,7 +14170,7 @@ function buildMarketplaceCard(listing) {
     el('div', { className: 'mlc-name' }, listing.title),
     el('div', { className: 'mlc-pricetag' }, plnum(priceVal) + ' 🪙')));
   if (listing.item_kind === 'farm_nft') body.appendChild(el('div', { className: 'ml-item-badge nft' }, '💎 Karta NFT #' + listing.nft_serial + '/' + listing.nft_edition + (listing.nft_level > 1 ? ' ' + '⭐'.repeat(listing.nft_level) : '')));
-  else if (listing.item_kind === 'farm_card') body.appendChild(el('div', { className: 'ml-item-badge card' }, '🃏 Karta rośliny (Ogródek)'));
+  else if (listing.item_kind === 'farm_card') body.appendChild(el('div', { className: 'ml-item-badge card' }, '🃏 Karta rośliny' + (Number(listing.qty) > 1 ? ' ×' + listing.qty : '') + ' (Ogródek)'));
   else if (listing.item_kind === 'farm_tile') body.appendChild(el('div', { className: 'ml-item-badge tile' }, '🌱 Działka [' + listing.farm_tile_x + ',' + listing.farm_tile_y + ']'));
   body.appendChild(el('div', { className: 'mlc-seller' }, '👤 Wystawia: ' + (listing.seller_nick || '?')));
   if (listing.description) body.appendChild(el('div', { className: 'mlc-desc' }, listing.description));
@@ -14914,7 +14920,32 @@ function mlSetSellKind(kind, preselect = '') {
   document.getElementById('ml-sell-kind').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.kind === kind));
   document.getElementById('ml-good-fields').style.display = kind === 'good' ? '' : 'none';
   document.getElementById('ml-item-field').style.display = kind === 'good' ? 'none' : '';
+  // Only fungible plant cards can be bundled; NFTs and tiles are always a single unit.
+  document.getElementById('ml-qty-field').style.display = kind === 'farm_card' ? '' : 'none';
+  document.getElementById('ml-qty').value = '1';
   if (kind !== 'good') mlPopulateItemPicker(kind, preselect);
+}
+// How many level-1 duplicates of a species the seller can freely list (owned minus
+// copies currently keeping a tile planted). Mirrors create_farm_card_listing's guard.
+function mlFreeCardCount(species) {
+  const owned = fmCollection.find(c => c.species === species)?.count || 0;
+  let planted = 0;
+  fmTiles.forEach(t => { if (t.owner_id === me?.id && t.planted_species === species) planted++; });
+  return Math.max(0, owned - planted);
+}
+// Clamp the qty picker to how many free duplicates the selected card has.
+function mlUpdateQtyMax() {
+  if (mlSellKind !== 'farm_card') return;
+  const species = document.getElementById('ml-item-select').value;
+  const free = species ? mlFreeCardCount(species) : 0;
+  const input = document.getElementById('ml-qty');
+  const hint = document.getElementById('ml-qty-hint');
+  input.max = Math.max(1, free);
+  input.disabled = free < 1;
+  if ((parseInt(input.value, 10) || 1) > free) input.value = String(Math.max(1, free));
+  hint.textContent = free > 1 ? ('Masz ' + free + ' wolnych duplikatów tej karty do sprzedaży (jako jeden pakiet).')
+                   : free === 1 ? 'Masz 1 wolny duplikat tej karty.'
+                   : 'Brak wolnego duplikatu tej karty.';
 }
 async function mlPopulateItemPicker(kind, preselect = '') {
   const sel = document.getElementById('ml-item-select');
@@ -14956,10 +14987,12 @@ async function mlPopulateItemPicker(kind, preselect = '') {
       const def = fmDefs.get(c.species);
       sel.append(el('option', { value: c.species }, (def?.emoji || '🃏') + ' ' + (def?.name || c.species) + ' (masz ' + c.count + ')'));
     });
-    hint.textContent = 'Sprzedajesz jeden duplikat (poziom 1). Twój poziom karty zostaje nienaruszony.';
+    hint.textContent = 'Sprzedajesz duplikaty (poziom 1) jako jeden pakiet. Twój poziom karty zostaje nienaruszony.';
   }
   if (preselect && [...sel.options].some(o => o.value === preselect)) sel.value = preselect;
+  mlUpdateQtyMax();
 }
+document.getElementById('ml-item-select').addEventListener('change', mlUpdateQtyMax);
 document.getElementById('ml-sell-kind').addEventListener('click', e => {
   const btn = e.target.closest('button[data-kind]'); if (!btn) return;
   mlSetSellKind(btn.dataset.kind);
@@ -14995,7 +15028,14 @@ document.getElementById('ml-submit').addEventListener('click', () => {
     const listingRef = mlSellKind === 'farm_tile'
       ? { x: Number(ref.split(',')[0]), y: Number(ref.split(',')[1]) }
       : ref;
-    createFarmListing(mlSellKind, listingRef, mlListingType, price, hours, incr, btn);
+    let qty = 1;
+    if (mlSellKind === 'farm_card') {
+      qty = parseInt(document.getElementById('ml-qty').value, 10) || 1;
+      const free = mlFreeCardCount(ref);
+      if (qty < 1) { showToast('❌ Podaj liczbę sztuk większą od 0.'); return; }
+      if (qty > free) { showToast('❌ Masz tylko ' + free + ' wolnych duplikatów tej karty.'); return; }
+    }
+    createFarmListing(mlSellKind, listingRef, mlListingType, price, hours, incr, btn, qty);
   }
 });
 
