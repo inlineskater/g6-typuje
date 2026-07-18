@@ -6223,6 +6223,9 @@
     .farm-sales-time { color: var(--muted); white-space: nowrap; }
     .farm-sales-crop { display: flex; align-items: center; gap: 4px; font-weight: 600; }
     .farm-sales-more { margin-top: 10px; text-align: center; }
+    /* Lootbox odds table: gold-box column + any-NFT summary */
+    .farm-odds-gold { color: #b45309; }
+    .farm-box-odds-summary { font-size: 12px; margin: 4px 0 2px; color: var(--text); }
     /* Lootbox stats + luck table */
     .farm-luck-opens { display: flex; align-items: baseline; gap: 6px; }
     .farm-luck-sub { font-size: 11px; color: var(--muted); white-space: nowrap; }
@@ -31064,7 +31067,7 @@ function buildFarmBoxesBody(bodyEl) {
       el('ul', { className: 'lootbox-feats', style: { margin: '10px 0' } },
         el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🃏'), el('span', {}, FARM_BOX_DRAWS + ' różne karty roślin')),
         el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '🎁'), el('span', {}, 'darmowa działka: ' + farmChanceLabel(farmVoucherChance() * 100) + ' teraz')),
-        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '💎'), el('span', {}, 'szansa na limitowaną kartę NFT (stała dla wszystkich)'))
+        el('li', { className: 'lootbox-feat' }, el('span', { className: 'lootbox-feat-ic' }, '💎'), el('span', {}, 'karta NFT: ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na skrzynkę (stała dla wszystkich)'))
       ),
       farmBoxBuyControls()
     )
@@ -31074,7 +31077,7 @@ function buildFarmBoxesBody(bodyEl) {
 
   const oddsWrap = el('div', { className: 'lootbox-odds-wrap hidden', style: { margin: '8px 4px 0' } }, farmBoxOddsTable());
   const oddsBtn = el('button', { className: 'lootbox-odds-toggle', style: { width: 'calc(100% - 8px)', margin: '8px 4px 0' } },
-    el('span', {}, 'ℹ️ Szanse i zawartość (Skrzynka z nasionami)'), el('span', { className: 'lootbox-chev' }, '▾')
+    el('span', {}, 'ℹ️ Szanse i zawartość (📦 zwykła i ⭐ Złota)'), el('span', { className: 'lootbox-chev' }, '▾')
   );
   oddsBtn.addEventListener('click', () => {
     const hiddenNow = oddsWrap.classList.toggle('hidden');
@@ -31405,32 +31408,44 @@ function plBoxes(n) {
 // model so the store and 📖 Katalog always show the same chances.
 function farmBoxOddsTable() {
   const mdl = farmCatalogModel();
+  // Real per-BOX chance for this card in each box type: standard = 3 draws,
+  // gold = 5 draws + guaranteed rare-or-better first draw.
+  const cellFor = (d, draws, rareFloor) => mdl.inPool(d)
+    ? farmChanceLabel(farmCardBoxChancePct(d.species, draws, rareFloor))
+    : ((d.edition_size != null && (mdl.minted.get(d.species) || 0) >= d.edition_size) ? 'wyprzedane' : '—');
   const tbody = el('tbody', {});
   farmCatalogGroups(mdl).forEach(g => {
     tbody.append(el('tr', { className: 'farm-cat-group-row' + (g.key === 'nft' ? ' nft' : '') },
-      el('td', { className: 'farm-cat-group-cell', colSpan: 3 }, g.title)));
+      el('td', { className: 'farm-cat-group-cell', colSpan: 4 }, g.title)));
     g.cards.forEach(d => {
       const f = farmCardFacts(d, mdl);
       tbody.append(el('tr', { className: 'farm-cat-row-' + d.rarity },
         el('td', { className: 'farm-cat-td-name' },
           el('span', { className: 'farm-cat-emoji-sm' }, farmIcon(d.emoji)),
           el('span', { className: 'farm-cat-name-txt farm-rar-' + d.rarity }, d.name)),
-        el('td', {}, f.chance),
+        el('td', {}, cellFor(d, FARM_BOX_DRAWS, false)),
+        el('td', { className: 'farm-odds-gold' }, cellFor(d, FARM_GOLDBOX_DRAWS, true)),
         el('td', {}, f.isNft ? ('💎 ' + f.minted + '/' + d.edition_size) : '—')));
     });
   });
+  const anyStd = farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false));
+  const anyGold = farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true));
   return el('div', { className: 'farm-box-odds-table' },
     el('div', { className: 'farm-box-odds-title' }, '🎲 Co możesz wylosować'),
+    el('div', { className: 'farm-box-odds-summary' },
+      el('span', {}, '💎 Dowolne NFT na skrzynkę: '),
+      el('b', {}, '📦 ' + anyStd), el('span', {}, ' · '),
+      el('b', { className: 'farm-odds-gold' }, '⭐ ' + anyGold)),
     el('div', { className: 'farm-cat-table-wrap' },
       el('table', { className: 'farm-cat-table' },
         el('thead', {}, el('tr', {},
-          el('th', {}, 'Roślina'), el('th', {}, 'Szansa'), el('th', {}, 'Edycja NFT'))),
+          el('th', {}, 'Roślina'), el('th', {}, '📦 Zwykła'), el('th', { className: 'farm-odds-gold' }, '⭐ Złota'), el('th', {}, 'Edycja NFT'))),
         tbody)),
     el('div', { className: 'farm-cat-legend', style: { marginTop: '8px' } },
       'Szansa = szansa na tę kartę przy otwarciu ', el('b', {}, 'jednej skrzynki'),
-      ' (' + FARM_BOX_DRAWS + ' losowania). Jest ' +
+      ' (📦 zwykła = ' + FARM_BOX_DRAWS + ' losowania, ⭐ Złota = ' + FARM_GOLDBOX_DRAWS + ' losowań z gwarancją min. 1 rzadkiej). Jest ' +
       'stała dla wszystkich i nie zależy od tego, ile NFT już masz. Karty 💎 NFT wypadają, dopóki edycja się nie wyprzeda. Naturalna szansa na 🎁 darmową działkę teraz: '
-      + farmChanceLabel(farmVoucherChance() * 100) + ' — maleje z każdą posiadaną działką albo voucherem.'));
+      + farmChanceLabel(farmVoucherChance() * 100) + ' (📦) — maleje z każdą posiadaną działką albo voucherem.'));
 }
 
 // Buy controls: qty stepper + total-price button (shared by the Sklep store
@@ -31507,7 +31522,7 @@ function renderFarmLootboxStore() {
       el('ul', { className: 'lootbox-feats' },
         feat('🃏', FARM_BOX_DRAWS + ' różne karty roślin'),
         feat('🎁', 'darmowa działka: ' + farmChanceLabel(farmVoucherChance() * 100) + ' teraz'),
-        feat('💎', 'szansa na limitowaną kartę NFT (stała dla wszystkich)')),
+        feat('💎', 'karta NFT: ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na skrzynkę (stała)')),
       farmBoxBuyControls(),
       owned,
       oddsBtn,
@@ -31546,7 +31561,7 @@ function farmGoldBoxCardEl() {
       el('ul', { className: 'lootbox-feats' },
         feat('🃏', FARM_GOLDBOX_DRAWS + ' kart naraz'),
         feat('🔒', 'gwarantowana min. 1 rzadka karta'),
-        feat('💎', 'większa szansa na kartę NFT'),
+        feat('💎', 'karta NFT: ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true)) + ' na skrzynię'),
         feat('🎁', 'większa szansa na darmową działkę')),
       farmGoldBoxBuyControls(),
       owned));
