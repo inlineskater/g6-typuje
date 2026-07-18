@@ -68,6 +68,7 @@ recon AS (
   LEFT JOIN public.farm_user_state us ON us.user_id = p.id
   LEFT JOIN buys  b ON b.user_id = p.id
   LEFT JOIN mints m ON m.user_id = p.id
+  WHERE NOT COALESCE(p.is_admin, false)   -- admins are excluded from the stats table
 ),
 -- Per-player old-era expected NFTs, ÷ opens = per-open expected probability
 -- (from a simulation of the OLD decaying odds over each player's actual

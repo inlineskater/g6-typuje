@@ -103,15 +103,20 @@ CREATE OR REPLACE FUNCTION public.farm_log_lootbox_open(
   p_user uuid, p_box_type text, p_cards jsonb)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_nick    text;
-  v_count   integer := 0;
-  v_nft     boolean := false;
-  v_vch     boolean := false;
-  v_species text := NULL;
-  v_serial  integer := NULL;
-  c         jsonb;
+  v_nick     text;
+  v_is_admin boolean := false;
+  v_count    integer := 0;
+  v_nft      boolean := false;
+  v_vch      boolean := false;
+  v_species  text := NULL;
+  v_serial   integer := NULL;
+  c          jsonb;
 BEGIN
-  SELECT nick INTO v_nick FROM public.profiles WHERE id = p_user;
+  -- Admins are excluded from the stats/luck table (staff account), so their
+  -- opens are never logged in the first place.
+  SELECT nick, COALESCE(is_admin, false) INTO v_nick, v_is_admin
+    FROM public.profiles WHERE id = p_user;
+  IF v_is_admin THEN RETURN; END IF;
   FOR c IN SELECT * FROM jsonb_array_elements(COALESCE(p_cards, '[]'::jsonb)) LOOP
     IF COALESCE((c->>'voucher')::boolean, false) THEN
       v_vch := true;
