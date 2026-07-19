@@ -8,7 +8,7 @@ CREATE TABLE public.profiles (
   id         uuid PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   nick       text UNIQUE NOT NULL,
   is_admin   boolean NOT NULL DEFAULT false,
-  coins      integer NOT NULL DEFAULT 1000,
+  coins      bigint NOT NULL DEFAULT 1000,
   created_at timestamptz DEFAULT now()
 );
 
@@ -22,7 +22,8 @@ CREATE TABLE public.markets (
   created_by   uuid REFERENCES public.profiles(id),
   created_at   timestamptz DEFAULT now(),
   resolved     boolean NOT NULL DEFAULT false,
-  resolution   text
+  resolution   text,
+  closes_at    timestamptz          -- optional: bets rejected once this passes
 );
 
 CREATE TABLE public.trades (
@@ -90,7 +91,8 @@ RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_user   uuid := auth.uid();
   v_nick   text;
-  v_coins  integer;
+  v_coins  bigint;
+  v_closes timestamptz;
   v_y      numeric;
   v_n      numeric;
   v_d      numeric;
@@ -117,10 +119,11 @@ BEGIN
     RAISE EXCEPTION 'side_locked';
   END IF;
 
-  SELECT yes_shares, no_shares INTO v_y, v_n
+  SELECT yes_shares, no_shares, closes_at INTO v_y, v_n, v_closes
   FROM public.markets WHERE id = p_market AND resolved = false FOR UPDATE;
 
   IF NOT FOUND THEN RAISE EXCEPTION 'market_not_found'; END IF;
+  IF v_closes IS NOT NULL AND now() >= v_closes THEN RAISE EXCEPTION 'market_closed'; END IF;
 
   IF p_side = 'YES' THEN
     v_d      := (v_y * p_amount) / (v_n + p_amount);
@@ -150,13 +153,14 @@ $$;
 
 -- ── RPC: create_market ─────────────────────────────────────────────────────
 
-CREATE OR REPLACE FUNCTION public.create_market(p_icon text, p_title text, p_deadline text)
+CREATE OR REPLACE FUNCTION public.create_market(
+  p_icon text, p_title text, p_deadline text, p_closes_at timestamptz DEFAULT NULL)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_id uuid;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
-  INSERT INTO public.markets (icon, title, deadline, created_by)
-  VALUES (COALESCE(NULLIF(trim(p_icon),''), '🎲'), p_title, p_deadline, auth.uid())
+  INSERT INTO public.markets (icon, title, deadline, created_by, closes_at)
+  VALUES (COALESCE(NULLIF(trim(p_icon),''), '🎲'), p_title, p_deadline, auth.uid(), p_closes_at)
   RETURNING id INTO v_id;
   RETURN v_id;
 END;
@@ -296,11 +300,11 @@ $$;
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.is_admin(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.place_bet(uuid, text, integer) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.create_market(text, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.create_market(text, text, text, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.resolve_market(uuid, text) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.place_bet(uuid, text, integer) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_market(text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_market(text, text, text, timestamptz) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.resolve_market(uuid, text) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';

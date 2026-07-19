@@ -8372,6 +8372,11 @@
       <label class="field-label" for="nm-deadline">Termin</label>
       <input type="text" id="nm-deadline" placeholder='np. "31 maja 2026"' maxlength="60" autocomplete="off">
     </div>
+    <div class="nm-field">
+      <label class="field-label" for="nm-closes">Zamknięcie zakładów (opcjonalnie)</label>
+      <input type="datetime-local" id="nm-closes" autocomplete="off">
+      <p style="color:var(--muted);font-size:11px;margin-top:6px;line-height:1.5">Po tym czasie nie będzie już można obstawiać (aż do rozstrzygnięcia). Puste = rynek otwarty do ręcznego zamknięcia.</p>
+    </div>
     <button class="btn-primary" id="nm-submit">Utwórz rynek</button>
   </div>
 </div>
@@ -10425,6 +10430,10 @@ async function renderMarkets() {
   updateActivityStrip();
 }
 
+function isBettingClosed(m) {
+  return !m.resolved && !!m.closes_at && new Date(m.closes_at).getTime() <= Date.now();
+}
+
 function buildMarketCard(m, pos) {
   const p = pYes(m);
 
@@ -10437,6 +10446,12 @@ function buildMarketCard(m, pos) {
     el('span', { className: 'creator-badge' }, 'Autor: ' + (m.creator_nick || 'Nieznany')),
     el('span', { className: 'deadline-badge' }, m.deadline),
   ];
+  if (m.closes_at) {
+    const cd = new Date(m.closes_at);
+    const closed = cd.getTime() <= Date.now();
+    metaItems.push(el('span', { className: 'deadline-badge' },
+      (closed ? '🔒 ' : '⏳ ') + cd.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })));
+  }
   if (!m.resolved && isResolver(m)) {
     const rb = el('button', { className: 'btn-resolve-sm' }, 'Zamknij');
     rb.addEventListener('click', () => openResolveModal(m.id));
@@ -10479,6 +10494,9 @@ function buildMarketCard(m, pos) {
     const isYes = m.resolution === 'YES';
     betSection = el('div', { className: 'resolved-banner ' + (isYes ? 'resolved-yes' : 'resolved-no') },
       isYes ? 'Rozstrzygnięty: TAK ✅' : 'Rozstrzygnięty: NIE ❌');
+  } else if (isBettingClosed(m)) {
+    betSection = el('div', { className: 'resolved-banner' },
+      '⏳ Zakłady zamknięte — czeka na rozstrzygnięcie');
   } else {
     const noCoins = me.coins < 1;
     const lockYes = pos && (pos.side === 'NO' || pos.side === 'MIXED');
@@ -11091,6 +11109,10 @@ function openBetModal(marketId, side) {
   if (me.coins < 1) return;
   activeMarket = markets.find(m => m.id === marketId);
   if (!activeMarket) return;
+  if (isBettingClosed(activeMarket)) {
+    showToast('❌ Zakłady na tym rynku są już zamknięte.');
+    return;
+  }
   const pos = myPositionsByMarket[marketId];
   if (pos?.side === 'MIXED') {
     showToast('❌ Ten rynek ma już pozycję po obu stronach. Nie można dokładać.');
@@ -11178,9 +11200,10 @@ btnPlace.addEventListener('click', async () => {
   btnPlace.disabled = false;
 
   if (error) {
-    const msg = error.message.includes('insufficient') ? 'Za mało coinów!'
-              : error.message.includes('not_auth')     ? 'Nie jesteś zalogowany.'
-              : error.message.includes('side_locked')  ? 'Na tym rynku możesz dokładać tylko do wybranej wcześniej strony.'
+    const msg = error.message.includes('insufficient')   ? 'Za mało coinów!'
+              : error.message.includes('not_auth')       ? 'Nie jesteś zalogowany.'
+              : error.message.includes('market_closed')  ? 'Zakłady na tym rynku zostały już zamknięte.'
+              : error.message.includes('side_locked')    ? 'Na tym rynku możesz dokładać tylko do wybranej wcześniej strony.'
               : 'Błąd: ' + error.message;
     showToast('❌ ' + msg); refreshBetModal(); return;
   }
@@ -11367,6 +11390,7 @@ function updateActivityStrip() {
 document.getElementById('btn-new-market').addEventListener('click', () => {
   document.getElementById('nm-title').value    = '';
   document.getElementById('nm-deadline').value = '';
+  document.getElementById('nm-closes').value   = '';
   show(nmOverlay); document.body.style.overflow = 'hidden';
 });
 document.getElementById('nm-close').addEventListener('click', closeNmModal);
@@ -11375,15 +11399,23 @@ nmOverlay.addEventListener('click', e => { if (e.target === nmOverlay) closeNmMo
 function closeNmModal() { hide(nmOverlay); document.body.style.overflow = ''; }
 
 document.getElementById('nm-submit').addEventListener('click', async () => {
-  const title    = document.getElementById('nm-title').value.trim();
-  const deadline = document.getElementById('nm-deadline').value.trim();
+  const title     = document.getElementById('nm-title').value.trim();
+  const deadline  = document.getElementById('nm-deadline').value.trim();
+  const closesRaw = document.getElementById('nm-closes').value;
   if (!title)    { showToast('❌ Podaj pytanie rynku.'); return; }
   if (!deadline) { showToast('❌ Podaj termin.'); return; }
+  let closesAt = null;
+  if (closesRaw) {
+    const d = new Date(closesRaw);
+    if (isNaN(d.getTime()))       { showToast('❌ Nieprawidłowa data zamknięcia zakładów.'); return; }
+    if (d.getTime() <= Date.now()) { showToast('❌ Zamknięcie zakładów musi być w przyszłości.'); return; }
+    closesAt = d.toISOString();
+  }
 
   const btn = document.getElementById('nm-submit');
   btn.disabled = true; btn.textContent = 'Tworzę…';
 
-  const { error } = await sb.rpc('create_market', { p_icon: nmIcon, p_title: title, p_deadline: deadline });
+  const { error } = await sb.rpc('create_market', { p_icon: nmIcon, p_title: title, p_deadline: deadline, p_closes_at: closesAt });
   btn.disabled = false; btn.textContent = 'Utwórz rynek';
 
   if (error) { showToast('❌ ' + error.message); return; }

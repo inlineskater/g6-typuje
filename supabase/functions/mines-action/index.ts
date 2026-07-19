@@ -4,8 +4,6 @@ import postgres from "npm:postgres@3.4.5";
 
 const ALLOWED_ORIGINS = new Set([
   "https://inlineskater.github.io",
-  "http://127.0.0.1:8000",
-  "http://localhost:8000",
 ]);
 
 function corsHeaders(req) {

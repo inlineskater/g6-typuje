@@ -25,6 +25,9 @@ verify_jwt = true
 [functions.slots-action]
 verify_jwt = true
 
+[functions.plinko-action]
+verify_jwt = true
+
 [functions.mines-action]
 verify_jwt = true
 

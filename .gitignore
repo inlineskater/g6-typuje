@@ -15,3 +15,6 @@ node_modules/
 supabase/.temp/
 
 document_signatures_export/
+
+# Database backups (contain user data — never commit; repo is public)
+backups/

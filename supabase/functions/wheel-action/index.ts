@@ -16,19 +16,11 @@ import postgres from "npm:postgres@3.4.5";
 
 const ALLOWED_ORIGINS = new Set([
   "https://inlineskater.github.io",
-  "http://127.0.0.1:8000",
-  "http://localhost:8000",
 ]);
 
 function isAllowedOrigin(origin) {
   if (!origin) return false;
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  try {
-    const url = new URL(origin);
-    return url.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
-  } catch (_) {
-    return false;
-  }
+  return ALLOWED_ORIGINS.has(origin);
 }
 
 function corsHeaders(req) {
