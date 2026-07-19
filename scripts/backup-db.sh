@@ -49,7 +49,7 @@ mkdir -p "$BACKUP_DIR"
 # Checked before the credential checks so a "done today" skip needs nothing set.
 # Override with BACKUP_FORCE=1 (e.g. for a manual/test run).
 TODAY="$(date +%Y%m%d)"
-if [[ -z "${BACKUP_FORCE:-}" ]] && compgen -G "$BACKUP_DIR/rynek-$TODAY-*.sql.gz" >/dev/null; then
+if [[ -z "${BACKUP_FORCE:-}" ]] && ls "$BACKUP_DIR"/rynek-"$TODAY"-*.sql.gz >/dev/null 2>&1; then
   echo "==> A backup for today ($TODAY) already exists — skipping. Set BACKUP_FORCE=1 to override."
   exit 0
 fi
@@ -78,9 +78,12 @@ echo "==> Snapshot complete ($(du -h "$OUT.gz" | cut -f1)): $(basename "$OUT").g
 
 # Retention: keep the newest $KEEP snapshots, delete older ones.
 if [[ "$KEEP" -gt 0 ]]; then
-  mapfile -t OLD < <(ls -1t "$BACKUP_DIR"/rynek-*.sql.gz 2>/dev/null | tail -n "+$((KEEP + 1))")
-  for old in "${OLD[@]:-}"; do
-    [[ -z "$old" ]] && continue
+  # Keep the newest $KEEP, delete the rest. Portable (macOS bash 3.2 — no mapfile).
+  # Snapshot filenames never contain spaces/globs, so word-splitting is safe here.
+  n=0
+  for old in $(ls -1t "$BACKUP_DIR"/rynek-*.sql.gz 2>/dev/null); do
+    n=$((n + 1))
+    [[ "$n" -le "$KEEP" ]] && continue
     rm -f "$old"
     echo "==> Pruned old snapshot: $(basename "$old")"
   done
