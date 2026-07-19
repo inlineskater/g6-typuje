@@ -37,9 +37,12 @@ calling `pg_dump` directly. Install just the client (no server, no Docker):
 ```bash
 brew install libpq && brew link --force libpq   # macOS
 
-# Direct connection string — Dashboard → Project Settings → Database →
-# Connection string → URI. Contains the DB password; keep it out of the repo.
-export SUPABASE_DB_URL='postgresql://postgres:<password>@db.rjovhmepanwbdgdkvylr.supabase.co:5432/postgres'
+# Use the SESSION POOLER host (Dashboard → Settings → Database → Connection
+# string → "Session pooler") — the direct db.<ref>.supabase.co host is IPv6-only
+# and won't resolve on most networks. Password goes in PGPASSWORD (raw, so
+# special characters don't need URL-encoding); keep both out of the repo.
+export SUPABASE_DB_URL='postgresql://postgres.rjovhmepanwbdgdkvylr@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'
+export PGPASSWORD='<your-db-password>'
 
 scripts/backup-db.sh                 # → ./backups/rynek-<stamp>.sql.gz
 BACKUP_KEEP=30 scripts/backup-db.sh  # keep 30 snapshots instead of the default 14
@@ -72,12 +75,15 @@ activate it, one-time:
    brew install libpq && brew link --force libpq
    ```
 2. Create the secret env file (holds the DB password — kept out of the repo, in
-   your home dir, sourced by the job) and lock it down:
+   your home dir, sourced by the job) and lock it down. Use the **Session pooler**
+   host (the direct `db.<ref>.supabase.co` host is IPv6-only and won't resolve on
+   most networks), and put the password in `PGPASSWORD` so special characters
+   don't need URL-encoding:
    ```bash
-   printf "export SUPABASE_DB_URL='postgresql://postgres:<pw>@db.rjovhmepanwbdgdkvylr.supabase.co:5432/postgres'\n" > ~/.rynek-backup.env
+   printf "export SUPABASE_DB_URL='postgresql://postgres.rjovhmepanwbdgdkvylr@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'\nexport PGPASSWORD='<your-db-password>'\n" > ~/.rynek-backup.env
    chmod 600 ~/.rynek-backup.env
    ```
-   (Connection string: Dashboard → Project Settings → Database → Connection string → URI.)
+   (Exact host/user: Dashboard → Project Settings → Database → Connection string → **Session pooler**.)
 3. Load and test it once:
    ```bash
    launchctl load ~/Library/LaunchAgents/com.rynek-proroctw.backup.plist

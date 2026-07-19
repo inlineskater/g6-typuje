@@ -13,15 +13,19 @@
 #     own `supabase db dump` needs Docker — this script avoids both by calling
 #     pg_dump directly. Install the client only (no server, no Docker):
 #         brew install libpq && brew link --force libpq      # macOS
-#   * The DIRECT database connection string in SUPABASE_DB_URL (it contains the
-#     DB password). Pass it via env only — NEVER hardcode/commit it. This repo
-#     is PUBLIC and the dump contains user data, so output goes to ./backups/,
-#     which is git-ignored. Do not move dumps into a tracked directory.
-#     Get the URL from: Supabase Dashboard -> Project Settings -> Database ->
-#     Connection string -> URI (direct 5432, or the pooler).
+#   * The database connection string in SUPABASE_DB_URL. Use the SESSION POOLER
+#     host, not the direct `db.<ref>.supabase.co` one — the direct host is
+#     IPv6-only and won't resolve on most networks. Pass it via env only — NEVER
+#     hardcode/commit it. This repo is PUBLIC and the dump contains user data, so
+#     output goes to ./backups/, which is git-ignored. Do not move dumps into a
+#     tracked directory. Get the string from: Supabase Dashboard -> Project
+#     Settings -> Database -> Connection string -> "Session pooler".
+#     Put the password in PGPASSWORD (raw, no URL-encoding needed) so special
+#     characters don't break the URL — pg_dump reads it automatically.
 #
 # USAGE
-#   export SUPABASE_DB_URL='postgresql://postgres:<password>@db.rjovhmepanwbdgdkvylr.supabase.co:5432/postgres'
+#   export SUPABASE_DB_URL='postgresql://postgres.<ref>@aws-0-<region>.pooler.supabase.com:5432/postgres'
+#   export PGPASSWORD='<your-db-password>'
 #   scripts/backup-db.sh                 # -> ./backups/rynek-<stamp>.sql.gz
 #   BACKUP_KEEP=30 scripts/backup-db.sh  # keep 30 snapshots (default 14)
 #
