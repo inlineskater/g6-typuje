@@ -50,18 +50,41 @@ BACKUP_KEEP=30 scripts/backup-db.sh  # keep 30 snapshots instead of the default 
 > and never paste one into an issue/PR. For an off-machine copy, upload to
 > private storage (e.g. an encrypted drive or a private bucket) — not git.
 
-### Scheduling (optional)
+### Scheduling — macOS launchd (installed)
 
-- **Local (cron), simplest:** run daily at 03:00 with the env var exported in the
-  cron environment:
-  ```
-  0 3 * * *  SUPABASE_DB_URL='postgresql://…' /path/to/rynek-proroctw/scripts/backup-db.sh >> ~/rynek-backup.log 2>&1
-  ```
-  Downside: only runs while that machine is on.
-- **GitHub Actions:** possible with `SUPABASE_DB_URL` stored as a repo secret, but
-  the workflow must upload the dump as a **private artifact / to external
-  storage** — it must **never** commit the dump back to this public repo. Given
-  that constraint, native Supabase backups are the better scheduled option.
+A launchd agent is installed at `~/Library/LaunchAgents/com.rynek-proroctw.backup.plist`
+(reference copy committed at `scripts/com.rynek-proroctw.backup.plist`). It runs
+`scripts/backup-db.sh` **daily at 03:00** — and on the next wake if the Mac was
+asleep. To activate it, one-time:
+
+1. Install pg_dump (no Docker):
+   ```bash
+   brew install libpq && brew link --force libpq
+   ```
+2. Create the secret env file (holds the DB password — kept out of the repo, in
+   your home dir, sourced by the job) and lock it down:
+   ```bash
+   printf "export SUPABASE_DB_URL='postgresql://postgres:<pw>@db.rjovhmepanwbdgdkvylr.supabase.co:5432/postgres'\n" > ~/.rynek-backup.env
+   chmod 600 ~/.rynek-backup.env
+   ```
+   (Connection string: Dashboard → Project Settings → Database → Connection string → URI.)
+3. Load and test it once:
+   ```bash
+   launchctl load ~/Library/LaunchAgents/com.rynek-proroctw.backup.plist
+   launchctl start com.rynek-proroctw.backup     # run now instead of waiting for 03:00
+   tail -20 ~/.rynek-backup.log                   # check output
+   ls -lh backups/                                # confirm rynek-<stamp>.sql.gz appeared
+   ```
+
+Stop/remove: `launchctl unload ~/Library/LaunchAgents/com.rynek-proroctw.backup.plist`.
+
+> Caveats vs native backups: runs only while this Mac is on, no point-in-time
+> recovery, and it dumps only the `public` schema — **login accounts (`auth.users`)
+> are not covered**. It's game-data insurance, not full disaster recovery.
+
+- **GitHub Actions** is also possible (store `SUPABASE_DB_URL` as a repo secret,
+  upload the dump as a private artifact — **never** commit it to this public repo),
+  but the launchd job above is simpler.
 
 ## Restore
 

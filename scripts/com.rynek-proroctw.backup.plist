@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rynek-proroctw.backup</string>
+
+  <!-- Daily at 03:00. If the Mac is asleep/off at 03:00, launchd runs the job
+       on the next wake. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>3</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+
+  <!-- Sources ~/.rynek-backup.env (you create it — holds SUPABASE_DB_URL) so no
+       secret lives in this file, then runs the backup script. Homebrew's bin is
+       prepended so pg_dump (from `brew install libpq`) is found. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"; source "$HOME/.rynek-backup.env" &amp;&amp; /Users/yuriishavlov/projects/rynek-proroctw/scripts/backup-db.sh</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/yuriishavlov/.rynek-backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/yuriishavlov/.rynek-backup.log</string>
+</dict>
+</plist>
