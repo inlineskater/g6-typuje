@@ -2,33 +2,32 @@
 #
 # Off-site logical backup for Rynek Proroctw G6 (hosted Supabase Postgres).
 #
-# Produces the canonical Supabase 3-file snapshot (roles + schema + data) for a
-# fully restorable dump, gzips it, and prunes old backups. This is a SUPPLEMENT
-# to Supabase's native backups (Dashboard -> Database -> Backups / PITR), not a
-# replacement -- see docs/BACKUPS.md.
+# Dumps the `public` schema (all game data: profiles, coins, trades, markets,
+# farm, poker/casino history, signatures, …) with pg_dump, gzips it, and prunes
+# old copies. This is a SUPPLEMENT to Supabase's native backups (Dashboard ->
+# Database -> Backups / PITR), which are the primary/authoritative backup and
+# also cover auth.users — see docs/BACKUPS.md.
 #
-# SECURITY
-#   * Needs the DIRECT database connection string (contains the DB password).
-#     Pass it via env only -- NEVER hardcode it, never commit it. This repo is
-#     PUBLIC and the dump contains user data, so output goes to ./backups/,
+# REQUIREMENTS
+#   * pg_dump on PATH. It is NOT bundled with the Supabase CLI, and the CLI's
+#     own `supabase db dump` needs Docker — this script avoids both by calling
+#     pg_dump directly. Install the client only (no server, no Docker):
+#         brew install libpq && brew link --force libpq      # macOS
+#   * The DIRECT database connection string in SUPABASE_DB_URL (it contains the
+#     DB password). Pass it via env only — NEVER hardcode/commit it. This repo
+#     is PUBLIC and the dump contains user data, so output goes to ./backups/,
 #     which is git-ignored. Do not move dumps into a tracked directory.
-#   * Get the URL from: Supabase Dashboard -> Project Settings -> Database ->
-#     Connection string -> URI (use the direct 5432 string, or the pooler).
-#
-# SETUP
-#   # macOS/Linux (bash/zsh):
-#   export SUPABASE_DB_URL='postgresql://postgres:<password>@db.rjovhmepanwbdgdkvylr.supabase.co:5432/postgres'
+#     Get the URL from: Supabase Dashboard -> Project Settings -> Database ->
+#     Connection string -> URI (direct 5432, or the pooler).
 #
 # USAGE
-#   scripts/backup-db.sh                 # write a timestamped snapshot to ./backups/
-#   BACKUP_KEEP=30 scripts/backup-db.sh  # keep the 30 most recent (default 14)
-#   BACKUP_DIR=/mnt/ext scripts/backup-db.sh
+#   export SUPABASE_DB_URL='postgresql://postgres:<password>@db.rjovhmepanwbdgdkvylr.supabase.co:5432/postgres'
+#   scripts/backup-db.sh                 # -> ./backups/rynek-<stamp>.sql.gz
+#   BACKUP_KEEP=30 scripts/backup-db.sh  # keep 30 snapshots (default 14)
 #
-# RESTORE (into a fresh/empty project) -- see docs/BACKUPS.md for the full flow:
-#   gunzip -k backups/<stamp>.data.sql.gz   # (and .roles / .schema)
-#   psql "$SUPABASE_DB_URL" -f backups/<stamp>.roles.sql
-#   psql "$SUPABASE_DB_URL" -f backups/<stamp>.schema.sql
-#   psql "$SUPABASE_DB_URL" -f backups/<stamp>.data.sql
+# RESTORE (into a fresh/empty project):
+#   gunzip -k backups/rynek-<stamp>.sql.gz
+#   psql "$SUPABASE_DB_URL" -f backups/rynek-<stamp>.sql
 
 set -euo pipefail
 
@@ -42,40 +41,31 @@ if [[ -z "$DB_URL" ]]; then
   exit 1
 fi
 
-if ! command -v supabase >/dev/null 2>&1; then
-  echo "ERROR: the Supabase CLI is not installed (brew install supabase/tap/supabase)." >&2
+if ! command -v pg_dump >/dev/null 2>&1; then
+  echo "ERROR: pg_dump not found. Install the Postgres client (no Docker needed):" >&2
+  echo "  brew install libpq && brew link --force libpq   # macOS" >&2
   exit 1
 fi
 
 mkdir -p "$BACKUP_DIR"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-PREFIX="$BACKUP_DIR/rynek-$STAMP"
+OUT="$BACKUP_DIR/rynek-$STAMP.sql"
 
-echo "==> Backing up to $PREFIX.*.sql.gz"
+echo "==> Dumping public schema to $OUT.gz"
+# --no-owner/--no-privileges keep the dump portable across projects/roles.
+pg_dump "$DB_URL" --schema=public --no-owner --no-privileges -f "$OUT"
+gzip -f "$OUT"
 
-# 1) roles, 2) schema (DDL), 3) data -- the canonical restorable Supabase set.
-echo "  - roles..."
-supabase db dump --db-url "$DB_URL" --role-only -f "$PREFIX.roles.sql"
-echo "  - schema..."
-supabase db dump --db-url "$DB_URL"             -f "$PREFIX.schema.sql"
-echo "  - data..."
-supabase db dump --db-url "$DB_URL" --data-only -f "$PREFIX.data.sql"
+echo "==> Snapshot complete ($(du -h "$OUT.gz" | cut -f1)): $(basename "$OUT").gz"
 
-echo "  - compressing..."
-gzip -f "$PREFIX.roles.sql" "$PREFIX.schema.sql" "$PREFIX.data.sql"
-
-SIZE="$(du -ch "$PREFIX".*.sql.gz 2>/dev/null | tail -1 | cut -f1)"
-echo "==> Snapshot complete ($SIZE): $(basename "$PREFIX").{roles,schema,data}.sql.gz"
-
-# Retention: keep the newest $KEEP snapshots (by the data file), delete older triples.
+# Retention: keep the newest $KEEP snapshots, delete older ones.
 if [[ "$KEEP" -gt 0 ]]; then
-  mapfile -t OLD < <(ls -1t "$BACKUP_DIR"/rynek-*.data.sql.gz 2>/dev/null | tail -n "+$((KEEP + 1))")
-  for data_gz in "${OLD[@]:-}"; do
-    [[ -z "$data_gz" ]] && continue
-    base="${data_gz%.data.sql.gz}"
-    rm -f "$base.data.sql.gz" "$base.schema.sql.gz" "$base.roles.sql.gz"
-    echo "==> Pruned old snapshot: $(basename "$base").*"
+  mapfile -t OLD < <(ls -1t "$BACKUP_DIR"/rynek-*.sql.gz 2>/dev/null | tail -n "+$((KEEP + 1))")
+  for old in "${OLD[@]:-}"; do
+    [[ -z "$old" ]] && continue
+    rm -f "$old"
+    echo "==> Pruned old snapshot: $(basename "$old")"
   done
 fi
 
-echo "==> Done. $(ls -1 "$BACKUP_DIR"/rynek-*.data.sql.gz 2>/dev/null | wc -l | tr -d ' ') snapshot(s) retained in $BACKUP_DIR"
+echo "==> Done. $(ls -1 "$BACKUP_DIR"/rynek-*.sql.gz 2>/dev/null | wc -l | tr -d ' ') snapshot(s) in $BACKUP_DIR"

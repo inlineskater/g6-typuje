@@ -26,17 +26,22 @@ daily backups (+ PITR if the budget allows).
 
 ## 2. Off-site snapshot script (supplementary)
 
-`scripts/backup-db.sh` produces a fully restorable **roles + schema + data**
-snapshot using the Supabase CLI (already installed; no `pg_dump` needed), gzips
-it, and prunes old copies. Run it manually before risky migrations and/or on a
-schedule for an independent off-Supabase copy.
+`scripts/backup-db.sh` dumps the **`public` schema** (all game data) with
+`pg_dump`, gzips it, and prunes old copies. Run it manually before risky
+migrations and/or on a schedule for an independent off-Supabase copy.
+
+Requires `pg_dump` on PATH. It is **not** bundled with the Supabase CLI, and the
+CLI's own `supabase db dump` needs **Docker** — this script avoids both by
+calling `pg_dump` directly. Install just the client (no server, no Docker):
 
 ```bash
-# The direct connection string — Dashboard → Project Settings → Database →
+brew install libpq && brew link --force libpq   # macOS
+
+# Direct connection string — Dashboard → Project Settings → Database →
 # Connection string → URI. Contains the DB password; keep it out of the repo.
 export SUPABASE_DB_URL='postgresql://postgres:<password>@db.rjovhmepanwbdgdkvylr.supabase.co:5432/postgres'
 
-scripts/backup-db.sh                 # → ./backups/rynek-<stamp>.{roles,schema,data}.sql.gz
+scripts/backup-db.sh                 # → ./backups/rynek-<stamp>.sql.gz
 BACKUP_KEEP=30 scripts/backup-db.sh  # keep 30 snapshots instead of the default 14
 ```
 
@@ -63,13 +68,8 @@ BACKUP_KEEP=30 scripts/backup-db.sh  # keep 30 snapshots instead of the default 
 Into a fresh/empty Supabase project (or the same one after a wipe), in order:
 
 ```bash
-gunzip -k backups/rynek-<stamp>.roles.sql.gz
-gunzip -k backups/rynek-<stamp>.schema.sql.gz
-gunzip -k backups/rynek-<stamp>.data.sql.gz
-
-psql "$SUPABASE_DB_URL" -f backups/rynek-<stamp>.roles.sql
-psql "$SUPABASE_DB_URL" -f backups/rynek-<stamp>.schema.sql
-psql "$SUPABASE_DB_URL" -f backups/rynek-<stamp>.data.sql
+gunzip -k backups/rynek-<stamp>.sql.gz
+psql "$SUPABASE_DB_URL" -f backups/rynek-<stamp>.sql
 ```
 
 Notes:
