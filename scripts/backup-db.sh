@@ -35,6 +35,21 @@ DB_URL="${SUPABASE_DB_URL:-}"
 BACKUP_DIR="${BACKUP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/backups}"
 KEEP="${BACKUP_KEEP:-14}"
 
+mkdir -p "$BACKUP_DIR"
+
+# Once-per-day catch-up guard. The launchd job fires at 03:00, on wake, AND at
+# every login (RunAtLoad) so a run missed while the Mac was off/asleep is picked
+# up the next time it's on. This guard makes those extra triggers safe: if today
+# already has a snapshot, skip. So you get at most one backup per calendar day,
+# and never a missed day as long as the Mac is on at some point that day.
+# Checked before the credential checks so a "done today" skip needs nothing set.
+# Override with BACKUP_FORCE=1 (e.g. for a manual/test run).
+TODAY="$(date +%Y%m%d)"
+if [[ -z "${BACKUP_FORCE:-}" ]] && compgen -G "$BACKUP_DIR/rynek-$TODAY-*.sql.gz" >/dev/null; then
+  echo "==> A backup for today ($TODAY) already exists — skipping. Set BACKUP_FORCE=1 to override."
+  exit 0
+fi
+
 if [[ -z "$DB_URL" ]]; then
   echo "ERROR: SUPABASE_DB_URL is not set." >&2
   echo "  export SUPABASE_DB_URL='postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres'" >&2
@@ -47,7 +62,6 @@ if ! command -v pg_dump >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p "$BACKUP_DIR"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 OUT="$BACKUP_DIR/rynek-$STAMP.sql"
 

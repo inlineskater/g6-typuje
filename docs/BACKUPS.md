@@ -54,8 +54,18 @@ BACKUP_KEEP=30 scripts/backup-db.sh  # keep 30 snapshots instead of the default 
 
 A launchd agent is installed at `~/Library/LaunchAgents/com.rynek-proroctw.backup.plist`
 (reference copy committed at `scripts/com.rynek-proroctw.backup.plist`). It runs
-`scripts/backup-db.sh` **daily at 03:00** — and on the next wake if the Mac was
-asleep. To activate it, one-time:
+`scripts/backup-db.sh` **daily at 03:00**, and **catches up if the Mac wasn't on
+at 03:00**:
+
+- **Asleep** at 03:00 → runs on the next wake (`StartCalendarInterval`).
+- **Fully off** at 03:00 → runs at your next login (`RunAtLoad`).
+- A **once-per-day guard** in the script (checks for a `backups/rynek-<today>-*`
+  file) means these extra triggers dump **at most once per calendar day** — so a
+  missed 03:00 is picked up the next time the Mac is on, with no double backups.
+  (`BACKUP_FORCE=1` overrides the guard for a manual run.)
+
+The only day you get no backup is one where the Mac is never on at all. To
+activate it, one-time:
 
 1. Install pg_dump (no Docker):
    ```bash

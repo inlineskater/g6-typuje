@@ -5,17 +5,24 @@
   <key>Label</key>
   <string>com.rynek-proroctw.backup</string>
 
-  <!-- Daily at 03:00. If the Mac is asleep/off at 03:00, launchd runs the job
-       on the next wake. -->
+  <!-- Primary time: daily at 03:00. If the Mac is ASLEEP at 03:00, launchd runs
+       the job on the next wake. -->
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key><integer>3</integer>
     <key>Minute</key><integer>0</integer>
   </dict>
 
+  <!-- If the Mac was fully OFF at 03:00, the agent reloads at your next login and
+       RunAtLoad fires the job then. The script's once-per-day guard makes this
+       safe: it dumps at most once per calendar day, so a missed 03:00 run is
+       simply picked up the next time the Mac is on. -->
+  <key>RunAtLoad</key>
+  <true/>
+
   <!-- Sources ~/.rynek-backup.env (you create it — holds SUPABASE_DB_URL) so no
-       secret lives in this file, then runs the backup script. Homebrew's bin is
-       prepended so pg_dump (from `brew install libpq`) is found. -->
+       secret lives in this file, then runs the backup. Homebrew bin is prepended
+       so pg_dump (from `brew install libpq`) is found. -->
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
@@ -23,8 +30,6 @@
     <string>export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"; source "$HOME/.rynek-backup.env" &amp;&amp; /Users/yuriishavlov/projects/rynek-proroctw/scripts/backup-db.sh</string>
   </array>
 
-  <key>RunAtLoad</key>
-  <false/>
   <key>StandardOutPath</key>
   <string>/Users/yuriishavlov/.rynek-backup.log</string>
   <key>StandardErrorPath</key>
