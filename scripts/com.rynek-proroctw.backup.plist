@@ -5,13 +5,18 @@
   <key>Label</key>
   <string>com.rynek-proroctw.backup</string>
 
-  <!-- Primary time: daily at 03:00. If the Mac is ASLEEP at 03:00, launchd runs
-       the job on the next wake. -->
+  <!-- Primary time 03:00, plus same-day retry slots. The script's once-per-day
+       guard means the FIRST successful run of the day makes the backup and the
+       later slots simply skip — but if 03:00 fails (e.g. the Supabase pooler
+       drops the dump), 09:00/15:00/21:00 retry instead of losing the whole day.
+       If the Mac is ASLEEP at a slot, launchd runs it on the next wake. -->
   <key>StartCalendarInterval</key>
-  <dict>
-    <key>Hour</key><integer>3</integer>
-    <key>Minute</key><integer>0</integer>
-  </dict>
+  <array>
+    <dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
 
   <!-- If the Mac was fully OFF at 03:00, the agent reloads at your next login and
        RunAtLoad fires the job then. The script's once-per-day guard makes this

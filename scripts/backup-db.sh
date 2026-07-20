@@ -71,7 +71,24 @@ OUT="$BACKUP_DIR/rynek-$STAMP.sql"
 
 echo "==> Dumping public schema to $OUT.gz"
 # --no-owner/--no-privileges keep the dump portable across projects/roles.
-pg_dump "$DB_URL" --schema=public --no-owner --no-privileges -f "$OUT"
+# RETRY: the Supabase connection pooler intermittently drops a dump mid-flight
+# ("server closed the connection unexpectedly"). It's transient — an immediate
+# re-run usually succeeds — so retry rather than lose the day's backup. (The
+# direct db.<ref>.supabase.co host, which Supabase recommends for pg_dump, is
+# IPv6-only and does not resolve on this network, so the pooler is the only path.)
+attempt=1
+max_attempts=3
+until pg_dump "$DB_URL" --schema=public --no-owner --no-privileges -f "$OUT"; do
+  rm -f "$OUT"
+  if [[ "$attempt" -ge "$max_attempts" ]]; then
+    echo "ERROR: pg_dump failed $max_attempts times; giving up (will retry at the next scheduled slot)." >&2
+    exit 1
+  fi
+  delay=$((attempt * 30))
+  echo "==> pg_dump failed (attempt $attempt/$max_attempts) — retrying in ${delay}s..." >&2
+  sleep "$delay"
+  attempt=$((attempt + 1))
+done
 gzip -f "$OUT"
 
 echo "==> Snapshot complete ($(du -h "$OUT.gz" | cut -f1)): $(basename "$OUT").gz"
