@@ -5440,6 +5440,73 @@
       background: radial-gradient(58% 150% at 24% 100%, var(--g-grass-b, #aed79e) 0 56%, transparent 58%), radial-gradient(66% 150% at 72% 100%, var(--g-grass-a, #cbe9bf) 0 54%, transparent 56%); }
     .farm-stage > .garden-sky::after { display: none; }
     .farm-stage > .garden-weather { z-index: 4; }
+
+    /* ── Tablica ogłoszeń — communal wooden sign hanging in the sky ──
+       (class prefix `.notice-board` to avoid colliding with the zen
+       garden's own `.sign-board` info panel above) */
+    .notice-board {
+      position: absolute; left: 12px; top: 10px; z-index: 6;
+      max-width: min(340px, calc(100% - 24px));
+      box-sizing: border-box; cursor: pointer; user-select: none;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      color: #4a2f14; text-align: center;
+      padding: 7px 12px 8px; border-radius: 7px;
+      background:
+        repeating-linear-gradient(180deg, rgba(255,255,255,.05) 0 6px, rgba(120,72,30,.06) 6px 12px),
+        linear-gradient(180deg, #c99a5f 0%, #b07f45 100%);
+      border: 2px solid #7c542a;
+      box-shadow: 0 4px 9px -4px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.28), inset 0 -2px 4px rgba(90,54,20,.35);
+      transition: transform .12s ease, box-shadow .12s ease;
+      animation: signSway 5.5s ease-in-out infinite;
+      transform-origin: 50% -10px;
+    }
+    /* rope pins fastening the sign to the sky */
+    .notice-board::before, .notice-board::after {
+      content: ''; position: absolute; top: -6px; width: 4px; height: 8px;
+      background: #6b4423; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.15);
+    }
+    .notice-board::before { left: 14px; }
+    .notice-board::after  { right: 14px; }
+    .notice-board:hover { transform: translateY(-1px) rotate(.3deg); box-shadow: 0 6px 12px -4px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.3); }
+    .notice-board:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    @keyframes signSway { 0%,100% { transform: rotate(-.8deg); } 50% { transform: rotate(.8deg); } }
+    .notice-board-msg {
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      font-size: 13px; line-height: 1.22; font-weight: 700;
+      overflow: hidden; overflow-wrap: anywhere;
+      text-shadow: 0 1px 0 rgba(255,255,255,.25);
+    }
+    .notice-board-meta {
+      display: block; font-size: 9px; line-height: 1.2; margin-top: 2px;
+      color: #6b4a24; opacity: .85; font-style: italic; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .notice-board--empty {
+      font-size: 11px; font-weight: 700; opacity: .92;
+      background: linear-gradient(180deg, rgba(201,154,95,.85) 0%, rgba(176,127,69,.85) 100%);
+    }
+    .notice-board--empty .notice-board-msg { font-size: 11px; white-space: normal; }
+    .night .notice-board { color: #f3e2c6; }
+    .night .notice-board-msg { text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+    .night .notice-board-meta { color: #e7cfa6; }
+
+    /* Rental modal */
+    #sign-overlay .modal { max-width: 380px; }
+    .sign-days-row { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; }
+    .sign-days-row input[type=range] { flex: 1; accent-color: #b07f45; }
+    .sign-days-badge { min-width: 62px; text-align: right; font-weight: 700; color: var(--text); }
+    .sign-cost-line { margin: 6px 0 2px; font-size: 13px; color: var(--muted); }
+    .sign-cost-line strong { color: var(--text); }
+    #sign-text-input { width: 100%; box-sizing: border-box; resize: none; }
+    .sign-charcount { text-align: right; font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .sign-preview {
+      margin: 12px 0 2px; padding: 9px 12px; border-radius: 7px; text-align: center;
+      font-family: 'Georgia', serif; font-weight: 700; color: #4a2f14;
+      background: linear-gradient(180deg, #c99a5f 0%, #b07f45 100%);
+      border: 2px solid #7c542a; box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+      word-break: break-word;
+    }
+    .sign-note { font-size: 11.5px; color: var(--muted); margin-top: 10px; line-height: 1.4; }
     .farm-starter-chip {
       position: absolute; left: 14px; top: 12px; z-index: 8;
       display: inline-flex; align-items: center; gap: 8px; max-width: min(420px, calc(100% - 28px));
@@ -8259,6 +8326,7 @@
         <div class="farm-stage">
           <div class="garden-sky">
             <div class="garden-glow"></div><div class="garden-stars"></div>
+            <div class="notice-board notice-board--empty" id="farm-sign-board" role="button" tabindex="0" title="Tablica ogłoszeń"></div>
             <div class="farm-starter-chip hidden" id="farm-starter-banner">
               <span class="farm-starter-emoji" aria-hidden="true">🎁</span>
               <span class="farm-starter-text"><strong>Prezent od serwera</strong><span>Darmowe skrzynki za 0 🪙</span></span>
@@ -8367,6 +8435,39 @@
     </div>
 
     <button class="btn-place btn-place-yes" id="fb-place">Postaw</button>
+  </div>
+</div>
+
+<!-- ── TABLICA OGŁOSZEŃ MODAL ── -->
+<div id="sign-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="sign-modal-title">📋 Wynajmij tablicę</span>
+      <button class="btn-close" id="sign-close">✕</button>
+    </div>
+    <p class="modal-market-name" id="sign-modal-sub">Twoje ogłoszenie zawiśnie w niebie ogródka dla całego biura.</p>
+
+    <div class="nm-field">
+      <label class="field-label" for="sign-text-input">Treść ogłoszenia</label>
+      <textarea id="sign-text-input" rows="2" maxlength="80" placeholder="np. Dziś urodziny Kornela 🎂 — tort w kuchni!"></textarea>
+      <div class="sign-charcount"><span id="sign-charcount">0</span>/80</div>
+    </div>
+
+    <div id="sign-buy-fields">
+      <div class="slider-section">
+        <div class="slider-label">
+          <span class="slider-label-text">Ile dni</span>
+          <span class="sign-days-badge" id="sign-days-badge">1 dzień</span>
+        </div>
+        <input type="range" id="sign-days" min="1" max="7" value="1" step="1">
+      </div>
+      <p class="sign-cost-line">Koszt najmu: <strong id="sign-cost">100</strong> 🪙 &nbsp;·&nbsp; koniec najmu: <strong id="sign-expiry">—</strong></p>
+    </div>
+
+    <div class="sign-preview" id="sign-preview">Podgląd</div>
+
+    <button class="btn-place btn-place-yes" id="sign-submit">Wynajmij tablicę — 100 🪙</button>
+    <p class="sign-note" id="sign-note">100 🪙 za każdą dobę (24h). Na czas najmu tablica jest tylko Twoja — nikt inny jej nie wynajmie, dopóki nie wygaśnie. Po publikacji treści ogłoszenia nie można zmienić. Monety są spalane.</p>
   </div>
 </div>
 
@@ -27880,9 +27981,187 @@ function normalizeFarmTile(t) {
   };
 }
 
+// ── Tablica ogłoszeń — communal sign board in the Ogródek sky ────────────────
+// One shared board; 100🪙/day (24h/day, 1–7 days), coins burned. While a message
+// is live the board is TAKEN (one owner at a time); published text is immutable.
+// Constants mirror supabase/sign-board.sql.
+const SIGN_BOARD_PRICE = 100;
+const SIGN_BOARD_MAX_DAYS = 7;
+const SIGN_BOARD_MAX_LEN = 80;
+let signBoardActive = null;   // active row {id,user_id,nick_snapshot,message,expires_at} or null
+let signBoardLoaded = false;
+let signBoardTick = null;     // 1-min interval keeping the countdown fresh
+
+function signDaysWord(n) { return (+n === 1) ? 'dzień' : 'dni'; }
+function signRemainingLabel(expiresAt) {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return 'wygasa';
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  if (h >= 24) { const d = Math.floor(h / 24); return `jeszcze ${d} ${signDaysWord(d)}`; }
+  if (h >= 1) return `jeszcze ${h} h ${m} min`;
+  return `jeszcze ${m} min`;
+}
+
+async function loadSignBoard() {
+  try {
+    const { data, error } = await sb
+      .from('sign_board_messages')
+      .select('id,user_id,nick_snapshot,message,expires_at')
+      .gt('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
+      .limit(1);
+    if (error) return;
+    signBoardActive = (data && data[0]) || null;
+    signBoardLoaded = true;
+    renderSignBoard();
+  } catch (e) { /* offline / transient — leave prior render */ }
+}
+
+function updateSignBoardMeta() {
+  if (!signBoardActive) return;
+  if (new Date(signBoardActive.expires_at).getTime() <= Date.now()) { loadSignBoard(); return; }
+  const meta = document.querySelector('#farm-sign-board .notice-board-meta');
+  if (meta) {
+    meta.textContent = `— ${signBoardActive.nick_snapshot} · ${signRemainingLabel(signBoardActive.expires_at)}`;
+  }
+}
+
+function renderSignBoard() {
+  const board = document.getElementById('farm-sign-board');
+  if (!board) return;
+  if (signBoardActive && new Date(signBoardActive.expires_at).getTime() <= Date.now()) signBoardActive = null;
+  board.replaceChildren();
+  if (signBoardActive) {
+    board.classList.remove('notice-board--empty');
+    board.append(
+      el('span', { class: 'notice-board-msg' }, signBoardActive.message),
+      el('span', { class: 'notice-board-meta' },
+        `— ${signBoardActive.nick_snapshot} · ${signRemainingLabel(signBoardActive.expires_at)}`)
+    );
+    board.title = `Ogłoszenie: ${signBoardActive.nick_snapshot}`;
+  } else {
+    board.classList.add('notice-board--empty');
+    board.append(el('span', { class: 'notice-board-msg' }, '📋 Wynajmij tablicę — 100 🪙/doba'));
+    board.title = 'Kliknij, aby wynająć tablicę ogłoszeń';
+  }
+  if (signBoardTick) { clearInterval(signBoardTick); signBoardTick = null; }
+  if (signBoardActive && activeTab === 'farm') {
+    signBoardTick = setInterval(() => {
+      if (activeTab !== 'farm') { clearInterval(signBoardTick); signBoardTick = null; return; }
+      updateSignBoardMeta();
+    }, 60000);
+  }
+}
+
+function signModalRefs() {
+  return {
+    overlay: document.getElementById('sign-overlay'),
+    title:   document.getElementById('sign-modal-title'),
+    sub:     document.getElementById('sign-modal-sub'),
+    buy:     document.getElementById('sign-buy-fields'),
+    submit:  document.getElementById('sign-submit'),
+    note:    document.getElementById('sign-note'),
+    input:   document.getElementById('sign-text-input'),
+    days:    document.getElementById('sign-days'),
+  };
+}
+
+function openSignModal() {
+  if (!me) { showToast('Zaloguj się, aby wynająć tablicę'); return; }
+  if (signBoardActive) {
+    const mine = signBoardActive.user_id === me.id;
+    showToast(mine
+      ? `Twoje ogłoszenie jest już opublikowane (${signRemainingLabel(signBoardActive.expires_at)}). Treści nie można zmienić.`
+      : `Tablica wynajęta przez ${signBoardActive.nick_snapshot} (${signRemainingLabel(signBoardActive.expires_at)})`);
+    return;
+  }
+  const r = signModalRefs();
+  r.title.textContent = '📋 Wynajmij tablicę';
+  r.sub.textContent = 'Twoje ogłoszenie zawiśnie w niebie ogródka dla całego biura.';
+  r.buy.classList.remove('hidden');
+  r.note.textContent = '100 🪙 za każdą dobę (24h). Na czas najmu tablica jest tylko Twoja — nikt inny jej nie wynajmie, dopóki nie wygaśnie. Po publikacji treści ogłoszenia nie można zmienić. Monety są spalane.';
+  r.input.value = '';
+  r.days.value = '1';
+  updateSignModalUi();
+  r.overlay.classList.remove('hidden');
+  setTimeout(() => r.input.focus(), 30);
+}
+
+function closeSignModal() { document.getElementById('sign-overlay').classList.add('hidden'); }
+
+function updateSignModalUi() {
+  const r = signModalRefs();
+  const raw = r.input.value || '';
+  const txt = raw.replace(/\s+/g, ' ').trim();
+  document.getElementById('sign-charcount').textContent = String(raw.length);
+  const preview = document.getElementById('sign-preview');
+  preview.textContent = txt || 'Podgląd';
+  const days = Math.max(1, Math.min(SIGN_BOARD_MAX_DAYS, +r.days.value || 1));
+  document.getElementById('sign-days-badge').textContent = `${days} ${signDaysWord(days)}`;
+  const cost = SIGN_BOARD_PRICE * days;
+  document.getElementById('sign-cost').textContent = String(cost);
+  const exp = new Date(Date.now() + days * 24 * 3600 * 1000);
+  document.getElementById('sign-expiry').textContent =
+    exp.toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  r.submit.textContent = `Wynajmij na ${days} ${signDaysWord(days)} — ${cost} 🪙`;
+}
+
+async function submitSignBoard() {
+  const r = signModalRefs();
+  const txt = (r.input.value || '').replace(/\s+/g, ' ').trim();
+  if (!txt) { showToast('Wpisz treść ogłoszenia'); return; }
+  if (txt.length > SIGN_BOARD_MAX_LEN) { showToast(`Za długi tekst (max ${SIGN_BOARD_MAX_LEN} znaków)`); return; }
+  r.submit.disabled = true;
+  try {
+    const days = Math.max(1, Math.min(SIGN_BOARD_MAX_DAYS, +r.days.value || 1));
+    const { error } = await sb.rpc('buy_sign_board', { p_message: txt, p_days: days });
+    if (error) throw error;
+    showToast(`Tablica wynajęta na ${days} ${signDaysWord(days)}! 🪙 −${SIGN_BOARD_PRICE * days}`);
+    await refreshMeCoins();
+    closeSignModal();
+    await loadSignBoard();
+  } catch (e) {
+    const msg = (e && e.message) || '';
+    const map = {
+      board_taken: 'Tablica jest już wynajęta — poczekaj, aż najem wygaśnie.',
+      insufficient_coins: 'Za mało monet.',
+      empty_message: 'Wpisz treść ogłoszenia.',
+      message_too_long: `Za długi tekst (max ${SIGN_BOARD_MAX_LEN} znaków).`,
+      bad_days: 'Wybierz 1–7 dni.',
+    };
+    const key = Object.keys(map).find(k => msg.includes(k));
+    showToast(key ? map[key] : ('Nie udało się: ' + msg));
+    if (msg.includes('board_taken')) { closeSignModal(); await loadSignBoard(); }
+  } finally {
+    r.submit.disabled = false;
+  }
+}
+
+function setupSignBoardOnce() {
+  if (window.__signWired) return;
+  window.__signWired = true;
+  const board = document.getElementById('farm-sign-board');
+  if (board) {
+    board.addEventListener('click', openSignModal);
+    board.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSignModal(); } });
+  }
+  const overlay = document.getElementById('sign-overlay');
+  document.getElementById('sign-close')?.addEventListener('click', closeSignModal);
+  overlay?.addEventListener('click', e => { if (e.target === overlay) closeSignModal(); });
+  document.getElementById('sign-submit')?.addEventListener('click', submitSignBoard);
+  document.getElementById('sign-text-input')?.addEventListener('input', updateSignModalUi);
+  document.getElementById('sign-days')?.addEventListener('input', updateSignModalUi);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) closeSignModal();
+  });
+}
+
 async function loadFarm() {
   if (!me) return;
   setupFarmOnce();
+  setupSignBoardOnce();
+  loadSignBoard();
   setupFarmRealtime();
   await claimFarmStarter();   // grant the welcome boxes before we read box state
   const seq = ++fmLoadSeq;
@@ -32176,6 +32455,10 @@ function setupFarmRealtime() {
       if (activeTab !== 'farm') return;
       clearTimeout(fmZenReloadTimer);
       fmZenReloadTimer = setTimeout(() => { if (activeTab === 'farm') loadFarm(); }, 350);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sign_board_messages' }, () => {
+      // Someone rented the communal sign board — refresh it.
+      loadSignBoard();
     })
     .subscribe();
   realtimeChannels.push(ch);
