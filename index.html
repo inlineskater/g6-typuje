@@ -6056,6 +6056,38 @@
     .fcc.pickable { cursor: pointer; transition: transform .12s, box-shadow .12s; }
     .fcc.pickable:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,.22); }
     .fcc-nft-serial { height: 13px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: #b45309; }
+    /* Plant picker: responsive 2-column grid of entries (plant card + details).
+       minmax(0, 1fr) keeps long names and income ranges inside the modal. */
+    .farm-pick-note { max-width: 760px; font-size: 11px; color: var(--muted); margin: 2px 0 10px; line-height: 1.4; }
+    .fpk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 4px 0 2px; }
+    .fpk-entry { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+    .fpk-entry.pickable { cursor: pointer; transition: border-color .12s, background .12s, box-shadow .12s, transform .12s; }
+    .fpk-entry.pickable:hover { border-color: var(--border-hi, #cbd5e1); background: var(--acc-dim); box-shadow: 0 4px 12px rgba(0,0,0,.08); transform: translateY(-1px); }
+    .fpk-entry:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent); }
+    .fpk-entry.disabled { opacity: .58; }
+    .fpk-entry.fpk-bonus { background: color-mix(in srgb, #f59e0b 8%, var(--card)); border-color: rgba(245,158,11,.42); }
+    .fpk-entry.fpk-bonus.pickable:hover { background: color-mix(in srgb, #f59e0b 15%, var(--card)); border-color: rgba(245,158,11,.65); }
+    /* Plant card (rarity frame · art · name · Lvl gem) — reuses the .fcc collection card */
+    .fpk-cardstack { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .fpk-card { width: 88px; }
+    .fpk-card .fcc-inner { padding: 7px 6px 8px; gap: 4px; }
+    .fpk-card .fcc-art .farm-ico { width: 38px; height: 38px; }
+    .fpk-card .fcc-art .farm-ico-emoji { font-size: 32px; }
+    .fpk-card .fcc-name { font-size: 11px; min-height: 2.2em; }
+    .fpk-bonus-badge { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 2px 7px; border-radius: 999px; background: rgba(245,158,11,.16); color: #b45309; font-size: 10px; font-weight: 800; line-height: 1.25; white-space: nowrap; }
+    .fpk-details { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+    .fpk-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; font-size: 11px; line-height: 1.25; }
+    .fpk-line .k { color: var(--muted); font-weight: 700; white-space: nowrap; }
+    .fpk-line .v { min-width: 0; font-weight: 800; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .fpk-line .v.money { color: #15803d; }
+    .fpk-line .v.money.boost { color: #b45309; }  /* seasonal-contract crop: income already includes the bonus */
+    .fpk-details .fpk-btn { width: 100%; margin-top: 4px; }
+    .fpk-btn { min-height: 29px; padding: 6px 10px; border: none; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; background: linear-gradient(180deg, #fbbf24, #f59e0b); color: #422006; box-shadow: 0 2px 0 #b45309; white-space: normal; }
+    .fpk-btn:hover:not(:disabled) { filter: brightness(1.05); }
+    .fpk-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .fpk-btn:disabled { background: var(--bg-mid, var(--surface)); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+    @media (max-width: 680px) { .fpk-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 360px) { .fpk-entry { gap: 8px; padding: 7px; } .fpk-card { width: 80px; } .fpk-card .fcc-art .farm-ico { width: 34px; height: 34px; } .fpk-card .fcc-art .farm-ico-emoji { font-size: 29px; } .fpk-line { gap: 5px; font-size: 10px; } }
     .fcc-item-effect { font-size: 9.5px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.25; width: 100%; min-height: 2.5em; display: flex; align-items: center; justify-content: center; word-break: break-word; }
     .fcc-item-slot { width: 100%; margin-top: 1px; padding: 6px 4px; border-radius: 8px; font-size: 11px; font-weight: 800; text-align: center; background: var(--bg-mid); color: var(--muted); box-sizing: border-box; }
     .fcc-grid.compact { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
@@ -28944,18 +28976,19 @@ function renderFarmSelectionBody() {
     });
 
     if (uniqueOwnedSpecies.size === 0) { box.append(el('div', { className: 'farm-empty' }, 'Brak kart roślin. Otwórz skrzynkę 📦.')); return; }
-    
-    const grid = el('div', { className: 'fcc-grid compact' });
+
+    // One entry per plantable card/instance, with its growth and income projection
+    // beside the collectible card. Active weekly-contract crops get a gold accent.
+    const entries = [];
     [...uniqueOwnedSpecies.values()]
       .sort((a, b) => (fmDefs.get(b.species)?.draw_weight || 0) - (fmDefs.get(a.species)?.draw_weight || 0))
       .forEach(card => {
         const def = fmDefs.get(card.species);
         if (!def) return;
 
-        // NFT species: level lives on each numbered instance, so render one pick
-        // card PER eligible (owned, unlisted, unplanted) copy — with its own name,
-        // serial and real level — instead of one aggregate card that always showed
-        // "Lvl 1" and no name. Lets the player plant a specific egzemplarz (e.g.
+        // NFT species: level lives on each numbered instance, so emit one entry PER
+        // eligible (owned, unlisted, unplanted) copy — with its own name, serial
+        // and real level — so the player plants a specific egzemplarz (e.g.
         // Świętosława #2) rather than blindly auto-picking the highest level.
         if (def.edition_size != null) {
           // Skip a stale farm_collection NFT row when no instances are actually owned.
@@ -28965,30 +28998,36 @@ function renderFarmSelectionBody() {
             .filter(n => n.owner_id === me?.id && n.species === card.species && !n.listed && !plantedIds.has(n.id))
             .sort((a, b) => b.level - a.level || a.serial_no - b.serial_no);
           if (!insts.length) {
-            grid.append(farmCardTile({ species: card.species, level: 1, count: 0 },
-              { plantDisabled: true, plantLabel: 'Wszystkie w użyciu' }));
+            entries.push({ def, level: 1, name: def.name, disabled: true, disabledLabel: 'Wszystkie w użyciu' });
             return;
           }
-          insts.forEach(inst => {
-            grid.append(farmCardTile({ species: card.species, level: inst.level || 1, count: 0 }, {
-              nameOverride: (inst.nft_name ? inst.nft_name + ' ' : '') + '#' + inst.serial_no,
-              onPick: (c, tileEl) => plantCrop(fmSel.x, fmSel.y, c.species, inst.id, tileEl),
-              plantLabel: '🌱 Zasadź'
-            }));
-          });
+          insts.forEach(inst => entries.push({
+            def, level: inst.level || 1,
+            name: (inst.nft_name ? inst.nft_name + ' ' : '') + '#' + inst.serial_no,
+            onPick: (btn) => plantCrop(fmSel.x, fmSel.y, def.species, inst.id, btn),
+          }));
           return;
         }
 
-        // Fungible card: one aggregate card, capped by how many copies are free.
+        // Fungible card: one entry, capped by how many copies are free to plant.
         const owned = ownedCounts.get(card.species) || 0;
         const planted = plantedCounts.get(card.species) || 0;
         const limitReached = planted >= owned;
-        grid.append(farmCardTile(card, {
-          onPick: limitReached ? null : ((c, tileEl) => plantCrop(fmSel.x, fmSel.y, c.species, null, tileEl)),
-          plantDisabled: limitReached,
-          plantLabel: limitReached ? `Posadzono (${planted}/${owned})` : '🌱 Zasadź'
-        }));
+        entries.push({
+          def, level: card.level, name: def.name,
+          disabled: limitReached, disabledLabel: `Posadzono (${planted}/${owned})`,
+          onPick: limitReached ? null : ((btn) => plantCrop(fmSel.x, fmSel.y, def.species, null, btn)),
+        });
       });
+
+    // Mention the contract only if at least one available crop can finish before
+    // it closes; later harvests are not eligible for its per-unit premium.
+    const seasonalActive = entries.some(e => !e.disabled && farmPlantIncomeCalc(e.def, e.level)?.seasonal);
+    box.append(el('div', { className: 'farm-pick-note' },
+      'Ceny NPC wahają się 30–100% maks., dlatego zarobek podano jako widełki „od–do". Zysk zależy od poziomu karty.'
+      + (seasonalActive ? ' 🏆 Roślina objęta kontraktem tygodnia jest oznaczona — bonus jest już doliczony do zarobku.' : '')));
+    const grid = el('div', { className: 'fpk-grid' });
+    entries.forEach(e => grid.append(farmPlantPickEntry(e)));
     box.append(grid);
     return;
   }
@@ -29565,6 +29604,83 @@ function farmPerDayIncome(d, price, level = 1) {
   const yld = farmYieldAtLevel(d, level);
   const growMin = farmGrowMinAtLevel(d, level);
   return Math.round(yld * price / Math.max(1, growMin / 1440));
+}
+
+// Money projection for one harvest of a card at the level being planted. The NPC
+// price swings 30–100% of the catalog max, so — like the catalog — every figure
+// is a low–high range: `total*` = the whole yield sold at once, `day*` = that
+// spread over the grow time (≥1 day by the 24h floor). When the crop is on the
+// weekly contract the per-unit premium (`bonusPerUnit`) is folded straight into
+// the price, so `seasonal` rows report their real boosted income. Returns null
+// when the crop has no market row (can't estimate). Used by the picker entries.
+function farmPlantIncomeCalc(def, level) {
+  const mkt = def && fmMarket.get(def.crop_type);
+  if (!mkt || mkt.base_price == null) return null;
+  const base = +mkt.base_price;
+  const yld = farmYieldAtLevel(def, level);
+  const growMin = farmGrowMinAtLevel(def, level);
+  const growDays = Math.max(1, growMin / 1440);
+  const activeBonus = farmActiveSeasonalBonus(def.crop_type);
+  const eventBounds = activeBonus > 0 ? farmSeasonalEventBounds() : null;
+  // Contract inventory must be harvested before ends_at. Do not advertise a
+  // premium for a crop that would mature after the current contract closes.
+  const readyBeforeContractEnds = !!(eventBounds && Date.now() + growMin * 60000 < eventBounds.to);
+  const bonusPerUnit = readyBeforeContractEnds ? activeBonus : 0;
+  const unitLow = base * 0.30 + bonusPerUnit, unitHigh = base + bonusPerUnit;
+  return {
+    base, yld, growMin, growDays, bonusPerUnit, seasonal: bonusPerUnit > 0,
+    totalLow: Math.round(yld * unitLow), totalHigh: Math.round(yld * unitHigh),
+    dayLow: Math.round(yld * unitLow / growDays), dayHigh: Math.round(yld * unitHigh / growDays),
+    seasonalTotal: Math.round(yld * bonusPerUnit),               // premium portion (for the badge)
+  };
+}
+
+// One plant-picker entry: identity (icon · name · level) on the left, then grow
+// time, yield, and the income projection (daily / per-harvest ranges) on the
+// right. A weekly-contract crop gets a 🏆 badge and its premium is already folded
+// into both income ranges.
+// `entry` = { def, level, name, onPick(btn), disabled, disabledLabel }.
+function farmPlantPickEntry(entry) {
+  const { def, level, name, disabled, disabledLabel, onPick } = entry;
+  const rar = def.rarity || 'common';
+  const isNft = def.edition_size != null;
+  const calc = farmPlantIncomeCalc(def, level);
+  const seasonal = !!(calc && calc.seasonal);
+  const money = (lo, hi) => (lo === hi ? String(lo) : lo + '–' + hi) + ' 🪙';
+  const entryEl = el('div', { className: 'fpk-entry farm-cat-row-' + rar + (disabled ? ' disabled' : ' pickable') + (seasonal ? ' fpk-bonus' : ''),
+    title: disabled ? 'Zasadzono wszystkie dostępne karty' : 'Kliknij, aby zasadzić' });
+  // Left side = a compact plant card (rarity frame · art · name · Lvl gem), so the
+  // picker reads like the collection; a 🏆 contract badge sits under it when active.
+  const card = el('div', { className: 'fcc fpk-card rar-' + rar + (isNft ? ' nft' : '') },
+    el('div', { className: 'fcc-gem' }, 'Lvl ' + level),
+    isNft ? el('div', { className: 'fcc-pin' }, '💎') : '',
+    el('div', { className: 'fcc-inner' },
+      el('div', { className: 'fcc-art' }, farmIcon(def.emoji)),
+      el('div', { className: 'fcc-name', title: name }, name),
+      el('div', { className: 'fcc-rar farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar)));
+  const cardStack = el('div', { className: 'fpk-cardstack' }, card);
+  if (seasonal) cardStack.append(el('span', { className: 'fpk-bonus-badge',
+    title: 'Kontrakt tygodnia: do ceny doliczono +' + calc.bonusPerUnit + ' 🪙/szt (łącznie +' + calc.seasonalTotal + ' 🪙 za zbiór ' + calc.yld + ' szt.). Bonus jest już wliczony w zarobek.' },
+    '🏆 +' + calc.bonusPerUnit + '/szt'));
+  const detailLine = (label, value, valueClass, title) => el('div', { className: 'fpk-line', title: title || '' },
+    el('span', { className: 'k' }, label),
+    el('span', { className: 'v' + (valueClass ? ' ' + valueClass : '') }, value));
+  const details = el('div', { className: 'fpk-details' },
+    detailLine('Wzrost', calc ? farmGrowDaysLabel(calc.growMin) : '—'),
+    detailLine('Plon', calc ? calc.yld + ' szt.' : '—'),
+    detailLine('Dziennie', calc ? money(calc.dayLow, calc.dayHigh) : '—', 'money' + (seasonal ? ' boost' : '')),
+    detailLine('Za zbiór', calc ? money(calc.totalLow, calc.totalHigh) : '—', 'money' + (seasonal ? ' boost' : '')));
+  const btn = el('button', { className: 'fpk-btn', type: 'button', disabled: !!disabled,
+    'aria-label': disabled ? (disabledLabel || 'Niedostępne') : 'Zasadź: ' + name },
+    disabled ? (disabledLabel || 'Niedostępne') : '🌱 Zasadź');
+  details.append(btn);
+  if (!disabled && onPick) {
+    const plant = () => { if (!btn.disabled) onPick(btn); };
+    btn.addEventListener('click', ev => { ev.stopPropagation(); plant(); });
+    entryEl.addEventListener('click', plant);
+  }
+  entryEl.append(cardStack, details);
+  return entryEl;
 }
 
 // Tiles the viewer currently has planted with this species, as their levels —
