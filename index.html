@@ -1806,6 +1806,13 @@
       border-radius: 7px; transition: all .15s; font-family: inherit;
     }
     .btn-close:hover { color: var(--text); border-color: var(--border-hi); }
+    .modal-header-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .btn-back {
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; font-size: 12px; font-weight: 700; line-height: 1; padding: 6px 10px;
+      border-radius: 7px; transition: all .15s; font-family: inherit; white-space: nowrap;
+    }
+    .btn-back:hover { color: var(--text); border-color: var(--border-hi); }
 
     .modal-market-name { color: var(--muted); font-size: 12px; margin-bottom: 20px; line-height: 1.5; }
 
@@ -5900,6 +5907,8 @@
     .farm-cat-lvl-table th { font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); font-weight: 800; }
     .farm-cat-lvl-table tr:last-child td { border-bottom: none; }
     .farm-cat-lvl-table td.farm-cat-perday { color: var(--accent); font-weight: 800; }
+    .farm-cat-lvl-table tr.farm-cat-lvl-owned td { background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 800; }
+    .farm-cat-lvl-table tr.farm-cat-lvl-owned td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     .farm-cat-lvl-note { margin-top: 7px; font-size: 10.5px; color: var(--muted); line-height: 1.4; }
     .farm-cat-td-name { font-weight: 700; color: var(--text); }
     .farm-cat-name-wrap { display: flex; align-items: center; gap: 7px; min-height: 24px; }
@@ -29723,18 +29732,30 @@ function closeFarmModal() {
 
 // Build a dismissible modal shell (same construction as farm-plant-overlay) and
 // return its body element to fill in.
-function openFarmModalShell(title) {
+function openFarmModalShell(title, opts = {}) {
   closeFarmModal();
   const overlay = el('div', { className: 'modal-overlay farm-v2-overlay', role: 'dialog', 'aria-modal': 'true' });
   const modal = el('div', { className: 'modal farm-v2-modal' });
+  // When a back handler exists, both ✕ and the backdrop return to the previous
+  // page (this modal replaced it) instead of closing outright.
+  const dismiss = typeof opts.onBack === 'function' ? opts.onBack : closeFarmModal;
   const closeBtn = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
-  closeBtn.addEventListener('click', closeFarmModal);
-  overlay.addEventListener('click', e => { if (e.target === overlay) closeFarmModal(); });
+  closeBtn.addEventListener('click', dismiss);
+  overlay.addEventListener('click', e => { if (e.target === overlay) dismiss(); });
   farmModalEsc = e => { if (e.key === 'Escape') closeFarmModal(); };
   window.addEventListener('keydown', farmModalEsc);
   const bodyEl = el('div', { className: 'farm-v2-body' });
+  // Optional "← Wróć" button that returns to the previous view instead of just
+  // closing (the level modal replaces the hub, so ✕ alone loses the catalog).
+  const headerLeft = el('div', { className: 'modal-header-left' });
+  if (typeof opts.onBack === 'function') {
+    const backBtn = el('button', { className: 'btn-back', type: 'button', 'aria-label': 'Wróć' }, '← Wróć');
+    backBtn.addEventListener('click', opts.onBack);
+    headerLeft.append(backBtn);
+  }
+  headerLeft.append(el('span', { className: 'modal-title' }, title));
   modal.append(
-    el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, title), closeBtn),
+    el('div', { className: 'modal-header' }, headerLeft, closeBtn),
     bodyEl,
   );
   overlay.append(modal);
@@ -29977,35 +29998,51 @@ function farmMyPlantedLevels(species) {
 // that level. Mirrors plant_crop / harvest_crop / level_up_card formulas.
 // There is NO upper cap on card level (farm_collection.level only has a floor
 // of 1 — see level_up_card in farm.sql) — costs just keep escalating forever.
-// So the table is player-relative: if the viewer already owns the card at
-// ownedLevel, show the NEXT 5 levels above that (their actual next choices)
-// instead of always re-showing 1-5, which they've already passed.
+// So the table shows the FULL ladder from level 1 — every tier's yield, grow
+// time, ≈/day, and upgrade cost — so players can see all levels (including ones
+// they've already passed), not just the ones above what they own. Levels are
+// uncapped, so show at least 1-10 and extend past the owned level when it's
+// higher; the row for the viewer's current level is highlighted.
 function farmCardLevelTable(d, price, ownedLevel) {
   const body = el('tbody', {});
-  const startL = (ownedLevel && ownedLevel >= 1) ? ownedLevel + 1 : 1;
-  const endL = startL + 4;
-  for (let L = startL; L <= endL; L++) {
+  const endL = Math.max(10, (ownedLevel && ownedLevel >= 1) ? ownedLevel + 5 : 1);
+  // NPC price swings 30–100% of the max, so ≈ Zysk/doba is a low–high range
+  // (same convention as the catalog overview row), not a single max-price number.
+  const floorPrice = price != null ? price * 0.30 : null;
+  for (let L = 1; L <= endL; L++) {
     const yld = farmYieldAtLevel(d, L);
     const growMin = farmGrowMinAtLevel(d, L);
-    const perDay = farmPerDayIncome(d, price, L);
+    const low = floorPrice != null ? farmPerDayIncome(d, floorPrice, L) : null;
+    const high = price != null ? farmPerDayIncome(d, price, L) : null;
+    const perDayTxt = high == null ? '—' : (low === high ? '≈ ' + high + ' 🪙' : '≈ ' + low + '–' + high + ' 🪙');
     const cost = L === 1 ? '—' : (2 * (L - 1)) + ' kart + ' + (50 * (L - 1) * (L - 1)) + ' 🪙';
-    body.append(el('tr', {},
-      el('td', {}, 'poz. ' + L),
+    const isOwned = !!(ownedLevel && L === ownedLevel);
+    body.append(el('tr', { className: isOwned ? 'farm-cat-lvl-owned' : '' },
+      el('td', {}, 'poz. ' + L + (isOwned ? ' • Twój' : '')),
       el('td', {}, yld + ' szt.'),
       el('td', {}, farmGrowDaysLabel(growMin)),
-      el('td', { className: 'farm-cat-perday' }, perDay != null ? '≈ ' + perDay + ' 🪙' : '—'),
+      el('td', { className: 'farm-cat-perday' }, perDayTxt),
       el('td', {}, cost)));
   }
-  const headTxt = d.emoji + ' ' + d.name + ' — poziomy karty'
-    + (ownedLevel ? ' (Twój obecny poziom: ' + ownedLevel + ' — kolejne poziomy niżej)' : '');
+  const headTxt = ownedLevel ? 'Twój obecny poziom: ' + ownedLevel : 'Nie masz jeszcze tej karty';
   return el('div', { className: 'farm-cat-lvl-wrap' },
     el('div', { className: 'farm-cat-lvl-head' }, headTxt),
     el('table', { className: 'farm-cat-lvl-table' },
       el('thead', {}, el('tr', {},
         el('th', {}, 'Poziom'), el('th', {}, 'Plon'), el('th', {}, 'Wzrost'),
-        el('th', {}, '≈ Zysk/doba (maks.)'), el('th', {}, 'Koszt ulepszenia'))),
+        el('th', {}, '≈ Zysk/doba'), el('th', {}, 'Koszt ulepszenia'))),
       body),
-    el('div', { className: 'farm-cat-lvl-note' }, 'Plon ×(1 + 0,5·(poziom−1)) • wzrost ×0,92 na poziom (min. 24 h) • poziom „zapisuje się" przy sadzeniu • zysk liczony przy cenie maks. • brak górnego limitu poziomu — ulepszanie jest nieskończone, tylko coraz droższe.'));
+    el('div', { className: 'farm-cat-lvl-note' }, 'Plon ×(1 + 0,5·(poziom−1)) • wzrost ×0,92 na poziom (min. 24 h) • poziom „zapisuje się" przy sadzeniu • zysk liczony przy cenie 30–100% pułapu • brak górnego limitu poziomu — ulepszanie jest nieskończone, tylko coraz droższe.'));
+}
+
+// Open the full per-level ladder for one card in its own modal window (instead
+// of an inline accordion) — triggered by clicking a catalog overview row.
+function openFarmLevelModal(d, price, ownedLevel) {
+  // Use the raw emoji char in the title (a string) — farmIcon() returns a DOM
+  // element, which would stringify to "[object HTMLImageElement]".
+  const bodyEl = openFarmModalShell((d.emoji || '🌱') + ' ' + d.name + ' — poziomy karty',
+    { onBack: () => openFarmHub('catalog') });
+  bodyEl.append(farmCardLevelTable(d, price, ownedLevel));
 }
 
 // Generic (card-independent) level ladder for the Help tab — multipliers + the
@@ -30034,7 +30071,7 @@ function farmCatalogTable(mdl) {
   const tbody = el('tbody', {});
   farmCatalogGroups(mdl).forEach(g => {
     tbody.append(el('tr', { className: 'farm-cat-group-row' + (g.key === 'nft' ? ' nft' : '') },
-      el('td', { className: 'farm-cat-group-cell', colSpan: 7 }, g.title)));
+      el('td', { className: 'farm-cat-group-cell', colSpan: 3 }, g.title)));
     g.cards.forEach(d => {
       const f = farmCardFacts(d, mdl);
       const ownedNow = f.have || f.mineOwned;
@@ -30079,39 +30116,29 @@ function farmCatalogTable(mdl) {
         btn.addEventListener('click', e => { e.stopPropagation(); openFarmNftExplorer(d.species); });
         stanCell = el('div', { className: 'farm-cat-stan-wrap' }, stanCell, btn);
       }
-      const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable' },
+      // Overview row = identity + the CURRENT level's ≈ Zysk/doba + Stan only;
+      // grow time, yield, price, and the full level ladder open in a modal on
+      // click (openFarmLevelModal), not an inline accordion.
+      const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable',
+        title: 'Kliknij, aby zobaczyć wszystkie poziomy' },
         el('td', { className: 'farm-cat-td-name' },
           el('div', { className: 'farm-cat-name-wrap' },
             el('span', { className: 'farm-cat-chev' }, '▸'),
             el('span', { className: 'farm-cat-emoji-sm' }, farmIcon(d.emoji)),
             el('span', { className: 'farm-cat-name-txt farm-rar-' + d.rarity }, d.name),
             f.isNft ? el('small', { className: 'farm-cat-nft-badge' }, ' 💎 ' + f.minted + '/' + d.edition_size) : '')),
-        el('td', {}, f.chance),
-        el('td', {}, farmGrowLabel(d.base_grow_minutes)),
-        el('td', {}, d.base_yield + ' szt.'),
-        el('td', {}, f.price != null ? (f.price + ' 🪙') : '—'),
         el('td', { className: 'farm-cat-perday' },
           perDayTxt, perDayNote ? el('small', { className: 'farm-cat-perday-note' }, perDayNote) : ''),
         el('td', {}, stanCell));
-      const detailTr = el('tr', { className: 'farm-cat-detail-row hidden' },
-        el('td', { className: 'farm-cat-detail-cell', colSpan: 7 }, farmCardLevelTable(d, f.price, ownedLvl)));
-      if (f.isNft) {
-        mainTr.title = 'Kliknij, aby rozwinąć poziomy';
-      }
-      mainTr.addEventListener('click', () => {
-        const nowHidden = detailTr.classList.toggle('hidden');
-        mainTr.classList.toggle('expanded', !nowHidden);
-      });
-      tbody.append(mainTr, detailTr);
+      mainTr.addEventListener('click', () => openFarmLevelModal(d, f.price, ownedLvl));
+      tbody.append(mainTr);
     });
   });
   return el('div', { className: 'farm-cat-table-wrap' },
     el('table', { className: 'farm-cat-table' },
       el('thead', {}, el('tr', {},
-        el('th', {}, 'Roślina'), el('th', {}, 'Szansa'), el('th', {}, 'Wzrost'),
-        el('th', {}, 'Plon'),
-        el('th', { title: 'Cena maksymalna (pułap). NPC płaci 30–100% tej kwoty; cena zmienia się 2×/dobę.' }, 'Cena maks.'),
-        el('th', { title: 'Zakres dobowego przychodu: plon × cena ÷ dni wzrostu, liczony przy cenie od 30% do 100% pułapu. Jeśli masz zasadzone rośliny tego gatunku, liczy realny plon na ich poziomach i sumuje wszystkie sztuki — inaczej pokazuje szacunek dla jednej rośliny na Twoim poziomie karty (lub poz. 1).' }, '≈ Zysk/doba'),
+        el('th', {}, 'Roślina'),
+        el('th', { title: 'Zakres dobowego przychodu na Twoim obecnym poziomie: plon × cena ÷ dni wzrostu, liczony przy cenie od 30% do 100% pułapu. Jeśli masz zasadzone rośliny tego gatunku, liczy realny plon na ich poziomach i sumuje wszystkie sztuki — inaczej pokazuje szacunek dla jednej rośliny na Twoim poziomie karty (lub poz. 1). Kliknij wiersz, aby zobaczyć wszystkie poziomy.' }, '≈ Zysk/doba'),
         el('th', {}, 'Stan'))),
       tbody));
 }
