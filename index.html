@@ -27252,7 +27252,14 @@ function ogpCarDef(id) {
 
 async function ogpLoadThree() {
   if (!ogpThreePromise) {
-    ogpThreePromise = import('https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js');
+    ogpThreePromise = (async () => {
+      try {
+        return await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+      } catch (err1) {
+        console.warn('jsDelivr Three.js load failed, trying unpkg fallback...', err1);
+        return await import('https://unpkg.com/three@0.160.0/build/three.module.js');
+      }
+    })();
   }
   return ogpThreePromise;
 }
