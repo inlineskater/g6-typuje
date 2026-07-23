@@ -26,6 +26,10 @@ ALTER TABLE public.bug_jumper_rounds
 -- history (same pattern as the earlier legacy_random_v1 → bug_jumper_hard_v2
 -- transition) but drop out of current leaderboards, matching every other
 -- seasonal-game course relaunch in this codebase.
+--
+-- ⚠️ bug_jumper_current_week, bug_jumper_all_time, and award_bug_jumper_week
+-- below are themselves SUPERSEDED by supabase/bug-jumper-top5-scoring.sql,
+-- which switches from single-best-round to averaging your top 5 rounds.
 
 CREATE OR REPLACE VIEW public.bug_jumper_current_week WITH (security_invoker = true) AS
 WITH current_week AS (

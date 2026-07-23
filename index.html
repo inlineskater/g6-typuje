@@ -7469,6 +7469,7 @@
                 <li><strong>Linie 10, 20 i 30 są bezpieczne</strong> — możesz tam chwilę poczekać i złapać rytm.</li>
                 <li><strong>Ciemne pola to ściany</strong> — trasa w każdej rundzie skręca inaczej (prosto, L albo S), więc czasem trzeba przesunąć się w bok, zanim pójdziesz wyżej.</li>
                 <li>Zderzenie z robakiem = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>. Po linii 30 wejście na GÓRĘ kończy rundę.</li>
+                <li><strong>Wynik tygodnia to średnia z Twoich 5 najlepszych rund</strong> — możesz grać ile chcesz, liczy się tylko Twoja piątka najlepszych.</li>
               </ul>
             </div>
 
@@ -11694,31 +11695,34 @@ async function loadSeasonHistory() {
     const current = getCurrentSeasonalEntry();
     const currentDbWeekStart = current.weekStart; // DB now also Monday-start
     const isSuperMariusz = current.gameType === 'super_mariusz';
-    const liveScoreColumns = current.gameType === 'bug_jumper'
-      ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
-      : isSuperMariusz
-      ? 'user_id,nick_snapshot,score,submitted_at,client_meta,completion_ms,completed'
-      : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
-    let liveScoresQuery = sb.from(current.gameType + '_scores')
-      .select(liveScoreColumns)
-      .eq('week_start', currentDbWeekStart)
-      .order('score', { ascending: false });
-    if (current.gameType === 'bug_jumper') {
+    const isBugJumper = current.gameType === 'bug_jumper';
+    let liveScoresQuery;
+    if (isBugJumper) {
+      // bug_jumper_current_week already averages each player's top 5 rounds
+      // and returns one ranked row per user — no client-side dedup needed.
+      liveScoresQuery = sb.from('bug_jumper_current_week')
+        .select('user_id,nick,score,rounds_played,completion_ms,submitted_at')
+        .order('rank')
+        .limit(20);
+    } else {
+      const liveScoreColumns = isSuperMariusz
+        ? 'user_id,nick_snapshot,score,submitted_at,client_meta,completion_ms,completed'
+        : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
+      liveScoresQuery = sb.from(current.gameType + '_scores')
+        .select(liveScoreColumns)
+        .eq('week_start', currentDbWeekStart)
+        .order('score', { ascending: false });
+      if (isSuperMariusz) {
+        liveScoresQuery = liveScoresQuery
+          .order('completion_ms', { ascending: true, nullsFirst: false });
+      } else {
+        liveScoresQuery = liveScoresQuery
+          .order('accuracy', { ascending: false });
+      }
       liveScoresQuery = liveScoresQuery
-        .eq('course_id', BUG_JUMPER_DYNAMIC_COURSE_ID)
-        .order('completion_ms', { ascending: true, nullsFirst: false });
+        .order('submitted_at', { ascending: true })
+        .limit(20);
     }
-    if (isSuperMariusz) {
-      liveScoresQuery = liveScoresQuery
-        .order('completion_ms', { ascending: true, nullsFirst: false });
-    }
-    if (current.gameType !== 'bug_jumper' && !isSuperMariusz) {
-      liveScoresQuery = liveScoresQuery
-        .order('accuracy', { ascending: false });
-    }
-    liveScoresQuery = liveScoresQuery
-      .order('submitted_at', { ascending: true })
-      .limit(20);
 
     const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, smRes, ppRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
@@ -11742,7 +11746,6 @@ async function loadSeasonHistory() {
       seen.add(r.user_id);
       const rank = pendingEntries.length + 1;
       const cm = r.client_meta || {};
-      const isBugJumper = current.gameType === 'bug_jumper';
       const baseScore = !isBugJumper && !isSuperMariusz && cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
       const itemBonus = !isBugJumper && !isSuperMariusz && cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
       pendingEntries.push({
@@ -22930,7 +22933,7 @@ function renderBugJumperState(data) {
   renderBugJumperAwards(document.getElementById('bj-awards'), data.awards || []);
   if (!bugJumperRuntime?.playing && bjStatus) {
     bjStatus.textContent = data.myWeekly
-      ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
+      ? 'Twoja średnia z ' + Math.min(5, data.myWeekly.rounds_played || 1) + ' najlepszych rund w tym tygodniu: ' + data.myWeekly.score + '.'
       : 'Użyj strzałek kursora. Trasa jest inna w każdej rundzie — omijaj ściany i robaki.';
   }
 }
@@ -22949,7 +22952,7 @@ function renderBugJumperTable(wrap, rows, mode) {
   ));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
-      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Najwyższy wynik' }, 'Wynik'))),
+      el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', { title: 'Średnia z 5 najlepszych rund' }, 'Wynik'))),
       el('tbody', {}, ...bodyRows)
     )
   );
