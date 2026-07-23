@@ -8339,7 +8339,6 @@
                 <div class="ogp-hud-pill ogp-drift-badge race-only hidden" id="ogp-drift-badge">🔥 DRIFT!</div>
                 <span></span>
                 <canvas class="ogp-minimap race-only" id="ogp-minimap" width="232" height="148" aria-label="Minimapa trasy"></canvas>
-                <button class="ogp-sound-toggle" id="ogp-sound-toggle" type="button" title="Dźwięk wyścigu" aria-label="Przełącz dźwięk">🔊</button>
                 <button class="ogp-fullscreen" id="ogp-fullscreen" type="button" title="Pełny ekran" aria-label="Pełny ekran">⛶</button>
               </div>
 
@@ -26622,7 +26621,7 @@ if (ppArena) {
 // no separate drift button. Multiplayer moved from a live coordinator/
 // broadcast model to async ghosts (see ogpFetchGhosts/ogpSeedGhostCars):
 // no more OGP_COORDINATOR_STALE_MS or realtime channel constants here.
-const OGP_CLIENT_VERSION = 'office_grand_prix_v4';
+const OGP_CLIENT_VERSION = 'office_grand_prix_v5';
 const OGP_TRACK_VERSION = 'office_loop_v4';
 const OGP_TRACK_HASH = '1d4b3b7abbf81bc598c0e309dc2baf8b46115d0cba3fdb9fa835cf8dde21569b';
 const OGP_TICK_MS = 50;
@@ -26630,12 +26629,12 @@ const OGP_TRACK_LENGTH = 160000;
 const OGP_START_PROGRESS = 16000;
 const OGP_FINISH_PROGRESS = OGP_START_PROGRESS + OGP_TRACK_LENGTH;
 const OGP_HARD_LIMIT_TICKS = 1200;
-const OGP_ACCEL = 18;
+const OGP_ACCEL = 22;
 const OGP_START_SPEED = 130;
-const OGP_MAX_SPEED = 280;
+const OGP_MAX_SPEED = 320;
 const OGP_FORWARD_PCT = 96;
-const OGP_STEER_RESPONSE = 580;
-const OGP_STEER_CENTER = 850;
+const OGP_STEER_RESPONSE = 340;
+const OGP_STEER_CENTER = 600;
 const OGP_STEER_MAX = 1000;
 const OGP_TURN_RATE = 8;
 const OGP_OFFROAD_AT = 5600;
@@ -26646,7 +26645,7 @@ const OGP_GRASS_GRIP_PCT = 55;
 const OGP_SAFETY_LATERAL = 8000;
 const OGP_RESET_AFTER_TICKS = 20;
 const OGP_RESET_CONTROL_TICKS = 12;
-const OGP_GRIP_NUM_ROAD = 4;
+const OGP_GRIP_NUM_ROAD = 2;
 const OGP_GRIP_DEN_ROAD = 5;
 const OGP_GRIP_NUM_GRASS = 1;
 const OGP_GRIP_DEN_GRASS = 7;
@@ -27109,142 +27108,16 @@ function ogpFormatTime(ms) {
   return `${minutes}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
 }
 
-let ogpAudioCtx = null;
-let ogpAudioMuted = false;
-let ogpEngineGain = null;
-let ogpEngineOsc = null;
-
-function ogpInitAudio() {
-  if (ogpAudioCtx || ogpAudioMuted) return;
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    ogpAudioCtx = new AudioCtx();
-  } catch {}
-}
-
-function ogpToggleAudio() {
-  ogpAudioMuted = !ogpAudioMuted;
-  const btn = document.getElementById('ogp-sound-toggle');
-  if (btn) btn.textContent = ogpAudioMuted ? '🔇' : '🔊';
-  if (ogpAudioMuted && ogpAudioCtx && ogpEngineGain) {
-    ogpEngineGain.gain.setValueAtTime(0, ogpAudioCtx.currentTime);
-  }
-}
-
-function ogpPlaySound(type, param = 1) {
-  if (ogpAudioMuted) return;
-  ogpInitAudio();
-  if (!ogpAudioCtx) return;
-  if (ogpAudioCtx.state === 'suspended') {
-    ogpAudioCtx.resume().catch(() => {});
-  }
-  const now = ogpAudioCtx.currentTime;
-  if (type === 'countdown_beep') {
-    const osc = ogpAudioCtx.createOscillator();
-    const gain = ogpAudioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(param > 0 ? 580 : 880, now);
-    gain.gain.setValueAtTime(0.18, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + (param > 0 ? 0.15 : 0.4));
-    osc.connect(gain);
-    gain.connect(ogpAudioCtx.destination);
-    osc.start(now);
-    osc.stop(now + (param > 0 ? 0.15 : 0.4));
-  } else if (type === 'boost') {
-    const osc = ogpAudioCtx.createOscillator();
-    const gain = ogpAudioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(200, now);
-    osc.frequency.exponentialRampToValueAtTime(650, now + 0.35);
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-    osc.connect(gain);
-    gain.connect(ogpAudioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 0.4);
-  } else if (type === 'item_get') {
-    const notes = [523.25, 659.25, 783.99];
-    notes.forEach((freq, idx) => {
-      const osc = ogpAudioCtx.createOscillator();
-      const gain = ogpAudioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.06);
-      gain.gain.setValueAtTime(0.15, now + idx * 0.06);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.12);
-      osc.connect(gain);
-      gain.connect(ogpAudioCtx.destination);
-      osc.start(now + idx * 0.06);
-      osc.stop(now + idx * 0.06 + 0.12);
-    });
-  } else if (type === 'banana_hit') {
-    const osc = ogpAudioCtx.createOscillator();
-    const gain = ogpAudioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(440, now);
-    osc.frequency.exponentialRampToValueAtTime(110, now + 0.35);
-    gain.gain.setValueAtTime(0.22, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-    osc.connect(gain);
-    gain.connect(ogpAudioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 0.35);
-  } else if (type === 'screech') {
-    const bufferSize = Math.floor(ogpAudioCtx.sampleRate * 0.1);
-    const buffer = ogpAudioCtx.createBuffer(1, bufferSize, ogpAudioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
-    const noise = ogpAudioCtx.createBufferSource();
-    noise.buffer = buffer;
-    const filter = ogpAudioCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1200, now);
-    filter.Q.setValueAtTime(5, now);
-    const gain = ogpAudioCtx.createGain();
-    gain.gain.setValueAtTime(0.12, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ogpAudioCtx.destination);
-    noise.start(now);
-  } else if (type === 'finish_win') {
-    const arpeggio = [440, 554.37, 659.25, 880];
-    arpeggio.forEach((freq, idx) => {
-      const osc = ogpAudioCtx.createOscillator();
-      const gain = ogpAudioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.1);
-      gain.gain.setValueAtTime(0.2, now + idx * 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.3);
-      osc.connect(gain);
-      gain.connect(ogpAudioCtx.destination);
-      osc.start(now + idx * 0.1);
-      osc.stop(now + idx * 0.1 + 0.3);
-    });
-  }
-}
-
-function ogpUpdateEngineSound(speed, isRacing) {
-  if (ogpAudioMuted || !isRacing) {
-    if (ogpEngineGain && ogpAudioCtx) ogpEngineGain.gain.setValueAtTime(0, ogpAudioCtx.currentTime);
-    return;
-  }
-  ogpInitAudio();
-  if (!ogpAudioCtx) return;
-  if (!ogpEngineOsc) {
-    ogpEngineOsc = ogpAudioCtx.createOscillator();
-    ogpEngineGain = ogpAudioCtx.createGain();
-    ogpEngineOsc.type = 'sawtooth';
-    ogpEngineOsc.frequency.setValueAtTime(55, ogpAudioCtx.currentTime);
-    ogpEngineGain.gain.setValueAtTime(0, ogpAudioCtx.currentTime);
-    ogpEngineOsc.connect(ogpEngineGain);
-    ogpEngineGain.connect(ogpAudioCtx.destination);
-    ogpEngineOsc.start();
-  }
-  const targetFreq = 50 + (speed / OGP_MAX_SPEED) * 160;
-  ogpEngineOsc.frequency.setTargetAtTime(targetFreq, ogpAudioCtx.currentTime, 0.05);
-  ogpEngineGain.gain.setTargetAtTime(0.04 + (speed / OGP_MAX_SPEED) * 0.07, ogpAudioCtx.currentTime, 0.05);
-}
+// Sound was removed from Office Grand Prix (2026-07, player feedback) -- the
+// procedural Web Audio engine (countdown beeps, boost/item/banana/finish
+// stingers, engine drone) is gone. These functions stay as no-op stubs
+// rather than being deleted so every call site elsewhere in the race code
+// (countdown, item pickup, camera-shake-on-hit, finish fanfare, per-frame
+// engine pitch) keeps working unmodified.
+function ogpInitAudio() {}
+function ogpToggleAudio() {}
+function ogpPlaySound() {}
+function ogpUpdateEngineSound() {}
 
 function ogpCarDef(id) {
   return OGP_CARS.find(car => car.id === id) || OGP_CARS[0];
@@ -27621,6 +27494,7 @@ function ogpBuildScene(runtime, THREE) {
   runtime.cameraWanted = new THREE.Vector3();
   runtime.cameraLookWanted = new THREE.Vector3();
   runtime.cameraForward = new THREE.Vector3();
+  runtime.cameraRight = new THREE.Vector3();
   runtime.renderFrames = Array.from({ length: 8 }, () => ({
     point: new THREE.Vector3(),
     tangent: new THREE.Vector3(),
@@ -27884,20 +27758,26 @@ function ogpRenderFrame(timestamp) {
       const heading = localPose.heading * Math.PI * 2 / OGP_ANGLE_STEPS;
       runtime.cameraForward.set(Math.cos(heading), 0, Math.sin(heading));
       const steerPct = localPose.steering / OGP_STEER_MAX;
-      const rightVec = new THREE.Vector3(-runtime.cameraForward.z, 0, runtime.cameraForward.x);
+      const rightVec = runtime.cameraRight.set(-runtime.cameraForward.z, 0, runtime.cameraForward.x);
 
+      // Steering-linked camera offsets are deliberately gentle -- the chase
+      // cam should read as "following a car that's turning", not itself
+      // whip around on every steering twitch. Softened 2026-07 after
+      // feedback that the previous coefficients (1.2 / 4.8 / 0.035 roll,
+      // plus a snappy 12.5 look-damping) made the camera feel more
+      // aggressive than the car actually was.
       runtime.cameraWanted.copy(frame.point)
         .addScaledVector(runtime.cameraForward, -8.5)
-        .addScaledVector(rightVec, -steerPct * 1.2);
+        .addScaledVector(rightVec, -steerPct * 0.5);
       runtime.cameraWanted.y += 4.6;
 
       runtime.cameraLookWanted.copy(frame.point)
         .addScaledVector(runtime.cameraForward, 9.5)
-        .addScaledVector(rightVec, steerPct * 4.8);
+        .addScaledVector(rightVec, steerPct * 2.0);
       runtime.cameraLookWanted.y += .8;
 
-      const positionDamping = 1 - Math.exp(-9.5 * delta / 1000);
-      const lookDamping = 1 - Math.exp(-12.5 * delta / 1000);
+      const positionDamping = 1 - Math.exp(-8 * delta / 1000);
+      const lookDamping = 1 - Math.exp(-8 * delta / 1000);
       runtime.cameraPosition.lerp(runtime.cameraWanted, positionDamping);
       runtime.cameraLook.lerp(runtime.cameraLookWanted, lookDamping);
 
@@ -27905,7 +27785,7 @@ function ogpRenderFrame(timestamp) {
       runtime.camera.fov += (targetFov - runtime.camera.fov) * (1 - Math.exp(-10 * delta / 1000));
       runtime.camera.updateProjectionMatrix();
 
-      runtime.camera.rotation.z = -steerPct * 0.035;
+      runtime.camera.rotation.z = -steerPct * 0.015;
 
       if (local.slowTicks > 0) {
         const shake = (local.slowTicks / OGP_SLOW_TICKS) * 0.28;
@@ -27932,7 +27812,17 @@ function ogpStartRenderLoop() {
   if (!runtime || runtime.frameId) return;
   const loop = timestamp => {
     if (!officeGrandPrixRuntime?.renderer) return;
-    ogpRenderFrame(timestamp);
+    // A single thrown frame must never permanently freeze the game: without
+    // this guard an exception here skips the requestAnimationFrame re-arm
+    // below, frameId stays non-null, and ogpStartRenderLoop's re-entry guard
+    // then refuses to ever restart the loop (this is exactly what happened
+    // when a stray bug threw mid-race -- the countdown kept ticking over a
+    // frozen frame with no way to recover).
+    try {
+      ogpRenderFrame(timestamp);
+    } catch (error) {
+      console.error('Office Grand Prix render frame failed:', error);
+    }
     officeGrandPrixRuntime.frameId = requestAnimationFrame(loop);
   };
   runtime.frameId = requestAnimationFrame(loop);
@@ -28351,7 +28241,7 @@ async function ogpFinishRace() {
         elapsedTicks,
         clientMeta: {
           platform: navigator.userAgentData?.platform || navigator.platform || 'web',
-          renderer: 'three-0.185.1',
+          renderer: 'three-0.160.0',
           viewport: `${window.innerWidth}x${window.innerHeight}`,
         },
       });
@@ -28430,7 +28320,6 @@ document.getElementById('ogp-item-btn')?.addEventListener('pointerdown', event =
   ogpQueueItemUse();
 });
 document.getElementById('ogp-fullscreen')?.addEventListener('click', ogpToggleFullscreen);
-document.getElementById('ogp-sound-toggle')?.addEventListener('click', ogpToggleAudio);
 document.addEventListener('fullscreenchange', () => {
   const active = document.fullscreenElement === ogpStage;
   if (ogpStage) ogpStage.classList.toggle('is-immersive', active);

@@ -45,7 +45,7 @@ const db = databaseUrl
 // PARITY CONTRACT: these constants and the deterministic functions from
 // ogpMix32 through replayOfficeGrandPrix must stay equivalent to the OGP
 // engine in index.html and scripts/office-grand-prix-parity.mjs.
-const OGP_ENGINE_VERSION = "office_grand_prix_v4";
+const OGP_ENGINE_VERSION = "office_grand_prix_v5";
 const OGP_TRACK_VERSION = "office_loop_v4";
 const OGP_TRACK_HASH = "1d4b3b7abbf81bc598c0e309dc2baf8b46115d0cba3fdb9fa835cf8dde21569b";
 const OGP_TICK_MS = 50;
@@ -54,12 +54,12 @@ const OGP_START_PROGRESS = 16000;
 const OGP_FINISH_PROGRESS = OGP_START_PROGRESS + OGP_TRACK_LENGTH;
 const OGP_MAX_TICKS = 1200;
 const OGP_MAX_INPUT_EVENTS = 1200;
-const OGP_ACCEL = 18;
+const OGP_ACCEL = 22;
 const OGP_START_SPEED = 130;
-const OGP_MAX_SPEED = 280;
+const OGP_MAX_SPEED = 320;
 const OGP_FORWARD_PCT = 96;
-const OGP_STEER_RESPONSE = 580;
-const OGP_STEER_CENTER = 850;
+const OGP_STEER_RESPONSE = 340;
+const OGP_STEER_CENTER = 600;
 const OGP_STEER_MAX = 1000;
 const OGP_TURN_RATE = 8;
 const OGP_OFFROAD_THRESHOLD = 5600;
@@ -70,7 +70,7 @@ const OGP_GRASS_GRIP_PCT = 55;
 const OGP_SAFETY_LATERAL = 8000;
 const OGP_RESET_AFTER_TICKS = 20;
 const OGP_RESET_CONTROL_TICKS = 12;
-const OGP_GRIP_NUM_ROAD = 4;
+const OGP_GRIP_NUM_ROAD = 2;
 const OGP_GRIP_DEN_ROAD = 5;
 const OGP_GRIP_NUM_GRASS = 1;
 const OGP_GRIP_DEN_GRASS = 7;
