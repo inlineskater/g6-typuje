@@ -27094,6 +27094,12 @@ function ogpStepRace(race) {
   }
 }
 
+function ogpApproachFloat(current, target, maxStep) {
+  const diff = target - current;
+  if (Math.abs(diff) <= maxStep) return target;
+  return current + Math.sign(diff) * maxStep;
+}
+
 function ogpFormatTime(ms) {
   const safe = Math.max(0, Number(ms) || 0);
   const minutes = Math.floor(safe / 60000);
@@ -27313,22 +27319,34 @@ function ogpBandGeometry(THREE, path, innerWidth, outerWidth, sideSign, segments
 function ogpCreateKart(THREE, carDef, number) {
   const group = new THREE.Group();
   group.name = `ogp-kart-${carDef.id}`;
+  const chassis = new THREE.Group();
+  group.add(chassis);
+
   const bodyMat = new THREE.MeshStandardMaterial({ color: carDef.color, roughness: .58, metalness: .08 });
   const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: .8 });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: .22, metalness: .15 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.55, .48, 2.45), bodyMat);
   body.position.y = .52;
-  group.add(body);
+  chassis.add(body);
   const nose = new THREE.Mesh(new THREE.BoxGeometry(1.25, .28, .75), bodyMat);
   nose.position.set(0, .65, -1.35);
-  group.add(nose);
+  chassis.add(nose);
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.02, .58, .92), glassMat);
   cabin.position.set(0, 1.02, .15);
   cabin.rotation.x = -.08;
-  group.add(cabin);
+  chassis.add(cabin);
   const bumper = new THREE.Mesh(new THREE.BoxGeometry(1.68, .18, .22), darkMat);
   bumper.position.set(0, .32, -1.56);
-  group.add(bumper);
+  chassis.add(bumper);
+
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(.26, 10, 10),
+    new THREE.MeshStandardMaterial({ color: carDef.color, roughness: .35 }));
+  helmet.position.set(0, 1.28, .15);
+  chassis.add(helmet);
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(.28, .1, .16), darkMat);
+  visor.position.set(0, 1.29, -.08);
+  chassis.add(visor);
+
   const wheelGeo = new THREE.CylinderGeometry(.34, .34, .28, 10);
   const wheelRolls = [];
   const frontSteers = [];
@@ -27341,7 +27359,7 @@ function ogpCreateKart(THREE, carDef, number) {
       wheel.rotation.z = Math.PI / 2;
       rollPivot.add(wheel);
       steerPivot.add(rollPivot);
-      group.add(steerPivot);
+      chassis.add(steerPivot);
       wheelRolls.push(rollPivot);
       if (z < 0) frontSteers.push(steerPivot);
     }
@@ -27349,12 +27367,12 @@ function ogpCreateKart(THREE, carDef, number) {
   const plate = new THREE.Mesh(new THREE.BoxGeometry(.52, .32, .07),
     new THREE.MeshBasicMaterial({ color: 0xffffff }));
   plate.position.set(0, .62, -1.755);
-  group.add(plate);
+  chassis.add(plate);
   const badge = new THREE.Mesh(new THREE.CircleGeometry(.15, 12),
     new THREE.MeshBasicMaterial({ color: number % 2 ? 0x111827 : 0x4f46e5 }));
   badge.rotation.x = -Math.PI / 2;
   badge.position.set(0, .62, -1.80);
-  group.add(badge);
+  chassis.add(badge);
 
   const shield = new THREE.Mesh(
     new THREE.SphereGeometry(1.55, 16, 10),
@@ -27368,7 +27386,7 @@ function ogpCreateKart(THREE, carDef, number) {
   );
   shield.position.y = .68;
   shield.visible = false;
-  group.add(shield);
+  chassis.add(shield);
 
   const trailMaterial = new THREE.MeshBasicMaterial({
     color: 0x7dd3fc,
@@ -27382,7 +27400,7 @@ function ogpCreateKart(THREE, carDef, number) {
     trail.rotation.x = -Math.PI / 2;
     trail.position.set(x, .35, 1.55);
     trail.visible = false;
-    group.add(trail);
+    chassis.add(trail);
     return trail;
   });
   const hitRing = new THREE.Mesh(
@@ -27392,7 +27410,7 @@ function ogpCreateKart(THREE, carDef, number) {
   hitRing.rotation.x = Math.PI / 2;
   hitRing.position.y = 1.7;
   hitRing.visible = false;
-  group.add(hitRing);
+  chassis.add(hitRing);
 
   const sparkMat = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: .9, depthWrite: false });
   const sparkGeo = new THREE.SphereGeometry(.14, 6, 6);
@@ -27400,11 +27418,13 @@ function ogpCreateKart(THREE, carDef, number) {
     const spark = new THREE.Mesh(sparkGeo, sparkMat.clone());
     spark.position.set(x, .2, 1.25);
     spark.visible = false;
-    group.add(spark);
+    chassis.add(spark);
     return spark;
   });
 
   group.scale.setScalar(.78);
+  group.userData.chassis = chassis;
+  group.userData.helmet = helmet;
   group.userData.wheelRolls = wheelRolls;
   group.userData.frontSteers = frontSteers;
   group.userData.shield = shield;
@@ -27788,6 +27808,20 @@ function ogpRenderFrame(timestamp) {
     data.wheelRolls.forEach(wheel => { wheel.rotation.x = data.wheelSpin; });
     const steerVisual = pose.steering / OGP_STEER_MAX * .42;
     data.frontSteers.forEach(wheel => { wheel.rotation.y = steerVisual; });
+
+    if (data.chassis) {
+      const targetRoll = -(pose.steering / OGP_STEER_MAX) * 0.18;
+      const targetPitch = car.boostTicks > 0 ? -0.09 : (car.slowTicks > 0 ? 0.14 : 0);
+      data.roll = ogpApproachFloat(data.roll || 0, targetRoll, delta * 0.0025);
+      data.pitch = ogpApproachFloat(data.pitch || 0, targetPitch, delta * 0.003);
+      data.chassis.rotation.z = data.roll;
+      data.chassis.rotation.x = data.pitch;
+
+      if (data.helmet) {
+        data.helmet.rotation.y = -(pose.steering / OGP_STEER_MAX) * 0.35;
+      }
+    }
+
     data.trails.forEach((trail, trailIndex) => {
       trail.visible = car.boostTicks > 0;
       if (trail.visible) {
@@ -27841,18 +27875,29 @@ function ogpRenderFrame(timestamp) {
     if (frame) {
       const heading = localPose.heading * Math.PI * 2 / OGP_ANGLE_STEPS;
       runtime.cameraForward.set(Math.cos(heading), 0, Math.sin(heading));
-      runtime.cameraWanted.copy(frame.point).addScaledVector(runtime.cameraForward, -8.5);
+      const steerPct = localPose.steering / OGP_STEER_MAX;
+      const rightVec = new THREE.Vector3(-runtime.cameraForward.z, 0, runtime.cameraForward.x);
+
+      runtime.cameraWanted.copy(frame.point)
+        .addScaledVector(runtime.cameraForward, -8.5)
+        .addScaledVector(rightVec, -steerPct * 1.2);
       runtime.cameraWanted.y += 4.6;
-      runtime.cameraLookWanted.copy(frame.point).addScaledVector(runtime.cameraForward, 7.2);
+
+      runtime.cameraLookWanted.copy(frame.point)
+        .addScaledVector(runtime.cameraForward, 9.5)
+        .addScaledVector(rightVec, steerPct * 4.8);
       runtime.cameraLookWanted.y += .8;
-      const positionDamping = 1 - Math.exp(-8.8 * delta / 1000);
-      const lookDamping = 1 - Math.exp(-11.5 * delta / 1000);
+
+      const positionDamping = 1 - Math.exp(-9.5 * delta / 1000);
+      const lookDamping = 1 - Math.exp(-12.5 * delta / 1000);
       runtime.cameraPosition.lerp(runtime.cameraWanted, positionDamping);
       runtime.cameraLook.lerp(runtime.cameraLookWanted, lookDamping);
 
       const targetFov = local.boostTicks > 0 ? 74 : 64;
       runtime.camera.fov += (targetFov - runtime.camera.fov) * (1 - Math.exp(-10 * delta / 1000));
       runtime.camera.updateProjectionMatrix();
+
+      runtime.camera.rotation.z = -steerPct * 0.035;
 
       if (local.slowTicks > 0) {
         const shake = (local.slowTicks / OGP_SLOW_TICKS) * 0.28;
