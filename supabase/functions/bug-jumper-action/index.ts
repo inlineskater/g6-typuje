@@ -18,28 +18,21 @@ const db = databaseUrl
 // popup-panic-action): the browser derives the identical lane/wall layout
 // locally via bjGenerateCourse(seed) in index.html to play in real time, and
 // this function re-derives it from the round's stored seed to replay +
-// validate submitted moves. makeRng/generateCourse/bugColAt/cellBlocked/
-// cellOpen must stay byte-for-byte identical to their index.html
-// counterparts (bjMakeRng/bjGenerateCourse/bjBugColAt/bjCellBlocked/
-// bjCellOpen).
+// validate submitted moves. makeRng/generateCourse/crawlColAt/bounceColAt/
+// cellBlocked/cellOpen must stay byte-for-byte identical to their index.html
+// counterparts (bjMakeRng/bjGenerateCourse/bjCrawlColAt/bjBounceColAt/
+// bjCellBlocked/bjCellOpen).
 const COURSE_ID = "bug_jumper_dynamic_v1";
-const COURSE_VERSION = 4;
-const BJ_COLS = 10;
+const COURSE_VERSION = 5;
+const BJ_COLS = 56;
 const BJ_ROWS = 32;
 const BJ_LANE_COUNT = 30;
 const BJ_SAFE_ROWS = [10, 20, 30];
-const BJ_BAND_HALF = 3;
+const BJ_BAND_HALF = 7;
+const BJ_DRIFT_MAX = 3;
 const ROUND_DURATION_MS = 25_000;
 const INPUT_COOLDOWN_MS = 100;
 const MAX_SCORE_PER_ROUND = 30;
-const BJ_SHAPES = [
-  [4, 4, 4], // straight
-  [4, 4, 6], // L, turning right late
-  [4, 4, 3], // L, turning left late
-  [4, 6, 3], // S, right then left
-  [4, 3, 6], // S, left then right
-  [3, 6, 3], // zigzag
-];
 const ROUND_EXPIRES_SECONDS = 120;
 const MAX_MOVES_PER_ROUND = 400;
 const MOVE_TIME_TOLERANCE_MS = 12;
@@ -80,43 +73,62 @@ function makeRng(seed) {
   };
 }
 
+// The corridor's center drifts a little (±BJ_DRIFT_MAX cols) row by row — no
+// fixed template, so the walk is different every round. Three obstacle kinds
+// live inside the corridor: crawl (sweeps + wraps), bounce (paces inside a
+// smaller sub-range, doesn't wrap), block (stationary).
 function generateCourse(seed) {
   const rng = makeRng(seed);
-  // Shape comes from the seed itself (not an rng() draw) so a player's chosen
-  // shape can be honored just by picking a seed with that remainder — see
-  // startRound below.
-  const shapeIndex = mod(Number(seed) >>> 0, BJ_SHAPES.length);
-  const shape = BJ_SHAPES[shapeIndex];
   const lanes = [];
-  for (let row = 1; row <= BJ_LANE_COUNT; row++) {
+  let center = Math.floor(BJ_COLS / 2);
+  for (let row = 1; row <= BJ_LANE_COUNT; row += 1) {
+    const delta = Math.floor(rng() * (BJ_DRIFT_MAX * 2 + 1)) - BJ_DRIFT_MAX;
+    center = Math.max(BJ_BAND_HALF, Math.min(BJ_COLS - 1 - BJ_BAND_HALF, center + delta));
+
     if (BJ_SAFE_ROWS.includes(row)) {
-      lanes.push({ safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [], bandStart: 0, bandEnd: BJ_COLS - 1 });
+      lanes.push({ safe: true, bandStart: 0, bandEnd: BJ_COLS - 1, obstacles: [] });
       continue;
     }
-    const segIdx = row <= 10 ? 0 : row <= 20 ? 1 : 2;
-    const center = shape[segIdx];
     const bandStart = center - BJ_BAND_HALF;
     const bandEnd = center + BJ_BAND_HALF;
     const bandWidth = bandEnd - bandStart + 1;
     const rowProgress = (row - 1) / (BJ_LANE_COUNT - 1);
-    const baseInterval = 700 - rowProgress * 300;
-    const intervalMs = Math.max(260, Math.round(baseInterval + (rng() - 0.5) * 80));
-    const phaseMs = Math.floor(rng() * 300);
-    const dir = rng() < 0.5 ? 1 : -1;
-    const bugCount = rng() < 0.25 ? 2 : 1;
-    const bugs = [];
-    for (let i = 0; i < bugCount; i += 1) {
-      const len = 1 + (rng() < 0.15 ? 1 : 0);
-      const col = bandStart + Math.floor(rng() * bandWidth);
-      bugs.push({ col, len });
+    const obstacleCount = 1 + Math.floor(rng() * 3);
+    const obstacles = [];
+    for (let i = 0; i < obstacleCount; i += 1) {
+      const roll = rng();
+      if (roll < 0.5) {
+        const len = 1 + (rng() < 0.15 ? 1 : 0);
+        const col = bandStart + Math.floor(rng() * bandWidth);
+        const baseInterval = 700 - rowProgress * 300;
+        const intervalMs = Math.max(260, Math.round(baseInterval + (rng() - 0.5) * 80));
+        const phaseMs = Math.floor(rng() * 300);
+        const dir = rng() < 0.5 ? 1 : -1;
+        obstacles.push({ kind: "crawl", col, len, dir, intervalMs, phaseMs });
+      } else if (roll < 0.8) {
+        const maxRange = Math.max(2, Math.min(bandWidth, 6));
+        const rangeLen = 2 + Math.floor(rng() * (maxRange - 1));
+        const anchorSpan = Math.max(1, bandEnd - (rangeLen - 1) - bandStart + 1);
+        const anchor = bandStart + Math.floor(rng() * anchorSpan);
+        const baseInterval = 600 - rowProgress * 250;
+        const intervalMs = Math.max(220, Math.round(baseInterval + (rng() - 0.5) * 80));
+        const phaseMs = Math.floor(rng() * 300);
+        obstacles.push({ kind: "bounce", anchor, rangeLen, intervalMs, phaseMs });
+      } else {
+        // block never wraps, so col must leave room for the full length
+        // inside the band (crawl doesn't need this — it wraps segment-by-
+        // segment in cellBlocked, so any starting col self-corrects).
+        const len = 1 + (rng() < 0.15 ? 1 : 0);
+        const col = bandStart + Math.floor(rng() * (bandWidth - len + 1));
+        obstacles.push({ kind: "block", col, len });
+      }
     }
-    lanes.push({ safe: false, dir, intervalMs, phaseMs, bugs, bandStart, bandEnd });
+    lanes.push({ safe: false, bandStart, bandEnd, obstacles });
   }
   return {
     id: COURSE_ID,
     version: COURSE_VERSION,
     seed: Number(seed) >>> 0,
-    shapeIndex,
     cols: BJ_COLS,
     rows: BJ_ROWS,
     laneCount: BJ_LANE_COUNT,
@@ -142,13 +154,25 @@ function publicCourseMeta() {
   };
 }
 
-function bugColAt(lane, bug, elapsedMs) {
+// crawl: sweeps across the whole band, wrapping around at the edges.
+function crawlColAt(lane, obs, elapsedMs) {
   const bandWidth = lane.bandEnd - lane.bandStart + 1;
-  const interval = Math.max(1, asInt(lane.intervalMs, 1));
-  const phase = Math.max(0, asInt(lane.phaseMs, 0));
+  const interval = Math.max(1, asInt(obs.intervalMs, 1));
+  const phase = Math.max(0, asInt(obs.phaseMs, 0));
   const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
-  const rel = mod((asInt(bug.col, 0) - lane.bandStart) + steps * asInt(lane.dir, 1), bandWidth);
+  const rel = mod((asInt(obs.col, 0) - lane.bandStart) + steps * asInt(obs.dir, 1), bandWidth);
   return lane.bandStart + rel;
+}
+
+// bounce: paces back and forth inside its own smaller range — never wraps.
+function bounceColAt(obs, elapsedMs) {
+  const interval = Math.max(1, asInt(obs.intervalMs, 1));
+  const phase = Math.max(0, asInt(obs.phaseMs, 0));
+  const period = Math.max(1, 2 * (obs.rangeLen - 1));
+  const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
+  const cyclePos = mod(steps, period);
+  const offset = cyclePos <= obs.rangeLen - 1 ? cyclePos : period - cyclePos;
+  return obs.anchor + offset;
 }
 
 function cellBlocked(row, col, elapsedMs, course) {
@@ -156,10 +180,19 @@ function cellBlocked(row, col, elapsedMs, course) {
   const lane = course.lanes[row - 1];
   if (!lane || lane.safe) return false;
   const bandWidth = lane.bandEnd - lane.bandStart + 1;
-  return lane.bugs.some((bug) => {
-    const head = bugColAt(lane, bug, elapsedMs);
-    for (let i = 0; i < asInt(bug.len, 1); i += 1) {
-      if (lane.bandStart + mod((head - lane.bandStart) + i, bandWidth) === col) return true;
+  return lane.obstacles.some((obs) => {
+    if (obs.kind === "crawl") {
+      const head = crawlColAt(lane, obs, elapsedMs);
+      for (let i = 0; i < asInt(obs.len, 1); i += 1) {
+        if (lane.bandStart + mod((head - lane.bandStart) + i, bandWidth) === col) return true;
+      }
+      return false;
+    }
+    if (obs.kind === "bounce") {
+      return bounceColAt(obs, elapsedMs) === col;
+    }
+    if (obs.kind === "block") {
+      return col >= obs.col && col < obs.col + asInt(obs.len, 1);
     }
     return false;
   });
@@ -174,11 +207,19 @@ function cellOpen(row, col, course) {
   return col >= lane.bandStart && col <= lane.bandEnd;
 }
 
+// Earliest future timestamp at which ANY obstacle in the lane next changes
+// position (block obstacles never move, so they don't contribute a step).
 function nextLaneStepAfter(lane, elapsedMs) {
-  const interval = Math.max(1, asInt(lane.intervalMs, 1));
-  const phase = Math.max(0, asInt(lane.phaseMs, 0));
-  const step = Math.floor((Math.max(0, elapsedMs) + phase) / interval) + 1;
-  return Math.max(0, step * interval - phase);
+  let best = Infinity;
+  for (const obs of lane.obstacles) {
+    if (obs.kind === "block") continue;
+    const interval = Math.max(1, asInt(obs.intervalMs, 1));
+    const phase = Math.max(0, asInt(obs.phaseMs, 0));
+    const step = Math.floor((Math.max(0, elapsedMs) + phase) / interval) + 1;
+    const t = Math.max(0, step * interval - phase);
+    if (t < best) best = t;
+  }
+  return best;
 }
 
 function firstCollisionBetween(state, fromMs, toMs, course) {
@@ -189,9 +230,11 @@ function firstCollisionBetween(state, fromMs, toMs, course) {
   const lane = course.lanes[state.row - 1];
   let t = nextLaneStepAfter(lane, start);
   let guard = 0;
-  while (t <= end + MOVE_TIME_TOLERANCE_MS && guard < 100) {
+  while (t <= end + MOVE_TIME_TOLERANCE_MS && guard < 300) {
     if (t >= start && cellBlocked(state.row, state.col, t, course)) return Math.min(end, Math.max(start, t));
-    t += Math.max(1, asInt(lane.intervalMs, 1));
+    const nt = nextLaneStepAfter(lane, t);
+    if (nt <= t) break;
+    t = nt;
     guard += 1;
   }
   if (cellBlocked(state.row, state.col, end, course)) return end;
@@ -417,7 +460,7 @@ async function loadState(userId) {
   };
 }
 
-async function startRound(userId, body) {
+async function startRound(userId) {
   if (!db) throw new Error("Database is not configured.");
 
   const [profile] = await db`
@@ -427,16 +470,7 @@ async function startRound(userId, body) {
   `;
   if (!profile) throw gameError("Profil nie istnieje.");
 
-  let seed = Math.floor(Math.random() * 2147483647) + 1;
-  // Player picked a specific shape (0..BJ_SHAPES.length-1) in the pre-round
-  // picker: nudge the drawn seed to that remainder so generateCourse(seed)
-  // lands on the requested shape. Lane randomization (everything after the
-  // shape pick) is untouched — still fully random.
-  const requestedShape = body?.shapeIndex == null ? -1 : asInt(body.shapeIndex, -1);
-  if (requestedShape >= 0 && requestedShape < BJ_SHAPES.length) {
-    seed = seed - mod(seed, BJ_SHAPES.length) + requestedShape;
-    if (seed < 1) seed += BJ_SHAPES.length;
-  }
+  const seed = Math.floor(Math.random() * 2147483647) + 1;
 
   const [round] = await db`
     insert into public.bug_jumper_rounds
@@ -594,7 +628,7 @@ Deno.serve(async (req) => {
 
     let result;
     if (action === "state") result = await loadState(user.id);
-    else if (action === "start") result = await startRound(user.id, body);
+    else if (action === "start") result = await startRound(user.id);
     else if (action === "submit") result = await submitRound(user.id, body);
     else throw gameError("Nieznana akcja.");
 

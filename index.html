@@ -3917,34 +3917,43 @@
     .bj-rules ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.55; }
     .bj-rules ul li { margin-bottom: 4px; }
     .bj-rules ul li strong { color: var(--text); }
-    .bj-shape-picker {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 14px;
-    }
-    .bj-shape-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .bj-shape-btn {
-      padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border);
-      background: var(--bg); color: var(--text); font-size: 11.5px; font-weight: 700;
-      cursor: pointer; transition: background .15s, border-color .15s, color .15s;
-    }
-    .bj-shape-btn:hover:not(:disabled) { border-color: #00ff66; }
-    .bj-shape-btn.is-active { background: #00ff66; color: #06210f; border-color: #00ff66; }
-    .bj-shape-btn:disabled { opacity: .5; cursor: not-allowed; }
     .bj-arena {
-      border: 2px solid #00ff66; border-radius: 6px;
-      background: #0a0a1a; overflow: hidden;
-      /* Tall 10:32 board: drive size off height (capped to fit the viewport
-         alongside the rest of the panel) and let width follow the ratio,
-         instead of the old width:100%/max-width which let it grow past 1000px
-         tall on short windows and forced scrolling to see the whole board. */
-      aspect-ratio: 10 / 32; height: min(56vh, 620px); width: auto; max-width: 100%;
+      border: 2px solid #22d3ee; border-radius: 6px;
+      background: #11151c; overflow: hidden;
+      /* Wide 56:32 board (~16:9, fits a fullscreen 1920x1080 monitor): drive
+         size off height (capped to fit the viewport alongside the rest of
+         the panel) and let width follow the ratio. */
+      aspect-ratio: 56 / 32; height: min(56vh, 620px); width: auto; max-width: 100%;
       margin: 0 auto;
       user-select: none; touch-action: none;
-      box-shadow: 0 0 15px rgba(0,255,100,0.3), inset 0 0 10px rgba(0,255,100,0.1);
+      box-shadow: 0 0 15px rgba(34,211,238,0.3), inset 0 0 10px rgba(34,211,238,0.1);
     }
     .bj-arena canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
     .bj-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .bj-start-btn { width: auto; }
+    /* Fullscreen: hide the chatter (rules/prizes/subtitle), let the board
+       take almost the whole 1920x1080-ish screen. */
+    .bj-game-panel:fullscreen,
+    .bj-game-panel:-webkit-full-screen {
+      background: #0a0d12; overflow: auto; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 14px; padding: 18px;
+    }
+    .bj-game-panel:fullscreen .bj-rules,
+    .bj-game-panel:fullscreen .page-sub,
+    .bj-game-panel:fullscreen .bj-prizes,
+    .bj-game-panel:-webkit-full-screen .bj-rules,
+    .bj-game-panel:-webkit-full-screen .page-sub,
+    .bj-game-panel:-webkit-full-screen .bj-prizes {
+      display: none;
+    }
+    .bj-game-panel:fullscreen .bj-stats,
+    .bj-game-panel:-webkit-full-screen .bj-stats {
+      max-width: 640px; width: 100%;
+    }
+    .bj-game-panel:fullscreen .bj-arena,
+    .bj-game-panel:-webkit-full-screen .bj-arena {
+      height: 80vh; max-width: 96vw;
+    }
     .bj-status { font-size: 12px; color: var(--muted); flex: 1; }
     .bj-board-panel { display: grid; gap: 16px; }
     .bj-prizes {
@@ -7466,11 +7475,11 @@
       <!-- Bug Jumper panel (season 2) -->
       <div id="seasonal-game-bug-jumper" class="hidden">
         <div class="bj-layout">
-          <section class="bj-game-panel">
+          <section class="bj-game-panel" id="bj-game-panel">
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Bug Jumper</h2>
-                <p class="page-sub">30 trudnych linii, losowa trasa w każdej rundzie — czasem prosta, czasem w kształcie L albo S.</p>
+                <p class="page-sub">30 trudnych linii na szerokim torze, który zawsze wije się inaczej — omijaj robaki, telefony i bariery.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 500 🪙</span>
@@ -7485,23 +7494,10 @@
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera <strong>▲</strong> po siatce.</li>
                 <li><strong>30 linii, każda za +1 pkt.</strong> Cofnięcie i ponowne wejście na tę samą linię nie daje punktów.</li>
                 <li><strong>Linie 10, 20 i 30 są bezpieczne</strong> — możesz tam chwilę poczekać i złapać rytm.</li>
-                <li><strong>Ciemne pola to ściany</strong> — trasa w każdej rundzie skręca inaczej (prosto, L albo S), więc czasem trzeba przesunąć się w bok, zanim pójdziesz wyżej.</li>
-                <li>Zderzenie z robakiem = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>. Po linii 30 wejście na GÓRĘ kończy rundę.</li>
+                <li><strong>Ciemne pola to ściany</strong> — korytarz w każdej rundzie wije się inaczej, więc czasem trzeba przesunąć się w bok, zanim pójdziesz wyżej.</li>
+                <li><strong>🐛 pełzają, ☎️ chodzą w tę i z powrotem, 🚧 stoją w miejscu</strong> — zderzenie z każdym z nich = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>. Po linii 30 wejście na GÓRĘ kończy rundę.</li>
                 <li><strong>Wynik tygodnia to średnia z Twoich 5 najlepszych rund</strong> — możesz grać ile chcesz, liczy się tylko Twoja piątka najlepszych.</li>
               </ul>
-            </div>
-
-            <div class="bj-shape-picker" id="bj-shape-picker">
-              <div class="bj-rules-title">Wybierz trasę</div>
-              <div class="bj-shape-row" id="bj-shape-row">
-                <button type="button" class="bj-shape-btn is-active" data-shape="random">🎲 Losowo</button>
-                <button type="button" class="bj-shape-btn" data-shape="0">Prosta</button>
-                <button type="button" class="bj-shape-btn" data-shape="1">L (w prawo)</button>
-                <button type="button" class="bj-shape-btn" data-shape="2">L (w lewo)</button>
-                <button type="button" class="bj-shape-btn" data-shape="3">S (prawo→lewo)</button>
-                <button type="button" class="bj-shape-btn" data-shape="4">S (lewo→prawo)</button>
-                <button type="button" class="bj-shape-btn" data-shape="5">Zygzak</button>
-              </div>
             </div>
 
             <div class="bj-stats">
@@ -7525,6 +7521,7 @@
 
             <div class="bj-actions">
               <button class="btn-primary bj-start-btn" id="bj-start-btn">Start rundy</button>
+              <button type="button" class="btn-ghost" id="bj-fullscreen-btn">⛶ Pełny ekran</button>
               <div class="bj-status" id="bj-status">Użyj strzałek. Trasa jest losowa w każdej rundzie.</div>
             </div>
           </section>
@@ -22484,35 +22481,23 @@ function vpIsTypingTarget(target) {
 // derives the lane/wall layout locally via bjGenerateCourse(seed) to play in
 // real time, and bug-jumper-action independently re-derives it from the
 // stored seed to replay + validate submitted moves. bjGenerateCourse and its
-// helpers (bjMakeRng, bjBugColAt, bjCellBlocked, bjCellOpen) must stay
-// byte-for-byte identical to generateCourse/bugColAt/cellBlocked/cellOpen in
-// supabase/functions/bug-jumper-action/index.ts.
+// helpers (bjMakeRng, bjCrawlColAt, bjBounceColAt, bjCellBlocked, bjCellOpen)
+// must stay byte-for-byte identical to generateCourse/crawlColAt/bounceColAt/
+// cellBlocked/cellOpen in supabase/functions/bug-jumper-action/index.ts.
 
-const BJ_COLS         = 10;
+const BJ_COLS         = 56;       // wide ~16:9 board (fits a fullscreen 1920x1080 monitor)
 const BJ_ROWS         = 32;       // 0=start, 1-30=lines, 31=finish
 const BJ_LANE_COUNT   = 30;
 const BJ_SAFE_ROWS    = Object.freeze([10, 20, 30]);
-const BJ_BAND_HALF    = 3;        // corridor half-width: band is center±3 (7 cols wide)
+const BJ_BAND_HALF    = 7;        // corridor half-width: band is center±7 (15 cols wide)
+const BJ_DRIFT_MAX    = 3;        // corridor center can shift by up to ±3 cols per row
 const BJ_DURATION_MS  = 25000;
 const BJ_INPUT_COOLDOWN_MS = 100;
 const BJ_MAX_SCORE    = 30;
-const BJ_COURSE_VERSION = 4;
-// Corridor centers per third of the climb (rows 1-9 / 11-19 / 21-29; rows
-// 10/20/30 are safe landings and always fully open). Picking one of these per
-// round is what makes a course an "L" (one hard turn), an "S"/zigzag (turns
-// back), or the original straight climb. Values must stay within [BAND_HALF,
-// BJ_COLS-1-BAND_HALF] so the band never runs off the board.
-const BJ_SHAPES = Object.freeze([
-  Object.freeze([4, 4, 4]), // straight
-  Object.freeze([4, 4, 6]), // L, turning right late
-  Object.freeze([4, 4, 3]), // L, turning left late
-  Object.freeze([4, 6, 3]), // S, right then left
-  Object.freeze([4, 3, 6]), // S, left then right
-  Object.freeze([3, 6, 3]), // zigzag
-]);
+const BJ_COURSE_VERSION = 5;
 const BJ_CELL        = 24;
-const BJ_CS_W        = BJ_COLS * BJ_CELL;    // 240
-const BJ_CS_H        = BJ_ROWS * BJ_CELL;    // 768
+const BJ_CS_W        = BJ_COLS * BJ_CELL;
+const BJ_CS_H        = BJ_ROWS * BJ_CELL;
 const BJ_START_COL   = Math.floor(BJ_COLS / 2);
 const BJ_MAX_DPR     = 1.5;
 const BJ_INPUT_QUEUE_MAX = 4;
@@ -22526,43 +22511,66 @@ function bjMakeRng(seed) {
   };
 }
 
+// The corridor's center drifts a little (±BJ_DRIFT_MAX cols) row by row —
+// no fixed template, so the walk is different every round and never repeats
+// the same turn pattern twice (straight/L/S/zigzag all fall out of the same
+// walk naturally, along with shapes no fixed catalog would produce).
+// Three obstacle kinds live inside the corridor:
+//   crawl  — sweeps across the band and wraps around (classic bug)
+//   bounce — paces back and forth inside a smaller sub-range (doesn't wrap)
+//   block  — stationary, always blocking its cell(s)
 function bjGenerateCourse(seed) {
   const rng = bjMakeRng(seed);
-  // Shape comes from the seed itself (not an rng() draw) so a player's chosen
-  // shape can be honored just by picking a seed with that remainder — see
-  // startRound's shape-select handling, both here and in bug-jumper-action.
-  const shapeIndex = bjMod(Number(seed) >>> 0, BJ_SHAPES.length);
-  const shape = BJ_SHAPES[shapeIndex];
   const lanes = [];
+  let center = BJ_START_COL;
   for (let row = 1; row <= BJ_LANE_COUNT; row++) {
+    const delta = Math.floor(rng() * (BJ_DRIFT_MAX * 2 + 1)) - BJ_DRIFT_MAX;
+    center = Math.max(BJ_BAND_HALF, Math.min(BJ_COLS - 1 - BJ_BAND_HALF, center + delta));
+
     if (BJ_SAFE_ROWS.includes(row)) {
-      lanes.push({ safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [], bandStart: 0, bandEnd: BJ_COLS - 1 });
+      lanes.push({ safe: true, bandStart: 0, bandEnd: BJ_COLS - 1, obstacles: [] });
       continue;
     }
-    const segIdx = row <= 10 ? 0 : row <= 20 ? 1 : 2;
-    const center = shape[segIdx];
     const bandStart = center - BJ_BAND_HALF;
     const bandEnd = center + BJ_BAND_HALF;
     const bandWidth = bandEnd - bandStart + 1;
     const rowProgress = (row - 1) / (BJ_LANE_COUNT - 1);
-    const baseInterval = 700 - rowProgress * 300;
-    const intervalMs = Math.max(260, Math.round(baseInterval + (rng() - 0.5) * 80));
-    const phaseMs = Math.floor(rng() * 300);
-    const dir = rng() < 0.5 ? 1 : -1;
-    const bugCount = rng() < 0.25 ? 2 : 1;
-    const bugs = [];
-    for (let i = 0; i < bugCount; i++) {
-      const len = 1 + (rng() < 0.15 ? 1 : 0);
-      const col = bandStart + Math.floor(rng() * bandWidth);
-      bugs.push({ col, len });
+    const obstacleCount = 1 + Math.floor(rng() * 3);
+    const obstacles = [];
+    for (let i = 0; i < obstacleCount; i++) {
+      const roll = rng();
+      if (roll < 0.5) {
+        const len = 1 + (rng() < 0.15 ? 1 : 0);
+        const col = bandStart + Math.floor(rng() * bandWidth);
+        const baseInterval = 700 - rowProgress * 300;
+        const intervalMs = Math.max(260, Math.round(baseInterval + (rng() - 0.5) * 80));
+        const phaseMs = Math.floor(rng() * 300);
+        const dir = rng() < 0.5 ? 1 : -1;
+        obstacles.push({ kind: 'crawl', col, len, dir, intervalMs, phaseMs });
+      } else if (roll < 0.8) {
+        const maxRange = Math.max(2, Math.min(bandWidth, 6));
+        const rangeLen = 2 + Math.floor(rng() * (maxRange - 1));
+        const anchorSpan = Math.max(1, bandEnd - (rangeLen - 1) - bandStart + 1);
+        const anchor = bandStart + Math.floor(rng() * anchorSpan);
+        const baseInterval = 600 - rowProgress * 250;
+        const intervalMs = Math.max(220, Math.round(baseInterval + (rng() - 0.5) * 80));
+        const phaseMs = Math.floor(rng() * 300);
+        obstacles.push({ kind: 'bounce', anchor, rangeLen, intervalMs, phaseMs });
+      } else {
+        // block never wraps, so col must leave room for the full length
+        // inside the band (crawl doesn't need this — it wraps segment-by-
+        // segment in bjCellBlocked, so any starting col self-corrects).
+        const len = 1 + (rng() < 0.15 ? 1 : 0);
+        const col = bandStart + Math.floor(rng() * (bandWidth - len + 1));
+        obstacles.push({ kind: 'block', col, len });
+      }
     }
-    lanes.push({ safe: false, dir, intervalMs, phaseMs, bugs, bandStart, bandEnd });
+    lanes.push({ safe: false, bandStart, bandEnd, obstacles });
   }
   return {
     id: BUG_JUMPER_DYNAMIC_COURSE_ID,
     version: BJ_COURSE_VERSION,
     seed: Number(seed) >>> 0,
-    shapeIndex,
     cols: BJ_COLS,
     rows: BJ_ROWS,
     laneCount: BJ_LANE_COUNT,
@@ -22642,16 +22650,16 @@ function bjGetStaticLayer(course) {
 
   for (let row = 0; row < BJ_ROWS; row++) {
     const y = (BJ_ROWS - 1 - row) * C;
-    if (row === 0) ctx.fillStyle = '#1a1a2e';
-    else if (row === BJ_ROWS - 1) ctx.fillStyle = '#0a2a0a';
-    else if (BJ_SAFE_ROWS.includes(row)) ctx.fillStyle = '#102d24';
-    else ctx.fillStyle = row % 2 === 0 ? '#0d0d22' : '#0a0a1a';
+    if (row === 0) ctx.fillStyle = '#161b24';
+    else if (row === BJ_ROWS - 1) ctx.fillStyle = '#0e2e28';
+    else if (BJ_SAFE_ROWS.includes(row)) ctx.fillStyle = '#0f2b30';
+    else ctx.fillStyle = row % 2 === 0 ? '#141922' : '#10141b';
     ctx.fillRect(0, y, W, C);
   }
 
   // ── Walls — cells outside this round's corridor band, blocking movement ──
   if (course?.lanes) {
-    ctx.fillStyle = '#1a0808';
+    ctx.fillStyle = '#241019';
     for (let row = 1; row <= BJ_LANE_COUNT; row++) {
       if (BJ_SAFE_ROWS.includes(row)) continue;
       const lane = course.lanes[row - 1];
@@ -22661,7 +22669,7 @@ function bjGetStaticLayer(course) {
         if (col < lane.bandStart || col > lane.bandEnd) ctx.fillRect(col * C, y, C, C);
       }
     }
-    ctx.strokeStyle = 'rgba(255,60,60,0.25)';
+    ctx.strokeStyle = 'rgba(244,63,94,0.25)';
     ctx.lineWidth = 1;
     for (let row = 1; row <= BJ_LANE_COUNT; row++) {
       if (BJ_SAFE_ROWS.includes(row)) continue;
@@ -22674,7 +22682,7 @@ function bjGetStaticLayer(course) {
     }
   }
 
-  ctx.strokeStyle = 'rgba(0,255,100,0.15)';
+  ctx.strokeStyle = 'rgba(34,211,238,0.14)';
   ctx.lineWidth = 1;
   for (let c = 0; c <= BJ_COLS; c++) {
     ctx.beginPath(); ctx.moveTo(c * C, 0); ctx.lineTo(c * C, H); ctx.stroke();
@@ -22691,8 +22699,8 @@ function bjGetStaticLayer(course) {
     else if (row === BJ_ROWS - 1) label = 'GÓRA';
     else if (BJ_SAFE_ROWS.includes(row)) label = 'SAFE ' + row;
     else label = 'LINIA ' + row;
-    ctx.fillStyle = row === BJ_ROWS - 1 ? '#00ff66' : 'rgba(0,255,100,0.4)';
-    if (BJ_SAFE_ROWS.includes(row)) ctx.fillStyle = '#7cffc4';
+    ctx.fillStyle = row === BJ_ROWS - 1 ? '#2dd4bf' : 'rgba(34,211,238,0.45)';
+    if (BJ_SAFE_ROWS.includes(row)) ctx.fillStyle = '#5eead4';
     ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
   }
 
@@ -22713,10 +22721,10 @@ function bjGetOverlayLayer(course) {
     ctx.fillRect(0, sy, W, 1);
   }
 
-  ctx.strokeStyle = 'rgba(0,255,100,0.25)';
+  ctx.strokeStyle = 'rgba(34,211,238,0.25)';
   ctx.lineWidth = 5;
   ctx.strokeRect(2.5, 2.5, W - 5, H - 5);
-  ctx.strokeStyle = '#00ff66';
+  ctx.strokeStyle = '#22d3ee';
   ctx.lineWidth = 1.5;
   ctx.strokeRect(1, 1, W - 2, H - 2);
 
@@ -22737,14 +22745,22 @@ function bjCreateCellSprite(draw) {
 function bjGetSprites() {
   if (bjSpriteCache) return bjSpriteCache;
 
-  const bugHead = bjCreateCellSprite((ctx, C) => {
-    ctx.fillStyle = '#cc2200';
+  const makeHead = (bg, border, emoji) => bjCreateCellSprite((ctx, C) => {
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, C, C);
-    ctx.strokeStyle = 'rgba(255,100,0,0.3)';
+    ctx.strokeStyle = border;
     ctx.strokeRect(0.5, 0.5, C - 1, C - 1);
     ctx.font = `${Math.round(C * 0.5)}px sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🐛', C / 2, C / 2);
+    ctx.fillText(emoji, C / 2, C / 2);
+  });
+
+  const makeBody = (bg, border) => bjCreateCellSprite((ctx, C) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, C, C);
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, C - 1, C - 1);
   });
 
   const makePlayer = (fill) => bjCreateCellSprite((ctx, C) => {
@@ -22757,9 +22773,13 @@ function bjGetSprites() {
   });
 
   bjSpriteCache = {
-    bugHead,
-    player: makePlayer('#00ffff'),
-    playerHit: makePlayer('#ff4444'),
+    crawlHead: makeHead('#7c2d12', 'rgba(251,146,60,0.4)', '🐛'),
+    crawlBody: makeBody('#7c2d12', 'rgba(251,146,60,0.3)'),
+    bounceHead: makeHead('#4c1d95', 'rgba(167,139,250,0.4)', '☎️'),
+    blockHead: makeHead('#78350f', 'rgba(251,191,36,0.5)', '🚧'),
+    blockBody: makeBody('#78350f', 'rgba(251,191,36,0.35)'),
+    player: makePlayer('#22d3ee'),
+    playerHit: makePlayer('#f43f5e'),
   };
   return bjSpriteCache;
 }
@@ -22774,13 +22794,25 @@ function bjElapsed(now = performance.now()) {
   return Math.max(0, Math.min(rt.durationMs, now - rt.startPerf));
 }
 
-function bjBugColAt(lane, bug, elapsedMs) {
+// crawl: sweeps across the whole band, wrapping around at the edges.
+function bjCrawlColAt(lane, obs, elapsedMs) {
   const bandWidth = lane.bandEnd - lane.bandStart + 1;
-  const interval = Math.max(1, Number(lane.intervalMs) || 1);
-  const phase = Math.max(0, Number(lane.phaseMs) || 0);
+  const interval = Math.max(1, Number(obs.intervalMs) || 1);
+  const phase = Math.max(0, Number(obs.phaseMs) || 0);
   const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
-  const rel = bjMod((Number(bug.col) - lane.bandStart) + steps * Number(lane.dir || 1), bandWidth);
+  const rel = bjMod((Number(obs.col) - lane.bandStart) + steps * Number(obs.dir || 1), bandWidth);
   return lane.bandStart + rel;
+}
+
+// bounce: paces back and forth inside its own smaller range — never wraps.
+function bjBounceColAt(obs, elapsedMs) {
+  const interval = Math.max(1, Number(obs.intervalMs) || 1);
+  const phase = Math.max(0, Number(obs.phaseMs) || 0);
+  const period = Math.max(1, 2 * (obs.rangeLen - 1));
+  const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
+  const cyclePos = bjMod(steps, period);
+  const offset = cyclePos <= obs.rangeLen - 1 ? cyclePos : period - cyclePos;
+  return obs.anchor + offset;
 }
 
 function bjCellBlocked(row, col, elapsedMs, course) {
@@ -22788,10 +22820,19 @@ function bjCellBlocked(row, col, elapsedMs, course) {
   const lane = course.lanes[row - 1];
   if (!lane || lane.safe) return false;
   const bandWidth = lane.bandEnd - lane.bandStart + 1;
-  return lane.bugs.some(bug => {
-    const head = bjBugColAt(lane, bug, elapsedMs);
-    for (let i = 0; i < bug.len; i++) {
-      if (lane.bandStart + bjMod((head - lane.bandStart) + i, bandWidth) === col) return true;
+  return lane.obstacles.some(obs => {
+    if (obs.kind === 'crawl') {
+      const head = bjCrawlColAt(lane, obs, elapsedMs);
+      for (let i = 0; i < obs.len; i++) {
+        if (lane.bandStart + bjMod((head - lane.bandStart) + i, bandWidth) === col) return true;
+      }
+      return false;
+    }
+    if (obs.kind === 'bounce') {
+      return bjBounceColAt(obs, elapsedMs) === col;
+    }
+    if (obs.kind === 'block') {
+      return col >= obs.col && col < obs.col + obs.len;
     }
     return false;
   });
@@ -22855,28 +22896,30 @@ function bjDraw(now) {
 
     const finishAge = now - (rt.prodFlash || 0);
     if (finishAge < 350) {
-      ctx.fillStyle = 'rgba(0,120,0,0.55)';
+      ctx.fillStyle = 'rgba(45,212,191,0.5)';
       ctx.fillRect(0, 0, W, C);
     }
 
-    // ── Obstacles — bug emoji on colored cells ──
+    // ── Obstacles: crawl (wraps), bounce (paces), block (stationary) ──
     course?.lanes?.forEach((lane, li) => {
       const row = li + 1;
       const ry = (BJ_ROWS - 1 - row) * C;
       const bandWidth = lane.bandEnd - lane.bandStart + 1;
-      lane.bugs.forEach(bug => {
-        const head = bjBugColAt(lane, bug, elapsed);
-        for (let i = 0; i < bug.len; i++) {
-          const cellCol = lane.bandStart + bjMod((head - lane.bandStart) + i, bandWidth);
-          const bx = cellCol * C;
-          if (i === 0) {
-            ctx.drawImage(sprites.bugHead, bx, ry, C, C);
-          } else {
-            ctx.fillStyle = '#993300';
-            ctx.fillRect(bx, ry, C, C);
-            ctx.strokeStyle = 'rgba(255,100,0,0.3)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(bx + 0.5, ry + 0.5, C - 1, C - 1);
+      lane.obstacles?.forEach(obs => {
+        if (obs.kind === 'crawl') {
+          const head = bjCrawlColAt(lane, obs, elapsed);
+          for (let i = 0; i < obs.len; i++) {
+            const cellCol = lane.bandStart + bjMod((head - lane.bandStart) + i, bandWidth);
+            const bx = cellCol * C;
+            ctx.drawImage(i === 0 ? sprites.crawlHead : sprites.crawlBody, bx, ry, C, C);
+          }
+        } else if (obs.kind === 'bounce') {
+          const bx = bjBounceColAt(obs, elapsed) * C;
+          ctx.drawImage(sprites.bounceHead, bx, ry, C, C);
+        } else if (obs.kind === 'block') {
+          for (let i = 0; i < obs.len; i++) {
+            const bx = (obs.col + i) * C;
+            ctx.drawImage(i === 0 ? sprites.blockHead : sprites.blockBody, bx, ry, C, C);
           }
         }
       });
@@ -22901,22 +22944,22 @@ function bjDraw(now) {
       ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillStyle = t.color === '#cc0000' ? '#ff4444' : '#ffff00';
+      ctx.fillStyle = t.color === '#cc0000' ? '#f43f5e' : '#facc15';
       ctx.fillText(t.text, tx, ty);
       ctx.restore();
     });
   }
 
-  // ── Idle overlay (dark retro) ──
+  // ── Idle overlay ──
   if (!rt?.playing) {
-    ctx.fillStyle = 'rgba(10,10,26,0.92)';
+    ctx.fillStyle = 'rgba(17,21,28,0.92)';
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#00ff66';
+    ctx.fillStyle = '#22d3ee';
     ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('DYNAMIC', W / 2, H / 2 - 14);
     ctx.font = '12px monospace';
-    ctx.fillStyle = 'rgba(0,255,100,0.5)';
+    ctx.fillStyle = 'rgba(34,211,238,0.5)';
     ctx.fillText('↑  ↓  ←  →  strzałki', W / 2, H / 2 + 12);
   }
 
@@ -23149,7 +23192,6 @@ function stopBugJumperRound() {
   if (rt?.rafId) cancelAnimationFrame(rt.rafId);
   bugJumperRuntime = newBugJumperRuntime();
   if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
-  bjSetShapePickerEnabled(true);
   bjResetStatCache();
   bjSetStats(BJ_DURATION_MS, true);
   bjInitCanvas();
@@ -23171,7 +23213,6 @@ function beginBugJumperRound(round, options = {}) {
     : 0;
   rt.startPerf = performance.now() - serverElapsed;
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Runda trwa'; }
-  bjSetShapePickerEnabled(false);
   if (bjStatus) {
     bjStatus.textContent = rt.archiveMode
       ? 'Tryb testowy admina — wynik nie zostanie zapisany.'
@@ -23205,11 +23246,7 @@ async function startBugJumperRound() {
   if (rt?.playing || rt?.submitting) return;
   if (activeTab === 'bug-jumper-test') {
     const now = new Date().toISOString();
-    let seed = Math.floor(Math.random() * 2147483647) + 1;
-    if (bjSelectedShapeIndex != null) {
-      seed = seed - bjMod(seed, BJ_SHAPES.length) + bjSelectedShapeIndex;
-      if (seed < 1) seed += BJ_SHAPES.length;
-    }
+    const seed = Math.floor(Math.random() * 2147483647) + 1;
     beginBugJumperRound({
       id: 'admin-test-' + Date.now(),
       courseId: BUG_JUMPER_DYNAMIC_COURSE_ID,
@@ -23224,17 +23261,15 @@ async function startBugJumperRound() {
     try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Ładuję...'; }
-  bjSetShapePickerEnabled(false);
   if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę...';
   try {
-    const data = await invokeBugJumper({ action: 'start', shapeIndex: bjSelectedShapeIndex });
+    const data = await invokeBugJumper({ action: 'start' });
     renderBugJumperState(data);
     beginBugJumperRound(data.round, allGamesMode ? { archiveMode: true } : {});
   } catch (err) {
     showToast('❌ ' + err.message);
     if (bjStatus) bjStatus.textContent = 'Nie udało się wystartować rundy.';
     if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
-    bjSetShapePickerEnabled(true);
   }
 }
 
@@ -23293,20 +23328,39 @@ async function finishBugJumperRound() {
 
 if (bjStartBtn) bjStartBtn.addEventListener('click', startBugJumperRound);
 
-// ── Bug Jumper route picker — pick a shape (or stay random) before starting ──
-let bjSelectedShapeIndex = null; // null = random
-const bjShapeRow = document.getElementById('bj-shape-row');
+// ── Bug Jumper fullscreen ────────────────────────────────────────────────
+const bjGamePanel = document.getElementById('bj-game-panel');
+const bjFullscreenBtn = document.getElementById('bj-fullscreen-btn');
 
-function bjSetShapePickerEnabled(enabled) {
-  bjShapeRow?.querySelectorAll('.bj-shape-btn').forEach(btn => { btn.disabled = !enabled; });
+function bjIsFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
 }
 
-bjShapeRow?.addEventListener('click', evt => {
-  const btn = evt.target.closest('.bj-shape-btn');
-  if (!btn || btn.disabled) return;
-  bjSelectedShapeIndex = btn.dataset.shape === 'random' ? null : Number(btn.dataset.shape);
-  bjShapeRow.querySelectorAll('.bj-shape-btn').forEach(b => b.classList.toggle('is-active', b === btn));
-});
+async function bjToggleFullscreen() {
+  if (!bjGamePanel) return;
+  try {
+    if (!bjIsFullscreen()) {
+      if (bjGamePanel.requestFullscreen) await bjGamePanel.requestFullscreen();
+      else if (bjGamePanel.webkitRequestFullscreen) bjGamePanel.webkitRequestFullscreen();
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  } catch {
+    showToast('❌ Nie udało się przełączyć pełnego ekranu.');
+  }
+}
+
+function bjOnFullscreenChange() {
+  if (bjFullscreenBtn) bjFullscreenBtn.textContent = bjIsFullscreen() ? '⤢ Wyjdź z pełnego ekranu' : '⛶ Pełny ekran';
+  bjInitCanvas();
+  bjDraw(performance.now());
+}
+
+if (bjFullscreenBtn) bjFullscreenBtn.addEventListener('click', bjToggleFullscreen);
+document.addEventListener('fullscreenchange', bjOnFullscreenChange);
+document.addEventListener('webkitfullscreenchange', bjOnFullscreenChange);
 
 // Arrow keys only — no WASD, no touch
 document.addEventListener('keydown', evt => {
