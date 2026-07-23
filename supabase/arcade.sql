@@ -52,10 +52,6 @@ GRANT SELECT ON public.arcade_leaderboard TO authenticated;
 
 -- ── pay_arcade_entry — deduct 1 coin and log the transaction ────────────────
 -- p_game_type is stored in coin_transactions.meta so Portfel can show it.
---
--- Office Grand Prix is intentionally absent from this browser-callable RPC.
--- In archive mode its Edge Function charges each roster-locked human exactly
--- once and tags the ledger entry with both game_type and session_id.
 
 CREATE OR REPLACE FUNCTION public.pay_arcade_entry(p_game_type text DEFAULT 'unknown')
 RETURNS integer
@@ -93,10 +89,6 @@ REVOKE ALL ON FUNCTION public.pay_arcade_entry(text) FROM PUBLIC, anon, authenti
 GRANT EXECUTE ON FUNCTION public.pay_arcade_entry(text) TO authenticated;
 
 -- ── record_arcade_score — insert a score row (called by JS after game ends) ──
--- Office Grand Prix is intentionally absent from v_score_cap. Its Edge
--- Function replays the submitted input log, derives the official result, and
--- inserts game_type='office_grand_prix' directly with service-role privileges.
--- RLS and the grants above leave no authenticated client INSERT path.
 
 CREATE OR REPLACE FUNCTION public.record_arcade_score(p_game_type text, p_score integer)
 RETURNS void

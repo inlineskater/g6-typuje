@@ -13,52 +13,34 @@ const db = databaseUrl
   ? postgres(databaseUrl, { prepare: false, max: 4, idle_timeout: 20 })
   : null;
 
-const COURSE = Object.freeze({
-  id: "bug_jumper_hard_v2",
-  version: 2,
-  cols: 10,
-  rows: 32,
-  laneCount: 30,
-  safeRows: Object.freeze([10, 20, 30]),
-  durationMs: 20_000,
-  inputCooldownMs: 120,
-  maxScore: 30,
-  lanes: Object.freeze([
-    { dir:  1, intervalMs: 520, phaseMs: 120, bugs: [{ col: 1, len: 2 }, { col: 7, len: 2 }] },
-    { dir: -1, intervalMs: 500, phaseMs: 260, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir:  1, intervalMs: 480, phaseMs:  80, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
-    { dir: -1, intervalMs: 460, phaseMs: 210, bugs: [{ col: 1, len: 3 }, { col: 7, len: 2 }] },
-    { dir:  1, intervalMs: 440, phaseMs: 330, bugs: [{ col: 0, len: 2 }, { col: 5, len: 3 }] },
-    { dir: -1, intervalMs: 420, phaseMs: 150, bugs: [{ col: 2, len: 2 }, { col: 7, len: 2 }] },
-    { dir:  1, intervalMs: 400, phaseMs: 290, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
-    { dir: -1, intervalMs: 380, phaseMs:  60, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir:  1, intervalMs: 360, phaseMs: 240, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
-    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
-    { dir: -1, intervalMs: 340, phaseMs: 110, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
-    { dir:  1, intervalMs: 320, phaseMs: 220, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir: -1, intervalMs: 300, phaseMs:  90, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
-    { dir:  1, intervalMs: 290, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 2 }] },
-    { dir: -1, intervalMs: 280, phaseMs:  40, bugs: [{ col: 0, len: 3 }, { col: 7, len: 2 }] },
-    { dir:  1, intervalMs: 270, phaseMs: 130, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
-    { dir: -1, intervalMs: 260, phaseMs: 210, bugs: [{ col: 1, len: 2 }, { col: 5, len: 3 }] },
-    { dir:  1, intervalMs: 250, phaseMs:  70, bugs: [{ col: 0, len: 2 }, { col: 6, len: 2 }] },
-    { dir: -1, intervalMs: 240, phaseMs: 160, bugs: [{ col: 3, len: 3 }, { col: 8, len: 2 }] },
-    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
-    { dir:  1, intervalMs: 230, phaseMs:  20, bugs: [{ col: 1, len: 2 }, { col: 7, len: 3 }] },
-    { dir: -1, intervalMs: 225, phaseMs: 120, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir:  1, intervalMs: 220, phaseMs:  80, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
-    { dir: -1, intervalMs: 215, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
-    { dir:  1, intervalMs: 210, phaseMs:  50, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir: -1, intervalMs: 205, phaseMs: 130, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
-    { dir:  1, intervalMs: 200, phaseMs:  90, bugs: [{ col: 1, len: 3 }, { col: 7, len: 2 }] },
-    { dir: -1, intervalMs: 195, phaseMs: 150, bugs: [{ col: 0, len: 2 }, { col: 6, len: 3 }] },
-    { dir:  1, intervalMs: 190, phaseMs:  30, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
-    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
-  ]),
-});
-const ROUND_DURATION_MS = COURSE.durationMs;
+// Course is procedurally generated per round from a seed drawn at `start`
+// (same deterministic-seed pattern as snake-action/invoice-horde-action/
+// popup-panic-action): the browser derives the identical lane/wall layout
+// locally via bjGenerateCourse(seed) in index.html to play in real time, and
+// this function re-derives it from the round's stored seed to replay +
+// validate submitted moves. makeRng/generateCourse/bugColAt/cellBlocked/
+// cellOpen must stay byte-for-byte identical to their index.html
+// counterparts (bjMakeRng/bjGenerateCourse/bjBugColAt/bjCellBlocked/
+// bjCellOpen).
+const COURSE_ID = "bug_jumper_dynamic_v1";
+const COURSE_VERSION = 3;
+const BJ_COLS = 10;
+const BJ_ROWS = 32;
+const BJ_LANE_COUNT = 30;
+const BJ_SAFE_ROWS = [10, 20, 30];
+const BJ_BAND_HALF = 2;
+const ROUND_DURATION_MS = 20_000;
+const INPUT_COOLDOWN_MS = 120;
+const MAX_SCORE_PER_ROUND = 30;
+const BJ_SHAPES = [
+  [5, 5, 5], // straight
+  [5, 5, 7], // L, turning right late
+  [5, 5, 3], // L, turning left late
+  [5, 7, 3], // S, right then left
+  [5, 3, 7], // S, left then right
+  [3, 7, 3], // zigzag
+];
 const ROUND_EXPIRES_SECONDS = 120;
-const MAX_SCORE_PER_ROUND = COURSE.maxScore;
 const MAX_MOVES_PER_ROUND = 400;
 const MOVE_TIME_TOLERANCE_MS = 12;
 const PRIZES = [100, 50, 25];
@@ -86,43 +68,107 @@ function asNumber(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function publicCourse() {
-  return {
-    id: COURSE.id,
-    version: COURSE.version,
-    cols: COURSE.cols,
-    rows: COURSE.rows,
-    laneCount: COURSE.laneCount,
-    safeRows: COURSE.safeRows,
-    durationMs: COURSE.durationMs,
-    inputCooldownMs: COURSE.inputCooldownMs,
-    maxScore: COURSE.maxScore,
-    lanes: COURSE.lanes,
-  };
-}
-
 function mod(n, m) {
   return ((n % m) + m) % m;
 }
 
+function makeRng(seed) {
+  let state = (Number(seed) || 1) >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function generateCourse(seed) {
+  const rng = makeRng(seed);
+  const shapeIndex = Math.floor(rng() * BJ_SHAPES.length);
+  const shape = BJ_SHAPES[shapeIndex];
+  const lanes = [];
+  for (let row = 1; row <= BJ_LANE_COUNT; row++) {
+    if (BJ_SAFE_ROWS.includes(row)) {
+      lanes.push({ safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [], bandStart: 0, bandEnd: BJ_COLS - 1 });
+      continue;
+    }
+    const segIdx = row <= 10 ? 0 : row <= 20 ? 1 : 2;
+    const center = shape[segIdx];
+    const bandStart = center - BJ_BAND_HALF;
+    const bandEnd = center + BJ_BAND_HALF;
+    const bandWidth = bandEnd - bandStart + 1;
+    const rowProgress = (row - 1) / (BJ_LANE_COUNT - 1);
+    const baseInterval = 520 - rowProgress * 330;
+    const intervalMs = Math.max(150, Math.round(baseInterval + (rng() - 0.5) * 80));
+    const phaseMs = Math.floor(rng() * 300);
+    const dir = rng() < 0.5 ? 1 : -1;
+    const bugCount = rng() < 0.55 ? 2 : 1;
+    const bugs = [];
+    for (let i = 0; i < bugCount; i += 1) {
+      const len = 1 + (rng() < 0.35 ? 1 : 0);
+      const col = bandStart + Math.floor(rng() * bandWidth);
+      bugs.push({ col, len });
+    }
+    lanes.push({ safe: false, dir, intervalMs, phaseMs, bugs, bandStart, bandEnd });
+  }
+  return {
+    id: COURSE_ID,
+    version: COURSE_VERSION,
+    seed: Number(seed) >>> 0,
+    shapeIndex,
+    cols: BJ_COLS,
+    rows: BJ_ROWS,
+    laneCount: BJ_LANE_COUNT,
+    safeRows: BJ_SAFE_ROWS,
+    durationMs: ROUND_DURATION_MS,
+    inputCooldownMs: INPUT_COOLDOWN_MS,
+    maxScore: MAX_SCORE_PER_ROUND,
+    lanes,
+  };
+}
+
+function publicCourseMeta() {
+  return {
+    id: COURSE_ID,
+    version: COURSE_VERSION,
+    cols: BJ_COLS,
+    rows: BJ_ROWS,
+    laneCount: BJ_LANE_COUNT,
+    safeRows: BJ_SAFE_ROWS,
+    durationMs: ROUND_DURATION_MS,
+    inputCooldownMs: INPUT_COOLDOWN_MS,
+    maxScore: MAX_SCORE_PER_ROUND,
+  };
+}
+
 function bugColAt(lane, bug, elapsedMs) {
+  const bandWidth = lane.bandEnd - lane.bandStart + 1;
   const interval = Math.max(1, asInt(lane.intervalMs, 1));
   const phase = Math.max(0, asInt(lane.phaseMs, 0));
   const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
-  return mod(asInt(bug.col, 0) + steps * asInt(lane.dir, 1), COURSE.cols);
+  const rel = mod((asInt(bug.col, 0) - lane.bandStart) + steps * asInt(lane.dir, 1), bandWidth);
+  return lane.bandStart + rel;
 }
 
-function cellBlocked(row, col, elapsedMs) {
-  if (row < 1 || row > COURSE.laneCount) return false;
-  const lane = COURSE.lanes[row - 1];
+function cellBlocked(row, col, elapsedMs, course) {
+  if (row < 1 || row > course.laneCount) return false;
+  const lane = course.lanes[row - 1];
   if (!lane || lane.safe) return false;
+  const bandWidth = lane.bandEnd - lane.bandStart + 1;
   return lane.bugs.some((bug) => {
     const head = bugColAt(lane, bug, elapsedMs);
     for (let i = 0; i < asInt(bug.len, 1); i += 1) {
-      if (mod(head + i, COURSE.cols) === col) return true;
+      if (lane.bandStart + mod((head - lane.bandStart) + i, bandWidth) === col) return true;
     }
     return false;
   });
+}
+
+// Corridor/wall check — a cell outside the round's band is impassable.
+function cellOpen(row, col, course) {
+  if (row <= 0 || row >= course.rows - 1) return true;
+  if (course.safeRows.includes(row)) return true;
+  const lane = course.lanes[row - 1];
+  if (!lane) return true;
+  return col >= lane.bandStart && col <= lane.bandEnd;
 }
 
 function nextLaneStepAfter(lane, elapsedMs) {
@@ -132,20 +178,20 @@ function nextLaneStepAfter(lane, elapsedMs) {
   return Math.max(0, step * interval - phase);
 }
 
-function firstCollisionBetween(state, fromMs, toMs) {
-  if (state.row < 1 || state.row > COURSE.laneCount) return null;
+function firstCollisionBetween(state, fromMs, toMs, course) {
+  if (state.row < 1 || state.row > course.laneCount) return null;
   const start = Math.max(0, fromMs);
   const end = Math.max(start, toMs);
-  if (cellBlocked(state.row, state.col, start)) return start;
-  const lane = COURSE.lanes[state.row - 1];
+  if (cellBlocked(state.row, state.col, start, course)) return start;
+  const lane = course.lanes[state.row - 1];
   let t = nextLaneStepAfter(lane, start);
   let guard = 0;
   while (t <= end + MOVE_TIME_TOLERANCE_MS && guard < 100) {
-    if (t >= start && cellBlocked(state.row, state.col, t)) return Math.min(end, Math.max(start, t));
+    if (t >= start && cellBlocked(state.row, state.col, t, course)) return Math.min(end, Math.max(start, t));
     t += Math.max(1, asInt(lane.intervalMs, 1));
     guard += 1;
   }
-  if (cellBlocked(state.row, state.col, end)) return end;
+  if (cellBlocked(state.row, state.col, end, course)) return end;
   return null;
 }
 
@@ -156,7 +202,7 @@ function parseMoves(value) {
     const t = Math.round(asNumber(move?.t, NaN));
     const dr = asInt(move?.dr, 0);
     const dc = asInt(move?.dc, 0);
-    if (!Number.isFinite(t) || t < 0 || t > COURSE.durationMs + 1000) {
+    if (!Number.isFinite(t) || t < 0 || t > ROUND_DURATION_MS + 1000) {
       throw gameError("Nieprawidłowy czas ruchu.");
     }
     const manhattan = Math.abs(dr) + Math.abs(dc);
@@ -167,10 +213,10 @@ function parseMoves(value) {
   });
 }
 
-function replayMoves(moves, untilMs = COURSE.durationMs) {
+function replayMoves(moves, course, untilMs = ROUND_DURATION_MS) {
   const state = {
     row: 0,
-    col: Math.floor(COURSE.cols / 2),
+    col: Math.floor(BJ_COLS / 2),
     bestRow: 0,
     completed: false,
     completionMs: null,
@@ -181,11 +227,11 @@ function replayMoves(moves, untilMs = COURSE.durationMs) {
 
   function resolveUntil(toMs) {
     if (state.completed) return;
-    const hitAt = firstCollisionBetween(state, state.lastMs, toMs);
+    const hitAt = firstCollisionBetween(state, state.lastMs, toMs, course);
     if (hitAt != null) {
       state.collisions += 1;
       state.row = 0;
-      state.col = Math.floor(COURSE.cols / 2);
+      state.col = Math.floor(BJ_COLS / 2);
       state.lastMs = hitAt;
     }
     state.lastMs = Math.max(state.lastMs, toMs);
@@ -202,33 +248,39 @@ function replayMoves(moves, untilMs = COURSE.durationMs) {
     if (move.t + MOVE_TIME_TOLERANCE_MS < state.nextInputAt) {
       throw gameError("Ruchy są za szybkie.");
     }
-    state.nextInputAt = move.t + COURSE.inputCooldownMs;
+    state.nextInputAt = move.t + INPUT_COOLDOWN_MS;
+
+    if (move.dc !== 0) {
+      const proposedCol = Math.max(0, Math.min(BJ_COLS - 1, state.col + move.dc));
+      if (cellOpen(state.row, proposedCol, course)) state.col = proposedCol;
+      resolveUntil(move.t);
+      continue;
+    }
 
     const newRow = state.row + move.dr;
-    const newCol = Math.max(0, Math.min(COURSE.cols - 1, state.col + move.dc));
-    state.col = newCol;
-    if (newRow < 0 || newRow > COURSE.rows - 1) continue;
+    if (newRow < 0 || newRow > course.rows - 1) continue;
+    if (!cellOpen(newRow, state.col, course)) continue;
 
-    if (newRow >= COURSE.rows - 1) {
-      state.row = COURSE.rows - 1;
-      state.bestRow = COURSE.laneCount;
+    if (newRow >= course.rows - 1) {
+      state.row = course.rows - 1;
+      state.bestRow = BJ_LANE_COUNT;
       state.completed = true;
       state.completionMs = move.t;
       break;
     }
 
     state.row = newRow;
-    if (move.dr > 0 && newRow >= 1 && newRow <= COURSE.laneCount) {
+    if (move.dr > 0 && newRow >= 1 && newRow <= BJ_LANE_COUNT) {
       state.bestRow = Math.max(state.bestRow, newRow);
     }
     resolveUntil(move.t);
   }
 
-  if (!state.completed) resolveUntil(Math.min(COURSE.durationMs, Math.max(0, untilMs)));
-  const lineScore = Math.min(COURSE.laneCount, state.bestRow);
+  if (!state.completed) resolveUntil(Math.min(ROUND_DURATION_MS, Math.max(0, untilMs)));
+  const lineScore = Math.min(MAX_SCORE_PER_ROUND, state.bestRow);
   return {
     lineScore,
-    bestRow: Math.min(COURSE.laneCount, state.bestRow),
+    bestRow: Math.min(MAX_SCORE_PER_ROUND, state.bestRow),
     completed: state.completed,
     completionMs: state.completed ? Math.round(state.completionMs) : null,
     collisions: state.collisions,
@@ -348,10 +400,10 @@ async function loadState(userId) {
   return {
     profile: { id: profile.id, nick: profile.nick, coins: asInt(profile.coins) },
     weekStart: weekRow?.week_start,
-    courseId: COURSE.id,
-    courseVersion: COURSE.version,
-    course: publicCourse(),
-    maxScore: COURSE.maxScore,
+    courseId: COURSE_ID,
+    courseVersion: COURSE_VERSION,
+    course: publicCourseMeta(),
+    maxScore: MAX_SCORE_PER_ROUND,
     roundDurationMs: ROUND_DURATION_MS,
     prizes: PRIZES,
     weekly: mapRows(weekly),
@@ -372,21 +424,23 @@ async function startRound(userId) {
   `;
   if (!profile) throw gameError("Profil nie istnieje.");
 
+  const seed = Math.floor(Math.random() * 2147483647) + 1;
+
   const [round] = await db`
     insert into public.bug_jumper_rounds
-      (user_id, nick_snapshot, duration_ms, expires_at)
+      (user_id, nick_snapshot, duration_ms, seed, expires_at)
     values
-      (${userId}, ${profile.nick}, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
-    returning id, started_at, expires_at
+      (${userId}, ${profile.nick}, ${ROUND_DURATION_MS}, ${seed}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
+    returning id, seed, started_at, expires_at
   `;
 
   return {
     ...(await loadState(userId)),
     round: {
       id: round.id,
-      courseId: COURSE.id,
-      courseVersion: COURSE.version,
-      course: publicCourse(),
+      seed: asInt(round.seed),
+      courseId: COURSE_ID,
+      courseVersion: COURSE_VERSION,
       durationMs: ROUND_DURATION_MS,
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
@@ -400,7 +454,7 @@ async function submitRound(userId, body) {
   const roundId = String(body.roundId ?? "");
   if (!roundId) throw gameError("Brak rundy do zapisania.");
   const courseId = String(body.courseId ?? "");
-  if (courseId !== COURSE.id) throw gameError("Nieprawidłowa wersja planszy.");
+  if (courseId !== COURSE_ID) throw gameError("Nieprawidłowa wersja planszy.");
   const moves = parseMoves(body.moves);
 
   const effect = await getStrongestHeroEffect(db, userId, "bug_jumper");
@@ -417,8 +471,9 @@ async function submitRound(userId, body) {
     if (!round) throw gameError("Runda nie istnieje.");
     if (round.submitted_at) throw gameError("Ta runda została już zapisana.");
     if (new Date(round.expires_at).getTime() < Date.now()) throw gameError("Runda wygasła.");
+    const course = generateCourse(round.seed);
     const actualElapsed = Date.now() - new Date(round.started_at).getTime();
-    const replay = replayMoves(moves, Math.min(asInt(round.duration_ms, ROUND_DURATION_MS), Math.max(0, actualElapsed)));
+    const replay = replayMoves(moves, course, Math.min(asInt(round.duration_ms, ROUND_DURATION_MS), Math.max(0, actualElapsed)));
     const minSubmitAt = new Date(round.started_at).getTime() + asInt(round.duration_ms, ROUND_DURATION_MS) - 750;
     if (!replay.completed && Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
     if (replay.completed && replay.completionMs > actualElapsed + 1000) throw gameError("Runda jeszcze trwa.");
@@ -469,7 +524,7 @@ async function submitRound(userId, body) {
           ${userId},
           ${round.nick_snapshot},
           public.bug_jumper_week_start(now()),
-          ${COURSE.id},
+          ${COURSE_ID},
           ${lineScore},
           ${hits},
           ${misses},
@@ -478,8 +533,10 @@ async function submitRound(userId, body) {
           ${asInt(round.duration_ms, ROUND_DURATION_MS)},
           ${replay.completionMs},
           ${JSON.stringify({
-            course_id: COURSE.id,
-            course_version: COURSE.version,
+            course_id: COURSE_ID,
+            course_version: COURSE_VERSION,
+            seed: asInt(round.seed),
+            shape_index: course.shapeIndex,
             move_count: replay.moveCount,
             client_score: asInt(body.score, 0),
             server_validated: true,

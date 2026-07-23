@@ -101,7 +101,7 @@ BEGIN
     FOREACH v_game IN ARRAY ARRAY[
       'whack_boss', 'bug_jumper', 'flappy_pants', 'snake',
       'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz',
-      'popup_panic', 'office_grand_prix'
+      'popup_panic'
     ]
     LOOP
       v_command := format(

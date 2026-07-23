@@ -254,8 +254,6 @@ AS $$
           SELECT prize_coins FROM public.super_mariusz_weekly_awards
           UNION ALL
           SELECT prize_coins FROM public.popup_panic_weekly_awards
-          UNION ALL
-          SELECT prize_coins FROM public.office_grand_prix_weekly_awards
         ) _awards
       ), 0::bigint)::numeric AS prizes_minted,
 

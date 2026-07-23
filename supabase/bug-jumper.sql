@@ -1,5 +1,11 @@
 -- Bug Jumper seasonal game support for Rynek Proroctw G6.
 -- Run after supabase/schema.sql and supabase/whack-boss.sql.
+--
+-- ⚠️ SUPERSEDED by supabase/bug-jumper-dynamic-course.sql, which adds a
+--    `seed` column to bug_jumper_rounds and repoints bug_jumper_current_week,
+--    bug_jumper_all_time, bug_jumper_recent_awards, and award_bug_jumper_week
+--    at course_id = 'bug_jumper_dynamic_v1' instead of 'bug_jumper_hard_v2'.
+--    Run that file after this one; re-run it after re-running this file.
 
 CREATE OR REPLACE FUNCTION public.bug_jumper_week_start(p_ts timestamptz DEFAULT now())
 RETURNS date

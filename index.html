@@ -4106,395 +4106,6 @@
       .pp-deadline > i { animation: none; }
     }
 
-    /* ── Office Grand Prix G6 (office_grand_prix) ── */
-    .ogp-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(250px, 310px);
-      gap: 16px;
-    }
-    .ogp-panel,
-    .ogp-side {
-      min-width: 0;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-    }
-    .ogp-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 12px;
-    }
-    .ogp-head-copy { min-width: 0; }
-    .ogp-head .page-title { margin-bottom: 4px; }
-    .ogp-mode-chip {
-      flex: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border-radius: 999px;
-      padding: 7px 10px;
-      border: 1px solid rgba(56,189,248,.42);
-      background: rgba(14,165,233,.12);
-      color: #38bdf8;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: .45px;
-      text-transform: uppercase;
-    }
-    .ogp-mode-chip.ranked {
-      border-color: rgba(250,204,21,.45);
-      background: rgba(250,204,21,.12);
-      color: #facc15;
-    }
-    .ogp-rules {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .ogp-rule {
-      border: 1px solid var(--border);
-      background: var(--surface);
-      border-radius: 10px;
-      padding: 9px 10px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.35;
-    }
-    .ogp-rule strong {
-      display: block;
-      color: var(--text);
-      font-size: 12px;
-      margin-bottom: 2px;
-    }
-    .ogp-stage {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      min-height: 360px;
-      overflow: hidden;
-      border-radius: 12px;
-      border: 2px solid #38bdf8;
-      background:
-        radial-gradient(circle at 50% 24%, rgba(125,211,252,.28), transparent 28%),
-        linear-gradient(#173654 0 58%, #24492f 58%);
-      box-shadow: 0 10px 30px rgba(2,8,23,.38), inset 0 0 30px rgba(56,189,248,.08);
-      user-select: none;
-      touch-action: none;
-      isolation: isolate;
-    }
-    .ogp-stage canvas.ogp-webgl {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .ogp-stage.is-immersive {
-      position: fixed;
-      inset: 0;
-      z-index: 10000;
-      width: 100vw;
-      height: 100dvh;
-      max-width: none;
-      min-height: 0;
-      aspect-ratio: auto;
-      border: 0;
-      border-radius: 0;
-    }
-    .ogp-top-hud {
-      position: absolute;
-      z-index: 8;
-      top: max(10px, env(safe-area-inset-top));
-      left: max(10px, env(safe-area-inset-left));
-      right: max(10px, env(safe-area-inset-right));
-      display: grid;
-      grid-template-columns: repeat(6, max-content) 1fr max-content max-content max-content;
-      align-items: center;
-      gap: 7px;
-      pointer-events: none;
-    }
-    .ogp-hud-pill {
-      min-width: 62px;
-      padding: 7px 9px;
-      border: 1px solid rgba(255,255,255,.2);
-      border-radius: 9px;
-      background: rgba(2,8,23,.72);
-      color: #fff;
-      box-shadow: 0 2px 10px rgba(0,0,0,.22);
-      backdrop-filter: blur(7px);
-      font-weight: 900;
-      font-variant-numeric: tabular-nums;
-      text-align: center;
-    }
-    .ogp-hud-pill small {
-      display: block;
-      color: #a5b4fc;
-      font-size: 8px;
-      letter-spacing: .55px;
-      text-transform: uppercase;
-    }
-    .ogp-drift-badge {
-      background: linear-gradient(135deg, #f59e0b, #ef4444);
-      border-color: #fde047;
-      color: #fff;
-      font-weight: 900;
-      animation: ogpPulseDrift .6s infinite alternate;
-    }
-    @keyframes ogpPulseDrift {
-      0% { transform: scale(1); }
-      100% { transform: scale(1.08); }
-    }
-    .ogp-sound-toggle,
-    .ogp-fullscreen {
-      pointer-events: auto;
-      width: 38px;
-      height: 38px;
-      border: 1px solid rgba(255,255,255,.24);
-      border-radius: 9px;
-      background: rgba(2,8,23,.72);
-      color: #fff;
-      cursor: pointer;
-      font-size: 17px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .ogp-minimap {
-      width: 116px;
-      height: 74px;
-      border-radius: 9px;
-      border: 1px solid rgba(255,255,255,.22);
-      background: rgba(2,8,23,.72);
-    }
-    .ogp-lobby {
-      position: absolute;
-      z-index: 9;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 58px 18px 18px;
-      background: linear-gradient(180deg, rgba(2,8,23,.35), rgba(2,8,23,.84));
-      color: #fff;
-      overflow: auto;
-    }
-    .ogp-lobby-card {
-      width: min(620px, 100%);
-      border: 1px solid rgba(255,255,255,.18);
-      border-radius: 14px;
-      padding: 16px;
-      background: rgba(7,16,35,.88);
-      box-shadow: 0 16px 45px rgba(0,0,0,.38);
-      backdrop-filter: blur(10px);
-    }
-    .ogp-lobby-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-weight: 900;
-      margin-bottom: 4px;
-    }
-    .ogp-lobby-sub {
-      color: #cbd5e1;
-      font-size: 11px;
-      line-height: 1.45;
-      margin-bottom: 12px;
-    }
-    .ogp-car-picker {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-    .ogp-car {
-      min-width: 0;
-      aspect-ratio: 1;
-      border: 2px solid transparent;
-      border-radius: 9px;
-      background: rgba(255,255,255,.08);
-      color: #fff;
-      cursor: pointer;
-      padding: 4px;
-    }
-    .ogp-car span {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border-radius: 6px;
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,.2);
-    }
-    .ogp-car.active {
-      border-color: #fff;
-      background: rgba(255,255,255,.18);
-      transform: translateY(-2px);
-    }
-    .ogp-lobby-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .ogp-lobby-actions button { width: auto; min-height: 42px; }
-    .ogp-secondary {
-      border: 1px solid rgba(255,255,255,.22);
-      border-radius: 8px;
-      background: rgba(255,255,255,.08);
-      color: #fff;
-      padding: 9px 13px;
-      cursor: pointer;
-      font-weight: 800;
-    }
-    .ogp-touch {
-      position: absolute;
-      z-index: 10;
-      left: max(14px, env(safe-area-inset-left));
-      right: max(14px, env(safe-area-inset-right));
-      bottom: max(14px, env(safe-area-inset-bottom));
-      display: none;
-      align-items: end;
-      justify-content: space-between;
-      pointer-events: none;
-    }
-    .ogp-steer-pad { display: flex; gap: 8px; }
-    .ogp-touch button {
-      pointer-events: auto;
-      width: 64px;
-      height: 58px;
-      border: 1px solid rgba(255,255,255,.32);
-      border-radius: 14px;
-      background: rgba(2,8,23,.68);
-      color: #fff;
-      font-size: 24px;
-      font-weight: 900;
-      box-shadow: 0 4px 18px rgba(0,0,0,.3);
-      touch-action: none;
-    }
-    .ogp-touch .ogp-item-btn {
-      width: 76px;
-      background: rgba(79,70,229,.78);
-      font-size: 12px;
-      letter-spacing: .35px;
-    }
-    .ogp-banner {
-      position: absolute;
-      z-index: 11;
-      left: 50%;
-      top: 42%;
-      transform: translate(-50%, -50%);
-      color: #fff;
-      font-size: clamp(32px, 8vw, 78px);
-      font-weight: 1000;
-      letter-spacing: -2px;
-      text-align: center;
-      text-shadow: 0 5px 18px rgba(0,0,0,.72);
-      pointer-events: none;
-    }
-    .ogp-webgl-error {
-      position: absolute;
-      z-index: 12;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: #07111f;
-      color: #e2e8f0;
-      text-align: center;
-      line-height: 1.55;
-    }
-    .ogp-stage.is-racing .ogp-touch { display: flex; }
-    .ogp-stage:not(.is-racing) .ogp-top-hud .race-only { visibility: hidden; }
-    .ogp-side { display: flex; flex-direction: column; gap: 14px; }
-    .ogp-side-title {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: .35px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .ogp-roster,
-    .ogp-board { display: flex; flex-direction: column; gap: 5px; }
-    .ogp-row {
-      display: grid;
-      grid-template-columns: 22px minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 7px;
-      min-height: 31px;
-      padding: 5px 7px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
-      font-size: 11px;
-    }
-    .ogp-row.me { border-color: var(--accent); }
-    .ogp-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ogp-row small { color: var(--muted); }
-    .ogp-car-dot {
-      width: 17px;
-      height: 17px;
-      border-radius: 5px;
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,.3);
-    }
-    .ogp-status {
-      min-height: 20px;
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.45;
-    }
-    body.ogp-no-scroll { overflow: hidden !important; }
-    @media (pointer: fine) {
-      .ogp-stage.is-racing .ogp-touch { display: none; }
-    }
-    @media (max-width: 980px) {
-      .ogp-layout { grid-template-columns: 1fr; }
-      .ogp-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 680px) {
-      .ogp-panel, .ogp-side { padding: 10px; }
-      .ogp-head { align-items: flex-start; }
-      .ogp-mode-chip { padding: 6px 8px; }
-      .ogp-rules { grid-template-columns: 1fr; }
-      .ogp-rule:nth-child(n+2) { display: none; }
-      .ogp-stage { min-height: 58dvh; aspect-ratio: auto; }
-      .ogp-top-hud {
-        grid-template-columns: repeat(3, max-content) 1fr max-content max-content;
-      }
-      .ogp-top-hud .ogp-lap-pill { display: none; }
-      .ogp-minimap { width: 88px; height: 58px; }
-      .ogp-car-picker { grid-template-columns: repeat(4, 1fr); }
-      .ogp-side { grid-template-columns: 1fr; }
-      .ogp-lobby { padding: 58px 10px 10px; }
-      .ogp-lobby-actions button { flex: 1; }
-    }
-    @media (orientation: portrait) and (max-width: 680px) {
-      .ogp-stage.is-immersive::after {
-        content: 'Obróć telefon poziomo, aby wygodniej sterować';
-        position: absolute;
-        z-index: 20;
-        left: 50%;
-        bottom: calc(86px + env(safe-area-inset-bottom));
-        transform: translateX(-50%);
-        width: max-content;
-        max-width: calc(100% - 24px);
-        border-radius: 999px;
-        padding: 7px 11px;
-        background: rgba(2,8,23,.78);
-        color: #fff;
-        font-size: 10px;
-        text-align: center;
-        pointer-events: none;
-      }
-    }
-
     /* ── Najazd Ticketów (Invoice Horde) ── */
     .ih-arena {
       max-width: 680px;
@@ -7841,7 +7452,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">Bug Jumper</h2>
-                <p class="page-sub">30 trudnych linii, stała plansza dla wszystkich i bez losowych zmian.</p>
+                <p class="page-sub">30 trudnych linii, losowa trasa w każdej rundzie — czasem prosta, czasem w kształcie L albo S.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 500 🪙</span>
@@ -7856,7 +7467,8 @@
                 <li><strong>↑ ↓ ← →</strong> — strzałki kursora przesuwają dewelopera <strong>▲</strong> po siatce.</li>
                 <li><strong>30 linii, każda za +1 pkt.</strong> Cofnięcie i ponowne wejście na tę samą linię nie daje punktów.</li>
                 <li><strong>Linie 10, 20 i 30 są bezpieczne</strong> — możesz tam chwilę poczekać i złapać rytm.</li>
-                <li>Zderzenie z blokiem = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>. Po linii 30 wejście na GÓRĘ kończy rundę.</li>
+                <li><strong>Ciemne pola to ściany</strong> — trasa w każdej rundzie skręca inaczej (prosto, L albo S), więc czasem trzeba przesunąć się w bok, zanim pójdziesz wyżej.</li>
+                <li>Zderzenie z robakiem = wracasz na START, ale <strong>najlepszy postęp zostaje</strong>. Po linii 30 wejście na GÓRĘ kończy rundę.</li>
               </ul>
             </div>
 
@@ -7881,7 +7493,7 @@
 
             <div class="bj-actions">
               <button class="btn-primary bj-start-btn" id="bj-start-btn">Start rundy</button>
-              <div class="bj-status" id="bj-status">Użyj strzałek. Stała plansza jest taka sama dla wszystkich.</div>
+              <div class="bj-status" id="bj-status">Użyj strzałek. Trasa jest losowa w każdej rundzie.</div>
             </div>
           </section>
 
@@ -8310,91 +7922,6 @@
         </div>
       </div>
 
-      <!-- Office Grand Prix G6 (low-poly 3D kart race vs bots + async ghosts; gameType office_grand_prix) -->
-      <div id="seasonal-game-office-grand-prix" class="hidden">
-        <div class="ogp-layout">
-          <section class="ogp-panel">
-            <div class="ogp-head">
-              <div class="ogp-head-copy">
-                <h2 class="page-title">Office Grand Prix G6 🏁</h2>
-                <p class="page-sub">Jedno okrążenie przez biuro w dowolnej chwili — bez czekania na innych. Jedziesz z botami i „duchami" kolegów odtworzonymi z ich najlepszych przejazdów. Kolor auta jest wyłącznie kosmetyczny.</p>
-              </div>
-              <span class="ogp-mode-chip" id="ogp-mode-chip">🧪 publiczny test</span>
-            </div>
-
-            <div class="ogp-rules">
-              <div class="ogp-rule"><strong>← → / A D</strong>Automatyczny gaz; kierujesz autem, a auto naturalnie zarzuca na zakrętach. Na telefonie użyj przycisków na ekranie.</div>
-              <div class="ogp-rule"><strong>Spacja = przedmiot</strong>Espresso przyspiesza, banan spowalnia rywala, a tarcza blokuje jednego banana.</div>
-              <div class="ogp-rule"><strong>👻 Duchy</strong>Puste miejsca w wyścigu zajmują odtworzone przejazdy innych graczy (jeśli są) — to podgląd, oficjalny wynik zawsze liczy serwer.</div>
-              <div class="ogp-rule"><strong>Punkty tygodnia</strong>10–8–6–5–4–3–2–1 za miejsce, +2 za najszybszy przejazd człowieka. Liczy się najlepsze 5 wyścigów.</div>
-            </div>
-
-            <div class="ogp-stage" id="ogp-stage">
-              <div class="ogp-top-hud">
-                <div class="ogp-hud-pill race-only"><small>Pozycja</small><span id="ogp-position">1/8</span></div>
-                <div class="ogp-hud-pill ogp-lap-pill race-only"><small>Okrążenie</small><span>1/1</span></div>
-                <div class="ogp-hud-pill race-only"><small>Czas</small><span id="ogp-time">0:00.00</span></div>
-                <div class="ogp-hud-pill race-only"><small>Prędkość</small><span id="ogp-speed">0 km/h</span></div>
-                <div class="ogp-hud-pill race-only"><small>Przedmiot</small><span id="ogp-item">—</span></div>
-                <div class="ogp-hud-pill ogp-drift-badge race-only hidden" id="ogp-drift-badge">🔥 DRIFT!</div>
-                <span></span>
-                <canvas class="ogp-minimap race-only" id="ogp-minimap" width="232" height="148" aria-label="Minimapa trasy"></canvas>
-                <button class="ogp-fullscreen" id="ogp-fullscreen" type="button" title="Pełny ekran" aria-label="Pełny ekran">⛶</button>
-              </div>
-
-              <div class="ogp-lobby" id="ogp-lobby">
-                <div class="ogp-lobby-card">
-                  <div class="ogp-lobby-title">
-                    <span>Gotowy do startu</span>
-                    <span id="ogp-lobby-count">0 👻</span>
-                  </div>
-                  <p class="ogp-lobby-sub" id="ogp-lobby-copy">Start natychmiastowy — grid wypełnią duchy innych graczy i boty.</p>
-                  <div class="ogp-car-picker" id="ogp-car-picker" aria-label="Wybierz kolor gokarta">
-                    <button class="ogp-car active" type="button" data-car="coral" aria-label="Auto koralowe"><span style="background:#f43f5e"></span></button>
-                    <button class="ogp-car" type="button" data-car="sky" aria-label="Auto błękitne"><span style="background:#0ea5e9"></span></button>
-                    <button class="ogp-car" type="button" data-car="lime" aria-label="Auto limonkowe"><span style="background:#84cc16"></span></button>
-                    <button class="ogp-car" type="button" data-car="amber" aria-label="Auto bursztynowe"><span style="background:#f59e0b"></span></button>
-                    <button class="ogp-car" type="button" data-car="violet" aria-label="Auto fioletowe"><span style="background:#8b5cf6"></span></button>
-                    <button class="ogp-car" type="button" data-car="teal" aria-label="Auto turkusowe"><span style="background:#14b8a6"></span></button>
-                    <button class="ogp-car" type="button" data-car="pink" aria-label="Auto różowe"><span style="background:#ec4899"></span></button>
-                    <button class="ogp-car" type="button" data-car="silver" aria-label="Auto srebrne"><span style="background:#94a3b8"></span></button>
-                  </div>
-                  <div class="ogp-lobby-actions">
-                    <button class="btn-primary" id="ogp-join-btn" type="button">🏁 Wyścig!</button>
-                    <button class="ogp-secondary" id="ogp-training-btn" type="button">Trening z botami</button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="ogp-banner hidden" id="ogp-banner"></div>
-              <div class="ogp-touch" id="ogp-touch">
-                <div class="ogp-steer-pad">
-                  <button type="button" data-steer="-1" aria-label="Skręć w lewo">◀</button>
-                  <button type="button" data-steer="1" aria-label="Skręć w prawo">▶</button>
-                </div>
-                <button class="ogp-item-btn" id="ogp-item-btn" type="button">UŻYJ<br>PRZEDMIOTU</button>
-              </div>
-            </div>
-
-            <div class="ogp-status" id="ogp-status">Ładowanie garażu…</div>
-          </section>
-
-          <aside class="ogp-side">
-            <section>
-              <div class="ogp-side-title"><span>Twoi rywale-duchy</span><span id="ogp-session-label">0 👻</span></div>
-              <div class="ogp-roster" id="ogp-roster"><div class="bj-empty">Puste miejsca wypełnią boty.</div></div>
-            </section>
-            <section>
-              <div class="ogp-side-title"><span>Ten tydzień</span><span>najlepsze 5</span></div>
-              <div class="ogp-board" id="ogp-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
-            </section>
-            <section>
-              <div class="ogp-side-title"><span>Ostatnie nagrody</span><span>500 · 250 · 100</span></div>
-              <div class="ogp-board" id="ogp-awards"><div class="bj-empty">Ranking rusza po tygodniu testowym.</div></div>
-            </section>
-          </aside>
-        </div>
-      </div>
 
       <!-- Najazd Ticketów panel (IT-helpdesk survival season; gameType invoice_horde) -->
       <div id="seasonal-game-invoice-horde" class="hidden">
@@ -8565,7 +8092,7 @@
     <div id="ag-picker">
       <div class="ag-header">
         <h2>🎮 Wszystkie Gry</h2>
-        <p class="ag-info">Zagraj w dowolną grę — <strong>1 moneta</strong> za rundę. Wyniki trafiają do oddzielnego rankingu arcade (bez nagród sezonowych). Wyjątek: publiczny test Office Grand Prix jest bezpłatny do 26.07.</p>
+        <p class="ag-info">Zagraj w dowolną grę — <strong>1 moneta</strong> za rundę. Wyniki trafiają do oddzielnego rankingu arcade (bez nagród sezonowych).</p>
       </div>
       <div class="ag-grid">
         <button class="ag-card" data-game="whack_boss">
@@ -8583,7 +8110,7 @@
           <div class="ag-card-banner">🐛</div>
           <div class="ag-card-body">
             <div class="ag-card-name">Bug Jumper</div>
-            <div class="ag-card-desc">30 trudnych linii, stała plansza dla wszystkich. Przeskakuj przeszkody strzałkami i dotrzyj jak najwyżej.</div>
+            <div class="ag-card-desc">30 trudnych linii, losowa trasa w każdej rundzie. Przeskakuj przeszkody strzałkami i dotrzyj jak najwyżej.</div>
             <div class="ag-card-meta">
               <span class="ag-card-cost">1 🪙 / runda</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
@@ -8667,17 +8194,6 @@
             </div>
           </div>
         </button>
-        <button class="ag-card hidden" id="ogp-archive-card" data-game="office_grand_prix">
-          <div class="ag-card-banner">🏎️</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">Office Grand Prix G6</div>
-            <div class="ag-card-desc">Pełny wyścig 3D dla 8 gokartów. Jedno okrążenie po biurze, przedmioty, boty i identyczne osiągi wszystkich aut.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">0 🪙 test i sezon · 1 🪙 archiwum</span>
-              <span class="ag-card-tag">3D · MULTIPLAYER</span>
-            </div>
-          </div>
-        </button>
       </div>
     </div>
     <div id="ag-game-slot" class="hidden">
@@ -8705,7 +8221,7 @@
 
   <div id="tab-bug-jumper-test" class="hidden">
     <main id="bug-jumper-test-main">
-      <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy admina — Bug Jumper Hard Course, bez zapisu wyniku.</p>
+      <p class="page-sub" style="margin-bottom:14px">🧪 Tryb testowy admina — Bug Jumper Dynamic Course, bez zapisu wyniku.</p>
     </main>
   </div>
 
@@ -9405,10 +8921,6 @@ let invoiceHordeRuntime = null;
 let varPatrolRuntime = null;
 let superMariuszRuntime = null;
 let popupPanicRuntime = null;
-let officeGrandPrixRuntime = null;
-const OGP_PUBLIC_UI_ENABLED = true;
-const OGP_LOCAL_V2_PREVIEW = !OGP_PUBLIC_UI_ENABLED &&
-  (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 const lwCharts = new Map();
@@ -9428,7 +8940,7 @@ const HERO_ITEM_SLOTS = [
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
 // Masculine forms (przedmiot), unlike FARM_RARITY_PL's feminine forms (karta).
 const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki', legendary: 'legendarny' };
-const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic', 'office_grand_prix']);
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic']);
 let heroItemDefs = [];
 let casinoLuckGlobalUntil = null; // shared „Amulet Bezwstydnego Fartu" buff end (casino_luck_status view)
 let casinoLuckStatusLoadedAt = 0;
@@ -9689,19 +9201,6 @@ const ppStatus        = document.getElementById('pp-status');
 const ppScoreEl       = document.getElementById('pp-score');
 const ppTimeEl        = document.getElementById('pp-time');
 const ppOpenEl        = document.getElementById('pp-open');
-const ogpStage        = document.getElementById('ogp-stage');
-const ogpLobby        = document.getElementById('ogp-lobby');
-const ogpJoinBtn      = document.getElementById('ogp-join-btn');
-const ogpTrainingBtn  = document.getElementById('ogp-training-btn');
-const ogpStatus       = document.getElementById('ogp-status');
-const ogpPositionEl   = document.getElementById('ogp-position');
-const ogpTimeEl       = document.getElementById('ogp-time');
-const ogpItemEl       = document.getElementById('ogp-item');
-const ogpRosterEl     = document.getElementById('ogp-roster');
-const ogpWeeklyEl     = document.getElementById('ogp-weekly-board');
-const ogpAwardsEl     = document.getElementById('ogp-awards');
-const ogpBannerEl     = document.getElementById('ogp-banner');
-const ogpMinimap      = document.getElementById('ogp-minimap');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
@@ -10169,7 +9668,6 @@ const AG_PANEL_IDS = {
   egg_catch:     'seasonal-game-egg-catch',
   super_mariusz: 'seasonal-game-super-mariusz',
   popup_panic:   'seasonal-game-popup-panic',
-  office_grand_prix: 'seasonal-game-office-grand-prix',
 };
 let agPanelHome = {};
 
@@ -10190,7 +9688,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopOfficeGrandPrix();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
   allGamesSelectedGame = null;
@@ -10199,7 +9697,7 @@ function leaveAllGamesTab() {
 function selectAllGame(gameType) {
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopOfficeGrandPrix();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound();
 
   allGamesSelectedGame = gameType;
   allGamesMode = true;
@@ -10220,7 +9718,6 @@ function selectAllGame(gameType) {
     vpUpdateTimerBar(1);
     requestAnimationFrame(() => vpDrawIdle());
   }
-  if (gameType === 'office_grand_prix') loadOfficeGrandPrixState();
   loadArcadeScores(gameType);
 }
 
@@ -10240,13 +9737,7 @@ async function recordArcadeScore(gameType, score) {
 }
 
 function formatArcadeScore(gameType, score) {
-  const value = Number(score) || 0;
-  if (gameType !== 'office_grand_prix') return String(value);
-  if (value <= 0) return 'DNF';
-  const points = Math.floor(value / 1000000);
-  const timePart = value % 1000000;
-  const completionMs = Math.max(0, 100000 - timePart);
-  return `${points} pkt · ${ogpFormatTime(completionMs)}`;
+  return String(Number(score) || 0);
 }
 
 async function loadArcadeScores(gameType) {
@@ -10302,7 +9793,7 @@ document.querySelectorAll('.ag-card').forEach(btn => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopOfficeGrandPrix();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -10315,7 +9806,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopOfficeGrandPrix(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -11221,7 +10712,7 @@ const ACT_GAME_LABELS = {
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
   egg_catch: '🥚 Łap Jajka', super_mariusz: '🧢 Super Mariusz',
-  popup_panic: '🖱️ Zamknij Popupy', office_grand_prix: '🏁 Office Grand Prix G6',
+  popup_panic: '🖱️ Zamknij Popupy',
   arcade: '🕹️ Arkada',
 };
 // Casino games whose rapid plays are collapsed into one session row; an idle gap
@@ -11294,7 +10785,7 @@ async function buildActivityFeed() {
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
     whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, eggCatchRes,
-    superMariuszRes, popupPanicRes, officeGrandPrixRes, arcadeRes, nftRes,
+    superMariuszRes, popupPanicRes, arcadeRes, nftRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -11310,8 +10801,6 @@ async function buildActivityFeed() {
     ranged(sb.from('egg_catch_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('super_mariusz_scores').select('user_id,nick_snapshot,score,completion_ms,completed,submitted_at'), 'submitted_at'),
     ranged(sb.from('popup_panic_scores').select(scoreSel), 'submitted_at'),
-    ranged(sb.from('office_grand_prix_scores')
-      .select('user_id,nick_snapshot,finish_place,total_points,finished,completion_ms,game_mode,submitted_at'), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
     ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
@@ -11399,23 +10888,12 @@ async function buildActivityFeed() {
   pushScores(varPatrolRes.data, 'var_patrol');
   pushScores(eggCatchRes.data, 'egg_catch');
   pushScores(popupPanicRes.data, 'popup_panic');
-  (officeGrandPrixRes.data || []).forEach(s => {
-    const result = s.finished
-      ? `${s.finish_place}. miejsce · ${ogpFormatTime(s.completion_ms)} · ${s.total_points} pkt`
-      : 'DNF';
-    const mode = s.game_mode === 'test' ? 'test · ' : (s.game_mode === 'arcade' ? 'arkada · ' : '');
-    entries.push({ nick: nickOf(s), ts: s.submitted_at, cat: 'game',
-      desc: `${ACT_GAME_LABELS.office_grand_prix} — ${mode}${result}` });
-  });
   (superMariuszRes.data || []).forEach(s => {
     const tail = s.completed ? 'ukończył trasę w ' + smFormatTime(s.completion_ms) : 'DNF — ' + smProgressPct(s.score) + '% trasy';
     entries.push({ nick: nickOf(s), ts: s.submitted_at, cat: 'game',
       desc: (ACT_GAME_LABELS['super_mariusz'] || '🕹️ super_mariusz') + ' — ' + tail });
   });
   (arcadeRes.data || []).forEach(s => {
-    // The racer already contributes its richer official result above; its
-    // encoded archive row exists only for the shared all-games leaderboard.
-    if (s.game_type === 'office_grand_prix') return;
     entries.push({ nick: nickOf(s), ts: s.created_at, cat: 'game',
       desc: (ACT_GAME_LABELS[s.game_type] || '🕹️ ' + s.game_type) + ' — wynik ' + s.score });
   });
@@ -11725,17 +11203,6 @@ function setupRealtime() {
       if (activeTab === 'whack-boss') loadPopupPanicState(false);
       await refreshMeCoins();
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'office_grand_prix_scores' }, () => {
-      if (activeTab === 'whack-boss' || (activeTab === 'all-games' && allGamesSelectedGame === 'office_grand_prix')) {
-        loadOfficeGrandPrixState(false);
-      }
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'office_grand_prix_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss' || (activeTab === 'all-games' && allGamesSelectedGame === 'office_grand_prix')) {
-        loadOfficeGrandPrixState(false);
-      }
-      await refreshMeCoins();
-    })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, () => {
       if (activeTab === 'whack-boss') loadInvoiceHordeState(false);
     })
@@ -11972,7 +11439,6 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'popup_panic_scores' }, scheduleActivityRebuild)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'office_grand_prix_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'farm_nft_transfers' }, scheduleActivityRebuild)
@@ -12230,42 +11696,33 @@ async function loadSeasonHistory() {
     const current = getCurrentSeasonalEntry();
     const currentDbWeekStart = current.weekStart; // DB now also Monday-start
     const isSuperMariusz = current.gameType === 'super_mariusz';
-    const isOfficeGrandPrix = current.gameType === 'office_grand_prix';
     const liveScoreColumns = current.gameType === 'bug_jumper'
       ? 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta,course_id,completion_ms'
       : isSuperMariusz
       ? 'user_id,nick_snapshot,score,submitted_at,client_meta,completion_ms,completed'
       : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
-    let liveScoresQuery;
-    if (isOfficeGrandPrix) {
-      liveScoresQuery = sb.from('office_grand_prix_current_week')
-        .select('user_id,nick,score,wins,combined_time_ms,races_counted,rank,first_result_at')
-        .order('rank')
-        .limit(20);
-    } else {
-      liveScoresQuery = sb.from(current.gameType + '_scores')
-        .select(liveScoreColumns)
-        .eq('week_start', currentDbWeekStart)
-        .order('score', { ascending: false });
-      if (current.gameType === 'bug_jumper') {
-        liveScoresQuery = liveScoresQuery
-          .eq('course_id', BUG_JUMPER_HARD_COURSE_ID)
-          .order('completion_ms', { ascending: true, nullsFirst: false });
-      }
-      if (isSuperMariusz) {
-        liveScoresQuery = liveScoresQuery
-          .order('completion_ms', { ascending: true, nullsFirst: false });
-      }
-      if (current.gameType !== 'bug_jumper' && !isSuperMariusz) {
-        liveScoresQuery = liveScoresQuery
-          .order('accuracy', { ascending: false });
-      }
+    let liveScoresQuery = sb.from(current.gameType + '_scores')
+      .select(liveScoreColumns)
+      .eq('week_start', currentDbWeekStart)
+      .order('score', { ascending: false });
+    if (current.gameType === 'bug_jumper') {
       liveScoresQuery = liveScoresQuery
-        .order('submitted_at', { ascending: true })
-        .limit(20);
+        .eq('course_id', BUG_JUMPER_DYNAMIC_COURSE_ID)
+        .order('completion_ms', { ascending: true, nullsFirst: false });
     }
+    if (isSuperMariusz) {
+      liveScoresQuery = liveScoresQuery
+        .order('completion_ms', { ascending: true, nullsFirst: false });
+    }
+    if (current.gameType !== 'bug_jumper' && !isSuperMariusz) {
+      liveScoresQuery = liveScoresQuery
+        .order('accuracy', { ascending: false });
+    }
+    liveScoresQuery = liveScoresQuery
+      .order('submitted_at', { ascending: true })
+      .limit(20);
 
-    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, smRes, ppRes, ogpRes, liveRes] = await Promise.all([
+    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, smRes, ppRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_weekly_awards').select('week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
@@ -12275,7 +11732,6 @@ async function loadSeasonHistory() {
       sb.from('egg_catch_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('super_mariusz_recent_awards').select('week_start,user_id,nick,rank,score,completion_ms,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('popup_panic_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('office_grand_prix_recent_awards').select('week_start,user_id,nick,rank,score,wins,combined_time_ms,races_counted,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       liveScoresQuery,
     ]);
 
@@ -12286,7 +11742,7 @@ async function loadSeasonHistory() {
     for (const r of (liveRes.data || [])) {
       if (seen.has(r.user_id)) continue;
       seen.add(r.user_id);
-      const rank = isOfficeGrandPrix ? Number(r.rank) : pendingEntries.length + 1;
+      const rank = pendingEntries.length + 1;
       const cm = r.client_meta || {};
       const isBugJumper = current.gameType === 'bug_jumper';
       const baseScore = !isBugJumper && !isSuperMariusz && cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
@@ -12311,7 +11767,6 @@ async function loadSeasonHistory() {
       ...mapSeasonAwardRows(ecRes.data, 'egg_catch'),
       ...mapSeasonAwardRows(smRes.data, 'super_mariusz'),
       ...mapSeasonAwardRows(ppRes.data, 'popup_panic'),
-      ...mapSeasonAwardRows(ogpRes.data, 'office_grand_prix'),
       ...pendingEntries,
     ];
     if (wrap) {
@@ -19396,8 +18851,7 @@ async function markWheelReady() {
 // ── Seasonal Game Framework ───────────────────────────────────────────────
 
 const SEASONAL_ANCHOR_WEEK_START = '2026-05-18';
-const SEASONAL_V2_ANCHOR_WEEK_START = '2026-07-27';
-const BUG_JUMPER_HARD_COURSE_ID = 'bug_jumper_hard_v2';
+const BUG_JUMPER_DYNAMIC_COURSE_ID = 'bug_jumper_dynamic_v1';
 const SEASONAL_ROTATION = [
   { gameType: 'whack_boss', displayName: 'Whack-a-Boss' },
   { gameType: 'bug_jumper',  displayName: 'Bug Jumper 🐛' },
@@ -19408,11 +18862,6 @@ const SEASONAL_ROTATION = [
   { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },
   { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },
   { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },
-  { gameType: 'office_grand_prix', displayName: 'Office Grand Prix G6 🏁' },
-];
-const SEASONAL_ROTATION_V2 = [
-  SEASONAL_ROTATION[9],
-  ...SEASONAL_ROTATION.slice(0, 9),
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
@@ -19422,7 +18871,7 @@ const SEASONAL_OVERRIDES = {
   '2026-07-06': { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },  // debut
   '2026-07-13': { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },  // debut
   '2026-07-20': { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },  // debut
-  '2026-07-27': { gameType: 'office_grand_prix', displayName: 'Office Grand Prix G6 🏁' },  // V2 racer debut
+  '2026-07-27': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -19767,23 +19216,12 @@ function addDaysStr(weekStartStr, days) {
 
 function seasonalEntryForWeekStart(weekStart) {
   const anchor = parseWeekStartDate(SEASONAL_ANCHOR_WEEK_START);
-  const v2Anchor = parseWeekStartDate(SEASONAL_V2_ANCHOR_WEEK_START);
   const week = parseWeekStartDate(weekStart);
   if (!anchor || !week) return { ...SEASONAL_ROTATION[0], weekStart, seasonNum: 1 };
   const idx = Math.max(0, Math.round((week.getTime() - anchor.getTime()) / (7 * 86400000)));
-  const useV2 = v2Anchor && week.getTime() >= v2Anchor.getTime();
-  const v2Index = useV2
-    ? Math.max(0, Math.round((week.getTime() - v2Anchor.getTime()) / (7 * 86400000)))
-    : 0;
-  const base = useV2
-    ? SEASONAL_ROTATION_V2[v2Index % SEASONAL_ROTATION_V2.length]
-    : SEASONAL_ROTATION[idx % SEASONAL_ROTATION.length];
+  const base = SEASONAL_ROTATION[idx % SEASONAL_ROTATION.length];
   const override = SEASONAL_OVERRIDES[weekStart];
-  const resolved = { ...base, ...(override || {}), weekStart, seasonNum: idx + 1 };
-  if (resolved.gameType === 'office_grand_prix' && !OGP_PUBLIC_UI_ENABLED && !OGP_LOCAL_V2_PREVIEW) {
-    return { ...resolved, gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' };
-  }
-  return resolved;
+  return { ...base, ...(override || {}), weekStart, seasonNum: idx + 1 };
 }
 
 function recentSeasonalEntries(limit = null) {
@@ -19867,7 +19305,6 @@ function loadSeasonalTab(showSpinner = true) {
   const ecPanel       = document.getElementById('seasonal-game-egg-catch');
   const smPanel       = document.getElementById('seasonal-game-super-mariusz');
   const ppPanel       = document.getElementById('seasonal-game-popup-panic');
-  const ogpPanel      = document.getElementById('seasonal-game-office-grand-prix');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -19879,7 +19316,6 @@ function loadSeasonalTab(showSpinner = true) {
   const isEC = current.gameType === 'egg_catch';
   const isSM = current.gameType === 'super_mariusz';
   const isPP = current.gameType === 'popup_panic';
-  const isOGP = current.gameType === 'office_grand_prix';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
@@ -19889,7 +19325,6 @@ function loadSeasonalTab(showSpinner = true) {
   if (ecPanel) { if (isEC) show(ecPanel); else hide(ecPanel); }
   if (smPanel) { if (isSM) show(smPanel); else hide(smPanel); }
   if (ppPanel) { if (isPP) show(ppPanel); else hide(ppPanel); }
-  if (ogpPanel) { if (isOGP) show(ogpPanel); else hide(ogpPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -19900,7 +19335,6 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isEC && eggCatchRuntime?.playing) stopEggCatchRound();
   if (!isSM && superMariuszRuntime?.playing) stopSuperMariuszRound();
   if (!isPP && popupPanicRuntime?.playing) stopPopupPanicRound();
-  if (!isOGP && officeGrandPrixRuntime) stopOfficeGrandPrix();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
@@ -19910,7 +19344,6 @@ function loadSeasonalTab(showSpinner = true) {
   if (eggCatchRuntime) eggCatchRuntime.archiveMode = false;
   if (superMariuszRuntime) superMariuszRuntime.archiveMode = false;
   if (popupPanicRuntime) popupPanicRuntime.archiveMode = false;
-  if (officeGrandPrixRuntime) officeGrandPrixRuntime.archiveMode = false;
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) loadBugJumperState(showSpinner);
   if (isFP) loadFlappyPantsState(showSpinner);
@@ -19920,7 +19353,6 @@ function loadSeasonalTab(showSpinner = true) {
   if (isEC) loadEggCatchState(showSpinner);
   if (isSM) loadSuperMariuszState(showSpinner);
   if (isPP) loadPopupPanicState(showSpinner);
-  if (isOGP) loadOfficeGrandPrixState(showSpinner);
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
@@ -23015,69 +22447,103 @@ function vpIsTypingTarget(target) {
 })();
 
 // ── Bug Jumper (canvas) ───────────────────────────────────────────────────
+// Course is procedurally generated per round from a server-issued seed (same
+// deterministic-seed pattern as Snake/Invoice Horde/Popup Panic): the browser
+// derives the lane/wall layout locally via bjGenerateCourse(seed) to play in
+// real time, and bug-jumper-action independently re-derives it from the
+// stored seed to replay + validate submitted moves. bjGenerateCourse and its
+// helpers (bjMakeRng, bjBugColAt, bjCellBlocked, bjCellOpen) must stay
+// byte-for-byte identical to generateCourse/bugColAt/cellBlocked/cellOpen in
+// supabase/functions/bug-jumper-action/index.ts.
 
-const BJ_COURSE = Object.freeze({
-  id: BUG_JUMPER_HARD_COURSE_ID,
-  version: 2,
-  cols: 10,
-  rows: 32,
-  laneCount: 30,
-  safeRows: Object.freeze([10, 20, 30]),
-  durationMs: 20000,
-  inputCooldownMs: 120,
-  maxScore: 30,
-  lanes: Object.freeze([
-    { dir:  1, intervalMs: 520, phaseMs: 120, bugs: [{ col: 1, len: 2 }, { col: 7, len: 2 }] },
-    { dir: -1, intervalMs: 500, phaseMs: 260, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir:  1, intervalMs: 480, phaseMs:  80, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
-    { dir: -1, intervalMs: 460, phaseMs: 210, bugs: [{ col: 1, len: 3 }, { col: 7, len: 2 }] },
-    { dir:  1, intervalMs: 440, phaseMs: 330, bugs: [{ col: 0, len: 2 }, { col: 5, len: 3 }] },
-    { dir: -1, intervalMs: 420, phaseMs: 150, bugs: [{ col: 2, len: 2 }, { col: 7, len: 2 }] },
-    { dir:  1, intervalMs: 400, phaseMs: 290, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
-    { dir: -1, intervalMs: 380, phaseMs:  60, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir:  1, intervalMs: 360, phaseMs: 240, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
-    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
-    { dir: -1, intervalMs: 340, phaseMs: 110, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
-    { dir:  1, intervalMs: 320, phaseMs: 220, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir: -1, intervalMs: 300, phaseMs:  90, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
-    { dir:  1, intervalMs: 290, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 2 }] },
-    { dir: -1, intervalMs: 280, phaseMs:  40, bugs: [{ col: 0, len: 3 }, { col: 7, len: 2 }] },
-    { dir:  1, intervalMs: 270, phaseMs: 130, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
-    { dir: -1, intervalMs: 260, phaseMs: 210, bugs: [{ col: 1, len: 2 }, { col: 5, len: 3 }] },
-    { dir:  1, intervalMs: 250, phaseMs:  70, bugs: [{ col: 0, len: 2 }, { col: 6, len: 2 }] },
-    { dir: -1, intervalMs: 240, phaseMs: 160, bugs: [{ col: 3, len: 3 }, { col: 8, len: 2 }] },
-    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
-    { dir:  1, intervalMs: 230, phaseMs:  20, bugs: [{ col: 1, len: 2 }, { col: 7, len: 3 }] },
-    { dir: -1, intervalMs: 225, phaseMs: 120, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir:  1, intervalMs: 220, phaseMs:  80, bugs: [{ col: 2, len: 3 }, { col: 8, len: 2 }] },
-    { dir: -1, intervalMs: 215, phaseMs: 170, bugs: [{ col: 1, len: 2 }, { col: 6, len: 3 }] },
-    { dir:  1, intervalMs: 210, phaseMs:  50, bugs: [{ col: 0, len: 2 }, { col: 5, len: 2 }] },
-    { dir: -1, intervalMs: 205, phaseMs: 130, bugs: [{ col: 3, len: 2 }, { col: 8, len: 2 }] },
-    { dir:  1, intervalMs: 200, phaseMs:  90, bugs: [{ col: 1, len: 3 }, { col: 7, len: 2 }] },
-    { dir: -1, intervalMs: 195, phaseMs: 150, bugs: [{ col: 0, len: 2 }, { col: 6, len: 3 }] },
-    { dir:  1, intervalMs: 190, phaseMs:  30, bugs: [{ col: 2, len: 2 }, { col: 8, len: 2 }] },
-    { safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [] },
-  ]),
-});
-
-const BJ_COLS        = BJ_COURSE.cols;
-const BJ_ROWS        = BJ_COURSE.rows;       // 0=start, 1-30=lines, 31=finish
-const BJ_LANE_COUNT  = BJ_COURSE.laneCount;
+const BJ_COLS         = 10;
+const BJ_ROWS         = 32;       // 0=start, 1-30=lines, 31=finish
+const BJ_LANE_COUNT   = 30;
+const BJ_SAFE_ROWS    = Object.freeze([10, 20, 30]);
+const BJ_BAND_HALF    = 2;        // corridor half-width: band is center±2 (5 cols wide)
+const BJ_DURATION_MS  = 20000;
+const BJ_INPUT_COOLDOWN_MS = 120;
+const BJ_MAX_SCORE    = 30;
+const BJ_COURSE_VERSION = 3;
+// Corridor centers per third of the climb (rows 1-9 / 11-19 / 21-29; rows
+// 10/20/30 are safe landings and always fully open). Picking one of these per
+// round is what makes a course an "L" (one hard turn), an "S"/zigzag (turns
+// back), or the original straight climb.
+const BJ_SHAPES = Object.freeze([
+  Object.freeze([5, 5, 5]), // straight
+  Object.freeze([5, 5, 7]), // L, turning right late
+  Object.freeze([5, 5, 3]), // L, turning left late
+  Object.freeze([5, 7, 3]), // S, right then left
+  Object.freeze([5, 3, 7]), // S, left then right
+  Object.freeze([3, 7, 3]), // zigzag
+]);
 const BJ_CELL        = 24;
 const BJ_CS_W        = BJ_COLS * BJ_CELL;    // 240
 const BJ_CS_H        = BJ_ROWS * BJ_CELL;    // 768
-const BJ_DURATION_MS = BJ_COURSE.durationMs;
 const BJ_START_COL   = Math.floor(BJ_COLS / 2);
 const BJ_MAX_DPR     = 1.5;
 const BJ_INPUT_QUEUE_MAX = 4;
 const BJ_INPUT_QUEUE_TTL_MS = 600;
 
+function bjMakeRng(seed) {
+  let state = Number(seed || 1) >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function bjGenerateCourse(seed) {
+  const rng = bjMakeRng(seed);
+  const shapeIndex = Math.floor(rng() * BJ_SHAPES.length);
+  const shape = BJ_SHAPES[shapeIndex];
+  const lanes = [];
+  for (let row = 1; row <= BJ_LANE_COUNT; row++) {
+    if (BJ_SAFE_ROWS.includes(row)) {
+      lanes.push({ safe: true, dir: 1, intervalMs: 1, phaseMs: 0, bugs: [], bandStart: 0, bandEnd: BJ_COLS - 1 });
+      continue;
+    }
+    const segIdx = row <= 10 ? 0 : row <= 20 ? 1 : 2;
+    const center = shape[segIdx];
+    const bandStart = center - BJ_BAND_HALF;
+    const bandEnd = center + BJ_BAND_HALF;
+    const bandWidth = bandEnd - bandStart + 1;
+    const rowProgress = (row - 1) / (BJ_LANE_COUNT - 1);
+    const baseInterval = 520 - rowProgress * 330;
+    const intervalMs = Math.max(150, Math.round(baseInterval + (rng() - 0.5) * 80));
+    const phaseMs = Math.floor(rng() * 300);
+    const dir = rng() < 0.5 ? 1 : -1;
+    const bugCount = rng() < 0.55 ? 2 : 1;
+    const bugs = [];
+    for (let i = 0; i < bugCount; i++) {
+      const len = 1 + (rng() < 0.35 ? 1 : 0);
+      const col = bandStart + Math.floor(rng() * bandWidth);
+      bugs.push({ col, len });
+    }
+    lanes.push({ safe: false, dir, intervalMs, phaseMs, bugs, bandStart, bandEnd });
+  }
+  return {
+    id: BUG_JUMPER_DYNAMIC_COURSE_ID,
+    version: BJ_COURSE_VERSION,
+    seed: Number(seed) >>> 0,
+    shapeIndex,
+    cols: BJ_COLS,
+    rows: BJ_ROWS,
+    laneCount: BJ_LANE_COUNT,
+    safeRows: BJ_SAFE_ROWS,
+    durationMs: BJ_DURATION_MS,
+    inputCooldownMs: BJ_INPUT_COOLDOWN_MS,
+    maxScore: BJ_MAX_SCORE,
+    lanes,
+  };
+}
+
 function newBugJumperRuntime() {
   return {
     playing: false, submitting: false, archiveMode: false,
     roundId: null,
-    courseId: BJ_COURSE.id,
-    course: BJ_COURSE,
+    courseId: BUG_JUMPER_DYNAMIC_COURSE_ID,
+    course: null,
     score: 0,
     playerCol: BJ_START_COL,
     playerRow: 0,
@@ -23120,8 +22586,8 @@ function bjInitCanvas() {
   bjCtx.imageSmoothingEnabled = false;
 }
 
-function bjCourseKey(course = BJ_COURSE) {
-  return [course.id || 'course', course.version || 0, course.rows || BJ_ROWS, course.cols || BJ_COLS].join(':');
+function bjCourseKey(course) {
+  return [course?.id || 'course', course?.version || 0, course?.seed || 0].join(':');
 }
 
 function bjCreateLayer() {
@@ -23131,7 +22597,7 @@ function bjCreateLayer() {
   return { canvas, ctx: canvas.getContext('2d') };
 }
 
-function bjGetStaticLayer(course = BJ_COURSE) {
+function bjGetStaticLayer(course) {
   const key = bjCourseKey(course);
   if (bjStaticLayer && bjStaticLayerKey === key) return bjStaticLayer;
 
@@ -23142,9 +22608,34 @@ function bjGetStaticLayer(course = BJ_COURSE) {
     const y = (BJ_ROWS - 1 - row) * C;
     if (row === 0) ctx.fillStyle = '#1a1a2e';
     else if (row === BJ_ROWS - 1) ctx.fillStyle = '#0a2a0a';
-    else if (course.safeRows?.includes(row)) ctx.fillStyle = '#102d24';
+    else if (BJ_SAFE_ROWS.includes(row)) ctx.fillStyle = '#102d24';
     else ctx.fillStyle = row % 2 === 0 ? '#0d0d22' : '#0a0a1a';
     ctx.fillRect(0, y, W, C);
+  }
+
+  // ── Walls — cells outside this round's corridor band, blocking movement ──
+  if (course?.lanes) {
+    ctx.fillStyle = '#1a0808';
+    for (let row = 1; row <= BJ_LANE_COUNT; row++) {
+      if (BJ_SAFE_ROWS.includes(row)) continue;
+      const lane = course.lanes[row - 1];
+      if (!lane) continue;
+      const y = (BJ_ROWS - 1 - row) * C;
+      for (let col = 0; col < BJ_COLS; col++) {
+        if (col < lane.bandStart || col > lane.bandEnd) ctx.fillRect(col * C, y, C, C);
+      }
+    }
+    ctx.strokeStyle = 'rgba(255,60,60,0.25)';
+    ctx.lineWidth = 1;
+    for (let row = 1; row <= BJ_LANE_COUNT; row++) {
+      if (BJ_SAFE_ROWS.includes(row)) continue;
+      const lane = course.lanes[row - 1];
+      if (!lane) continue;
+      const y = (BJ_ROWS - 1 - row) * C;
+      for (let col = 0; col < BJ_COLS; col++) {
+        if (col < lane.bandStart || col > lane.bandEnd) ctx.strokeRect(col * C + 0.5, y + 0.5, C - 1, C - 1);
+      }
+    }
   }
 
   ctx.strokeStyle = 'rgba(0,255,100,0.15)';
@@ -23162,10 +22653,10 @@ function bjGetStaticLayer(course = BJ_COURSE) {
     let label;
     if (row === 0) label = 'START';
     else if (row === BJ_ROWS - 1) label = 'GÓRA';
-    else if (course.safeRows?.includes(row)) label = 'SAFE ' + row;
+    else if (BJ_SAFE_ROWS.includes(row)) label = 'SAFE ' + row;
     else label = 'LINIA ' + row;
     ctx.fillStyle = row === BJ_ROWS - 1 ? '#00ff66' : 'rgba(0,255,100,0.4)';
-    if (course.safeRows?.includes(row)) ctx.fillStyle = '#7cffc4';
+    if (BJ_SAFE_ROWS.includes(row)) ctx.fillStyle = '#7cffc4';
     ctx.fillText(label, 3, (BJ_ROWS - 1 - row) * C + 3);
   }
 
@@ -23174,7 +22665,7 @@ function bjGetStaticLayer(course = BJ_COURSE) {
   return bjStaticLayer;
 }
 
-function bjGetOverlayLayer(course = BJ_COURSE) {
+function bjGetOverlayLayer(course) {
   const key = bjCourseKey(course);
   if (bjOverlayLayer && bjOverlayLayerKey === key) return bjOverlayLayer;
 
@@ -23248,23 +22739,35 @@ function bjElapsed(now = performance.now()) {
 }
 
 function bjBugColAt(lane, bug, elapsedMs) {
+  const bandWidth = lane.bandEnd - lane.bandStart + 1;
   const interval = Math.max(1, Number(lane.intervalMs) || 1);
   const phase = Math.max(0, Number(lane.phaseMs) || 0);
   const steps = Math.floor((Math.max(0, elapsedMs) + phase) / interval);
-  return bjMod(Number(bug.col) + steps * Number(lane.dir || 1), BJ_COLS);
+  const rel = bjMod((Number(bug.col) - lane.bandStart) + steps * Number(lane.dir || 1), bandWidth);
+  return lane.bandStart + rel;
 }
 
-function bjCellBlocked(row, col, elapsedMs, course = BJ_COURSE) {
-  if (row < 1 || row > course.laneCount) return false;
+function bjCellBlocked(row, col, elapsedMs, course) {
+  if (!course || row < 1 || row > BJ_LANE_COUNT) return false;
   const lane = course.lanes[row - 1];
   if (!lane || lane.safe) return false;
+  const bandWidth = lane.bandEnd - lane.bandStart + 1;
   return lane.bugs.some(bug => {
     const head = bjBugColAt(lane, bug, elapsedMs);
     for (let i = 0; i < bug.len; i++) {
-      if (bjMod(head + i, course.cols) === col) return true;
+      if (lane.bandStart + bjMod((head - lane.bandStart) + i, bandWidth) === col) return true;
     }
     return false;
   });
+}
+
+// Corridor/wall check — a cell outside the round's band is impassable.
+function bjCellOpen(row, col, course) {
+  if (row <= 0 || row >= BJ_ROWS - 1) return true;
+  if (BJ_SAFE_ROWS.includes(row)) return true;
+  const lane = course?.lanes?.[row - 1];
+  if (!lane) return true;
+  return col >= lane.bandStart && col <= lane.bandEnd;
 }
 
 function bjGameScore(rt = bugJumperRuntime) {
@@ -23304,7 +22807,7 @@ function bjDraw(now) {
   const ctx = bjCtx;
   if (!ctx) return;
   const rt = bugJumperRuntime;
-  const course = rt?.course || BJ_COURSE;
+  const course = rt?.course || null;
   const elapsed = rt ? bjElapsed(now) : 0;
   const W = BJ_CS_W, H = BJ_CS_H, C = BJ_CELL;
 
@@ -23321,13 +22824,14 @@ function bjDraw(now) {
     }
 
     // ── Obstacles — bug emoji on colored cells ──
-    course.lanes.forEach((lane, li) => {
+    course?.lanes?.forEach((lane, li) => {
       const row = li + 1;
       const ry = (BJ_ROWS - 1 - row) * C;
+      const bandWidth = lane.bandEnd - lane.bandStart + 1;
       lane.bugs.forEach(bug => {
         const head = bjBugColAt(lane, bug, elapsed);
         for (let i = 0; i < bug.len; i++) {
-          const cellCol = bjMod(head + i, BJ_COLS);
+          const cellCol = lane.bandStart + bjMod((head - lane.bandStart) + i, bandWidth);
           const bx = cellCol * C;
           if (i === 0) {
             ctx.drawImage(sprites.bugHead, bx, ry, C, C);
@@ -23374,7 +22878,7 @@ function bjDraw(now) {
     ctx.fillStyle = '#00ff66';
     ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('HARD V2', W / 2, H / 2 - 14);
+    ctx.fillText('DYNAMIC', W / 2, H / 2 - 14);
     ctx.font = '12px monospace';
     ctx.fillStyle = 'rgba(0,255,100,0.5)';
     ctx.fillText('↑  ↓  ←  →  strzałki', W / 2, H / 2 + 12);
@@ -23391,13 +22895,6 @@ async function invokeBugJumper(payload) {
   if (error) throw new Error(error.message || 'Nie udało się połączyć z Bug Jumper.');
   if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Bug Jumper.');
   return data;
-}
-
-function bjCourseFromServer(course) {
-  if (course?.id !== BJ_COURSE.id || Number(course?.version) !== BJ_COURSE.version) {
-    console.warn('Unexpected Bug Jumper course from server; using bundled hard course.');
-  }
-  return BJ_COURSE;
 }
 
 async function loadBugJumperState(showSpinner = true) {
@@ -23436,7 +22933,7 @@ function renderBugJumperState(data) {
   if (!bugJumperRuntime?.playing && bjStatus) {
     bjStatus.textContent = data.myWeekly
       ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
-      : 'Użyj strzałek kursora. Hard Course jest taki sam w każdej rundzie.';
+      : 'Użyj strzałek kursora. Trasa jest inna w każdej rundzie — omijaj ściany i robaki.';
   }
 }
 
@@ -23517,22 +23014,33 @@ function bjResolveCollisionAt(elapsedMs = bjElapsed()) {
 }
 
 function bjInputCooldownMs(rt = bugJumperRuntime) {
-  return Math.max(1, Number(rt?.course?.inputCooldownMs || BJ_COURSE.inputCooldownMs) || BJ_COURSE.inputCooldownMs);
+  return Math.max(1, Number(rt?.course?.inputCooldownMs) || BJ_INPUT_COOLDOWN_MS);
 }
 
 function bjMovePlayer(dr, dc, now = performance.now()) {
   const rt = bugJumperRuntime;
   if (!rt?.playing || rt.completed) return false;
   if (now < rt.inputCooldown) return false;
+  const course = rt.course;
   const elapsed = bjElapsed(now);
   bjResolveCollisionAt(elapsed);
   rt.inputCooldown = now + bjInputCooldownMs(rt);
   rt.moveLog.push({ t: Math.round(elapsed), dr, dc });
 
+  // Sideways move: blocked by a wall outside this row's corridor band.
+  if (dc !== 0) {
+    const proposedCol = Math.max(0, Math.min(BJ_COLS - 1, rt.playerCol + dc));
+    if (bjCellOpen(rt.playerRow, proposedCol, course)) rt.playerCol = proposedCol;
+    bjResolveCollisionAt(elapsed);
+    bjSetStats(Math.max(0, rt.durationMs - elapsed), true);
+    return true;
+  }
+
+  // Vertical move: blocked if the next row's corridor doesn't include the
+  // current column — the player must shuffle sideways first.
   const newRow = rt.playerRow + dr;
-  const newCol = Math.max(0, Math.min(BJ_COLS - 1, rt.playerCol + dc));
-  rt.playerCol = newCol;
   if (newRow < 0 || newRow > BJ_ROWS - 1) return true;
+  if (!bjCellOpen(newRow, rt.playerCol, course)) return true;
 
   if (newRow >= BJ_ROWS - 1) {
     rt.bestRowReached = BJ_LANE_COUNT;
@@ -23611,15 +23119,15 @@ function stopBugJumperRound() {
   bjDraw(performance.now());
 }
 
-function beginBugJumperRound(round, course, options = {}) {
+function beginBugJumperRound(round, options = {}) {
   stopBugJumperRound();
   bugJumperRuntime = newBugJumperRuntime();
   const rt = bugJumperRuntime;
   rt.playing    = true;
   rt.roundId    = round.id;
   rt.archiveMode = !!options.archiveMode;
-  rt.courseId   = round.courseId || course?.id || BJ_COURSE.id;
-  rt.course     = bjCourseFromServer(course || round.course);
+  rt.courseId   = round.courseId || BUG_JUMPER_DYNAMIC_COURSE_ID;
+  rt.course     = bjGenerateCourse(round.seed);
   rt.durationMs = round.durationMs || BJ_DURATION_MS;
   const serverElapsed = round.startedAt && round.serverNow
     ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
@@ -23629,7 +23137,7 @@ function beginBugJumperRound(round, course, options = {}) {
   if (bjStatus) {
     bjStatus.textContent = rt.archiveMode
       ? 'Tryb testowy admina — wynik nie zostanie zapisany.'
-      : '↑ ↓ ← → — przejdź stałą planszę do góry.';
+      : '↑ ↓ ← → — wspinaj się, omijaj ściany i robaki.';
   }
   if (bjArena) {
     if (!bjArena.hasAttribute('tabindex')) bjArena.tabIndex = 0;
@@ -23651,7 +23159,7 @@ function prepareBugJumperAdminTest() {
   if (weeklyWrap) weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Tryb testowy admina — ranking nie jest używany.'));
   if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Start uruchamia lokalną rundę bez zapisu w bazie.'));
   if (awardsWrap) awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Nagrody nie są naliczane w teście.'));
-  if (bjStatus) bjStatus.textContent = 'Admin test — stała plansza Hard Course, bez zapisu wyniku.';
+  if (bjStatus) bjStatus.textContent = 'Admin test — losowa dynamiczna trasa, bez zapisu wyniku.';
 }
 
 async function startBugJumperRound() {
@@ -23661,11 +23169,12 @@ async function startBugJumperRound() {
     const now = new Date().toISOString();
     beginBugJumperRound({
       id: 'admin-test-' + Date.now(),
-      courseId: BJ_COURSE.id,
+      courseId: BUG_JUMPER_DYNAMIC_COURSE_ID,
+      seed: Math.floor(Math.random() * 2147483647) + 1,
       durationMs: BJ_DURATION_MS,
       startedAt: now,
       serverNow: now,
-    }, BJ_COURSE, { archiveMode: true });
+    }, { archiveMode: true });
     return;
   }
   if (allGamesMode) {
@@ -23676,7 +23185,7 @@ async function startBugJumperRound() {
   try {
     const data = await invokeBugJumper({ action: 'start' });
     renderBugJumperState(data);
-    beginBugJumperRound(data.round, data.course, allGamesMode ? { archiveMode: true } : {});
+    beginBugJumperRound(data.round, allGamesMode ? { archiveMode: true } : {});
   } catch (err) {
     showToast('❌ ' + err.message);
     if (bjStatus) bjStatus.textContent = 'Nie udało się wystartować rundy.';
@@ -26606,1762 +26115,6 @@ if (ppArena) {
     }
   });
 }
-
-// ── Office Grand Prix G6 (office_grand_prix) ───────────────────────────────
-// Rendering is real Three.js/WebGL 3D. Official outcomes come from replaying
-// this integer, fixed-tick engine in office-grand-prix-action; Three.js never
-// participates in physics or scoring.
-//
-// V3 (2026-07): faster, drift-capable physics on a redesigned straights +
-// true-radius-corner circuit (V2's tight inner loop made the constant-offset
-// road/curb geometry self-intersect on the inside of that corner). Steering
-// still only sets `heading` (facing); a new `moveHeading` (travel direction)
-// chases it via a proportional "grip" catch-up (ogpChaseAngle) that lags more
-// on turn-in and under harder/faster steering -- that lag IS the drift, with
-// no separate drift button. Multiplayer moved from a live coordinator/
-// broadcast model to async ghosts (see ogpFetchGhosts/ogpSeedGhostCars):
-// no more OGP_COORDINATOR_STALE_MS or realtime channel constants here.
-const OGP_CLIENT_VERSION = 'office_grand_prix_v5';
-const OGP_TRACK_VERSION = 'office_loop_v4';
-const OGP_TRACK_HASH = '1d4b3b7abbf81bc598c0e309dc2baf8b46115d0cba3fdb9fa835cf8dde21569b';
-const OGP_TICK_MS = 50;
-const OGP_TRACK_LENGTH = 160000;
-const OGP_START_PROGRESS = 16000;
-const OGP_FINISH_PROGRESS = OGP_START_PROGRESS + OGP_TRACK_LENGTH;
-const OGP_HARD_LIMIT_TICKS = 1200;
-const OGP_ACCEL = 22;
-const OGP_START_SPEED = 130;
-const OGP_MAX_SPEED = 320;
-const OGP_FORWARD_PCT = 96;
-const OGP_STEER_RESPONSE = 340;
-const OGP_STEER_CENTER = 600;
-const OGP_STEER_MAX = 1000;
-const OGP_TURN_RATE = 8;
-const OGP_OFFROAD_AT = 5600;
-const OGP_OFFROAD_PCT = 68;
-const OGP_GRASS_MAX_SPEED = 140;
-const OGP_GRASS_BRAKE = 10;
-const OGP_GRASS_GRIP_PCT = 55;
-const OGP_SAFETY_LATERAL = 8000;
-const OGP_RESET_AFTER_TICKS = 20;
-const OGP_RESET_CONTROL_TICKS = 12;
-const OGP_GRIP_NUM_ROAD = 2;
-const OGP_GRIP_DEN_ROAD = 5;
-const OGP_GRIP_NUM_GRASS = 1;
-const OGP_GRIP_DEN_GRASS = 7;
-const OGP_BOOST_TICKS = 30;
-const OGP_SLOW_TICKS = 25;
-const OGP_SHIELD_TICKS = 120;
-const OGP_ANGLE_STEPS = 256;
-const OGP_TRIG_SCALE = 10000;
-const OGP_GATE_PROGRESS = Object.freeze([29000, 44000, 59000, 74000, 89000, 104000, 119000, 134000, 149000, 164000]);
-const OGP_GATE_LANES = Object.freeze([-1800, 0, 1800, 0, -1800, 1800, 0, -1800, 1800, 0]);
-// Generated from the pinned Three.js 0.185.1 CatmullRomCurve3 (control points
-// in ogpBuildScene, tension .5) using getTangentAt(i / 256). Physics consumes
-// only these checked-in integers.
-const OGP_TRACK_TANGENTS = Object.freeze([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,254,250,248,246,244,241,239,237,236,234,232,231,230,229,227,224,222,219,217,215,213,211,209,207,206,205,203,200,197,195,193,191,189,187,185,183,181,179,177,172,170,169,170,172,172,172,174,179,189,198,204,207,209,212,217,219,217,213,210,208,203,195,183,175,170,167,163,158,152,146,142,138,136,131,127,126,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,129,129,128,125,123,122,120,118,118,116,113,108,104,101,97,94,92,89,87,84,81,78,75,73,70,68,66,64,62,60,58,56,54,52,50,46,41,38,37,38,36,35,35,36,37,35,35,39,47,62,72,78,81,81,82,84,86,87,87,89,90,91,90,88,84,82,78,72,64,54,46,37,24,15,10,6,0,254,254,0,0,0,0,0,0]);
-const OGP_SIN = Object.freeze([0,245,491,736,980,1224,1467,1710,1951,2191,2430,2667,2903,3137,3369,3599,3827,4052,4276,4496,4714,4929,5141,5350,5556,5758,5957,6152,6344,6532,6716,6895,7071,7242,7410,7572,7730,7883,8032,8176,8315,8449,8577,8701,8819,8932,9040,9142,9239,9330,9415,9495,9569,9638,9700,9757,9808,9853,9892,9925,9952,9973,9988,9997,10000,9997,9988,9973,9952,9925,9892,9853,9808,9757,9700,9638,9569,9495,9415,9330,9239,9142,9040,8932,8819,8701,8577,8449,8315,8176,8032,7883,7730,7572,7410,7242,7071,6895,6716,6532,6344,6152,5957,5758,5556,5350,5141,4929,4714,4496,4276,4052,3827,3599,3369,3137,2903,2667,2430,2191,1951,1710,1467,1224,980,736,491,245,0,-245,-491,-736,-980,-1224,-1467,-1710,-1951,-2191,-2430,-2667,-2903,-3137,-3369,-3599,-3827,-4052,-4276,-4496,-4714,-4929,-5141,-5350,-5556,-5758,-5957,-6152,-6344,-6532,-6716,-6895,-7071,-7242,-7410,-7572,-7730,-7883,-8032,-8176,-8315,-8449,-8577,-8701,-8819,-8932,-9040,-9142,-9239,-9330,-9415,-9495,-9569,-9638,-9700,-9757,-9808,-9853,-9892,-9925,-9952,-9973,-9988,-9997,-10000,-9997,-9988,-9973,-9952,-9925,-9892,-9853,-9808,-9757,-9700,-9638,-9569,-9495,-9415,-9330,-9239,-9142,-9040,-8932,-8819,-8701,-8577,-8449,-8315,-8176,-8032,-7883,-7730,-7572,-7410,-7242,-7071,-6895,-6716,-6532,-6344,-6152,-5957,-5758,-5556,-5350,-5141,-4929,-4714,-4496,-4276,-4052,-3827,-3599,-3369,-3137,-2903,-2667,-2430,-2191,-1951,-1710,-1467,-1224,-980,-736,-491,-245]);
-const OGP_CARS = Object.freeze([
-  { id: 'coral',  label: 'Koral',   color: 0xf43f5e },
-  { id: 'sky',    label: 'Błękit',  color: 0x0ea5e9 },
-  { id: 'lime',   label: 'Limonka', color: 0x84cc16 },
-  { id: 'amber',  label: 'Bursztyn',color: 0xf59e0b },
-  { id: 'violet', label: 'Fiolet',  color: 0x8b5cf6 },
-  { id: 'teal',   label: 'Turkus',  color: 0x14b8a6 },
-  { id: 'pink',   label: 'Róż',     color: 0xec4899 },
-  { id: 'silver', label: 'Srebro',  color: 0x94a3b8 },
-]);
-const OGP_ITEM_LABEL = Object.freeze({ turbo: '☕ Espresso', banana: '🍌 Banan', shield: '🛡️ Tarcza' });
-const OGP_BOT_NAMES = Object.freeze([
-  'Bot Kadry', 'Bot Księgowość', 'Bot IT', 'Bot Sprzedaż',
-  'Bot Audyt', 'Bot Sekretariat', 'Bot Podatki', 'Bot Zarząd',
-]);
-let ogpThreePromise = null;
-let ogpSelectedCar = 'coral';
-let ogpKeySteer = { left: false, right: false };
-
-function ogpClamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function ogpApproach(value, target, amount) {
-  if (value < target) return Math.min(target, value + amount);
-  if (value > target) return Math.max(target, value - amount);
-  return target;
-}
-
-function ogpWrapAngle(value) {
-  return ((Math.trunc(value) % OGP_ANGLE_STEPS) + OGP_ANGLE_STEPS) % OGP_ANGLE_STEPS;
-}
-
-function ogpAngleDelta(target, current) {
-  const delta = ogpWrapAngle(target - current);
-  return delta > OGP_ANGLE_STEPS / 2 ? delta - OGP_ANGLE_STEPS : delta;
-}
-
-// Chases `current` toward `target` by a proportional (num/den) fraction of
-// the remaining gap each tick, with a minimum 1-unit step so it always fully
-// converges instead of stalling on integer truncation. Applied to
-// car.moveHeading chasing car.heading, this is the whole drift model: a
-// steady turn produces a bounded steady-state slip angle (bigger for a
-// sharper/faster turn), while releasing the wheel lets it catch up to zero.
-function ogpChaseAngle(current, target, num, den) {
-  const gap = ogpAngleDelta(target, current);
-  if (gap === 0) return current;
-  let step = Math.trunc(gap * num / den);
-  if (step === 0) step = gap > 0 ? 1 : -1;
-  if (Math.abs(step) > Math.abs(gap)) step = gap;
-  return ogpWrapAngle(current + step);
-}
-
-function ogpSin(angle) {
-  return OGP_SIN[ogpWrapAngle(angle)];
-}
-
-function ogpCos(angle) {
-  return OGP_SIN[ogpWrapAngle(angle + OGP_ANGLE_STEPS / 4)];
-}
-
-function ogpTrackHeading(progress) {
-  const wrapped = ((Math.trunc(progress) % OGP_TRACK_LENGTH) + OGP_TRACK_LENGTH) % OGP_TRACK_LENGTH;
-  const index = Math.floor(wrapped * OGP_TRACK_TANGENTS.length / OGP_TRACK_LENGTH);
-  return OGP_TRACK_TANGENTS[index];
-}
-
-function ogpGridPose(seed, slot) {
-  const gridIndex = (Number(slot) + (Number(seed) >>> 0)) % 8;
-  const row = Math.floor(gridIndex / 2);
-  const column = gridIndex % 2;
-  const progress = OGP_START_PROGRESS - row * 700;
-  return {
-    progress,
-    lateral: column === 0 ? -1050 : 1050,
-    heading: ogpTrackHeading(progress),
-  };
-}
-
-function ogpXorShift32(seed) {
-  let value = Number(seed) >>> 0;
-  value ^= value << 13;
-  value ^= value >>> 17;
-  value ^= value << 5;
-  return value >>> 0;
-}
-
-function ogpMix32(value) {
-  let x = Number(value) >>> 0;
-  x ^= x >>> 16;
-  x = Math.imul(x, 0x7feb352d);
-  x ^= x >>> 15;
-  x = Math.imul(x, 0x846ca68b);
-  x ^= x >>> 16;
-  return x >>> 0;
-}
-
-function ogpRandom(seed, slot, salt) {
-  return ogpMix32(
-    (Number(seed) >>> 0) ^
-    Math.imul((Number(slot) + 1) >>> 0, 0x9e3779b1) ^
-    Math.imul((Number(salt) + 1) >>> 0, 0x85ebca6b)
-  );
-}
-
-function ogpSeeded(seed, a, b, c = 0) {
-  let value = (Number(seed) ^ Math.imul((a + 1) | 0, 0x9e3779b1) ^
-    Math.imul((b + 11) | 0, 0x85ebca6b) ^ Math.imul((c + 101) | 0, 0xc2b2ae35)) >>> 0;
-  value = ogpXorShift32(value || 0x6d2b79f5);
-  return value >>> 0;
-}
-
-function ogpRankOrder(race) {
-  return race.cars.slice().sort((a, b) => {
-    const af = a.finishedTick == null ? Number.MAX_SAFE_INTEGER : a.finishedTick;
-    const bf = b.finishedTick == null ? Number.MAX_SAFE_INTEGER : b.finishedTick;
-    if (a.finishedTick != null || b.finishedTick != null) {
-      if (a.finishedTick != null && b.finishedTick == null) return -1;
-      if (a.finishedTick == null && b.finishedTick != null) return 1;
-      if (af !== bf) return af - bf;
-    }
-    return b.progress - a.progress || a.slot - b.slot;
-  });
-}
-
-function ogpPlaceOf(race, slot) {
-  const target = race.cars[slot];
-  if (!target) return 8;
-  let place = 1;
-  for (const other of race.cars) {
-    if (other.slot === target.slot) continue;
-    if (other.finishedTick != null && target.finishedTick == null) {
-      place += 1;
-      continue;
-    }
-    if (other.finishedTick != null && target.finishedTick != null) {
-      if (other.finishedTick < target.finishedTick ||
-        (other.finishedTick === target.finishedTick && other.slot < target.slot)) place += 1;
-      continue;
-    }
-    if (other.finishedTick == null && target.finishedTick == null &&
-      (other.progress > target.progress ||
-        (other.progress === target.progress && other.slot < target.slot))) place += 1;
-  }
-  return place;
-}
-
-function ogpRollItem(seed, slot, gateIndex, place) {
-  const roll = ogpRandom(seed, slot, 1000 + gateIndex) % 100;
-  const weights = place <= 2 ? [20, 50, 30] : (place <= 5 ? [40, 35, 25] : [60, 25, 15]);
-  if (roll < weights[0]) return 'turbo';
-  if (roll < weights[0] + weights[1]) return 'banana';
-  return 'shield';
-}
-
-function ogpNewRace(seed, roster, localSlot, opts = {}) {
-  const raceSeed = Number.isFinite(Number(seed)) ? (Number(seed) >>> 0) : 0x6d2b79f5;
-  const entries = Array.from({ length: 8 }, (_, slot) => {
-    const source = roster?.find(row => Number(row.slot) === slot) || {};
-    const requestedCar = source.carId || source.cosmeticId;
-    const carId = OGP_CARS.some(car => car.id === requestedCar) ? requestedCar : OGP_CARS[slot].id;
-    const pose = ogpGridPose(raceSeed, slot);
-    return {
-      slot,
-      userId: source.userId || null,
-      nick: source.nick || OGP_BOT_NAMES[slot],
-      isBot: source.isBot !== false && !source.userId && !source.isGhost,
-      isGhost: !!source.isGhost,
-      ghostLog: source.isGhost ? (source.ghostLog || []) : null,
-      ghostIndex: 0,
-      ghostSteer: 0,
-      carId,
-      progress: pose.progress,
-      lateral: pose.lateral,
-      heading: pose.heading,
-      moveHeading: pose.heading,
-      steering: 0,
-      previousProgress: pose.progress,
-      previousLateral: pose.lateral,
-      previousHeading: pose.heading,
-      previousSteering: 0,
-      speed: OGP_START_SPEED,
-      item: null,
-      itemHeldTicks: 0,
-      nextGate: 0,
-      lastCheckpoint: OGP_START_PROGRESS,
-      boostTicks: 0,
-      slowTicks: 0,
-      slowAppliedTick: 0,
-      shieldTicks: 0,
-      outsideTicks: 0,
-      resetTicks: 0,
-      resetCount: 0,
-      finishedTick: null,
-      dnf: false,
-      lastInput: { steer: 0, useItem: false },
-    };
-  });
-  return {
-    engineVersion: OGP_CLIENT_VERSION,
-    trackVersion: OGP_TRACK_VERSION,
-    trackHash: OGP_TRACK_HASH,
-    seed: raceSeed,
-    tick: 0,
-    localSlot: Number.isInteger(localSlot) ? localSlot : 0,
-    cars: entries,
-    bananas: [],
-    finished: false,
-    training: !!opts.training,
-    sessionId: opts.sessionId || null,
-    currentInputs: new Map(),
-    inputLog: [],
-    submitted: false,
-  };
-}
-
-function ogpBotInput(race, car) {
-  let targetLane = 0;
-  const nextGate = OGP_GATE_PROGRESS[car.nextGate];
-  if (car.item == null && nextGate != null && nextGate >= car.progress && nextGate - car.progress <= 15000) {
-    targetLane = OGP_GATE_LANES[car.nextGate];
-  } else {
-    const phase = Math.floor((race.tick + 1) / 120);
-    targetLane = ((ogpRandom(race.seed, car.slot, 5000 + phase) % 3) - 1) * 900;
-  }
-  for (const banana of race.bananas) {
-    const bananaLane = banana.lane ?? banana.lateral;
-    const ahead = banana.progress - car.progress;
-    if (banana.active !== false && banana.ownerSlot !== car.slot && ahead > 0 && ahead < 6500 &&
-      Math.abs(bananaLane - targetLane) < 1100) {
-      targetLane = bananaLane >= 0 ? -2200 : 2200;
-      break;
-    }
-  }
-  const lookAhead = 1800 + car.speed * 6;
-  const laneCorrection = ogpClamp(Math.trunc((targetLane - car.lateral) / 240), -14, 14);
-  const targetHeading = ogpWrapAngle(ogpTrackHeading(car.progress + lookAhead) - laneCorrection);
-  const headingError = ogpAngleDelta(targetHeading, car.heading);
-  const steer = Math.abs(headingError) <= 2 ? 0 : (headingError < 0 ? -1 : 1);
-  let useItem = false;
-  if (car.item === 'turbo' && car.itemHeldTicks >= 8) useItem = true;
-  else if (car.item === 'shield' && car.shieldTicks === 0 && car.itemHeldTicks >= 3) useItem = true;
-  else if (car.item === 'banana') {
-    const follower = race.cars.some(other => other.slot !== car.slot && other.finishedTick == null &&
-      car.progress > other.progress && car.progress - other.progress < 9000 &&
-      Math.abs(car.lateral - other.lateral) < 1500);
-    useItem = follower || car.itemHeldTicks >= 70;
-  }
-  return { steer, useItem };
-}
-
-// Ghost cars replay a previously-recorded human inputLog tick-for-tick, the
-// same sparse-event format as race.inputLog itself: hold the last steer
-// value until the log's next event lands on this tick. This is purely a
-// LOCAL, cosmetic opponent -- the server's own authoritative replay always
-// fills non-player slots with ogpBotInput, so a ghost never affects the
-// caller's official score (see ogpFetchGhosts).
-function ogpGhostInput(race, car) {
-  let steer = car.ghostSteer || 0;
-  let useItem = false;
-  const log = car.ghostLog || [];
-  while (car.ghostIndex < log.length && log[car.ghostIndex].tick === race.tick + 1) {
-    const event = log[car.ghostIndex];
-    steer = ogpClamp(Math.trunc(event.steer || 0), -1, 1);
-    useItem = !!(event.useItem || event.use);
-    car.ghostIndex += 1;
-  }
-  car.ghostSteer = steer;
-  return { steer, useItem };
-}
-
-function ogpUseItem(race, car) {
-  if (!car.item || car.finishedTick != null) return;
-  const item = car.item;
-  car.item = null;
-  car.itemHeldTicks = 0;
-  if (car.slot === race.localSlot) {
-    if (item === 'turbo') ogpPlaySound('boost');
-    else if (item === 'shield') ogpPlaySound('item_get');
-    else if (item === 'banana') ogpPlaySound('banana_hit');
-  }
-  if (item === 'turbo') car.boostTicks = OGP_BOOST_TICKS;
-  if (item === 'shield') car.shieldTicks = OGP_SHIELD_TICKS;
-  if (item === 'banana') {
-    race.bananas.push({
-      id: `${car.slot}:${race.tick}`,
-      active: true,
-      ownerSlot: car.slot,
-      createdTick: race.tick + 1,
-      progress: car.progress - 320,
-      lane: car.lateral,
-      lateral: car.lateral,
-    });
-  }
-}
-
-function ogpStepRace(race) {
-  if (!race || race.finished) return;
-  const tick = race.tick + 1;
-  const progressOrder = ogpRankOrder(race);
-  const placeBySlot = new Map(progressOrder.map((car, index) => [car.slot, index + 1]));
-  const inputs = new Map();
-  for (const car of race.cars) {
-    const input = car.isGhost ? ogpGhostInput(race, car) :
-      car.isBot ? ogpBotInput(race, car) :
-      (race.currentInputs.get(car.slot) || car.lastInput || { steer: 0, useItem: false });
-    inputs.set(car.slot, { steer: ogpClamp(Math.trunc(input.steer || 0), -1, 1), useItem: !!input.useItem });
-  }
-
-  for (const car of race.cars) {
-    if (car.finishedTick != null) continue;
-    const requestedInput = inputs.get(car.slot);
-    const controlsLocked = car.resetTicks > 0;
-    const input = controlsLocked ? { steer: 0, useItem: false } : requestedInput;
-    if (controlsLocked) car.resetTicks -= 1;
-    car.lastInput = { steer: input.steer, useItem: false };
-    car.previousProgress = car.progress;
-    car.previousLateral = car.lateral;
-    car.previousHeading = car.heading;
-    car.previousSteering = car.steering;
-    if (input.useItem) ogpUseItem(race, car);
-
-    const offroad = Math.abs(car.lateral) > OGP_OFFROAD_AT;
-    const steeringStep = offroad
-      ? Math.max(1, Math.floor(OGP_STEER_RESPONSE * OGP_GRASS_GRIP_PCT / 100))
-      : OGP_STEER_RESPONSE;
-    car.steering = ogpApproach(
-      car.steering,
-      input.steer * OGP_STEER_MAX,
-      input.steer === 0 ? OGP_STEER_CENTER : steeringStep,
-    );
-    const gripPct = offroad ? OGP_GRASS_GRIP_PCT : 100;
-    const speedFactor = Math.floor(OGP_MAX_SPEED / 2 + car.speed / 2);
-    const turn = Math.trunc(
-      car.steering * speedFactor * OGP_TURN_RATE * gripPct /
-      (OGP_STEER_MAX * OGP_MAX_SPEED * 100),
-    );
-    car.heading = ogpWrapAngle(car.heading + turn);
-    // Travel direction lags the nose direction -- that gap is the drift.
-    car.moveHeading = ogpChaseAngle(
-      car.moveHeading,
-      car.heading,
-      offroad ? OGP_GRIP_NUM_GRASS : OGP_GRIP_NUM_ROAD,
-      offroad ? OGP_GRIP_DEN_GRASS : OGP_GRIP_DEN_ROAD,
-    );
-
-    const surfaceMaxSpeed = offroad ? OGP_GRASS_MAX_SPEED : OGP_MAX_SPEED;
-    if (car.speed > surfaceMaxSpeed) car.speed = Math.max(surfaceMaxSpeed, car.speed - OGP_GRASS_BRAKE);
-    else car.speed = Math.min(surfaceMaxSpeed, car.speed + OGP_ACCEL);
-    let velocity = Math.floor(car.speed * OGP_FORWARD_PCT / 100);
-    if (offroad) velocity = Math.floor(velocity * OGP_OFFROAD_PCT / 100);
-    if (car.boostTicks > 0) velocity = Math.floor(velocity * 140 / 100);
-    if (car.slowTicks > 0) velocity = Math.floor(velocity * 65 / 100);
-    const relativeHeading = ogpAngleDelta(car.moveHeading, ogpTrackHeading(car.progress));
-    const progressDelta = Math.trunc(velocity * ogpCos(relativeHeading) / OGP_TRIG_SCALE);
-    const lateralDelta = Math.trunc(velocity * ogpSin(-relativeHeading) / OGP_TRIG_SCALE);
-    const previousProgress = car.progress;
-    car.progress += progressDelta;
-    car.lateral += lateralDelta;
-
-    if (Math.abs(car.lateral) > OGP_SAFETY_LATERAL) car.outsideTicks += 1;
-    else car.outsideTicks = 0;
-    if (car.outsideTicks >= OGP_RESET_AFTER_TICKS) {
-      car.progress = Math.max(OGP_START_PROGRESS, car.lastCheckpoint - 800);
-      car.lateral = 0;
-      car.heading = ogpTrackHeading(car.progress);
-      car.moveHeading = car.heading;
-      car.steering = 0;
-      car.speed = OGP_START_SPEED;
-      car.outsideTicks = 0;
-      car.resetTicks = OGP_RESET_CONTROL_TICKS;
-      car.resetCount += 1;
-      car.previousProgress = car.progress;
-      car.previousLateral = car.lateral;
-      car.previousHeading = car.heading;
-      car.previousSteering = 0;
-      continue;
-    }
-
-    while (car.nextGate < OGP_GATE_PROGRESS.length &&
-      previousProgress < OGP_GATE_PROGRESS[car.nextGate] &&
-      car.progress >= OGP_GATE_PROGRESS[car.nextGate]) {
-      const gateIndex = car.nextGate;
-      if (!car.item && Math.abs(car.lateral - OGP_GATE_LANES[gateIndex]) <= 1050) {
-        car.item = ogpRollItem(race.seed, car.slot, gateIndex, placeBySlot.get(car.slot) || 8);
-        car.itemHeldTicks = 0;
-        if (car.slot === race.localSlot) ogpPlaySound('item_get');
-      }
-      car.lastCheckpoint = OGP_GATE_PROGRESS[gateIndex];
-      car.nextGate += 1;
-    }
-    if (car.item) car.itemHeldTicks += 1;
-
-    if (car.progress >= OGP_FINISH_PROGRESS && car.nextGate === OGP_GATE_PROGRESS.length) {
-      car.progress = OGP_FINISH_PROGRESS;
-      car.finishedTick = tick;
-      car.speed = 0;
-    }
-  }
-
-  for (const banana of race.bananas) {
-    if (banana.active === false) continue;
-    const bananaLane = banana.lane ?? banana.lateral;
-    for (const car of race.cars) {
-      if (car.slot === banana.ownerSlot || car.finishedTick != null || tick <= banana.createdTick) continue;
-      if (Math.abs(car.progress - banana.progress) <= 420 && Math.abs(car.lateral - bananaLane) <= 820) {
-        banana.active = false;
-        if (car.shieldTicks > 0) car.shieldTicks = 0;
-        else {
-          car.slowTicks = OGP_SLOW_TICKS;
-          car.slowAppliedTick = tick;
-          if (car.slot === race.localSlot) ogpPlaySound('banana_hit');
-        }
-        break;
-      }
-    }
-  }
-
-  race.cars.forEach(car => {
-    if (car.boostTicks > 0) car.boostTicks -= 1;
-    if (car.slowTicks > 0 && car.slowAppliedTick !== tick) car.slowTicks -= 1;
-    if (car.shieldTicks > 0) car.shieldTicks -= 1;
-  });
-  race.tick = tick;
-  race.currentInputs.forEach(input => { input.useItem = false; });
-  if (race.tick >= OGP_HARD_LIMIT_TICKS) {
-    race.cars.forEach(car => { if (car.finishedTick == null) car.dnf = true; });
-    race.finished = true;
-  } else if (race.cars.every(car => car.finishedTick != null)) {
-    race.finished = true;
-  }
-}
-
-function ogpApproachFloat(current, target, maxStep) {
-  const diff = target - current;
-  if (Math.abs(diff) <= maxStep) return target;
-  return current + Math.sign(diff) * maxStep;
-}
-
-function ogpFormatTime(ms) {
-  const safe = Math.max(0, Number(ms) || 0);
-  const minutes = Math.floor(safe / 60000);
-  const seconds = Math.floor((safe % 60000) / 1000);
-  const hundredths = Math.floor((safe % 1000) / 10);
-  return `${minutes}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
-}
-
-// Sound was removed from Office Grand Prix (2026-07, player feedback) -- the
-// procedural Web Audio engine (countdown beeps, boost/item/banana/finish
-// stingers, engine drone) is gone. These functions stay as no-op stubs
-// rather than being deleted so every call site elsewhere in the race code
-// (countdown, item pickup, camera-shake-on-hit, finish fanfare, per-frame
-// engine pitch) keeps working unmodified.
-function ogpInitAudio() {}
-function ogpToggleAudio() {}
-function ogpPlaySound() {}
-function ogpUpdateEngineSound() {}
-
-function ogpCarDef(id) {
-  return OGP_CARS.find(car => car.id === id) || OGP_CARS[0];
-}
-
-async function ogpLoadThree() {
-  if (!ogpThreePromise) {
-    ogpThreePromise = (async () => {
-      try {
-        return await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
-      } catch (err1) {
-        console.warn('jsDelivr Three.js load failed, trying unpkg fallback...', err1);
-        return await import('https://unpkg.com/three@0.160.0/build/three.module.js');
-      }
-    })();
-  }
-  return ogpThreePromise;
-}
-
-function ogpHasWebGL() {
-  try {
-    const canvas = document.createElement('canvas');
-    return !!(window.WebGL2RenderingContext && canvas.getContext('webgl2')) ||
-      !!(window.WebGLRenderingContext && canvas.getContext('webgl'));
-  } catch {
-    return false;
-  }
-}
-
-function ogpRoadGeometry(THREE, path, width, segments = 420) {
-  const positions = [];
-  const indices = [];
-  const up = new THREE.Vector3(0, 1, 0);
-  for (let i = 0; i <= segments; i += 1) {
-    const t = i / segments;
-    const point = path.getPointAt(t);
-    const tangent = path.getTangentAt(t).normalize();
-      const side = new THREE.Vector3().crossVectors(up, tangent).normalize();
-    for (const sign of [-1, 1]) {
-      const vertex = point.clone().addScaledVector(side, sign * width);
-      positions.push(vertex.x, vertex.y, vertex.z);
-    }
-    if (i < segments) {
-      const a = i * 2;
-      indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
-    }
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  return geometry;
-}
-
-function ogpBandGeometry(THREE, path, innerWidth, outerWidth, sideSign, segments = 420) {
-  const positions = [];
-  const indices = [];
-  const up = new THREE.Vector3(0, 1, 0);
-  for (let i = 0; i <= segments; i += 1) {
-    const t = i / segments;
-    const point = path.getPointAt(t);
-    const tangent = path.getTangentAt(t).normalize();
-    const side = new THREE.Vector3().crossVectors(up, tangent).normalize();
-    const inner = point.clone().addScaledVector(side, sideSign * innerWidth);
-    const outer = point.clone().addScaledVector(side, sideSign * outerWidth);
-    positions.push(inner.x, inner.y, inner.z, outer.x, outer.y, outer.z);
-    if (i < segments) {
-      const a = i * 2;
-      if (sideSign > 0) indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
-      else indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
-    }
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  return geometry;
-}
-
-function ogpCreateKart(THREE, carDef, number) {
-  const group = new THREE.Group();
-  group.name = `ogp-kart-${carDef.id}`;
-  const chassis = new THREE.Group();
-  group.add(chassis);
-
-  const bodyMat = new THREE.MeshStandardMaterial({ color: carDef.color, roughness: .58, metalness: .08 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: .8 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: .22, metalness: .15 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.55, .48, 2.45), bodyMat);
-  body.position.y = .52;
-  chassis.add(body);
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(1.25, .28, .75), bodyMat);
-  nose.position.set(0, .65, -1.35);
-  chassis.add(nose);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.02, .58, .92), glassMat);
-  cabin.position.set(0, 1.02, .15);
-  cabin.rotation.x = -.08;
-  chassis.add(cabin);
-  const bumper = new THREE.Mesh(new THREE.BoxGeometry(1.68, .18, .22), darkMat);
-  bumper.position.set(0, .32, -1.56);
-  chassis.add(bumper);
-
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(.26, 10, 10),
-    new THREE.MeshStandardMaterial({ color: carDef.color, roughness: .35 }));
-  helmet.position.set(0, 1.28, .15);
-  chassis.add(helmet);
-  const visor = new THREE.Mesh(new THREE.BoxGeometry(.28, .1, .16), darkMat);
-  visor.position.set(0, 1.29, -.08);
-  chassis.add(visor);
-
-  const wheelGeo = new THREE.CylinderGeometry(.34, .34, .28, 10);
-  const wheelRolls = [];
-  const frontSteers = [];
-  for (const x of [-.86, .86]) {
-    for (const z of [-.83, .82]) {
-      const steerPivot = new THREE.Group();
-      steerPivot.position.set(x, .35, z);
-      const rollPivot = new THREE.Group();
-      const wheel = new THREE.Mesh(wheelGeo, darkMat);
-      wheel.rotation.z = Math.PI / 2;
-      rollPivot.add(wheel);
-      steerPivot.add(rollPivot);
-      chassis.add(steerPivot);
-      wheelRolls.push(rollPivot);
-      if (z < 0) frontSteers.push(steerPivot);
-    }
-  }
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(.52, .32, .07),
-    new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  plate.position.set(0, .62, -1.755);
-  chassis.add(plate);
-  const badge = new THREE.Mesh(new THREE.CircleGeometry(.15, 12),
-    new THREE.MeshBasicMaterial({ color: number % 2 ? 0x111827 : 0x4f46e5 }));
-  badge.rotation.x = -Math.PI / 2;
-  badge.position.set(0, .62, -1.80);
-  chassis.add(badge);
-
-  const shield = new THREE.Mesh(
-    new THREE.SphereGeometry(1.55, 16, 10),
-    new THREE.MeshBasicMaterial({
-      color: 0x67e8f9,
-      transparent: true,
-      opacity: .2,
-      depthWrite: false,
-      wireframe: true,
-    }),
-  );
-  shield.position.y = .68;
-  shield.visible = false;
-  chassis.add(shield);
-
-  const trailMaterial = new THREE.MeshBasicMaterial({
-    color: 0x7dd3fc,
-    transparent: true,
-    opacity: .72,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  const trails = [-.42, .42].map((x) => {
-    const trail = new THREE.Mesh(new THREE.ConeGeometry(.16, 1.45, 7), trailMaterial.clone());
-    trail.rotation.x = -Math.PI / 2;
-    trail.position.set(x, .35, 1.55);
-    trail.visible = false;
-    chassis.add(trail);
-    return trail;
-  });
-  const hitRing = new THREE.Mesh(
-    new THREE.TorusGeometry(.72, .08, 6, 16),
-    new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: .85, depthWrite: false }),
-  );
-  hitRing.rotation.x = Math.PI / 2;
-  hitRing.position.y = 1.7;
-  hitRing.visible = false;
-  chassis.add(hitRing);
-
-  const sparkMat = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: .9, depthWrite: false });
-  const sparkGeo = new THREE.SphereGeometry(.14, 6, 6);
-  const sparks = [-.65, .65].map(x => {
-    const spark = new THREE.Mesh(sparkGeo, sparkMat.clone());
-    spark.position.set(x, .2, 1.25);
-    spark.visible = false;
-    chassis.add(spark);
-    return spark;
-  });
-
-  group.scale.setScalar(.78);
-  group.userData.chassis = chassis;
-  group.userData.helmet = helmet;
-  group.userData.wheelRolls = wheelRolls;
-  group.userData.frontSteers = frontSteers;
-  group.userData.shield = shield;
-  group.userData.trails = trails;
-  group.userData.hitRing = hitRing;
-  group.userData.sparks = sparks;
-  group.userData.wheelSpin = 0;
-  return group;
-}
-
-function ogpAddOfficeScenery(THREE, scene) {
-  const deskMat = new THREE.MeshStandardMaterial({ color: 0x9a6b45, roughness: .9 });
-  const legMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: .75 });
-  const paperMats = [0x60a5fa, 0xf472b6, 0xfacc15, 0x4ade80].map(color =>
-    new THREE.MeshStandardMaterial({ color, roughness: .72 }));
-  const deskPositions = [
-    [-58, -31, .3], [-31, 48, -.5], [45, 48, .6], [64, 3, -.2],
-    [38, -52, .5], [-35, -51, -.4], [-68, 16, .2], [7, 58, .4],
-  ];
-  deskPositions.forEach((entry, index) => {
-    const group = new THREE.Group();
-    const top = new THREE.Mesh(new THREE.BoxGeometry(8, .65, 3.7), deskMat);
-    top.position.y = 2.5;
-    group.add(top);
-    for (const x of [-3.2, 3.2]) {
-      for (const z of [-1.25, 1.25]) {
-        const leg = new THREE.Mesh(new THREE.BoxGeometry(.35, 2.5, .35), legMat);
-        leg.position.set(x, 1.25, z);
-        group.add(leg);
-      }
-    }
-    const monitor = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.8, .2),
-      new THREE.MeshStandardMaterial({ color: 0x172033, emissive: 0x102a55, emissiveIntensity: .45 }));
-    monitor.position.set(0, 3.65, 0);
-    group.add(monitor);
-    const folder = new THREE.Mesh(new THREE.BoxGeometry(1.1, .16, 1.5), paperMats[index % paperMats.length]);
-    folder.position.set(2.2, 2.9, .2);
-    folder.rotation.y = .2 * index;
-    group.add(folder);
-    group.position.set(entry[0], 0, entry[1]);
-    group.rotation.y = entry[2];
-    scene.add(group);
-  });
-
-  const printer = new THREE.Group();
-  const printerMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: .7 });
-  const printerDark = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: .7 });
-  const base = new THREE.Mesh(new THREE.BoxGeometry(8, 4.5, 5.5), printerMat);
-  base.position.y = 2.25;
-  printer.add(base);
-  const slot = new THREE.Mesh(new THREE.BoxGeometry(5, .5, .25), printerDark);
-  slot.position.set(0, 2.6, -2.78);
-  printer.add(slot);
-  printer.position.set(3, 0, -59);
-  scene.add(printer);
-
-  const cupMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: .58 });
-  const coffee = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 1.9, 4.8, 12), cupMat);
-  coffee.position.set(-64, 2.4, -10);
-  scene.add(coffee);
-  const coffeeTop = new THREE.Mesh(new THREE.CylinderGeometry(2.05, 2.05, .12, 16),
-    new THREE.MeshStandardMaterial({ color: 0x3f2417, roughness: 1 }));
-  coffeeTop.position.set(-64, 4.83, -10);
-  scene.add(coffeeTop);
-}
-
-function ogpBuildScene(runtime, THREE) {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x9dd9ff);
-  scene.fog = new THREE.Fog(0x9dd9ff, 75, 175);
-  const camera = new THREE.PerspectiveCamera(64, 16 / 9, .1, 350);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.shadowMap.enabled = false;
-  renderer.domElement.className = 'ogp-webgl';
-  ogpStage.prepend(renderer.domElement);
-
-  const hemi = new THREE.HemisphereLight(0xdff4ff, 0x32522f, 2.1);
-  scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffffff, 2.5);
-  sun.position.set(-35, 75, 25);
-  scene.add(sun);
-
-  // Straights + true-constant-radius corners (a "rounded rectangle" circuit:
-  // 4 corner radii of 22-28 world units, each 3x+ the curb half-width below)
-  // -- unlike V2's tight inner loop, this shape cannot self-intersect at any
-  // width up to ~9 (verified offline with the real offset-polyline geometry
-  // this function builds; see docs/office-grand-prix-v2-release-gate.md).
-  const points = [
-    [-38,44],[-34,44],[-30,44],[-26,44],[-22,44],[-18,44],[-14,44],[-10,44],[-6,44],[-2,44],[2,44],[6,44],[10,44],[14,44],[18,44],[22,44],[26,44],[30,44],[34,44],
-    [39,43],[44,41],[49,38],[54,34],[58,29],[61,23],[63,16],[63,8],
-    [61,0],[57,-7],[54,-14],[56,-21],[60,-27],
-    [62,-33],[60,-38],[56,-42],[50,-44],[44,-44],[38,-44],[32,-44],[26,-44],[20,-44],[14,-44],[8,-44],[2,-44],
-    [-4,-44],[-10,-44],[-16,-44],[-22,-44],[-28,-44],[-34,-44],[-40,-44],
-    [-46,-43],[-52,-41],[-57,-37],[-61,-31],[-63,-24],[-63,-16],[-61,-8],[-57,-2],
-    [-52,4],[-48,10],[-50,17],[-54,24],[-59,31],[-61,37],[-59,42],[-54,44],[-48,44],[-43,44]
-  ].map(([x, z]) => new THREE.Vector3(x, .14, z));
-  const path = new THREE.CatmullRomCurve3(points, true, 'catmullrom', .5);
-
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(280, 280),
-    new THREE.MeshStandardMaterial({ color: 0x4f7f4b, roughness: 1 }));
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -.03;
-  scene.add(ground);
-  const road = new THREE.Mesh(ogpRoadGeometry(THREE, path, 7.0),
-    new THREE.MeshStandardMaterial({ color: 0x303642, roughness: .94, metalness: .02 }));
-  scene.add(road);
-  const curbMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: .78 });
-  for (const sideSign of [-1, 1]) {
-    const curb = new THREE.Mesh(ogpBandGeometry(THREE, path, 6.9, 7.6, sideSign), curbMat);
-    curb.position.y = .025;
-    scene.add(curb);
-  }
-
-  const markingMat = new THREE.MeshBasicMaterial({ color: 0xfde68a, side: THREE.DoubleSide });
-  for (let progress = OGP_START_PROGRESS + 3200; progress < OGP_FINISH_PROGRESS; progress += 6200) {
-    const frame = ogpTrackFrameRaw(THREE, path, progress / OGP_TRACK_LENGTH, 0);
-    const dash = new THREE.Mesh(new THREE.PlaneGeometry(.16, 2.25), markingMat);
-    dash.position.copy(frame.point);
-    dash.position.y += .045;
-    dash.rotation.x = -Math.PI / 2;
-    dash.rotation.z = -Math.atan2(frame.tangent.z, frame.tangent.x) + Math.PI / 2;
-    scene.add(dash);
-  }
-
-  const startFrame = ogpTrackFrameRaw(THREE, path, OGP_START_PROGRESS / OGP_TRACK_LENGTH, 0);
-  const arch = new THREE.Group();
-  const archMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: .55 });
-  for (const x of [-6.4, 6.4]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(.55, 5.8, .55), archMat);
-    post.position.set(x, 2.9, 0);
-    arch.add(post);
-  }
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(13.4, .8, .65),
-    new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: .52 }));
-  bar.position.y = 5.5;
-  arch.add(bar);
-  arch.position.copy(startFrame.point);
-  arch.rotation.y = -Math.atan2(startFrame.tangent.z, startFrame.tangent.x) + Math.PI / 2;
-  scene.add(arch);
-
-  const gridMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-  for (let gridIndex = 0; gridIndex < 8; gridIndex += 1) {
-    const row = Math.floor(gridIndex / 2);
-    const lane = gridIndex % 2 === 0 ? -1050 : 1050;
-    const progress = OGP_START_PROGRESS - row * 700;
-    const tile = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 2.05), gridMat);
-    const frame = ogpTrackFrameRaw(THREE, path, progress / OGP_TRACK_LENGTH, lane / 800);
-    tile.position.copy(frame.point);
-    tile.position.y += .05;
-    tile.rotation.x = -Math.PI / 2;
-    tile.rotation.z = -Math.atan2(frame.tangent.z, frame.tangent.x) + Math.PI / 2;
-    scene.add(tile);
-  }
-
-  const itemBoxes = OGP_GATE_PROGRESS.map((progress, index) => {
-    const frame = ogpTrackFrameRaw(THREE, path, progress / OGP_TRACK_LENGTH, OGP_GATE_LANES[index] / 800);
-    const box = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.15, 1.15),
-      new THREE.MeshStandardMaterial({
-        color: 0x60a5fa, emissive: 0x1d4ed8, emissiveIntensity: .65,
-        transparent: true, opacity: .88, roughness: .2, metalness: .15,
-      }));
-    box.position.copy(frame.point);
-    box.position.y += 1.05;
-    scene.add(box);
-    return box;
-  });
-
-  const carMeshes = OGP_CARS.map((carDef, index) => {
-    const mesh = ogpCreateKart(THREE, carDef, index + 1);
-    scene.add(mesh);
-    return mesh;
-  });
-  ogpAddOfficeScenery(THREE, scene);
-  runtime.three = THREE;
-  runtime.scene = scene;
-  runtime.camera = camera;
-  runtime.renderer = renderer;
-  runtime.path = path;
-  runtime.itemMeshes = itemBoxes;
-  runtime.carMeshes = carMeshes;
-  runtime.bananaMeshes = new Map();
-  runtime.activeBananaIds = new Set();
-  runtime.cameraPosition = new THREE.Vector3();
-  runtime.cameraLook = new THREE.Vector3();
-  runtime.cameraWanted = new THREE.Vector3();
-  runtime.cameraLookWanted = new THREE.Vector3();
-  runtime.cameraForward = new THREE.Vector3();
-  runtime.cameraRight = new THREE.Vector3();
-  runtime.renderFrames = Array.from({ length: 8 }, () => ({
-    point: new THREE.Vector3(),
-    tangent: new THREE.Vector3(),
-    side: new THREE.Vector3(),
-  }));
-  runtime.bananaFrame = {
-    point: new THREE.Vector3(),
-    tangent: new THREE.Vector3(),
-    side: new THREE.Vector3(),
-  };
-  runtime.renderPoses = Array.from({ length: 8 }, () => ({
-    progress: 0, lateral: 0, heading: 0, steering: 0,
-  }));
-  runtime.previewRace = ogpNewRace(1, null, 0, { training: true });
-  runtime.dynamicDprScale = 1;
-  runtime.frameTimeEma = 16.7;
-  runtime.lastQualityAdjustAt = 0;
-  runtime.minimapTrack = Array.from({ length: 101 }, (_, index) => {
-    const point = path.getPointAt(index / 100);
-    return { x: point.x, z: point.z };
-  });
-  runtime.minimapCarPoints = Array.from({ length: 8 }, () => new THREE.Vector3());
-  runtime.resizeObserver = new ResizeObserver(() => ogpResizeRenderer());
-  runtime.resizeObserver.observe(ogpStage);
-  ogpResizeRenderer();
-}
-
-function ogpTrackFrameRaw(THREE, path, normalizedProgress, lateralWorld, out = null) {
-  const t = ((normalizedProgress % 1) + 1) % 1;
-  const frame = out || {
-    point: new THREE.Vector3(),
-    tangent: new THREE.Vector3(),
-    side: new THREE.Vector3(),
-  };
-  const point = path.getPointAt(t, frame.point);
-  const tangent = path.getTangentAt(t, frame.tangent).normalize();
-  const side = frame.side.set(tangent.z, 0, -tangent.x).normalize();
-  point.addScaledVector(side, lateralWorld);
-  return frame;
-}
-
-function ogpTrackFrame(progress, lateral, out = null) {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime?.three || !runtime.path) return null;
-  return ogpTrackFrameRaw(runtime.three, runtime.path, progress / OGP_TRACK_LENGTH, lateral / 800, out);
-}
-
-function ogpResizeRenderer() {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime?.renderer || !runtime.camera || !ogpStage) return;
-  const rect = ogpStage.getBoundingClientRect();
-  const width = Math.max(2, Math.floor(rect.width));
-  const height = Math.max(2, Math.floor(rect.height));
-  const maxPixels = 1500000;
-  const pixelCap = Math.sqrt(maxPixels / Math.max(1, width * height));
-  const cappedRatio = Math.min(window.devicePixelRatio || 1, 1.5, pixelCap);
-  runtime.renderer.setPixelRatio(Math.max(.75, cappedRatio * (runtime.dynamicDprScale || 1)));
-  runtime.renderer.setSize(width, height, false);
-  runtime.camera.aspect = width / height;
-  runtime.camera.updateProjectionMatrix();
-}
-
-async function ogpEnsureRenderer() {
-  if (officeGrandPrixRuntime?.renderer) {
-    ogpStartRenderLoop();
-    ogpResizeRenderer();
-    return officeGrandPrixRuntime;
-  }
-  if (!ogpHasWebGL()) {
-    if (ogpStage && !ogpStage.querySelector('.ogp-webgl-error')) {
-      ogpStage.append(el('div', { className: 'ogp-webgl-error' },
-        'Ta przeglądarka lub urządzenie nie udostępnia WebGL. Włącz akcelerację sprzętową albo otwórz portal w aktualnym Chrome, Edge lub Safari, aby zagrać w wyścig 3D.'));
-    }
-    throw new Error('WebGL jest niedostępny.');
-  }
-  officeGrandPrixRuntime = officeGrandPrixRuntime || {
-    playing: false, archiveMode: false, selectedCar: ogpSelectedCar,
-    frameId: null, lastFrame: 0, accumulator: 0, previewAngle: 0,
-  };
-  try {
-    const THREE = await ogpLoadThree();
-    if (!officeGrandPrixRuntime.renderer) ogpBuildScene(officeGrandPrixRuntime, THREE);
-    ogpStartRenderLoop();
-    return officeGrandPrixRuntime;
-  } catch (error) {
-    if (ogpStage && !ogpStage.querySelector('.ogp-webgl-error')) {
-      ogpStage.append(el('div', { className: 'ogp-webgl-error' },
-        'Nie udało się wczytać silnika 3D. Sprawdź połączenie z internetem i odśwież stronę. Sterowanie i wynik nie uruchomią się bez kompletnej sceny.'));
-    }
-    throw error;
-  }
-}
-
-function ogpSyncBananaMeshes() {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime?.three || !runtime.race) return;
-  const activeIds = runtime.activeBananaIds;
-  activeIds.clear();
-  for (const banana of runtime.race.bananas) {
-    if (banana.active !== false) activeIds.add(banana.id);
-  }
-  runtime.bananaMeshes.forEach((mesh, id) => {
-    if (!activeIds.has(id)) {
-      runtime.scene.remove(mesh);
-      mesh.geometry.dispose();
-      mesh.material.dispose();
-      runtime.bananaMeshes.delete(id);
-    }
-  });
-  for (const banana of runtime.race.bananas) {
-    if (banana.active === false) continue;
-    let mesh = runtime.bananaMeshes.get(banana.id);
-    if (!mesh) {
-      mesh = new runtime.three.Mesh(
-        new runtime.three.TorusGeometry(.48, .14, 6, 12, Math.PI * 1.25),
-        new runtime.three.MeshStandardMaterial({ color: 0xfacc15, emissive: 0x713f12, emissiveIntensity: .25, roughness: .55 })
-      );
-      mesh.rotation.x = Math.PI / 2;
-      runtime.scene.add(mesh);
-      runtime.bananaMeshes.set(banana.id, mesh);
-    }
-    const frame = ogpTrackFrame(banana.progress, banana.lane ?? banana.lateral, runtime.bananaFrame);
-    if (frame) {
-      mesh.position.copy(frame.point);
-      mesh.position.y += .38;
-      mesh.rotation.z += .035;
-    }
-  }
-}
-
-function ogpLerpAngle(from, to, alpha) {
-  return from + ogpAngleDelta(to, from) * alpha;
-}
-
-function ogpRenderPose(runtime, race, car, index, alpha) {
-  // Every car (local, bot, or ghost) is fully simulated client-side every
-  // tick -- no remote-snapshot interpolation branch needed since there's no
-  // network peer to lag behind.
-  const target = runtime.renderPoses[index];
-  target.progress = car.previousProgress + (car.progress - car.previousProgress) * alpha;
-  target.lateral = car.previousLateral + (car.lateral - car.previousLateral) * alpha;
-  target.heading = ogpLerpAngle(car.previousHeading, car.heading, alpha);
-  target.steering = car.previousSteering + (car.steering - car.previousSteering) * alpha;
-  return target;
-}
-
-function ogpRenderFrame(timestamp) {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime?.renderer || !runtime.scene || !runtime.camera) return;
-  // Catch up as many as five fixed ticks after an ordinary slow mobile frame.
-  // Larger gaps (for example a backgrounded tab) stay capped deliberately.
-  const delta = runtime.lastFrame ? Math.min(250, timestamp - runtime.lastFrame) : 16;
-  runtime.lastFrame = timestamp;
-  runtime.frameTimeEma += (delta - runtime.frameTimeEma) * .06;
-  if (timestamp - (runtime.lastQualityAdjustAt || 0) >= 2000) {
-    runtime.lastQualityAdjustAt = timestamp;
-    const previousScale = runtime.dynamicDprScale || 1;
-    if (runtime.frameTimeEma > 28) runtime.dynamicDprScale = Math.max(.68, previousScale - .1);
-    else if (runtime.frameTimeEma < 19) runtime.dynamicDprScale = Math.min(1, previousScale + .05);
-    if (runtime.dynamicDprScale !== previousScale) ogpResizeRenderer();
-  }
-  if (runtime.playing && runtime.race && !runtime.race.finished && !runtime.prestart) {
-    runtime.accumulator += delta;
-    while (runtime.accumulator >= OGP_TICK_MS && runtime.playing) {
-      ogpCaptureLocalInput(runtime.race);
-      ogpStepRace(runtime.race);
-      runtime.accumulator -= OGP_TICK_MS;
-      const local = runtime.race.cars[runtime.race.localSlot];
-      if ((local.finishedTick != null || runtime.race.tick >= OGP_HARD_LIMIT_TICKS) && !runtime.finishing) {
-        runtime.finishing = true;
-        ogpFinishRace();
-      }
-    }
-  }
-
-  const displayRace = runtime.race || runtime.previewRace;
-  const interpolation = runtime.playing
-    ? ogpClamp(runtime.accumulator / OGP_TICK_MS, 0, 1)
-    : 1;
-  displayRace.cars.forEach((car, index) => {
-    const mesh = runtime.carMeshes[index];
-    const pose = ogpRenderPose(runtime, displayRace, car, index, interpolation);
-    const frame = ogpTrackFrame(pose.progress, pose.lateral, runtime.renderFrames[index]);
-    if (!mesh || !frame) return;
-    mesh.visible = true;
-    mesh.position.copy(frame.point);
-    mesh.position.y += .05;
-    const headingRadians = pose.heading * Math.PI * 2 / OGP_ANGLE_STEPS;
-    mesh.rotation.y = -(headingRadians + Math.PI / 2);
-
-    const data = mesh.userData;
-    data.wheelSpin += car.speed * delta * .00022;
-    data.wheelRolls.forEach(wheel => { wheel.rotation.x = data.wheelSpin; });
-    const steerVisual = pose.steering / OGP_STEER_MAX * .42;
-    data.frontSteers.forEach(wheel => { wheel.rotation.y = steerVisual; });
-
-    if (data.chassis) {
-      const targetRoll = -(pose.steering / OGP_STEER_MAX) * 0.18;
-      const targetPitch = car.boostTicks > 0 ? -0.09 : (car.slowTicks > 0 ? 0.14 : 0);
-      data.roll = ogpApproachFloat(data.roll || 0, targetRoll, delta * 0.0025);
-      data.pitch = ogpApproachFloat(data.pitch || 0, targetPitch, delta * 0.003);
-      data.chassis.rotation.z = data.roll;
-      data.chassis.rotation.x = data.pitch;
-
-      if (data.helmet) {
-        data.helmet.rotation.y = -(pose.steering / OGP_STEER_MAX) * 0.35;
-      }
-    }
-
-    data.trails.forEach((trail, trailIndex) => {
-      trail.visible = car.boostTicks > 0;
-      if (trail.visible) {
-        trail.material.opacity = .56 + .18 * Math.sin(timestamp * .02 + trailIndex);
-        trail.scale.y = 1 + .18 * Math.sin(timestamp * .025 + trailIndex);
-      }
-    });
-    data.shield.visible = car.shieldTicks > 0;
-    if (data.shield.visible) {
-      data.shield.rotation.y = timestamp * .0015;
-      data.shield.material.opacity = .17 + .07 * Math.sin(timestamp * .01);
-    }
-    data.hitRing.visible = car.slowTicks > 0;
-    if (data.hitRing.visible) {
-      data.hitRing.rotation.z = timestamp * .008;
-      data.hitRing.material.opacity = .52 + .3 * Math.sin(timestamp * .018);
-    }
-
-    const slipAngle = Math.abs(ogpAngleDelta(car.moveHeading, car.heading));
-    const isDrifting = slipAngle >= 12 && car.speed > 130;
-    if (data.sparks) {
-      data.sparks.forEach((spark, sIdx) => {
-        spark.visible = isDrifting;
-        if (isDrifting) {
-          spark.material.opacity = .6 + .4 * Math.sin(timestamp * .05 + sIdx);
-          spark.scale.setScalar(.8 + .5 * Math.random());
-        }
-      });
-    }
-    if (isDrifting && index === displayRace.localSlot && Math.random() < 0.12) {
-      ogpPlaySound('screech');
-    }
-  });
-
-  runtime.itemMeshes.forEach((box, index) => {
-    box.rotation.x = timestamp * .0011 + index;
-    box.rotation.y = timestamp * .0015 + index;
-    const local = displayRace.cars[displayRace.localSlot];
-    box.visible = !runtime.playing || local.nextGate <= index;
-  });
-  ogpSyncBananaMeshes();
-
-  if (runtime.playing && runtime.race) {
-    const local = runtime.race.cars[runtime.race.localSlot];
-    const localPose = runtime.renderPoses[runtime.race.localSlot];
-    const frame = ogpTrackFrame(
-      localPose.progress,
-      localPose.lateral,
-      runtime.renderFrames[runtime.race.localSlot],
-    );
-    if (frame) {
-      const heading = localPose.heading * Math.PI * 2 / OGP_ANGLE_STEPS;
-      runtime.cameraForward.set(Math.cos(heading), 0, Math.sin(heading));
-      const steerPct = localPose.steering / OGP_STEER_MAX;
-      const rightVec = runtime.cameraRight.set(-runtime.cameraForward.z, 0, runtime.cameraForward.x);
-
-      // Steering-linked camera offsets are deliberately gentle -- the chase
-      // cam should read as "following a car that's turning", not itself
-      // whip around on every steering twitch. Softened 2026-07 after
-      // feedback that the previous coefficients (1.2 / 4.8 / 0.035 roll,
-      // plus a snappy 12.5 look-damping) made the camera feel more
-      // aggressive than the car actually was.
-      runtime.cameraWanted.copy(frame.point)
-        .addScaledVector(runtime.cameraForward, -8.5)
-        .addScaledVector(rightVec, -steerPct * 0.5);
-      runtime.cameraWanted.y += 4.6;
-
-      runtime.cameraLookWanted.copy(frame.point)
-        .addScaledVector(runtime.cameraForward, 9.5)
-        .addScaledVector(rightVec, steerPct * 2.0);
-      runtime.cameraLookWanted.y += .8;
-
-      const positionDamping = 1 - Math.exp(-8 * delta / 1000);
-      const lookDamping = 1 - Math.exp(-8 * delta / 1000);
-      runtime.cameraPosition.lerp(runtime.cameraWanted, positionDamping);
-      runtime.cameraLook.lerp(runtime.cameraLookWanted, lookDamping);
-
-      const targetFov = local.boostTicks > 0 ? 74 : 64;
-      runtime.camera.fov += (targetFov - runtime.camera.fov) * (1 - Math.exp(-10 * delta / 1000));
-      runtime.camera.updateProjectionMatrix();
-
-      runtime.camera.rotation.z = -steerPct * 0.015;
-
-      if (local.slowTicks > 0) {
-        const shake = (local.slowTicks / OGP_SLOW_TICKS) * 0.28;
-        runtime.cameraPosition.x += (Math.random() - 0.5) * shake;
-        runtime.cameraPosition.y += (Math.random() - 0.5) * shake;
-      }
-
-      runtime.camera.position.copy(runtime.cameraPosition);
-      runtime.camera.lookAt(runtime.cameraLook);
-    }
-    ogpUpdateHud();
-    ogpDrawMinimap();
-  } else {
-    runtime.previewAngle += delta * .00009;
-    const radius = 74;
-    runtime.camera.position.set(Math.cos(runtime.previewAngle) * radius, 48, Math.sin(runtime.previewAngle) * radius);
-    runtime.camera.lookAt(0, 0, 0);
-  }
-  runtime.renderer.render(runtime.scene, runtime.camera);
-}
-
-function ogpStartRenderLoop() {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime || runtime.frameId) return;
-  const loop = timestamp => {
-    if (!officeGrandPrixRuntime?.renderer) return;
-    // A single thrown frame must never permanently freeze the game: without
-    // this guard an exception here skips the requestAnimationFrame re-arm
-    // below, frameId stays non-null, and ogpStartRenderLoop's re-entry guard
-    // then refuses to ever restart the loop (this is exactly what happened
-    // when a stray bug threw mid-race -- the countdown kept ticking over a
-    // frozen frame with no way to recover).
-    try {
-      ogpRenderFrame(timestamp);
-    } catch (error) {
-      console.error('Office Grand Prix render frame failed:', error);
-    }
-    officeGrandPrixRuntime.frameId = requestAnimationFrame(loop);
-  };
-  runtime.frameId = requestAnimationFrame(loop);
-}
-
-function ogpUpdateHud() {
-  const race = officeGrandPrixRuntime?.race;
-  if (!race) return;
-  const local = race.cars[race.localSlot];
-  if (ogpPositionEl) ogpPositionEl.textContent = `${ogpPlaceOf(race, local.slot)}/8`;
-  if (ogpTimeEl) ogpTimeEl.textContent = ogpFormatTime((local.finishedTick || race.tick) * OGP_TICK_MS);
-  const speedEl = document.getElementById('ogp-speed');
-  if (speedEl) speedEl.textContent = `${Math.floor(local.speed)} km/h`;
-  const driftEl = document.getElementById('ogp-drift-badge');
-  const slipAngle = Math.abs(ogpAngleDelta(local.moveHeading, local.heading));
-  if (driftEl) driftEl.classList.toggle('hidden', !(slipAngle >= 12 && local.speed > 130));
-  if (ogpItemEl) {
-    const base = local.item ? OGP_ITEM_LABEL[local.item] : '—';
-    ogpItemEl.textContent = local.shieldTicks > 0 ? `${base} · 🛡️` : base;
-  }
-  ogpUpdateEngineSound(local.speed, officeGrandPrixRuntime.playing && !officeGrandPrixRuntime.prestart);
-}
-
-function ogpDrawMinimap() {
-  const runtime = officeGrandPrixRuntime;
-  const race = runtime?.race;
-  if (!race || !ogpMinimap || !runtime.path) return;
-  const ctx = ogpMinimap.getContext('2d');
-  const width = ogpMinimap.width;
-  const height = ogpMinimap.height;
-  ctx.clearRect(0, 0, width, height);
-  ctx.strokeStyle = 'rgba(255,255,255,.84)';
-  ctx.lineWidth = 5;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  for (let i = 0; i <= 100; i += 1) {
-    const point = runtime.minimapTrack[i];
-    const x = width / 2 + point.x * 1.65;
-    const y = height / 2 + point.z * 1.05;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  ctx.closePath();
-  ctx.stroke();
-  race.cars.forEach(car => {
-    const wrapped = ((car.progress % OGP_TRACK_LENGTH) + OGP_TRACK_LENGTH) % OGP_TRACK_LENGTH;
-    const point = runtime.path.getPointAt(wrapped / OGP_TRACK_LENGTH, runtime.minimapCarPoints[car.slot]);
-    ctx.fillStyle = `#${ogpCarDef(car.carId).color.toString(16).padStart(6, '0')}`;
-    ctx.beginPath();
-    ctx.arc(width / 2 + point.x * 1.65, height / 2 + point.z * 1.05, car.slot === race.localSlot ? 5 : 3.5, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
-function ogpCaptureLocalInput(race) {
-  const local = race.cars[race.localSlot];
-  if (!local || local.isBot) return;
-  const steer = ogpKeySteer.left === ogpKeySteer.right ? 0 : (ogpKeySteer.left ? -1 : 1);
-  const previous = race.currentInputs.get(local.slot) || { steer: 0, useItem: false };
-  const next = { steer, useItem: !!previous.useItem };
-  race.currentInputs.set(local.slot, next);
-  if (previous.steer !== steer || next.useItem) {
-    const event = { tick: race.tick + 1, steer, useItem: !!next.useItem };
-    const last = race.inputLog[race.inputLog.length - 1];
-    if (!last || last.tick !== event.tick || last.steer !== event.steer || last.useItem !== event.useItem) {
-      race.inputLog.push(event);
-    }
-  }
-}
-
-function ogpQueueItemUse() {
-  const race = officeGrandPrixRuntime?.race;
-  if (!officeGrandPrixRuntime?.playing || !race || officeGrandPrixRuntime.prestart) return;
-  const local = race.cars[race.localSlot];
-  if (!local?.item) return;
-  const input = race.currentInputs.get(local.slot) || { steer: 0, useItem: false };
-  input.useItem = true;
-  race.currentInputs.set(local.slot, input);
-}
-
-// Normalizes a ghosts[] payload from the `ghosts` Edge Function action into
-// the roster-row shape ogpNewRace expects, seated in slots 1..N (slot 0 is
-// always the local player).
-function ogpGhostRoster(ghosts) {
-  return (ghosts || []).slice(0, 7).map((ghost, index) => ({
-    slot: index + 1,
-    userId: ghost.userId || null,
-    nick: ghost.nick || 'Gracz',
-    carId: OGP_CARS.some(car => car.id === ghost.carId) ? ghost.carId : OGP_CARS[index + 1].id,
-    isGhost: true,
-    ghostLog: Array.isArray(ghost.inputLog) ? ghost.inputLog : [],
-    finishedTick: ghost.finishedTick ?? null,
-  }));
-}
-
-function ogpRenderGhostRoster(ghosts) {
-  if (!ogpRosterEl) return;
-  const list = ghosts || [];
-  if (!list.length) {
-    ogpRosterEl.replaceChildren(el('div', { className: 'bj-empty' }, 'Brak jeszcze zapisanych przejazdów — puste miejsca wypełnią boty.'));
-  } else {
-    ogpRosterEl.replaceChildren(...list.map(ghost => {
-      const car = ogpCarDef(ghost.carId);
-      return el('div', { className: 'ogp-row' },
-        el('span', { className: 'ogp-car-dot', style: { background: `#${car.color.toString(16).padStart(6, '0')}` } }),
-        el('strong', {}, ghost.nick || 'Gracz'),
-        el('small', {}, ghost.finishedTick ? ogpFormatTime(ghost.finishedTick * OGP_TICK_MS) : 'DNF'));
-    }));
-  }
-  const counter = document.getElementById('ogp-lobby-count');
-  if (counter) counter.textContent = `${list.length} 👻`;
-  const label = document.getElementById('ogp-session-label');
-  if (label) label.textContent = `${list.length} 👻`;
-}
-
-function ogpRenderLeaderboard(rows) {
-  if (!ogpWeeklyEl) return;
-  if (!rows?.length) {
-    ogpWeeklyEl.replaceChildren(el('div', { className: 'bj-empty' }, 'Brak oficjalnych wyników w tym tygodniu.'));
-    return;
-  }
-  ogpWeeklyEl.replaceChildren(...rows.slice(0, 10).map((row, index) =>
-    el('div', { className: 'ogp-row' + (row.user_id === me?.id ? ' me' : '') },
-      el('strong', {}, `${index + 1}.`),
-      el('strong', {}, row.nick || 'Gracz'),
-      el('small', {}, `${row.points ?? row.weekly_points ?? row.score ?? 0} pkt`))));
-}
-
-function ogpRenderAwards(rows) {
-  if (!ogpAwardsEl || !rows?.length) return;
-  ogpAwardsEl.replaceChildren(...rows.slice(0, 6).map(row =>
-    el('div', { className: 'ogp-row' },
-      el('strong', {}, row.rank === 1 ? '🥇' : (row.rank === 2 ? '🥈' : '🥉')),
-      el('strong', {}, row.nick || 'Gracz'),
-      el('small', {}, `${row.prize_coins || 0} 🪙`))));
-}
-
-async function invokeOfficeGrandPrix(payload) {
-  const { data, error } = await sb.functions.invoke('office-grand-prix-action', { body: payload });
-  if (error) throw new Error(error.message || 'Nie udało się połączyć z serwerem wyścigu.');
-  if (!data || data.ok === false) throw new Error(data?.error || 'Serwer odrzucił akcję wyścigu.');
-  return data;
-}
-
-async function ogpLoadBoards() {
-  const [weekly, awards] = await Promise.all([
-    // Compatibility view exposes disposable test standings before launch and
-    // the five-best-races weekly ranking from the ranked debut onward.
-    sb.from('office_grand_prix_weekly_leaderboard').select('*').order('rank').limit(20),
-    sb.from('office_grand_prix_recent_awards').select('*').order('week_start', { ascending: false }).order('rank').limit(9),
-  ]);
-  if (!weekly.error) ogpRenderLeaderboard(weekly.data || []);
-  if (!awards.error) ogpRenderAwards(awards.data || []);
-}
-
-function ogpApplyMode(data) {
-  const mode = data?.mode || data?.portal_mode || 'test';
-  const chip = document.getElementById('ogp-mode-chip');
-  if (!chip) return;
-  chip.classList.toggle('ranked', mode === 'ranked' || mode === 'seasonal');
-  chip.textContent = mode === 'ranked' || mode === 'seasonal' ? '🏆 sezon rankingowy' :
-    (mode === 'arcade' ? '🕹️ archiwum · 1 moneta' : '🧪 publiczny test · bez opłat');
-}
-
-function ogpIsActive() {
-  return (activeTab === 'whack-boss' && getCurrentSeasonalEntry().gameType === 'office_grand_prix') ||
-    (activeTab === 'all-games' && allGamesSelectedGame === 'office_grand_prix');
-}
-
-function ogpServerNowMs() {
-  return Date.now() + (officeGrandPrixRuntime?.serverClockOffsetMs || 0);
-}
-
-function ogpServerContractValid(data) {
-  return (
-    (data?.engineVersion || data?.physics?.engineVersion) === OGP_CLIENT_VERSION &&
-    (data?.trackVersion || data?.physics?.trackVersion) === OGP_TRACK_VERSION &&
-    (data?.trackHash || data?.physics?.trackHash) === OGP_TRACK_HASH &&
-    Number(data?.tickMs || data?.physics?.tickMs) === OGP_TICK_MS
-  );
-}
-
-// Applies the shared bits of a `ghosts`/`start_race` response: mode chip,
-// weekly/test leaderboard, awards, and the caller's live coin balance. There
-// is no more shared lobby/session state to reconcile -- each race is its own
-// solo server session (see ogpStartRankedRace).
-function ogpApplySharedState(data) {
-  if (!data) return;
-  officeGrandPrixRuntime.serverContractValid = ogpServerContractValid(data);
-  if (data.serverNow && Number.isFinite(new Date(data.serverNow).getTime())) {
-    officeGrandPrixRuntime.serverClockOffsetMs = new Date(data.serverNow).getTime() - Date.now();
-  }
-  ogpApplyMode(data);
-  if (data.mode === 'test' && data.testStandings) ogpRenderLeaderboard(data.testStandings);
-  else if (data.weekly) ogpRenderLeaderboard(data.weekly);
-  if (data.awards) ogpRenderAwards(data.awards);
-  if (data.profile && me) {
-    me.coins = data.profile.coins;
-    setText(headerCoins, me.coins);
-  }
-}
-
-async function ogpRefreshGhosts() {
-  const data = await invokeOfficeGrandPrix({ action: 'ghosts' });
-  ogpApplySharedState(data);
-  officeGrandPrixRuntime.ghosts = Array.isArray(data.ghosts) ? data.ghosts : [];
-  ogpRenderGhostRoster(officeGrandPrixRuntime.ghosts);
-  return officeGrandPrixRuntime.ghosts;
-}
-
-async function loadOfficeGrandPrixState(showSpinner = true) {
-  try {
-    await ogpEnsureRenderer();
-  } catch (error) {
-    if (ogpStatus) ogpStatus.textContent = error.message;
-    return;
-  }
-  if (showSpinner && ogpStatus) ogpStatus.textContent = 'Ładowanie garażu…';
-  ogpLoadBoards().catch(() => {});
-  try {
-    await ogpRefreshGhosts();
-    if (!officeGrandPrixRuntime.serverContractValid) {
-      if (ogpJoinBtn) {
-        ogpJoinBtn.disabled = true;
-        ogpJoinBtn.textContent = 'Odśwież portal';
-      }
-      if (ogpStatus) ogpStatus.textContent = 'Wersja silnika lub trasy na serwerze nie pasuje do klienta. Wyścigi online są zablokowane.';
-      return;
-    }
-    if (ogpJoinBtn) {
-      ogpJoinBtn.disabled = false;
-      ogpJoinBtn.textContent = '🏁 Wyścig!';
-    }
-    if (ogpStatus) {
-      ogpStatus.textContent = officeGrandPrixRuntime.serverState?.mode === 'test'
-        ? 'Publiczny test trwa do niedzieli — wyścigi i ranking testowy są bezpłatne, a wyniki zostaną wyzerowane przed sezonem.'
-        : 'Gotowe — wciśnij Wyścig, kiedy chcesz. Start jest natychmiastowy.';
-    }
-  } catch (error) {
-    ogpRenderGhostRoster([]);
-    if (ogpStatus) {
-      ogpStatus.textContent = 'Serwer wyścigu jest chwilowo niedostępny. Scena 3D i trening z botami działają lokalnie; oficjalny start pozostaje zablokowany.';
-    }
-    if (ogpJoinBtn) {
-      ogpJoinBtn.disabled = true;
-      ogpJoinBtn.textContent = 'Serwer niedostępny';
-    }
-  }
-}
-
-async function ogpStartRankedRace() {
-  if (!ogpJoinBtn) return;
-  ogpJoinBtn.disabled = true;
-  ogpJoinBtn.textContent = 'Przygotowuję start…';
-  try {
-    await ogpEnsureRenderer();
-    let data;
-    try {
-      data = await invokeOfficeGrandPrix({
-        action: 'start_race',
-        engineVersion: OGP_CLIENT_VERSION,
-        trackVersion: OGP_TRACK_VERSION,
-        trackHash: OGP_TRACK_HASH,
-        cosmetic: Math.max(0, OGP_CARS.findIndex(car => car.id === ogpSelectedCar)),
-      });
-    } catch (edgeError) {
-      console.warn('Ranked race server error, launching local training fallback:', edgeError);
-      showToast('⚠️ Uruchamiam natychmiastowy wyścig lokalny.');
-      ogpJoinBtn.disabled = false;
-      ogpJoinBtn.textContent = '🏁 Wyścig!';
-      return ogpStartTraining();
-    }
-    ogpApplySharedState(data);
-    officeGrandPrixRuntime.session = data.session;
-    const ghosts = Array.isArray(data.ghosts) ? data.ghosts : officeGrandPrixRuntime.ghosts || [];
-    ogpRenderGhostRoster(ghosts);
-    const roster = [
-      { slot: 0, userId: me?.id || 'local', nick: me?.nick || 'Ty', carId: ogpSelectedCar, isBot: false },
-      ...ogpGhostRoster(ghosts),
-    ];
-    ogpStartRace(Number(data.session.seed), roster, 0, {
-      training: false,
-      sessionId: data.session.id,
-    });
-  } catch (error) {
-    showToast('❌ ' + error.message);
-    ogpJoinBtn.disabled = false;
-    ogpJoinBtn.textContent = '🏁 Wyścig!';
-  }
-}
-
-async function ogpStartTraining() {
-  try {
-    await ogpEnsureRenderer();
-    const roster = Array.from({ length: 8 }, (_, slot) => slot === 0
-      ? { slot, userId: me?.id || 'training', nick: me?.nick || 'Ty', carId: ogpSelectedCar, isBot: false }
-      : { slot, userId: null, nick: OGP_BOT_NAMES[slot], carId: OGP_CARS[slot].id, isBot: true });
-    ogpStartRace(ogpSeeded(Date.now(), 7, 27), roster, 0, { training: true });
-  } catch (error) {
-    showToast('❌ ' + error.message);
-  }
-}
-
-function ogpInitializeCamera(runtime, car) {
-  const frame = ogpTrackFrame(
-    car.progress,
-    car.lateral,
-    runtime.renderFrames?.[car.slot] || null,
-  );
-  if (!frame) return;
-  const heading = car.heading * Math.PI * 2 / OGP_ANGLE_STEPS;
-  runtime.cameraForward.set(Math.cos(heading), 0, Math.sin(heading));
-  runtime.cameraPosition.copy(frame.point).addScaledVector(runtime.cameraForward, -8.5);
-  runtime.cameraPosition.y += 4.6;
-  runtime.cameraLook.copy(frame.point).addScaledVector(runtime.cameraForward, 7.2);
-  runtime.cameraLook.y += .8;
-  runtime.camera.position.copy(runtime.cameraPosition);
-  runtime.camera.lookAt(runtime.cameraLook);
-}
-
-function ogpStartRace(seed, roster, localSlot, opts = {}) {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime?.renderer) return;
-  runtime.playing = false;
-  if (runtime.countdownInterval) {
-    clearInterval(runtime.countdownInterval);
-    runtime.countdownInterval = null;
-  }
-  runtime.race = ogpNewRace(seed, roster, localSlot, opts);
-  runtime.playing = true;
-  runtime.prestart = true;
-  runtime.finishing = false;
-  runtime.accumulator = 0;
-  runtime.lastFrame = performance.now();
-  ogpInitializeCamera(runtime, runtime.race.cars[runtime.race.localSlot]);
-  ogpStage.classList.add('is-racing');
-  hide(ogpLobby);
-  if (ogpStatus) ogpStatus.textContent = opts.training
-    ? 'Trening — wynik nie jest zapisywany. Wszystkie auta mają identyczne osiągi.'
-    : 'Wyścig w toku — oficjalny wynik zatwierdzi serwer po deterministycznym odtworzeniu wejść.';
-  let count = 3;
-  show(ogpBannerEl);
-  ogpBannerEl.textContent = String(count);
-  ogpPlaySound('countdown_beep', count);
-  runtime.countdownInterval = setInterval(() => {
-    count -= 1;
-    if (count > 0) {
-      ogpBannerEl.textContent = String(count);
-      ogpPlaySound('countdown_beep', count);
-    } else if (count === 0) {
-      ogpBannerEl.textContent = 'START!';
-      ogpPlaySound('countdown_beep', 0);
-      runtime.prestart = false;
-      setTimeout(() => hide(ogpBannerEl), 650);
-    } else {
-      clearInterval(runtime.countdownInterval);
-      runtime.countdownInterval = null;
-    }
-  }, 800);
-}
-
-async function ogpFinishRace() {
-  const runtime = officeGrandPrixRuntime;
-  const race = runtime?.race;
-  if (!race) return;
-  runtime.playing = false;
-  ogpStage.classList.remove('is-racing');
-  ogpKeySteer.left = false;
-  ogpKeySteer.right = false;
-  const order = ogpRankOrder(race);
-  const local = race.cars[race.localSlot];
-  const place = order.findIndex(car => car.slot === local.slot) + 1;
-  const dnf = local.finishedTick == null;
-  if (!dnf && place <= 3) ogpPlaySound('finish_win');
-  show(ogpLobby);
-  const title = ogpLobby.querySelector('.ogp-lobby-title > span');
-  const copy = document.getElementById('ogp-lobby-copy');
-  if (title) title.textContent = dnf ? 'Koniec wyścigu · DNF' : `Meta · ${place}. miejsce`;
-  if (copy) copy.textContent = dnf
-    ? 'Limit 60 sekund minął. DNF daje 0 punktów; możesz od razu ruszyć ponownie.'
-    : `Czas ${ogpFormatTime(local.finishedTick * OGP_TICK_MS)}. ${race.training ? 'To był trening bez zapisu.' : 'Serwer odtwarza wejścia i zatwierdza oficjalny wynik.'}`;
-  if (ogpTrainingBtn) ogpTrainingBtn.textContent = 'Trening ponownie';
-  if (ogpStatus) ogpStatus.textContent = dnf
-    ? 'Nie ukończono w 60 sekund.'
-    : `Lokalny finisz (z duchami): ${place}. miejsce · ${ogpFormatTime(local.finishedTick * OGP_TICK_MS)}. Oficjalny wynik liczy się względem botów.`;
-  if (!race.training && race.sessionId && !race.submitted) {
-    race.submitted = true;
-    try {
-      const terminalTick = local.finishedTick || OGP_HARD_LIMIT_TICKS;
-      // The finish tick was already simulated with the player's real control.
-      // Neutralise only the following, not-yet-simulated tick so the browser
-      // and the authoritative replay see the exact same finishing input.
-      if (!dnf && terminalTick < OGP_HARD_LIMIT_TICKS) {
-        const neutralTick = terminalTick + 1;
-        const lastInput = race.inputLog[race.inputLog.length - 1];
-        if (lastInput?.tick === neutralTick) {
-          lastInput.steer = 0;
-          lastInput.useItem = false;
-        } else if (!lastInput || lastInput.tick < neutralTick) {
-          race.inputLog.push({ tick: neutralTick, steer: 0, useItem: false });
-        }
-      }
-      const startedAt = runtime.session?.raceStartedAt || runtime.session?.race_started_at;
-      const wallTicks = startedAt
-        ? Math.floor((ogpServerNowMs() - new Date(startedAt).getTime()) / OGP_TICK_MS)
-        : terminalTick;
-      const elapsedTicks = Math.max(terminalTick, Math.min(OGP_HARD_LIMIT_TICKS, wallTicks));
-      if (ogpStatus) ogpStatus.textContent = 'Zapisuję wynik…';
-      const data = await invokeOfficeGrandPrix({
-        action: 'submit',
-        sessionId: race.sessionId,
-        engineVersion: OGP_CLIENT_VERSION,
-        trackVersion: OGP_TRACK_VERSION,
-        trackHash: OGP_TRACK_HASH,
-        idempotencyKey: `ogp:${race.sessionId}:${me?.id || race.localSlot}`,
-        inputs: race.inputLog,
-        elapsedTicks,
-        clientMeta: {
-          platform: navigator.userAgentData?.platform || navigator.platform || 'web',
-          renderer: 'three-0.160.0',
-          viewport: `${window.innerWidth}x${window.innerHeight}`,
-        },
-      });
-      ogpApplySharedState(data);
-      const official = data.participant || null;
-      if (ogpStatus) ogpStatus.textContent = official?.finished == null
-        ? 'Zapis przyjęty. Serwer ustala oficjalny wynik.'
-        : (official.finished
-          ? `Wynik zatwierdzony: ${official.place}. miejsce · ${official.points || 0} pkt.`
-          : 'Serwer zatwierdził DNF.');
-      if (allGamesMode && allGamesSelectedGame === 'office_grand_prix') loadArcadeScores('office_grand_prix');
-      ogpRefreshGhosts().catch(() => {});
-    } catch (error) {
-      if (ogpStatus) ogpStatus.textContent = 'Nie udało się zatwierdzić wyniku: ' + error.message;
-    }
-  }
-}
-
-function stopOfficeGrandPrix() {
-  ogpKeySteer.left = false;
-  ogpKeySteer.right = false;
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime) return;
-  if (runtime.frameId) cancelAnimationFrame(runtime.frameId);
-  runtime.frameId = null;
-  runtime.lastFrame = 0;
-  runtime.playing = false;
-  runtime.prestart = false;
-  runtime.race = null;
-  runtime.finishing = false;
-  runtime.bananaMeshes?.forEach(mesh => {
-    runtime.scene?.remove(mesh);
-    mesh.geometry?.dispose();
-    mesh.material?.dispose();
-  });
-  runtime.bananaMeshes?.clear();
-  ogpStage?.classList.remove('is-racing', 'is-immersive');
-  document.body.classList.remove('ogp-no-scroll');
-  show(ogpLobby);
-  if (document.fullscreenElement === ogpStage) document.exitFullscreen().catch(() => {});
-}
-
-async function ogpToggleFullscreen() {
-  if (!ogpStage) return;
-  if (document.fullscreenElement === ogpStage) {
-    await document.exitFullscreen().catch(() => {});
-    return;
-  }
-  try {
-    await ogpStage.requestFullscreen({ navigationUI: 'hide' });
-    ogpStage.classList.add('is-immersive');
-    document.body.classList.add('ogp-no-scroll');
-    try { await screen.orientation?.lock?.('landscape'); } catch {}
-  } catch {
-    ogpStage.classList.toggle('is-immersive');
-    document.body.classList.toggle('ogp-no-scroll', ogpStage.classList.contains('is-immersive'));
-    ogpResizeRenderer();
-  }
-}
-
-if (OGP_LOCAL_V2_PREVIEW || OGP_PUBLIC_UI_ENABLED) {
-  document.getElementById('ogp-archive-card')?.classList.remove('hidden');
-}
-document.querySelectorAll('#ogp-car-picker .ogp-car').forEach(button => {
-  button.addEventListener('click', () => {
-    if (officeGrandPrixRuntime?.playing) return;
-    ogpSelectedCar = button.dataset.car;
-    if (officeGrandPrixRuntime) officeGrandPrixRuntime.selectedCar = ogpSelectedCar;
-    document.querySelectorAll('#ogp-car-picker .ogp-car').forEach(other => other.classList.toggle('active', other === button));
-  });
-});
-ogpJoinBtn?.addEventListener('click', ogpStartRankedRace);
-ogpTrainingBtn?.addEventListener('click', ogpStartTraining);
-document.getElementById('ogp-item-btn')?.addEventListener('pointerdown', event => {
-  event.preventDefault();
-  ogpQueueItemUse();
-});
-document.getElementById('ogp-fullscreen')?.addEventListener('click', ogpToggleFullscreen);
-document.addEventListener('fullscreenchange', () => {
-  const active = document.fullscreenElement === ogpStage;
-  if (ogpStage) ogpStage.classList.toggle('is-immersive', active);
-  document.body.classList.toggle('ogp-no-scroll', active);
-  ogpResizeRenderer();
-});
-document.querySelectorAll('#ogp-touch [data-steer]').forEach(button => {
-  const direction = Number(button.dataset.steer);
-  const set = active => {
-    if (direction < 0) ogpKeySteer.left = active;
-    else ogpKeySteer.right = active;
-  };
-  button.addEventListener('pointerdown', event => {
-    event.preventDefault();
-    try { button.setPointerCapture(event.pointerId); } catch {}
-    set(true);
-  });
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type =>
-    button.addEventListener(type, event => { event.preventDefault(); set(false); }));
-});
-function ogpReleaseHeldControls() {
-  ogpKeySteer.left = false;
-  ogpKeySteer.right = false;
-  const race = officeGrandPrixRuntime?.race;
-  if (race) race.currentInputs.set(race.localSlot, { steer: 0, useItem: false });
-}
-window.addEventListener('keydown', event => {
-  if (!officeGrandPrixRuntime?.playing || event.repeat && event.code === 'Space') return;
-  if (event.code === 'ArrowLeft' || event.code === 'KeyA') { ogpKeySteer.left = true; event.preventDefault(); }
-  if (event.code === 'ArrowRight' || event.code === 'KeyD') { ogpKeySteer.right = true; event.preventDefault(); }
-  if (event.code === 'Space') { ogpQueueItemUse(); event.preventDefault(); }
-});
-window.addEventListener('keyup', event => {
-  if (event.code === 'ArrowLeft' || event.code === 'KeyA') ogpKeySteer.left = false;
-  if (event.code === 'ArrowRight' || event.code === 'KeyD') ogpKeySteer.right = false;
-});
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) return;
-  ogpReleaseHeldControls();
-});
-window.addEventListener('blur', ogpReleaseHeldControls);
-window.addEventListener('pointercancel', ogpReleaseHeldControls);
 
 // ── Najazd Faktur (Invoice Horde) — canvas ───────────────────────────────────
 // Deterministic integer arena-survivor. The simulation here is replayed 1:1 by
