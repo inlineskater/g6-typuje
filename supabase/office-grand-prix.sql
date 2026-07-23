@@ -68,6 +68,12 @@ CREATE TABLE IF NOT EXISTS public.office_grand_prix_sessions (
                            )),
   game_mode                text NOT NULL
                            CHECK (game_mode IN ('test', 'seasonal', 'arcade')),
+  engine_version           text NOT NULL DEFAULT 'office_grand_prix_v2'
+                           CONSTRAINT office_grand_prix_sessions_engine_version_check
+                           CHECK (engine_version IN (
+                             'office_grand_prix_v1',
+                             'office_grand_prix_v2'
+                           )),
   seed                     integer NOT NULL CHECK (seed >= 0),
   max_players              smallint NOT NULL DEFAULT 8
                            CHECK (max_players = 8),
@@ -103,6 +109,39 @@ CREATE TABLE IF NOT EXISTS public.office_grand_prix_sessions (
     )
   )
 );
+
+-- Additive V2 rollout for installations that already ran the V1 file.
+ALTER TABLE public.office_grand_prix_sessions
+  ADD COLUMN IF NOT EXISTS engine_version text;
+
+UPDATE public.office_grand_prix_sessions
+SET engine_version = 'office_grand_prix_v1'
+WHERE engine_version IS NULL;
+
+ALTER TABLE public.office_grand_prix_sessions
+  ALTER COLUMN engine_version SET DEFAULT 'office_grand_prix_v2',
+  ALTER COLUMN engine_version SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.office_grand_prix_sessions'::regclass
+      AND conname = 'office_grand_prix_sessions_engine_version_check'
+  ) THEN
+    ALTER TABLE public.office_grand_prix_sessions
+      ADD CONSTRAINT office_grand_prix_sessions_engine_version_check
+      CHECK (engine_version IN (
+        'office_grand_prix_v1',
+        'office_grand_prix_v2'
+      )) NOT VALID;
+  END IF;
+END;
+$$;
+
+ALTER TABLE public.office_grand_prix_sessions
+  VALIDATE CONSTRAINT office_grand_prix_sessions_engine_version_check;
 
 -- Exactly one lobby/countdown/race may exist at a time. Expression indexes are
 -- used because the singleton key is intentionally not part of the data model.

@@ -8,25 +8,37 @@
 //   node scripts/office-grand-prix-parity.mjs
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // ── Browser-style engine (mirrors index.html) ───────────────────────────────
 
-const C_ENGINE_VERSION = 'office_grand_prix_v1';
+const C_ENGINE_VERSION = 'office_grand_prix_v2';
+const C_TRACK_VERSION = 'office_loop_v2';
+const C_TRACK_HASH = '4c6fe6372d604110d5b0fdbe9c23ac35d6bcf1d8aeb9fbb9737c44c5226daeb8';
 const C_TICK_MS = 50;
 const C_TRACK_LENGTH = 160000;
+const C_START_PROGRESS = 16000;
+const C_FINISH_PROGRESS = C_START_PROGRESS + C_TRACK_LENGTH;
 const C_MAX_TICKS = 1800;
-const C_ACCEL = 4;
-const C_START_SPEED = 70;
-const C_MAX_SPEED = 150;
-const C_FORWARD_PCT = 95;
-const C_STEER_STEP = 180;
-const C_NEUTRAL_STEP = 40;
-const C_LANE_LIMIT = 4400;
+const C_ACCEL = 5;
+const C_START_SPEED = 84;
+const C_MAX_SPEED = 180;
+const C_FORWARD_PCT = 96;
+const C_STEER_RESPONSE = 300;
+const C_STEER_CENTER = 360;
+const C_STEER_MAX = 1000;
+const C_TURN_RATE = 4;
 const C_OFFROAD_AT = 3400;
 const C_OFFROAD_PCT = 70;
+const C_GRASS_MAX_SPEED = 115;
+const C_GRASS_BRAKE = 8;
+const C_GRASS_GRIP_PCT = 62;
+const C_SAFETY_LATERAL = 6500;
+const C_RESET_AFTER_TICKS = 20;
+const C_RESET_CONTROL_TICKS = 12;
 const C_BOOST_PCT = 125;
 const C_BOOST_TICKS = 30;
 const C_BANANA_PCT = 65;
@@ -35,20 +47,64 @@ const C_SHIELD_TICKS = 160;
 const C_PICKUP_RADIUS = 1050;
 const C_BANANA_PROGRESS_RADIUS = 420;
 const C_BANANA_LANE_RADIUS = 820;
-const C_GATES = [13000, 28000, 43000, 58000, 73000, 88000, 103000, 118000, 133000, 148000];
+const C_ANGLE_STEPS = 256;
+const C_TRIG_SCALE = 10000;
+const C_GATES = [29000, 44000, 59000, 74000, 89000, 104000, 119000, 134000, 149000, 164000];
 const C_GATE_LANES = [-1800, 0, 1800, 0, -1800, 1800, 0, -1800, 1800, 0];
+const C_TRACK_TANGENTS = [209,237,240,241,242,243,243,244,244,244,245,245,245,246,246,248,253,255,0,0,0,1,1,1,1,1,1,2,2,2,3,3,5,11,16,18,18,19,19,19,20,20,20,21,21,21,22,23,24,34,44,46,47,48,49,49,50,50,50,51,52,53,54,65,72,74,75,75,75,76,76,76,77,77,78,78,79,81,93,97,98,99,99,100,100,101,101,101,102,103,104,106,117,120,121,121,122,122,122,122,123,123,123,123,124,124,125,126,130,137,138,139,139,140,140,140,141,141,141,141,142,142,143,144,151,160,161,162,163,163,164,164,164,165,165,166,166,167,170,186,194,196,197,198,199,199,200,201,202,203,205,220,237,239,240,241,241,242,242,243,243,244,245,247,4,9,11,11,12,12,12,13,13,13,13,14,14,17,18,19,19,19,19,19,19,20,20,20,21,21,23,26,57,67,69,71,72,73,74,76,78,82,110,116,118,119,119,120,120,120,121,121,121,122,123,124,129,144,147,148,149,149,150,150,151,151,152,153,155,172,185,188,189,190,190,190,190,190,189,189,185,175,173,173,173,172,172,173,173,173,173,173,174,175,176,179];
+const C_SIN = [0,245,491,736,980,1224,1467,1710,1951,2191,2430,2667,2903,3137,3369,3599,3827,4052,4276,4496,4714,4929,5141,5350,5556,5758,5957,6152,6344,6532,6716,6895,7071,7242,7410,7572,7730,7883,8032,8176,8315,8449,8577,8701,8819,8932,9040,9142,9239,9330,9415,9495,9569,9638,9700,9757,9808,9853,9892,9925,9952,9973,9988,9997,10000,9997,9988,9973,9952,9925,9892,9853,9808,9757,9700,9638,9569,9495,9415,9330,9239,9142,9040,8932,8819,8701,8577,8449,8315,8176,8032,7883,7730,7572,7410,7242,7071,6895,6716,6532,6344,6152,5957,5758,5556,5350,5141,4929,4714,4496,4276,4052,3827,3599,3369,3137,2903,2667,2430,2191,1951,1710,1467,1224,980,736,491,245,0,-245,-491,-736,-980,-1224,-1467,-1710,-1951,-2191,-2430,-2667,-2903,-3137,-3369,-3599,-3827,-4052,-4276,-4496,-4714,-4929,-5141,-5350,-5556,-5758,-5957,-6152,-6344,-6532,-6716,-6895,-7071,-7242,-7410,-7572,-7730,-7883,-8032,-8176,-8315,-8449,-8577,-8701,-8819,-8932,-9040,-9142,-9239,-9330,-9415,-9495,-9569,-9638,-9700,-9757,-9808,-9853,-9892,-9925,-9952,-9973,-9988,-9997,-10000,-9997,-9988,-9973,-9952,-9925,-9892,-9853,-9808,-9757,-9700,-9638,-9569,-9495,-9415,-9330,-9239,-9142,-9040,-8932,-8819,-8701,-8577,-8449,-8315,-8176,-8032,-7883,-7730,-7572,-7410,-7242,-7071,-6895,-6716,-6532,-6344,-6152,-5957,-5758,-5556,-5350,-5141,-4929,-4714,-4496,-4276,-4052,-3827,-3599,-3369,-3137,-2903,-2667,-2430,-2191,-1951,-1710,-1467,-1224,-980,-736,-491,-245];
 const C_CARS = ['coral', 'sky', 'lime', 'amber', 'violet', 'teal', 'pink', 'silver'];
 const C_PLACEMENT = [10, 8, 6, 5, 4, 3, 2, 1];
 const C_FASTEST_HUMAN_BONUS = 2;
+const C_TRACK_POINTS = [
+  [-42,-31],[-15,-40],[17,-39],[43,-25],[52,-1],[44,25],
+  [24,41],[-6,45],[-34,36],[-51,15],[-47,-7],[-25,-15],
+  [-2,-8],[22,5],[18,23],[-8,28],[-28,16],[-30,-5],
+];
 
 function cClamp(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
-function cApproachZero(value, amount) {
-  if (value > 0) return Math.max(0, value - amount);
-  if (value < 0) return Math.min(0, value + amount);
-  return 0;
+function cApproach(value, target, amount) {
+  if (value < target) return Math.min(target, value + amount);
+  if (value > target) return Math.max(target, value - amount);
+  return target;
+}
+
+function cWrapAngle(value) {
+  return ((Math.trunc(value) % C_ANGLE_STEPS) + C_ANGLE_STEPS) % C_ANGLE_STEPS;
+}
+
+function cAngleDelta(target, current) {
+  const delta = cWrapAngle(target - current);
+  return delta > C_ANGLE_STEPS / 2 ? delta - C_ANGLE_STEPS : delta;
+}
+
+function cSin(angle) {
+  return C_SIN[cWrapAngle(angle)];
+}
+
+function cCos(angle) {
+  return C_SIN[cWrapAngle(angle + C_ANGLE_STEPS / 4)];
+}
+
+function cTrackHeading(progress) {
+  const wrapped = ((Math.trunc(progress) % C_TRACK_LENGTH) + C_TRACK_LENGTH) % C_TRACK_LENGTH;
+  const index = Math.floor(wrapped * C_TRACK_TANGENTS.length / C_TRACK_LENGTH);
+  return C_TRACK_TANGENTS[index];
+}
+
+function cGridPose(seed, slot) {
+  const gridIndex = (slot + (seed >>> 0)) % 8;
+  const row = Math.floor(gridIndex / 2);
+  const column = gridIndex % 2;
+  const progress = C_START_PROGRESS - row * 700;
+  return {
+    progress,
+    lateral: column === 0 ? -1050 : 1050,
+    heading: cTrackHeading(progress),
+  };
 }
 
 function cMix32(value) {
@@ -97,42 +153,54 @@ function cCreateRace(spec) {
     tick: 0,
     finished: false,
     bananas: [],
-    cars: spec.racers.map((source, slot) => ({
-      slot,
-      userId: source.userId ?? null,
-      nick: source.nick,
-      isBot: source.isBot === true,
-      carId: C_CARS.includes(source.carId) ? source.carId : C_CARS[slot],
-      cosmetic: C_CARS.indexOf(C_CARS.includes(source.carId) ? source.carId : C_CARS[slot]),
-      progress: 0,
-      lateral: 0,
-      speed: C_START_SPEED,
-      item: null,
-      itemHeldTicks: 0,
-      nextGate: 0,
-      gateLog: [],
-      boostTicks: 0,
-      slowTicks: 0,
-      slowAppliedTick: 0,
-      shieldTicks: 0,
-      finishedTick: null,
-      dnf: false,
-      lastInput: { steer: 0, useItem: false },
-      events: Array.isArray(source.events) ? source.events : [],
-      eventIndex: 0,
-      inputEvents: Array.isArray(source.events) ? source.events.length : 0,
-      bananasHit: 0,
-      shieldsUsed: 0,
-      boostsUsed: 0,
-      bananasDropped: 0,
-    })),
+    captureBotInputs: !!spec.captureBotInputs,
+    cars: spec.racers.map((source, slot) => {
+      const pose = cGridPose(seed, slot);
+      return {
+        slot,
+        userId: source.userId ?? null,
+        nick: source.nick,
+        isBot: source.isBot === true,
+        carId: C_CARS.includes(source.carId) ? source.carId : C_CARS[slot],
+        cosmetic: C_CARS.indexOf(C_CARS.includes(source.carId) ? source.carId : C_CARS[slot]),
+        progress: pose.progress,
+        lateral: pose.lateral,
+        heading: pose.heading,
+        steering: 0,
+        speed: C_START_SPEED,
+        item: null,
+        itemHeldTicks: 0,
+        nextGate: 0,
+        lastCheckpoint: C_START_PROGRESS,
+        gateLog: [],
+        boostTicks: 0,
+        slowTicks: 0,
+        slowAppliedTick: 0,
+        shieldTicks: 0,
+        outsideTicks: 0,
+        resetTicks: 0,
+        resetCount: 0,
+        finishedTick: null,
+        dnf: false,
+        lastInput: { steer: 0, useItem: false },
+        events: Array.isArray(source.events) ? source.events : [],
+        eventIndex: 0,
+        inputEvents: Array.isArray(source.events) ? source.events.length : 0,
+        capturedEvents: [],
+        capturedSteer: 0,
+        bananasHit: 0,
+        shieldsUsed: 0,
+        boostsUsed: 0,
+        bananasDropped: 0,
+      };
+    }),
   };
 }
 
 function cBotInput(race, car) {
   let targetLane = 0;
   const nextGate = C_GATES[car.nextGate];
-  if (car.item == null && nextGate != null && nextGate >= car.progress && nextGate - car.progress <= 14000) {
+  if (car.item == null && nextGate != null && nextGate >= car.progress && nextGate - car.progress <= 15000) {
     targetLane = C_GATE_LANES[car.nextGate];
   } else {
     const phase = Math.floor((race.tick + 1) / 120);
@@ -154,8 +222,11 @@ function cBotInput(race, car) {
     }
   }
 
-  let steer = 0;
-  if (Math.abs(targetLane - car.lateral) > C_STEER_STEP) steer = targetLane > car.lateral ? 1 : -1;
+  const lookAhead = 1800 + car.speed * 6;
+  const laneCorrection = cClamp(Math.trunc((targetLane - car.lateral) / 240), -14, 14);
+  const targetHeading = cWrapAngle(cTrackHeading(car.progress + lookAhead) - laneCorrection);
+  const headingError = cAngleDelta(targetHeading, car.heading);
+  const steer = Math.abs(headingError) <= 2 ? 0 : (headingError < 0 ? -1 : 1);
   let useItem = false;
   if (car.item === 'turbo' && car.itemHeldTicks >= 8) useItem = true;
   else if (car.item === 'shield' && car.shieldTicks === 0 && car.itemHeldTicks >= 3) useItem = true;
@@ -204,11 +275,57 @@ function cUseItem(race, car) {
       active: true,
       ownerSlot: car.slot,
       createdTick: race.tick + 1,
-      progress: Math.max(0, car.progress - 320),
+      progress: car.progress - 320,
       lane: car.lateral,
       lateral: car.lateral,
     });
   }
+}
+
+function cAdvancePose(car, steer) {
+  const offroad = Math.abs(car.lateral) > C_OFFROAD_AT;
+  const steeringStep = offroad
+    ? Math.max(1, Math.floor(C_STEER_RESPONSE * C_GRASS_GRIP_PCT / 100))
+    : C_STEER_RESPONSE;
+  car.steering = cApproach(
+    car.steering,
+    steer * C_STEER_MAX,
+    steer === 0 ? C_STEER_CENTER : steeringStep,
+  );
+  const gripPct = offroad ? C_GRASS_GRIP_PCT : 100;
+  const turn = Math.trunc(
+    car.steering * car.speed * C_TURN_RATE * gripPct /
+    (C_STEER_MAX * C_MAX_SPEED * 100),
+  );
+  car.heading = cWrapAngle(car.heading + turn);
+
+  const surfaceMaxSpeed = offroad ? C_GRASS_MAX_SPEED : C_MAX_SPEED;
+  if (car.speed > surfaceMaxSpeed) {
+    car.speed = Math.max(surfaceMaxSpeed, car.speed - C_GRASS_BRAKE);
+  } else {
+    car.speed = Math.min(surfaceMaxSpeed, car.speed + C_ACCEL);
+  }
+  let velocity = Math.floor(car.speed * C_FORWARD_PCT / 100);
+  if (offroad) velocity = Math.floor(velocity * C_OFFROAD_PCT / 100);
+  if (car.boostTicks > 0) velocity = Math.floor(velocity * C_BOOST_PCT / 100);
+  if (car.slowTicks > 0) velocity = Math.floor(velocity * C_BANANA_PCT / 100);
+  const relativeHeading = cAngleDelta(car.heading, cTrackHeading(car.progress));
+  car.progress += Math.trunc(velocity * cCos(relativeHeading) / C_TRIG_SCALE);
+  car.lateral += Math.trunc(velocity * cSin(-relativeHeading) / C_TRIG_SCALE);
+
+  if (Math.abs(car.lateral) > C_SAFETY_LATERAL) car.outsideTicks += 1;
+  else car.outsideTicks = 0;
+  if (car.outsideTicks < C_RESET_AFTER_TICKS) return false;
+
+  car.progress = Math.max(C_START_PROGRESS, car.lastCheckpoint - 800);
+  car.lateral = 0;
+  car.heading = cTrackHeading(car.progress);
+  car.steering = 0;
+  car.speed = C_START_SPEED;
+  car.outsideTicks = 0;
+  car.resetTicks = C_RESET_CONTROL_TICKS;
+  car.resetCount += 1;
+  return true;
 }
 
 function cStepRace(race) {
@@ -220,11 +337,24 @@ function cStepRace(race) {
 
   for (const car of race.cars) {
     if (car.finishedTick != null) continue;
-    const input = car.isBot ? cBotInput(race, car) : cHumanInput(car, tick);
-    inputs.set(car.slot, {
+    let input = car.isBot ? cBotInput(race, car) : cHumanInput(car, tick);
+    if (car.resetTicks > 0) {
+      input = { steer: 0, useItem: false };
+      car.resetTicks -= 1;
+    }
+    const normalized = {
       steer: cClamp(Math.trunc(input.steer || 0), -1, 1),
       useItem: !!input.useItem,
-    });
+    };
+    if (
+      race.captureBotInputs &&
+      car.isBot &&
+      (normalized.steer !== car.capturedSteer || normalized.useItem)
+    ) {
+      car.capturedEvents.push({ tick, ...normalized });
+      car.capturedSteer = normalized.steer;
+    }
+    inputs.set(car.slot, normalized);
   }
 
   for (const car of race.cars) {
@@ -233,19 +363,8 @@ function cStepRace(race) {
     car.lastInput = { steer: input.steer, useItem: false };
     if (input.useItem) cUseItem(race, car);
 
-    if (input.steer) {
-      car.lateral = cClamp(car.lateral + input.steer * C_STEER_STEP, -C_LANE_LIMIT, C_LANE_LIMIT);
-    } else {
-      car.lateral = cApproachZero(car.lateral, C_NEUTRAL_STEP);
-    }
-
-    car.speed = Math.min(C_MAX_SPEED, car.speed + C_ACCEL);
-    let delta = Math.floor(car.speed * C_FORWARD_PCT / 100);
-    if (Math.abs(car.lateral) > C_OFFROAD_AT) delta = Math.floor(delta * C_OFFROAD_PCT / 100);
-    if (car.boostTicks > 0) delta = Math.floor(delta * C_BOOST_PCT / 100);
-    if (car.slowTicks > 0) delta = Math.floor(delta * C_BANANA_PCT / 100);
     const previousProgress = car.progress;
-    car.progress += Math.max(0, delta);
+    if (cAdvancePose(car, input.steer)) continue;
 
     while (
       car.nextGate < C_GATES.length &&
@@ -258,12 +377,13 @@ function cStepRace(race) {
         car.item = cRollItem(race.seed, car.slot, gateIndex, placeBySlot.get(car.slot) || 8);
         car.itemHeldTicks = 0;
       }
+      car.lastCheckpoint = C_GATES[gateIndex];
       car.nextGate += 1;
     }
     if (car.item) car.itemHeldTicks += 1;
 
-    if (car.progress >= C_TRACK_LENGTH && car.nextGate === C_GATES.length) {
-      car.progress = C_TRACK_LENGTH;
+    if (car.progress >= C_FINISH_PROGRESS && car.nextGate === C_GATES.length) {
+      car.progress = C_FINISH_PROGRESS;
       car.finishedTick = tick;
       car.speed = 0;
     }
@@ -330,6 +450,10 @@ function cRaceResults(race) {
       finishTick: car.finishedTick,
       completionMs: finished ? car.finishedTick * C_TICK_MS : null,
       progress: car.progress,
+      lateral: car.lateral,
+      heading: car.heading,
+      steering: car.steering,
+      resetCount: car.resetCount,
       placementPoints,
       fastestBonus,
       totalPoints: placementPoints + fastestBonus,
@@ -348,6 +472,8 @@ function browserReplayRace(spec) {
   const results = cRaceResults(race);
   return {
     engineVersion: C_ENGINE_VERSION,
+    trackVersion: C_TRACK_VERSION,
+    trackHash: C_TRACK_HASH,
     seed: race.seed,
     ticks: Math.max(...results.map((row) => row.finishTick ?? C_MAX_TICKS)),
     results,
@@ -356,19 +482,30 @@ function browserReplayRace(spec) {
 
 // ── Server-style engine (mirrors office-grand-prix-action) ──────────────────
 
-const S_ENGINE_VERSION = 'office_grand_prix_v1';
+const S_ENGINE_VERSION = 'office_grand_prix_v2';
+const S_TRACK_VERSION = 'office_loop_v2';
+const S_TRACK_HASH = '4c6fe6372d604110d5b0fdbe9c23ac35d6bcf1d8aeb9fbb9737c44c5226daeb8';
 const S_TICK_MS = 50;
 const S_TRACK_LENGTH = 160000;
+const S_START_PROGRESS = 16000;
+const S_FINISH_PROGRESS = S_START_PROGRESS + S_TRACK_LENGTH;
 const S_MAX_TICKS = 1800;
-const S_ACCELERATION = 4;
-const S_INITIAL_SPEED = 70;
-const S_TOP_SPEED = 150;
-const S_FORWARD_PERCENT = 95;
-const S_STEER_PER_TICK = 180;
-const S_RETURN_PER_TICK = 40;
-const S_LANE_BOUND = 4400;
+const S_ACCELERATION = 5;
+const S_INITIAL_SPEED = 84;
+const S_TOP_SPEED = 180;
+const S_FORWARD_PERCENT = 96;
+const S_STEER_RESPONSE = 300;
+const S_STEER_CENTER = 360;
+const S_STEER_MAX = 1000;
+const S_TURN_RATE = 4;
 const S_OFFROAD_BOUND = 3400;
 const S_OFFROAD_PERCENT = 70;
+const S_GRASS_TOP_SPEED = 115;
+const S_GRASS_BRAKE = 8;
+const S_GRASS_GRIP_PERCENT = 62;
+const S_SAFETY_LANE = 6500;
+const S_RESET_AFTER = 20;
+const S_RESET_CONTROL = 12;
 const S_TURBO_PERCENT = 125;
 const S_TURBO_DURATION = 30;
 const S_BANANA_PERCENT = 65;
@@ -377,8 +514,12 @@ const S_SHIELD_DURATION = 160;
 const S_ITEM_RADIUS = 1050;
 const S_HAZARD_PROGRESS_RADIUS = 420;
 const S_HAZARD_LANE_RADIUS = 820;
-const S_CHECKPOINTS = [13000, 28000, 43000, 58000, 73000, 88000, 103000, 118000, 133000, 148000];
+const S_ANGLE_COUNT = 256;
+const S_TRIG_SCALE = 10000;
+const S_CHECKPOINTS = [29000, 44000, 59000, 74000, 89000, 104000, 119000, 134000, 149000, 164000];
 const S_CHECKPOINT_LANES = [-1800, 0, 1800, 0, -1800, 1800, 0, -1800, 1800, 0];
+const S_TRACK_DIRECTIONS = [209,237,240,241,242,243,243,244,244,244,245,245,245,246,246,248,253,255,0,0,0,1,1,1,1,1,1,2,2,2,3,3,5,11,16,18,18,19,19,19,20,20,20,21,21,21,22,23,24,34,44,46,47,48,49,49,50,50,50,51,52,53,54,65,72,74,75,75,75,76,76,76,77,77,78,78,79,81,93,97,98,99,99,100,100,101,101,101,102,103,104,106,117,120,121,121,122,122,122,122,123,123,123,123,124,124,125,126,130,137,138,139,139,140,140,140,141,141,141,141,142,142,143,144,151,160,161,162,163,163,164,164,164,165,165,166,166,167,170,186,194,196,197,198,199,199,200,201,202,203,205,220,237,239,240,241,241,242,242,243,243,244,245,247,4,9,11,11,12,12,12,13,13,13,13,14,14,17,18,19,19,19,19,19,19,20,20,20,21,21,23,26,57,67,69,71,72,73,74,76,78,82,110,116,118,119,119,120,120,120,121,121,121,122,123,124,129,144,147,148,149,149,150,150,151,151,152,153,155,172,185,188,189,190,190,190,190,190,189,189,185,175,173,173,173,172,172,173,173,173,173,173,174,175,176,179];
+const S_SINE = [0,245,491,736,980,1224,1467,1710,1951,2191,2430,2667,2903,3137,3369,3599,3827,4052,4276,4496,4714,4929,5141,5350,5556,5758,5957,6152,6344,6532,6716,6895,7071,7242,7410,7572,7730,7883,8032,8176,8315,8449,8577,8701,8819,8932,9040,9142,9239,9330,9415,9495,9569,9638,9700,9757,9808,9853,9892,9925,9952,9973,9988,9997,10000,9997,9988,9973,9952,9925,9892,9853,9808,9757,9700,9638,9569,9495,9415,9330,9239,9142,9040,8932,8819,8701,8577,8449,8315,8176,8032,7883,7730,7572,7410,7242,7071,6895,6716,6532,6344,6152,5957,5758,5556,5350,5141,4929,4714,4496,4276,4052,3827,3599,3369,3137,2903,2667,2430,2191,1951,1710,1467,1224,980,736,491,245,0,-245,-491,-736,-980,-1224,-1467,-1710,-1951,-2191,-2430,-2667,-2903,-3137,-3369,-3599,-3827,-4052,-4276,-4496,-4714,-4929,-5141,-5350,-5556,-5758,-5957,-6152,-6344,-6532,-6716,-6895,-7071,-7242,-7410,-7572,-7730,-7883,-8032,-8176,-8315,-8449,-8577,-8701,-8819,-8932,-9040,-9142,-9239,-9330,-9415,-9495,-9569,-9638,-9700,-9757,-9808,-9853,-9892,-9925,-9952,-9973,-9988,-9997,-10000,-9997,-9988,-9973,-9952,-9925,-9892,-9853,-9808,-9757,-9700,-9638,-9569,-9495,-9415,-9330,-9239,-9142,-9040,-8932,-8819,-8701,-8577,-8449,-8315,-8176,-8032,-7883,-7730,-7572,-7410,-7242,-7071,-6895,-6716,-6532,-6344,-6152,-5957,-5758,-5556,-5350,-5141,-4929,-4714,-4496,-4276,-4052,-3827,-3599,-3369,-3137,-2903,-2667,-2430,-2191,-1951,-1710,-1467,-1224,-980,-736,-491,-245];
 const S_COSMETICS = ['coral', 'sky', 'lime', 'amber', 'violet', 'teal', 'pink', 'silver'];
 const S_PLACE_POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
 const S_FAST_BONUS = 2;
@@ -406,6 +547,47 @@ function sRandom(seed, slot, salt) {
   return sMix32(input);
 }
 
+function sApproach(value, target, amount) {
+  if (value < target) return Math.min(target, value + amount);
+  if (value > target) return Math.max(target, value - amount);
+  return target;
+}
+
+function sWrapDirection(value) {
+  return ((Math.trunc(value) % S_ANGLE_COUNT) + S_ANGLE_COUNT) % S_ANGLE_COUNT;
+}
+
+function sDirectionError(target, current) {
+  const delta = sWrapDirection(target - current);
+  return delta > S_ANGLE_COUNT / 2 ? delta - S_ANGLE_COUNT : delta;
+}
+
+function sSin(direction) {
+  return S_SINE[sWrapDirection(direction)];
+}
+
+function sCos(direction) {
+  return S_SINE[sWrapDirection(direction + S_ANGLE_COUNT / 4)];
+}
+
+function sTrackDirection(progress) {
+  const wrapped = ((Math.trunc(progress) % S_TRACK_LENGTH) + S_TRACK_LENGTH) % S_TRACK_LENGTH;
+  const index = Math.floor(wrapped * S_TRACK_DIRECTIONS.length / S_TRACK_LENGTH);
+  return S_TRACK_DIRECTIONS[index];
+}
+
+function sGridPose(seed, slot) {
+  const gridIndex = (slot + (seed >>> 0)) % 8;
+  const row = Math.floor(gridIndex / 2);
+  const column = gridIndex % 2;
+  const progress = S_START_PROGRESS - row * 700;
+  return {
+    progress,
+    lane: column === 0 ? -1050 : 1050,
+    heading: sTrackDirection(progress),
+  };
+}
+
 function sItemAtGate(seed, slot, checkpoint, place) {
   const roll = sRandom(seed, slot, 1000 + checkpoint) % 100;
   const turboWeight = place <= 2 ? 20 : place <= 5 ? 40 : 60;
@@ -427,12 +609,6 @@ function sSlotsByPlace(cars) {
     .map((car) => car.slot);
 }
 
-function sReturnLane(lane) {
-  if (lane > 0) return Math.max(0, lane - S_RETURN_PER_TICK);
-  if (lane < 0) return Math.min(0, lane + S_RETURN_PER_TICK);
-  return 0;
-}
-
 function sBotControl(car, cars, bananas, seed, tick) {
   let targetLane = 0;
   const nextCheckpoint = S_CHECKPOINTS[car.nextGate];
@@ -440,7 +616,7 @@ function sBotControl(car, cars, bananas, seed, tick) {
     car.item == null &&
     nextCheckpoint != null &&
     nextCheckpoint >= car.progress &&
-    nextCheckpoint - car.progress <= 14000
+    nextCheckpoint - car.progress <= 15000
   ) {
     targetLane = S_CHECKPOINT_LANES[car.nextGate];
   } else {
@@ -461,8 +637,11 @@ function sBotControl(car, cars, bananas, seed, tick) {
     }
   }
 
-  const delta = targetLane - car.lane;
-  const steer = Math.abs(delta) <= S_STEER_PER_TICK ? 0 : delta > 0 ? 1 : -1;
+  const lookAhead = 1800 + car.speed * 6;
+  const laneCorrection = Math.max(-14, Math.min(14, Math.trunc((targetLane - car.lane) / 240)));
+  const targetDirection = sWrapDirection(sTrackDirection(car.progress + lookAhead) - laneCorrection);
+  const headingError = sDirectionError(targetDirection, car.heading);
+  const steer = Math.abs(headingError) <= 2 ? 0 : headingError < 0 ? -1 : 1;
   let useItem = false;
   if (car.item === 'turbo' && car.itemHeldTicks >= 8) useItem = true;
   else if (car.item === 'shield' && car.shieldTicks === 0 && car.itemHeldTicks >= 3) useItem = true;
@@ -488,7 +667,7 @@ function sUseItem(car, bananas, tick) {
     bananas.push({
       active: true,
       ownerSlot: car.slot,
-      progress: Math.max(0, car.progress - 320),
+      progress: car.progress - 320,
       lane: car.lane,
       createdTick: tick,
     });
@@ -497,52 +676,94 @@ function sUseItem(car, bananas, tick) {
   car.itemHeldTicks = 0;
 }
 
-function sAdvance(car) {
-  car.speed = Math.min(S_TOP_SPEED, car.speed + S_ACCELERATION);
-  let forward = Math.floor(car.speed * S_FORWARD_PERCENT / 100);
-  if (Math.abs(car.lane) > S_OFFROAD_BOUND) forward = Math.floor(forward * S_OFFROAD_PERCENT / 100);
-  if (car.boostTicks > 0) forward = Math.floor(forward * S_TURBO_PERCENT / 100);
-  if (car.slowTicks > 0) forward = Math.floor(forward * S_BANANA_PERCENT / 100);
-  car.progress += Math.max(0, forward);
+function sAdvance(car, steer) {
+  const onGrass = Math.abs(car.lane) > S_OFFROAD_BOUND;
+  const response = onGrass
+    ? Math.max(1, Math.floor(S_STEER_RESPONSE * S_GRASS_GRIP_PERCENT / 100))
+    : S_STEER_RESPONSE;
+  car.steering = sApproach(
+    car.steering,
+    steer * S_STEER_MAX,
+    steer === 0 ? S_STEER_CENTER : response,
+  );
+  const grip = onGrass ? S_GRASS_GRIP_PERCENT : 100;
+  const rotation = Math.trunc(
+    car.steering * car.speed * S_TURN_RATE * grip /
+    (S_STEER_MAX * S_TOP_SPEED * 100),
+  );
+  car.heading = sWrapDirection(car.heading + rotation);
+
+  const speedLimit = onGrass ? S_GRASS_TOP_SPEED : S_TOP_SPEED;
+  if (car.speed > speedLimit) car.speed = Math.max(speedLimit, car.speed - S_GRASS_BRAKE);
+  else car.speed = Math.min(speedLimit, car.speed + S_ACCELERATION);
+  let movement = Math.floor(car.speed * S_FORWARD_PERCENT / 100);
+  if (onGrass) movement = Math.floor(movement * S_OFFROAD_PERCENT / 100);
+  if (car.boostTicks > 0) movement = Math.floor(movement * S_TURBO_PERCENT / 100);
+  if (car.slowTicks > 0) movement = Math.floor(movement * S_BANANA_PERCENT / 100);
+  const relative = sDirectionError(car.heading, sTrackDirection(car.progress));
+  car.progress += Math.trunc(movement * sCos(relative) / S_TRIG_SCALE);
+  car.lane += Math.trunc(movement * sSin(-relative) / S_TRIG_SCALE);
+
+  if (Math.abs(car.lane) > S_SAFETY_LANE) car.outsideTicks += 1;
+  else car.outsideTicks = 0;
+  if (car.outsideTicks < S_RESET_AFTER) return false;
+  car.progress = Math.max(S_START_PROGRESS, car.lastCheckpoint - 800);
+  car.lane = 0;
+  car.heading = sTrackDirection(car.progress);
+  car.steering = 0;
+  car.speed = S_INITIAL_SPEED;
+  car.outsideTicks = 0;
+  car.resetTicks = S_RESET_CONTROL;
+  car.resetCount += 1;
+  return true;
 }
 
 function serverReplayRace(spec) {
   const raceSeed = Number(spec.seed) >>> 0;
   const cars = spec.racers
-    .map((row, slot) => ({
-      slot,
-      userId: row.userId ?? null,
-      nick: row.nick,
-      cosmetic: S_COSMETICS.includes(row.carId) ? S_COSMETICS.indexOf(row.carId) : slot,
-      isBot: row.isBot === true,
-      capTick: row.isBot === true
-        ? S_MAX_TICKS
-        : row.submitted === false
-          ? 0
-          : sInteger(row.elapsedTicks, S_MAX_TICKS),
-      inputs: row.submitted === false ? [] : (Array.isArray(row.events) ? row.events : []),
-      inputEvents: row.submitted === false ? 0 : (Array.isArray(row.events) ? row.events.length : 0),
-      inputIndex: 0,
-      steer: 0,
-      speed: S_INITIAL_SPEED,
-      progress: 0,
-      lane: 0,
-      item: null,
-      itemHeldTicks: 0,
-      nextGate: 0,
-      gateLog: [],
-      boostTicks: 0,
-      slowTicks: 0,
-      slowAppliedTick: 0,
-      shieldTicks: 0,
-      bananasHit: 0,
-      shieldsUsed: 0,
-      boostsUsed: 0,
-      bananasDropped: 0,
-      finished: false,
-      finishTick: null,
-      retired: row.isBot !== true && row.submitted === false,
-    }))
+    .map((row, slot) => {
+      const pose = sGridPose(raceSeed, slot);
+      return {
+        slot,
+        userId: row.userId ?? null,
+        nick: row.nick,
+        cosmetic: S_COSMETICS.includes(row.carId) ? S_COSMETICS.indexOf(row.carId) : slot,
+        isBot: row.isBot === true,
+        capTick: row.isBot === true
+          ? S_MAX_TICKS
+          : row.submitted === false
+            ? 0
+            : sInteger(row.elapsedTicks, S_MAX_TICKS),
+        inputs: row.submitted === false ? [] : (Array.isArray(row.events) ? row.events : []),
+        inputEvents: row.submitted === false ? 0 : (Array.isArray(row.events) ? row.events.length : 0),
+        inputIndex: 0,
+        steer: 0,
+        speed: S_INITIAL_SPEED,
+        progress: pose.progress,
+        lane: pose.lane,
+        heading: pose.heading,
+        steering: 0,
+        item: null,
+        itemHeldTicks: 0,
+        nextGate: 0,
+        lastCheckpoint: S_START_PROGRESS,
+        gateLog: [],
+        boostTicks: 0,
+        slowTicks: 0,
+        slowAppliedTick: 0,
+        shieldTicks: 0,
+        outsideTicks: 0,
+        resetTicks: 0,
+        resetCount: 0,
+        bananasHit: 0,
+        shieldsUsed: 0,
+        boostsUsed: 0,
+        bananasDropped: 0,
+        finished: false,
+        finishTick: null,
+        retired: row.isBot !== true && row.submitted === false,
+      };
+    })
     .sort((a, b) => a.slot - b.slot);
   const bananas = [];
 
@@ -572,6 +793,11 @@ function serverReplayRace(spec) {
           car.inputIndex += 1;
         }
       }
+      if (car.resetTicks > 0) {
+        steer = 0;
+        useItem = false;
+        car.resetTicks -= 1;
+      }
       car.steer = steer;
       controls.set(car.slot, { steer, useItem });
     }
@@ -586,14 +812,8 @@ function serverReplayRace(spec) {
         sUseItem(car, bananas, tick);
       }
 
-      if (control.steer === 0) {
-        car.lane = sReturnLane(car.lane);
-      } else {
-        car.lane = Math.max(-S_LANE_BOUND, Math.min(S_LANE_BOUND, car.lane + control.steer * S_STEER_PER_TICK));
-      }
-
       const previousProgress = car.progress;
-      sAdvance(car);
+      if (sAdvance(car, control.steer)) continue;
       while (car.nextGate < S_CHECKPOINTS.length && car.progress >= S_CHECKPOINTS[car.nextGate]) {
         const gate = car.nextGate;
         car.gateLog.push(gate);
@@ -605,12 +825,13 @@ function serverReplayRace(spec) {
           car.item = sItemAtGate(raceSeed, car.slot, gate, placeBySlot.get(car.slot) ?? 8);
           car.itemHeldTicks = 0;
         }
+        car.lastCheckpoint = S_CHECKPOINTS[gate];
         car.nextGate += 1;
       }
 
       if (car.item != null) car.itemHeldTicks += 1;
-      if (car.progress >= S_TRACK_LENGTH && car.nextGate === S_CHECKPOINTS.length) {
-        car.progress = S_TRACK_LENGTH;
+      if (car.progress >= S_FINISH_PROGRESS && car.nextGate === S_CHECKPOINTS.length) {
+        car.progress = S_FINISH_PROGRESS;
         car.finished = true;
         car.finishTick = tick;
         car.speed = 0;
@@ -677,6 +898,10 @@ function serverReplayRace(spec) {
       finishTick: car.finishTick,
       completionMs: car.finished ? car.finishTick * S_TICK_MS : null,
       progress: car.progress,
+      lateral: car.lane,
+      heading: car.heading,
+      steering: car.steering,
+      resetCount: car.resetCount,
       placementPoints,
       fastestBonus,
       totalPoints: placementPoints + fastestBonus,
@@ -690,6 +915,8 @@ function serverReplayRace(spec) {
 
   return {
     engineVersion: S_ENGINE_VERSION,
+    trackVersion: S_TRACK_VERSION,
+    trackHash: S_TRACK_HASH,
     seed: raceSeed,
     ticks: Math.max(...results.map((row) => row.finishTick ?? S_MAX_TICKS)),
     results,
@@ -785,12 +1012,12 @@ function sBestFiveLeaderboard(rows) {
 }
 
 function cValidGateFinish(progress, finishTick, gates) {
-  if (progress < C_TRACK_LENGTH || finishTick < 1 || finishTick > C_MAX_TICKS) return false;
+  if (progress < C_FINISH_PROGRESS || finishTick < 1 || finishTick > C_MAX_TICKS) return false;
   return Array.isArray(gates) && gates.length === C_GATES.length && gates.every((gate, index) => gate === index);
 }
 
 function sValidGateFinish(progress, finishTick, gates) {
-  if (Number(progress) < S_TRACK_LENGTH) return false;
+  if (Number(progress) < S_FINISH_PROGRESS) return false;
   if (!Number.isInteger(finishTick) || finishTick <= 0 || finishTick > S_MAX_TICKS) return false;
   if (!Array.isArray(gates) || gates.length !== S_CHECKPOINTS.length) return false;
   for (let expected = 0; expected < S_CHECKPOINTS.length; expected += 1) {
@@ -844,20 +1071,32 @@ function assertSourceContracts() {
 
   assert.equal(stringConst(clientSource, 'OGP_CLIENT_VERSION'), C_ENGINE_VERSION);
   assert.equal(stringConst(serverSource, 'OGP_ENGINE_VERSION'), S_ENGINE_VERSION);
+  assert.equal(stringConst(clientSource, 'OGP_TRACK_VERSION'), C_TRACK_VERSION);
+  assert.equal(stringConst(serverSource, 'OGP_TRACK_VERSION'), S_TRACK_VERSION);
+  assert.equal(stringConst(clientSource, 'OGP_TRACK_HASH'), C_TRACK_HASH);
+  assert.equal(stringConst(serverSource, 'OGP_TRACK_HASH'), S_TRACK_HASH);
 
   const clientNumbers = {
     OGP_TICK_MS: C_TICK_MS,
     OGP_TRACK_LENGTH: C_TRACK_LENGTH,
+    OGP_START_PROGRESS: C_START_PROGRESS,
     OGP_HARD_LIMIT_TICKS: C_MAX_TICKS,
     OGP_ACCEL: C_ACCEL,
     OGP_START_SPEED: C_START_SPEED,
     OGP_MAX_SPEED: C_MAX_SPEED,
     OGP_FORWARD_PCT: C_FORWARD_PCT,
-    OGP_STEER_STEP: C_STEER_STEP,
-    OGP_NEUTRAL_STEP: C_NEUTRAL_STEP,
-    OGP_LANE_LIMIT: C_LANE_LIMIT,
+    OGP_STEER_RESPONSE: C_STEER_RESPONSE,
+    OGP_STEER_CENTER: C_STEER_CENTER,
+    OGP_STEER_MAX: C_STEER_MAX,
+    OGP_TURN_RATE: C_TURN_RATE,
     OGP_OFFROAD_AT: C_OFFROAD_AT,
     OGP_OFFROAD_PCT: C_OFFROAD_PCT,
+    OGP_GRASS_MAX_SPEED: C_GRASS_MAX_SPEED,
+    OGP_GRASS_BRAKE: C_GRASS_BRAKE,
+    OGP_GRASS_GRIP_PCT: C_GRASS_GRIP_PCT,
+    OGP_SAFETY_LATERAL: C_SAFETY_LATERAL,
+    OGP_RESET_AFTER_TICKS: C_RESET_AFTER_TICKS,
+    OGP_RESET_CONTROL_TICKS: C_RESET_CONTROL_TICKS,
     OGP_BOOST_TICKS: C_BOOST_TICKS,
     OGP_SLOW_TICKS: C_SLOW_TICKS,
     OGP_SHIELD_TICKS: C_SHIELD_TICKS,
@@ -869,16 +1108,24 @@ function assertSourceContracts() {
   const serverNumbers = {
     OGP_TICK_MS: S_TICK_MS,
     OGP_TRACK_LENGTH: S_TRACK_LENGTH,
+    OGP_START_PROGRESS: S_START_PROGRESS,
     OGP_MAX_TICKS: S_MAX_TICKS,
     OGP_ACCEL: S_ACCELERATION,
     OGP_START_SPEED: S_INITIAL_SPEED,
     OGP_MAX_SPEED: S_TOP_SPEED,
     OGP_FORWARD_PCT: S_FORWARD_PERCENT,
-    OGP_STEER_PER_TICK: S_STEER_PER_TICK,
-    OGP_NEUTRAL_RETURN: S_RETURN_PER_TICK,
-    OGP_LANE_LIMIT: S_LANE_BOUND,
+    OGP_STEER_RESPONSE: S_STEER_RESPONSE,
+    OGP_STEER_CENTER: S_STEER_CENTER,
+    OGP_STEER_MAX: S_STEER_MAX,
+    OGP_TURN_RATE: S_TURN_RATE,
     OGP_OFFROAD_THRESHOLD: S_OFFROAD_BOUND,
     OGP_OFFROAD_PCT: S_OFFROAD_PERCENT,
+    OGP_GRASS_MAX_SPEED: S_GRASS_TOP_SPEED,
+    OGP_GRASS_BRAKE: S_GRASS_BRAKE,
+    OGP_GRASS_GRIP_PCT: S_GRASS_GRIP_PERCENT,
+    OGP_SAFETY_LATERAL: S_SAFETY_LANE,
+    OGP_RESET_AFTER_TICKS: S_RESET_AFTER,
+    OGP_RESET_CONTROL_TICKS: S_RESET_CONTROL,
     OGP_BOOST_PCT: S_TURBO_PERCENT,
     OGP_BOOST_TICKS: S_TURBO_DURATION,
     OGP_BANANA_PCT: S_BANANA_PERCENT,
@@ -894,8 +1141,12 @@ function assertSourceContracts() {
 
   assert.deepEqual(numberArray(clientSource, 'OGP_GATE_PROGRESS'), C_GATES);
   assert.deepEqual(numberArray(clientSource, 'OGP_GATE_LANES'), C_GATE_LANES);
+  assert.deepEqual(numberArray(clientSource, 'OGP_TRACK_TANGENTS'), C_TRACK_TANGENTS);
+  assert.deepEqual(numberArray(clientSource, 'OGP_SIN'), C_SIN);
   assert.deepEqual(numberArray(serverSource, 'OGP_GATES'), S_CHECKPOINTS);
   assert.deepEqual(numberArray(serverSource, 'OGP_GATE_LANES'), S_CHECKPOINT_LANES);
+  assert.deepEqual(numberArray(serverSource, 'OGP_TRACK_TANGENTS'), S_TRACK_DIRECTIONS);
+  assert.deepEqual(numberArray(serverSource, 'OGP_SIN'), S_SINE);
   assert.deepEqual(numberArray(serverSource, 'OGP_PLACEMENT_POINTS'), S_PLACE_POINTS);
 
   const clientCarsBlock = clientSource.match(/const\s+OGP_CARS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\);/);
@@ -911,12 +1162,16 @@ function assertSourceContracts() {
   assertContains(serverSource, 'const roll = ogpRandom(seed, slot, 1000 + gate) % 100;', 'server stateless item RNG');
   assertContains(
     clientSource,
-    'seed: Number.isFinite(Number(seed)) ? (Number(seed) >>> 0) : 0x6d2b79f5,',
+    'const raceSeed = Number.isFinite(Number(seed)) ? (Number(seed) >>> 0) : 0x6d2b79f5;',
     'client preserves seed zero',
   );
   assertContains(serverSource, 'const raceSeed = seed >>> 0;', 'server preserves seed zero');
-  assertContains(clientSource, 'if (car.boostTicks > 0) delta = Math.floor(delta * 125 / 100);', 'client turbo floor order');
-  assertContains(clientSource, 'if (car.slowTicks > 0) delta = Math.floor(delta * 65 / 100);', 'client banana floor order');
+  assertContains(clientSource, 'if (car.boostTicks > 0) velocity = Math.floor(velocity * 125 / 100);', 'client turbo floor order');
+  assertContains(clientSource, 'if (car.slowTicks > 0) velocity = Math.floor(velocity * 65 / 100);', 'client banana floor order');
+  assertContains(clientSource, 'car.heading = ogpWrapAngle(car.heading + turn);', 'client manual heading');
+  assertContains(clientSource, 'car.lateral += lateralDelta;', 'client projected lateral motion');
+  assertContains(serverSource, 'car.heading = ogpWrapAngle(car.heading + turn);', 'server manual heading');
+  assertContains(serverSource, 'car.lane += Math.trunc(velocity * ogpSin(-relativeHeading) / OGP_TRIG_SCALE);', 'server projected lateral motion');
   assertContains(clientSource, "Math.abs(car.lateral - OGP_GATE_LANES[gateIndex]) <= 1050", 'client pickup radius');
   assertContains(clientSource, 'Math.abs(car.progress - banana.progress) <= 420', 'client banana progress radius');
   assertContains(clientSource, 'Math.abs(car.lateral - bananaLane) <= 820', 'client banana lane radius');
@@ -933,7 +1188,10 @@ function assertSourceContracts() {
 
   const submitClient = clientSource.match(/invokeOfficeGrandPrix\(\{\s*action:\s*'submit'([\s\S]*?)\n\s*\}\);/);
   assert.ok(submitClient, 'source contract missing client submit API');
-  for (const field of ['sessionId:', 'engineVersion:', 'idempotencyKey:', 'inputs:', 'elapsedTicks,', 'clientMeta:']) {
+  for (const field of [
+    'sessionId:', 'engineVersion:', 'trackVersion:', 'trackHash:', 'sessionVersion:',
+    'idempotencyKey:', 'inputs:', 'elapsedTicks,', 'clientMeta:',
+  ]) {
     assert.ok(submitClient[0].includes(field), `client submit API field drift: ${field}`);
   }
   const submitServer = serverSource.slice(
@@ -942,7 +1200,8 @@ function assertSourceContracts() {
   );
   for (const field of [
     'body.sessionId',
-    'body.engineVersion',
+    'requireV2ClientContract(body)',
+    'requireCurrentSessionVersion(body, session)',
     'body.elapsedTicks',
     'body.inputs ?? body.inputLog',
     'body.idempotencyKey',
@@ -950,7 +1209,13 @@ function assertSourceContracts() {
   ]) {
     assert.ok(submitServer.includes(field), `server submit API field drift: ${field}`);
   }
+  assertContains(serverSource, 'String(body.engineVersion ?? "") !== OGP_ENGINE_VERSION', 'server engine rejection');
+  assertContains(serverSource, 'String(body.trackVersion ?? "") !== OGP_TRACK_VERSION', 'server track-version rejection');
+  assertContains(serverSource, 'String(body.trackHash ?? "") !== OGP_TRACK_HASH', 'server track-hash rejection');
+  assertContains(serverSource, 'const expected = asInt(body.sessionVersion, -1);', 'server stale-session rejection');
   for (const [clientField, serverField] of [
+    ['heading', 'heading'],
+    ['steering', 'steering'],
     ['itemHeldTicks', 'itemHeldTicks'],
     ['nextGate', 'nextGate'],
     ['boostTicks', 'boostTicks'],
@@ -962,6 +1227,39 @@ function assertSourceContracts() {
     assert.ok(clientSource.includes(clientField), `client race state field drift: ${clientField}`);
     assert.ok(serverSource.includes(serverField), `server race state field drift: ${serverField}`);
   }
+  for (const snapshotField of [
+    'engineVersion: OGP_CLIENT_VERSION',
+    'trackVersion: OGP_TRACK_VERSION',
+    'trackHash: OGP_TRACK_HASH',
+    'heading: car.heading',
+    'steering: car.steering',
+    'effects:',
+  ]) {
+    assert.ok(clientSource.includes(snapshotField), `snapshot contract drift: ${snapshotField}`);
+  }
+  assertContains(clientSource, 'runtime.accumulator / OGP_TICK_MS', 'local pose interpolation');
+  assertContains(clientSource, 'const targetTick = race.tick - 3 + alpha;', 'remote snapshot buffer');
+  assertContains(clientSource, 'mesh.rotation.y = -(headingRadians + Math.PI / 2);', 'kart forward axis');
+  assertContains(clientSource, 'new THREE.MeshStandardMaterial({ color: 0x303642', 'uniform asphalt material');
+  assert.ok(
+    !clientSource.includes('mesh.position.y += .05 + Math.sin'),
+    'sinusoidal kart bobbing returned',
+  );
+  assert.ok(
+    !clientSource.includes('mesh.scale.setScalar(.82'),
+    'whole-kart shield scaling returned',
+  );
+  assertContains(serverSource, 'const OGP_SESSIONS_ENABLED = false;', 'maintenance session gate');
+  assertContains(
+    sqlSource,
+    "engine_version = 'office_grand_prix_v1'",
+    'historical session V1 backfill',
+  );
+  assertContains(
+    sqlSource,
+    "engine_version           text NOT NULL DEFAULT 'office_grand_prix_v2'",
+    'new session V2 default',
+  );
 
   assertContains(
     sqlSource,
@@ -1047,6 +1345,34 @@ function collectStats(replay, totals) {
   }
 }
 
+function makeBotDrivenHumanSpec(seed, userIds = []) {
+  const captureSpec = {
+    seed,
+    captureBotInputs: true,
+    racers: C_CARS.map((carId, slot) => ({
+      userId: null,
+      nick: `Pilot ${slot}`,
+      isBot: true,
+      carId,
+      elapsedTicks: C_MAX_TICKS,
+      events: [],
+    })),
+  };
+  const captureRace = cCreateRace(captureSpec);
+  while (!captureRace.finished) cStepRace(captureRace);
+  return {
+    seed,
+    racers: captureRace.cars.map((car, slot) => ({
+      userId: userIds[slot] ?? `pilot-${slot}`,
+      nick: userIds[slot] ?? `Pilot ${slot}`,
+      isBot: false,
+      carId: C_CARS[slot],
+      elapsedTicks: C_MAX_TICKS,
+      events: car.capturedEvents.map((event) => ({ ...event })),
+    })),
+  };
+}
+
 function runGoldenTests() {
   assertSourceContracts();
   assert.equal(C_ENGINE_VERSION, S_ENGINE_VERSION);
@@ -1054,12 +1380,97 @@ function runGoldenTests() {
   assert.deepEqual(C_GATE_LANES, S_CHECKPOINT_LANES);
   assert.deepEqual(C_CARS, S_COSMETICS);
 
+  const trackPayload = {
+    version: C_TRACK_VERSION,
+    steps: C_ANGLE_STEPS,
+    scale: C_TRIG_SCALE,
+    points: C_TRACK_POINTS,
+    tangents: C_TRACK_TANGENTS,
+    sin: C_SIN,
+  };
+  const verifiedTrackHash = createHash('sha256')
+    .update(JSON.stringify(trackPayload))
+    .digest('hex');
+  assert.equal(verifiedTrackHash, C_TRACK_HASH, 'checked-in track hash drift');
+  assert.equal(verifiedTrackHash, S_TRACK_HASH, 'server track hash drift');
+
+  const steeringSpec = {
+    seed: 0x13572468,
+    racers: C_CARS.map((carId, slot) => ({
+      userId: `steer-${slot}`,
+      nick: `Steer ${slot}`,
+      isBot: false,
+      carId,
+      elapsedTicks: C_MAX_TICKS,
+      events: [],
+    })),
+  };
+  const steeringRace = cCreateRace(steeringSpec);
+  const baseCar = steeringRace.cars[0];
+  baseCar.progress = C_START_PROGRESS;
+  baseCar.lateral = 0;
+  baseCar.heading = cTrackHeading(baseCar.progress);
+  baseCar.steering = 0;
+  baseCar.speed = C_MAX_SPEED;
+  const leftCar = structuredClone(baseCar);
+  const rightCar = structuredClone(baseCar);
+  for (let tick = 0; tick < 12; tick += 1) {
+    cAdvancePose(leftCar, -1);
+    cAdvancePose(rightCar, 1);
+  }
+  assert.ok(cAngleDelta(leftCar.heading, baseCar.heading) < 0, 'left input did not turn heading left');
+  assert.ok(cAngleDelta(rightCar.heading, baseCar.heading) > 0, 'right input did not turn heading right');
+  assert.ok(leftCar.lateral > 0, 'left input moved to the wrong side of the track');
+  assert.ok(rightCar.lateral < 0, 'right input moved to the wrong side of the track');
+  const neutralHeading = leftCar.heading;
+  const neutralLateral = leftCar.lateral;
+  for (let tick = 0; tick < 8; tick += 1) cAdvancePose(leftCar, 0);
+  assert.equal(leftCar.steering, 0, 'neutral input did not center the wheels');
+  assert.notEqual(leftCar.heading, cTrackHeading(leftCar.progress), 'neutral input recentered kart heading');
+  assert.notEqual(leftCar.lateral, neutralLateral, 'neutral input recentered the lane');
+  assert.ok(
+    Math.abs(cAngleDelta(leftCar.heading, neutralHeading)) <= C_TURN_RATE * 4,
+    'wheel-centering produced an implausible heading snap',
+  );
+
+  const gridPoses = C_CARS.map((_, slot) => cGridPose(0x2468ace0, slot));
+  assert.equal(
+    new Set(gridPoses.map((pose) => `${pose.progress}:${pose.lateral}`)).size,
+    8,
+    'starting grid poses overlap',
+  );
+  const unattendedRace = cCreateRace(steeringSpec);
+  let unattendedMaxLateral = 0;
+  let unattendedReset = false;
+  for (let tick = 0; tick < 500 && !unattendedReset; tick += 1) {
+    cStepRace(unattendedRace);
+    const unattended = unattendedRace.cars[0];
+    unattendedMaxLateral = Math.max(unattendedMaxLateral, Math.abs(unattended.lateral));
+    unattendedReset = unattended.resetCount > 0;
+  }
+  assert.ok(unattendedMaxLateral > C_OFFROAD_AT, 'unattended kart stayed on the road through a bend');
+  assert.equal(unattendedReset, true, 'out-of-envelope kart did not reset deterministically');
+
+  for (const frameRate of [30, 60, 120]) {
+    const samples = [];
+    for (let frame = 0; frame < frameRate; frame += 1) {
+      const elapsed = frame * 1000 / frameRate;
+      const tick = Math.floor(elapsed / C_TICK_MS);
+      const alpha = (elapsed - tick * C_TICK_MS) / C_TICK_MS;
+      samples.push(tick * 100 + alpha * 100);
+    }
+    assert.ok(
+      samples.slice(1).every((value, index) => value > samples[index]),
+      `${frameRate}Hz interpolation contains a fixed-tick plateau`,
+    );
+  }
+
   const cleanSpec = {
     seed: 0x12345678,
     racers: C_CARS.map((carId, slot) => ({
-      userId: `clean-${slot}`,
+      userId: null,
       nick: `Clean ${slot}`,
-      isBot: false,
+      isBot: true,
       carId,
       elapsedTicks: C_MAX_TICKS,
       events: [],
@@ -1070,8 +1481,8 @@ function runGoldenTests() {
   assert.deepEqual(cleanClient, cleanServer, 'clean-race browser/server parity');
   assert.ok(cleanClient.results.every((row) => row.finished), 'clean racers must finish');
   assert.ok(
-    cleanClient.results[0].completionMs >= 55_000 && cleanClient.results[0].completionMs <= 70_000,
-    `clean lap ${cleanClient.results[0].completionMs}ms is outside 55–70 seconds`,
+    cleanClient.results[0].completionMs >= 55_000 && cleanClient.results[0].completionMs <= 65_000,
+    `clean lap ${cleanClient.results[0].completionMs}ms is outside 55–65 seconds: ${JSON.stringify(cleanClient.results)}`,
   );
 
   const zeroSeedSpec = structuredClone(cleanSpec);
@@ -1110,9 +1521,15 @@ function runGoldenTests() {
     })),
   };
   const retiredResult = serverReplayRace(retiredFixture);
-  assert.equal(retiredResult.results.find((row) => row.slot === 0).progress, 0, 'missing submission moved');
+  assert.equal(
+    retiredResult.results.find((row) => row.slot === 0).progress,
+    sGridPose(retiredFixture.seed, 0).progress,
+    'missing submission moved',
+  );
   assert.ok(
-    retiredResult.results.filter((row) => row.slot !== 0).every((row) => row.progress === 70),
+    retiredResult.results.filter((row) => row.slot !== 0).every((row) =>
+      row.progress > sGridPose(retiredFixture.seed, row.slot).progress
+    ),
     'cap tick must be simulated inclusively before DNF',
   );
   assert.ok(retiredResult.results.every((row) => !row.finished && row.totalPoints === 0), 'retired racers scored');
@@ -1136,33 +1553,27 @@ function runGoldenTests() {
   const outOfOrder = orderedGates.slice();
   [outOfOrder[4], outOfOrder[5]] = [outOfOrder[5], outOfOrder[4]];
   for (const validator of [cValidGateFinish, sValidGateFinish]) {
-    assert.equal(validator(C_TRACK_LENGTH, 1200, orderedGates), true);
-    assert.equal(validator(C_TRACK_LENGTH, 1200, missingGate), false, 'missing gate accepted');
-    assert.equal(validator(C_TRACK_LENGTH, 1200, outOfOrder), false, 'out-of-order gates accepted');
-    assert.equal(validator(C_TRACK_LENGTH, C_MAX_TICKS + 1, orderedGates), false, 'post-90s finish accepted');
-    assert.equal(validator(C_TRACK_LENGTH - 1, 1200, orderedGates), false, 'shortcut accepted');
+    assert.equal(validator(C_FINISH_PROGRESS, 1200, orderedGates), true);
+    assert.equal(validator(C_FINISH_PROGRESS, 1200, missingGate), false, 'missing gate accepted');
+    assert.equal(validator(C_FINISH_PROGRESS, 1200, outOfOrder), false, 'out-of-order gates accepted');
+    assert.equal(validator(C_FINISH_PROGRESS, C_MAX_TICKS + 1, orderedGates), false, 'post-90s finish accepted');
+    assert.equal(validator(C_FINISH_PROGRESS - 1, 1200, orderedGates), false, 'shortcut accepted');
   }
 
-  const scoringFixture = {
-    seed: 0xfeedbeef,
-    racers: C_CARS.map((carId, slot) => ({
-        userId: slot === 0 ? 'alice' : slot === 1 ? 'bob' : `scorer-${slot}`,
-        nick: slot === 0 ? 'Alice' : slot === 1 ? 'Bob' : `Scorer ${slot}`,
-        isBot: false,
-        carId,
-        elapsedTicks: 1800,
-        events: [],
-    })),
-  };
+  const scoringFixture = makeBotDrivenHumanSpec(
+    0xfeedbeef,
+    C_CARS.map((_, slot) => slot === 0 ? 'alice' : slot === 1 ? 'bob' : `scorer-${slot}`),
+  );
   const scoredClient = browserReplayRace(scoringFixture);
   const scoredServer = serverReplayRace(scoringFixture);
   assert.deepEqual(scoredClient, scoredServer, 'fixed score fixture parity');
-  const byId = new Map(scoredClient.results.map((row) => [row.userId ?? row.nick, row]));
-  assert.equal(byId.get('alice').placementPoints, 10);
-  assert.equal(byId.get('alice').fastestBonus, 2);
-  assert.equal(byId.get('alice').totalPoints, 12);
-  assert.equal(byId.get('bob').placementPoints, 8);
-  assert.equal(byId.get('bob').fastestBonus, 0);
+  const firstHuman = scoredClient.results.find((row) => row.place === 1);
+  const secondHuman = scoredClient.results.find((row) => row.place === 2);
+  assert.equal(firstHuman.placementPoints, 10);
+  assert.equal(firstHuman.fastestBonus, 2);
+  assert.equal(firstHuman.totalPoints, 12);
+  assert.equal(secondHuman.placementPoints, 8);
+  assert.equal(secondHuman.fastestBonus, 0);
 
   const botScoringFixture = {
     seed: 0xfeedbeef,

@@ -40,17 +40,18 @@ Function secrets used by `football-action`: `ODDS_API_KEY`, `FOOTBALL_CRON_SECRE
 
 ### Office Grand Prix rollout
 
-The public test is free through Sunday, 26 July 2026. Its test standings are disposable and must not be copied into ranked results. The first free ranked week begins Monday, 27 July 2026 at 00:00 `Europe/Warsaw`; the new ten-game cycle then continues with Whack-a-Boss on 3 August and repeats every ten weeks. Outside its seasonal week the racer remains available in the archive for one coin. The server derives `test`, `seasonal`, or one-coin `arcade` mode, so the browser clock is never authoritative.
+Office Grand Prix V1 is retired and the completed public-test race remains audit history. V2 is checked in but release-gated: the production archive card is hidden, `OGP_SESSIONS_ENABLED` is `false`, and Popup Panic occupies the racer's seasonal slot until a Monday activation. Localhost still exposes bot training for handling/rendering work. Do not copy test standings into ranked results.
 
 Deploy in this order:
 
-1. Re-run `supabase/arcade.sql`, then run `supabase/office-grand-prix.sql`.
-2. Run `supabase/season-award-gating.sql`, followed by `supabase/polish-midnight-schedules.sql`.
-3. Re-run `supabase/coin-inflow-stats.sql` and `supabase/economy-stats.sql`.
-4. Deploy `supabase/functions/office-grand-prix-action` with JWT verification enabled.
-5. In Supabase Realtime, confirm private-channel authorization is enabled and the policies installed by `office-grand-prix.sql` allow authenticated participants to use `ogp:<session-id>`, ordinary entrants to send only on their own `ogp-input:<session-id>:<slot>` channel, and the elected coordinator to receive every occupied input channel. Confirm the racer score and award tables added by that SQL are present in the `supabase_realtime` publication.
-6. Check that `office_grand_prix_weekly_awards` exists in `cron.job`; its first ranked payout is expected after the 27 July week closes.
-7. Deploy `index.html` through the existing GitHub Pages workflow, then verify a desktop and mobile client can join the same lobby, bots fill the remaining slots, and only the Edge Function can finalize results.
+1. Deploy the hidden client and maintenance-gated Edge Function.
+2. Apply `supabase/migrations/20260723101709_office_grand_prix_v2_engine.sql` (or re-run the idempotent `supabase/office-grand-prix.sql`). Existing sessions become `office_grand_prix_v1`; future sessions default to `office_grand_prix_v2`.
+3. Run `supabase/season-award-gating.sql`, followed by `supabase/polish-midnight-schedules.sql`.
+4. Run `node scripts/office-grand-prix-parity.mjs`; it must report 5,000 races / 40,000 kart replays and zero mismatches.
+5. Deploy `supabase/functions/office-grand-prix-action` with JWT verification enabled.
+6. In Supabase Realtime, confirm private-channel authorization is enabled and the installed policies allow participants to use `ogp:<session-id>`, entrants to send only on their `ogp-input:<session-id>:<slot>` channel, and the elected coordinator to receive occupied input channels.
+7. Test two authenticated desktop/mobile clients, six bots, reconnect/failover, stale-contract rejection, idempotent submission, leaderboard writes, and mobile p95 frame time below 33 ms.
+8. Only on a Monday boundary, replace the Popup Panic fallback with Office Grand Prix, set both the UI and server session gates to `true`, deploy, and run one smoke race before leaving creation enabled.
 
 Archive entry fees and scores are backend-owned. The Edge Function charges each locked human once, records `coin_transactions.reason = 'arcade_entry'` with the session ID, replays the submitted inputs, and only then inserts an official `arcade_scores` row. Do not add `office_grand_prix` to the browser-callable `pay_arcade_entry` or `record_arcade_score` RPCs.
 

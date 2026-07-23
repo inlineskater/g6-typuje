@@ -16,6 +16,8 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:8000",
   "http://localhost:8080",
   "http://127.0.0.1:8080",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
 ]);
 
 const databaseUrl = Deno.env.get("SUPABASE_DB_URL");
@@ -31,20 +33,31 @@ const db = databaseUrl
 // PARITY CONTRACT: these constants and the deterministic functions from
 // ogpMix32 through replayOfficeGrandPrix must stay equivalent to the OGP
 // engine in index.html and scripts/office-grand-prix-parity.mjs.
-const OGP_ENGINE_VERSION = "office_grand_prix_v1";
+const OGP_ENGINE_VERSION = "office_grand_prix_v2";
+const OGP_TRACK_VERSION = "office_loop_v2";
+const OGP_TRACK_HASH = "4c6fe6372d604110d5b0fdbe9c23ac35d6bcf1d8aeb9fbb9737c44c5226daeb8";
 const OGP_TICK_MS = 50;
 const OGP_TRACK_LENGTH = 160000;
+const OGP_START_PROGRESS = 16000;
+const OGP_FINISH_PROGRESS = OGP_START_PROGRESS + OGP_TRACK_LENGTH;
 const OGP_MAX_TICKS = 1800;
 const OGP_MAX_INPUT_EVENTS = 1800;
-const OGP_ACCEL = 4;
-const OGP_START_SPEED = 70;
-const OGP_MAX_SPEED = 150;
-const OGP_FORWARD_PCT = 95;
-const OGP_STEER_PER_TICK = 180;
-const OGP_NEUTRAL_RETURN = 40;
-const OGP_LANE_LIMIT = 4400;
+const OGP_ACCEL = 5;
+const OGP_START_SPEED = 84;
+const OGP_MAX_SPEED = 180;
+const OGP_FORWARD_PCT = 96;
+const OGP_STEER_RESPONSE = 300;
+const OGP_STEER_CENTER = 360;
+const OGP_STEER_MAX = 1000;
+const OGP_TURN_RATE = 4;
 const OGP_OFFROAD_THRESHOLD = 3400;
 const OGP_OFFROAD_PCT = 70;
+const OGP_GRASS_MAX_SPEED = 115;
+const OGP_GRASS_BRAKE = 8;
+const OGP_GRASS_GRIP_PCT = 62;
+const OGP_SAFETY_LATERAL = 6500;
+const OGP_RESET_AFTER_TICKS = 20;
+const OGP_RESET_CONTROL_TICKS = 12;
 const OGP_BOOST_PCT = 125;
 const OGP_BOOST_TICKS = 30;
 const OGP_BANANA_PCT = 65;
@@ -53,14 +66,18 @@ const OGP_SHIELD_TICKS = 160;
 const OGP_GATE_PICKUP_RADIUS = 1050;
 const OGP_BANANA_HIT_PROGRESS = 420;
 const OGP_BANANA_HIT_LANE = 820;
+const OGP_ANGLE_STEPS = 256;
+const OGP_TRIG_SCALE = 10000;
 const OGP_GATES = [
-  13000, 28000, 43000, 58000, 73000,
-  88000, 103000, 118000, 133000, 148000,
+  29000, 44000, 59000, 74000, 89000,
+  104000, 119000, 134000, 149000, 164000,
 ];
 const OGP_GATE_LANES = [
   -1800, 0, 1800, 0, -1800,
   1800, 0, -1800, 1800, 0,
 ];
+const OGP_TRACK_TANGENTS = [209,237,240,241,242,243,243,244,244,244,245,245,245,246,246,248,253,255,0,0,0,1,1,1,1,1,1,2,2,2,3,3,5,11,16,18,18,19,19,19,20,20,20,21,21,21,22,23,24,34,44,46,47,48,49,49,50,50,50,51,52,53,54,65,72,74,75,75,75,76,76,76,77,77,78,78,79,81,93,97,98,99,99,100,100,101,101,101,102,103,104,106,117,120,121,121,122,122,122,122,123,123,123,123,124,124,125,126,130,137,138,139,139,140,140,140,141,141,141,141,142,142,143,144,151,160,161,162,163,163,164,164,164,165,165,166,166,167,170,186,194,196,197,198,199,199,200,201,202,203,205,220,237,239,240,241,241,242,242,243,243,244,245,247,4,9,11,11,12,12,12,13,13,13,13,14,14,17,18,19,19,19,19,19,19,20,20,20,21,21,23,26,57,67,69,71,72,73,74,76,78,82,110,116,118,119,119,120,120,120,121,121,121,122,123,124,129,144,147,148,149,149,150,150,151,151,152,153,155,172,185,188,189,190,190,190,190,190,189,189,185,175,173,173,173,172,172,173,173,173,173,173,174,175,176,179];
+const OGP_SIN = [0,245,491,736,980,1224,1467,1710,1951,2191,2430,2667,2903,3137,3369,3599,3827,4052,4276,4496,4714,4929,5141,5350,5556,5758,5957,6152,6344,6532,6716,6895,7071,7242,7410,7572,7730,7883,8032,8176,8315,8449,8577,8701,8819,8932,9040,9142,9239,9330,9415,9495,9569,9638,9700,9757,9808,9853,9892,9925,9952,9973,9988,9997,10000,9997,9988,9973,9952,9925,9892,9853,9808,9757,9700,9638,9569,9495,9415,9330,9239,9142,9040,8932,8819,8701,8577,8449,8315,8176,8032,7883,7730,7572,7410,7242,7071,6895,6716,6532,6344,6152,5957,5758,5556,5350,5141,4929,4714,4496,4276,4052,3827,3599,3369,3137,2903,2667,2430,2191,1951,1710,1467,1224,980,736,491,245,0,-245,-491,-736,-980,-1224,-1467,-1710,-1951,-2191,-2430,-2667,-2903,-3137,-3369,-3599,-3827,-4052,-4276,-4496,-4714,-4929,-5141,-5350,-5556,-5758,-5957,-6152,-6344,-6532,-6716,-6895,-7071,-7242,-7410,-7572,-7730,-7883,-8032,-8176,-8315,-8449,-8577,-8701,-8819,-8932,-9040,-9142,-9239,-9330,-9415,-9495,-9569,-9638,-9700,-9757,-9808,-9853,-9892,-9925,-9952,-9973,-9988,-9997,-10000,-9997,-9988,-9973,-9952,-9925,-9892,-9853,-9808,-9757,-9700,-9638,-9569,-9495,-9415,-9330,-9239,-9142,-9040,-8932,-8819,-8701,-8577,-8449,-8315,-8176,-8032,-7883,-7730,-7572,-7410,-7242,-7071,-6895,-6716,-6532,-6344,-6152,-5957,-5758,-5556,-5350,-5141,-4929,-4714,-4496,-4276,-4052,-3827,-3599,-3369,-3137,-2903,-2667,-2430,-2191,-1951,-1710,-1467,-1224,-980,-736,-491,-245];
 const OGP_PLACEMENT_POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
 const OGP_FASTEST_HUMAN_BONUS = 2;
 const OGP_COSMETICS = [
@@ -83,6 +100,10 @@ const OGP_RACE_SECONDS = 90;
 const OGP_SUBMISSION_GRACE_SECONDS = 10;
 const OGP_COORDINATOR_STALE_MS = 6000;
 const OGP_MAX_REQUEST_BYTES = 300000;
+// Keep production session creation closed until the V2 mobile/multiplayer
+// acceptance gate is signed off. Existing completed rows remain queryable as
+// immutable test-race audit history.
+const OGP_SESSIONS_ENABLED = false;
 
 type OGPItem = "turbo" | "banana" | "shield" | null;
 type OGPInput = { tick: number; steer: -1 | 0 | 1; useItem: boolean };
@@ -105,10 +126,11 @@ function json(req: Request, body: unknown, status = 200) {
   });
 }
 
-function gameError(code: string, message: string) {
+function gameError(code: string, message: string, status = 200) {
   const error = new Error(message);
   error.isGame = true;
   error.code = code;
+  error.status = status;
   return error;
 }
 
@@ -119,6 +141,34 @@ function asInt(value: unknown, fallback = 0) {
 
 function asBoolean(value: unknown, fallback = false) {
   return typeof value === "boolean" ? value : fallback;
+}
+
+function requireV2ClientContract(body: any) {
+  if (String(body.engineVersion ?? "") !== OGP_ENGINE_VERSION) {
+    throw gameError(
+      "engine_version_mismatch",
+      "Wersja gry zmieniła się. Odśwież portal.",
+    );
+  }
+  if (
+    String(body.trackVersion ?? "") !== OGP_TRACK_VERSION
+    || String(body.trackHash ?? "") !== OGP_TRACK_HASH
+  ) {
+    throw gameError(
+      "track_version_mismatch",
+      "Trasa gry zmieniła się. Odśwież portal.",
+    );
+  }
+}
+
+function requireCurrentSessionVersion(body: any, session: any) {
+  const expected = asInt(body.sessionVersion, -1);
+  if (expected < 1 || expected !== asInt(session?.version, -2)) {
+    throw gameError(
+      "stale_session",
+      "Stan lobby zmienił się. Odświeżono dane — spróbuj ponownie.",
+    );
+  }
 }
 
 function validUuid(value: unknown) {
@@ -196,6 +246,47 @@ function ogpRandom(seed: number, slot: number, salt: number) {
   );
 }
 
+function ogpApproach(value: number, target: number, amount: number) {
+  if (value < target) return Math.min(target, value + amount);
+  if (value > target) return Math.max(target, value - amount);
+  return target;
+}
+
+function ogpWrapAngle(value: number) {
+  return ((Math.trunc(value) % OGP_ANGLE_STEPS) + OGP_ANGLE_STEPS) % OGP_ANGLE_STEPS;
+}
+
+function ogpAngleDelta(target: number, current: number) {
+  const delta = ogpWrapAngle(target - current);
+  return delta > OGP_ANGLE_STEPS / 2 ? delta - OGP_ANGLE_STEPS : delta;
+}
+
+function ogpSin(angle: number) {
+  return OGP_SIN[ogpWrapAngle(angle)];
+}
+
+function ogpCos(angle: number) {
+  return OGP_SIN[ogpWrapAngle(angle + OGP_ANGLE_STEPS / 4)];
+}
+
+function ogpTrackHeading(progress: number) {
+  const wrapped = ((Math.trunc(progress) % OGP_TRACK_LENGTH) + OGP_TRACK_LENGTH) % OGP_TRACK_LENGTH;
+  const index = Math.floor(wrapped * OGP_TRACK_TANGENTS.length / OGP_TRACK_LENGTH);
+  return OGP_TRACK_TANGENTS[index];
+}
+
+function ogpGridPose(seed: number, slot: number) {
+  const gridIndex = (slot + (seed >>> 0)) % 8;
+  const row = Math.floor(gridIndex / 2);
+  const column = gridIndex % 2;
+  const progress = OGP_START_PROGRESS - row * 700;
+  return {
+    progress,
+    lane: column === 0 ? -1050 : 1050,
+    heading: ogpTrackHeading(progress),
+  };
+}
+
 function ogpItemForGate(seed: number, slot: number, gate: number, place: number): OGPItem {
   const roll = ogpRandom(seed, slot, 1000 + gate) % 100;
   // Leaders: 20/50/30; middle: 40/35/25; back: 60/25/15.
@@ -219,12 +310,6 @@ function ogpRankByProgress(cars: any[]) {
     .map((car) => car.slot);
 }
 
-function ogpReturnToCenter(lane: number) {
-  if (lane > 0) return Math.max(0, lane - OGP_NEUTRAL_RETURN);
-  if (lane < 0) return Math.min(0, lane + OGP_NEUTRAL_RETURN);
-  return 0;
-}
-
 function ogpBotControl(car: any, cars: any[], bananas: any[], seed: number, tick: number) {
   let targetLane = 0;
   const nextGate = OGP_GATES[car.nextGate];
@@ -232,7 +317,7 @@ function ogpBotControl(car: any, cars: any[], bananas: any[], seed: number, tick
     car.item == null
     && nextGate != null
     && nextGate >= car.progress
-    && nextGate - car.progress <= 14000
+    && nextGate - car.progress <= 15000
   ) {
     targetLane = OGP_GATE_LANES[car.nextGate];
   } else {
@@ -253,12 +338,16 @@ function ogpBotControl(car: any, cars: any[], bananas: any[], seed: number, tick
     }
   }
 
-  const delta = targetLane - car.lane;
-  const steer = Math.abs(delta) <= OGP_STEER_PER_TICK
-    ? 0
-    : delta > 0
-    ? 1
-    : -1;
+  const lookAhead = 1800 + car.speed * 6;
+  const laneCorrection = Math.max(
+    -14,
+    Math.min(14, Math.trunc((targetLane - car.lane) / 240)),
+  );
+  const targetHeading = ogpWrapAngle(
+    ogpTrackHeading(car.progress + lookAhead) - laneCorrection,
+  );
+  const headingError = ogpAngleDelta(targetHeading, car.heading);
+  const steer = Math.abs(headingError) <= 2 ? 0 : headingError < 0 ? -1 : 1;
 
   let useItem = false;
   if (car.item === "turbo" && car.itemHeldTicks >= 8) useItem = true;
@@ -285,7 +374,7 @@ function ogpUseItem(car: any, bananas: any[], tick: number) {
     bananas.push({
       active: true,
       ownerSlot: car.slot,
-      progress: Math.max(0, car.progress - 320),
+      progress: car.progress - 320,
       lane: car.lane,
       createdTick: tick,
     });
@@ -294,19 +383,50 @@ function ogpUseItem(car: any, bananas: any[], tick: number) {
   car.itemHeldTicks = 0;
 }
 
-function ogpAdvanceProgress(car: any) {
-  car.speed = Math.min(OGP_MAX_SPEED, car.speed + OGP_ACCEL);
-  let forward = Math.floor(car.speed * OGP_FORWARD_PCT / 100);
-  if (Math.abs(car.lane) > OGP_OFFROAD_THRESHOLD) {
-    forward = Math.floor(forward * OGP_OFFROAD_PCT / 100);
+function ogpAdvancePose(car: any, steer: number) {
+  const offroad = Math.abs(car.lane) > OGP_OFFROAD_THRESHOLD;
+  const steeringStep = offroad
+    ? Math.max(1, Math.floor(OGP_STEER_RESPONSE * OGP_GRASS_GRIP_PCT / 100))
+    : OGP_STEER_RESPONSE;
+  car.steering = ogpApproach(
+    car.steering,
+    steer * OGP_STEER_MAX,
+    steer === 0 ? OGP_STEER_CENTER : steeringStep,
+  );
+  const gripPct = offroad ? OGP_GRASS_GRIP_PCT : 100;
+  const turn = Math.trunc(
+    car.steering * car.speed * OGP_TURN_RATE * gripPct /
+    (OGP_STEER_MAX * OGP_MAX_SPEED * 100),
+  );
+  car.heading = ogpWrapAngle(car.heading + turn);
+
+  const surfaceMaxSpeed = offroad ? OGP_GRASS_MAX_SPEED : OGP_MAX_SPEED;
+  if (car.speed > surfaceMaxSpeed) {
+    car.speed = Math.max(surfaceMaxSpeed, car.speed - OGP_GRASS_BRAKE);
+  } else {
+    car.speed = Math.min(surfaceMaxSpeed, car.speed + OGP_ACCEL);
   }
-  if (car.boostTicks > 0) {
-    forward = Math.floor(forward * OGP_BOOST_PCT / 100);
-  }
-  if (car.slowTicks > 0) {
-    forward = Math.floor(forward * OGP_BANANA_PCT / 100);
-  }
-  car.progress += Math.max(0, forward);
+  let velocity = Math.floor(car.speed * OGP_FORWARD_PCT / 100);
+  if (offroad) velocity = Math.floor(velocity * OGP_OFFROAD_PCT / 100);
+  if (car.boostTicks > 0) velocity = Math.floor(velocity * OGP_BOOST_PCT / 100);
+  if (car.slowTicks > 0) velocity = Math.floor(velocity * OGP_BANANA_PCT / 100);
+  const relativeHeading = ogpAngleDelta(car.heading, ogpTrackHeading(car.progress));
+  car.progress += Math.trunc(velocity * ogpCos(relativeHeading) / OGP_TRIG_SCALE);
+  car.lane += Math.trunc(velocity * ogpSin(-relativeHeading) / OGP_TRIG_SCALE);
+
+  if (Math.abs(car.lane) > OGP_SAFETY_LATERAL) car.outsideTicks += 1;
+  else car.outsideTicks = 0;
+  if (car.outsideTicks < OGP_RESET_AFTER_TICKS) return false;
+
+  car.progress = Math.max(OGP_START_PROGRESS, car.lastCheckpoint - 800);
+  car.lane = 0;
+  car.heading = ogpTrackHeading(car.progress);
+  car.steering = 0;
+  car.speed = OGP_START_SPEED;
+  car.outsideTicks = 0;
+  car.resetTicks = OGP_RESET_CONTROL_TICKS;
+  car.resetCount += 1;
+  return true;
 }
 
 function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[]) {
@@ -321,8 +441,10 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
   const cars = roster
     .map((row) => {
       const submission = row.is_bot ? null : submissionByUser.get(String(row.user_id));
+      const slot = asInt(row.slot);
+      const pose = ogpGridPose(raceSeed, slot);
       return {
-        slot: asInt(row.slot),
+        slot,
         userId: row.user_id == null ? null : String(row.user_id),
         nick: String(row.nick_snapshot),
         cosmetic: asInt(row.cosmetic),
@@ -333,15 +455,21 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
         inputIndex: 0,
         steer: 0,
         speed: OGP_START_SPEED,
-        progress: 0,
-        lane: 0,
+        progress: pose.progress,
+        lane: pose.lane,
+        heading: pose.heading,
+        steering: 0,
         item: null,
         itemHeldTicks: 0,
         nextGate: 0,
+        lastCheckpoint: OGP_START_PROGRESS,
         boostTicks: 0,
         slowTicks: 0,
         slowAppliedTick: 0,
         shieldTicks: 0,
+        outsideTicks: 0,
+        resetTicks: 0,
+        resetCount: 0,
         bananasHit: 0,
         shieldsUsed: 0,
         boostsUsed: 0,
@@ -383,6 +511,11 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
           car.inputIndex += 1;
         }
       }
+      if (car.resetTicks > 0) {
+        steer = 0;
+        useItem = false;
+        car.resetTicks -= 1;
+      }
       car.steer = steer;
       controls.set(car.slot, { steer, useItem });
     }
@@ -397,16 +530,8 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
         ogpUseItem(car, bananas, tick);
       }
 
-      if (control.steer === 0) car.lane = ogpReturnToCenter(car.lane);
-      else {
-        car.lane = Math.max(
-          -OGP_LANE_LIMIT,
-          Math.min(OGP_LANE_LIMIT, car.lane + control.steer * OGP_STEER_PER_TICK),
-        );
-      }
-
       const previousProgress = car.progress;
-      ogpAdvanceProgress(car);
+      if (ogpAdvancePose(car, control.steer)) continue;
 
       while (
         car.nextGate < OGP_GATES.length
@@ -426,12 +551,13 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
           );
           car.itemHeldTicks = 0;
         }
+        car.lastCheckpoint = OGP_GATES[gate];
         car.nextGate += 1;
       }
 
       if (car.item != null) car.itemHeldTicks += 1;
-      if (car.progress >= OGP_TRACK_LENGTH && car.nextGate === OGP_GATES.length) {
-        car.progress = OGP_TRACK_LENGTH;
+      if (car.progress >= OGP_FINISH_PROGRESS && car.nextGate === OGP_GATES.length) {
+        car.progress = OGP_FINISH_PROGRESS;
         car.finished = true;
         car.finishTick = tick;
         car.speed = 0;
@@ -507,6 +633,10 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
       finishTick: car.finishTick,
       completionMs: car.finished ? car.finishTick * OGP_TICK_MS : null,
       progress: car.progress,
+      lateral: car.lane,
+      heading: car.heading,
+      steering: car.steering,
+      resetCount: car.resetCount,
       placementPoints,
       fastestBonus,
       totalPoints: placementPoints + fastestBonus,
@@ -520,6 +650,8 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
 
   return {
     engineVersion: OGP_ENGINE_VERSION,
+    trackVersion: OGP_TRACK_VERSION,
+    trackHash: OGP_TRACK_HASH,
     seed: raceSeed,
     ticks: Math.max(...results.map((row) => row.finishTick ?? OGP_MAX_TICKS)),
     results: results.sort((a, b) => a.place - b.place),
@@ -736,6 +868,12 @@ async function lockRoster(tx: any, session: any) {
 
 async function finalizeSession(tx: any, session: any) {
   if (session.status === "finished" || session.finished_at) return session;
+  if (session.engine_version !== OGP_ENGINE_VERSION) {
+    throw gameError(
+      "session_engine_mismatch",
+      "Sesja nie może zostać odtworzona przez aktywny silnik.",
+    );
+  }
 
   const roster = await tx`
     SELECT *
@@ -918,6 +1056,8 @@ function mapSession(row: any) {
     id: row.id,
     status: row.status,
     mode: row.game_mode,
+    engineVersion: row.engine_version,
+    engine_version: row.engine_version,
     seed: asInt(row.seed),
     maxPlayers: asInt(row.max_players),
     coordinatorId: row.coordinator_id,
@@ -1029,7 +1169,7 @@ async function loadState(userId: string, preferredSessionId?: string | null) {
           .map((row) => `ogp-input:${mappedSession.id}:${row.slot}`)
         : [],
       private: true,
-      inputBatchHz: 3,
+      inputBatchHz: 10,
     }
     : null;
   const heartbeatMs = mappedSession?.coordinatorHeartbeatAt
@@ -1048,6 +1188,14 @@ async function loadState(userId: string, preferredSessionId?: string | null) {
 
   return {
     serverNow: new Date().toISOString(),
+    maintenance: !OGP_SESSIONS_ENABLED,
+    sessionsEnabled: OGP_SESSIONS_ENABLED,
+    engineVersion: OGP_ENGINE_VERSION,
+    trackVersion: OGP_TRACK_VERSION,
+    trackHash: OGP_TRACK_HASH,
+    tickMs: OGP_TICK_MS,
+    tickHz: 1000 / OGP_TICK_MS,
+    snapshotHz: 10,
     mode: currentMode,
     profile: {
       id: profile.id,
@@ -1068,18 +1216,31 @@ async function loadState(userId: string, preferredSessionId?: string | null) {
     ),
     physics: {
       engineVersion: OGP_ENGINE_VERSION,
+      trackVersion: OGP_TRACK_VERSION,
+      trackHash: OGP_TRACK_HASH,
       tickMs: OGP_TICK_MS,
       trackLength: OGP_TRACK_LENGTH,
+      startProgress: OGP_START_PROGRESS,
+      finishProgress: OGP_FINISH_PROGRESS,
       maxTicks: OGP_MAX_TICKS,
       accel: OGP_ACCEL,
       startSpeed: OGP_START_SPEED,
       maxSpeed: OGP_MAX_SPEED,
       forwardPct: OGP_FORWARD_PCT,
-      steerPerTick: OGP_STEER_PER_TICK,
-      neutralReturn: OGP_NEUTRAL_RETURN,
-      laneLimit: OGP_LANE_LIMIT,
+      steerResponse: OGP_STEER_RESPONSE,
+      steerCenter: OGP_STEER_CENTER,
+      steerMax: OGP_STEER_MAX,
+      turnRate: OGP_TURN_RATE,
       offroadThreshold: OGP_OFFROAD_THRESHOLD,
       offroadPct: OGP_OFFROAD_PCT,
+      grassMaxSpeed: OGP_GRASS_MAX_SPEED,
+      grassBrake: OGP_GRASS_BRAKE,
+      grassGripPct: OGP_GRASS_GRIP_PCT,
+      safetyLateral: OGP_SAFETY_LATERAL,
+      resetAfterTicks: OGP_RESET_AFTER_TICKS,
+      resetControlTicks: OGP_RESET_CONTROL_TICKS,
+      angleSteps: OGP_ANGLE_STEPS,
+      trigScale: OGP_TRIG_SCALE,
       boostPct: OGP_BOOST_PCT,
       boostTicks: OGP_BOOST_TICKS,
       bananaPct: OGP_BANANA_PCT,
@@ -1123,6 +1284,14 @@ async function progressThenState(userId: string, sessionId?: string | null) {
 
 async function joinLobby(userId: string, body: any) {
   if (!db) throw new Error("Database is not configured.");
+  if (!OGP_SESSIONS_ENABLED) {
+    throw gameError(
+      "maintenance",
+      "Office Grand Prix jest przebudowywany. Nowe sesje są chwilowo wyłączone.",
+      503,
+    );
+  }
+  requireV2ClientContract(body);
   let joinedSessionId: string | null = null;
   let waiting = false;
   await db.begin(async (tx) => {
@@ -1139,17 +1308,21 @@ async function joinLobby(userId: string, body: any) {
       const inserted = await tx`
         INSERT INTO public.office_grand_prix_sessions (
           game_mode,
+          engine_version,
           seed,
           created_by
         )
         VALUES (
           ${modeRows[0]?.mode ?? "arcade"},
+          ${OGP_ENGINE_VERSION},
           ${seed},
           ${userId}
         )
         RETURNING *
       `;
       session = inserted[0];
+    } else {
+      requireCurrentSessionVersion(body, session);
     }
     joinedSessionId = session.id;
 
@@ -1236,11 +1409,16 @@ async function joinLobby(userId: string, body: any) {
 
 async function setReady(userId: string, body: any) {
   if (!db) throw new Error("Database is not configured.");
+  requireV2ClientContract(body);
   const sessionId = validUuid(body.sessionId);
   const ready = asBoolean(body.ready, true);
   await db.begin(async (tx) => {
     let session = await advanceSession(tx, sessionId);
     if (!session) throw gameError("session_not_found", "Sesja nie istnieje.");
+    if (session.engine_version !== OGP_ENGINE_VERSION) {
+      throw gameError("session_engine_mismatch", "Ta sesja używa innego silnika wyścigu.");
+    }
+    requireCurrentSessionVersion(body, session);
     if (!["lobby", "countdown"].includes(session.status) || session.roster_locked_at) {
       throw gameError("roster_locked", "Lista startowa jest już zamknięta.");
     }
@@ -1499,12 +1677,7 @@ async function claimCoordinator(userId: string, body: any) {
 async function submitRace(userId: string, body: any) {
   if (!db) throw new Error("Database is not configured.");
   const sessionId = validUuid(body.sessionId);
-  if (String(body.engineVersion ?? "") !== OGP_ENGINE_VERSION) {
-    throw gameError(
-      "engine_version_mismatch",
-      "Wersja gry zmieniła się. Odśwież portal przed zapisem wyścigu.",
-    );
-  }
+  requireV2ClientContract(body);
   const elapsedTicks = asInt(body.elapsedTicks, 0);
   if (elapsedTicks < 1 || elapsedTicks > OGP_MAX_TICKS) {
     throw gameError("bad_elapsed", "Nieprawidłowy czas wyścigu.");
@@ -1528,6 +1701,9 @@ async function submitRace(userId: string, body: any) {
   await db.begin(async (tx) => {
     let session = await advanceSession(tx, sessionId);
     if (!session) throw gameError("session_not_found", "Sesja nie istnieje.");
+    if (session.engine_version !== OGP_ENGINE_VERSION) {
+      throw gameError("session_engine_mismatch", "Ta sesja używa innego silnika wyścigu.");
+    }
     const existing = await tx`
       SELECT payload_hash, idempotency_key
       FROM public.office_grand_prix_submissions
@@ -1545,6 +1721,7 @@ async function submitRace(userId: string, body: any) {
       }
       throw gameError("already_submitted", "Ten wyścig został już zapisany.");
     }
+    requireCurrentSessionVersion(body, session);
     if (session.status !== "racing" || !session.race_started_at) {
       throw gameError("race_not_running", "Wyścig jeszcze się nie rozpoczął.");
     }
@@ -1681,6 +1858,6 @@ Deno.serve(async (req) => {
       ok: false,
       code: error?.isGame ? error.code : "server_error",
       error: error?.isGame ? error.message : "Błąd serwera.",
-    });
+    }, error?.isGame ? error.status : 500);
   }
 });
