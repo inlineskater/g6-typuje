@@ -68,11 +68,13 @@ CREATE TABLE IF NOT EXISTS public.office_grand_prix_sessions (
                            )),
   game_mode                text NOT NULL
                            CHECK (game_mode IN ('test', 'seasonal', 'arcade')),
-  engine_version           text NOT NULL DEFAULT 'office_grand_prix_v2'
+  engine_version           text NOT NULL DEFAULT 'office_grand_prix_v4'
                            CONSTRAINT office_grand_prix_sessions_engine_version_check
                            CHECK (engine_version IN (
                              'office_grand_prix_v1',
-                             'office_grand_prix_v2'
+                             'office_grand_prix_v2',
+                             'office_grand_prix_v3',
+                             'office_grand_prix_v4'
                            )),
   seed                     integer NOT NULL CHECK (seed >= 0),
   max_players              smallint NOT NULL DEFAULT 8
