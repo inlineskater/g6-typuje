@@ -23,22 +23,22 @@ const db = databaseUrl
 // counterparts (bjMakeRng/bjGenerateCourse/bjBugColAt/bjCellBlocked/
 // bjCellOpen).
 const COURSE_ID = "bug_jumper_dynamic_v1";
-const COURSE_VERSION = 3;
+const COURSE_VERSION = 4;
 const BJ_COLS = 10;
 const BJ_ROWS = 32;
 const BJ_LANE_COUNT = 30;
 const BJ_SAFE_ROWS = [10, 20, 30];
-const BJ_BAND_HALF = 2;
-const ROUND_DURATION_MS = 20_000;
-const INPUT_COOLDOWN_MS = 120;
+const BJ_BAND_HALF = 3;
+const ROUND_DURATION_MS = 25_000;
+const INPUT_COOLDOWN_MS = 100;
 const MAX_SCORE_PER_ROUND = 30;
 const BJ_SHAPES = [
-  [5, 5, 5], // straight
-  [5, 5, 7], // L, turning right late
-  [5, 5, 3], // L, turning left late
-  [5, 7, 3], // S, right then left
-  [5, 3, 7], // S, left then right
-  [3, 7, 3], // zigzag
+  [4, 4, 4], // straight
+  [4, 4, 6], // L, turning right late
+  [4, 4, 3], // L, turning left late
+  [4, 6, 3], // S, right then left
+  [4, 3, 6], // S, left then right
+  [3, 6, 3], // zigzag
 ];
 const ROUND_EXPIRES_SECONDS = 120;
 const MAX_MOVES_PER_ROUND = 400;
@@ -82,7 +82,10 @@ function makeRng(seed) {
 
 function generateCourse(seed) {
   const rng = makeRng(seed);
-  const shapeIndex = Math.floor(rng() * BJ_SHAPES.length);
+  // Shape comes from the seed itself (not an rng() draw) so a player's chosen
+  // shape can be honored just by picking a seed with that remainder — see
+  // startRound below.
+  const shapeIndex = mod(Number(seed) >>> 0, BJ_SHAPES.length);
   const shape = BJ_SHAPES[shapeIndex];
   const lanes = [];
   for (let row = 1; row <= BJ_LANE_COUNT; row++) {
@@ -96,14 +99,14 @@ function generateCourse(seed) {
     const bandEnd = center + BJ_BAND_HALF;
     const bandWidth = bandEnd - bandStart + 1;
     const rowProgress = (row - 1) / (BJ_LANE_COUNT - 1);
-    const baseInterval = 520 - rowProgress * 330;
-    const intervalMs = Math.max(150, Math.round(baseInterval + (rng() - 0.5) * 80));
+    const baseInterval = 700 - rowProgress * 300;
+    const intervalMs = Math.max(260, Math.round(baseInterval + (rng() - 0.5) * 80));
     const phaseMs = Math.floor(rng() * 300);
     const dir = rng() < 0.5 ? 1 : -1;
-    const bugCount = rng() < 0.55 ? 2 : 1;
+    const bugCount = rng() < 0.25 ? 2 : 1;
     const bugs = [];
     for (let i = 0; i < bugCount; i += 1) {
-      const len = 1 + (rng() < 0.35 ? 1 : 0);
+      const len = 1 + (rng() < 0.15 ? 1 : 0);
       const col = bandStart + Math.floor(rng() * bandWidth);
       bugs.push({ col, len });
     }
@@ -414,7 +417,7 @@ async function loadState(userId) {
   };
 }
 
-async function startRound(userId) {
+async function startRound(userId, body) {
   if (!db) throw new Error("Database is not configured.");
 
   const [profile] = await db`
@@ -424,7 +427,16 @@ async function startRound(userId) {
   `;
   if (!profile) throw gameError("Profil nie istnieje.");
 
-  const seed = Math.floor(Math.random() * 2147483647) + 1;
+  let seed = Math.floor(Math.random() * 2147483647) + 1;
+  // Player picked a specific shape (0..BJ_SHAPES.length-1) in the pre-round
+  // picker: nudge the drawn seed to that remainder so generateCourse(seed)
+  // lands on the requested shape. Lane randomization (everything after the
+  // shape pick) is untouched — still fully random.
+  const requestedShape = body?.shapeIndex == null ? -1 : asInt(body.shapeIndex, -1);
+  if (requestedShape >= 0 && requestedShape < BJ_SHAPES.length) {
+    seed = seed - mod(seed, BJ_SHAPES.length) + requestedShape;
+    if (seed < 1) seed += BJ_SHAPES.length;
+  }
 
   const [round] = await db`
     insert into public.bug_jumper_rounds
@@ -582,7 +594,7 @@ Deno.serve(async (req) => {
 
     let result;
     if (action === "state") result = await loadState(user.id);
-    else if (action === "start") result = await startRound(user.id);
+    else if (action === "start") result = await startRound(user.id, body);
     else if (action === "submit") result = await submitRound(user.id, body);
     else throw gameError("Nieznana akcja.");
 

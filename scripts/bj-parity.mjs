@@ -11,17 +11,17 @@ const BJ_COLS = 10;
 const BJ_ROWS = 32;
 const BJ_LANE_COUNT = 30;
 const BJ_SAFE_ROWS = [10, 20, 30];
-const BJ_BAND_HALF = 2;
-const ROUND_DURATION_MS = 20000;
-const INPUT_COOLDOWN_MS = 120;
+const BJ_BAND_HALF = 3;
+const ROUND_DURATION_MS = 25000;
+const INPUT_COOLDOWN_MS = 100;
 const MAX_SCORE = 30;
 const BJ_SHAPES = [
-  [5, 5, 5],
-  [5, 5, 7],
-  [5, 5, 3],
-  [5, 7, 3],
-  [5, 3, 7],
-  [3, 7, 3],
+  [4, 4, 4],
+  [4, 4, 6],
+  [4, 4, 3],
+  [4, 6, 3],
+  [4, 3, 6],
+  [3, 6, 3],
 ];
 const MOVE_TIME_TOLERANCE_MS = 12;
 
@@ -36,7 +36,7 @@ function makeSim(tag) {
   }
   function generateCourse(seed) {
     const rng = makeRng(seed);
-    const shapeIndex = Math.floor(rng() * BJ_SHAPES.length);
+    const shapeIndex = mod(Number(seed) >>> 0, BJ_SHAPES.length);
     const shape = BJ_SHAPES[shapeIndex];
     const lanes = [];
     for (let row = 1; row <= BJ_LANE_COUNT; row++) {
@@ -50,21 +50,21 @@ function makeSim(tag) {
       const bandEnd = center + BJ_BAND_HALF;
       const bandWidth = bandEnd - bandStart + 1;
       const rowProgress = (row - 1) / (BJ_LANE_COUNT - 1);
-      const baseInterval = 520 - rowProgress * 330;
-      const intervalMs = Math.max(150, Math.round(baseInterval + (rng() - 0.5) * 80));
+      const baseInterval = 700 - rowProgress * 300;
+      const intervalMs = Math.max(260, Math.round(baseInterval + (rng() - 0.5) * 80));
       const phaseMs = Math.floor(rng() * 300);
       const dir = rng() < 0.5 ? 1 : -1;
-      const bugCount = rng() < 0.55 ? 2 : 1;
+      const bugCount = rng() < 0.25 ? 2 : 1;
       const bugs = [];
       for (let i = 0; i < bugCount; i++) {
-        const len = 1 + (rng() < 0.35 ? 1 : 0);
+        const len = 1 + (rng() < 0.15 ? 1 : 0);
         const col = bandStart + Math.floor(rng() * bandWidth);
         bugs.push({ col, len });
       }
       lanes.push({ safe: false, dir, intervalMs, phaseMs, bugs, bandStart, bandEnd });
     }
     return {
-      id: 'bug_jumper_dynamic_v1', version: 3, seed: Number(seed) >>> 0, shapeIndex,
+      id: 'bug_jumper_dynamic_v1', version: 4, seed: Number(seed) >>> 0, shapeIndex,
       cols: BJ_COLS, rows: BJ_ROWS, laneCount: BJ_LANE_COUNT, safeRows: BJ_SAFE_ROWS,
       durationMs: ROUND_DURATION_MS, inputCooldownMs: INPUT_COOLDOWN_MS, maxScore: MAX_SCORE,
       lanes,
@@ -223,10 +223,28 @@ for (const seed of seeds) {
   }
 }
 
+// Shape-select adjustment (startRound in bug-jumper-action): nudging a random
+// seed's remainder to a requested shape must always land on that shape.
+function mod(n, m) { return ((n % m) + m) % m; }
+let shapeSelectMismatches = 0;
+for (let i = 0; i < 500; i++) {
+  const raw = Math.floor(Math.random() * 2147483647) + 1;
+  for (let want = 0; want < BJ_SHAPES.length; want++) {
+    let seed = raw - mod(raw, BJ_SHAPES.length) + want;
+    if (seed < 1) seed += BJ_SHAPES.length;
+    const got = client.generateCourse(seed).shapeIndex;
+    if (got !== want) {
+      shapeSelectMismatches++;
+      console.log('SHAPE-SELECT MISMATCH raw', raw, 'want', want, 'seed', seed, 'got', got);
+    }
+  }
+}
+console.log(`Shape-select checks: ${500 * BJ_SHAPES.length}, mismatches: ${shapeSelectMismatches}`);
+
 console.log(`Tested ${seeds.length} seeds (course) / ${seeds.length * 3} replays.`);
 console.log(`Course mismatches: ${courseMismatches}`);
 console.log(`Replay mismatches: ${replayMismatches}`);
-if (courseMismatches > 0 || replayMismatches > 0) {
+if (courseMismatches > 0 || replayMismatches > 0 || shapeSelectMismatches > 0) {
   console.error('FAIL: parity broken between index.html and bug-jumper-action.');
   process.exit(1);
 } else {
