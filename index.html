@@ -26630,14 +26630,14 @@ const OGP_TRACK_LENGTH = 160000;
 const OGP_START_PROGRESS = 16000;
 const OGP_FINISH_PROGRESS = OGP_START_PROGRESS + OGP_TRACK_LENGTH;
 const OGP_HARD_LIMIT_TICKS = 1200;
-const OGP_ACCEL = 9;
+const OGP_ACCEL = 13;
 const OGP_START_SPEED = 100;
 const OGP_MAX_SPEED = 230;
 const OGP_FORWARD_PCT = 96;
-const OGP_STEER_RESPONSE = 340;
-const OGP_STEER_CENTER = 420;
+const OGP_STEER_RESPONSE = 480;
+const OGP_STEER_CENTER = 700;
 const OGP_STEER_MAX = 1000;
-const OGP_TURN_RATE = 6;
+const OGP_TURN_RATE = 7;
 const OGP_OFFROAD_AT = 5600;
 const OGP_OFFROAD_PCT = 68;
 const OGP_GRASS_MAX_SPEED = 140;
@@ -26646,8 +26646,8 @@ const OGP_GRASS_GRIP_PCT = 55;
 const OGP_SAFETY_LATERAL = 8000;
 const OGP_RESET_AFTER_TICKS = 20;
 const OGP_RESET_CONTROL_TICKS = 12;
-const OGP_GRIP_NUM_ROAD = 1;
-const OGP_GRIP_DEN_ROAD = 3;
+const OGP_GRIP_NUM_ROAD = 3;
+const OGP_GRIP_DEN_ROAD = 4;
 const OGP_GRIP_NUM_GRASS = 1;
 const OGP_GRIP_DEN_GRASS = 7;
 const OGP_BOOST_TICKS = 30;
@@ -26994,8 +26994,9 @@ function ogpStepRace(race) {
       input.steer === 0 ? OGP_STEER_CENTER : steeringStep,
     );
     const gripPct = offroad ? OGP_GRASS_GRIP_PCT : 100;
+    const speedFactor = Math.floor(OGP_MAX_SPEED / 2 + car.speed / 2);
     const turn = Math.trunc(
-      car.steering * car.speed * OGP_TURN_RATE * gripPct /
+      car.steering * speedFactor * OGP_TURN_RATE * gripPct /
       (OGP_STEER_MAX * OGP_MAX_SPEED * 100),
     );
     car.heading = ogpWrapAngle(car.heading + turn);
