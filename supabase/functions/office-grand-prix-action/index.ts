@@ -1,10 +1,22 @@
 // @ts-nocheck
-// Office Grand Prix G6 authoritative lobby and deterministic race verifier.
+// Office Grand Prix G6 authoritative race server and deterministic replay
+// verifier.
 //
 // Deployment:
 //   supabase functions deploy office-grand-prix-action
 // `supabase/config.toml` keeps verify_jwt=true. SUPABASE_DB_URL, SUPABASE_URL,
 // and SUPABASE_ANON_KEY are supplied by the hosted Supabase environment.
+//
+// V3 (2026-07): dropped the live lobby/coordinator/broadcast model entirely.
+// Every race is its own solo session: `start_race` creates it, seats the
+// caller in slot 0 and 7 bots in the rest, and starts it immediately --
+// nothing waits on another human. `ghosts` is a separate, read-only action
+// that hands the browser up to 7 other players' most recent recorded laps
+// (for THIS engine/track version) so the client can drive extra visual karts
+// locally by replaying their inputLog through the same deterministic engine.
+// Ghosts never touch this file's roster/scoring: the authoritative replay
+// below always fills the 7 non-player slots with the bot AI, exactly as it
+// always has, so a ghost can never affect the caller's official result.
 
 import { createClient } from "npm:@supabase/supabase-js@2.107.0";
 import postgres from "npm:postgres@3.4.5";
@@ -33,36 +45,40 @@ const db = databaseUrl
 // PARITY CONTRACT: these constants and the deterministic functions from
 // ogpMix32 through replayOfficeGrandPrix must stay equivalent to the OGP
 // engine in index.html and scripts/office-grand-prix-parity.mjs.
-const OGP_ENGINE_VERSION = "office_grand_prix_v2";
-const OGP_TRACK_VERSION = "office_loop_v2";
-const OGP_TRACK_HASH = "4c6fe6372d604110d5b0fdbe9c23ac35d6bcf1d8aeb9fbb9737c44c5226daeb8";
+const OGP_ENGINE_VERSION = "office_grand_prix_v3";
+const OGP_TRACK_VERSION = "office_loop_v3";
+const OGP_TRACK_HASH = "4eb8fb43bdb592567e7188590afe8adad044d56b8c4279c0744e31137ee2ece5";
 const OGP_TICK_MS = 50;
 const OGP_TRACK_LENGTH = 160000;
 const OGP_START_PROGRESS = 16000;
 const OGP_FINISH_PROGRESS = OGP_START_PROGRESS + OGP_TRACK_LENGTH;
-const OGP_MAX_TICKS = 1800;
-const OGP_MAX_INPUT_EVENTS = 1800;
-const OGP_ACCEL = 5;
-const OGP_START_SPEED = 84;
-const OGP_MAX_SPEED = 180;
+const OGP_MAX_TICKS = 1200;
+const OGP_MAX_INPUT_EVENTS = 1200;
+const OGP_ACCEL = 9;
+const OGP_START_SPEED = 100;
+const OGP_MAX_SPEED = 230;
 const OGP_FORWARD_PCT = 96;
-const OGP_STEER_RESPONSE = 300;
-const OGP_STEER_CENTER = 360;
+const OGP_STEER_RESPONSE = 340;
+const OGP_STEER_CENTER = 420;
 const OGP_STEER_MAX = 1000;
-const OGP_TURN_RATE = 4;
-const OGP_OFFROAD_THRESHOLD = 3400;
-const OGP_OFFROAD_PCT = 70;
-const OGP_GRASS_MAX_SPEED = 115;
-const OGP_GRASS_BRAKE = 8;
-const OGP_GRASS_GRIP_PCT = 62;
-const OGP_SAFETY_LATERAL = 6500;
+const OGP_TURN_RATE = 6;
+const OGP_OFFROAD_THRESHOLD = 5600;
+const OGP_OFFROAD_PCT = 68;
+const OGP_GRASS_MAX_SPEED = 140;
+const OGP_GRASS_BRAKE = 10;
+const OGP_GRASS_GRIP_PCT = 55;
+const OGP_SAFETY_LATERAL = 8000;
 const OGP_RESET_AFTER_TICKS = 20;
 const OGP_RESET_CONTROL_TICKS = 12;
+const OGP_GRIP_NUM_ROAD = 1;
+const OGP_GRIP_DEN_ROAD = 3;
+const OGP_GRIP_NUM_GRASS = 1;
+const OGP_GRIP_DEN_GRASS = 7;
 const OGP_BOOST_PCT = 125;
 const OGP_BOOST_TICKS = 30;
 const OGP_BANANA_PCT = 65;
 const OGP_BANANA_TICKS = 25;
-const OGP_SHIELD_TICKS = 160;
+const OGP_SHIELD_TICKS = 120;
 const OGP_GATE_PICKUP_RADIUS = 1050;
 const OGP_BANANA_HIT_PROGRESS = 420;
 const OGP_BANANA_HIT_LANE = 820;
@@ -76,7 +92,10 @@ const OGP_GATE_LANES = [
   -1800, 0, 1800, 0, -1800,
   1800, 0, -1800, 1800, 0,
 ];
-const OGP_TRACK_TANGENTS = [209,237,240,241,242,243,243,244,244,244,245,245,245,246,246,248,253,255,0,0,0,1,1,1,1,1,1,2,2,2,3,3,5,11,16,18,18,19,19,19,20,20,20,21,21,21,22,23,24,34,44,46,47,48,49,49,50,50,50,51,52,53,54,65,72,74,75,75,75,76,76,76,77,77,78,78,79,81,93,97,98,99,99,100,100,101,101,101,102,103,104,106,117,120,121,121,122,122,122,122,123,123,123,123,124,124,125,126,130,137,138,139,139,140,140,140,141,141,141,141,142,142,143,144,151,160,161,162,163,163,164,164,164,165,165,166,166,167,170,186,194,196,197,198,199,199,200,201,202,203,205,220,237,239,240,241,241,242,242,243,243,244,245,247,4,9,11,11,12,12,12,13,13,13,13,14,14,17,18,19,19,19,19,19,19,20,20,20,21,21,23,26,57,67,69,71,72,73,74,76,78,82,110,116,118,119,119,120,120,120,121,121,121,122,123,124,129,144,147,148,149,149,150,150,151,151,152,153,155,172,185,188,189,190,190,190,190,190,189,189,185,175,173,173,173,172,172,173,173,173,173,173,174,175,176,179];
+// Generated from the pinned Three.js 0.185.1 CatmullRomCurve3 (control
+// points + tension .5 in index.html's ogpBuildScene) using
+// getTangentAt(i / 256). Physics consumes only these checked-in integers.
+const OGP_TRACK_TANGENTS = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,253,250,248,246,244,242,239,237,235,233,231,229,227,224,222,220,218,216,213,211,209,207,205,203,201,198,196,194,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,191,188,185,182,180,177,174,171,168,166,163,160,157,155,152,149,146,144,141,138,135,133,130,129,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,127,125,123,120,118,116,113,111,109,106,104,102,99,97,95,92,90,88,85,83,81,78,76,74,71,69,66,65,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,63,61,58,56,53,51,48,46,43,40,38,35,33,30,28,25,23,20,18,15,13,10,8,5,2];
 const OGP_SIN = [0,245,491,736,980,1224,1467,1710,1951,2191,2430,2667,2903,3137,3369,3599,3827,4052,4276,4496,4714,4929,5141,5350,5556,5758,5957,6152,6344,6532,6716,6895,7071,7242,7410,7572,7730,7883,8032,8176,8315,8449,8577,8701,8819,8932,9040,9142,9239,9330,9415,9495,9569,9638,9700,9757,9808,9853,9892,9925,9952,9973,9988,9997,10000,9997,9988,9973,9952,9925,9892,9853,9808,9757,9700,9638,9569,9495,9415,9330,9239,9142,9040,8932,8819,8701,8577,8449,8315,8176,8032,7883,7730,7572,7410,7242,7071,6895,6716,6532,6344,6152,5957,5758,5556,5350,5141,4929,4714,4496,4276,4052,3827,3599,3369,3137,2903,2667,2430,2191,1951,1710,1467,1224,980,736,491,245,0,-245,-491,-736,-980,-1224,-1467,-1710,-1951,-2191,-2430,-2667,-2903,-3137,-3369,-3599,-3827,-4052,-4276,-4496,-4714,-4929,-5141,-5350,-5556,-5758,-5957,-6152,-6344,-6532,-6716,-6895,-7071,-7242,-7410,-7572,-7730,-7883,-8032,-8176,-8315,-8449,-8577,-8701,-8819,-8932,-9040,-9142,-9239,-9330,-9415,-9495,-9569,-9638,-9700,-9757,-9808,-9853,-9892,-9925,-9952,-9973,-9988,-9997,-10000,-9997,-9988,-9973,-9952,-9925,-9892,-9853,-9808,-9757,-9700,-9638,-9569,-9495,-9415,-9330,-9239,-9142,-9040,-8932,-8819,-8701,-8577,-8449,-8315,-8176,-8032,-7883,-7730,-7572,-7410,-7242,-7071,-6895,-6716,-6532,-6344,-6152,-5957,-5758,-5556,-5350,-5141,-4929,-4714,-4496,-4276,-4052,-3827,-3599,-3369,-3137,-2903,-2667,-2430,-2191,-1951,-1710,-1467,-1224,-980,-736,-491,-245];
 const OGP_PLACEMENT_POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
 const OGP_FASTEST_HUMAN_BONUS = 2;
@@ -94,16 +113,15 @@ const OGP_BOT_NAMES = [
   "Bot Zarząd",
 ];
 
-const OGP_COUNTDOWN_SECONDS = 15;
-const OGP_ROSTER_LOCK_SECONDS = 10;
 const OGP_RACE_SECONDS = 90;
 const OGP_SUBMISSION_GRACE_SECONDS = 10;
-const OGP_COORDINATOR_STALE_MS = 6000;
+const OGP_MAX_GHOSTS = 7;
 const OGP_MAX_REQUEST_BYTES = 300000;
 // Production session creation, opened 2026-07-23 by explicit override of the
-// V2 mobile/multiplayer acceptance gate (manual QA rows were not signed off;
-// see docs/office-grand-prix-v2-release-gate.md). Existing completed rows
-// remain queryable as immutable test-race audit history.
+// V2 mobile acceptance gate; V3 (2026-07) replaced the multiplayer surface
+// that gate was mainly about with async ghosts, so live-coordinator/
+// reconnect risk no longer applies. See
+// docs/office-grand-prix-v2-release-gate.md for the audit trail.
 const OGP_SESSIONS_ENABLED = true;
 
 type OGPItem = "turbo" | "banana" | "shield" | null;
@@ -140,38 +158,6 @@ function asInt(value: unknown, fallback = 0) {
   return Number.isFinite(number) ? Math.trunc(number) : fallback;
 }
 
-function asBoolean(value: unknown, fallback = false) {
-  return typeof value === "boolean" ? value : fallback;
-}
-
-function requireV2ClientContract(body: any) {
-  if (String(body.engineVersion ?? "") !== OGP_ENGINE_VERSION) {
-    throw gameError(
-      "engine_version_mismatch",
-      "Wersja gry zmieniła się. Odśwież portal.",
-    );
-  }
-  if (
-    String(body.trackVersion ?? "") !== OGP_TRACK_VERSION
-    || String(body.trackHash ?? "") !== OGP_TRACK_HASH
-  ) {
-    throw gameError(
-      "track_version_mismatch",
-      "Trasa gry zmieniła się. Odśwież portal.",
-    );
-  }
-}
-
-function requireCurrentSessionVersion(body: any, session: any) {
-  const expected = asInt(body.sessionVersion, -1);
-  if (expected < 1 || expected !== asInt(session?.version, -2)) {
-    throw gameError(
-      "stale_session",
-      "Stan lobby zmienił się. Odświeżono dane — spróbuj ponownie.",
-    );
-  }
-}
-
 function validUuid(value: unknown) {
   const text = String(value ?? "");
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)) {
@@ -197,6 +183,24 @@ async function sha256Hex(value: string) {
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function requireV2ClientContract(body: any) {
+  if (String(body.engineVersion ?? "") !== OGP_ENGINE_VERSION) {
+    throw gameError(
+      "engine_version_mismatch",
+      "Wersja gry zmieniła się. Odśwież portal.",
+    );
+  }
+  if (
+    String(body.trackVersion ?? "") !== OGP_TRACK_VERSION
+    || String(body.trackHash ?? "") !== OGP_TRACK_HASH
+  ) {
+    throw gameError(
+      "track_version_mismatch",
+      "Trasa gry zmieniła się. Odśwież portal.",
+    );
+  }
 }
 
 function parseInputs(raw: unknown, elapsedTicks: number): OGPInput[] {
@@ -229,6 +233,8 @@ function parseInputs(raw: unknown, elapsedTicks: number): OGPInput[] {
   });
 }
 
+// ── Deterministic physics engine (mirrors index.html) ───────────────────────
+
 function ogpMix32(value: number) {
   let x = value >>> 0;
   x ^= x >>> 16;
@@ -260,6 +266,19 @@ function ogpWrapAngle(value: number) {
 function ogpAngleDelta(target: number, current: number) {
   const delta = ogpWrapAngle(target - current);
   return delta > OGP_ANGLE_STEPS / 2 ? delta - OGP_ANGLE_STEPS : delta;
+}
+
+// Chases `current` toward `target` by a proportional (num/den) fraction of
+// the remaining gap each tick, with a minimum 1-unit step so it always fully
+// converges instead of stalling on integer truncation. Applied to
+// car.moveHeading chasing car.heading, this is the whole drift model.
+function ogpChaseAngle(current: number, target: number, num: number, den: number) {
+  const gap = ogpAngleDelta(target, current);
+  if (gap === 0) return current;
+  let step = Math.trunc(gap * num / den);
+  if (step === 0) step = gap > 0 ? 1 : -1;
+  if (Math.abs(step) > Math.abs(gap)) step = gap;
+  return ogpWrapAngle(current + step);
 }
 
 function ogpSin(angle: number) {
@@ -400,6 +419,13 @@ function ogpAdvancePose(car: any, steer: number) {
     (OGP_STEER_MAX * OGP_MAX_SPEED * 100),
   );
   car.heading = ogpWrapAngle(car.heading + turn);
+  // Travel direction lags the nose direction -- that gap is the drift.
+  car.moveHeading = ogpChaseAngle(
+    car.moveHeading,
+    car.heading,
+    offroad ? OGP_GRIP_NUM_GRASS : OGP_GRIP_NUM_ROAD,
+    offroad ? OGP_GRIP_DEN_GRASS : OGP_GRIP_DEN_ROAD,
+  );
 
   const surfaceMaxSpeed = offroad ? OGP_GRASS_MAX_SPEED : OGP_MAX_SPEED;
   if (car.speed > surfaceMaxSpeed) {
@@ -411,7 +437,7 @@ function ogpAdvancePose(car: any, steer: number) {
   if (offroad) velocity = Math.floor(velocity * OGP_OFFROAD_PCT / 100);
   if (car.boostTicks > 0) velocity = Math.floor(velocity * OGP_BOOST_PCT / 100);
   if (car.slowTicks > 0) velocity = Math.floor(velocity * OGP_BANANA_PCT / 100);
-  const relativeHeading = ogpAngleDelta(car.heading, ogpTrackHeading(car.progress));
+  const relativeHeading = ogpAngleDelta(car.moveHeading, ogpTrackHeading(car.progress));
   car.progress += Math.trunc(velocity * ogpCos(relativeHeading) / OGP_TRIG_SCALE);
   car.lane += Math.trunc(velocity * ogpSin(-relativeHeading) / OGP_TRIG_SCALE);
 
@@ -422,6 +448,7 @@ function ogpAdvancePose(car: any, steer: number) {
   car.progress = Math.max(OGP_START_PROGRESS, car.lastCheckpoint - 800);
   car.lane = 0;
   car.heading = ogpTrackHeading(car.progress);
+  car.moveHeading = car.heading;
   car.steering = 0;
   car.speed = OGP_START_SPEED;
   car.outsideTicks = 0;
@@ -459,6 +486,7 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
         progress: pose.progress,
         lane: pose.lane,
         heading: pose.heading,
+        moveHeading: pose.heading,
         steering: 0,
         item: null,
         itemHeldTicks: 0,
@@ -659,6 +687,8 @@ function replayOfficeGrandPrix(seed: number, roster: any[], submissionRows: any[
   };
 }
 
+// ── Auth + data helpers ──────────────────────────────────────────────────────
+
 async function requireUser(req: Request) {
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) {
@@ -697,175 +727,192 @@ async function profileForUser(sql: any, userId: string, forUpdate = false) {
   return rows[0];
 }
 
-async function sessionForUpdate(tx: any, sessionId?: string | null) {
-  const rows = sessionId
-    ? await tx`
-      SELECT *
-      FROM public.office_grand_prix_sessions
-      WHERE id = ${sessionId}
-      FOR UPDATE
-    `
-    : await tx`
-      SELECT *
-      FROM public.office_grand_prix_sessions
-      WHERE status IN ('lobby', 'countdown', 'racing')
-      ORDER BY created_at
-      LIMIT 1
-      FOR UPDATE
-    `;
-  return rows[0] ?? null;
+function mapSession(row: any) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    status: row.status,
+    mode: row.game_mode,
+    engineVersion: row.engine_version,
+    seed: asInt(row.seed),
+    raceStartedAt: row.race_started_at,
+    race_started_at: row.race_started_at,
+    raceEndsAt: row.race_ends_at,
+    submissionsDueAt: row.submissions_due_at,
+    createdAt: row.created_at,
+  };
 }
 
-async function lockRoster(tx: any, session: any) {
-  if (session.roster_locked_at) return session;
+// ── Ghosts (read-only, no roster/scoring impact) ────────────────────────────
 
-  await tx`
-    DELETE FROM public.office_grand_prix_participants
-    WHERE session_id = ${session.id}
-      AND NOT is_bot
-      AND NOT is_ready
+async function fetchGhosts(userId: string) {
+  const rows = await db`
+    WITH recent AS (
+      SELECT DISTINCT ON (s.user_id)
+        s.user_id,
+        s.input_log,
+        s.received_at,
+        p.nick_snapshot AS nick,
+        p.cosmetic,
+        sc.finished,
+        sc.completion_ms
+      FROM public.office_grand_prix_submissions s
+      JOIN public.office_grand_prix_sessions sess ON sess.id = s.session_id
+      JOIN public.office_grand_prix_participants p
+        ON p.session_id = s.session_id AND p.user_id = s.user_id
+      LEFT JOIN public.office_grand_prix_scores sc
+        ON sc.session_id = s.session_id AND sc.user_id = s.user_id
+      WHERE sess.engine_version = ${OGP_ENGINE_VERSION}
+        AND s.user_id != ${userId}
+      ORDER BY s.user_id, s.received_at DESC
+    )
+    SELECT *
+    FROM recent
+    ORDER BY received_at DESC
+    LIMIT ${OGP_MAX_GHOSTS}
   `;
+  return rows.map((row) => ({
+    userId: row.user_id,
+    nick: row.nick,
+    carId: OGP_COSMETICS[asInt(row.cosmetic)] ?? OGP_COSMETICS[0],
+    inputLog: Array.isArray(row.input_log) ? row.input_log : [],
+    finishedTick: row.finished && row.completion_ms != null
+      ? Math.round(asInt(row.completion_ms) / OGP_TICK_MS)
+      : null,
+  }));
+}
 
-  if (session.game_mode === "arcade") {
-    const entrants = await tx`
-      SELECT p.id, p.user_id
-      FROM public.office_grand_prix_participants p
-      WHERE p.session_id = ${session.id}
-        AND NOT p.is_bot
-        AND p.is_ready
-        AND NOT p.entry_fee_charged
-      ORDER BY p.slot
-      FOR UPDATE
-    `;
-    for (const entrant of entrants) {
+async function loadSharedState(userId: string) {
+  if (!db) throw new Error("Database is not configured.");
+  const profile = await profileForUser(db, userId);
+  const [modeRows, weekly, allTime, testStandings, awards] = await Promise.all([
+    db`SELECT public.office_grand_prix_mode(now()) AS mode`,
+    db`SELECT * FROM public.office_grand_prix_current_week ORDER BY rank LIMIT 20`,
+    db`SELECT * FROM public.office_grand_prix_all_time ORDER BY rank LIMIT 20`,
+    db`SELECT * FROM public.office_grand_prix_test_standings ORDER BY rank LIMIT 20`,
+    db`SELECT * FROM public.office_grand_prix_recent_awards ORDER BY week_start DESC, rank LIMIT 12`,
+  ]);
+  const currentMode = modeRows[0]?.mode ?? "arcade";
+  const mappedTestStandings = testStandings.map((row) => ({
+    ...row,
+    rank: asInt(row.rank),
+    finish_place: asInt(row.finish_place),
+    completion_ms: asInt(row.completion_ms),
+    score: OGP_PLACEMENT_POINTS[asInt(row.finish_place) - 1] ?? 0,
+  }));
+
+  return {
+    serverNow: new Date().toISOString(),
+    maintenance: !OGP_SESSIONS_ENABLED,
+    engineVersion: OGP_ENGINE_VERSION,
+    trackVersion: OGP_TRACK_VERSION,
+    trackHash: OGP_TRACK_HASH,
+    tickMs: OGP_TICK_MS,
+    mode: currentMode,
+    profile: {
+      id: profile.id,
+      nick: profile.nick,
+      coins: asInt(profile.coins),
+    },
+    weekly,
+    testStandings: mappedTestStandings,
+    allTime,
+    awards,
+  };
+}
+
+async function ghostsAction(userId: string) {
+  if (!db) throw new Error("Database is not configured.");
+  const [shared, ghosts] = await Promise.all([
+    loadSharedState(userId),
+    fetchGhosts(userId),
+  ]);
+  return { ...shared, ghosts };
+}
+
+// ── Start a solo race ────────────────────────────────────────────────────────
+
+async function startRace(userId: string, body: any) {
+  if (!db) throw new Error("Database is not configured.");
+  if (!OGP_SESSIONS_ENABLED) {
+    throw gameError(
+      "maintenance",
+      "Office Grand Prix jest przebudowywany. Wyścigi są chwilowo wyłączone.",
+      503,
+    );
+  }
+  requireV2ClientContract(body);
+
+  const session = await db.begin(async (tx) => {
+    const profile = await profileForUser(tx, userId, true);
+    const modeRows = await tx`SELECT public.office_grand_prix_mode(now()) AS mode`;
+    const mode = modeRows[0]?.mode ?? "arcade";
+
+    if (mode === "arcade") {
       const charged = await tx`
         UPDATE public.profiles
         SET coins = coins - 1
-        WHERE id = ${entrant.user_id}
-          AND coins >= 1
+        WHERE id = ${userId} AND coins >= 1
         RETURNING coins
       `;
       if (!charged[0]) {
-        await tx`
-          DELETE FROM public.office_grand_prix_participants
-          WHERE id = ${entrant.id}
-        `;
-        continue;
+        throw gameError("insufficient_coins", "Potrzebujesz 1 monety w archiwum.");
       }
       await tx`
         INSERT INTO public.coin_transactions(user_id, delta, reason, meta)
         VALUES (
-          ${entrant.user_id},
+          ${userId},
           -1,
           'arcade_entry',
-          ${JSON.stringify({
-            game_type: "office_grand_prix",
-            session_id: session.id,
-            charged_at: new Date().toISOString(),
-          })}::jsonb
+          ${JSON.stringify({ game_type: "office_grand_prix" })}::jsonb
         )
       `;
-      await tx`
-        UPDATE public.office_grand_prix_participants
-        SET entry_fee_charged = true,
-            entry_fee_charged_at = now()
-        WHERE id = ${entrant.id}
-      `;
     }
-  }
 
-  const humans = await tx`
-    SELECT *
-    FROM public.office_grand_prix_participants
-    WHERE session_id = ${session.id}
-      AND NOT is_bot
-      AND is_ready
-    ORDER BY slot
-  `;
+    const seedBytes = crypto.getRandomValues(new Uint32Array(1));
+    const seed = seedBytes[0] & 0x7fffffff;
+    const requestedCosmetic = asInt(body.cosmetic, -1);
+    const cosmetic = requestedCosmetic >= 0 && requestedCosmetic <= 7 ? requestedCosmetic : 0;
 
-  if (humans.length === 0) {
-    const cancelled = await tx`
-      UPDATE public.office_grand_prix_sessions
-      SET status = 'cancelled',
-          coordinator_id = NULL,
-          coordinator_heartbeat_at = NULL,
-          finished_at = now(),
-          updated_at = now(),
-          version = version + 1
-      WHERE id = ${session.id}
-      RETURNING *
-    `;
-    return cancelled[0];
-  }
-
-  const occupied = await tx`
-    SELECT slot, cosmetic
-    FROM public.office_grand_prix_participants
-    WHERE session_id = ${session.id}
-    ORDER BY slot
-  `;
-  const usedSlots = new Set(occupied.map((row) => asInt(row.slot)));
-  const usedCosmetics = new Set(occupied.map((row) => asInt(row.cosmetic)));
-  let botNumber = 0;
-  for (let slot = 0; slot < 8; slot += 1) {
-    if (usedSlots.has(slot)) continue;
-    const cosmetic = Array.from({ length: 8 }, (_, index) => index)
-      .find((index) => !usedCosmetics.has(index));
-    if (cosmetic == null) throw new Error("No cosmetic available for bot.");
-    await tx`
-      INSERT INTO public.office_grand_prix_participants (
-        session_id,
-        slot,
-        user_id,
-        nick_snapshot,
-        cosmetic,
-        is_bot,
-        is_ready,
-        ready_at
+    const inserted = await tx`
+      INSERT INTO public.office_grand_prix_sessions (
+        game_mode, engine_version, seed, created_by,
+        status, race_started_at, race_ends_at, submissions_due_at
       )
       VALUES (
-        ${session.id},
-        ${slot},
-        NULL,
-        ${OGP_BOT_NAMES[botNumber] ?? `Bot ${botNumber + 1}`},
-        ${cosmetic},
-        true,
-        true,
-        now()
+        ${mode}, ${OGP_ENGINE_VERSION}, ${seed}, ${userId},
+        'racing', now(), now() + interval '90 seconds', now() + interval '100 seconds'
       )
+      RETURNING *
     `;
-    usedSlots.add(slot);
-    usedCosmetics.add(cosmetic);
-    botNumber += 1;
-  }
+    const sessionRow = inserted[0];
 
-  const coordinatorStillPresent = humans.some((row) =>
-    String(row.user_id) === String(session.coordinator_id)
-  );
-  const coordinatorId = coordinatorStillPresent
-    ? session.coordinator_id
-    : humans[0].user_id;
-  const updated = await tx`
-    UPDATE public.office_grand_prix_sessions
-    SET roster_locked_at = now(),
-        coordinator_id = ${coordinatorId},
-        coordinator_claimed_at = CASE
-          WHEN coordinator_id IS DISTINCT FROM ${coordinatorId}
-            THEN now()
-          ELSE coordinator_claimed_at
-        END,
-        coordinator_heartbeat_at = CASE
-          WHEN coordinator_id IS DISTINCT FROM ${coordinatorId}
-            THEN now()
-          ELSE coordinator_heartbeat_at
-        END,
-        updated_at = now(),
-        version = version + 1
-    WHERE id = ${session.id}
-    RETURNING *
-  `;
-  return updated[0];
+    await tx`
+      INSERT INTO public.office_grand_prix_participants (
+        session_id, slot, user_id, nick_snapshot, cosmetic, is_bot, is_ready, ready_at
+      )
+      VALUES (${sessionRow.id}, 0, ${userId}, ${profile.nick}, ${cosmetic}, false, true, now())
+    `;
+    const botCosmetics = [0, 1, 2, 3, 4, 5, 6, 7].filter((value) => value !== cosmetic);
+    for (let slot = 1; slot < 8; slot += 1) {
+      await tx`
+        INSERT INTO public.office_grand_prix_participants (
+          session_id, slot, user_id, nick_snapshot, cosmetic, is_bot, is_ready, ready_at
+        )
+        VALUES (
+          ${sessionRow.id}, ${slot}, NULL, ${OGP_BOT_NAMES[slot - 1] ?? `Bot ${slot}`},
+          ${botCosmetics[slot - 1]}, true, true, now()
+        )
+      `;
+    }
+    return sessionRow;
+  });
+
+  const shared = await loadSharedState(userId);
+  return { ...shared, session: mapSession(session) };
 }
+
+// ── Submit + finalize (authoritative replay) ────────────────────────────────
 
 async function finalizeSession(tx: any, session: any) {
   if (session.status === "finished" || session.finished_at) return session;
@@ -896,6 +943,7 @@ async function finalizeSession(tx: any, session: any) {
       AS week_start
   `;
   const weekStart = weekRows[0].week_start;
+  let ownResult: any = null;
 
   for (const participant of roster) {
     const result = resultBySlot.get(asInt(participant.slot));
@@ -925,35 +973,20 @@ async function finalizeSession(tx: any, session: any) {
     `;
 
     if (participant.is_bot) continue;
+    if (String(participant.user_id) === String(session.created_by)) {
+      ownResult = result;
+    }
     await tx`
       INSERT INTO public.office_grand_prix_scores (
-        session_id,
-        user_id,
-        nick_snapshot,
-        week_start,
-        game_mode,
-        finish_place,
-        placement_points,
-        fastest_bonus,
-        total_points,
-        finished,
-        completion_ms,
-        input_events,
-        server_meta
+        session_id, user_id, nick_snapshot, week_start, game_mode,
+        finish_place, placement_points, fastest_bonus, total_points,
+        finished, completion_ms, input_events, server_meta
       )
       VALUES (
-        ${session.id},
-        ${participant.user_id},
-        ${participant.nick_snapshot},
-        ${weekStart},
-        ${session.game_mode},
-        ${result.place},
-        ${result.placementPoints},
-        ${result.fastestBonus},
-        ${result.totalPoints},
-        ${result.finished},
-        ${result.completionMs},
-        ${result.inputEvents},
+        ${session.id}, ${participant.user_id}, ${participant.nick_snapshot},
+        ${weekStart}, ${session.game_mode},
+        ${result.place}, ${result.placementPoints}, ${result.fastestBonus}, ${result.totalPoints},
+        ${result.finished}, ${result.completionMs}, ${result.inputEvents},
         ${JSON.stringify(resultJson)}::jsonb
       )
       ON CONFLICT (session_id, user_id) DO NOTHING
@@ -965,12 +998,7 @@ async function finalizeSession(tx: any, session: any) {
         : 0;
       await tx`
         INSERT INTO public.arcade_scores(user_id, game_type, score, coins_paid)
-        VALUES (
-          ${participant.user_id},
-          'office_grand_prix',
-          ${encodedScore},
-          1
-        )
+        VALUES (${participant.user_id}, 'office_grand_prix', ${encodedScore}, 1)
       `;
       await tx`
         UPDATE public.office_grand_prix_participants
@@ -982,697 +1010,11 @@ async function finalizeSession(tx: any, session: any) {
 
   const finished = await tx`
     UPDATE public.office_grand_prix_sessions
-    SET status = 'finished',
-        finished_at = now(),
-        updated_at = now(),
-        version = version + 1
-    WHERE id = ${session.id}
-      AND status = 'racing'
+    SET status = 'finished', finished_at = now(), updated_at = now(), version = version + 1
+    WHERE id = ${session.id} AND status = 'racing'
     RETURNING *
   `;
-  return finished[0] ?? session;
-}
-
-async function advanceSession(tx: any, requestedSessionId?: string | null) {
-  let session = await sessionForUpdate(tx, requestedSessionId);
-  if (!session) return null;
-  const nowMs = Date.now();
-
-  if (
-    session.status === "countdown"
-    && !session.roster_locked_at
-    && session.roster_locks_at
-    && nowMs >= new Date(session.roster_locks_at).getTime()
-  ) {
-    session = await lockRoster(tx, session);
-  }
-
-  if (
-    session.status === "countdown"
-    && session.roster_locked_at
-    && session.race_starts_at
-    && nowMs >= new Date(session.race_starts_at).getTime()
-  ) {
-    const started = await tx`
-      UPDATE public.office_grand_prix_sessions
-      SET status = 'racing',
-          race_started_at = race_starts_at,
-          race_ends_at = race_starts_at + interval '90 seconds',
-          submissions_due_at = race_starts_at + interval '100 seconds',
-          updated_at = now(),
-          version = version + 1
-      WHERE id = ${session.id}
-        AND status = 'countdown'
-      RETURNING *
-    `;
-    session = started[0] ?? session;
-  }
-
-  if (session.status === "racing") {
-    const counts = await tx`
-      SELECT
-        COUNT(*) FILTER (WHERE NOT p.is_bot)::integer AS humans,
-        COUNT(s.id)::integer AS submissions
-      FROM public.office_grand_prix_participants p
-      LEFT JOIN public.office_grand_prix_submissions s
-        ON s.session_id = p.session_id
-       AND s.user_id = p.user_id
-      WHERE p.session_id = ${session.id}
-    `;
-    const humans = asInt(counts[0]?.humans);
-    const submissions = asInt(counts[0]?.submissions);
-    const deadlinePassed = session.submissions_due_at
-      && nowMs >= new Date(session.submissions_due_at).getTime();
-    if (humans > 0 && (submissions >= humans || deadlinePassed)) {
-      session = await finalizeSession(tx, session);
-    }
-  }
-
-  return session;
-}
-
-function mapSession(row: any) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    status: row.status,
-    mode: row.game_mode,
-    engineVersion: row.engine_version,
-    engine_version: row.engine_version,
-    seed: asInt(row.seed),
-    maxPlayers: asInt(row.max_players),
-    coordinatorId: row.coordinator_id,
-    coordinatorUserId: row.coordinator_id,
-    coordinator_user_id: row.coordinator_id,
-    coordinatorHeartbeatAt: row.coordinator_heartbeat_at,
-    countdownStartedAt: row.countdown_started_at,
-    rosterLocksAt: row.roster_locks_at,
-    rosterLockedAt: row.roster_locked_at,
-    raceStartsAt: row.race_starts_at,
-    startsAt: row.race_starts_at,
-    starts_at: row.race_starts_at,
-    raceStartedAt: row.race_started_at,
-    raceEndsAt: row.race_ends_at,
-    submissionsDueAt: row.submissions_due_at,
-    finishedAt: row.finished_at,
-    version: asInt(row.version),
-    createdAt: row.created_at,
-  };
-}
-
-function mapParticipant(row: any) {
-  return {
-    id: row.id,
-    slot: asInt(row.slot),
-    userId: row.user_id,
-    nick: row.nick_snapshot,
-    cosmetic: asInt(row.cosmetic),
-    cosmeticId: OGP_COSMETICS[asInt(row.cosmetic)],
-    carId: OGP_COSMETICS[asInt(row.cosmetic)],
-    car_id: OGP_COSMETICS[asInt(row.cosmetic)],
-    isBot: !!row.is_bot,
-    ready: !!row.is_ready,
-    joinedAt: row.joined_at,
-    readyAt: row.ready_at,
-    submitted: !!row.submitted,
-    submissionReceivedAt: row.submission_received_at,
-    finished: row.finished == null ? null : !!row.finished,
-    place: row.finish_place == null ? null : asInt(row.finish_place),
-    completionMs: row.completion_ms == null ? null : asInt(row.completion_ms),
-    points: row.points == null ? null : asInt(row.points),
-    result: row.result_json ?? {},
-  };
-}
-
-function mapLeaderboard(rows: any[]) {
-  return rows.map((row) => ({
-    ...row,
-    rank: asInt(row.rank),
-    score: asInt(row.score),
-    wins: asInt(row.wins),
-    combined_time_ms: asInt(row.combined_time_ms),
-    races_counted: asInt(row.races_counted),
-    weeks_played: row.weeks_played == null ? undefined : asInt(row.weeks_played),
-  }));
-}
-
-async function loadState(userId: string, preferredSessionId?: string | null) {
-  if (!db) throw new Error("Database is not configured.");
-  const profile = await profileForUser(db, userId);
-  let sessionRows;
-  if (preferredSessionId) {
-    sessionRows = await db`
-      SELECT *
-      FROM public.office_grand_prix_sessions
-      WHERE id = ${preferredSessionId}
-    `;
-  } else {
-    sessionRows = await db`
-      SELECT *
-      FROM public.office_grand_prix_sessions
-      ORDER BY
-        (status IN ('lobby', 'countdown', 'racing')) DESC,
-        created_at DESC
-      LIMIT 1
-    `;
-  }
-  const session = sessionRows[0] ?? null;
-  const participants = session
-    ? await db`
-      SELECT
-        p.*,
-        (s.id IS NOT NULL) AS submitted
-      FROM public.office_grand_prix_participants p
-      LEFT JOIN public.office_grand_prix_submissions s
-        ON s.session_id = p.session_id
-       AND s.user_id = p.user_id
-      WHERE p.session_id = ${session.id}
-      ORDER BY p.slot
-    `
-    : [];
-  const [modeRows, weekly, allTime, testStandings, awards] = await Promise.all([
-    db`SELECT public.office_grand_prix_mode(now()) AS mode`,
-    db`SELECT * FROM public.office_grand_prix_current_week ORDER BY rank LIMIT 20`,
-    db`SELECT * FROM public.office_grand_prix_all_time ORDER BY rank LIMIT 20`,
-    db`SELECT * FROM public.office_grand_prix_test_standings ORDER BY rank LIMIT 20`,
-    db`SELECT * FROM public.office_grand_prix_recent_awards ORDER BY week_start DESC, rank LIMIT 12`,
-  ]);
-  const mappedParticipants = participants.map(mapParticipant);
-  const myParticipant = mappedParticipants.find((row) => row.userId === userId) ?? null;
-  const mappedSession = mapSession(session);
-  const channels = mappedSession && myParticipant
-    ? {
-      race: `ogp:${mappedSession.id}`,
-      input: `ogp-input:${mappedSession.id}:${myParticipant.slot}`,
-      coordinatorInputs: mappedSession.coordinatorId === userId
-        ? mappedParticipants
-          .filter((row) => !row.isBot)
-          .map((row) => `ogp-input:${mappedSession.id}:${row.slot}`)
-        : [],
-      private: true,
-      inputBatchHz: 10,
-    }
-    : null;
-  const heartbeatMs = mappedSession?.coordinatorHeartbeatAt
-    ? new Date(mappedSession.coordinatorHeartbeatAt).getTime()
-    : 0;
-
-  const mappedWeekly = mapLeaderboard(weekly);
-  const mappedTestStandings = testStandings.map((row) => ({
-    ...row,
-    rank: asInt(row.rank),
-    finish_place: asInt(row.finish_place),
-    completion_ms: asInt(row.completion_ms),
-    score: OGP_PLACEMENT_POINTS[asInt(row.finish_place) - 1] ?? 0,
-  }));
-  const currentMode = modeRows[0]?.mode ?? "arcade";
-
-  return {
-    serverNow: new Date().toISOString(),
-    maintenance: !OGP_SESSIONS_ENABLED,
-    sessionsEnabled: OGP_SESSIONS_ENABLED,
-    engineVersion: OGP_ENGINE_VERSION,
-    trackVersion: OGP_TRACK_VERSION,
-    trackHash: OGP_TRACK_HASH,
-    tickMs: OGP_TICK_MS,
-    tickHz: 1000 / OGP_TICK_MS,
-    snapshotHz: 10,
-    mode: currentMode,
-    profile: {
-      id: profile.id,
-      nick: profile.nick,
-      coins: asInt(profile.coins),
-    },
-    session: mappedSession,
-    participants: mappedParticipants,
-    myParticipant,
-    channels,
-    canClaimCoordinator: !!(
-      mappedSession
-      && myParticipant?.ready
-      && (
-        !mappedSession.coordinatorId
-        || Date.now() - heartbeatMs > OGP_COORDINATOR_STALE_MS
-      )
-    ),
-    physics: {
-      engineVersion: OGP_ENGINE_VERSION,
-      trackVersion: OGP_TRACK_VERSION,
-      trackHash: OGP_TRACK_HASH,
-      tickMs: OGP_TICK_MS,
-      trackLength: OGP_TRACK_LENGTH,
-      startProgress: OGP_START_PROGRESS,
-      finishProgress: OGP_FINISH_PROGRESS,
-      maxTicks: OGP_MAX_TICKS,
-      accel: OGP_ACCEL,
-      startSpeed: OGP_START_SPEED,
-      maxSpeed: OGP_MAX_SPEED,
-      forwardPct: OGP_FORWARD_PCT,
-      steerResponse: OGP_STEER_RESPONSE,
-      steerCenter: OGP_STEER_CENTER,
-      steerMax: OGP_STEER_MAX,
-      turnRate: OGP_TURN_RATE,
-      offroadThreshold: OGP_OFFROAD_THRESHOLD,
-      offroadPct: OGP_OFFROAD_PCT,
-      grassMaxSpeed: OGP_GRASS_MAX_SPEED,
-      grassBrake: OGP_GRASS_BRAKE,
-      grassGripPct: OGP_GRASS_GRIP_PCT,
-      safetyLateral: OGP_SAFETY_LATERAL,
-      resetAfterTicks: OGP_RESET_AFTER_TICKS,
-      resetControlTicks: OGP_RESET_CONTROL_TICKS,
-      angleSteps: OGP_ANGLE_STEPS,
-      trigScale: OGP_TRIG_SCALE,
-      boostPct: OGP_BOOST_PCT,
-      boostTicks: OGP_BOOST_TICKS,
-      bananaPct: OGP_BANANA_PCT,
-      bananaTicks: OGP_BANANA_TICKS,
-      shieldTicks: OGP_SHIELD_TICKS,
-      gates: OGP_GATES,
-      gateLanes: OGP_GATE_LANES,
-      cosmetics: OGP_COSMETICS,
-    },
-    scoring: {
-      placement: OGP_PLACEMENT_POINTS,
-      fastestHumanBonus: OGP_FASTEST_HUMAN_BONUS,
-      weeklyRacesCounted: 5,
-      prizes: [500, 250, 100],
-    },
-    weekly: mappedWeekly,
-    leaderboard: currentMode === "test" ? mappedTestStandings : mappedWeekly,
-    allTime: mapLeaderboard(allTime),
-    testStandings: mappedTestStandings,
-    awards: awards.map((row) => ({
-      ...row,
-      rank: asInt(row.rank),
-      score: asInt(row.score),
-      wins: asInt(row.wins),
-      combined_time_ms: asInt(row.combined_time_ms),
-      races_counted: asInt(row.races_counted),
-      prize_coins: asInt(row.prize_coins),
-    })),
-  };
-}
-
-async function progressThenState(userId: string, sessionId?: string | null) {
-  if (!db) throw new Error("Database is not configured.");
-  let progressedId = sessionId ?? null;
-  await db.begin(async (tx) => {
-    const session = await advanceSession(tx, sessionId);
-    if (session) progressedId = session.id;
-  });
-  return loadState(userId, progressedId);
-}
-
-async function joinLobby(userId: string, body: any) {
-  if (!db) throw new Error("Database is not configured.");
-  if (!OGP_SESSIONS_ENABLED) {
-    throw gameError(
-      "maintenance",
-      "Office Grand Prix jest przebudowywany. Nowe sesje są chwilowo wyłączone.",
-      503,
-    );
-  }
-  requireV2ClientContract(body);
-  let joinedSessionId: string | null = null;
-  let waiting = false;
-  await db.begin(async (tx) => {
-    await tx`SELECT pg_advisory_xact_lock(hashtext('office_grand_prix_active'))`;
-    const profile = await profileForUser(tx, userId);
-    let session = await advanceSession(tx, null);
-
-    if (!session || session.status === "finished" || session.status === "cancelled") {
-      const modeRows = await tx`
-        SELECT public.office_grand_prix_mode(now()) AS mode
-      `;
-      const seedBytes = crypto.getRandomValues(new Uint32Array(1));
-      const seed = seedBytes[0] & 0x7fffffff;
-      const inserted = await tx`
-        INSERT INTO public.office_grand_prix_sessions (
-          game_mode,
-          engine_version,
-          seed,
-          created_by
-        )
-        VALUES (
-          ${modeRows[0]?.mode ?? "arcade"},
-          ${OGP_ENGINE_VERSION},
-          ${seed},
-          ${userId}
-        )
-        RETURNING *
-      `;
-      session = inserted[0];
-    } else {
-      requireCurrentSessionVersion(body, session);
-    }
-    joinedSessionId = session.id;
-
-    const existing = await tx`
-      SELECT id
-      FROM public.office_grand_prix_participants
-      WHERE session_id = ${session.id}
-        AND user_id = ${userId}
-    `;
-    if (existing[0]) return;
-
-    const lockReached = session.roster_locks_at
-      && Date.now() >= new Date(session.roster_locks_at).getTime();
-    if (
-      session.status === "racing"
-      || session.roster_locked_at
-      || lockReached
-    ) {
-      waiting = true;
-      return;
-    }
-
-    const occupied = await tx`
-      SELECT slot, cosmetic
-      FROM public.office_grand_prix_participants
-      WHERE session_id = ${session.id}
-      ORDER BY slot
-      FOR UPDATE
-    `;
-    if (occupied.length >= 8) {
-      waiting = true;
-      return;
-    }
-    const usedSlots = new Set(occupied.map((row) => asInt(row.slot)));
-    const usedCosmetics = new Set(occupied.map((row) => asInt(row.cosmetic)));
-    const slot = Array.from({ length: 8 }, (_, index) => index)
-      .find((index) => !usedSlots.has(index));
-    const requestedCosmetic = body.cosmetic == null
-      ? OGP_COSMETICS.indexOf(String(body.carId ?? body.car_id ?? ""))
-      : asInt(body.cosmetic, -1);
-    const cosmetic = requestedCosmetic >= 0
-      && requestedCosmetic <= 7
-      && !usedCosmetics.has(requestedCosmetic)
-      ? requestedCosmetic
-      : Array.from({ length: 8 }, (_, index) => index)
-        .find((index) => !usedCosmetics.has(index));
-    if (slot == null || cosmetic == null) {
-      waiting = true;
-      return;
-    }
-
-    await tx`
-      INSERT INTO public.office_grand_prix_participants (
-        session_id,
-        slot,
-        user_id,
-        nick_snapshot,
-        cosmetic,
-        is_bot,
-        is_ready
-      )
-      VALUES (
-        ${session.id},
-        ${slot},
-        ${profile.id},
-        ${profile.nick},
-        ${cosmetic},
-        false,
-        false
-      )
-    `;
-    await tx`
-      UPDATE public.office_grand_prix_sessions
-      SET updated_at = now(),
-          version = version + 1
-      WHERE id = ${session.id}
-    `;
-  });
-  return {
-    ...(await loadState(userId, joinedSessionId)),
-    waiting,
-  };
-}
-
-async function setReady(userId: string, body: any) {
-  if (!db) throw new Error("Database is not configured.");
-  requireV2ClientContract(body);
-  const sessionId = validUuid(body.sessionId);
-  const ready = asBoolean(body.ready, true);
-  await db.begin(async (tx) => {
-    let session = await advanceSession(tx, sessionId);
-    if (!session) throw gameError("session_not_found", "Sesja nie istnieje.");
-    if (session.engine_version !== OGP_ENGINE_VERSION) {
-      throw gameError("session_engine_mismatch", "Ta sesja używa innego silnika wyścigu.");
-    }
-    requireCurrentSessionVersion(body, session);
-    if (!["lobby", "countdown"].includes(session.status) || session.roster_locked_at) {
-      throw gameError("roster_locked", "Lista startowa jest już zamknięta.");
-    }
-    if (
-      session.roster_locks_at
-      && Date.now() >= new Date(session.roster_locks_at).getTime()
-    ) {
-      session = await lockRoster(tx, session);
-      throw gameError("roster_locked", "Lista startowa jest już zamknięta.");
-    }
-
-    const participant = await tx`
-      UPDATE public.office_grand_prix_participants
-      SET is_ready = ${ready},
-          ready_at = CASE WHEN ${ready} THEN now() ELSE NULL END
-      WHERE session_id = ${session.id}
-        AND user_id = ${userId}
-        AND NOT is_bot
-      RETURNING *
-    `;
-    if (!participant[0]) {
-      throw gameError("not_in_lobby", "Najpierw dołącz do wyścigu.");
-    }
-
-    const readyRows = await tx`
-      SELECT user_id, slot
-      FROM public.office_grand_prix_participants
-      WHERE session_id = ${session.id}
-        AND NOT is_bot
-        AND is_ready
-      ORDER BY slot
-    `;
-    if (readyRows.length === 0) {
-      await tx`
-        UPDATE public.office_grand_prix_sessions
-        SET status = 'lobby',
-            coordinator_id = NULL,
-            coordinator_claimed_at = NULL,
-            coordinator_heartbeat_at = NULL,
-            countdown_started_at = NULL,
-            roster_locks_at = NULL,
-            race_starts_at = NULL,
-            updated_at = now(),
-            version = version + 1
-        WHERE id = ${session.id}
-      `;
-      return;
-    }
-
-    const coordinatorPresent = readyRows.some((row) =>
-      String(row.user_id) === String(session.coordinator_id)
-    );
-    const coordinatorId = coordinatorPresent
-      ? session.coordinator_id
-      : readyRows[0].user_id;
-    if (session.status === "lobby") {
-      await tx`
-        UPDATE public.office_grand_prix_sessions
-        SET status = 'countdown',
-            countdown_started_at = now(),
-            roster_locks_at = now() + interval '10 seconds',
-            race_starts_at = now() + interval '15 seconds',
-            coordinator_id = ${coordinatorId},
-            coordinator_claimed_at = now(),
-            coordinator_heartbeat_at = now(),
-            updated_at = now(),
-            version = version + 1
-        WHERE id = ${session.id}
-      `;
-    } else {
-      await tx`
-        UPDATE public.office_grand_prix_sessions
-        SET coordinator_id = ${coordinatorId},
-            coordinator_claimed_at = CASE
-              WHEN coordinator_id IS DISTINCT FROM ${coordinatorId}
-                THEN now()
-              ELSE coordinator_claimed_at
-            END,
-            coordinator_heartbeat_at = CASE
-              WHEN coordinator_id IS DISTINCT FROM ${coordinatorId}
-                THEN now()
-              ELSE coordinator_heartbeat_at
-            END,
-            updated_at = now(),
-            version = version + 1
-        WHERE id = ${session.id}
-      `;
-    }
-  });
-  return loadState(userId, sessionId);
-}
-
-async function leaveLobby(userId: string, body: any) {
-  if (!db) throw new Error("Database is not configured.");
-  const sessionId = validUuid(body.sessionId);
-  await db.begin(async (tx) => {
-    const session = await advanceSession(tx, sessionId);
-    if (!session) throw gameError("session_not_found", "Sesja nie istnieje.");
-    if (
-      session.roster_locked_at
-      || session.status === "racing"
-      || session.status === "finished"
-      || (
-        session.roster_locks_at
-        && Date.now() >= new Date(session.roster_locks_at).getTime()
-      )
-    ) {
-      throw gameError("roster_locked", "Nie można opuścić zamkniętej listy startowej.");
-    }
-    const removed = await tx`
-      DELETE FROM public.office_grand_prix_participants
-      WHERE session_id = ${session.id}
-        AND user_id = ${userId}
-        AND NOT is_bot
-      RETURNING id
-    `;
-    if (!removed[0]) return;
-
-    const remaining = await tx`
-      SELECT user_id, is_ready, slot
-      FROM public.office_grand_prix_participants
-      WHERE session_id = ${session.id}
-        AND NOT is_bot
-      ORDER BY slot
-    `;
-    if (remaining.length === 0) {
-      await tx`
-        UPDATE public.office_grand_prix_sessions
-        SET status = 'cancelled',
-            coordinator_id = NULL,
-            coordinator_heartbeat_at = NULL,
-            finished_at = now(),
-            updated_at = now(),
-            version = version + 1
-        WHERE id = ${session.id}
-      `;
-      return;
-    }
-    const ready = remaining.filter((row) => row.is_ready);
-    if (ready.length === 0) {
-      await tx`
-        UPDATE public.office_grand_prix_sessions
-        SET status = 'lobby',
-            coordinator_id = NULL,
-            coordinator_claimed_at = NULL,
-            coordinator_heartbeat_at = NULL,
-            countdown_started_at = NULL,
-            roster_locks_at = NULL,
-            race_starts_at = NULL,
-            updated_at = now(),
-            version = version + 1
-        WHERE id = ${session.id}
-      `;
-    } else {
-      const coordinatorId = ready.some((row) =>
-          String(row.user_id) === String(session.coordinator_id)
-        )
-        ? session.coordinator_id
-        : ready[0].user_id;
-      await tx`
-        UPDATE public.office_grand_prix_sessions
-        SET coordinator_id = ${coordinatorId},
-            coordinator_claimed_at = CASE
-              WHEN coordinator_id IS DISTINCT FROM ${coordinatorId}
-                THEN now()
-              ELSE coordinator_claimed_at
-            END,
-            coordinator_heartbeat_at = CASE
-              WHEN coordinator_id IS DISTINCT FROM ${coordinatorId}
-                THEN now()
-              ELSE coordinator_heartbeat_at
-            END,
-            updated_at = now(),
-            version = version + 1
-        WHERE id = ${session.id}
-      `;
-    }
-  });
-  return loadState(userId, sessionId);
-}
-
-async function coordinatorHeartbeat(userId: string, body: any) {
-  if (!db) throw new Error("Database is not configured.");
-  const sessionId = validUuid(body.sessionId);
-  await db.begin(async (tx) => {
-    let session = await advanceSession(tx, sessionId);
-    if (!session) throw gameError("session_not_found", "Sesja nie istnieje.");
-    if (!["countdown", "racing"].includes(session.status)) return;
-    const heartbeat = await tx`
-      UPDATE public.office_grand_prix_sessions
-      SET coordinator_heartbeat_at = now(),
-          updated_at = now()
-      WHERE id = ${session.id}
-        AND coordinator_id = ${userId}
-      RETURNING id
-    `;
-    if (!heartbeat[0]) {
-      throw gameError("not_coordinator", "Inny gracz koordynuje ten wyścig.");
-    }
-    session = await advanceSession(tx, sessionId);
-  });
-  return loadState(userId, sessionId);
-}
-
-async function claimCoordinator(userId: string, body: any) {
-  if (!db) throw new Error("Database is not configured.");
-  const sessionId = validUuid(body.sessionId);
-  await db.begin(async (tx) => {
-    const session = await advanceSession(tx, sessionId);
-    if (!session) throw gameError("session_not_found", "Sesja nie istnieje.");
-    if (!["lobby", "countdown", "racing"].includes(session.status)) {
-      throw gameError("race_closed", "Wyścig jest już zakończony.");
-    }
-    const participant = await tx`
-      SELECT id, is_ready
-      FROM public.office_grand_prix_participants
-      WHERE session_id = ${session.id}
-        AND user_id = ${userId}
-        AND NOT is_bot
-    `;
-    if (!participant[0]?.is_ready) {
-      throw gameError("not_ready", "Tylko gotowy kierowca może przejąć koordynację.");
-    }
-    const heartbeatMs = session.coordinator_heartbeat_at
-      ? new Date(session.coordinator_heartbeat_at).getTime()
-      : 0;
-    const coordinatorExists = session.coordinator_id
-      ? await tx`
-        SELECT 1
-        FROM public.office_grand_prix_participants
-        WHERE session_id = ${session.id}
-          AND user_id = ${session.coordinator_id}
-          AND NOT is_bot
-      `
-      : [];
-    const stale = !session.coordinator_id
-      || coordinatorExists.length === 0
-      || Date.now() - heartbeatMs > OGP_COORDINATOR_STALE_MS
-      || String(session.coordinator_id) === userId;
-    if (!stale) {
-      throw gameError("coordinator_active", "Koordynator nadal jest aktywny.");
-    }
-    await tx`
-      UPDATE public.office_grand_prix_sessions
-      SET coordinator_id = ${userId},
-          coordinator_claimed_at = now(),
-          coordinator_heartbeat_at = now(),
-          updated_at = now(),
-          version = version + 1
-      WHERE id = ${session.id}
-    `;
-  });
-  return loadState(userId, sessionId);
+  return { session: finished[0] ?? session, ownResult };
 }
 
 async function submitRace(userId: string, body: any) {
@@ -1684,9 +1026,7 @@ async function submitRace(userId: string, body: any) {
     throw gameError("bad_elapsed", "Nieprawidłowy czas wyścigu.");
   }
   const inputs = parseInputs(body.inputs ?? body.inputLog, elapsedTicks);
-  const idempotencyKey = String(
-    body.idempotencyKey ?? `${sessionId}:${userId}`,
-  );
+  const idempotencyKey = String(body.idempotencyKey ?? `${sessionId}:${userId}`);
   if (
     idempotencyKey.length < 8
     || idempotencyKey.length > 100
@@ -1698,18 +1038,24 @@ async function submitRace(userId: string, body: any) {
   const payloadHash = await sha256Hex(canonical);
   const clientMeta = safeClientMeta(body.clientMeta);
   let alreadyAccepted = false;
+  let ownResult: any = null;
 
   await db.begin(async (tx) => {
-    let session = await advanceSession(tx, sessionId);
+    const sessionRows = await tx`
+      SELECT * FROM public.office_grand_prix_sessions WHERE id = ${sessionId} FOR UPDATE
+    `;
+    let session = sessionRows[0];
     if (!session) throw gameError("session_not_found", "Sesja nie istnieje.");
+    if (String(session.created_by) !== userId) {
+      throw gameError("not_your_session", "To nie jest Twoja sesja wyścigu.");
+    }
     if (session.engine_version !== OGP_ENGINE_VERSION) {
       throw gameError("session_engine_mismatch", "Ta sesja używa innego silnika wyścigu.");
     }
     const existing = await tx`
       SELECT payload_hash, idempotency_key
       FROM public.office_grand_prix_submissions
-      WHERE session_id = ${session.id}
-        AND user_id = ${userId}
+      WHERE session_id = ${session.id} AND user_id = ${userId}
       FOR UPDATE
     `;
     if (existing[0]) {
@@ -1718,11 +1064,23 @@ async function submitRace(userId: string, body: any) {
         && existing[0].idempotency_key === idempotencyKey
       ) {
         alreadyAccepted = true;
+        const scoreRows = await tx`
+          SELECT finish_place, total_points, finished, completion_ms
+          FROM public.office_grand_prix_scores
+          WHERE session_id = ${session.id} AND user_id = ${userId}
+        `;
+        if (scoreRows[0]) {
+          ownResult = {
+            place: asInt(scoreRows[0].finish_place),
+            points: asInt(scoreRows[0].total_points),
+            finished: scoreRows[0].finished,
+            completionMs: scoreRows[0].completion_ms == null ? null : asInt(scoreRows[0].completion_ms),
+          };
+        }
         return;
       }
       throw gameError("already_submitted", "Ten wyścig został już zapisany.");
     }
-    requireCurrentSessionVersion(body, session);
     if (session.status !== "racing" || !session.race_started_at) {
       throw gameError("race_not_running", "Wyścig jeszcze się nie rozpoczął.");
     }
@@ -1731,18 +1089,6 @@ async function submitRace(userId: string, body: any) {
       && Date.now() > new Date(session.submissions_due_at).getTime()
     ) {
       throw gameError("submission_closed", "Minął czas na zapis wyścigu.");
-    }
-    const participant = await tx`
-      SELECT id
-      FROM public.office_grand_prix_participants
-      WHERE session_id = ${session.id}
-        AND user_id = ${userId}
-        AND NOT is_bot
-        AND is_ready
-      FOR UPDATE
-    `;
-    if (!participant[0]) {
-      throw gameError("not_in_race", "Nie ma Cię na liście startowej.");
     }
 
     const wallTicks = Math.floor(
@@ -1754,53 +1100,38 @@ async function submitRace(userId: string, body: any) {
 
     await tx`
       INSERT INTO public.office_grand_prix_submissions (
-        session_id,
-        user_id,
-        idempotency_key,
-        payload_hash,
-        elapsed_ticks,
-        input_events,
-        input_log,
-        client_meta
+        session_id, user_id, idempotency_key, payload_hash,
+        elapsed_ticks, input_events, input_log, client_meta
       )
       VALUES (
-        ${session.id},
-        ${userId},
-        ${idempotencyKey},
-        ${payloadHash},
-        ${elapsedTicks},
-        ${inputs.length},
-        ${JSON.stringify(inputs)}::jsonb,
+        ${session.id}, ${userId}, ${idempotencyKey}, ${payloadHash},
+        ${elapsedTicks}, ${inputs.length}, ${JSON.stringify(inputs)}::jsonb,
         ${JSON.stringify(clientMeta)}::jsonb
       )
     `;
     await tx`
       UPDATE public.office_grand_prix_participants
       SET submission_received_at = now()
-      WHERE id = ${participant[0].id}
+      WHERE session_id = ${session.id} AND user_id = ${userId}
     `;
-    session = await advanceSession(tx, sessionId);
+
+    const finalized = await finalizeSession(tx, session);
+    session = finalized.session;
+    ownResult = finalized.ownResult
+      ? {
+        place: finalized.ownResult.place,
+        points: finalized.ownResult.totalPoints,
+        finished: finalized.ownResult.finished,
+        completionMs: finalized.ownResult.completionMs,
+      }
+      : null;
   });
 
-  const state = await loadState(userId, sessionId);
-  const official = state.participants.find((row) => row.userId === userId) ?? null;
+  const shared = await loadSharedState(userId);
   return {
-    ...state,
-    submission: {
-      accepted: true,
-      alreadyAccepted,
-      inputEvents: inputs.length,
-      elapsedTicks,
-    },
-    result: official?.finished == null
-      ? { pending: true }
-      : {
-        pending: false,
-        dnf: !official.finished,
-        placement: official.place,
-        points: official.points,
-        completionMs: official.completionMs,
-      },
+    ...shared,
+    submission: { accepted: true, alreadyAccepted, inputEvents: inputs.length, elapsedTicks },
+    participant: ownResult,
   };
 }
 
@@ -1823,22 +1154,13 @@ Deno.serve(async (req) => {
       throw gameError("request_too_large", "Zapis wyścigu jest zbyt duży.");
     }
     const body = raw ? JSON.parse(raw) : {};
-    const action = String(body.action ?? "state");
+    const action = String(body.action ?? "ghosts");
 
     let result;
-    if (action === "state") {
-      const sessionId = body.sessionId ? validUuid(body.sessionId) : null;
-      result = await progressThenState(user.id, sessionId);
-    } else if (action === "join") {
-      result = await joinLobby(user.id, body);
-    } else if (action === "ready") {
-      result = await setReady(user.id, body);
-    } else if (action === "leave") {
-      result = await leaveLobby(user.id, body);
-    } else if (action === "coordinator_heartbeat") {
-      result = await coordinatorHeartbeat(user.id, body);
-    } else if (action === "claim_coordinator") {
-      result = await claimCoordinator(user.id, body);
+    if (action === "ghosts") {
+      result = await ghostsAction(user.id);
+    } else if (action === "start_race") {
+      result = await startRace(user.id, body);
     } else if (action === "submit") {
       result = await submitRace(user.id, body);
     } else {
@@ -1849,11 +1171,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error(error);
     if (error instanceof SyntaxError) {
-      return json(req, {
-        ok: false,
-        code: "bad_json",
-        error: "Nieprawidłowe żądanie.",
-      });
+      return json(req, { ok: false, code: "bad_json", error: "Nieprawidłowe żądanie." });
     }
     return json(req, {
       ok: false,

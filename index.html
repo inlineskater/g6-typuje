@@ -4333,14 +4333,6 @@
       cursor: pointer;
       font-weight: 800;
     }
-    .ogp-countdown {
-      margin-left: auto;
-      align-self: center;
-      color: #fde68a;
-      font-size: 13px;
-      font-weight: 900;
-      font-variant-numeric: tabular-nums;
-    }
     .ogp-touch {
       position: absolute;
       z-index: 10;
@@ -4467,7 +4459,6 @@
       .ogp-side { grid-template-columns: 1fr; }
       .ogp-lobby { padding: 58px 10px 10px; }
       .ogp-lobby-actions button { flex: 1; }
-      .ogp-countdown { width: 100%; margin-left: 0; }
     }
     @media (orientation: portrait) and (max-width: 680px) {
       .ogp-stage.is-immersive::after {
@@ -8304,21 +8295,22 @@
         </div>
       </div>
 
-      <!-- Office Grand Prix G6 (low-poly 3D multiplayer kart race; gameType office_grand_prix) -->
+      <!-- Office Grand Prix G6 (low-poly 3D kart race vs bots + async ghosts; gameType office_grand_prix) -->
       <div id="seasonal-game-office-grand-prix" class="hidden">
         <div class="ogp-layout">
           <section class="ogp-panel">
             <div class="ogp-head">
               <div class="ogp-head-copy">
                 <h2 class="page-title">Office Grand Prix G6 🏁</h2>
-                <p class="page-sub">Jedno okrążenie przez biuro, osiem identycznie szybkich gokartów i około minuta wyścigu. Kolor auta jest wyłącznie kosmetyczny.</p>
+                <p class="page-sub">Jedno okrążenie przez biuro w dowolnej chwili — bez czekania na innych. Jedziesz z botami i „duchami" kolegów odtworzonymi z ich najlepszych przejazdów. Kolor auta jest wyłącznie kosmetyczny.</p>
               </div>
               <span class="ogp-mode-chip" id="ogp-mode-chip">🧪 publiczny test</span>
             </div>
 
             <div class="ogp-rules">
-              <div class="ogp-rule"><strong>← → / A D</strong>Automatyczny gaz; kierujesz autem. Na telefonie użyj przycisków na ekranie.</div>
+              <div class="ogp-rule"><strong>← → / A D</strong>Automatyczny gaz; kierujesz autem, a auto naturalnie zarzuca na zakrętach. Na telefonie użyj przycisków na ekranie.</div>
               <div class="ogp-rule"><strong>Spacja = przedmiot</strong>Espresso przyspiesza, banan spowalnia rywala, a tarcza blokuje jednego banana.</div>
+              <div class="ogp-rule"><strong>👻 Duchy</strong>Puste miejsca w wyścigu zajmują odtworzone przejazdy innych graczy (jeśli są) — to podgląd, oficjalny wynik zawsze liczy serwer.</div>
               <div class="ogp-rule"><strong>Punkty tygodnia</strong>10–8–6–5–4–3–2–1 za miejsce, +2 za najszybszy przejazd człowieka. Liczy się najlepsze 5 wyścigów.</div>
             </div>
 
@@ -8336,10 +8328,10 @@
               <div class="ogp-lobby" id="ogp-lobby">
                 <div class="ogp-lobby-card">
                   <div class="ogp-lobby-title">
-                    <span>Wspólne lobby · 8 miejsc</span>
-                    <span id="ogp-lobby-count">0/8</span>
+                    <span>Gotowy do startu</span>
+                    <span id="ogp-lobby-count">0 👻</span>
                   </div>
-                  <p class="ogp-lobby-sub" id="ogp-lobby-copy">Pierwszy gotowy gracz uruchamia 15-sekundowe odliczanie. Pięć sekund przed startem skład zostaje zablokowany, a wolne miejsca zajmują boty.</p>
+                  <p class="ogp-lobby-sub" id="ogp-lobby-copy">Start natychmiastowy — grid wypełnią duchy innych graczy i boty.</p>
                   <div class="ogp-car-picker" id="ogp-car-picker" aria-label="Wybierz kolor gokarta">
                     <button class="ogp-car active" type="button" data-car="coral" aria-label="Auto koralowe"><span style="background:#f43f5e"></span></button>
                     <button class="ogp-car" type="button" data-car="sky" aria-label="Auto błękitne"><span style="background:#0ea5e9"></span></button>
@@ -8351,10 +8343,8 @@
                     <button class="ogp-car" type="button" data-car="silver" aria-label="Auto srebrne"><span style="background:#94a3b8"></span></button>
                   </div>
                   <div class="ogp-lobby-actions">
-                    <button class="btn-primary" id="ogp-join-btn" type="button">Dołącz do lobby</button>
-                    <button class="ogp-secondary hidden" id="ogp-ready-btn" type="button">Jestem gotowy</button>
+                    <button class="btn-primary" id="ogp-join-btn" type="button">🏁 Wyścig!</button>
                     <button class="ogp-secondary" id="ogp-training-btn" type="button">Trening z botami</button>
-                    <span class="ogp-countdown" id="ogp-countdown"></span>
                   </div>
                 </div>
               </div>
@@ -8369,13 +8359,13 @@
               </div>
             </div>
 
-            <div class="ogp-status" id="ogp-status">Ładowanie garażu i wspólnego lobby…</div>
+            <div class="ogp-status" id="ogp-status">Ładowanie garażu…</div>
           </section>
 
           <aside class="ogp-side">
             <section>
-              <div class="ogp-side-title"><span>Skład wyścigu</span><span id="ogp-session-label">lobby</span></div>
-              <div class="ogp-roster" id="ogp-roster"><div class="bj-empty">Wolne miejsca wypełnią boty.</div></div>
+              <div class="ogp-side-title"><span>Twoi rywale-duchy</span><span id="ogp-session-label">0 👻</span></div>
+              <div class="ogp-roster" id="ogp-roster"><div class="bj-empty">Puste miejsca wypełnią boty.</div></div>
             </section>
             <section>
               <div class="ogp-side-title"><span>Ten tydzień</span><span>najlepsze 5</span></div>
@@ -9685,7 +9675,6 @@ const ppOpenEl        = document.getElementById('pp-open');
 const ogpStage        = document.getElementById('ogp-stage');
 const ogpLobby        = document.getElementById('ogp-lobby');
 const ogpJoinBtn      = document.getElementById('ogp-join-btn');
-const ogpReadyBtn     = document.getElementById('ogp-ready-btn');
 const ogpTrainingBtn  = document.getElementById('ogp-training-btn');
 const ogpStatus       = document.getElementById('ogp-status');
 const ogpPositionEl   = document.getElementById('ogp-position');
@@ -9694,7 +9683,6 @@ const ogpItemEl       = document.getElementById('ogp-item');
 const ogpRosterEl     = document.getElementById('ogp-roster');
 const ogpWeeklyEl     = document.getElementById('ogp-weekly-board');
 const ogpAwardsEl     = document.getElementById('ogp-awards');
-const ogpCountdownEl  = document.getElementById('ogp-countdown');
 const ogpBannerEl     = document.getElementById('ogp-banner');
 const ogpMinimap      = document.getElementById('ogp-minimap');
 const ihArena         = document.getElementById('ih-arena');
@@ -26606,41 +26594,55 @@ if (ppArena) {
 // Rendering is real Three.js/WebGL 3D. Official outcomes come from replaying
 // this integer, fixed-tick engine in office-grand-prix-action; Three.js never
 // participates in physics or scoring.
-const OGP_CLIENT_VERSION = 'office_grand_prix_v2';
-const OGP_TRACK_VERSION = 'office_loop_v2';
-const OGP_TRACK_HASH = '4c6fe6372d604110d5b0fdbe9c23ac35d6bcf1d8aeb9fbb9737c44c5226daeb8';
+//
+// V3 (2026-07): faster, drift-capable physics on a redesigned straights +
+// true-radius-corner circuit (V2's tight inner loop made the constant-offset
+// road/curb geometry self-intersect on the inside of that corner). Steering
+// still only sets `heading` (facing); a new `moveHeading` (travel direction)
+// chases it via a proportional "grip" catch-up (ogpChaseAngle) that lags more
+// on turn-in and under harder/faster steering -- that lag IS the drift, with
+// no separate drift button. Multiplayer moved from a live coordinator/
+// broadcast model to async ghosts (see ogpFetchGhosts/ogpSeedGhostCars):
+// no more OGP_COORDINATOR_STALE_MS or realtime channel constants here.
+const OGP_CLIENT_VERSION = 'office_grand_prix_v3';
+const OGP_TRACK_VERSION = 'office_loop_v3';
+const OGP_TRACK_HASH = '4eb8fb43bdb592567e7188590afe8adad044d56b8c4279c0744e31137ee2ece5';
 const OGP_TICK_MS = 50;
 const OGP_TRACK_LENGTH = 160000;
 const OGP_START_PROGRESS = 16000;
 const OGP_FINISH_PROGRESS = OGP_START_PROGRESS + OGP_TRACK_LENGTH;
-const OGP_HARD_LIMIT_TICKS = 1800;
-const OGP_ACCEL = 5;
-const OGP_START_SPEED = 84;
-const OGP_MAX_SPEED = 180;
+const OGP_HARD_LIMIT_TICKS = 1200;
+const OGP_ACCEL = 9;
+const OGP_START_SPEED = 100;
+const OGP_MAX_SPEED = 230;
 const OGP_FORWARD_PCT = 96;
-const OGP_STEER_RESPONSE = 300;
-const OGP_STEER_CENTER = 360;
+const OGP_STEER_RESPONSE = 340;
+const OGP_STEER_CENTER = 420;
 const OGP_STEER_MAX = 1000;
-const OGP_TURN_RATE = 4;
-const OGP_OFFROAD_AT = 3400;
-const OGP_OFFROAD_PCT = 70;
-const OGP_GRASS_MAX_SPEED = 115;
-const OGP_GRASS_BRAKE = 8;
-const OGP_GRASS_GRIP_PCT = 62;
-const OGP_SAFETY_LATERAL = 6500;
+const OGP_TURN_RATE = 6;
+const OGP_OFFROAD_AT = 5600;
+const OGP_OFFROAD_PCT = 68;
+const OGP_GRASS_MAX_SPEED = 140;
+const OGP_GRASS_BRAKE = 10;
+const OGP_GRASS_GRIP_PCT = 55;
+const OGP_SAFETY_LATERAL = 8000;
 const OGP_RESET_AFTER_TICKS = 20;
 const OGP_RESET_CONTROL_TICKS = 12;
+const OGP_GRIP_NUM_ROAD = 1;
+const OGP_GRIP_DEN_ROAD = 3;
+const OGP_GRIP_NUM_GRASS = 1;
+const OGP_GRIP_DEN_GRASS = 7;
 const OGP_BOOST_TICKS = 30;
 const OGP_SLOW_TICKS = 25;
-const OGP_SHIELD_TICKS = 160;
-const OGP_COORDINATOR_STALE_MS = 6000;
+const OGP_SHIELD_TICKS = 120;
 const OGP_ANGLE_STEPS = 256;
 const OGP_TRIG_SCALE = 10000;
 const OGP_GATE_PROGRESS = Object.freeze([29000, 44000, 59000, 74000, 89000, 104000, 119000, 134000, 149000, 164000]);
 const OGP_GATE_LANES = Object.freeze([-1800, 0, 1800, 0, -1800, 1800, 0, -1800, 1800, 0]);
-// Generated from the pinned Three.js 0.185.1 CatmullRomCurve3 using
-// getTangentAt(i / 256). Physics consumes only these checked-in integers.
-const OGP_TRACK_TANGENTS = Object.freeze([209,237,240,241,242,243,243,244,244,244,245,245,245,246,246,248,253,255,0,0,0,1,1,1,1,1,1,2,2,2,3,3,5,11,16,18,18,19,19,19,20,20,20,21,21,21,22,23,24,34,44,46,47,48,49,49,50,50,50,51,52,53,54,65,72,74,75,75,75,76,76,76,77,77,78,78,79,81,93,97,98,99,99,100,100,101,101,101,102,103,104,106,117,120,121,121,122,122,122,122,123,123,123,123,124,124,125,126,130,137,138,139,139,140,140,140,141,141,141,141,142,142,143,144,151,160,161,162,163,163,164,164,164,165,165,166,166,167,170,186,194,196,197,198,199,199,200,201,202,203,205,220,237,239,240,241,241,242,242,243,243,244,245,247,4,9,11,11,12,12,12,13,13,13,13,14,14,17,18,19,19,19,19,19,19,20,20,20,21,21,23,26,57,67,69,71,72,73,74,76,78,82,110,116,118,119,119,120,120,120,121,121,121,122,123,124,129,144,147,148,149,149,150,150,151,151,152,153,155,172,185,188,189,190,190,190,190,190,189,189,185,175,173,173,173,172,172,173,173,173,173,173,174,175,176,179]);
+// Generated from the pinned Three.js 0.185.1 CatmullRomCurve3 (control points
+// in ogpBuildScene, tension .5) using getTangentAt(i / 256). Physics consumes
+// only these checked-in integers.
+const OGP_TRACK_TANGENTS = Object.freeze([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,253,250,248,246,244,242,239,237,235,233,231,229,227,224,222,220,218,216,213,211,209,207,205,203,201,198,196,194,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,191,188,185,182,180,177,174,171,168,166,163,160,157,155,152,149,146,144,141,138,135,133,130,129,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,127,125,123,120,118,116,113,111,109,106,104,102,99,97,95,92,90,88,85,83,81,78,76,74,71,69,66,65,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,63,61,58,56,53,51,48,46,43,40,38,35,33,30,28,25,23,20,18,15,13,10,8,5,2]);
 const OGP_SIN = Object.freeze([0,245,491,736,980,1224,1467,1710,1951,2191,2430,2667,2903,3137,3369,3599,3827,4052,4276,4496,4714,4929,5141,5350,5556,5758,5957,6152,6344,6532,6716,6895,7071,7242,7410,7572,7730,7883,8032,8176,8315,8449,8577,8701,8819,8932,9040,9142,9239,9330,9415,9495,9569,9638,9700,9757,9808,9853,9892,9925,9952,9973,9988,9997,10000,9997,9988,9973,9952,9925,9892,9853,9808,9757,9700,9638,9569,9495,9415,9330,9239,9142,9040,8932,8819,8701,8577,8449,8315,8176,8032,7883,7730,7572,7410,7242,7071,6895,6716,6532,6344,6152,5957,5758,5556,5350,5141,4929,4714,4496,4276,4052,3827,3599,3369,3137,2903,2667,2430,2191,1951,1710,1467,1224,980,736,491,245,0,-245,-491,-736,-980,-1224,-1467,-1710,-1951,-2191,-2430,-2667,-2903,-3137,-3369,-3599,-3827,-4052,-4276,-4496,-4714,-4929,-5141,-5350,-5556,-5758,-5957,-6152,-6344,-6532,-6716,-6895,-7071,-7242,-7410,-7572,-7730,-7883,-8032,-8176,-8315,-8449,-8577,-8701,-8819,-8932,-9040,-9142,-9239,-9330,-9415,-9495,-9569,-9638,-9700,-9757,-9808,-9853,-9892,-9925,-9952,-9973,-9988,-9997,-10000,-9997,-9988,-9973,-9952,-9925,-9892,-9853,-9808,-9757,-9700,-9638,-9569,-9495,-9415,-9330,-9239,-9142,-9040,-8932,-8819,-8701,-8577,-8449,-8315,-8176,-8032,-7883,-7730,-7572,-7410,-7242,-7071,-6895,-6716,-6532,-6344,-6152,-5957,-5758,-5556,-5350,-5141,-4929,-4714,-4496,-4276,-4052,-3827,-3599,-3369,-3137,-2903,-2667,-2430,-2191,-1951,-1710,-1467,-1224,-980,-736,-491,-245]);
 const OGP_CARS = Object.freeze([
   { id: 'coral',  label: 'Koral',   color: 0xf43f5e },
@@ -26659,8 +26661,6 @@ const OGP_BOT_NAMES = Object.freeze([
 ]);
 let ogpThreePromise = null;
 let ogpSelectedCar = 'coral';
-let ogpStatePollTimer = null;
-let ogpCountdownTimer = null;
 let ogpKeySteer = { left: false, right: false };
 
 function ogpClamp(value, min, max) {
@@ -26680,6 +26680,21 @@ function ogpWrapAngle(value) {
 function ogpAngleDelta(target, current) {
   const delta = ogpWrapAngle(target - current);
   return delta > OGP_ANGLE_STEPS / 2 ? delta - OGP_ANGLE_STEPS : delta;
+}
+
+// Chases `current` toward `target` by a proportional (num/den) fraction of
+// the remaining gap each tick, with a minimum 1-unit step so it always fully
+// converges instead of stalling on integer truncation. Applied to
+// car.moveHeading chasing car.heading, this is the whole drift model: a
+// steady turn produces a bounded steady-state slip angle (bigger for a
+// sharper/faster turn), while releasing the wheel lets it catch up to zero.
+function ogpChaseAngle(current, target, num, den) {
+  const gap = ogpAngleDelta(target, current);
+  if (gap === 0) return current;
+  let step = Math.trunc(gap * num / den);
+  if (step === 0) step = gap > 0 ? 1 : -1;
+  if (Math.abs(step) > Math.abs(gap)) step = gap;
+  return ogpWrapAngle(current + step);
 }
 
 function ogpSin(angle) {
@@ -26795,11 +26810,16 @@ function ogpNewRace(seed, roster, localSlot, opts = {}) {
       slot,
       userId: source.userId || null,
       nick: source.nick || OGP_BOT_NAMES[slot],
-      isBot: source.isBot !== false && !source.userId,
+      isBot: source.isBot !== false && !source.userId && !source.isGhost,
+      isGhost: !!source.isGhost,
+      ghostLog: source.isGhost ? (source.ghostLog || []) : null,
+      ghostIndex: 0,
+      ghostSteer: 0,
       carId,
       progress: pose.progress,
       lateral: pose.lateral,
       heading: pose.heading,
+      moveHeading: pose.heading,
       steering: 0,
       previousProgress: pose.progress,
       previousLateral: pose.lateral,
@@ -26834,11 +26854,8 @@ function ogpNewRace(seed, roster, localSlot, opts = {}) {
     finished: false,
     training: !!opts.training,
     sessionId: opts.sessionId || null,
-    coordinator: !!opts.coordinator,
     currentInputs: new Map(),
-    remoteInputs: new Map(),
     inputLog: [],
-    pendingNetworkInputs: [],
     submitted: false,
   };
 }
@@ -26878,6 +26895,26 @@ function ogpBotInput(race, car) {
   return { steer, useItem };
 }
 
+// Ghost cars replay a previously-recorded human inputLog tick-for-tick, the
+// same sparse-event format as race.inputLog itself: hold the last steer
+// value until the log's next event lands on this tick. This is purely a
+// LOCAL, cosmetic opponent -- the server's own authoritative replay always
+// fills non-player slots with ogpBotInput, so a ghost never affects the
+// caller's official score (see ogpFetchGhosts).
+function ogpGhostInput(race, car) {
+  let steer = car.ghostSteer || 0;
+  let useItem = false;
+  const log = car.ghostLog || [];
+  while (car.ghostIndex < log.length && log[car.ghostIndex].tick === race.tick + 1) {
+    const event = log[car.ghostIndex];
+    steer = ogpClamp(Math.trunc(event.steer || 0), -1, 1);
+    useItem = !!(event.useItem || event.use);
+    car.ghostIndex += 1;
+  }
+  car.ghostSteer = steer;
+  return { steer, useItem };
+}
+
 function ogpUseItem(race, car) {
   if (!car.item || car.finishedTick != null) return;
   const item = car.item;
@@ -26905,8 +26942,9 @@ function ogpStepRace(race) {
   const placeBySlot = new Map(progressOrder.map((car, index) => [car.slot, index + 1]));
   const inputs = new Map();
   for (const car of race.cars) {
-    const input = car.isBot ? ogpBotInput(race, car) :
-      (race.currentInputs.get(car.slot) || race.remoteInputs.get(car.slot) || car.lastInput || { steer: 0, useItem: false });
+    const input = car.isGhost ? ogpGhostInput(race, car) :
+      car.isBot ? ogpBotInput(race, car) :
+      (race.currentInputs.get(car.slot) || car.lastInput || { steer: 0, useItem: false });
     inputs.set(car.slot, { steer: ogpClamp(Math.trunc(input.steer || 0), -1, 1), useItem: !!input.useItem });
   }
 
@@ -26938,6 +26976,13 @@ function ogpStepRace(race) {
       (OGP_STEER_MAX * OGP_MAX_SPEED * 100),
     );
     car.heading = ogpWrapAngle(car.heading + turn);
+    // Travel direction lags the nose direction -- that gap is the drift.
+    car.moveHeading = ogpChaseAngle(
+      car.moveHeading,
+      car.heading,
+      offroad ? OGP_GRIP_NUM_GRASS : OGP_GRIP_NUM_ROAD,
+      offroad ? OGP_GRIP_DEN_GRASS : OGP_GRIP_DEN_ROAD,
+    );
 
     const surfaceMaxSpeed = offroad ? OGP_GRASS_MAX_SPEED : OGP_MAX_SPEED;
     if (car.speed > surfaceMaxSpeed) car.speed = Math.max(surfaceMaxSpeed, car.speed - OGP_GRASS_BRAKE);
@@ -26946,7 +26991,7 @@ function ogpStepRace(race) {
     if (offroad) velocity = Math.floor(velocity * OGP_OFFROAD_PCT / 100);
     if (car.boostTicks > 0) velocity = Math.floor(velocity * 125 / 100);
     if (car.slowTicks > 0) velocity = Math.floor(velocity * 65 / 100);
-    const relativeHeading = ogpAngleDelta(car.heading, ogpTrackHeading(car.progress));
+    const relativeHeading = ogpAngleDelta(car.moveHeading, ogpTrackHeading(car.progress));
     const progressDelta = Math.trunc(velocity * ogpCos(relativeHeading) / OGP_TRIG_SCALE);
     const lateralDelta = Math.trunc(velocity * ogpSin(-relativeHeading) / OGP_TRIG_SCALE);
     const previousProgress = car.progress;
@@ -26959,6 +27004,7 @@ function ogpStepRace(race) {
       car.progress = Math.max(OGP_START_PROGRESS, car.lastCheckpoint - 800);
       car.lateral = 0;
       car.heading = ogpTrackHeading(car.progress);
+      car.moveHeading = car.heading;
       car.steering = 0;
       car.speed = OGP_START_SPEED;
       car.outsideTicks = 0;
@@ -27015,7 +27061,6 @@ function ogpStepRace(race) {
   });
   race.tick = tick;
   race.currentInputs.forEach(input => { input.useItem = false; });
-  race.remoteInputs.forEach(input => { input.useItem = false; });
   if (race.tick >= OGP_HARD_LIMIT_TICKS) {
     race.cars.forEach(car => { if (car.finishedTick == null) car.dnf = true; });
     race.finished = true;
@@ -27270,24 +27315,27 @@ function ogpBuildScene(runtime, THREE) {
   sun.position.set(-35, 75, 25);
   scene.add(sun);
 
+  // Straights + true-constant-radius corners (a "rounded rectangle" circuit:
+  // 4 corner radii of 22-28 world units, each 3x+ the curb half-width below)
+  // -- unlike V2's tight inner loop, this shape cannot self-intersect at any
+  // width up to ~9 (verified offline with the real offset-polyline geometry
+  // this function builds; see docs/office-grand-prix-v2-release-gate.md).
   const points = [
-    [-42, -31], [-15, -40], [17, -39], [43, -25], [52, -1], [44, 25],
-    [24, 41], [-6, 45], [-34, 36], [-51, 15], [-47, -7], [-25, -15],
-    [-2, -8], [22, 5], [18, 23], [-8, 28], [-28, 16], [-30, -5],
+    [-38,44],[-35,44],[-32,44],[-29,44],[-26,44],[-23,44],[-20,44],[-17,44],[-14,44],[-11,44],[-8,44],[-5,44],[-2,44],[1,44],[4,44],[7,44],[10,44],[13,44],[16,44],[19,44],[22,44],[25,44],[28,44],[31,44],[34,44],[36.99,43.84],[39.95,43.36],[42.85,42.57],[45.64,41.47],[48.29,40.08],[50.79,38.41],[53.09,36.49],[55.17,34.33],[57.01,31.96],[58.58,29.41],[59.87,26.7],[60.87,23.87],[61.56,20.96],[61.93,17.98],[62,14.98],[62,11.98],[62,8.98],[62,5.98],[62,2.98],[62,-0.02],[62,-3.02],[62,-6.02],[62,-9.02],[62,-12.02],[62,-15.02],[62,-18.02],[62,-21.02],[61.91,-24.01],[61.43,-26.97],[60.56,-29.84],[59.3,-32.56],[57.68,-35.09],[55.74,-37.37],[53.5,-39.37],[51.02,-41.04],[48.33,-42.36],[45.48,-43.31],[42.53,-43.85],[39.54,-44],[36.54,-44],[33.54,-44],[30.54,-44],[27.54,-44],[24.54,-44],[21.54,-44],[18.54,-44],[15.54,-44],[12.54,-44],[9.54,-44],[6.54,-44],[3.54,-44],[0.54,-44],[-2.46,-44],[-5.46,-44],[-8.46,-44],[-11.46,-44],[-14.46,-44],[-17.46,-44],[-20.46,-44],[-23.46,-44],[-26.46,-44],[-29.46,-44],[-32.46,-44],[-35.46,-44],[-38.46,-43.88],[-41.42,-43.43],[-44.31,-42.64],[-47.09,-41.51],[-49.73,-40.08],[-52.18,-38.35],[-54.41,-36.36],[-56.4,-34.11],[-58.12,-31.66],[-59.55,-29.02],[-60.66,-26.24],[-61.45,-23.34],[-61.89,-20.38],[-62,-17.38],[-62,-14.38],[-62,-11.38],[-62,-8.38],[-62,-5.38],[-62,-2.38],[-62,0.62],[-62,3.62],[-62,6.62],[-62,9.62],[-62,12.62],[-62,15.62],[-62,18.62],[-61.95,21.62],[-61.56,24.59],[-60.8,27.49],[-59.69,30.28],[-58.24,32.9],[-56.47,35.32],[-54.42,37.51],[-52.11,39.42],[-49.58,41.02],[-46.86,42.3],[-44.01,43.23],[-41.07,43.8],
   ].map(([x, z]) => new THREE.Vector3(x, .14, z));
-  const path = new THREE.CatmullRomCurve3(points, true, 'catmullrom', .18);
+  const path = new THREE.CatmullRomCurve3(points, true, 'catmullrom', .5);
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(230, 230),
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(280, 280),
     new THREE.MeshStandardMaterial({ color: 0x4f7f4b, roughness: 1 }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -.03;
   scene.add(ground);
-  const road = new THREE.Mesh(ogpRoadGeometry(THREE, path, 6.2),
+  const road = new THREE.Mesh(ogpRoadGeometry(THREE, path, 7.0),
     new THREE.MeshStandardMaterial({ color: 0x303642, roughness: .94, metalness: .02 }));
   scene.add(road);
   const curbMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: .78 });
   for (const sideSign of [-1, 1]) {
-    const curb = new THREE.Mesh(ogpBandGeometry(THREE, path, 6.18, 6.72, sideSign), curbMat);
+    const curb = new THREE.Mesh(ogpBandGeometry(THREE, path, 6.9, 7.6, sideSign), curbMat);
     curb.position.y = .025;
     scene.add(curb);
   }
@@ -27379,7 +27427,6 @@ function ogpBuildScene(runtime, THREE) {
   runtime.renderPoses = Array.from({ length: 8 }, () => ({
     progress: 0, lateral: 0, heading: 0, steering: 0,
   }));
-  runtime.remoteSnapshotBuffers = Array.from({ length: 8 }, () => []);
   runtime.previewRace = ogpNewRace(1, null, 0, { training: true });
   runtime.dynamicDprScale = 1;
   runtime.frameTimeEma = 16.7;
@@ -27502,27 +27549,10 @@ function ogpLerpAngle(from, to, alpha) {
 }
 
 function ogpRenderPose(runtime, race, car, index, alpha) {
+  // Every car (local, bot, or ghost) is fully simulated client-side every
+  // tick -- no remote-snapshot interpolation branch needed since there's no
+  // network peer to lag behind.
   const target = runtime.renderPoses[index];
-  const buffer = runtime.remoteSnapshotBuffers?.[index];
-  if (!race.coordinator && index !== race.localSlot && buffer?.length) {
-    const targetTick = race.tick - 3 + alpha;
-    let before = buffer[0];
-    let after = buffer[buffer.length - 1];
-    for (let i = 0; i < buffer.length; i += 1) {
-      if (buffer[i].tick <= targetTick) before = buffer[i];
-      if (buffer[i].tick >= targetTick) {
-        after = buffer[i];
-        break;
-      }
-    }
-    const span = Math.max(1, after.tick - before.tick);
-    const mix = ogpClamp((targetTick - before.tick) / span, 0, 1);
-    target.progress = before.progress + (after.progress - before.progress) * mix;
-    target.lateral = before.lateral + (after.lateral - before.lateral) * mix;
-    target.heading = ogpLerpAngle(before.heading, after.heading, mix);
-    target.steering = before.steering + (after.steering - before.steering) * mix;
-    return target;
-  }
   target.progress = car.previousProgress + (car.progress - car.previousProgress) * alpha;
   target.lateral = car.previousLateral + (car.lateral - car.previousLateral) * alpha;
   target.heading = ogpLerpAngle(car.previousHeading, car.heading, alpha);
@@ -27551,8 +27581,6 @@ function ogpRenderFrame(timestamp) {
       ogpCaptureLocalInput(runtime.race);
       ogpStepRace(runtime.race);
       runtime.accumulator -= OGP_TICK_MS;
-      if (runtime.race.tick % 2 === 0) ogpFlushInputBatch();
-      if (runtime.race.coordinator && runtime.race.tick % 2 === 0) ogpBroadcastSnapshot();
       const local = runtime.race.cars[runtime.race.localSlot];
       if ((local.finishedTick != null || runtime.race.tick >= OGP_HARD_LIMIT_TICKS) && !runtime.finishing) {
         runtime.finishing = true;
@@ -27706,7 +27734,6 @@ function ogpCaptureLocalInput(race) {
     const last = race.inputLog[race.inputLog.length - 1];
     if (!last || last.tick !== event.tick || last.steer !== event.steer || last.useItem !== event.useItem) {
       race.inputLog.push(event);
-      race.pendingNetworkInputs.push(event);
     }
   }
 }
@@ -27721,35 +27748,39 @@ function ogpQueueItemUse() {
   race.currentInputs.set(local.slot, input);
 }
 
-function ogpRosterFromServer(rows) {
-  return (rows || []).map((row, index) => ({
-    slot: Number(row.slot ?? row.grid_slot ?? index),
-    userId: row.user_id || row.userId || null,
-    nick: row.nick || row.nick_snapshot || row.display_name || (row.is_bot ? OGP_BOT_NAMES[index] : 'Gracz'),
-    carId: row.car_id || row.carId || row.cosmeticId ||
-      OGP_CARS[Number(row.cosmetic ?? index) % OGP_CARS.length].id,
-    isBot: row.is_bot ?? row.isBot ?? !row.user_id,
-    ready: !!row.ready,
+// Normalizes a ghosts[] payload from the `ghosts` Edge Function action into
+// the roster-row shape ogpNewRace expects, seated in slots 1..N (slot 0 is
+// always the local player).
+function ogpGhostRoster(ghosts) {
+  return (ghosts || []).slice(0, 7).map((ghost, index) => ({
+    slot: index + 1,
+    userId: ghost.userId || null,
+    nick: ghost.nick || 'Gracz',
+    carId: OGP_CARS.some(car => car.id === ghost.carId) ? ghost.carId : OGP_CARS[index + 1].id,
+    isGhost: true,
+    ghostLog: Array.isArray(ghost.inputLog) ? ghost.inputLog : [],
+    finishedTick: ghost.finishedTick ?? null,
   }));
 }
 
-function ogpRenderRoster(rows) {
+function ogpRenderGhostRoster(ghosts) {
   if (!ogpRosterEl) return;
-  const roster = ogpRosterFromServer(rows);
-  const entries = Array.from({ length: 8 }, (_, slot) => roster.find(row => row.slot === slot) || {
-    slot, nick: 'Wolne · bot przy starcie', carId: OGP_CARS[slot].id, isBot: true, ready: false,
-  });
-  ogpRosterEl.replaceChildren(...entries.map(row => {
-    const car = ogpCarDef(row.carId);
-    const mine = !!(me && row.userId === me.id);
-    return el('div', { className: 'ogp-row' + (mine ? ' me' : '') },
-      el('span', { className: 'ogp-car-dot', style: { background: `#${car.color.toString(16).padStart(6, '0')}` } }),
-      el('strong', {}, row.nick),
-      el('small', {}, row.userId ? (row.ready ? '✓ gotowy' : 'w lobby') : 'BOT'));
-  }));
-  const count = roster.filter(row => row.userId).length;
+  const list = ghosts || [];
+  if (!list.length) {
+    ogpRosterEl.replaceChildren(el('div', { className: 'bj-empty' }, 'Brak jeszcze zapisanych przejazdów — puste miejsca wypełnią boty.'));
+  } else {
+    ogpRosterEl.replaceChildren(...list.map(ghost => {
+      const car = ogpCarDef(ghost.carId);
+      return el('div', { className: 'ogp-row' },
+        el('span', { className: 'ogp-car-dot', style: { background: `#${car.color.toString(16).padStart(6, '0')}` } }),
+        el('strong', {}, ghost.nick || 'Gracz'),
+        el('small', {}, ghost.finishedTick ? ogpFormatTime(ghost.finishedTick * OGP_TICK_MS) : 'DNF'));
+    }));
+  }
   const counter = document.getElementById('ogp-lobby-count');
-  if (counter) counter.textContent = `${count}/8`;
+  if (counter) counter.textContent = `${list.length} 👻`;
+  const label = document.getElementById('ogp-session-label');
+  if (label) label.textContent = `${list.length} 👻`;
 }
 
 function ogpRenderLeaderboard(rows) {
@@ -27792,14 +27823,6 @@ async function ogpLoadBoards() {
   if (!awards.error) ogpRenderAwards(awards.data || []);
 }
 
-function ogpServerSession(data) {
-  return data?.session || data?.race_session || data?.state?.session || null;
-}
-
-function ogpServerParticipants(data) {
-  return data?.participants || data?.roster || data?.state?.participants || [];
-}
-
 function ogpApplyMode(data) {
   const mode = data?.mode || data?.portal_mode || 'test';
   const chip = document.getElementById('ogp-mode-chip');
@@ -27827,23 +27850,17 @@ function ogpServerContractValid(data) {
   );
 }
 
-function ogpApplyServerState(data) {
+// Applies the shared bits of a `ghosts`/`start_race` response: mode chip,
+// weekly/test leaderboard, awards, and the caller's live coin balance. There
+// is no more shared lobby/session state to reconcile -- each race is its own
+// solo server session (see ogpStartRankedRace).
+function ogpApplySharedState(data) {
   if (!data) return;
-  const runtime = officeGrandPrixRuntime;
-  const session = ogpServerSession(data);
-  const participants = ogpServerParticipants(data);
-  runtime.serverState = data;
-  runtime.session = session;
-  runtime.serverContractValid = ogpServerContractValid(data);
+  officeGrandPrixRuntime.serverContractValid = ogpServerContractValid(data);
   if (data.serverNow && Number.isFinite(new Date(data.serverNow).getTime())) {
-    runtime.serverClockOffsetMs = new Date(data.serverNow).getTime() - Date.now();
-  }
-  if (runtime.race && session) {
-    const coordinatorId = session.coordinator_id || session.coordinatorId || session.coordinatorUserId;
-    runtime.race.coordinator = coordinatorId === me?.id;
+    officeGrandPrixRuntime.serverClockOffsetMs = new Date(data.serverNow).getTime() - Date.now();
   }
   ogpApplyMode(data);
-  ogpRenderRoster(participants);
   if (data.mode === 'test' && data.testStandings) ogpRenderLeaderboard(data.testStandings);
   else if (data.weekly) ogpRenderLeaderboard(data.weekly);
   if (data.awards) ogpRenderAwards(data.awards);
@@ -27851,80 +27868,14 @@ function ogpApplyServerState(data) {
     me.coins = data.profile.coins;
     setText(headerCoins, me.coins);
   }
-  if (!runtime.serverContractValid) {
-    ogpDisconnectRealtime();
-    if (ogpJoinBtn) {
-      ogpJoinBtn.disabled = true;
-      ogpJoinBtn.textContent = 'Odśwież portal';
-    }
-    if (ogpReadyBtn) ogpReadyBtn.classList.add('hidden');
-    if (ogpStatus) {
-      ogpStatus.textContent = 'Wersja silnika lub trasy na serwerze nie pasuje do klienta V2. Wyścigi online są zablokowane.';
-    }
-    return;
-  }
-  const mine = participants.find(row => (row.user_id || row.userId) === me?.id);
-  const sessionClosed = !session || session.status === 'finished' || session.status === 'cancelled';
-  if (ogpJoinBtn) {
-    ogpJoinBtn.classList.toggle('hidden', !!mine && !sessionClosed);
-    ogpJoinBtn.disabled = !!data.maintenance;
-    ogpJoinBtn.textContent = data.maintenance
-      ? 'Lobby w konserwacji'
-      : (sessionClosed ? 'Dołącz do kolejnego wyścigu' : 'Dołącz do lobby');
-  }
-  if (ogpReadyBtn) {
-    ogpReadyBtn.classList.toggle('hidden', !mine || sessionClosed);
-    ogpReadyBtn.disabled = !!mine?.ready;
-    ogpReadyBtn.textContent = mine?.ready ? '✓ Gotowy' : 'Jestem gotowy';
-  }
-  const sessionLabel = document.getElementById('ogp-session-label');
-  if (sessionLabel) sessionLabel.textContent = session?.status || 'lobby';
-  ogpUpdateCountdown(session);
-  if (ogpIsActive() && session?.id && mine && !sessionClosed) ogpConnectRealtime(session, participants);
-  const rosterLocked = session?.roster_locked_at || session?.rosterLockedAt;
-  const raceStartsAt = session?.race_starts_at || session?.raceStartsAt || session?.startsAt;
-  const localRaceDone = runtime.localRaceCompleteSessionId === session?.id;
-  if (ogpIsActive() && !localRaceDone && session?.status === 'countdown' && rosterLocked && raceStartsAt && mine && !runtime.playing) {
-    ogpScheduleOfficialStart(session, participants, mine);
-  }
-  if (ogpIsActive() && !localRaceDone &&
-    (session?.status === 'running' || session?.status === 'racing') && mine && !runtime.playing) {
-    clearTimeout(runtime.serverStartTimer);
-    runtime.serverStartTimer = null;
-    const roster = ogpRosterFromServer(participants);
-    const slot = Number(mine.slot ?? mine.grid_slot ?? roster.findIndex(row => row.userId === me.id));
-    const coordinatorId = session.coordinator_id || session.coordinatorId || session.coordinatorUserId;
-    const startedAt = session.race_started_at || session.raceStartedAt || raceStartsAt;
-    const catchUpTicks = Math.max(0, Math.min(40,
-      Math.floor((ogpServerNowMs() - new Date(startedAt).getTime()) / OGP_TICK_MS)));
-    ogpStartRace(Number(session.seed), roster, slot, {
-      training: false,
-      sessionId: session.id,
-      coordinator: coordinatorId === me.id,
-      skipCountdown: true,
-      catchUpTicks,
-    });
-  }
-  if (session?.status === 'finished' && mine?.finished != null && !runtime.playing) {
-    const officialText = mine.finished
-      ? `Oficjalny wynik: ${mine.place}. miejsce · ${ogpFormatTime(mine.completionMs)} · ${mine.points || 0} pkt.`
-      : 'Oficjalny wynik: DNF · 0 pkt.';
-    if (ogpStatus) ogpStatus.textContent = officialText;
-    if (allGamesMode && allGamesSelectedGame === 'office_grand_prix' &&
-      runtime.lastArcadeRefreshSessionId !== session.id) {
-      runtime.lastArcadeRefreshSessionId = session.id;
-      loadArcadeScores('office_grand_prix');
-    }
-  }
-  if (!runtime.playing && ogpStatus) {
-    if (!(session?.status === 'finished' && mine?.finished != null)) {
-      ogpStatus.textContent = data.maintenance
-        ? 'V2 działa lokalnie w trybie treningowym. Nowe sesje online pozostają wyłączone do zakończenia testów mobilnych i multiplayer.'
-        : data.mode === 'test'
-        ? 'Publiczny test trwa do niedzieli — wyścigi i ranking testowy są bezpłatne, a wyniki zostaną wyzerowane przed sezonem.'
-        : 'Dołącz do wspólnego lobby. Pierwszy gotowy gracz uruchamia odliczanie.';
-    }
-  }
+}
+
+async function ogpRefreshGhosts() {
+  const data = await invokeOfficeGrandPrix({ action: 'ghosts' });
+  ogpApplySharedState(data);
+  officeGrandPrixRuntime.ghosts = Array.isArray(data.ghosts) ? data.ghosts : [];
+  ogpRenderGhostRoster(officeGrandPrixRuntime.ghosts);
+  return officeGrandPrixRuntime.ghosts;
 }
 
 async function loadOfficeGrandPrixState(showSpinner = true) {
@@ -27934,115 +27885,69 @@ async function loadOfficeGrandPrixState(showSpinner = true) {
     if (ogpStatus) ogpStatus.textContent = error.message;
     return;
   }
-  if (showSpinner && ogpStatus) ogpStatus.textContent = 'Łączę ze wspólnym lobby…';
+  if (showSpinner && ogpStatus) ogpStatus.textContent = 'Ładowanie garażu…';
   ogpLoadBoards().catch(() => {});
   try {
-    const data = await invokeOfficeGrandPrix({ action: 'state', archive: !!allGamesMode });
-    ogpApplyServerState(data);
-  } catch (error) {
-    ogpRenderRoster([]);
+    await ogpRefreshGhosts();
+    if (!officeGrandPrixRuntime.serverContractValid) {
+      if (ogpJoinBtn) {
+        ogpJoinBtn.disabled = true;
+        ogpJoinBtn.textContent = 'Odśwież portal';
+      }
+      if (ogpStatus) ogpStatus.textContent = 'Wersja silnika lub trasy na serwerze nie pasuje do klienta. Wyścigi online są zablokowane.';
+      return;
+    }
+    if (ogpJoinBtn) {
+      ogpJoinBtn.disabled = false;
+      ogpJoinBtn.textContent = '🏁 Wyścig!';
+    }
     if (ogpStatus) {
-      ogpStatus.textContent = 'Serwer wyścigu nie jest jeszcze wdrożony. Scena 3D i trening z botami działają lokalnie; oficjalne lobby pozostaje zablokowane.';
+      ogpStatus.textContent = officeGrandPrixRuntime.serverState?.mode === 'test'
+        ? 'Publiczny test trwa do niedzieli — wyścigi i ranking testowy są bezpłatne, a wyniki zostaną wyzerowane przed sezonem.'
+        : 'Gotowe — wciśnij Wyścig, kiedy chcesz. Start jest natychmiastowy.';
+    }
+  } catch (error) {
+    ogpRenderGhostRoster([]);
+    if (ogpStatus) {
+      ogpStatus.textContent = 'Serwer wyścigu jest chwilowo niedostępny. Scena 3D i trening z botami działają lokalnie; oficjalny start pozostaje zablokowany.';
     }
     if (ogpJoinBtn) {
       ogpJoinBtn.disabled = true;
-      ogpJoinBtn.textContent = 'Lobby chwilowo niedostępne';
+      ogpJoinBtn.textContent = 'Serwer niedostępny';
     }
   }
-  clearInterval(ogpStatePollTimer);
-  ogpStatePollTimer = setInterval(() => {
-    if (!officeGrandPrixRuntime?.playing && ogpIsActive()) {
-      invokeOfficeGrandPrix({ action: 'state', archive: !!allGamesMode }).then(ogpApplyServerState).catch(() => {});
-    }
-  }, 1000);
 }
 
-async function ogpJoinLobby() {
+async function ogpStartRankedRace() {
   if (!ogpJoinBtn || ogpJoinBtn.disabled) return;
   ogpJoinBtn.disabled = true;
-  ogpJoinBtn.textContent = 'Dołączam…';
+  ogpJoinBtn.textContent = 'Przygotowuję start…';
   try {
+    await ogpEnsureRenderer();
     const data = await invokeOfficeGrandPrix({
-      action: 'join',
+      action: 'start_race',
       engineVersion: OGP_CLIENT_VERSION,
       trackVersion: OGP_TRACK_VERSION,
       trackHash: OGP_TRACK_HASH,
-      sessionVersion: officeGrandPrixRuntime?.session?.version ?? null,
       cosmetic: Math.max(0, OGP_CARS.findIndex(car => car.id === ogpSelectedCar)),
     });
-    ogpApplyServerState(data);
+    ogpApplySharedState(data);
+    officeGrandPrixRuntime.session = data.session;
+    const ghosts = Array.isArray(data.ghosts) ? data.ghosts : officeGrandPrixRuntime.ghosts || [];
+    ogpRenderGhostRoster(ghosts);
+    const roster = [
+      { slot: 0, userId: me?.id || 'local', nick: me?.nick || 'Ty', carId: ogpSelectedCar, isBot: false },
+      ...ogpGhostRoster(ghosts),
+    ];
+    ogpStartRace(Number(data.session.seed), roster, 0, {
+      training: false,
+      sessionId: data.session.id,
+    });
   } catch (error) {
     showToast('❌ ' + error.message);
     ogpJoinBtn.disabled = false;
-    ogpJoinBtn.textContent = 'Dołącz do lobby';
+    ogpJoinBtn.textContent = '🏁 Wyścig!';
   }
-}
-
-async function ogpReadyUp() {
-  if (!ogpReadyBtn || ogpReadyBtn.disabled) return;
-  ogpReadyBtn.disabled = true;
-  ogpReadyBtn.textContent = 'Zgłaszam gotowość…';
-  try {
-    const data = await invokeOfficeGrandPrix({
-      action: 'ready',
-      sessionId: officeGrandPrixRuntime?.session?.id,
-      engineVersion: OGP_CLIENT_VERSION,
-      trackVersion: OGP_TRACK_VERSION,
-      trackHash: OGP_TRACK_HASH,
-      sessionVersion: officeGrandPrixRuntime?.session?.version,
-      ready: true,
-    });
-    ogpApplyServerState(data);
-  } catch (error) {
-    showToast('❌ ' + error.message);
-    ogpReadyBtn.disabled = false;
-    ogpReadyBtn.textContent = 'Jestem gotowy';
-  }
-}
-
-function ogpUpdateCountdown(session) {
-  clearInterval(ogpCountdownTimer);
-  const startsAt = session?.race_starts_at || session?.raceStartsAt || session?.starts_at || session?.startsAt;
-  if (!startsAt || !ogpCountdownEl) {
-    if (ogpCountdownEl) ogpCountdownEl.textContent = '';
-    return;
-  }
-  const render = () => {
-    const left = Math.max(0, new Date(startsAt).getTime() - ogpServerNowMs());
-    const locked = left <= 5000;
-    ogpCountdownEl.textContent = left > 0
-      ? `${locked ? '🔒 skład · ' : ''}start za ${(left / 1000).toFixed(1)} s`
-      : '🏁 START';
-  };
-  render();
-  ogpCountdownTimer = setInterval(render, 100);
-}
-
-function ogpScheduleOfficialStart(session, participantRows, mine) {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime || runtime.serverStartSessionId === session.id) return;
-  clearTimeout(runtime.serverStartTimer);
-  runtime.serverStartSessionId = session.id;
-  const startsAt = session.race_starts_at || session.raceStartsAt || session.startsAt;
-  const roster = ogpRosterFromServer(participantRows);
-  const slot = Number(mine.slot ?? mine.grid_slot ?? roster.findIndex(row => row.userId === me?.id));
-  const coordinatorId = session.coordinator_id || session.coordinatorId || session.coordinatorUserId;
-  const begin = () => {
-    runtime.serverStartTimer = null;
-    if (runtime.playing || runtime.session?.id !== session.id) return;
-    const catchUpTicks = Math.max(0, Math.min(40,
-      Math.floor((ogpServerNowMs() - new Date(startsAt).getTime()) / OGP_TICK_MS)));
-    ogpStartRace(Number(session.seed), roster, slot, {
-      training: false,
-      sessionId: session.id,
-      coordinator: coordinatorId === me?.id,
-      skipCountdown: true,
-      catchUpTicks,
-    });
-  };
-  const delay = new Date(startsAt).getTime() - ogpServerNowMs();
-  if (delay <= 0) begin();
-  else runtime.serverStartTimer = setTimeout(begin, delay);
 }
 
 async function ogpStartTraining() {
@@ -28078,30 +27983,17 @@ function ogpStartRace(seed, roster, localSlot, opts = {}) {
   const runtime = officeGrandPrixRuntime;
   if (!runtime?.renderer || runtime.playing) return;
   runtime.race = ogpNewRace(seed, roster, localSlot, opts);
-  if (!opts.coordinator) runtime.lastCoordinatorSnapshotAt = Date.now();
-  if (opts.sessionId && runtime.localRaceCompleteSessionId !== opts.sessionId) {
-    runtime.localRaceCompleteSessionId = null;
-  }
   runtime.playing = true;
-  runtime.prestart = !opts.skipCountdown;
+  runtime.prestart = true;
   runtime.finishing = false;
   runtime.accumulator = 0;
   runtime.lastFrame = performance.now();
-  runtime.remoteSnapshotBuffers?.forEach(buffer => { buffer.length = 0; });
   ogpInitializeCamera(runtime, runtime.race.cars[runtime.race.localSlot]);
   ogpStage.classList.add('is-racing');
   hide(ogpLobby);
-  ogpRenderRoster(roster);
   if (ogpStatus) ogpStatus.textContent = opts.training
     ? 'Trening — wynik nie jest zapisywany. Wszystkie auta mają identyczne osiągi.'
-    : 'Wyścig na żywo — oficjalny wynik zatwierdzi serwer po deterministycznym odtworzeniu wejść.';
-  const catchUpTicks = Math.max(0, Math.min(Number(opts.catchUpTicks) || 0, 40));
-  for (let tick = 0; tick < catchUpTicks; tick += 1) ogpStepRace(runtime.race);
-  if (opts.skipCountdown) {
-    hide(ogpBannerEl);
-    runtime.prestart = false;
-    return;
-  }
+    : 'Wyścig w toku — oficjalny wynik zatwierdzi serwer po deterministycznym odtworzeniu wejść.';
   let count = 3;
   show(ogpBannerEl);
   ogpBannerEl.textContent = String(count);
@@ -28131,18 +28023,17 @@ async function ogpFinishRace() {
   const local = race.cars[race.localSlot];
   const place = order.findIndex(car => car.slot === local.slot) + 1;
   const dnf = local.finishedTick == null;
-  if (race.sessionId) runtime.localRaceCompleteSessionId = race.sessionId;
   show(ogpLobby);
   const title = ogpLobby.querySelector('.ogp-lobby-title > span');
   const copy = document.getElementById('ogp-lobby-copy');
   if (title) title.textContent = dnf ? 'Koniec wyścigu · DNF' : `Meta · ${place}. miejsce`;
   if (copy) copy.textContent = dnf
-    ? 'Limit 90 sekund minął. DNF daje 0 punktów; możesz od razu wrócić do lobby.'
-    : `Czas ${ogpFormatTime(local.finishedTick * OGP_TICK_MS)}. ${race.training ? 'To był trening bez zapisu.' : 'Serwer odtwarza wejścia i zatwierdza oficjalną kolejność.'}`;
+    ? 'Limit 60 sekund minął. DNF daje 0 punktów; możesz od razu ruszyć ponownie.'
+    : `Czas ${ogpFormatTime(local.finishedTick * OGP_TICK_MS)}. ${race.training ? 'To był trening bez zapisu.' : 'Serwer odtwarza wejścia i zatwierdza oficjalny wynik.'}`;
   if (ogpTrainingBtn) ogpTrainingBtn.textContent = 'Trening ponownie';
   if (ogpStatus) ogpStatus.textContent = dnf
-    ? 'Nie ukończono w 90 sekund.'
-    : `Lokalny finisz: ${place}. miejsce · ${ogpFormatTime(local.finishedTick * OGP_TICK_MS)}.`;
+    ? 'Nie ukończono w 60 sekund.'
+    : `Lokalny finisz (z duchami): ${place}. miejsce · ${ogpFormatTime(local.finishedTick * OGP_TICK_MS)}. Oficjalny wynik liczy się względem botów.`;
   if (!race.training && race.sessionId && !race.submitted) {
     race.submitted = true;
     try {
@@ -28160,26 +28051,18 @@ async function ogpFinishRace() {
           race.inputLog.push({ tick: neutralTick, steer: 0, useItem: false });
         }
       }
-      // Live peer snapshots are presentation-only and can arrive late. Give
-      // the authoritative replay five seconds of neutral-input headroom while
-      // staying inside the server's ten-second submission window.
-      if (!dnf) {
-        if (ogpStatus) ogpStatus.textContent = 'Finisz lokalny — przygotowuję zapis do oficjalnego odtworzenia…';
-        await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-      const startedAt = runtime.session?.raceStartedAt || runtime.session?.race_started_at ||
-        runtime.session?.raceStartsAt || runtime.session?.startsAt;
+      const startedAt = runtime.session?.raceStartedAt || runtime.session?.race_started_at;
       const wallTicks = startedAt
         ? Math.floor((ogpServerNowMs() - new Date(startedAt).getTime()) / OGP_TICK_MS)
         : terminalTick;
       const elapsedTicks = Math.max(terminalTick, Math.min(OGP_HARD_LIMIT_TICKS, wallTicks));
+      if (ogpStatus) ogpStatus.textContent = 'Zapisuję wynik…';
       const data = await invokeOfficeGrandPrix({
         action: 'submit',
         sessionId: race.sessionId,
         engineVersion: OGP_CLIENT_VERSION,
         trackVersion: OGP_TRACK_VERSION,
         trackHash: OGP_TRACK_HASH,
-        sessionVersion: runtime.session?.version,
         idempotencyKey: `ogp:${race.sessionId}:${me?.id || race.localSlot}`,
         inputs: race.inputLog,
         elapsedTicks,
@@ -28189,224 +28072,24 @@ async function ogpFinishRace() {
           viewport: `${window.innerWidth}x${window.innerHeight}`,
         },
       });
-      ogpApplyServerState(data);
-      const official = (data.participants || []).find(row => row.userId === me?.id || row.user_id === me?.id);
+      ogpApplySharedState(data);
+      const official = data.participant || null;
       if (ogpStatus) ogpStatus.textContent = official?.finished == null
-        ? 'Zapis przyjęty. Serwer czeka na pozostałych kierowców i ustali oficjalną kolejność.'
+        ? 'Zapis przyjęty. Serwer ustala oficjalny wynik.'
         : (official.finished
           ? `Wynik zatwierdzony: ${official.place}. miejsce · ${official.points || 0} pkt.`
           : 'Serwer zatwierdził DNF.');
+      if (allGamesMode && allGamesSelectedGame === 'office_grand_prix') loadArcadeScores('office_grand_prix');
+      ogpRefreshGhosts().catch(() => {});
     } catch (error) {
       if (ogpStatus) ogpStatus.textContent = 'Nie udało się zatwierdzić wyniku: ' + error.message;
     }
   }
 }
 
-function ogpSnapshotPayload() {
-  const race = officeGrandPrixRuntime?.race;
-  if (!race) return null;
-  return {
-    engineVersion: OGP_CLIENT_VERSION,
-    trackVersion: OGP_TRACK_VERSION,
-    trackHash: OGP_TRACK_HASH,
-    tick: race.tick,
-    cars: race.cars.map(car => ({
-      slot: car.slot, progress: car.progress, lateral: car.lateral,
-      heading: car.heading, steering: car.steering, speed: car.speed,
-      item: car.item, itemHeldTicks: car.itemHeldTicks, nextGate: car.nextGate,
-      boostTicks: car.boostTicks, slowTicks: car.slowTicks,
-      slowAppliedTick: car.slowAppliedTick, shieldTicks: car.shieldTicks,
-      outsideTicks: car.outsideTicks, resetTicks: car.resetTicks,
-      resetCount: car.resetCount, finishedTick: car.finishedTick,
-      effects: {
-        item: car.item,
-        boostTicks: car.boostTicks,
-        slowTicks: car.slowTicks,
-        shieldTicks: car.shieldTicks,
-      },
-    })),
-    bananas: race.bananas,
-  };
-}
-
-async function ogpBroadcastSnapshot() {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime?.mainChannel || !runtime.race?.coordinator) return;
-  const payload = ogpSnapshotPayload();
-  if (!payload) return;
-  runtime.mainChannel.send({ type: 'broadcast', event: 'snapshot', payload }).catch(() => {});
-}
-
-function ogpApplySnapshot(payload) {
-  const race = officeGrandPrixRuntime?.race;
-  if (!race || race.coordinator || !payload || !Array.isArray(payload.cars)) return;
-  if (
-    payload.engineVersion !== OGP_CLIENT_VERSION ||
-    payload.trackVersion !== OGP_TRACK_VERSION ||
-    payload.trackHash !== OGP_TRACK_HASH
-  ) return;
-  const snapshotTick = Number(payload.tick);
-  if (!Number.isInteger(snapshotTick) || snapshotTick < 0) return;
-  officeGrandPrixRuntime.lastCoordinatorSnapshotAt = Date.now();
-  payload.cars.forEach(source => {
-    const target = race.cars[Number(source.slot)];
-    if (!target) return;
-    // The player's own deterministic simulation and input log are never
-    // rewritten by presentation snapshots. Official ordering comes from the
-    // server replay, not coordinator state.
-    if (target.slot === race.localSlot) return;
-    const buffer = officeGrandPrixRuntime.remoteSnapshotBuffers?.[target.slot];
-    if (buffer) {
-      const latest = buffer[buffer.length - 1];
-      if (!latest || snapshotTick > latest.tick) {
-        buffer.push({
-          tick: snapshotTick,
-          progress: Number(source.progress),
-          lateral: Number(source.lateral),
-          heading: ogpWrapAngle(Number(source.heading)),
-          steering: Number(source.steering) || 0,
-        });
-        if (buffer.length > 8) buffer.splice(0, buffer.length - 8);
-      }
-    }
-    ['progress', 'lateral', 'heading', 'steering', 'speed', 'itemHeldTicks', 'nextGate',
-      'boostTicks', 'slowTicks', 'slowAppliedTick', 'shieldTicks', 'outsideTicks',
-      'resetTicks', 'resetCount'].forEach(key => {
-      if (Number.isFinite(Number(source[key]))) target[key] = Number(source[key]);
-    });
-    target.previousProgress = target.progress;
-    target.previousLateral = target.lateral;
-    target.previousHeading = target.heading;
-    target.previousSteering = target.steering;
-    target.item = source.item || null;
-    target.finishedTick = source.finishedTick == null ? null : Number(source.finishedTick);
-  });
-  if (Array.isArray(payload.bananas)) race.bananas = payload.bananas.map(row => ({ ...row }));
-}
-
-async function ogpFlushInputBatch() {
-  const runtime = officeGrandPrixRuntime;
-  const race = runtime?.race;
-  if (!runtime?.inputChannel || !race?.pendingNetworkInputs.length) return;
-  const events = race.pendingNetworkInputs.splice(0, 20);
-  try {
-    await runtime.inputChannel.send({
-      type: 'broadcast',
-      event: 'input_batch',
-      payload: { slot: race.localSlot, fromTick: events[0]?.tick || race.tick, events },
-    });
-  } catch {
-    race.pendingNetworkInputs.unshift(...events);
-  }
-}
-
-async function ogpConnectRealtime(session, participantRows) {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime || !me) return;
-  const roster = ogpRosterFromServer(participantRows);
-  const mine = roster.find(row => row.userId === me.id);
-  const coordinatorId = session.coordinator_id || session.coordinatorId || session.coordinatorUserId;
-  const roleKey = `${session.id}:${mine?.slot ?? 'none'}:${coordinatorId === me.id ? 'coordinator' : 'participant'}`;
-  if (runtime.realtimeSessionId === session.id && runtime.realtimeRoleKey === roleKey) return;
-  ogpDisconnectRealtime();
-  runtime.realtimeSessionId = session.id;
-  runtime.realtimeRoleKey = roleKey;
-  try { await sb.realtime.setAuth(); } catch {}
-  const mainTopic = `ogp:${session.id}`;
-  runtime.mainChannel = sb.channel(mainTopic, {
-    config: { private: true, presence: { key: String(me.id) } },
-  })
-    .on('broadcast', { event: 'snapshot' }, message => ogpApplySnapshot(message.payload))
-    .on('presence', { event: 'sync' }, () => {
-      const online = Object.keys(runtime.mainChannel.presenceState() || {}).length;
-      const counter = document.getElementById('ogp-lobby-count');
-      if (counter && !runtime.playing) counter.title = `${online} graczy online w kanale wyścigu`;
-    })
-    .subscribe(async status => {
-      if (status === 'SUBSCRIBED') {
-        await runtime.mainChannel.track({ user_id: me.id, nick: me.nick, online_at: new Date().toISOString() });
-      }
-    });
-  realtimeChannels.push(runtime.mainChannel);
-
-  if (mine) {
-    runtime.inputChannel = sb.channel(`ogp-input:${session.id}:${mine.slot}`, { config: { private: true } }).subscribe();
-    realtimeChannels.push(runtime.inputChannel);
-  }
-
-  if (coordinatorId === me.id) {
-    runtime.coordinatorInputChannels = [];
-    for (let slot = 0; slot < 8; slot += 1) {
-      if (mine && slot === mine.slot) continue;
-      const channel = sb.channel(`ogp-input:${session.id}:${slot}`, { config: { private: true } })
-        .on('broadcast', { event: 'input_batch' }, message => {
-          const payload = message.payload || {};
-          const events = Array.isArray(payload.events) ? payload.events : [];
-          const latest = events[events.length - 1];
-          if (latest && officeGrandPrixRuntime?.race) {
-            officeGrandPrixRuntime.race.remoteInputs.set(slot, {
-              steer: ogpClamp(Number(latest.steer) || 0, -1, 1),
-              useItem: events.some(event => event.useItem === true || event.use === true),
-            });
-          }
-        })
-        .subscribe();
-      runtime.coordinatorInputChannels.push(channel);
-      realtimeChannels.push(channel);
-    }
-  }
-  runtime.heartbeatTimer = setInterval(() => {
-    if (!runtime.session?.id) return;
-    const activeCoordinatorId = runtime.session.coordinator_id ||
-      runtime.session.coordinatorId || runtime.session.coordinatorUserId;
-    const isCoordinator = activeCoordinatorId === me?.id;
-    const snapshotStale = runtime.playing && !isCoordinator &&
-      Date.now() - (runtime.lastCoordinatorSnapshotAt || Date.now()) >
-        OGP_COORDINATOR_STALE_MS + 1000;
-    const canClaim = !isCoordinator &&
-      (!!runtime.serverState?.canClaimCoordinator || snapshotStale);
-    if (!isCoordinator && !canClaim) return;
-    if (canClaim) {
-      const now = Date.now();
-      if (now - (runtime.lastCoordinatorClaimAttemptAt || 0) < 4000) return;
-      runtime.lastCoordinatorClaimAttemptAt = now;
-    }
-    invokeOfficeGrandPrix({
-      action: isCoordinator ? 'coordinator_heartbeat' : 'claim_coordinator',
-      sessionId: runtime.session.id,
-      tick: runtime.race?.tick || 0,
-    }).then(data => {
-      ogpApplyServerState(data);
-    }).catch(() => {});
-  }, 2000);
-}
-
-function ogpDisconnectRealtime() {
-  const runtime = officeGrandPrixRuntime;
-  if (!runtime) return;
-  clearInterval(runtime.heartbeatTimer);
-  runtime.heartbeatTimer = null;
-  const channels = [runtime.mainChannel, runtime.inputChannel, ...(runtime.coordinatorInputChannels || [])].filter(Boolean);
-  channels.forEach(channel => {
-    try { sb.removeChannel(channel); } catch {}
-  });
-  realtimeChannels = realtimeChannels.filter(channel => !channels.includes(channel));
-  runtime.mainChannel = null;
-  runtime.inputChannel = null;
-  runtime.coordinatorInputChannels = [];
-  runtime.realtimeSessionId = null;
-  runtime.realtimeRoleKey = null;
-}
-
 function stopOfficeGrandPrix() {
-  clearInterval(ogpStatePollTimer);
-  clearInterval(ogpCountdownTimer);
-  clearTimeout(officeGrandPrixRuntime?.serverStartTimer);
-  ogpStatePollTimer = null;
-  ogpCountdownTimer = null;
   ogpKeySteer.left = false;
   ogpKeySteer.right = false;
-  ogpDisconnectRealtime();
   const runtime = officeGrandPrixRuntime;
   if (!runtime) return;
   if (runtime.frameId) cancelAnimationFrame(runtime.frameId);
@@ -28422,8 +28105,6 @@ function stopOfficeGrandPrix() {
     mesh.material?.dispose();
   });
   runtime.bananaMeshes?.clear();
-  runtime.serverStartTimer = null;
-  runtime.serverStartSessionId = null;
   ogpStage?.classList.remove('is-racing', 'is-immersive');
   document.body.classList.remove('ogp-no-scroll');
   show(ogpLobby);
@@ -28459,8 +28140,7 @@ document.querySelectorAll('#ogp-car-picker .ogp-car').forEach(button => {
     document.querySelectorAll('#ogp-car-picker .ogp-car').forEach(other => other.classList.toggle('active', other === button));
   });
 });
-ogpJoinBtn?.addEventListener('click', ogpJoinLobby);
-ogpReadyBtn?.addEventListener('click', ogpReadyUp);
+ogpJoinBtn?.addEventListener('click', ogpStartRankedRace);
 ogpTrainingBtn?.addEventListener('click', ogpStartTraining);
 document.getElementById('ogp-item-btn')?.addEventListener('pointerdown', event => {
   event.preventDefault();
