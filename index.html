@@ -28176,18 +28176,27 @@ async function loadOfficeGrandPrixState(showSpinner = true) {
 }
 
 async function ogpStartRankedRace() {
-  if (!ogpJoinBtn || ogpJoinBtn.disabled) return;
+  if (!ogpJoinBtn) return;
   ogpJoinBtn.disabled = true;
   ogpJoinBtn.textContent = 'Przygotowuję start…';
   try {
     await ogpEnsureRenderer();
-    const data = await invokeOfficeGrandPrix({
-      action: 'start_race',
-      engineVersion: OGP_CLIENT_VERSION,
-      trackVersion: OGP_TRACK_VERSION,
-      trackHash: OGP_TRACK_HASH,
-      cosmetic: Math.max(0, OGP_CARS.findIndex(car => car.id === ogpSelectedCar)),
-    });
+    let data;
+    try {
+      data = await invokeOfficeGrandPrix({
+        action: 'start_race',
+        engineVersion: OGP_CLIENT_VERSION,
+        trackVersion: OGP_TRACK_VERSION,
+        trackHash: OGP_TRACK_HASH,
+        cosmetic: Math.max(0, OGP_CARS.findIndex(car => car.id === ogpSelectedCar)),
+      });
+    } catch (edgeError) {
+      console.warn('Ranked race server error, launching local training fallback:', edgeError);
+      showToast('⚠️ Uruchamiam natychmiastowy wyścig lokalny.');
+      ogpJoinBtn.disabled = false;
+      ogpJoinBtn.textContent = '🏁 Wyścig!';
+      return ogpStartTraining();
+    }
     ogpApplySharedState(data);
     officeGrandPrixRuntime.session = data.session;
     const ghosts = Array.isArray(data.ghosts) ? data.ghosts : officeGrandPrixRuntime.ghosts || [];
@@ -28238,7 +28247,12 @@ function ogpInitializeCamera(runtime, car) {
 
 function ogpStartRace(seed, roster, localSlot, opts = {}) {
   const runtime = officeGrandPrixRuntime;
-  if (!runtime?.renderer || runtime.playing) return;
+  if (!runtime?.renderer) return;
+  runtime.playing = false;
+  if (runtime.countdownInterval) {
+    clearInterval(runtime.countdownInterval);
+    runtime.countdownInterval = null;
+  }
   runtime.race = ogpNewRace(seed, roster, localSlot, opts);
   runtime.playing = true;
   runtime.prestart = true;
@@ -28255,7 +28269,7 @@ function ogpStartRace(seed, roster, localSlot, opts = {}) {
   show(ogpBannerEl);
   ogpBannerEl.textContent = String(count);
   ogpPlaySound('countdown_beep', count);
-  const timer = setInterval(() => {
+  runtime.countdownInterval = setInterval(() => {
     count -= 1;
     if (count > 0) {
       ogpBannerEl.textContent = String(count);
@@ -28266,7 +28280,8 @@ function ogpStartRace(seed, roster, localSlot, opts = {}) {
       runtime.prestart = false;
       setTimeout(() => hide(ogpBannerEl), 650);
     } else {
-      clearInterval(timer);
+      clearInterval(runtime.countdownInterval);
+      runtime.countdownInterval = null;
     }
   }, 800);
 }
