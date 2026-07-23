@@ -9399,7 +9399,7 @@ let varPatrolRuntime = null;
 let superMariuszRuntime = null;
 let popupPanicRuntime = null;
 let officeGrandPrixRuntime = null;
-const OGP_PUBLIC_UI_ENABLED = false;
+const OGP_PUBLIC_UI_ENABLED = true;
 const OGP_LOCAL_V2_PREVIEW = !OGP_PUBLIC_UI_ENABLED &&
   (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
 let allGamesMode = false;
@@ -19417,7 +19417,7 @@ const SEASONAL_OVERRIDES = {
   '2026-07-06': { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },  // debut
   '2026-07-13': { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },  // debut
   '2026-07-20': { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },  // debut
-  '2026-07-27': { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },  // V2 racer remains gated
+  '2026-07-27': { gameType: 'office_grand_prix', displayName: 'Office Grand Prix G6 🏁' },  // V2 racer debut
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -28448,7 +28448,7 @@ async function ogpToggleFullscreen() {
   }
 }
 
-if (OGP_LOCAL_V2_PREVIEW) {
+if (OGP_LOCAL_V2_PREVIEW || OGP_PUBLIC_UI_ENABLED) {
   document.getElementById('ogp-archive-card')?.classList.remove('hidden');
 }
 document.querySelectorAll('#ogp-car-picker .ogp-car').forEach(button => {

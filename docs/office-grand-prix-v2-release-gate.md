@@ -4,6 +4,14 @@ V2 remains intentionally hidden in production until every manual row below is
 signed off. The completed V1 test session and its score rows are audit history;
 do not delete or promote them.
 
+> **2026-07-23 override:** both production flags were flipped and the game was
+> published with the manual gate below still unchecked, and outside a Monday
+> boundary, on the owner's explicit instruction. The manual rows were **not**
+> executed — they are left unchecked below as an honest record of what still
+> hasn't been verified in production (real two-player/mobile/reconnect
+> behavior). Treat any report of racing bugs, coin/score anomalies, or mobile
+> issues as expected until someone actually walks this list.
+
 ## Automated gate
 
 - [x] `node scripts/office-grand-prix-parity.mjs`

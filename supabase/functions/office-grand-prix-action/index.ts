@@ -100,10 +100,11 @@ const OGP_RACE_SECONDS = 90;
 const OGP_SUBMISSION_GRACE_SECONDS = 10;
 const OGP_COORDINATOR_STALE_MS = 6000;
 const OGP_MAX_REQUEST_BYTES = 300000;
-// Keep production session creation closed until the V2 mobile/multiplayer
-// acceptance gate is signed off. Existing completed rows remain queryable as
-// immutable test-race audit history.
-const OGP_SESSIONS_ENABLED = false;
+// Production session creation, opened 2026-07-23 by explicit override of the
+// V2 mobile/multiplayer acceptance gate (manual QA rows were not signed off;
+// see docs/office-grand-prix-v2-release-gate.md). Existing completed rows
+// remain queryable as immutable test-race audit history.
+const OGP_SESSIONS_ENABLED = true;
 
 type OGPItem = "turbo" | "banana" | "shield" | null;
 type OGPInput = { tick: number; steer: -1 | 0 | 1; useItem: boolean };

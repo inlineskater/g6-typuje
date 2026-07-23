@@ -30,13 +30,11 @@ AS $$
     WHEN '2026-07-06' THEN 'egg_catch'  -- Łap Jajka debut
     WHEN '2026-07-13' THEN 'super_mariusz'  -- Super Mariusz debut
     WHEN '2026-07-20' THEN 'popup_panic'  -- Zamknij Popupy! debut
-    WHEN '2026-07-27' THEN 'popup_panic'  -- racer V2 remains behind its release gate
+    WHEN '2026-07-27' THEN 'office_grand_prix'  -- V2 racer debut
     ELSE CASE
-      -- While the V2 racer is gated, Popup Panic occupies its Monday slot.
-      -- Replace the first entry with office_grand_prix only at a Monday release.
       WHEN p_week_start >= DATE '2026-07-27' THEN
         (ARRAY[
-          'popup_panic','whack_boss','bug_jumper','flappy_pants','snake',
+          'office_grand_prix','whack_boss','bug_jumper','flappy_pants','snake',
           'invoice_horde','var_patrol','egg_catch','super_mariusz','popup_panic'
         ])[
           (((p_week_start - DATE '2026-07-27') / 7) % 10) + 1
