@@ -43,6 +43,9 @@ verify_jwt = true
 [functions.popup-panic-action]
 verify_jwt = true
 
+[functions.office-grand-prix-action]
+verify_jwt = true
+
 [functions.garden-action]
 verify_jwt = true
 

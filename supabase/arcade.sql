@@ -16,6 +16,8 @@ CREATE INDEX IF NOT EXISTS arcade_scores_user_game_idx
   ON public.arcade_scores(user_id, game_type, created_at DESC);
 CREATE INDEX IF NOT EXISTS arcade_scores_game_score_idx
   ON public.arcade_scores(game_type, score DESC);
+CREATE INDEX IF NOT EXISTS arcade_scores_best_per_user_idx
+  ON public.arcade_scores(game_type, user_id, score DESC, created_at ASC);
 
 ALTER TABLE public.arcade_scores ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "arcade_scores_insert" ON public.arcade_scores;
@@ -26,6 +28,9 @@ CREATE POLICY "arcade_scores_select" ON public.arcade_scores
 
 REVOKE ALL ON public.arcade_scores FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.arcade_scores TO authenticated;
+-- Server-validated games may write official archive results directly. Browser
+-- roles still have read-only access and cannot bypass their game verifier.
+GRANT SELECT, INSERT ON public.arcade_scores TO service_role;
 
 -- ── Leaderboard view (best score per user per game) ─────────────────────────
 
@@ -47,6 +52,10 @@ GRANT SELECT ON public.arcade_leaderboard TO authenticated;
 
 -- ── pay_arcade_entry — deduct 1 coin and log the transaction ────────────────
 -- p_game_type is stored in coin_transactions.meta so Portfel can show it.
+--
+-- Office Grand Prix is intentionally absent from this browser-callable RPC.
+-- In archive mode its Edge Function charges each roster-locked human exactly
+-- once and tags the ledger entry with both game_type and session_id.
 
 CREATE OR REPLACE FUNCTION public.pay_arcade_entry(p_game_type text DEFAULT 'unknown')
 RETURNS integer
@@ -84,6 +93,10 @@ REVOKE ALL ON FUNCTION public.pay_arcade_entry(text) FROM PUBLIC, anon, authenti
 GRANT EXECUTE ON FUNCTION public.pay_arcade_entry(text) TO authenticated;
 
 -- ── record_arcade_score — insert a score row (called by JS after game ends) ──
+-- Office Grand Prix is intentionally absent from v_score_cap. Its Edge
+-- Function replays the submitted input log, derives the official result, and
+-- inserts game_type='office_grand_prix' directly with service-role privileges.
+-- RLS and the grants above leave no authenticated client INSERT path.
 
 CREATE OR REPLACE FUNCTION public.record_arcade_score(p_game_type text, p_score integer)
 RETURNS void

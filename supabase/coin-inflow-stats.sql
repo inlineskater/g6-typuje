@@ -182,6 +182,12 @@ AS $$
     SELECT user_id, prize_coins, awarded_at FROM public.var_patrol_weekly_awards
     UNION ALL
     SELECT user_id, prize_coins, awarded_at FROM public.egg_catch_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.super_mariusz_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.popup_panic_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.office_grand_prix_weekly_awards
   ),
   seasonal_inflows AS (
     SELECT

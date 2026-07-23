@@ -1,6 +1,6 @@
 # Rynek Proroctw G6
 
-Company prediction market with virtual coins, a shared Texas Hold'em table, a casino, rotating arcade games, World Cup betting, a collaborative pixel canvas, and a farm/NFT economy. Polish UI, single static `index.html`.
+Company prediction market with virtual coins, a shared Texas Hold'em table, a casino, rotating arcade games (including a shared low-poly 3D kart race), World Cup betting, a collaborative pixel canvas, and a farm/NFT economy. Polish UI, single static `index.html`.
 
 Production URL:
 
@@ -28,15 +28,38 @@ The public anon key in `index.html` is intentional for Supabase browser apps; th
 Fresh project setup:
 
 1. Create a Supabase project.
-2. In SQL Editor, run `supabase/schema.sql` (core prediction market), then the feature SQL files you want — arcade, poker, store, marketplace, garden, hero items (`hero-items.sql` → `hero-items-always-active.sql`; the cosmetic „Herosi" system itself is removed — also run `supabase/remove-heroes.sql` — surviving hero items are „Przedmioty specjalne"), casino games (`plinko`, `mines`, `roulette`, `crash`, `slots`), seasonal games (`whack-boss`, `bug-jumper`, `flappy-pants`, `snake`, `invoice-horde`, `var-patrol`, `egg-catch`, `super-mariusz` + `season-award-gating.sql`), `football.sql` (Mundial), `canvas.sql`, `documents.sql`, and the farm stack in the order above. Run `polish-midnight-schedules.sql` after the garden, seasonal, and farm SQL so daily resets and weekly awards follow Europe/Warsaw across DST.
+2. In SQL Editor, run `supabase/schema.sql` (core prediction market), then the feature SQL files you want — arcade, poker, store, marketplace, garden, hero items (`hero-items.sql` → `hero-items-always-active.sql`; the cosmetic „Herosi" system itself is removed — also run `supabase/remove-heroes.sql` — surviving hero items are „Przedmioty specjalne"), casino games (`plinko`, `mines`, `roulette`, `crash`, `slots`), seasonal games (`whack-boss`, `bug-jumper`, `flappy-pants`, `snake`, `invoice-horde`, `var-patrol`, `egg-catch`, `super-mariusz`, `popup-panic`, `office-grand-prix` + `season-award-gating.sql`), `football.sql` (Mundial), `canvas.sql`, `documents.sql`, and the farm stack in the order above. Run `polish-midnight-schedules.sql` after the garden, seasonal, and farm SQL so daily resets and weekly awards follow Europe/Warsaw across DST.
 3. Run the stats views last: `hazard-views.sql`, `coin-inflow-stats.sql`, `economy-stats.sql`, `leaderboard-net-worth-items.sql`.
-4. Deploy the Edge Functions in `supabase/functions/` (one per server-owned game: poker, roulette, crash, slots, plinko, mines, wheel, football, garden, and all eight seasonal `*-action` functions).
+4. Deploy the Edge Functions in `supabase/functions/` (one per server-owned game: poker, roulette, crash, slots, plinko, mines, wheel, football, garden, and all ten seasonal `*-action` functions).
 5. Run `supabase/prod-hardening.sql`.
 6. Authentication → Providers → Email: disable email confirmation (PIN signups use synthetic emails).
 7. Authentication → URL Configuration: set the site URL to the GitHub Pages URL.
 8. Confirm the `pg_cron` jobs from the SQL files exist (weekly game awards, football odds sync, farm price rolls, farm rot cleanup, land-tax assessment).
 
 Function secrets used by `football-action`: `ODDS_API_KEY`, `FOOTBALL_CRON_SECRET`, optional `ODDS_SPORT_KEY` / `ODDS_REGIONS` / `ODDS_BOOKMAKER`.
+
+### Office Grand Prix rollout
+
+The public test is free through Sunday, 26 July 2026. Its test standings are disposable and must not be copied into ranked results. The first free ranked week begins Monday, 27 July 2026 at 00:00 `Europe/Warsaw`; the new ten-game cycle then continues with Whack-a-Boss on 3 August and repeats every ten weeks. Outside its seasonal week the racer remains available in the archive for one coin. The server derives `test`, `seasonal`, or one-coin `arcade` mode, so the browser clock is never authoritative.
+
+Deploy in this order:
+
+1. Re-run `supabase/arcade.sql`, then run `supabase/office-grand-prix.sql`.
+2. Run `supabase/season-award-gating.sql`, followed by `supabase/polish-midnight-schedules.sql`.
+3. Re-run `supabase/coin-inflow-stats.sql` and `supabase/economy-stats.sql`.
+4. Deploy `supabase/functions/office-grand-prix-action` with JWT verification enabled.
+5. In Supabase Realtime, confirm private-channel authorization is enabled and the policies installed by `office-grand-prix.sql` allow authenticated participants to use `ogp:<session-id>`, ordinary entrants to send only on their own `ogp-input:<session-id>:<slot>` channel, and the elected coordinator to receive every occupied input channel. Confirm the racer score and award tables added by that SQL are present in the `supabase_realtime` publication.
+6. Check that `office_grand_prix_weekly_awards` exists in `cron.job`; its first ranked payout is expected after the 27 July week closes.
+7. Deploy `index.html` through the existing GitHub Pages workflow, then verify a desktop and mobile client can join the same lobby, bots fill the remaining slots, and only the Edge Function can finalize results.
+
+Archive entry fees and scores are backend-owned. The Edge Function charges each locked human once, records `coin_transactions.reason = 'arcade_entry'` with the session ID, replays the submitted inputs, and only then inserts an official `arcade_scores` row. Do not add `office_grand_prix` to the browser-callable `pay_arcade_entry` or `record_arcade_score` RPCs.
+
+Rollback without destroying audit history:
+
+1. Revert the GitHub Pages release so players cannot start new races.
+2. Unschedule only the racer payout job with `SELECT cron.unschedule('office_grand_prix_weekly_awards');`.
+3. Roll back or undeploy `office-grand-prix-action`, then restore the previous rotation/gating SQL.
+4. Keep racer sessions, submissions, scores, awards, and coin transactions. If a charge needs correction, use an audited compensating coin transaction rather than deleting ledger rows.
 
 ## How it works
 
@@ -45,7 +68,7 @@ Function secrets used by `football-action`: `ODDS_API_KEY`, `FOOTBALL_CRON_SECRE
 - Mundial: fixed-odds World Cup 2026 betting vs the house; odds come from The Odds API and are locked at bet time; one bet per match.
 - Poker: one shared Hold'em table, 100 coin buy-in, server-owned state.
 - Casino (house games): Plinko, Miny (5×5 mines), Ruletka (shared table), Rakieta (solo crash), Sloty, and Koło Żubra (shared 15-second rounds with unanimous ready-to-start acceleration) — all RNG and payouts are server-owned; the browser only animates trusted results.
-- Seasonal games: one rotating arcade game per Monday-start week (Whack-a-Boss, Bug Jumper, „3 Pary Spodni", Snake, „Najazd Ticketów", VAR Patrol, „Łap Jajka", „Super Mariusz"); server-validated rounds with game-specific weekly prizes.
+- Seasonal games: one rotating arcade game per Monday-start week (Whack-a-Boss, Bug Jumper, „3 Pary Spodni", Snake, „Najazd Ticketów", VAR Patrol, „Łap Jajka", „Super Mariusz", „Zamknij Popupy!", and the shared 3D „Office Grand Prix G6"); server-validated rounds with game-specific weekly prizes.
 - Wspólne Płótno: shared 192×108 pixel canvas; one free pixel per 2 h, then 1 coin per pixel.
 - Targowisko: peer-to-peer marketplace (fixed price or auction with escrow); coins transfer buyer → seller.
 - Ogródek (Farma): shared 13×4 tile grid; buy tiles, open card lootboxes, plant, harvest, and sell crops at a fluctuating "stalk market" NPC price; serialized NFT cards with per-instance levels (merge two to level up); land tax on holdings above the fair share; P2P resale of cards/NFTs/tiles via Targowisko. Details in [docs/farma.md](docs/farma.md).

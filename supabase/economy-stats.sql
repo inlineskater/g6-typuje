@@ -234,7 +234,7 @@ AS $$
                              'farm_seasonal_rank_award')
       ), 0::numeric) AS ledger_minted,
 
-      -- weekly game prize payouts (100/50/25 per rank per season)
+      -- weekly game prize payouts (game-defined top-three awards)
       COALESCE((
         SELECT sum(prize_coins) FROM (
           SELECT prize_coins FROM public.whack_boss_weekly_awards
@@ -250,6 +250,12 @@ AS $$
           SELECT prize_coins FROM public.var_patrol_weekly_awards
           UNION ALL
           SELECT prize_coins FROM public.egg_catch_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.super_mariusz_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.popup_panic_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.office_grand_prix_weekly_awards
         ) _awards
       ), 0::bigint)::numeric AS prizes_minted,
 
