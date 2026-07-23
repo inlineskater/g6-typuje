@@ -8092,7 +8092,7 @@
     <div id="ag-picker">
       <div class="ag-header">
         <h2>🎮 Wszystkie Gry</h2>
-        <p class="ag-info">Zagraj w dowolną grę — <strong>1 moneta</strong> za rundę. Wyniki trafiają do oddzielnego rankingu arcade (bez nagród sezonowych).</p>
+        <p class="ag-info">Zagraj w dowolną grę <strong>za darmo</strong>. Wyniki trafiają do oddzielnego rankingu arcade (bez nagród sezonowych).</p>
       </div>
       <div class="ag-grid">
         <button class="ag-card" data-game="whack_boss">
@@ -8101,7 +8101,7 @@
             <div class="ag-card-name">Whack-a-Boss</div>
             <div class="ag-card-desc">18 sekund intensywnego klikania. Kliknij bossa kiedy jest widoczny — nie klikaj gdy znika. Łańcuchy trafień budują combo.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">ZRĘCZNOŚCIOWA</span>
             </div>
           </div>
@@ -8112,7 +8112,7 @@
             <div class="ag-card-name">Bug Jumper</div>
             <div class="ag-card-desc">30 trudnych linii, losowa trasa w każdej rundzie. Przeskakuj przeszkody strzałkami i dotrzyj jak najwyżej.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
             </div>
           </div>
@@ -8123,7 +8123,7 @@
             <div class="ag-card-name">3 Pary Spodni</div>
             <div class="ag-card-desc">Flappy Bird z parami spodni. Masz 3 życia — każde zderzenie kosztuje jedną parę. Wynik = liczba ominętych rur.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">ARCADE</span>
             </div>
           </div>
@@ -8134,7 +8134,7 @@
             <div class="ag-card-name">Snake</div>
             <div class="ag-card-desc">Klasyczny wąż na siatce 20×20. Zbieraj jabłka, unikaj ścian i własnego ogona. Masz 120 sekund.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">KLASYCZNA</span>
             </div>
           </div>
@@ -8145,7 +8145,7 @@
             <div class="ag-card-name">Najazd Ticketów</div>
             <div class="ag-card-desc">Survival: jesteś informatykiem otoczonym ticketami. Uciekaj, prowadź rój za sobą i zamykaj zgłoszenia — boss CF soakuje 5 trafień.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">SURVIVAL</span>
             </div>
           </div>
@@ -8156,7 +8156,7 @@
             <div class="ag-card-name">VAR Patrol</div>
             <div class="ag-card-desc">Pokój VAR: 60 sekund decyzji tylko o spalonym. Oglądaj stop-klatkę, wybierz GRA albo SPALONY, buduj serię.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">REFLEKS</span>
             </div>
           </div>
@@ -8167,7 +8167,7 @@
             <div class="ag-card-name">Łap Jajka</div>
             <div class="ag-card-desc">Elektronika LCD: jajka staczają się z 4 kurnych grzęd, Ty łapiesz je koszykiem wilka. Trzy stłuczki kończą rundę, a jajka lecą coraz szybciej.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">REFLEKS</span>
             </div>
           </div>
@@ -8178,7 +8178,7 @@
             <div class="ag-card-name">„Super Mariusz"</div>
             <div class="ag-card-desc">Brutalny hardmode speedrun po biurowym korytarzu. Jedno życie — kolce, teczki i przepaście zabijają od razu. Liczy się dystans, a wśród finisherów czas.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
             </div>
           </div>
@@ -8189,7 +8189,7 @@
             <div class="ag-card-name">„Zamknij Popupy!"</div>
             <div class="ag-card-desc">30 sekund biurowego koszmaru: zamykaj popupy zanim zasypią ekran. Czerwony malware ma zegar — nie zdążysz, łapiesz wirusa.</div>
             <div class="ag-card-meta">
-              <span class="ag-card-cost">1 🪙 / runda</span>
+              <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">REFLEKS</span>
             </div>
           </div>
@@ -9744,9 +9744,9 @@ async function loadArcadeScores(gameType) {
   const panel = document.getElementById('ag-scores-panel');
   if (!panel) return;
   const [topRes, myRes] = await Promise.all([
-    sb.from('arcade_leaderboard').select('score, nick, coins_paid, created_at')
+    sb.from('arcade_leaderboard').select('score, nick, created_at')
       .eq('game_type', gameType).order('score', { ascending: false }).limit(10),
-    sb.from('arcade_scores').select('score, coins_paid, created_at')
+    sb.from('arcade_scores').select('score, created_at')
       .eq('game_type', gameType).eq('user_id', me.id)
       .order('created_at', { ascending: false }).limit(5),
   ]);
@@ -9763,8 +9763,7 @@ async function loadArcadeScores(gameType) {
         d.append(
           el('span', { className: 'ag-score-rank' }, (i + 1) + '.'),
           el('span', { className: 'ag-score-nick' }, row.nick),
-          el('span', { className: 'ag-score-val'  }, formatArcadeScore(gameType, row.score)),
-          el('span', { className: 'ag-score-coin' }, row.coins_paid + ' 🪙')
+          el('span', { className: 'ag-score-val'  }, formatArcadeScore(gameType, row.score))
         );
         return d;
       }));
@@ -9778,7 +9777,6 @@ async function loadArcadeScores(gameType) {
         const d = el('div', { className: 'ag-score-row' });
         d.append(
           el('span', { className: 'ag-score-val'  }, formatArcadeScore(gameType, row.score)),
-          el('span', { className: 'ag-score-coin' }, row.coins_paid + ' 🪙'),
           el('span', { className: 'ag-score-date' }, new Date(row.created_at).toLocaleDateString('pl-PL'))
         );
         return d;
@@ -21246,7 +21244,7 @@ function beginWhackBossRound(round) {
 async function startWhackBossRound() {
   if (whackBossRuntime?.playing || whackBossRuntime?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (wbStartBtn) {
     wbStartBtn.disabled = true;
@@ -22351,7 +22349,7 @@ function beginVarPatrolRound(round) {
 async function startVarPatrolRound() {
   if (varPatrolRuntime?.playing || varPatrolRuntime?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   const startBtn = document.getElementById('vp-start-btn');
   const status = document.getElementById('vp-status');
@@ -23178,7 +23176,7 @@ async function startBugJumperRound() {
     return;
   }
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Ładuję...'; }
   if (bjStatus) bjStatus.textContent = 'Przygotowuję rundę...';
@@ -23594,7 +23592,7 @@ async function startFlappyPantsRound() {
   const rt = flappyPantsRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (fpStartBtn) { fpStartBtn.disabled = true; fpStartBtn.textContent = 'Ładuję...'; }
   if (fpStatus) fpStatus.textContent = 'Przygotowuję rundę...';
@@ -24098,7 +24096,7 @@ async function startSnakeRound() {
   const rt = snakeRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (snStartBtn) { snStartBtn.disabled = true; snStartBtn.textContent = 'Ładuję...'; }
   if (snStatus) snStatus.textContent = 'Przygotowuję rundę...';
@@ -24679,7 +24677,7 @@ async function startEggCatchRound() {
   const rt = eggCatchRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (ecStartBtn) { ecStartBtn.disabled = true; ecStartBtn.textContent = 'Ładuję...'; }
   if (ecStatus) ecStatus.textContent = 'Przygotowuję rundę...';
@@ -25526,7 +25524,7 @@ async function startSuperMariuszRound() {
   const rt = superMariuszRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (smStartBtn) { smStartBtn.disabled = true; smStartBtn.textContent = 'Ładuję...'; }
   if (smStatus) smStatus.textContent = 'Przygotowuję rundę...';
@@ -26030,7 +26028,7 @@ async function startPopupPanicRound() {
   const rt = popupPanicRuntime;
   if (rt?.playing || rt?.submitting) return;
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch (e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (ppStartBtn) { ppStartBtn.disabled = true; ppStartBtn.textContent = 'Ładuję...'; }
   if (ppStatus) ppStatus.textContent = 'Przygotowuję rundę...';
@@ -26837,7 +26835,7 @@ async function startInvoiceHordeRound() {
     return;
   }
   if (allGamesMode) {
-    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Niewystarczająca liczba monet!'); return; }
+    try { await payArcadeEntry(allGamesSelectedGame); } catch(e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
   if (ihStartBtn) { ihStartBtn.disabled = true; ihStartBtn.textContent = 'Ładuję...'; }
   if (ihStatus) ihStatus.textContent = 'Przygotowuję rundę...';

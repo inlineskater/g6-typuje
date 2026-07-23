@@ -50,8 +50,11 @@ ORDER BY game_type, user_id, score DESC, created_at ASC;
 REVOKE ALL ON public.arcade_leaderboard FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.arcade_leaderboard TO authenticated;
 
--- ── pay_arcade_entry — deduct 1 coin and log the transaction ────────────────
--- p_game_type is stored in coin_transactions.meta so Portfel can show it.
+-- ── pay_arcade_entry — validate entry and return the caller's balance ───────
+-- 2026-07: Wszystkie Gry is free forever — no coin is deducted anymore and no
+-- coin_transactions row is written. The RPC is kept (same name/signature) so
+-- the frontend's per-game call sites don't need to change; it still checks
+-- auth + game_type before a round starts.
 
 CREATE OR REPLACE FUNCTION public.pay_arcade_entry(p_game_type text DEFAULT 'unknown')
 RETURNS integer
@@ -71,15 +74,8 @@ BEGIN
     RAISE EXCEPTION 'invalid_game_type';
   END IF;
 
-  UPDATE profiles
-  SET coins = coins - 1
-  WHERE id = v_uid AND coins >= 1
-  RETURNING coins INTO v_coins;
-
-  IF NOT FOUND THEN RAISE EXCEPTION 'insufficient coins'; END IF;
-
-  INSERT INTO coin_transactions(user_id, delta, reason, meta)
-  VALUES (v_uid, -1, 'arcade_entry', jsonb_build_object('game_type', p_game_type));
+  SELECT coins INTO v_coins FROM profiles WHERE id = v_uid;
+  IF NOT FOUND THEN RAISE EXCEPTION 'profile_not_found'; END IF;
 
   RETURN v_coins;
 END;
@@ -89,6 +85,12 @@ REVOKE ALL ON FUNCTION public.pay_arcade_entry(text) FROM PUBLIC, anon, authenti
 GRANT EXECUTE ON FUNCTION public.pay_arcade_entry(text) TO authenticated;
 
 -- ── record_arcade_score — insert a score row (called by JS after game ends) ──
+-- 2026-07: entry is free, so the old "must have an unspent paid entry" gate
+-- (which doubled as the only anti-spam throttle on this client-callable RPC)
+-- is gone too. Replaced with a flat per-user-per-game cooldown — 5s is well
+-- under every arcade game's real round length (shortest is ~15s), so it
+-- never affects a genuine player clicking "Zagraj ponownie", but it stops a
+-- script from calling this RPC in a tight loop to flood the table.
 
 CREATE OR REPLACE FUNCTION public.record_arcade_score(p_game_type text, p_score integer)
 RETURNS void
@@ -98,9 +100,8 @@ SET search_path = public
 AS $$
 DECLARE
   v_uid  uuid := auth.uid();
-  v_paid integer;
-  v_submitted integer;
   v_score_cap integer;
+  v_last_at timestamptz;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'not authenticated'; END IF;
 
@@ -121,26 +122,20 @@ BEGIN
     RAISE EXCEPTION 'invalid_score';
   END IF;
 
-  -- Serialize submissions per user so two concurrent RPC calls cannot consume
-  -- the same paid entry twice.
+  -- Serialize submissions per user so two concurrent RPC calls can't both
+  -- pass the cooldown check for the same round.
   PERFORM 1 FROM public.profiles WHERE id = v_uid FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'profile_not_found'; END IF;
 
-  -- Count how many times they paid entry for this game
-  SELECT COUNT(*)::integer INTO v_paid FROM public.coin_transactions
-   WHERE user_id = v_uid AND reason = 'arcade_entry' AND meta->>'game_type' = p_game_type;
-
-  -- Count how many scores they have already recorded for this game
-  SELECT COUNT(*)::integer INTO v_submitted FROM public.arcade_scores
+  SELECT MAX(created_at) INTO v_last_at FROM public.arcade_scores
    WHERE user_id = v_uid AND game_type = p_game_type;
 
-  -- Block submission if they haven't paid for a new entry
-  IF v_paid <= v_submitted THEN
-    RAISE EXCEPTION 'entry fee not paid for this round';
+  IF v_last_at IS NOT NULL AND now() - v_last_at < interval '5 seconds' THEN
+    RAISE EXCEPTION 'submitting too fast';
   END IF;
 
   INSERT INTO arcade_scores(user_id, game_type, score, coins_paid)
-  VALUES (v_uid, p_game_type, p_score, 1);
+  VALUES (v_uid, p_game_type, p_score, 0);
 END;
 $$;
 
