@@ -4212,7 +4212,7 @@
       left: max(10px, env(safe-area-inset-left));
       right: max(10px, env(safe-area-inset-right));
       display: grid;
-      grid-template-columns: repeat(4, max-content) 1fr max-content max-content;
+      grid-template-columns: repeat(6, max-content) 1fr max-content max-content max-content;
       align-items: center;
       gap: 7px;
       pointer-events: none;
@@ -4237,6 +4237,18 @@
       letter-spacing: .55px;
       text-transform: uppercase;
     }
+    .ogp-drift-badge {
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      border-color: #fde047;
+      color: #fff;
+      font-weight: 900;
+      animation: ogpPulseDrift .6s infinite alternate;
+    }
+    @keyframes ogpPulseDrift {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.08); }
+    }
+    .ogp-sound-toggle,
     .ogp-fullscreen {
       pointer-events: auto;
       width: 38px;
@@ -4247,6 +4259,9 @@
       color: #fff;
       cursor: pointer;
       font-size: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .ogp-minimap {
       width: 116px;
@@ -8319,9 +8334,12 @@
                 <div class="ogp-hud-pill race-only"><small>Pozycja</small><span id="ogp-position">1/8</span></div>
                 <div class="ogp-hud-pill ogp-lap-pill race-only"><small>Okrążenie</small><span>1/1</span></div>
                 <div class="ogp-hud-pill race-only"><small>Czas</small><span id="ogp-time">0:00.00</span></div>
+                <div class="ogp-hud-pill race-only"><small>Prędkość</small><span id="ogp-speed">0 km/h</span></div>
                 <div class="ogp-hud-pill race-only"><small>Przedmiot</small><span id="ogp-item">—</span></div>
+                <div class="ogp-hud-pill ogp-drift-badge race-only hidden" id="ogp-drift-badge">🔥 DRIFT!</div>
                 <span></span>
                 <canvas class="ogp-minimap race-only" id="ogp-minimap" width="232" height="148" aria-label="Minimapa trasy"></canvas>
+                <button class="ogp-sound-toggle" id="ogp-sound-toggle" type="button" title="Dźwięk wyścigu" aria-label="Przełącz dźwięk">🔊</button>
                 <button class="ogp-fullscreen" id="ogp-fullscreen" type="button" title="Pełny ekran" aria-label="Pełny ekran">⛶</button>
               </div>
 
@@ -26604,9 +26622,9 @@ if (ppArena) {
 // no separate drift button. Multiplayer moved from a live coordinator/
 // broadcast model to async ghosts (see ogpFetchGhosts/ogpSeedGhostCars):
 // no more OGP_COORDINATOR_STALE_MS or realtime channel constants here.
-const OGP_CLIENT_VERSION = 'office_grand_prix_v3';
-const OGP_TRACK_VERSION = 'office_loop_v3';
-const OGP_TRACK_HASH = '4eb8fb43bdb592567e7188590afe8adad044d56b8c4279c0744e31137ee2ece5';
+const OGP_CLIENT_VERSION = 'office_grand_prix_v4';
+const OGP_TRACK_VERSION = 'office_loop_v4';
+const OGP_TRACK_HASH = '1d4b3b7abbf81bc598c0e309dc2baf8b46115d0cba3fdb9fa835cf8dde21569b';
 const OGP_TICK_MS = 50;
 const OGP_TRACK_LENGTH = 160000;
 const OGP_START_PROGRESS = 16000;
@@ -26642,7 +26660,7 @@ const OGP_GATE_LANES = Object.freeze([-1800, 0, 1800, 0, -1800, 1800, 0, -1800, 
 // Generated from the pinned Three.js 0.185.1 CatmullRomCurve3 (control points
 // in ogpBuildScene, tension .5) using getTangentAt(i / 256). Physics consumes
 // only these checked-in integers.
-const OGP_TRACK_TANGENTS = Object.freeze([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,253,250,248,246,244,242,239,237,235,233,231,229,227,224,222,220,218,216,213,211,209,207,205,203,201,198,196,194,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,191,188,185,182,180,177,174,171,168,166,163,160,157,155,152,149,146,144,141,138,135,133,130,129,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,127,125,123,120,118,116,113,111,109,106,104,102,99,97,95,92,90,88,85,83,81,78,76,74,71,69,66,65,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,63,61,58,56,53,51,48,46,43,40,38,35,33,30,28,25,23,20,18,15,13,10,8,5,2]);
+const OGP_TRACK_TANGENTS = Object.freeze([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,254,250,248,246,244,241,239,237,236,234,232,231,230,229,227,224,222,219,217,215,213,211,209,207,206,205,203,200,197,195,193,191,189,187,185,183,181,179,177,172,170,169,170,172,172,172,174,179,189,198,204,207,209,212,217,219,217,213,210,208,203,195,183,175,170,167,163,158,152,146,142,138,136,131,127,126,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,129,129,128,125,123,122,120,118,118,116,113,108,104,101,97,94,92,89,87,84,81,78,75,73,70,68,66,64,62,60,58,56,54,52,50,46,41,38,37,38,36,35,35,36,37,35,35,39,47,62,72,78,81,81,82,84,86,87,87,89,90,91,90,88,84,82,78,72,64,54,46,37,24,15,10,6,0,254,254,0,0,0,0,0,0]);
 const OGP_SIN = Object.freeze([0,245,491,736,980,1224,1467,1710,1951,2191,2430,2667,2903,3137,3369,3599,3827,4052,4276,4496,4714,4929,5141,5350,5556,5758,5957,6152,6344,6532,6716,6895,7071,7242,7410,7572,7730,7883,8032,8176,8315,8449,8577,8701,8819,8932,9040,9142,9239,9330,9415,9495,9569,9638,9700,9757,9808,9853,9892,9925,9952,9973,9988,9997,10000,9997,9988,9973,9952,9925,9892,9853,9808,9757,9700,9638,9569,9495,9415,9330,9239,9142,9040,8932,8819,8701,8577,8449,8315,8176,8032,7883,7730,7572,7410,7242,7071,6895,6716,6532,6344,6152,5957,5758,5556,5350,5141,4929,4714,4496,4276,4052,3827,3599,3369,3137,2903,2667,2430,2191,1951,1710,1467,1224,980,736,491,245,0,-245,-491,-736,-980,-1224,-1467,-1710,-1951,-2191,-2430,-2667,-2903,-3137,-3369,-3599,-3827,-4052,-4276,-4496,-4714,-4929,-5141,-5350,-5556,-5758,-5957,-6152,-6344,-6532,-6716,-6895,-7071,-7242,-7410,-7572,-7730,-7883,-8032,-8176,-8315,-8449,-8577,-8701,-8819,-8932,-9040,-9142,-9239,-9330,-9415,-9495,-9569,-9638,-9700,-9757,-9808,-9853,-9892,-9925,-9952,-9973,-9988,-9997,-10000,-9997,-9988,-9973,-9952,-9925,-9892,-9853,-9808,-9757,-9700,-9638,-9569,-9495,-9415,-9330,-9239,-9142,-9040,-8932,-8819,-8701,-8577,-8449,-8315,-8176,-8032,-7883,-7730,-7572,-7410,-7242,-7071,-6895,-6716,-6532,-6344,-6152,-5957,-5758,-5556,-5350,-5141,-4929,-4714,-4496,-4276,-4052,-3827,-3599,-3369,-3137,-2903,-2667,-2430,-2191,-1951,-1710,-1467,-1224,-980,-736,-491,-245]);
 const OGP_CARS = Object.freeze([
   { id: 'coral',  label: 'Koral',   color: 0xf43f5e },
@@ -26920,6 +26938,11 @@ function ogpUseItem(race, car) {
   const item = car.item;
   car.item = null;
   car.itemHeldTicks = 0;
+  if (car.slot === race.localSlot) {
+    if (item === 'turbo') ogpPlaySound('boost');
+    else if (item === 'shield') ogpPlaySound('item_get');
+    else if (item === 'banana') ogpPlaySound('banana_hit');
+  }
   if (item === 'turbo') car.boostTicks = OGP_BOOST_TICKS;
   if (item === 'shield') car.shieldTicks = OGP_SHIELD_TICKS;
   if (item === 'banana') {
@@ -27024,6 +27047,7 @@ function ogpStepRace(race) {
       if (!car.item && Math.abs(car.lateral - OGP_GATE_LANES[gateIndex]) <= 1050) {
         car.item = ogpRollItem(race.seed, car.slot, gateIndex, placeBySlot.get(car.slot) || 8);
         car.itemHeldTicks = 0;
+        if (car.slot === race.localSlot) ogpPlaySound('item_get');
       }
       car.lastCheckpoint = OGP_GATE_PROGRESS[gateIndex];
       car.nextGate += 1;
@@ -27048,6 +27072,7 @@ function ogpStepRace(race) {
         else {
           car.slowTicks = OGP_SLOW_TICKS;
           car.slowAppliedTick = tick;
+          if (car.slot === race.localSlot) ogpPlaySound('banana_hit');
         }
         break;
       }
@@ -27075,6 +27100,143 @@ function ogpFormatTime(ms) {
   const seconds = Math.floor((safe % 60000) / 1000);
   const hundredths = Math.floor((safe % 1000) / 10);
   return `${minutes}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+}
+
+let ogpAudioCtx = null;
+let ogpAudioMuted = false;
+let ogpEngineGain = null;
+let ogpEngineOsc = null;
+
+function ogpInitAudio() {
+  if (ogpAudioCtx || ogpAudioMuted) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    ogpAudioCtx = new AudioCtx();
+  } catch {}
+}
+
+function ogpToggleAudio() {
+  ogpAudioMuted = !ogpAudioMuted;
+  const btn = document.getElementById('ogp-sound-toggle');
+  if (btn) btn.textContent = ogpAudioMuted ? '🔇' : '🔊';
+  if (ogpAudioMuted && ogpAudioCtx && ogpEngineGain) {
+    ogpEngineGain.gain.setValueAtTime(0, ogpAudioCtx.currentTime);
+  }
+}
+
+function ogpPlaySound(type, param = 1) {
+  if (ogpAudioMuted) return;
+  ogpInitAudio();
+  if (!ogpAudioCtx) return;
+  if (ogpAudioCtx.state === 'suspended') {
+    ogpAudioCtx.resume().catch(() => {});
+  }
+  const now = ogpAudioCtx.currentTime;
+  if (type === 'countdown_beep') {
+    const osc = ogpAudioCtx.createOscillator();
+    const gain = ogpAudioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(param > 0 ? 580 : 880, now);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (param > 0 ? 0.15 : 0.4));
+    osc.connect(gain);
+    gain.connect(ogpAudioCtx.destination);
+    osc.start(now);
+    osc.stop(now + (param > 0 ? 0.15 : 0.4));
+  } else if (type === 'boost') {
+    const osc = ogpAudioCtx.createOscillator();
+    const gain = ogpAudioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(650, now + 0.35);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc.connect(gain);
+    gain.connect(ogpAudioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  } else if (type === 'item_get') {
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((freq, idx) => {
+      const osc = ogpAudioCtx.createOscillator();
+      const gain = ogpAudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+      gain.gain.setValueAtTime(0.15, now + idx * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.12);
+      osc.connect(gain);
+      gain.connect(ogpAudioCtx.destination);
+      osc.start(now + idx * 0.06);
+      osc.stop(now + idx * 0.06 + 0.12);
+    });
+  } else if (type === 'banana_hit') {
+    const osc = ogpAudioCtx.createOscillator();
+    const gain = ogpAudioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.35);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+    osc.connect(gain);
+    gain.connect(ogpAudioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.35);
+  } else if (type === 'screech') {
+    const bufferSize = Math.floor(ogpAudioCtx.sampleRate * 0.1);
+    const buffer = ogpAudioCtx.createBuffer(1, bufferSize, ogpAudioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
+    const noise = ogpAudioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ogpAudioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, now);
+    filter.Q.setValueAtTime(5, now);
+    const gain = ogpAudioCtx.createGain();
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ogpAudioCtx.destination);
+    noise.start(now);
+  } else if (type === 'finish_win') {
+    const arpeggio = [440, 554.37, 659.25, 880];
+    arpeggio.forEach((freq, idx) => {
+      const osc = ogpAudioCtx.createOscillator();
+      const gain = ogpAudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+      gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.3);
+      osc.connect(gain);
+      gain.connect(ogpAudioCtx.destination);
+      osc.start(now + idx * 0.1);
+      osc.stop(now + idx * 0.1 + 0.3);
+    });
+  }
+}
+
+function ogpUpdateEngineSound(speed, isRacing) {
+  if (ogpAudioMuted || !isRacing) {
+    if (ogpEngineGain && ogpAudioCtx) ogpEngineGain.gain.setValueAtTime(0, ogpAudioCtx.currentTime);
+    return;
+  }
+  ogpInitAudio();
+  if (!ogpAudioCtx) return;
+  if (!ogpEngineOsc) {
+    ogpEngineOsc = ogpAudioCtx.createOscillator();
+    ogpEngineGain = ogpAudioCtx.createGain();
+    ogpEngineOsc.type = 'sawtooth';
+    ogpEngineOsc.frequency.setValueAtTime(55, ogpAudioCtx.currentTime);
+    ogpEngineGain.gain.setValueAtTime(0, ogpAudioCtx.currentTime);
+    ogpEngineOsc.connect(ogpEngineGain);
+    ogpEngineGain.connect(ogpAudioCtx.destination);
+    ogpEngineOsc.start();
+  }
+  const targetFreq = 50 + (speed / OGP_MAX_SPEED) * 160;
+  ogpEngineOsc.frequency.setTargetAtTime(targetFreq, ogpAudioCtx.currentTime, 0.05);
+  ogpEngineGain.gain.setTargetAtTime(0.04 + (speed / OGP_MAX_SPEED) * 0.07, ogpAudioCtx.currentTime, 0.05);
 }
 
 function ogpCarDef(id) {
@@ -27232,12 +27394,23 @@ function ogpCreateKart(THREE, carDef, number) {
   hitRing.visible = false;
   group.add(hitRing);
 
+  const sparkMat = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: .9, depthWrite: false });
+  const sparkGeo = new THREE.SphereGeometry(.14, 6, 6);
+  const sparks = [-.65, .65].map(x => {
+    const spark = new THREE.Mesh(sparkGeo, sparkMat.clone());
+    spark.position.set(x, .2, 1.25);
+    spark.visible = false;
+    group.add(spark);
+    return spark;
+  });
+
   group.scale.setScalar(.78);
   group.userData.wheelRolls = wheelRolls;
   group.userData.frontSteers = frontSteers;
   group.userData.shield = shield;
   group.userData.trails = trails;
   group.userData.hitRing = hitRing;
+  group.userData.sparks = sparks;
   group.userData.wheelSpin = 0;
   return group;
 }
@@ -27321,7 +27494,13 @@ function ogpBuildScene(runtime, THREE) {
   // width up to ~9 (verified offline with the real offset-polyline geometry
   // this function builds; see docs/office-grand-prix-v2-release-gate.md).
   const points = [
-    [-38,44],[-35,44],[-32,44],[-29,44],[-26,44],[-23,44],[-20,44],[-17,44],[-14,44],[-11,44],[-8,44],[-5,44],[-2,44],[1,44],[4,44],[7,44],[10,44],[13,44],[16,44],[19,44],[22,44],[25,44],[28,44],[31,44],[34,44],[36.99,43.84],[39.95,43.36],[42.85,42.57],[45.64,41.47],[48.29,40.08],[50.79,38.41],[53.09,36.49],[55.17,34.33],[57.01,31.96],[58.58,29.41],[59.87,26.7],[60.87,23.87],[61.56,20.96],[61.93,17.98],[62,14.98],[62,11.98],[62,8.98],[62,5.98],[62,2.98],[62,-0.02],[62,-3.02],[62,-6.02],[62,-9.02],[62,-12.02],[62,-15.02],[62,-18.02],[62,-21.02],[61.91,-24.01],[61.43,-26.97],[60.56,-29.84],[59.3,-32.56],[57.68,-35.09],[55.74,-37.37],[53.5,-39.37],[51.02,-41.04],[48.33,-42.36],[45.48,-43.31],[42.53,-43.85],[39.54,-44],[36.54,-44],[33.54,-44],[30.54,-44],[27.54,-44],[24.54,-44],[21.54,-44],[18.54,-44],[15.54,-44],[12.54,-44],[9.54,-44],[6.54,-44],[3.54,-44],[0.54,-44],[-2.46,-44],[-5.46,-44],[-8.46,-44],[-11.46,-44],[-14.46,-44],[-17.46,-44],[-20.46,-44],[-23.46,-44],[-26.46,-44],[-29.46,-44],[-32.46,-44],[-35.46,-44],[-38.46,-43.88],[-41.42,-43.43],[-44.31,-42.64],[-47.09,-41.51],[-49.73,-40.08],[-52.18,-38.35],[-54.41,-36.36],[-56.4,-34.11],[-58.12,-31.66],[-59.55,-29.02],[-60.66,-26.24],[-61.45,-23.34],[-61.89,-20.38],[-62,-17.38],[-62,-14.38],[-62,-11.38],[-62,-8.38],[-62,-5.38],[-62,-2.38],[-62,0.62],[-62,3.62],[-62,6.62],[-62,9.62],[-62,12.62],[-62,15.62],[-62,18.62],[-61.95,21.62],[-61.56,24.59],[-60.8,27.49],[-59.69,30.28],[-58.24,32.9],[-56.47,35.32],[-54.42,37.51],[-52.11,39.42],[-49.58,41.02],[-46.86,42.3],[-44.01,43.23],[-41.07,43.8],
+    [-38,44],[-34,44],[-30,44],[-26,44],[-22,44],[-18,44],[-14,44],[-10,44],[-6,44],[-2,44],[2,44],[6,44],[10,44],[14,44],[18,44],[22,44],[26,44],[30,44],[34,44],
+    [39,43],[44,41],[49,38],[54,34],[58,29],[61,23],[63,16],[63,8],
+    [61,0],[57,-7],[54,-14],[56,-21],[60,-27],
+    [62,-33],[60,-38],[56,-42],[50,-44],[44,-44],[38,-44],[32,-44],[26,-44],[20,-44],[14,-44],[8,-44],[2,-44],
+    [-4,-44],[-10,-44],[-16,-44],[-22,-44],[-28,-44],[-34,-44],[-40,-44],
+    [-46,-43],[-52,-41],[-57,-37],[-61,-31],[-63,-24],[-63,-16],[-61,-8],[-57,-2],
+    [-52,4],[-48,10],[-50,17],[-54,24],[-59,31],[-61,37],[-59,42],[-54,44],[-48,44],[-43,44]
   ].map(([x, z]) => new THREE.Vector3(x, .14, z));
   const path = new THREE.CatmullRomCurve3(points, true, 'catmullrom', .5);
 
@@ -27626,6 +27805,21 @@ function ogpRenderFrame(timestamp) {
       data.hitRing.rotation.z = timestamp * .008;
       data.hitRing.material.opacity = .52 + .3 * Math.sin(timestamp * .018);
     }
+
+    const slipAngle = Math.abs(ogpAngleDelta(car.moveHeading, car.heading));
+    const isDrifting = slipAngle >= 12 && car.speed > 130;
+    if (data.sparks) {
+      data.sparks.forEach((spark, sIdx) => {
+        spark.visible = isDrifting;
+        if (isDrifting) {
+          spark.material.opacity = .6 + .4 * Math.sin(timestamp * .05 + sIdx);
+          spark.scale.setScalar(.8 + .5 * Math.random());
+        }
+      });
+    }
+    if (isDrifting && index === displayRace.localSlot && Math.random() < 0.12) {
+      ogpPlaySound('screech');
+    }
   });
 
   runtime.itemMeshes.forEach((box, index) => {
@@ -27655,6 +27849,17 @@ function ogpRenderFrame(timestamp) {
       const lookDamping = 1 - Math.exp(-11.5 * delta / 1000);
       runtime.cameraPosition.lerp(runtime.cameraWanted, positionDamping);
       runtime.cameraLook.lerp(runtime.cameraLookWanted, lookDamping);
+
+      const targetFov = local.boostTicks > 0 ? 74 : 64;
+      runtime.camera.fov += (targetFov - runtime.camera.fov) * (1 - Math.exp(-10 * delta / 1000));
+      runtime.camera.updateProjectionMatrix();
+
+      if (local.slowTicks > 0) {
+        const shake = (local.slowTicks / OGP_SLOW_TICKS) * 0.28;
+        runtime.cameraPosition.x += (Math.random() - 0.5) * shake;
+        runtime.cameraPosition.y += (Math.random() - 0.5) * shake;
+      }
+
       runtime.camera.position.copy(runtime.cameraPosition);
       runtime.camera.lookAt(runtime.cameraLook);
     }
@@ -27686,10 +27891,16 @@ function ogpUpdateHud() {
   const local = race.cars[race.localSlot];
   if (ogpPositionEl) ogpPositionEl.textContent = `${ogpPlaceOf(race, local.slot)}/8`;
   if (ogpTimeEl) ogpTimeEl.textContent = ogpFormatTime((local.finishedTick || race.tick) * OGP_TICK_MS);
+  const speedEl = document.getElementById('ogp-speed');
+  if (speedEl) speedEl.textContent = `${Math.floor(local.speed)} km/h`;
+  const driftEl = document.getElementById('ogp-drift-badge');
+  const slipAngle = Math.abs(ogpAngleDelta(local.moveHeading, local.heading));
+  if (driftEl) driftEl.classList.toggle('hidden', !(slipAngle >= 12 && local.speed > 130));
   if (ogpItemEl) {
     const base = local.item ? OGP_ITEM_LABEL[local.item] : '—';
     ogpItemEl.textContent = local.shieldTicks > 0 ? `${base} · 🛡️` : base;
   }
+  ogpUpdateEngineSound(local.speed, officeGrandPrixRuntime.playing && !officeGrandPrixRuntime.prestart);
 }
 
 function ogpDrawMinimap() {
@@ -27997,12 +28208,15 @@ function ogpStartRace(seed, roster, localSlot, opts = {}) {
   let count = 3;
   show(ogpBannerEl);
   ogpBannerEl.textContent = String(count);
+  ogpPlaySound('countdown_beep', count);
   const timer = setInterval(() => {
     count -= 1;
     if (count > 0) {
       ogpBannerEl.textContent = String(count);
+      ogpPlaySound('countdown_beep', count);
     } else if (count === 0) {
       ogpBannerEl.textContent = 'START!';
+      ogpPlaySound('countdown_beep', 0);
       runtime.prestart = false;
       setTimeout(() => hide(ogpBannerEl), 650);
     } else {
@@ -28023,6 +28237,7 @@ async function ogpFinishRace() {
   const local = race.cars[race.localSlot];
   const place = order.findIndex(car => car.slot === local.slot) + 1;
   const dnf = local.finishedTick == null;
+  if (!dnf && place <= 3) ogpPlaySound('finish_win');
   show(ogpLobby);
   const title = ogpLobby.querySelector('.ogp-lobby-title > span');
   const copy = document.getElementById('ogp-lobby-copy');
@@ -28147,6 +28362,7 @@ document.getElementById('ogp-item-btn')?.addEventListener('pointerdown', event =
   ogpQueueItemUse();
 });
 document.getElementById('ogp-fullscreen')?.addEventListener('click', ogpToggleFullscreen);
+document.getElementById('ogp-sound-toggle')?.addEventListener('click', ogpToggleAudio);
 document.addEventListener('fullscreenchange', () => {
   const active = document.fullscreenElement === ogpStage;
   if (ogpStage) ogpStage.classList.toggle('is-immersive', active);
