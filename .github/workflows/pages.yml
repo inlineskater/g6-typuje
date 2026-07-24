@@ -34,6 +34,7 @@ jobs:
           mkdir -p _site
           cp index.html _site/index.html
           cp login_hero.jpg _site/login_hero.jpg
+          cp -r games _site/games
           touch _site/.nojekyll
 
       - name: Upload artifact
