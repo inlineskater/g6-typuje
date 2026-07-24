@@ -35,6 +35,27 @@
       --no-line:   rgba(220,38,38,.22);
       --radius:    10px;
       --page-pad:  24px;
+
+      /* ── Design scale (2026-07 Ogródek restyle) ──────────────────────────
+         Before this block the farm CSS used 17 literal border-radii and 70
+         unique box-shadow strings for what are conceptually 3 card types.
+         Use these tokens for anything new; they are what makes the UI read as
+         one designed system instead of a pile of one-off panels. */
+      --r-sm:   8px;    /* chips, inputs, small controls */
+      --r-md:   12px;   /* the default card/panel radius */
+      --r-lg:   16px;   /* hero panels, modals-in-modals */
+      --r-pill: 999px;
+
+      --sh-sm:  0 1px 2px rgba(15,23,42,.05);
+      --sh-md:  0 2px 8px rgba(15,23,42,.06);
+      --sh-lg:  0 8px 28px rgba(15,23,42,.10);
+
+      /* Referenced across the farm CSS but never defined until now — two call
+         sites had no fallback (.fcc-item-slot, .farm-cat-perday-note) and were
+         rendering transparent / unstyled. */
+      --bg-mid:    #f1f5f9;
+      --surface-2: #f8fafc;
+      --text-dim:  #6b7280;
     }
 
     body {
@@ -5442,22 +5463,14 @@
     .farm-topbar { display: flex; flex-direction: column; gap: 10px; padding: 11px 14px; border: 3px solid #765438; border-radius: 10px; background: repeating-linear-gradient(0deg, transparent 0 13px, rgba(60,30,10,.075) 13px 14px), linear-gradient(180deg, #efd3a7 0%, #dfb77f 54%, #c9955f 100%); box-shadow: 0 6px 14px rgba(60,30,10,.16), inset 0 1px 0 rgba(255,255,255,.45); }
     .farm-toolbar-host { display: flex; justify-content: center; }
     /* Tile inspector now lives inside the one wooden top bar — strip its own plate look, add a divider + height cap. */
-    .farm-topbar .farm-section { border: none; border-radius: 0; background: none; box-shadow: none; padding: 10px 2px 0; margin: 0; border-top: 1px solid rgba(60,30,10,.3); max-height: 240px; overflow-y: auto; }
-    .farm-topbar .farm-section::before, .farm-topbar .farm-section::after { display: none; }
-    .farm-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-    /* Side panels styled like the Zen garden wooden sign-boards */
-    .farm-section { position: relative; padding: 14px 14px 12px; border: 3px solid #765438; border-radius: 8px; color: #3d2810; font-size: 12px; line-height: 1.5;
-      background:
-        repeating-linear-gradient(0deg, transparent 0 13px, rgba(60,30,10,.075) 13px 14px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 60px, rgba(60,30,10,.04) 60px 61px),
-        linear-gradient(180deg, #efd3a7 0%, #dfb77f 54%, #c9955f 100%);
-      box-shadow: 0 8px 16px rgba(60,30,10,.16), inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 5px rgba(60,30,10,.14); }
-    .farm-section::before, .farm-section::after { content: ''; position: absolute; top: 6px; width: 7px; height: 7px; border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #6b4a2a, #1f1108 75%); box-shadow: inset 0 -1px 0 rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.15); }
-    .farm-section::before { left: 6px; } .farm-section::after { right: 6px; }
-    .farm-section h4, .farm-sel-title { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #14532d; text-shadow: 0 1px 0 rgba(255,255,255,.35); }
-    .farm-section .farm-empty, .farm-card-sub { font-size: 12px; color: #5a4326; }
-    .farm-card-name { color: #2c1d0c; }
+    /* The wooden side board (.farm-section / .farm-side) was removed when the hub
+       moved into the modal — its CSS is gone. Wood now survives only where it is
+       deliberate scenery: .farm-topbar, .notice-board, .plot-sign, .farm-divider.
+       These three classes outlived it and are used inside the WHITE modal, so
+       they drop the wood-brown/green ink for the neutral text tokens. */
+    .farm-sel-title { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .farm-card-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .farm-card-name { color: var(--text); }
     .farm-box-link-btn { display: block; width: 100%; margin-bottom: 10px; padding: 9px 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 800; font-size: 12px; color: #fff; background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 2px 6px rgba(217,119,6,.4); }
     .farm-box-link-btn:hover { filter: brightness(1.06); }
     /* Ogródek-style scene: grass field with a sky band on top + weather overlay. */
@@ -5891,11 +5904,12 @@
     .farm-v2-modal::-webkit-scrollbar { width: 0; height: 0; display: none; }
     .farm-v2-body { padding: 4px 2px 2px; }
     /* Hub modal tab bar (Katalog / Mój Majątek / Jak to działa) */
-    .farm-hub-tabs { display: flex; gap: 4px; padding: 4px; margin: 0 0 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
-    .farm-hub-tab { flex: 1 1 0; min-width: 0; padding: 9px 8px; border: none; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 800; font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background .12s, color .12s; }
+    /* Wraps to a second row instead of ellipsising labels — with 7 tabs the old
+       `flex: 1 1 0` squeezed them into „Mój M…" / „Jak to…" on narrow modals. */
+    .farm-hub-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin: 0 0 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+    .farm-hub-tab { flex: 0 1 auto; min-width: max-content; padding: 9px 12px; border: none; border-radius: var(--r-sm); background: transparent; color: var(--muted); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; transition: background .12s, color .12s; }
     .farm-hub-tab:hover { color: var(--text); }
-    .farm-hub-tab.active { background: var(--accent); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
-    .farm-hub-body { min-height: 120px; }
+    .farm-hub-tab.active { background: var(--accent); color: #fff; font-weight: 700; box-shadow: var(--sh-sm); }
     .farm-cat-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
     .farm-cat-head-txt { flex: 1 1 220px; min-width: 0; }
     .farm-cat-head-title { font-weight: 800; font-size: 14px; color: var(--text); }
@@ -6131,6 +6145,131 @@
     .fcc.rar-epic { background: linear-gradient(160deg, #e0b3ff, #a855f7); }
     .fcc.rar-legendary { background: linear-gradient(160deg, #fde68a, #f59e0b); }
     .fcc.nft { background: linear-gradient(160deg, #fde68a, #b45309); box-shadow: 0 0 16px rgba(245,158,11,.5), 0 4px 12px rgba(0,0,0,.25); }
+    /* Bred hybrid NFTs get a holographic (rainbow) frame. */
+    .fcc.is-hybrid { background: linear-gradient(135deg, #f472b6, #a855f7, #38bdf8, #34d399, #fde047, #f472b6); background-size: 300% 300%; animation: fccHolo 6s linear infinite; box-shadow: 0 0 18px rgba(168,85,247,.5), 0 4px 12px rgba(0,0,0,.25); }
+    @keyframes fccHolo { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+    .farm-nft-card.is-hybrid { background: linear-gradient(165deg, #fdf2ff, #f0e0ff); border-color: #a855f7; box-shadow: 0 8px 28px rgba(168,85,247,.35), inset 0 1px 0 rgba(255,255,255,.6); }
+    /* 🧬 Kolekcje tab */
+    /* „Co nowego" — one-time release note, corner card (never blocks the app) */
+    .whatsnew { position: fixed; right: 16px; bottom: 16px; z-index: 200; width: min(330px, calc(100vw - 32px));
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--sh-lg);
+      padding: 13px 14px; opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .2s; }
+    .whatsnew.show { opacity: 1; transform: none; }
+    .whatsnew-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .whatsnew-title { font-weight: 700; font-size: 13px; }
+    .whatsnew-x { border: none; background: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 2px 4px; line-height: 1; }
+    .whatsnew-x:hover { color: var(--text); }
+    .whatsnew-list { list-style: none; margin: 9px 0 11px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+    .whatsnew-list li { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .wn-ic { flex: 0 0 auto; }
+    .whatsnew-ok { width: 100%; padding: 8px; border: none; border-radius: var(--r-sm); background: var(--accent); color: #fff; font-weight: 600; font-size: 12px; cursor: pointer; }
+    .whatsnew-ok:hover { background: #4f46e5; }
+    /* 🏡 Działki — compact ownership chips (replaced poster-sized .fcc deeds) */
+    .deed-chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 6px; margin: 8px 0 4px; }
+    .deed-chip { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--border); border-left: 3px solid var(--dim); border-radius: var(--r-sm); background: var(--card); font-size: 12px; }
+    .deed-chip.deed-free { border-left-color: #22c55e; }
+    .deed-chip.deed-busy { border-left-color: #f59e0b; }
+    .deed-chip.deed-listed { border-left-color: #6366f1; }
+    .deed-chip.deed-mig { border-left-color: #a855f7; }
+    .deed-chip-label { font-weight: 700; font-size: 11px; letter-spacing: .02em; }
+    .deed-chip-status { color: var(--muted); font-weight: 500; }
+    .deed-chip-val { margin-left: auto; font-weight: 600; white-space: nowrap; }
+    /* 🏅 Osiągnięcia */
+    .farm-ach-picker { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
+    .farm-ach-list { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+    @media (min-width: 720px) { .farm-ach-list { grid-template-columns: 1fr 1fr; } }
+    .fac-tier.none { color: var(--muted); font-weight: 600; opacity: .65; }
+    .farm-ach-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px; background: var(--card); box-shadow: var(--sh-sm); }
+    .farm-ach-card.is-maxed { border-color: #f59e0b; box-shadow: 0 0 0 1px rgba(245,158,11,.35), var(--sh-md); }
+    .fac-head { display: flex; align-items: center; gap: 8px; }
+    .fac-icon { font-size: 20px; line-height: 1; }
+    .fac-title { font-weight: 700; flex: 1; font-size: 14px; }
+    .fac-bonus-pill { font-weight: 700; font-size: 12px; color: #15803d; background: rgba(34,197,94,.12); border-radius: var(--r-pill); padding: 3px 9px; white-space: nowrap; }
+    .fac-bonus-pill.zero { color: var(--muted); background: var(--surface); }
+    .fac-bonus { font-weight: 900; color: #16a34a; font-size: 13px; margin-top: 4px; }
+    .fac-bar { position: relative; height: 6px; border-radius: var(--r-pill); background: var(--surface); overflow: hidden; margin: 10px 0 7px; }
+    .fac-bar i { display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .3s; }
+    .fac-tick { position: absolute; top: 0; width: 2px; height: 100%; background: var(--card); }
+    .fac-tick.hit { background: rgba(255,255,255,.5); }
+    .fac-foot { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .farm-ach-effect { font-size: 12px; color: var(--muted); margin-top: 5px; padding-top: 5px; border-top: 1px dotted var(--border); }
+    .ach-lb { margin-top: 6px; }
+    .ach-lb > summary { cursor: pointer; font-size: 11px; font-weight: 700; color: var(--muted); list-style: none; padding: 3px 0; user-select: none; }
+    .ach-lb > summary::-webkit-details-marker { display: none; }
+    .ach-lb > summary::before { content: '▸ '; }
+    .ach-lb[open] > summary::before { content: '▾ '; }
+    .ach-lb > summary:hover { color: var(--text); }
+    .ach-lb-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 3px; }
+    .ach-lb-table td { padding: 3px 4px; border-top: 1px solid var(--border); }
+    .ach-lb-table th { padding: 3px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 800; text-align: left; border-bottom: 1px solid var(--border); }
+    .ach-lb-table tr.is-me { font-weight: 800; background: rgba(245,158,11,.14); box-shadow: inset 2px 0 0 #f59e0b; }
+    .ach-lb-pos { width: 22px; color: var(--muted); }
+    .ach-lb-val { text-align: right; font-weight: 600; width: 52px; }
+    .ach-lb-tier { width: 54px; text-align: right; white-space: nowrap; }
+    .fac-mine { font-size: 13px; margin-top: 1px; }
+    .fac-mine b { font-size: 16px; }
+    .fac-mine-tag { color: var(--muted); font-size: 11px; font-weight: 700; margin-left: 4px; }
+    .farm-section-block { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+    .farm-block-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; letter-spacing: -.01em; }
+    .farm-series-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
+    .farm-series-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 10px; text-align: center; background: var(--card); transition: border-color .12s, box-shadow .12s; }
+    .farm-series-card:hover { border-color: var(--border-hi); box-shadow: var(--sh-sm); }
+    .farm-series-card.is-live { border-color: var(--yes); box-shadow: 0 0 0 1px rgba(22,163,74,.25), var(--sh-md); }
+    .farm-series-card.is-soon { opacity: .62; filter: grayscale(.35); }
+    .farm-series-card.is-soldout { opacity: .8; }
+    .fsc-art { font-size: 34px; line-height: 1; }
+    .fsc-name { font-weight: 600; font-size: 13px; margin: 6px 0 4px; }
+    .fsc-tag { font-size: 11px; font-weight: 500; color: var(--muted); }
+    .fsc-ed { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .farm-breed-select { width: 100%; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; }
+    .farm-breed-preview { margin-top: 12px; }
+    .fbp-eq { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 30px; }
+    .fbp-op { font-size: 20px; color: var(--muted); font-weight: 900; }
+    .fbp-result { font-size: 40px; filter: drop-shadow(0 2px 6px rgba(168,85,247,.5)); }
+    .fbp-name { text-align: center; font-weight: 900; font-size: 16px; margin-top: 6px; }
+    /* 🧬 Laboratorium krzyżowania */
+    .bl-modal { max-width: 960px; width: 100%; }
+    .bl-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: stretch; }
+    @media (max-width: 720px) { .bl-grid { grid-template-columns: 1fr; } }
+    .bl-slot { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px; background: var(--card); min-width: 200px; }
+    .bl-slot.filled { border-color: #cbd5e1; }
+    .bl-slot-head { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 800; margin-bottom: 4px; }
+    .bl-result { background: linear-gradient(165deg, #fbf7ff, #f3ecff); border-color: #d8b4fe; }
+    .bl-result.ready { box-shadow: 0 6px 22px rgba(168,85,247,.18); }
+    .bl-empty { font-size: 34px; text-align: center; color: var(--muted); opacity: .45; margin: 14px 0 4px; }
+    .bl-empty-txt { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 8px; }
+    .bl-art { font-size: 44px; text-align: center; line-height: 1.1; }
+    .bl-art-holo { filter: drop-shadow(0 3px 10px rgba(168,85,247,.5)); }
+    .bl-name { font-weight: 700; text-align: center; font-size: 15px; }
+    .bl-sub { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 8px; }
+    .bl-stat { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; border-top: 1px solid var(--border); }
+    .bl-stat span { color: var(--muted); }
+    .bl-stat.good b { color: #16a34a; }
+    .bl-stat.good b::after { content: ' ▲'; font-size: 9px; }
+    .bl-synergy { margin-top: 8px; font-size: 11px; font-weight: 700; color: #7c3aed; background: rgba(168,85,247,.1); border-radius: 7px; padding: 5px 7px; text-align: center; }
+    .bl-pick { margin-top: auto; align-self: stretch; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font-weight: 800; font-size: 12px; cursor: pointer; }
+    .bl-pick:hover { background: var(--card); }
+    .bl-foot { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .bl-warn { font-size: 12px; color: #b45309; font-weight: 500; }
+    .bl-choose-head { font-weight: 800; margin-bottom: 8px; }
+    .bl-choose { display: flex; flex-direction: column; gap: 5px; max-height: 46vh; overflow: auto; }
+    .bl-choose-row { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--card); cursor: pointer; text-align: left; font: inherit; transition: border-color .12s, background .12s; }
+    .bl-choose-row:hover { border-color: #a855f7; background: #faf5ff; box-shadow: var(--sh-sm); }
+    .bcr-emoji { font-size: 20px; }
+    .bcr-name { font-weight: 600; font-size: 13px; }
+    .bcr-stat { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .breed-formula { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 2px; }
+    .bf-card { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); }
+    .bf-card.bf-out { border: 0; background: linear-gradient(135deg, #f472b6, #a855f7, #38bdf8, #34d399, #fde047, #f472b6); background-size: 300% 300%; animation: fccHolo 6s linear infinite; }
+    .bf-op { color: var(--muted); font-weight: 900; }
+    .bf-caption { font-size: 12px; color: var(--muted); flex: 1 1 180px; }
+    .breed-facts { list-style: none; margin: 8px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+    .breed-facts li { display: flex; gap: 7px; align-items: flex-start; line-height: 1.5; }
+    .bfx { flex: 0 0 auto; }
+    .breed-cta { display: inline-flex; width: auto; padding: 9px 16px; }
+    .farm-hybrid-feed { margin-top: 8px; }
+    .farm-hybrid-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 4px 0; border-bottom: 1px dotted var(--border); }
+    .fhr-parents { color: var(--muted); white-space: nowrap; }
     .fcc-inner { position: relative; border-radius: 11px; background: var(--card); padding: 10px 8px 9px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
     .fcc-gem { position: absolute; top: 7px; left: 7px; z-index: 3; min-width: 22px; height: 21px; padding: 0 6px; border-radius: 7px; background: linear-gradient(160deg, #334155, #0f172a); color: #fde68a; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 1px; box-shadow: 0 1px 3px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.28); }
     .fcc-pin { position: absolute; top: 7px; right: 7px; z-index: 3; font-size: 10px; font-weight: 900; color: #b45309; background: rgba(255,255,255,.88); border-radius: 6px; padding: 1px 5px; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
@@ -6209,14 +6348,21 @@
         radial-gradient(circle at 88% 70%, #fff7c2 0 3px, transparent 4px);
       animation: fccSpark .65s ease forwards; }
     @keyframes fccSpark { 0% { opacity: 0; transform: scale(.6); } 35% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
-    /* Wooden carved tool buttons inside the farm side board */
-    .farm-tool-btn { color: #fbf0d8; text-shadow: 0 1px 1px rgba(0,0,0,.45); border: 1px solid #4a2c12;
-      background: linear-gradient(180deg, #8a5a32, #6d431f); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 4px rgba(40,20,6,.3); }
-    .farm-tool-btn:hover { color: #fff; border-color: #3a2210; background: linear-gradient(180deg, #976233, #784a22); }
-    .farm-tool-btn.primary { border-color: #b45309; background: linear-gradient(180deg, #fbbf24, #f59e0b); color: #422006; text-shadow: 0 1px 0 rgba(255,255,255,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 2px 5px rgba(180,83,9,.4); }
-    .farm-tool-btn.primary:hover { color: #2c1500; background: linear-gradient(180deg, #fcc63a, #fba60d); border-color: #92400e; }
+    /* These open the SAME destinations as .farm-hub-tab in the modal, so they
+       share its shape: same radius, weight, size and accent. (They used to be
+       carved wooden planks, which made one navigation land in two visual
+       languages depending on whether you were in the garden or in a window.)
+       The wood stays where it is scenery — the bar they sit on, signs, fence. */
+    .farm-tool-btn { color: var(--text); text-shadow: none; border: 1px solid var(--border);
+      border-radius: var(--r-sm); font-weight: 600; font-size: 13px;
+      background: var(--card); box-shadow: var(--sh-sm); transition: background .12s, color .12s, border-color .12s; }
+    .farm-tool-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--card); }
+    .farm-tool-btn.primary { border-color: transparent; background: var(--accent); color: #fff; font-weight: 700; text-shadow: none; box-shadow: var(--sh-sm); }
+    .farm-tool-btn.primary:hover { background: #4f46e5; color: #fff; border-color: transparent; }
     /* Hub modal: clean white, matching the rest of the site (wood stays only on the farm side board) */
-    .farm-hub-body { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    /* One definition only — this used to be declared twice (the later copy
+       silently dropped min-height, so an empty tab collapsed to nothing). */
+    .farm-hub-body { min-height: 120px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px; }
     /* Box-buy store: owned-box banner + "open in inventory" hint */
     .farm-box-owned { margin-top: 10px; padding: 9px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; color: var(--text); background: var(--surface); border: 1px solid var(--border); text-align: center; }
     .farm-box-owned b { font-weight: 900; color: var(--accent); }
@@ -6317,7 +6463,7 @@
     .mlc-bid-hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
     /* Crop price-history charts (📈 Ceny tab) */
     .farm-price-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 4px; }
-    .farm-price-card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px; box-shadow: 0 2px 10px rgba(15,23,42,.05); }
+    .farm-price-card { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); padding: 12px; box-shadow: var(--sh-sm); }
     .farm-price-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
     .farm-price-ic { font-size: 26px; line-height: 1; }
     .farm-price-ic .farm-ico { width: 28px; height: 28px; }
@@ -9714,6 +9860,52 @@ function showApp() {
   switchTab('farm');   // Ogródek is the home tab
   setupRealtime();
   if (DOCUMENTS_ENABLED) loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
+  setTimeout(maybeShowWhatsNew, 1200);   // after the entry animation settles
+}
+
+// ── „Co nowego" — one-time release note ───────────────────────────────────
+// A small dismissible card in the corner, shown ONCE per browser and only for
+// the current WHATS_NEW_ID. Deliberately not a blocking modal: it announces
+// features, it does not gate anything. Bump the id (and the list) for the next
+// release; everyone sees the new one exactly once.
+const WHATS_NEW_ID = 'nft-2026-07-24';
+const WHATS_NEW = {
+  title: 'Co nowego w Ogródku',
+  items: [
+    ['🗓️', 'Co poniedziałek NOWA limitowana kolekcja NFT — nakład jest mały, kto pierwszy ten lepszy.'],
+    ['🧬', 'Krzyżowanie kart: dwie różne karty NFT → jedna hybryda, lepsza od obu rodziców.'],
+    ['🏅', 'Osiągnięcia: 5 torów z pasywnymi bonusami (lepsze ceny, szybszy wzrost, większe zbiory).'],
+    ['✨', 'Odświeżony wygląd Ogródka i nowe „Laboratorium krzyżowania".'],
+  ],
+};
+
+function maybeShowWhatsNew() {
+  let seen = null;
+  try { seen = localStorage.getItem('rp_whats_new'); } catch (e) { return; }   // private mode → skip
+  if (seen === WHATS_NEW_ID) return;
+  if (document.querySelector('.whatsnew')) return;   // already on screen
+
+  const card = el('div', { className: 'whatsnew' });
+  const close = () => {
+    try { localStorage.setItem('rp_whats_new', WHATS_NEW_ID); } catch (e) {}
+    card.classList.remove('show');
+    setTimeout(() => card.remove(), 200);
+  };
+  const x = el('button', { className: 'whatsnew-x', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  x.addEventListener('click', close);
+  card.append(el('div', { className: 'whatsnew-head' },
+    el('span', { className: 'whatsnew-title' }, '✨ ' + WHATS_NEW.title), x));
+  const list = el('ul', { className: 'whatsnew-list' });
+  WHATS_NEW.items.forEach(([ic, tx]) =>
+    list.append(el('li', {}, el('span', { className: 'wn-ic' }, ic), tx)));
+  card.append(list);
+  const ok = el('button', { className: 'whatsnew-ok', type: 'button' }, 'Jasne, zamknij');
+  ok.addEventListener('click', close);
+  card.append(ok);
+  document.body.append(card);
+  // setTimeout, not rAF alone: rAF never fires while the tab is in the
+  // background, which would leave the card mounted at opacity 0.
+  setTimeout(() => card.classList.add('show'), 20);
 }
 
 function updateAdminTestTabs() {
@@ -19441,6 +19633,60 @@ const SEASONAL_OVERRIDES = {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+//  Weekly seasonal NFT series (Farma) — display mirror of
+//  supabase/farm-weekly-nft-series.sql. A new limited-edition NFT plant goes live
+//  every Monday 00:00 Europe/Warsaw; editions keep dropping UNTIL SOLD OUT. The
+//  authoritative activation/supply is server-side (farm_nft_series_schedule view);
+//  this array only drives the „Wkrótce 🔒" preview + labels. Keep the rows (and
+//  edition sizes) byte-for-byte in sync with the seeded catalog in that SQL file.
+// ════════════════════════════════════════════════════════════════════════════
+const NFT_SERIES_ROTATION = [
+  { week: '2026-07-27', species: 'lavender_provence', name: 'Lawenda Prowansalska',  emoji: '🪻', edition: 8 },
+  { week: '2026-08-03', species: 'golden_harvest',    name: 'Złociste Żniwa',        emoji: '🌾', edition: 10 },
+  { week: '2026-08-10', species: 'garden_hollyhock',  name: 'Malwa Ogrodowa',        emoji: '🌺', edition: 8 },
+  { week: '2026-08-17', species: 'imperial_dahlia',   name: 'Dalia Cesarska',        emoji: '🌼', edition: 6 },
+  { week: '2026-08-24', species: 'golden_marigold',   name: 'Aksamitka Złota',       emoji: '🏵️', edition: 8 },
+  { week: '2026-08-31', species: 'vine_grape',        name: 'Grono Winne',           emoji: '🍇', edition: 8 },
+  { week: '2026-09-07', species: 'noble_boletus',     name: 'Borowik Szlachetny',    emoji: '🍄', edition: 6 },
+  { week: '2026-09-14', species: 'autumn_heather',    name: 'Wrzos Jesienny',        emoji: '🌿', edition: 8 },
+  { week: '2026-09-21', species: 'sweet_chestnut',    name: 'Kasztan Jadalny',       emoji: '🌰', edition: 8 },
+  { week: '2026-09-28', species: 'giant_pumpkin',     name: 'Dynia Olbrzymia',       emoji: '🎃', edition: 5 },
+  { week: '2026-10-05', species: 'fiery_maple',       name: 'Klon Ognisty',          emoji: '🍁', edition: 8 },
+  { week: '2026-10-12', species: 'royal_chrysanth',   name: 'Chryzantema Królewska', emoji: '💮', edition: 6 },
+];
+
+// Curated hybrid recipes — display/preview mirror of farm_hybrid_recipes +
+// the hybrid defs in supabase/farm-nft-breeding.sql. Key = the two parent species
+// sorted + joined by '+'. Any uncatalogued different-species pair → wild_hybrid.
+const NFT_HYBRIDS = {
+  wild_hybrid:       { name: 'Dziki Mieszaniec',       emoji: '🌈', edition: 500 },
+  sunrose:           { name: 'Słoneczna Róża',         emoji: '🌹', edition: 12 },
+  paradise_lotus:    { name: 'Rajski Lotos',           emoji: '🪷', edition: 8 },
+  crystal_peony:     { name: 'Kryształowa Peonia',     emoji: '🌸', edition: 10 },
+  golden_nenufar:    { name: 'Złoty Nenufar',          emoji: '🌼', edition: 10 },
+  royal_rose_banana: { name: 'Różany Banan Królewski', emoji: '🌹', edition: 8 },
+  sunny_banana:      { name: 'Słoneczny Banan',        emoji: '🍌', edition: 8 },
+};
+const NFT_HYBRID_RECIPES = {
+  'aeae_banana+crystal_lotus':    'paradise_lotus',
+  'aeae_banana+diamond_rose':     'royal_rose_banana',
+  'aeae_banana+golden_sunflower': 'sunny_banana',
+  'crystal_lotus+diamond_rose':   'crystal_peony',
+  'crystal_lotus+golden_sunflower': 'golden_nenufar',
+  'diamond_rose+golden_sunflower': 'sunrose',
+};
+// The set of hybrid species (so the UI can flag a card as a bred hybrid).
+const NFT_HYBRID_SPECIES = new Set(Object.keys(NFT_HYBRIDS));
+// Client preview of the breeding outcome for a parent pair (mirrors breed_nft's
+// recipe lookup + wild fallback). Returns the hybrid meta ({species,name,emoji,...}).
+function farmBreedResult(spA, spB) {
+  if (!spA || !spB || spA === spB) return null;
+  const key = [spA, spB].sort().join('+');
+  const species = NFT_HYBRID_RECIPES[key] || 'wild_hybrid';
+  return Object.assign({ species, curated: species !== 'wild_hybrid' }, NFT_HYBRIDS[species]);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  Dokumenty do podpisania („Moje Dokumenty")
 //  Server stores only the drawn signature (document_signatures + sign_document
 //  RPC in supabase/documents.sql); the text lives here. `gate:'farm'` docs block
@@ -24256,15 +24502,18 @@ function farmBoxLinkBtn() {
 
 // Hub buttons, rendered at the bottom of the wooden side panel. 🎒 Mój Majątek is
 // the prominent primary action (selling & leveling live there now).
+// Built from FARM_HUB_TABS so the garden top bar and the hub modal's tab bar can
+// never drift apart — they open the same places, so they must show the same
+// labels in the same order (they previously disagreed: „Jak to działa" vs
+// „Pomoc", and the top bar was missing 🏅 Osiągnięcia entirely).
 function farmToolbar() {
-  const mkBtn = (cls, label, on) => { const b = el('button', { className: cls }, label); b.addEventListener('click', on); return b; };
-  return el('div', { className: 'farm-toolbar' },
-    mkBtn('farm-tool-btn primary', '🎒 Mój Majątek', () => openFarmHub('inventory')),
-    mkBtn('farm-tool-btn', '🏆 Wyzwanie', () => openFarmHub('seasonal')),
-    mkBtn('farm-tool-btn', '📖 Katalog', () => openFarmHub('catalog')),
-    mkBtn('farm-tool-btn', '📈 Cennik', () => openFarmHub('market')),
-    mkBtn('farm-tool-btn', '❓ Jak to działa', () => openFarmHub('help')),
-    mkBtn('farm-tool-btn', '📦 Skrzynki', () => openFarmHub('boxes')));
+  const bar = el('div', { className: 'farm-toolbar' });
+  FARM_HUB_TABS.forEach(t => {
+    const b = el('button', { className: 'farm-tool-btn' + (t.id === 'inventory' ? ' primary' : '') }, t.label);
+    b.addEventListener('click', () => openFarmHub(t.id));
+    bar.append(b);
+  });
+  return bar;
 }
 
 // One popup per plain-cell click: planted → rich detail modal; otherwise the
@@ -24570,7 +24819,8 @@ function farmNftTile(n) {
   const rar = def.rarity || 'legendary';
   const lvl = n.level || 1;
   const stars = lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '';
-  const tile = el('div', { className: 'fcc nft pickable rar-' + rar, title: 'Kliknij, aby zobaczyć kartę' });
+  const hybrid = NFT_HYBRID_SPECIES.has(n.species);
+  const tile = el('div', { className: 'fcc nft pickable rar-' + rar + (hybrid ? ' is-hybrid' : ''), title: 'Kliknij, aby zobaczyć kartę' });
   const planted = farmPlantedNftIds();
   let mergeBtn;
   if (n.listed) {
@@ -24587,7 +24837,7 @@ function farmNftTile(n) {
   tile.addEventListener('click', open);
   tile.append(
     el('div', { className: 'fcc-gem' }, '#' + n.serial_no + (lvl > 1 ? ' Lvl' + lvl : '')),
-    el('div', { className: 'fcc-pin' }, '💎'),
+    el('div', { className: 'fcc-pin' }, hybrid ? '🧬' : '💎'),
     el('div', { className: 'fcc-inner' },
       el('div', { className: 'fcc-art' }, farmIcon(def.emoji || '💎')),
       el('div', { className: 'fcc-name', title: n.nft_name || def.name }, (n.nft_name || def.name || n.species) + stars),
@@ -25030,11 +25280,15 @@ function farmCatalogGroups(mdl) {
     epic: { title: '✨ Epickie rośliny' },
     legendary: { title: '🏆 Legendarne' },
     nft: { title: '💎 Karty NFT', sub: 'Limitowane, numerowane okazy — wypadają z tej samej skrzynki za ' + FARM_BOX_PRICE + ' 🪙. Sprzedaż między graczami dodamy później.' },
+    hybrid: { title: '🧬 Hybrydy', sub: 'Nie wypadają ze skrzynek — powstają wyłącznie z krzyżowania dwóch kart NFT (🎒 Mój Majątek).' },
   };
-  const order = ['common', 'rare', 'epic', 'legendary', 'nft'];
+  const order = ['common', 'rare', 'epic', 'legendary', 'nft', 'hybrid'];
   const byKey = new Map();
   mdl.sorted.forEach(d => {
-    const key = d.edition_size != null ? 'nft' : d.rarity;
+    // Weekly series that hasn't started yet is previewed in „Kolekcje sezonowe"
+    // below — listing it here too (with 0% odds) just clutters the table.
+    if (d.series_week && !d.is_active) return;
+    const key = d.is_hybrid ? 'hybrid' : (d.edition_size != null ? 'nft' : d.rarity);
     if (!byKey.has(key)) byKey.set(key, []);
     byKey.get(key).push(d);
   });
@@ -25263,10 +25517,13 @@ function farmCatalogTable(mdl) {
         // (every serial slot + its owner), so the compact row only needs the
         // action button — showing a global histogram here next to "my serials"
         // read as duplicated info and forced the table to scroll horizontally.
-        const btn = el('button', { className: 'farm-mini-btn', style: { padding: '2px 6px', fontSize: '10px' } }, 'Edycja 💎');
+        const btn = el('button', { className: 'farm-mini-btn', style: { padding: '2px 6px', fontSize: '10px' }, title: 'Pokaż wszystkie egzemplarze tej edycji' }, 'Pokaż wszystkie');
         btn.addEventListener('click', e => { e.stopPropagation(); openFarmNftExplorer(d.species); });
-        stanCell = el('div', { className: 'farm-cat-stan-wrap' }, stanCell, btn);
+        stanCell = el('div', { className: 'farm-cat-stan-wrap' }, btn, stanCell);  // przycisk po lewej
       }
+      // Ile egzemplarzy żyje vs zostało „spalonych" w fuzjach/krzyżowaniu.
+      const nftLive = f.isNft ? fmNft.filter(n => n.species === d.species).length : 0;
+      const nftFused = f.isNft ? Math.max(0, f.minted - nftLive) : 0;
       // Overview row = identity + the CURRENT level's ≈ Zysk/doba + Stan only;
       // grow time, yield, price, and the full level ladder open in a modal on
       // click (openFarmLevelModal), not an inline accordion.
@@ -25277,7 +25534,11 @@ function farmCatalogTable(mdl) {
             el('span', { className: 'farm-cat-chev' }, '▸'),
             el('span', { className: 'farm-cat-emoji-sm' }, farmIcon(d.emoji)),
             el('span', { className: 'farm-cat-name-txt farm-rar-' + d.rarity }, d.name),
-            f.isNft ? el('small', { className: 'farm-cat-nft-badge' }, ' 💎 ' + f.minted + '/' + d.edition_size) : '')),
+            f.isNft ? el('small', { className: 'farm-cat-nft-badge',
+                title: 'Wybito ' + f.minted + ' z ' + d.edition_size + ' · istnieje ' + nftLive +
+                       (nftFused ? ' · spalono w fuzjach ' + nftFused : '') },
+              ' 💎 ' + f.minted + '/' + d.edition_size +
+              ' · 🌱' + nftLive + (nftFused ? ' · 🔥' + nftFused : '')) : '')),
         el('td', { className: 'farm-cat-perday' },
           perDayTxt, perDayNote ? el('small', { className: 'farm-cat-perday-note' }, perDayNote) : ''),
         el('td', {}, stanCell));
@@ -25427,14 +25688,14 @@ function farmTileDeed({ x, y, tile }) {
   else if (isPlanted) { status = 'Zajęta'; statusCls = 'busy'; }
   const label = farmTileDeedLabel(x, y);
   const valueText = isMig ? 'poza limitem' : (tile.asset_value ? (tile.asset_value + ' 🪙') : 'w limicie');
-  const tileEl = el('div', { className: 'fcc deed' + (isMig ? ' deed-mig' : ''), title: 'Działka ' + label });
+  // Compact chip (was a full-size .fcc card): a plot list is reference info, so
+  // it reads better as a dense row than as 11 poster-sized deeds.
+  const tileEl = el('div', { className: 'deed-chip deed-' + statusCls + (isMig ? ' deed-mig' : ''),
+    title: 'Działka ' + label + ' · ' + status + ' · ' + valueText });
   tileEl.append(
-    el('div', { className: 'fcc-gem' }, label),
-    el('div', { className: 'fcc-inner' },
-      el('div', { className: 'fcc-art' }, farmIcon('📜')),
-      el('div', { className: 'fcc-name' }, 'Akt własności'),
-      el('div', { className: 'fcc-rar deed-status-' + statusCls }, status),
-      el('div', { className: 'fcc-item-effect maj-num' }, valueText)));
+    el('span', { className: 'deed-chip-label' }, label),
+    el('span', { className: 'deed-chip-status' }, status),
+    el('span', { className: 'deed-chip-val' }, valueText));
   return tileEl;
 }
 
@@ -25460,7 +25721,7 @@ function buildFarmLandSection(container) {
     container.append(el('div', { className: 'farm-empty maj-empty' },
       'Nie masz jeszcze żadnej działki. Kliknij puste pole na farmie, aby kupić (lub użyj 🎁 darmowej działki).'));
   } else {
-    const grid = el('div', { className: 'fcc-grid' });
+    const grid = el('div', { className: 'deed-chip-grid' });
     tiles.forEach(t => grid.append(farmTileDeed(t)));
     container.append(grid);
   }
@@ -25739,16 +26000,22 @@ function buildFarmCatalogBody(bodyEl) {
   bodyEl.replaceChildren();
   const mdl = farmCatalogModel();
   bodyEl.append(farmCatalogTable(mdl));
+  // 🗓️ Kolekcje sezonowe — pokazywane w sekcji kart NFT (co tydzień nowa edycja).
+  const sec = el('div', { className: 'farm-section-block' });
+  sec.append(el('div', { className: 'farm-block-title' }, '🗓️ Kolekcje sezonowe (co tydzień)'));
+  sec.append(farmSeriesGrid());
+  bodyEl.append(sec);
 }
 
 // ── Ogródek hub: one modal, unified tab bar ──
 let farmHubTab = 'inventory';
 const FARM_HUB_TABS = [
   { id: 'inventory', label: '🎒 Mój Majątek' },
+  { id: 'collections', label: '🏅 Osiągnięcia' },
   { id: 'seasonal',  label: '🏆 Wyzwanie' },
   { id: 'catalog',   label: '📖 Katalog' },
   { id: 'market',    label: '📈 Cennik' },
-  { id: 'help',      label: '❓ Jak to działa' },
+  { id: 'help',      label: '❓ Pomoc' },
   { id: 'boxes',     label: '📦 Skrzynki' },
 ];
 
@@ -25762,6 +26029,7 @@ function renderFarmHubBody() {
   if (bar) bar.querySelectorAll('.farm-hub-tab').forEach(b => b.classList.toggle('active', b.dataset.hubtab === farmHubTab));
   
   if (farmHubTab === 'inventory') buildFarmInventoryBody(bodyEl);
+  else if (farmHubTab === 'collections') buildFarmCollectionsBody(bodyEl);
   else if (farmHubTab === 'seasonal') buildFarmSeasonalBody(bodyEl);
   else if (farmHubTab === 'catalog') buildFarmCatalogBody(bodyEl);
   else if (farmHubTab === 'market') buildFarmMarketBody(bodyEl);
@@ -25799,7 +26067,7 @@ async function openFarmHub(initialTab) {
   // brief spinner while ensureFarmData() loads (e.g. opened from Portfel).
   if (fmDefs.size) renderFarmHubBody();
   else body.append(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
-  await Promise.all([ensureFarmData({ force: true }), loadMyHeroInventory()]);
+  await Promise.all([ensureFarmData({ force: true }), loadMyHeroInventory(), loadFarmMeta()]);
   if (!farmModalEl) return;   // user closed it while loading
   renderFarmHubBody();
 }
@@ -25830,11 +26098,12 @@ function openFarmNftModal(n) {
   closeX.addEventListener('click', close);
   const stat = (label, val) => el('div', { className: 'farm-nft-stat' }, el('span', {}, label), el('b', {}, val));
   const growMin = def.base_grow_minutes ? def.base_grow_minutes * Math.pow(0.92, lvl - 1) : null;
-  const card = el('div', { className: 'farm-nft-card rar-' + rar },
+  const isHybrid = NFT_HYBRID_SPECIES.has(n.species);
+  const card = el('div', { className: 'farm-nft-card rar-' + rar + (isHybrid ? ' is-hybrid' : '') },
     el('div', { className: 'farm-nft-card-serial' }, '#' + n.serial_no + ' / ' + n.edition_size + (lvl > 1 ? ' · Poz. ' + lvl : '')),
     el('div', { className: 'farm-nft-card-art' }, farmIcon(def.emoji || '💎')),
     el('div', { className: 'farm-nft-card-name' }, (n.nft_name || def.name || n.species) + stars),
-    el('div', { className: 'farm-nft-card-species farm-rar-' + rar }, (def.name || n.species) + ' · ' + (FARM_RARITY_PL[rar] || rar) + ' NFT'),
+    el('div', { className: 'farm-nft-card-species farm-rar-' + rar }, (def.name || n.species) + ' · ' + (isHybrid ? '🧬 Hybryda' : (FARM_RARITY_PL[rar] || rar)) + ' NFT'),
     el('div', { className: 'farm-nft-card-stats' },
       stat('Poziom', lvl + (lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '')),
       stat('Plon', (def.base_yield || '?') + ' szt.'),
@@ -25934,6 +26203,413 @@ async function mergeFarmNft(heroId, fuelId, btn) {
   const hero = fmNft.find(n => n.id === heroId);
   if (hero) hero.level = data.new_level;
   showToast('🔀 ' + (data.hero_name || '') + ' #' + data.hero_serial + ' — poziom ' + data.new_level + '! („' + (data.fuel_name || '') + '" #' + data.fuel_serial + ' poświęcona)');
+  refreshFarmHub(); renderFarmSelection();
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  🧬 Kolekcje hub tab — weekly NFT series preview (L1), breeding (L2),
+//  collector's-reputation badge (L3).  Server: farm-weekly-nft-series.sql,
+//  farm-nft-breeding.sql, farm-collector-perks.sql.
+// ════════════════════════════════════════════════════════════════════════════
+let fmSeries = null;       // rows from farm_nft_series_schedule (Katalog)
+let fmHybridFeed = null;   // rows from farm_hybrid_recent (Mój Majątek)
+let fmAchMine = null;      // my farm_achievements JSON
+let fmAchAll = null;       // every player's farm_achievements (accordion tables)
+
+// 5-track achievement wall (mirrors supabase/farm-achievements.sql). `bonus`
+// returns the CURRENT mechanical bonus % (null = prestige badge only). Stage
+// thresholds are `at`; the 4 tiers are Brąz/Srebro/Złoto/Diament.
+// Progi są skalowane do REALNYCH danych z serwera (lipiec 2026), nie do okrągłych
+// liczb: rekord to 5 działek (podatek gruntowy sprawia, że 6-7 to już wyczyn),
+// najlepszy kolekcjoner ma 7 NFT / 4 gatunki / 13 łącznych poziomów. Progi wyżej
+// niż te wartości byłyby martwe i zniechęcające.
+const ACHIEVEMENTS = [
+  { key: 'renoma', icon: '🏅', label: 'Renoma Kolekcjonera', metricKey: 'distinct_species',
+    unit: 'różnych gatunków NFT', short: 'Gatunki', stages: [2, 4, 6, 9],
+    effect: 'Efekt: +2% do ceny sprzedaży plonów u NPC za każdy gatunek (maks. +30%).',
+    bonus: d => Math.min(30, 2 * (d.distinct_species || 0)), bonusSign: '+' },
+  { key: 'kciuk', icon: '🌱', label: 'Zielony Kciuk', metricKey: 'nft_level_sum',
+    unit: 'łącznych poziomów NFT', short: 'Poziomy', stages: [4, 8, 13, 20],
+    effect: 'Efekt: −1% czasu wzrostu roślin za każdy poziom NFT (maks. −20%; podłoga 24 h nadal obowiązuje).',
+    bonus: d => Math.min(20, 1 * (d.nft_level_sum || 0)), bonusSign: '−' },
+  { key: 'hybryd', icon: '🧬', label: 'Mistrz Hybryd', metricKey: 'hybrids_bred',
+    unit: 'wyhodowanych hybryd', short: 'Hybrydy', stages: [1, 2, 3, 5],
+    effect: 'Efekt: −5% kosztu krzyżowania za każdą hybrydę (maks. −30%). Każda hybryda kosztuje 2 karty NFT, więc 5 to wyczyn.',
+    bonus: d => Math.min(30, 5 * (d.hybrids_bred || 0)), bonusSign: '−' },
+  { key: 'sezon', icon: '🗓️', label: 'Sezonowy Łowca', metricKey: 'distinct_series',
+    unit: 'kolekcji sezonowych', short: 'Kolekcje', stages: [1, 2, 4, 6],
+    effect: 'Efekt: +2% do premii z tygodniowego kontraktu 🏆 za każdą posiadaną kolekcję sezonową (maks. +20%).',
+    bonus: d => Math.min(20, 2 * (d.distinct_series || 0)), bonusSign: '+' },
+  { key: 'ziemia', icon: '🏞️', label: 'Potentat Ziemski', metricKey: 'tiles_owned',
+    unit: 'posiadanych działek', short: 'Działki', stages: [2, 3, 4, 6],
+    effect: 'Efekt: +2% do zbiorów (plonu) za każdą działkę (maks. +15%). Podatek gruntowy sprawia, że 6 działek to naprawdę dużo.',
+    bonus: d => Math.min(15, 2 * (d.tiles_owned || 0)), bonusSign: '+' },
+];
+
+async function loadFarmMeta() {
+  const [sched, feed, ach, all] = await Promise.all([
+    sb.from('farm_nft_series_schedule').select('*'),
+    sb.from('farm_hybrid_recent').select('*'),
+    sb.rpc('farm_achievements'),
+    sb.rpc('farm_achievements_all'),
+  ]);
+  fmSeries = sched.error ? [] : (sched.data || []);
+  fmHybridFeed = feed.error ? [] : (feed.data || []);
+  fmAchMine = ach.error ? {} : (ach.data || {});
+  fmAchAll = all.error ? [] : (all.data || []);
+}
+
+function farmSeriesWeekLabel(w) {
+  if (!w) return '';
+  const p = String(w).slice(0, 10).split('-');
+  return p.length === 3 ? (p[2] + '.' + p[1]) : String(w);
+}
+
+// Eligible breeding parents: owned NFT instances that aren't listed for sale.
+// (Planted ones are rejected server-side; we surface that as a toast.)
+function farmBreedableNfts() {
+  return (fmNft || []).filter(n => !n.listed);
+}
+function farmNftLabel(n) {
+  const def = fmDefs.get(n.species) || {};
+  return (def.emoji || '💎') + ' ' + (def.name || n.species) + ' #' + n.serial_no +
+         (n.level > 1 ? ' · poz. ' + n.level : '');
+}
+
+// 🏅 Osiągnięcia tab — 5 staged achievement tracks with progress bars + the
+// ability to preview any other player's progress.
+function buildFarmCollectionsBody(bodyEl) {
+  bodyEl.replaceChildren();
+  if (fmAchMine === null) {
+    bodyEl.append(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
+    loadFarmMeta().then(() => { if (farmHubTab === 'collections') buildFarmCollectionsBody(bodyEl); });
+    return;
+  }
+
+  bodyEl.append(el('div', { className: 'farm-card-sub' },
+    'Zdobywaj odznaki i pasywne bonusy do całej farmy. Każdy z 5 torów daje REALNY efekt — ' +
+    'lepsze ceny, szybszy wzrost, większe zbiory, tańsze krzyżowanie i wyższe premie z kontraktów. ' +
+    'Bonusy działają zawsze — wystarczy posiadać (nic nie trzeba „zakładać"). ' +
+    'Rozwiń „Ranking biura", aby porównać się z innymi.'));
+
+  const wrap = el('div', { className: 'farm-ach-list' });
+  ACHIEVEMENTS.forEach(a => wrap.append(renderAchievementCard(a, fmAchMine || {})));
+  bodyEl.append(wrap);
+}
+
+// Collapsed per-achievement comparison table: every player's value for THIS
+// track, best first, own row highlighted. Uses <details> so it costs no space
+// until opened.
+function achLeaderboard(ach) {
+  const rows = (fmAchAll || []).slice()
+    .sort((a, b) => (+b[ach.metricKey] || 0) - (+a[ach.metricKey] || 0));
+  if (!rows.length) return '';
+  const det = el('details', { className: 'ach-lb' });
+  det.append(el('summary', {}, '📊 Ranking biura (' + rows.length + ')'));
+  const thead = el('thead', {}, el('tr', {},
+    el('th', { className: 'ach-lb-pos' }, '#'),
+    el('th', {}, 'Gracz'),
+    el('th', { className: 'ach-lb-val' }, ach.short || 'Wynik'),
+    el('th', { className: 'ach-lb-tier' }, 'Bonus')));
+  const tb = el('tbody', {});
+  rows.forEach((r, i) => {
+    const mine = r.user_id === me?.id;
+    tb.append(el('tr', { className: mine ? 'is-me' : '' },
+      el('td', { className: 'ach-lb-pos' }, mine ? '▶' : String(i + 1)),
+      el('td', {}, (r.nick || '—') + (mine ? ' (Ty)' : '')),
+      el('td', { className: 'ach-lb-val' }, String(+(r[ach.metricKey] || 0))),
+      el('td', { className: 'ach-lb-tier' }, achBonusLabel(ach, ach.bonus(r)))));
+  });
+  det.append(el('table', { className: 'ach-lb-table' }, thead, tb));
+  return det;
+}
+
+// „−0%" / „+0%" reads as a broken value; an inactive bonus shows a dash.
+function achBonusLabel(ach, bonus) {
+  return bonus ? (ach.bonusSign + bonus + '%') : '—';
+}
+
+function renderAchievementCard(ach, data) {
+  const val = +(data[ach.metricKey] || 0);
+  const stages = ach.stages;
+  const maxAt = stages[stages.length - 1];
+  let stageIdx = 0; stages.forEach(s => { if (val >= s) stageIdx++; });
+  const maxed = stageIdx >= stages.length;
+  const nextAt = maxed ? null : stages[stageIdx];
+  const fillPct = Math.min(100, val / maxAt * 100);
+  const bonus = ach.bonus(data);
+
+  const card = el('div', { className: 'farm-ach-card' + (maxed ? ' is-maxed' : '') });
+  card.append(el('div', { className: 'fac-head' },
+    el('span', { className: 'fac-icon' }, ach.icon),
+    el('span', { className: 'fac-title' }, ach.label),
+    el('span', { className: 'fac-bonus-pill' + (bonus ? '' : ' zero') }, achBonusLabel(ach, bonus))));
+  card.append(el('div', { className: 'fac-mine' },
+    el('b', {}, String(val)), ' ' + ach.unit));
+
+  const bar = el('div', { className: 'fac-bar' });
+  bar.append(el('i', { style: { width: fillPct + '%' } }));
+  stages.forEach(s => bar.append(el('span', { className: 'fac-tick' + (val >= s ? ' hit' : ''), style: { left: Math.min(100, s / maxAt * 100) + '%' }, title: String(s) })));
+  card.append(bar);
+
+  card.append(el('div', { className: 'fac-foot' },
+    maxed ? 'Bonus maksymalny — nic więcej nie wyciśniesz.'
+          : ('Jeszcze ' + (nextAt - val) + ' → ' + achBonusLabel(ach, ach.bonus(Object.assign({}, data, { [ach.metricKey]: nextAt }))))));
+  card.append(el('div', { className: 'farm-ach-effect' }, ach.effect));
+  card.append(achLeaderboard(ach));
+  return card;
+}
+
+// Reusable weekly-series preview grid (used in the Katalog NFT section).
+function farmSeriesGrid() {
+  const wrap = el('div', {});
+  wrap.append(el('div', { className: 'farm-card-sub' },
+    'W każdy poniedziałek 00:00 startuje NOWA limitowana kolekcja NFT — wpada do skrzynek, aż wyczerpie się nakład. Kolejne tygodnie: „Wkrótce".'));
+  if (fmSeries === null) {
+    loadFarmMeta().then(() => { if (farmModalEl) refreshFarmHub(); });
+    wrap.append(el('div', { className: 'farm-card-sub' }, 'Ładowanie…'));
+    return wrap;
+  }
+  const grid = el('div', { className: 'farm-series-grid' });
+  (fmSeries || []).slice().sort((a, b) => String(a.series_week).localeCompare(String(b.series_week))).forEach(s => {
+    const soldOut = s.activated && s.minted_count >= s.edition_size;
+    const cls = 'farm-series-card' + (s.droppable ? ' is-live' : soldOut ? ' is-soldout' : !s.activated ? ' is-soon' : '');
+    const card = el('div', { className: cls });
+    card.append(el('div', { className: 'fsc-art' }, s.emoji || '💎'));
+    card.append(el('div', { className: 'fsc-name' }, s.name));
+    let tag;
+    if (s.droppable) tag = '🟢 W skrzynkach · ' + s.minted_count + '/' + s.edition_size;
+    else if (soldOut) tag = '✅ Wyprzedana · ' + s.edition_size + '/' + s.edition_size;
+    else tag = '🔒 Wkrótce · pon. ' + farmSeriesWeekLabel(s.series_week);
+    card.append(el('div', { className: 'fsc-tag' }, tag));
+    card.append(el('div', { className: 'fsc-ed' }, 'Nakład ' + s.edition_size));
+    grid.append(card);
+  });
+  wrap.append(grid);
+  return wrap;
+}
+
+// Reusable breeding section (button + explanation + office hybrid feed).
+// Lives in 🎒 Mój Majątek.
+function farmBreedingSection() {
+  const sec = el('div', { className: 'farm-section-block' });
+  sec.append(el('div', { className: 'farm-block-title' }, '🧬 Krzyżowanie (hybrydy)'));
+  // Scannable formula instead of a paragraph: two parents in, one hybrid out.
+  sec.append(el('div', { className: 'breed-formula' },
+    el('span', { className: 'bf-card' }, '🌹'),
+    el('span', { className: 'bf-op' }, '+'),
+    el('span', { className: 'bf-card' }, '🌻'),
+    el('span', { className: 'bf-op' }, '→'),
+    el('span', { className: 'bf-card bf-out' }, '🌹'),
+    el('span', { className: 'bf-caption' }, 'dwie różne karty NFT → jedna nowa, numerowana hybryda')));
+  const ul = el('ul', { className: 'breed-facts' });
+  [['🔥', 'Obie karty-rodzice znikają NA ZAWSZE.'],
+   ['✨', 'Wybrane pary dają kultowy przepis (np. 🌹+🌻 → „Słoneczna Róża"), reszta „Dzikiego Mieszańca 🌈".'],
+   ['🪙', 'Koszt rośnie z poziomem rodziców; odznaka „Mistrz Hybryd" go obniża.']
+  ].forEach(([ic, tx]) => ul.append(el('li', {}, el('span', { className: 'bfx' }, ic), tx)));
+  sec.append(ul);
+  const btn = el('button', { className: 'btn-primary breed-cta' }, '🧬 Skrzyżuj karty');
+  btn.addEventListener('click', () => openFarmBreedModal());
+  if (farmBreedableNfts().length < 2) {
+    btn.disabled = true;
+    btn.title = 'Potrzebujesz co najmniej dwóch kart NFT różnych gatunków.';
+  }
+  sec.append(btn);
+  if (fmHybridFeed && fmHybridFeed.length) {
+    const feed = el('div', { className: 'farm-hybrid-feed' });
+    feed.append(el('div', { className: 'farm-card-sub', style: { marginTop: '10px', fontWeight: '600' } }, 'Ostatnie hybrydy w biurze:'));
+    fmHybridFeed.slice(0, 8).forEach(h => {
+      feed.append(el('div', { className: 'farm-hybrid-row' },
+        el('span', {}, (h.hybrid_emoji || '🌈') + ' ' + h.hybrid_name + ' #' + h.hybrid_serial),
+        el('span', { className: 'fhr-parents' }, '← ' + (fmDefs.get(h.parent_a_species)?.emoji || '') + '+' + (fmDefs.get(h.parent_b_species)?.emoji || '') +
+          (h.bred_by_nick ? ' · ' + h.bred_by_nick : ''))));
+    });
+    sec.append(feed);
+  }
+  return sec;
+}
+
+// Breeding modal — pick two different-species NFT parents → mint a hybrid.
+// ── 🧬 Laboratorium krzyżowania ──────────────────────────────────────────
+// A dedicated window: parent A on the left, parent B on the right, and the
+// resulting hybrid in the middle — with full stats for all three, so the player
+// can compare BEFORE burning two cards. Mirrors farm_hybrid_stats() in
+// supabase/farm-nft-breeding.sql: yield = ceil(max×1.15), grow = max(24h, min×0.95).
+const BREED_YIELD_SYNERGY = 1.15;
+const BREED_GROW_SYNERGY  = 0.95;
+
+// Effective stats of one owned NFT instance (bred hybrids carry their own).
+function farmNftStats(n) {
+  const def = fmDefs.get(n.species) || {};
+  const lvl = n.level || 1;
+  const baseY = n.stat_yield != null ? n.stat_yield : (def.base_yield || 0);
+  const baseG = n.stat_grow_minutes != null ? n.stat_grow_minutes : (def.base_grow_minutes || 0);
+  const yield_ = Math.round(baseY * (1 + (lvl - 1) * 0.5));
+  const grow = Math.max(1440, baseG * Math.pow(0.92, lvl - 1));
+  const price = fmMarket.get(def.crop_type)?.base_price;
+  const perDay = price != null ? Math.round(yield_ * price / Math.max(1, grow / 1440)) : null;
+  return { def, lvl, baseY, baseG, yield: yield_, grow, price, perDay,
+           value: n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null };
+}
+
+// Synergy result for a parent pair — the client mirror of farm_hybrid_stats().
+function farmBreedPreview(a, b) {
+  if (!a || !b) return null;
+  const sa = farmNftStats(a), sb2 = farmNftStats(b);
+  const res = farmBreedResult(a.species, b.species);
+  // Derived from the parents' EFFECTIVE (level-scaled) stats, so the hybrid is
+  // always better than both — mirrors farm_hybrid_stats() in the SQL.
+  const baseY = Math.ceil(Math.max(sa.yield, sb2.yield) * BREED_YIELD_SYNERGY);
+  const baseG = Math.max(1440, Math.floor(Math.min(sa.grow, sb2.grow) * BREED_GROW_SYNERGY));
+  const price = fmMarket.get('seasonal_bloom')?.base_price;
+  const perDay = price != null ? Math.round(baseY * price / Math.max(1, baseG / 1440)) : null;
+  const ed = res?.edition || 0;
+  return { res, yield: baseY, grow: baseG, price, perDay,
+           value: ed ? Math.round(20000 / ed) : null,
+           bestParentYield: Math.max(sa.yield, sb2.yield),
+           bestParentPerDay: Math.max(sa.perDay || 0, sb2.perDay || 0),
+           cost: Math.round(400 * ((a.level || 1) + (b.level || 1)) *
+                 (1 - Math.min(0.30, 0.05 * (fmAchMine?.hybrids_bred || 0)))) };
+}
+
+function breedStatRow(label, value, opts = {}) {
+  return el('div', { className: 'bl-stat' + (opts.good ? ' good' : '') },
+    el('span', {}, label), el('b', {}, value));
+}
+
+// One parent slot: either an empty picker or the chosen card + its stats.
+function breedSlot(side, chosen, onPick) {
+  const box = el('div', { className: 'bl-slot' + (chosen ? ' filled' : '') });
+  box.append(el('div', { className: 'bl-slot-head' }, side));
+  if (!chosen) {
+    box.append(el('div', { className: 'bl-empty' }, '＋'),
+               el('div', { className: 'bl-empty-txt' }, 'Wybierz kartę'));
+  } else {
+    const st = farmNftStats(chosen);
+    box.append(
+      el('div', { className: 'bl-art' }, st.def.emoji || '💎'),
+      el('div', { className: 'bl-name' }, chosen.nft_name || st.def.name || chosen.species),
+      el('div', { className: 'bl-sub' }, (st.def.name || '') + ' · #' + chosen.serial_no + '/' + chosen.edition_size),
+      breedStatRow('Poziom', String(st.lvl)),
+      breedStatRow('Plon', st.yield + ' szt.'),
+      breedStatRow('Wzrost', farmGrowLabel(st.grow)),
+      breedStatRow('Zysk/doba', st.perDay != null ? ('≈ ' + st.perDay + ' 🪙') : '—'),
+      breedStatRow('Wartość', st.value != null ? (st.value + ' 🪙') : '—'));
+  }
+  const btn = el('button', { className: 'bl-pick' }, chosen ? 'Zmień' : 'Wybierz');
+  btn.addEventListener('click', onPick);
+  box.append(btn);
+  return box;
+}
+
+function openFarmBreedModal() {
+  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeX.addEventListener('click', close);
+
+  const pool = farmBreedableNfts();
+  let A = null, B = null;
+  const body = el('div', { className: 'bl-body' });
+
+  // Inline chooser: lists eligible cards (excluding the other slot's species).
+  function choose(slot) {
+    const other = slot === 'A' ? B : A;
+    const list = el('div', { className: 'bl-choose' });
+    const opts = pool.filter(n => (!other || (n.id !== other.id && n.species !== other.species)));
+    if (!opts.length) {
+      list.append(el('div', { className: 'farm-empty' }, 'Brak pasujących kart — potrzebujesz karty INNEGO gatunku.'));
+    }
+    opts.forEach(n => {
+      const st = farmNftStats(n);
+      const row = el('button', { className: 'bl-choose-row' },
+        el('span', { className: 'bcr-emoji' }, st.def.emoji || '💎'),
+        el('span', { className: 'bcr-name' }, (n.nft_name || st.def.name) + ' #' + n.serial_no),
+        el('span', { className: 'bcr-stat' }, 'poz. ' + st.lvl + ' · ' + st.yield + ' szt. · ≈' + (st.perDay ?? '—') + '🪙/d'));
+      row.addEventListener('click', () => { if (slot === 'A') A = n; else B = n; render(); });
+      list.append(row);
+    });
+    body.replaceChildren(el('div', { className: 'bl-choose-head' }, 'Wybierz kartę — rodzic ' + slot),
+      list);
+    const back = el('button', { className: 'bl-pick', style: { marginTop: '10px' } }, '← Wróć');
+    back.addEventListener('click', render);
+    body.append(back);
+  }
+
+  function render() {
+    body.replaceChildren();
+    const prev = farmBreedPreview(A, B);
+    const grid = el('div', { className: 'bl-grid' });
+    grid.append(breedSlot('Rodzic A', A, () => choose('A')));
+
+    // Middle: the result.
+    const mid = el('div', { className: 'bl-slot bl-result' + (prev ? ' ready' : '') });
+    mid.append(el('div', { className: 'bl-slot-head' }, 'Hybryda'));
+    if (!prev) {
+      mid.append(el('div', { className: 'bl-empty' }, '🧬'),
+                 el('div', { className: 'bl-empty-txt' }, 'Wybierz dwie karty różnych gatunków, aby zobaczyć wynik'));
+    } else {
+      const r = prev.res;
+      mid.append(
+        el('div', { className: 'bl-art bl-art-holo' }, r.emoji || '🌈'),
+        el('div', { className: 'bl-name' }, r.name),
+        el('div', { className: 'bl-sub' }, r.curated ? '✨ Kultowy przepis' : 'Brak przepisu — Dziki Mieszaniec'),
+        breedStatRow('Poziom', '1'),
+        breedStatRow('Plon', prev.yield + ' szt.', { good: prev.yield > prev.bestParentYield }),
+        breedStatRow('Wzrost', farmGrowLabel(prev.grow), { good: true }),
+        breedStatRow('Zysk/doba', prev.perDay != null ? ('≈ ' + prev.perDay + ' 🪙') : '—',
+                     { good: (prev.perDay || 0) > prev.bestParentPerDay }),
+        breedStatRow('Wartość', prev.value != null ? (prev.value + ' 🪙') : '—'),
+        el('div', { className: 'bl-synergy' }, '⚡ Synergia: +15% plonu i −5% czasu wzrostu wobec lepszego rodzica'));
+    }
+    grid.append(mid);
+    grid.append(breedSlot('Rodzic B', B, () => choose('B')));
+    body.append(grid);
+
+    const foot = el('div', { className: 'bl-foot' });
+    if (prev) {
+      const enough = (me?.coins || 0) >= prev.cost;
+      foot.append(el('div', { className: 'bl-warn' },
+        '⚠️ Obie karty-rodzice zostaną zniszczone na zawsze.'));
+      const go = el('button', { className: 'btn-primary' },
+        enough ? ('🧬 Skrzyżuj · ' + prev.cost + ' 🪙') : ('Za mało coinów (' + prev.cost + ' 🪙)'));
+      go.disabled = !enough;
+      go.addEventListener('click', async () => {
+        const ok = await breedNft(A.id, B.id, go);
+        if (ok) close();
+      });
+      foot.append(go);
+    }
+    body.append(foot);
+  }
+  render();
+
+  const modal = el('div', { className: 'modal bl-modal' },
+    el('div', { className: 'modal-header' },
+      el('span', { className: 'modal-title' }, '🧬 Laboratorium krzyżowania'), closeX),
+    body);
+  overlay.append(modal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  window.addEventListener('keydown', esc);
+  document.body.append(overlay);
+}
+
+
+async function breedNft(aId, bId, btn) {
+  if (!aId || !bId) return false;
+  if (btn) btn.disabled = true;
+  const { data, error } = await sb.rpc('breed_nft', { p_a: aId, p_b: bId });
+  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return false; }
+  if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
+  const h = data.hybrid || {};
+  // Remove both parents; add the fresh hybrid instance to local state.
+  fmNft = fmNft.filter(n => n.id !== aId && n.id !== bId);
+  fmNft.push({ id: h.id, species: h.species, serial_no: h.serial_no, edition_size: h.edition_size,
+               nft_name: h.nft_name, level: 1, listed: false });
+  fmHybridFeed = null; fmAchMine = null; fmAchAll = null;  // refetch meta (feed + achievements)
+  showToast('🧬 Wyhodowano „' + (h.name || 'hybrydę') + '" #' + h.serial_no + (h.curated ? ' ✨ (kultowy przepis!)' : '') + '!');
   refreshFarmHub(); renderFarmSelection();
   return true;
 }
@@ -26370,6 +27046,9 @@ function buildFarmInventoryBody(bodyEl) {
     bodyEl.append(grid);
   }
 
+  // 🧬 Krzyżowanie (hybrydy) — breed two NFTs into a hybrid, right under the cards.
+  bodyEl.append(farmBreedingSection());
+
   // Fungible (non-NFT) species only — NFT species render above in 💎 Karty NFT.
   // farm_collection rows for already-merged/migrated NFT species can linger at
   // count=0 (the migration zeroes them rather than deleting them), and without
@@ -26389,7 +27068,6 @@ function buildFarmInventoryBody(bodyEl) {
 
   buildSpecialItemsSection(bodyEl);
 
-  buildGardenAdvisorTable(bodyEl);
 }
 
 // A special item rendered with the SAME .fcc frame/size as a plant or NFT
@@ -26436,22 +27114,6 @@ function buildSpecialItemsSection(bodyEl) {
   bodyEl.append(grid);
 }
 
-// Collapsed by default; the tables are only computed/rendered while the
-// dropdown is actually open (rebuilt fresh each time it's opened, cleared on close).
-function buildGardenAdvisorTable(container) {
-  const details = el('details', { className: 'cosmetics-details farm-cat-divider' });
-  const summary = el('summary', { className: 'cosmetics-summary' },
-    el('span', { className: 'cosmetics-title' }, '💡 Asystent Decyzyjny Ogródka'),
-    el('span', { className: 'cosmetics-chev' }, '▾'));
-  const body = el('div', { className: 'cosmetics-sub' });
-  details.append(summary, body);
-  container.append(details);
-
-  details.addEventListener('toggle', () => {
-    if (details.open) renderGardenAdvisorBody(body);
-    else body.replaceChildren();
-  });
-}
 
 function renderGardenAdvisorBody(container) {
   container.replaceChildren();
