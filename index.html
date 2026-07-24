@@ -8271,6 +8271,7 @@
       </div>
       <div class="shop-category-filters" id="shop-category-filters" aria-label="Kategorie sklepu">
         <button class="shop-category-filter active" type="button" data-shop-target="marketplace-section">🤝 Ogłoszenia</button>
+        <button class="shop-category-filter" type="button" data-shop-target="buy-orders-section">📥 Zlecenia zakupu</button>
         <button class="shop-category-filter" type="button" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
         <button class="shop-category-filter" type="button" data-shop-target="hero-shop-section">🎒 Przedmioty specjalne</button>
         <button class="shop-category-filter" type="button" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
@@ -8289,6 +8290,36 @@
         </button>
         <div class="shop-grid" id="marketplace-grid">
           <div class="loading-center"><div class="spinner"></div></div>
+        </div>
+      </section>
+      <section class="shop-section" id="buy-orders-section">
+        <div class="shop-section-head">
+          <div>
+            <div class="shop-section-title">📥 Zlecenia zakupu</div>
+            <div class="shop-section-sub">Powiedz, co chcesz kupić — inni gracze sprzedadzą Ci to od razu po Twojej cenie, albo złożą własną ofertę, jeśli nie podasz ceny.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px" id="bo-subtabs">
+          <button class="shop-category-filter active" type="button" data-bo-target="bo-fixed" style="flex:1;padding:8px 12px">💰 Stała cena (auto)</button>
+          <button class="shop-category-filter" type="button" data-bo-target="bo-open" style="flex:1;padding:8px 12px">❓ Zapytania ofertowe</button>
+        </div>
+        <div id="bo-fixed">
+          <button class="ml-add-big" id="btn-new-buy-order">
+            <span class="ml-add-big-main">➕ Zleć zakup po stałej cenie</span>
+            <span class="ml-add-big-sub">np. kupię karty Marchewka po 10 🪙, max 10 szt. — sprzedaż jest automatyczna</span>
+          </button>
+          <div class="shop-grid" id="buy-orders-grid">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div id="bo-open" style="display:none">
+          <button class="ml-add-big" id="btn-new-request">
+            <span class="ml-add-big-main">➕ Zapytaj o cokolwiek</span>
+            <span class="ml-add-big-sub">Nie podawaj ceny — inni zaproponują swoją ofertę, Ty wybierzesz najlepszą</span>
+          </button>
+          <div class="shop-grid" id="requests-grid">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
         </div>
       </section>
       <section class="shop-section" id="farm-lootbox-section">
@@ -8665,6 +8696,57 @@
   </div>
 </div>
 
+<!-- ── BUY ORDER MODAL (stała cena, auto-sprzedaż) ── -->
+<div id="bo-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Nowe zlecenie zakupu</span>
+      <button class="btn-close" id="bo-close">✕</button>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Podajesz cenę i limit sztuk — każdy sprzedający dostanie zapłatę natychmiast, bez targowania.</p>
+    <div class="nm-field">
+      <label class="field-label">Co chcesz kupić?</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="bo-kind">
+        <button class="shop-category-filter active" type="button" data-kind="farm_card" style="flex:1;padding:8px 10px">🃏 Karta rośliny</button>
+        <button class="shop-category-filter" type="button" data-kind="farm_nft" style="flex:1;padding:8px 10px">💎 Karta NFT</button>
+        <button class="shop-category-filter" type="button" data-kind="farm_tile" style="flex:1;padding:8px 10px">🌱 Działka</button>
+      </div>
+    </div>
+    <div class="nm-field" id="bo-species-field">
+      <label class="field-label" for="bo-species">Gatunek</label>
+      <select id="bo-species" class="nick-select"></select>
+    </div>
+    <div class="nm-field" style="display:flex;gap:12px">
+      <div style="flex:1">
+        <label class="field-label" for="bo-price">Cena za 1 szt. (🪙)</label>
+        <input type="number" id="bo-price" min="1" value="10">
+      </div>
+      <div style="flex:1">
+        <label class="field-label" for="bo-qty">Ile sztuk max?</label>
+        <input type="number" id="bo-qty" min="1" max="999" value="10">
+      </div>
+    </div>
+    <div class="farm-hint" id="bo-hint" style="margin-top:4px"></div>
+    <button class="btn-primary" id="bo-submit">Zleć zakup</button>
+  </div>
+</div>
+
+<!-- ── BUY REQUEST (RFQ) MODAL ── -->
+<div id="req-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Nowe zapytanie</span>
+      <button class="btn-close" id="req-close">✕</button>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Nie podajesz ceny — opisz czego szukasz, a inni gracze zaproponują swoją ofertę (cenę, ilość, co mogą zrobić).</p>
+    <div class="nm-field">
+      <label class="field-label" for="req-desc">Czego szukasz?</label>
+      <textarea id="req-desc" placeholder="np. Szukam podwózki w piątek, albo: kupię dowolne karty NFT" maxlength="300"></textarea>
+    </div>
+    <button class="btn-primary" id="req-submit">Wystaw zapytanie</button>
+  </div>
+</div>
+
 <!-- ── ACTIVITY MODAL ── -->
 <div id="af-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:520px">
@@ -8986,6 +9068,8 @@ let myHeroInventory = [];
 let heroAuctionItemDefs = [];
 let heroAuctions = [];
 let marketplaceListings = [];
+let buyOrders = [];
+let marketplaceRequests = [];
 let auctionTimerInterval = null;
 
 // ── CPMM math ─────────────────────────────────────────────────────────────
@@ -14486,6 +14570,325 @@ function renderMarketplaceGrid() {
   active.forEach(listing => grid.appendChild(buildMarketplaceCard(listing)));
 }
 
+// ── Buy orders (Zlecenia zakupu) — standing auto-fill offers ───────────────
+// The buyer sets a fixed unit price + max qty; any seller with a matching item
+// fills part of it instantly (no negotiation). No escrow: fill_buy_order
+// checks the buyer's live balance, so a shortfall just fails that one fill.
+async function loadBuyOrders() {
+  const { data, error } = await sb.from('marketplace_buy_order_cards').select('*').order('created_at', { ascending: false });
+  if (!error && data) buyOrders = data;
+}
+
+// Open requests (RFQ) — buyer posts no price, sellers propose their own offer
+// (price/qty/description) and the buyer manually accepts one.
+async function loadMarketplaceRequests() {
+  const { data, error } = await sb.from('marketplace_request_cards').select('*').order('created_at', { ascending: false });
+  if (!error && data) {
+    marketplaceRequests = data.map(r => ({ ...r, offers: typeof r.offers === 'string' ? JSON.parse(r.offers) : (r.offers || []) }));
+  }
+}
+
+const BO_ERR = {
+  bad_item_kind: 'Wybierz co chcesz kupić.', bad_price: 'Podaj cenę większą od 0.', bad_species: 'Wybierz gatunek.',
+  use_nft_kind: 'Ta karta to NFT — wybierz „Karta NFT".', use_card_kind: 'To zwykła karta — wybierz „Karta rośliny".',
+  order_not_found: 'Zlecenie nie istnieje.', order_not_open: 'Zlecenie już nieaktywne.', cannot_fill_own: 'Nie możesz zrealizować własnego zlecenia.',
+  not_enough_remaining: 'Zbyt duża ilość — sprawdź ile jeszcze zostało.', not_enough_cards: 'Nie masz tylu wolnych duplikatów tej karty.',
+  nft_not_found: 'Nie znaleziono karty NFT.', not_owner: 'To nie twój przedmiot.', already_listed: 'Ten przedmiot jest już wystawiony na Targowisku.',
+  species_mismatch: 'Ta karta NFT to inny gatunek niż w zleceniu.', tile_not_owned: 'To nie jest kupiona działka.',
+  zen_tile: 'Roślinki z Ogródka nie można sprzedać jako działki.', tile_occupied: 'Ta działka nie jest pusta.',
+  buyer_insufficient_funds: 'Kupujący nie ma już tylu coinów — spróbuj z mniejszą ilością.',
+  land_tax_debt: 'Najpierw spłać podatek od działek.', bad_coords: 'Wybierz działkę.', bad_instance: 'Wybierz kartę NFT.',
+};
+function boErrMsg(error) {
+  const slug = (error.message.match(/[a-z_]+/) || [''])[0];
+  return BO_ERR[slug] || error.message;
+}
+
+async function createBuyOrder(itemKind, species, price, qty, btn) {
+  btn.disabled = true; btn.textContent = 'Zlecam…';
+  const { error } = await sb.rpc('create_buy_order', {
+    p_item_kind: itemKind, p_card_species: itemKind === 'farm_tile' ? null : species,
+    p_unit_price: price, p_qty: qty,
+  });
+  btn.disabled = false; btn.textContent = 'Zleć zakup';
+  if (error) { showToast('❌ ' + boErrMsg(error)); return; }
+  showToast('✅ Zlecenie wystawione!');
+  hide(document.getElementById('bo-overlay'));
+  loadShop();
+}
+
+async function cancelBuyOrder(orderId, btn) {
+  btn.disabled = true; btn.textContent = 'Anulowanie…';
+  const { error } = await sb.rpc('cancel_buy_order', { p_order_id: orderId });
+  if (error) { showToast('❌ ' + boErrMsg(error)); btn.disabled = false; btn.textContent = 'Anuluj zlecenie'; return; }
+  showToast('✅ Zlecenie anulowane.');
+  loadShop();
+}
+
+async function fillBuyOrder(order, qty, ref, btn) {
+  btn.disabled = true; btn.textContent = 'Sprzedaję…';
+  const args = { p_order_id: order.id, p_qty: qty };
+  if (order.item_kind === 'farm_nft') args.p_instance_id = ref;
+  if (order.item_kind === 'farm_tile') { args.p_tile_x = ref.x; args.p_tile_y = ref.y; }
+  const { data, error } = await sb.rpc('fill_buy_order', args);
+  btn.disabled = false; btn.textContent = 'Sprzedaj';
+  if (error) { showToast('❌ ' + boErrMsg(error)); return; }
+  if (data?.coins_left !== undefined) { me.coins = data.coins_left; setText(headerCoins, me.coins); }
+  showToast('✅ Sprzedano! Otrzymałeś ' + Number(data?.total || 0).toLocaleString('pl-PL') + ' 🪙');
+  await ensureFarmData({ force: true });
+  loadShop();
+  if (order.item_kind === 'farm_tile') await loadFarm();
+}
+
+// Seller-side fulfillment control for a buy order card: what to sell depends
+// on item_kind (a qty stepper for cards, an instance/tile picker for the rest).
+function buildBuyOrderFillControls(order, remaining) {
+  const wrap = el('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  if (order.item_kind === 'farm_card') {
+    const free = mlFreeCardCount(order.card_species);
+    const max = Math.min(free, remaining);
+    if (max < 1) {
+      wrap.appendChild(el('div', { className: 'mlc-note' }, free < 1 ? 'Nie masz wolnych duplikatów tej karty.' : 'Zlecenie prawie zrealizowane.'));
+      return wrap;
+    }
+    const input = el('input', { type: 'number', min: '1', max: String(max), value: String(max), className: 'mlc-bid-input' });
+    const btn = el('button', { className: 'mlc-buy' }, el('span', {}, 'Sprzedaj'));
+    btn.addEventListener('click', () => {
+      const qty = Math.max(1, Math.min(max, Math.trunc(Number(input.value) || 1)));
+      fillBuyOrder(order, qty, null, btn);
+    });
+    wrap.appendChild(el('div', { className: 'mlc-desc' }, 'Masz ' + free + ' wolnych duplikatów.'));
+    wrap.appendChild(el('div', { className: 'mlc-bid-row' }, input, btn));
+  } else if (order.item_kind === 'farm_nft') {
+    const mine = fmNft.filter(n => n.owner_id === me?.id && !n.listed && n.species === order.card_species);
+    if (!mine.length) { wrap.appendChild(el('div', { className: 'mlc-note' }, 'Nie masz wolnej karty NFT tego gatunku.')); return wrap; }
+    const sel = el('select', { className: 'nick-select' });
+    mine.sort((a, b) => a.serial_no - b.serial_no).forEach(n => {
+      sel.append(el('option', { value: n.id }, (n.nft_name || n.species) + ' #' + n.serial_no + '/' + n.edition_size + (n.level > 1 ? ' ' + '⭐'.repeat(n.level) : '')));
+    });
+    const btn = el('button', { className: 'mlc-buy' }, el('span', {}, 'Sprzedaj'));
+    btn.addEventListener('click', () => fillBuyOrder(order, 1, sel.value, btn));
+    wrap.appendChild(sel);
+    wrap.appendChild(btn);
+  } else if (order.item_kind === 'farm_tile') {
+    const tiles = [];
+    fmTiles.forEach((t, key) => {
+      if (t.owner_id !== me?.id) return;
+      if (t.acquired_via === 'migration' || t.planted_species || t.listed) return;
+      const [x, y] = key.split(',').map(Number);
+      tiles.push({ x, y, key });
+    });
+    if (!tiles.length) { wrap.appendChild(el('div', { className: 'mlc-note' }, 'Nie masz pustej działki do sprzedania.')); return wrap; }
+    const sel = el('select', { className: 'nick-select' });
+    tiles.sort((a, b) => a.y - b.y || a.x - b.x).forEach(t => sel.append(el('option', { value: t.key }, '🌱 Działka [' + t.x + ',' + t.y + ']')));
+    const btn = el('button', { className: 'mlc-buy' }, el('span', {}, 'Sprzedaj'));
+    btn.addEventListener('click', () => {
+      const [x, y] = sel.value.split(',').map(Number);
+      fillBuyOrder(order, 1, { x, y }, btn);
+    });
+    wrap.appendChild(sel);
+    wrap.appendChild(btn);
+  }
+  return wrap;
+}
+
+function buildBuyOrderCard(order) {
+  const isBuyer = order.buyer_id === me?.id;
+  const remaining = Number(order.qty_remaining || 0);
+  const closed = order.status !== 'open';
+  const plnum = n => Number(n || 0).toLocaleString('pl-PL');
+  const icon = order.item_kind === 'farm_tile' ? '🌱' : order.item_kind === 'farm_nft' ? '💎' : (order.card_emoji || '🃏');
+  const kindLabel = order.item_kind === 'farm_tile' ? 'Działka Ogródka'
+    : order.item_kind === 'farm_nft' ? ('Karta NFT: ' + (order.card_name || order.card_species))
+    : ('Karta rośliny: ' + (order.card_name || order.card_species));
+
+  const card = el('div', { className: 'mlc-card' + (closed ? ' is-closed' : '') });
+  card.appendChild(el('div', { className: 'mlc-hero glow-fixed' },
+    el('div', { className: 'mlc-glow' }),
+    el('div', { className: 'mlc-type' }, '📥 Zlecenie zakupu'),
+    el('div', { className: 'mlc-icon' }, icon)));
+
+  const body = el('div', { className: 'mlc-body' });
+  body.appendChild(el('div', { className: 'mlc-head' },
+    el('div', { className: 'mlc-name' }, kindLabel),
+    el('div', { className: 'mlc-pricetag' }, plnum(order.unit_price) + ' 🪙/szt.')));
+  body.appendChild(el('div', { className: 'mlc-seller' }, '👤 Kupuje: ' + (order.buyer_nick || '?')));
+  body.appendChild(el('div', { className: 'mlc-desc' }, 'Pozostało ' + remaining + ' z ' + order.qty_total + ' szt.'));
+
+  if (closed) {
+    body.appendChild(el('div', { className: 'mlc-note' }, order.status === 'cancelled' ? 'Zlecenie anulowane.' : 'Zlecenie zrealizowane w całości.'));
+  } else if (isBuyer) {
+    body.appendChild(el('div', { className: 'mlc-note' }, 'To Twoje zlecenie'));
+    const b = el('button', { className: 'mlc-cancel' }, 'Anuluj zlecenie');
+    b.addEventListener('click', () => cancelBuyOrder(order.id, b));
+    body.appendChild(b);
+  } else {
+    body.appendChild(buildBuyOrderFillControls(order, remaining));
+  }
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderBuyOrdersGrid() {
+  const grid = document.getElementById('buy-orders-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+  const btnNew = document.getElementById('btn-new-buy-order');
+  if (btnNew) btnNew.style.display = me ? '' : 'none';
+  const active = buyOrders.filter(o => o.status === 'open');
+  if (!active.length) {
+    grid.appendChild(el('p', { className: 'shop-empty' }, 'Brak aktywnych zleceń zakupu. Zleć pierwsze! 📥'));
+    return;
+  }
+  active.forEach(o => grid.appendChild(buildBuyOrderCard(o)));
+}
+
+const REQ_ERR = {
+  bad_description: 'Opisz czego szukasz.', request_not_found: 'Zapytanie nie istnieje.', request_not_open: 'Zapytanie już zamknięte.',
+  cannot_offer_own: 'Nie możesz zaoferować na własne zapytanie.', bad_price: 'Podaj cenę większą od 0.',
+  offer_not_found: 'Oferta nie istnieje.', offer_not_pending: 'Ta oferta nie jest już aktywna.', not_authorized: 'Brak uprawnień.',
+  insufficient_coins: 'Za mało coinów!',
+};
+function reqErrMsg(error) {
+  const slug = (error.message.match(/[a-z_]+/) || [''])[0];
+  return REQ_ERR[slug] || error.message;
+}
+
+async function createMarketplaceRequest(desc, btn) {
+  btn.disabled = true; btn.textContent = 'Wystawiam…';
+  const { error } = await sb.rpc('create_marketplace_request', { p_description: desc });
+  btn.disabled = false; btn.textContent = 'Wystaw zapytanie';
+  if (error) { showToast('❌ ' + reqErrMsg(error)); return; }
+  showToast('✅ Zapytanie wystawione!');
+  hide(document.getElementById('req-overlay'));
+  loadShop();
+}
+
+async function cancelMarketplaceRequest(requestId, btn) {
+  btn.disabled = true; btn.textContent = 'Anulowanie…';
+  const { error } = await sb.rpc('cancel_marketplace_request', { p_request_id: requestId });
+  if (error) { showToast('❌ ' + reqErrMsg(error)); btn.disabled = false; btn.textContent = 'Anuluj zapytanie'; return; }
+  showToast('✅ Zapytanie anulowane.');
+  loadShop();
+}
+
+async function createRequestOffer(requestId, price, qty, desc, btn) {
+  btn.disabled = true; btn.textContent = 'Wysyłam…';
+  const { error } = await sb.rpc('create_request_offer', { p_request_id: requestId, p_price: price, p_qty: qty, p_description: desc });
+  btn.disabled = false; btn.textContent = 'Wyślij ofertę';
+  if (error) { showToast('❌ ' + reqErrMsg(error)); return; }
+  showToast('✅ Oferta wysłana!');
+  loadShop();
+}
+
+async function withdrawRequestOffer(offerId, btn) {
+  btn.disabled = true; btn.textContent = 'Wycofywanie…';
+  const { error } = await sb.rpc('withdraw_request_offer', { p_offer_id: offerId });
+  if (error) { showToast('❌ ' + reqErrMsg(error)); btn.disabled = false; btn.textContent = 'Wycofaj ofertę'; return; }
+  showToast('✅ Oferta wycofana.');
+  loadShop();
+}
+
+async function declineRequestOffer(offerId, btn) {
+  btn.disabled = true; btn.textContent = 'Odrzucanie…';
+  const { error } = await sb.rpc('decline_request_offer', { p_offer_id: offerId });
+  if (error) { showToast('❌ ' + reqErrMsg(error)); btn.disabled = false; btn.textContent = 'Odrzuć'; return; }
+  showToast('✅ Oferta odrzucona.');
+  loadShop();
+}
+
+async function acceptRequestOffer(offerId, btn) {
+  btn.disabled = true; btn.textContent = 'Akceptuję…';
+  const { data, error } = await sb.rpc('accept_request_offer', { p_offer_id: offerId });
+  if (error) { showToast('❌ ' + reqErrMsg(error)); btn.disabled = false; btn.textContent = 'Akceptuj'; return; }
+  if (data?.coins_left !== undefined) { me.coins = data.coins_left; setText(headerCoins, me.coins); }
+  showToast('✅ Oferta zaakceptowana! Skontaktuj się ze sprzedającym.');
+  loadShop();
+}
+
+function buildRequestCard(request) {
+  const isBuyer = request.buyer_id === me?.id;
+  const closed = request.status !== 'open';
+  const plnum = n => Number(n || 0).toLocaleString('pl-PL');
+  const offers = request.offers || [];
+  const myOffer = offers.find(o => o.seller_id === me?.id && o.status === 'pending');
+
+  const card = el('div', { className: 'mlc-card' + (closed ? ' is-closed' : '') });
+  card.appendChild(el('div', { className: 'mlc-hero glow-auction' },
+    el('div', { className: 'mlc-glow' }),
+    el('div', { className: 'mlc-type' }, '❓ Zapytanie'),
+    el('div', { className: 'mlc-icon' }, '❓')));
+
+  const body = el('div', { className: 'mlc-body' });
+  body.appendChild(el('div', { className: 'mlc-name' }, request.description));
+  body.appendChild(el('div', { className: 'mlc-seller' }, '👤 Szuka: ' + (request.buyer_nick || '?')));
+
+  const pending = offers.filter(o => o.status === 'pending');
+  if (pending.length) {
+    const list = el('div', { className: 'mlc-top' });
+    pending.forEach(o => {
+      const row = el('div', {}, '💬 ' + (o.seller_nick || '?') + ': ' + plnum(o.price) + ' 🪙' + (o.qty > 1 ? ' ×' + o.qty : '') + (o.description ? ' — ' + o.description : ''));
+      if (isBuyer && !closed) {
+        const acceptBtn = el('button', { className: 'mlc-cancel', style: 'color:var(--accent);border-color:var(--accent);margin-left:6px' }, 'Akceptuj');
+        acceptBtn.addEventListener('click', () => acceptRequestOffer(o.id, acceptBtn));
+        const declineBtn = el('button', { className: 'mlc-cancel', style: 'margin-left:6px' }, 'Odrzuć');
+        declineBtn.addEventListener('click', () => declineRequestOffer(o.id, declineBtn));
+        row.append(acceptBtn, declineBtn);
+      }
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+  } else if (!closed) {
+    body.appendChild(el('div', { className: 'mlc-desc' }, 'Brak ofert jeszcze.'));
+  }
+
+  if (closed) {
+    const accepted = offers.find(o => o.id === request.accepted_offer_id);
+    body.appendChild(el('div', { className: 'mlc-result' }, request.status === 'cancelled' ? 'Zapytanie anulowane.'
+      : accepted ? ('✅ Przyjęto ofertę: ' + (accepted.seller_nick || '?') + ' za ' + plnum(accepted.price) + ' 🪙')
+      : 'Zapytanie zamknięte.'));
+  } else if (isBuyer) {
+    const b = el('button', { className: 'mlc-cancel' }, 'Anuluj zapytanie');
+    b.addEventListener('click', () => cancelMarketplaceRequest(request.id, b));
+    body.appendChild(b);
+  } else {
+    const priceInput = el('input', { type: 'number', min: '1', value: String(myOffer?.price || 100), className: 'mlc-bid-input' });
+    const qtyInput = el('input', { type: 'number', min: '1', value: String(myOffer?.qty || 1), className: 'mlc-bid-input' });
+    const descInput = el('input', { type: 'text', placeholder: 'Co oferujesz? (opcjonalnie)', value: myOffer?.description || '', maxlength: '300', style: 'width:100%;margin-top:6px' });
+    const btn = el('button', { className: 'mlc-buy' }, el('span', {}, myOffer ? 'Zaktualizuj ofertę' : 'Wyślij ofertę'));
+    btn.addEventListener('click', () => {
+      const price = Math.max(1, Math.trunc(Number(priceInput.value) || 1));
+      const qty = Math.max(1, Math.trunc(Number(qtyInput.value) || 1));
+      createRequestOffer(request.id, price, qty, descInput.value.trim(), btn);
+    });
+    body.appendChild(el('div', { className: 'mlc-bid-row' }, priceInput, qtyInput, btn));
+    body.appendChild(descInput);
+    if (myOffer) {
+      const wb = el('button', { className: 'mlc-cancel', style: 'margin-top:6px' }, 'Wycofaj ofertę');
+      wb.addEventListener('click', () => withdrawRequestOffer(myOffer.id, wb));
+      body.appendChild(wb);
+    }
+  }
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderRequestsGrid() {
+  const grid = document.getElementById('requests-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+  const btnNew = document.getElementById('btn-new-request');
+  if (btnNew) btnNew.style.display = me ? '' : 'none';
+  const active = marketplaceRequests.filter(r => r.status === 'open');
+  if (!active.length) {
+    grid.appendChild(el('p', { className: 'shop-empty' }, 'Brak aktywnych zapytań. Zapytaj o cokolwiek! ❓'));
+    return;
+  }
+  active.forEach(r => grid.appendChild(buildRequestCard(r)));
+}
+
 // Full sale history (all settled listings, any age) in a table: who → whom, price.
 async function openMarketplaceHistory() {
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
@@ -14580,6 +14983,9 @@ async function loadShop() {
     loadHeroAuctions(),
     loadMyHeroInventory(),
     loadMarketplaceListings(),
+    loadBuyOrders(),
+    loadMarketplaceRequests(),
+    ensureFarmData(),
     refreshMyCoins(),
   ]);
 
@@ -14597,6 +15003,8 @@ async function loadShop() {
   renderHeroAuctionAdmin();
   renderHeroAuctionGrid();
   renderMarketplaceGrid();
+  renderBuyOrdersGrid();
+  renderRequestsGrid();
   loadFarmLootbox();
   loadZappsShop();
 
@@ -15069,6 +15477,10 @@ function setupShopRealtime() {
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auction_bids' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_listings' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_bids' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_buy_orders' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_buy_order_fills' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_requests' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_request_offers' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'zapps_purchase_requests' }, reload)
     .subscribe();
   realtimeChannels.push(ch);
@@ -15258,6 +15670,80 @@ document.getElementById('ml-submit').addEventListener('click', () => {
     }
     createFarmListing(mlSellKind, listingRef, mlListingType, price, hours, incr, btn, qty);
   }
+});
+
+// ── Buy orders / requests (Zlecenia zakupu) — modal + subtab wiring ────────
+document.getElementById('bo-subtabs')?.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-bo-target]');
+  if (!btn) return;
+  document.getElementById('bo-subtabs').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  document.getElementById('bo-fixed').style.display = btn.dataset.boTarget === 'bo-fixed' ? '' : 'none';
+  document.getElementById('bo-open').style.display  = btn.dataset.boTarget === 'bo-open'  ? '' : 'none';
+});
+
+const boOverlay = document.getElementById('bo-overlay');
+let boKind = 'farm_card';
+function openBuyOrderModal() {
+  boKind = 'farm_card';
+  document.getElementById('bo-kind').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.kind === boKind));
+  document.getElementById('bo-price').value = '10';
+  document.getElementById('bo-qty').value = '10';
+  boPopulateSpeciesPicker(boKind);
+  show(boOverlay);
+}
+document.getElementById('btn-new-buy-order')?.addEventListener('click', openBuyOrderModal);
+document.getElementById('bo-close')?.addEventListener('click', () => hide(boOverlay));
+boOverlay?.addEventListener('click', e => { if (e.target === boOverlay) hide(boOverlay); });
+document.getElementById('bo-kind')?.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-kind]');
+  if (!btn) return;
+  boKind = btn.dataset.kind;
+  document.getElementById('bo-kind').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  boPopulateSpeciesPicker(boKind);
+});
+// Species picker lists EVERY defined species of the chosen kind (not just owned
+// ones) — the buyer wants to acquire cards, so ownership is irrelevant here.
+async function boPopulateSpeciesPicker(kind) {
+  const field = document.getElementById('bo-species-field');
+  const sel = document.getElementById('bo-species');
+  const hint = document.getElementById('bo-hint');
+  if (kind === 'farm_tile') {
+    field.style.display = 'none';
+    hint.textContent = 'Kupujesz dowolną pustą działkę Ogródka od innego gracza.';
+    return;
+  }
+  field.style.display = '';
+  await ensureFarmData();
+  sel.replaceChildren();
+  const wantNft = kind === 'farm_nft';
+  const defs = [...fmDefs.values()].filter(d => wantNft ? d.edition_size != null : d.edition_size == null);
+  if (!defs.length) { sel.append(el('option', { value: '' }, 'Brak gatunków')); return; }
+  defs.sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach(d => {
+    sel.append(el('option', { value: d.species }, (d.emoji || (wantNft ? '💎' : '🃏')) + ' ' + d.name));
+  });
+  hint.textContent = wantNft ? 'Kupisz dowolny numerowany egzemplarz tego gatunku NFT.' : 'Kupisz dowolne duplikaty (poziom 1) tej karty.';
+}
+document.getElementById('bo-submit')?.addEventListener('click', () => {
+  const price = parseInt(document.getElementById('bo-price').value, 10);
+  const qty = parseInt(document.getElementById('bo-qty').value, 10);
+  const species = document.getElementById('bo-species').value;
+  if (!price || price < 1) { showToast('❌ Podaj cenę większą od 0.'); return; }
+  if (!qty || qty < 1) { showToast('❌ Podaj liczbę sztuk większą od 0.'); return; }
+  if (boKind !== 'farm_tile' && !species) { showToast('❌ Wybierz gatunek.'); return; }
+  createBuyOrder(boKind, species, price, qty, document.getElementById('bo-submit'));
+});
+
+const reqOverlay = document.getElementById('req-overlay');
+document.getElementById('btn-new-request')?.addEventListener('click', () => {
+  document.getElementById('req-desc').value = '';
+  show(reqOverlay);
+});
+document.getElementById('req-close')?.addEventListener('click', () => hide(reqOverlay));
+reqOverlay?.addEventListener('click', e => { if (e.target === reqOverlay) hide(reqOverlay); });
+document.getElementById('req-submit')?.addEventListener('click', () => {
+  const desc = document.getElementById('req-desc').value.trim();
+  if (!desc) { showToast('❌ Opisz czego szukasz.'); return; }
+  createMarketplaceRequest(desc, document.getElementById('req-submit'));
 });
 
 // ── Garden Cosmetics ──────────────────────────────────────────────────────
