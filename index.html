@@ -22684,6 +22684,13 @@ const FARM_ERR = {
   fuel_listed: 'Wybrana karta do poświęcenia jest wystawiona na Targowisku.',
   hero_planted: 'Ta karta jest właśnie zasadzona — zbierz plon, by ją połączyć.',
   fuel_planted: 'Wybrana karta do poświęcenia jest właśnie zasadzona.',
+  // breed_nft (🧬 krzyżowanie)
+  parent_not_found: 'Nie znaleziono jednej z kart-rodziców.',
+  not_owner: 'To nie twoja karta.',
+  same_species: 'Rodzice muszą być różnymi gatunkami.',
+  parent_listed: 'Karta-rodzic jest wystawiona na Targowisku.',
+  parent_planted: 'Karta-rodzic jest właśnie zasadzona — zbierz plon, by ją skrzyżować.',
+  hybrid_sold_out: 'Ta hybryda jest wyczerpana — nakład wyprzedany.',
 };
 
 let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, listed, asset_value, planted_species, planted_level, planted_at, ready_at, nick, zen }
@@ -26266,10 +26273,12 @@ function farmSeriesWeekLabel(w) {
   return p.length === 3 ? (p[2] + '.' + p[1]) : String(w);
 }
 
-// Eligible breeding parents: owned NFT instances that aren't listed for sale.
+// Eligible breeding parents: OWN NFT instances that aren't listed for sale.
+// fmNft is the whole public instance table (the catalog/explorer needs every
+// serial), so the owner filter is what keeps other players' cards out.
 // (Planted ones are rejected server-side; we surface that as a toast.)
 function farmBreedableNfts() {
-  return (fmNft || []).filter(n => !n.listed);
+  return (fmNft || []).filter(n => n.owner_id === me?.id && !n.listed);
 }
 function farmNftLabel(n) {
   const def = fmDefs.get(n.species) || {};
@@ -26607,7 +26616,7 @@ async function breedNft(aId, bId, btn) {
   // Remove both parents; add the fresh hybrid instance to local state.
   fmNft = fmNft.filter(n => n.id !== aId && n.id !== bId);
   fmNft.push({ id: h.id, species: h.species, serial_no: h.serial_no, edition_size: h.edition_size,
-               nft_name: h.nft_name, level: 1, listed: false });
+               owner_id: me.id, nft_name: h.nft_name, level: 1, listed: false });
   fmHybridFeed = null; fmAchMine = null; fmAchAll = null;  // refetch meta (feed + achievements)
   showToast('🧬 Wyhodowano „' + (h.name || 'hybrydę') + '" #' + h.serial_no + (h.curated ? ' ✨ (kultowy przepis!)' : '') + '!');
   refreshFarmHub(); renderFarmSelection();
