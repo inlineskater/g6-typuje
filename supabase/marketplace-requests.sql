@@ -233,8 +233,7 @@ BEGIN
   v_total := v_qty * v_order.unit_price;
 
   UPDATE public.profiles SET coins = coins - v_total
-   WHERE id = v_order.buyer_id AND coins >= v_total
-  RETURNING coins INTO v_coins_left;
+   WHERE id = v_order.buyer_id AND coins >= v_total;
   IF NOT FOUND THEN RAISE EXCEPTION 'buyer_insufficient_funds'; END IF;
 
   v_sale_tax := public.farm_apply_land_tax_autopay(
@@ -242,7 +241,12 @@ BEGIN
     jsonb_build_object('buy_order_id', p_order_id, 'item_kind', v_order.item_kind, 'buyer_id', v_order.buyer_id)
   );
   v_seller_net := COALESCE((v_sale_tax->>'net')::integer, v_total);
-  UPDATE public.profiles SET coins = coins + v_seller_net WHERE id = v_user;
+  -- coins_left is the CALLER's balance, and the caller here is the SELLER.
+  -- It used to be captured from the buyer's deduction above, so the seller's
+  -- header coin counter jumped to the BUYER's balance after a fill (wrong
+  -- number on screen, and it leaked another player's exact wallet).
+  UPDATE public.profiles SET coins = coins + v_seller_net WHERE id = v_user
+  RETURNING coins INTO v_coins_left;
 
   UPDATE public.marketplace_buy_orders
      SET qty_filled = qty_filled + v_qty,
@@ -262,7 +266,8 @@ BEGIN
             jsonb_build_object('buy_order_id', p_order_id, 'item_kind', v_order.item_kind, 'buyer_id', v_order.buyer_id));
   END IF;
 
-  RETURN json_build_object('ok', true, 'coins_left', v_coins_left, 'qty', v_qty, 'total', v_total);
+  RETURN json_build_object('ok', true, 'coins_left', v_coins_left, 'seller_net', v_seller_net,
+                           'qty', v_qty, 'total', v_total);
 END;
 $$;
 

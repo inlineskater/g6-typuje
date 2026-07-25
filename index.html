@@ -504,21 +504,36 @@
     }
     .btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
 
-    /* ── NAV TABS ── */
+    /* ── NAV TABS (2026-07-25 restyle) ────────────────────────────────────────
+       Was a flat row of underline-only tabs that scrolled away with the page:
+       nothing to aim at on hover, a 2px line as the only "you are here" signal,
+       and on a phone the row WRAPPED into two/three stacked lines that pushed the
+       content down. Now: pill targets with a real hover surface, an accent pill
+       for the active tab, and the bar sticks under the header (one horizontal
+       scroll lane on narrow screens instead of a growing block). */
     .nav-tabs {
-      display: flex; border-bottom: 1px solid var(--border);
-      background: var(--surface); padding: 0 var(--page-pad);
+      display: flex; align-items: center; gap: 2px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px);
+      padding: 5px var(--page-pad);
+    }
+    /* Sticky only where the header is a guaranteed-58px single row — on a phone
+       it wraps to two rows, and a fixed 58px offset would slide the nav over it. */
+    @media (min-width: 761px) {
+      .nav-tabs { position: sticky; top: 58px; z-index: 19; }
     }
 
     .nav-tab {
-      background: none; border: none; border-bottom: 2px solid transparent;
+      background: none; border: none; border-radius: var(--r-sm);
       color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600;
-      font-family: inherit; min-height: 44px; padding: 11px 16px; transition: all .15s; margin-bottom: -1px;
+      font-family: inherit; min-height: 34px; padding: 8px 12px;
+      transition: background .13s, color .13s;
       letter-spacing: 0;
       white-space: nowrap;
     }
-    .nav-tab:hover { color: var(--text); }
-    .nav-tab.active { border-bottom-color: var(--accent); color: var(--text); }
+    .nav-tab:hover { color: var(--text); background: var(--surface); }
+    .nav-tab.active { color: var(--accent); background: var(--acc-dim); }
     .nav-tab.has-nav-hint {
       display: flex; align-items: center; gap: 7px;
     }
@@ -539,14 +554,14 @@
     }
     .nav-group { position: relative; display: flex; align-items: stretch; }
     .nav-group-btn {
-      background: none; border: none; border-bottom: 2px solid transparent;
+      background: none; border: none; border-radius: var(--r-sm);
       color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600;
-      font-family: inherit; min-height: 44px; padding: 11px 16px; transition: all .15s; margin-bottom: -1px;
+      font-family: inherit; min-height: 34px; padding: 8px 12px; transition: background .13s, color .13s;
       white-space: nowrap; display: flex; align-items: center; gap: 4px;
     }
-    .nav-group-btn:hover { color: var(--text); }
-    .nav-group.active .nav-group-btn { border-bottom-color: var(--accent); color: var(--text); }
-    .nav-group.open .nav-group-btn { color: var(--text); }
+    .nav-group-btn:hover { color: var(--text); background: var(--surface); }
+    .nav-group.active .nav-group-btn { color: var(--accent); background: var(--acc-dim); }
+    .nav-group.open .nav-group-btn { color: var(--text); background: var(--surface); }
     .nav-chevron { font-size: 10px; transition: transform .2s; display: inline-block; }
     .nav-group.open .nav-chevron { transform: rotate(180deg); }
     .nav-new-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; vertical-align: middle; }
@@ -558,13 +573,19 @@
     }
     .nav-group.open .nav-dropdown { display: block; }
     .nav-dropdown .nav-tab {
-      display: block; width: 100%; text-align: left;
-      border-bottom: none; border-radius: 0; padding: 10px 16px; margin-bottom: 0;
+      display: block; width: 100%; text-align: left; position: relative;
+      border-bottom: none; border-radius: 0; padding: 10px 16px; margin-bottom: 0; min-height: 0;
     }
     .nav-dropdown .nav-tab:first-child { border-radius: 8px 8px 0 0; }
     .nav-dropdown .nav-tab:last-child  { border-radius: 0 0 8px 8px; }
     .nav-dropdown .nav-tab:hover { background: var(--surface); }
-    .nav-dropdown .nav-tab.active { color: var(--accent); background: var(--surface); border-bottom: none; }
+    .nav-dropdown .nav-tab.active { color: var(--accent); background: var(--acc-dim); border-bottom: none; }
+    /* An accent rail marks the open item — inside a menu a background tint alone
+       reads the same as the hover state. */
+    .nav-dropdown .nav-tab.active::before {
+      content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+      border-radius: 0 3px 3px 0; background: var(--accent);
+    }
     .nav-dropdown-label { padding: 8px 16px 3px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); user-select: none; }
     .nav-dropdown-label + .nav-dropdown-label, .nav-tab + .nav-dropdown-label { border-top: 1px solid var(--border); margin-top: 4px; }
     .nav-dropdown-right { left: auto; right: 0; }
@@ -581,8 +602,10 @@
     .nav-menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
     @media (max-width: 760px) {
-      .nav-tabs { flex-wrap: wrap; padding: 0 10px; }
-      .nav-tab, .nav-group-btn { padding: 10px 12px; font-size: 12px; }
+      /* Wrapping (not a scroll lane) on phones: the dropdowns are absolutely
+         positioned children, and an overflow-x container would clip them. */
+      .nav-tabs { flex-wrap: wrap; gap: 3px; padding: 5px 8px; }
+      .nav-tab, .nav-group-btn { padding: 8px 11px; font-size: 12px; }
       .nav-tab.has-nav-hint { justify-content: center; gap: 5px; }
       .nav-hint-badge { min-height: 16px; padding: 2px 5px; font-size: 9px; }
       .nav-dropdown { min-width: 150px; }
@@ -2056,7 +2079,7 @@
 
       .coins-badge { padding: 5px 10px; }
       .btn-ghost { padding-left: 10px; padding-right: 10px; }
-      .nav-tabs { padding: 0; }
+      .nav-tabs { padding: 5px 6px; }
 
       .prob-row { align-items: center; }
       .prob-num { font-size: 24px; }
@@ -5460,7 +5483,15 @@
     .farm-wrap { display: flex; flex-direction: column; gap: 12px; }
     .farm-hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
     .farm-body { display: flex; flex-direction: column; gap: 12px; }
-    .farm-topbar { display: flex; flex-direction: column; gap: 10px; padding: 11px 14px; border: 3px solid #765438; border-radius: 10px; background: repeating-linear-gradient(0deg, transparent 0 13px, rgba(60,30,10,.075) 13px 14px), linear-gradient(180deg, #efd3a7 0%, #dfb77f 54%, #c9955f 100%); box-shadow: 0 6px 14px rgba(60,30,10,.16), inset 0 1px 0 rgba(255,255,255,.45); }
+    /* ── Ogródek control bar (2026-07-25 restyle) ──────────────────────────────
+       Was a 3px-bordered wooden plank with a hard drop shadow — loud scenery
+       wrapped around plain UI controls, and it fought every white panel it
+       opened. Now a calm card with a green whisper, so the WOOD stays where it
+       is actually scenery (sign board, plot sign, fence) and the chrome that
+       carries buttons/stats reads as chrome. */
+    .farm-topbar { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px;
+      border: 1px solid rgba(62,95,55,.20); border-radius: var(--r-md);
+      background: linear-gradient(180deg, #f7fbf4 0%, var(--card) 100%); box-shadow: var(--sh-sm); }
     .farm-toolbar-host { display: flex; justify-content: center; }
     /* Tile inspector now lives inside the one wooden top bar — strip its own plate look, add a divider + height cap. */
     /* The wooden side board (.farm-section / .farm-side) was removed when the hub
@@ -5758,50 +5789,107 @@
     .farm-mini-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
     .farm-mini-btn:disabled { opacity: .5; cursor: not-allowed; }
     .farm-mini-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .farm-tax-card { padding: 10px 12px; margin-bottom: 12px; border: 1px solid rgba(146,64,14,.22); border-radius: 8px; background: #fff7ed; color: #5a4326; }
-    .farm-tax-card.ok { background: #f0fdf4; border-color: rgba(22,101,52,.2); }
-    .farm-tax-title { font-weight: 900; color: #7c2d12; margin-bottom: 6px; }
-    .farm-tax-card.ok .farm-tax-title { color: #166534; }
-    .farm-tax-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px; }
-    .farm-tax-stat { padding: 6px 8px; border-radius: 7px; background: rgba(255,255,255,.72); border: 1px solid rgba(120,53,15,.12); }
-    .farm-tax-stat span { display: block; font-size: 10px; color: #8a6b45; font-weight: 800; text-transform: uppercase; }
-    .farm-tax-stat b { font-size: 13px; color: #3c2a16; }
-    .farm-tax-note { margin-top: 7px; font-size: 11px; line-height: 1.35; color: #6b4d2b; }
-    .farm-tax-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .farm-seasonal-card { padding: 12px; border: 1px solid rgba(37,99,235,.22); border-radius: 10px; background: #eff6ff; color: #1e3a8a; }
-    .farm-seasonal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-    .farm-seasonal-title { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; font-weight: 900; color: #1e3a8a; }
-    .farm-seasonal-title .farm-ico { width: 28px; height: 28px; }
-    .farm-seasonal-status { flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; background: rgba(37,99,235,.12); color: #1d4ed8; font-size: 11px; font-weight: 900; }
-    .farm-seasonal-status.active { background: rgba(22,163,74,.13); color: #15803d; }
-    .farm-seasonal-status.closed { background: rgba(100,116,139,.13); color: #475569; }
-    .farm-seasonal-sub { font-size: 12px; line-height: 1.45; color: #334155; margin-bottom: 10px; }
-    .farm-seasonal-how { display: grid; gap: 6px; margin-bottom: 10px; padding: 9px 10px; border-radius: 8px; background: rgba(255,255,255,.72); border: 1px solid rgba(37,99,235,.14); font-size: 12px; line-height: 1.4; color: #334155; }
-    .farm-seasonal-how b { color: #1e3a8a; }
-    .farm-seasonal-goals { display: grid; gap: 7px; margin-bottom: 10px; }
-    .farm-seasonal-goal { padding: 8px 10px; border-left: 3px solid #2563eb; background: rgba(255,255,255,.65); border-radius: 7px; font-size: 12px; line-height: 1.4; color: #334155; }
-    .farm-seasonal-goal b { display: block; margin-bottom: 2px; color: #1e3a8a; font-size: 12px; }
-    .farm-seasonal-price { margin-bottom: 10px; padding: 9px 10px; border-radius: 8px; background: rgba(22,163,74,.08); border: 1px solid rgba(22,163,74,.18); color: #14532d; }
-    .farm-seasonal-price-title { font-size: 12px; font-weight: 900; margin-bottom: 7px; }
-    .farm-seasonal-price-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-    .farm-seasonal-price-stat { min-width: 0; padding: 6px 7px; border-radius: 7px; background: rgba(255,255,255,.72); border: 1px solid rgba(22,163,74,.12); }
-    .farm-seasonal-price-stat span { display: block; font-size: 10px; font-weight: 900; color: #166534; text-transform: uppercase; }
-    .farm-seasonal-price-stat b { display: block; font-size: 13px; color: #14532d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .farm-seasonal-price-note { margin-top: 6px; font-size: 11px; line-height: 1.35; color: #166534; }
-    .farm-seasonal-progress { height: 14px; border-radius: 999px; background: rgba(30,58,138,.13); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(30,58,138,.08); }
-    .farm-seasonal-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #60a5fa, #2563eb); transition: width .35s ease; }
-    .farm-seasonal-progress-fill.done { background: linear-gradient(90deg, #4ade80, #16a34a); }
-    .farm-seasonal-progress-text { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 5px; font-size: 11px; font-weight: 800; color: #334155; }
-    .farm-seasonal-rank { display: grid; grid-template-columns: 42px minmax(0, 1fr) 82px; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(37,99,235,.13); font-size: 12px; }
+    /* ── Land tax card (2026-07-25 redesign) ──────────────────────────────────
+       Was: a shouty amber panel + a 4-cell stat grid of bare numbers + a wall of
+       note text quoting a date that had long since passed. Now: one headline
+       sentence that says what you actually pay, a capacity bar, a small ledger,
+       and the formula tucked into <details>. */
+    /* No outline: state is carried by a flat tint + the pill, and the card
+       already sits inside the hub body's frame. */
+    .farm-tax-card { margin: 10px 0 12px; padding: 12px 13px; border-radius: var(--r-md);
+      background: var(--surface-2); color: var(--text); }
+    /* Only an actionable state (unpaid debt) earns a colour wash. Being over the
+       limit is already said by the pill, the amber bar segment and the lead line
+       — tinting the whole card too just put two amber blocks next to each other. */
+    .farm-tax-card.warn { background: var(--surface-2); }
+    .farm-tax-card.debt { background: #fff1f5; }
+    .farm-tax-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .farm-tax-title { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .farm-tax-pill { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: #15803d; white-space: nowrap; }
+    .farm-tax-pill.warn { color: #b45309; }
+    .farm-tax-pill.debt { color: #be185d; }
+    .farm-tax-lead { margin-top: 7px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+    .farm-tax-lead b { color: var(--text); font-weight: 700; }
+    .farm-tax-bar { position: relative; display: flex; gap: 3px; margin-top: 10px; }
+    .farm-tax-seg { height: 6px; flex: 1 1 0; border-radius: var(--r-pill); background: rgba(15,23,42,.09); }
+    .farm-tax-seg.used { background: #34d399; }
+    .farm-tax-seg.over { background: #f59e0b; }
+    .farm-tax-scale { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: var(--dim); }
+    .farm-tax-rows { margin-top: 10px; }
+    .farm-tax-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      padding: 5px 0; font-size: 12px; color: var(--muted); }
+    .farm-tax-row b { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .farm-tax-row.is-debt b { color: #be185d; }
+    .farm-tax-row small { display: block; font-size: 10px; color: var(--dim); font-weight: 400; }
+    .farm-tax-note { margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--muted); }
+    .farm-tax-help { margin-top: 8px; font-size: 11px; color: var(--muted); }
+    .farm-tax-help > summary { cursor: pointer; font-weight: 600; color: var(--accent); list-style: none; }
+    .farm-tax-help > summary::-webkit-details-marker { display: none; }
+    .farm-tax-help > summary::before { content: '▸ '; display: inline-block; transition: transform .15s; }
+    .farm-tax-help[open] > summary::before { content: '▾ '; }
+    .farm-tax-help ul { margin: 6px 0 0; padding-left: 16px; line-height: 1.55; }
+    .farm-tax-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    /* ── Weekly farm contract (2026-07-25 redesign) ────────────────────────────
+       Was: a blue box where the date range, the "how it works" goals, a 3-cell
+       price grid and the shared bar all competed at the same weight, so nobody
+       could tell what to actually DO. Now: title → one instruction line → what
+       a unit pays → the two rewards as numbered blocks → your own standing. */
+    /* The hub body is the only frame. Sections separate with space and a single
+       hairline; the two goals are tinted blocks, not outlined cards. */
+    .farm-seasonal-card { padding: 2px 0 0; color: var(--text); }
+    .farm-seasonal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .farm-seasonal-title { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; font-weight: 700; color: var(--text); }
+    .farm-seasonal-title .farm-ico { width: 26px; height: 26px; }
+    .farm-seasonal-status { flex: 0 0 auto; color: var(--dim); font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .farm-seasonal-status.active { color: #15803d; }
+    .farm-seasonal-status.closed { color: #475569; }
+    .farm-seasonal-lead { margin-top: 9px; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+    .farm-seasonal-lead b { color: var(--text); font-weight: 700; }
+    .farm-seasonal-price-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .farm-seasonal-price-main > span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #166534; }
+    .farm-seasonal-price-main > b { font-size: 22px; font-weight: 700; color: #14532d; font-variant-numeric: tabular-nums; }
+    .farm-seasonal-price-main .fsp-unit { text-transform: none; letter-spacing: 0; font-weight: 500; color: #166534; }
+    .farm-seasonal-goals { display: grid; gap: 8px; margin-top: 14px; }
+    .farm-seasonal-goal { padding: 11px 12px; border-radius: var(--r-md);
+      background: var(--surface-2); font-size: 12px; line-height: 1.5; color: var(--muted); }
+    .farm-seasonal-goal.is-done { background: #f0fdf4; }
+    .fsg-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .fsg-head b { flex: 1 1 auto; min-width: 0; font-size: 12.5px; font-weight: 700; color: var(--text); }
+    .fsg-num { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+      width: 19px; height: 19px; border-radius: var(--r-pill); background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
+    .fsg-state { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--dim); }
+    .fsg-state.ok { color: #15803d; }
+    .fsg-body { margin-bottom: 8px; }
+    .fsg-body b { color: var(--text); font-weight: 700; }
+    .farm-seasonal-mine { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); }
+    .farm-seasonal-mine.has { border-top-color: var(--border); }
+    .fsm-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--dim); margin-bottom: 7px; }
+    .fsm-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .fsm-stats > div { min-width: 0; }
+    .fsm-stats b { display: block; font-size: 16px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .fsm-stats span { display: block; font-size: 10.5px; color: var(--muted); }
+    .fsm-empty { font-size: 12px; line-height: 1.5; color: var(--muted); }
+    .farm-seasonal-next { display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--dim); }
+    .farm-seasonal-next .farm-ico { width: 16px; height: 16px; }
+    .farm-seasonal-next b { color: var(--muted); font-weight: 700; }
+    .farm-seasonal-price { margin-top: 13px; padding: 11px 12px; border-radius: var(--r-md); background: rgba(22,163,74,.07); color: #14532d; }
+    .farm-seasonal-price-note { margin-top: 6px; font-size: 11px; line-height: 1.5; color: #166534; }
+    .farm-seasonal-price-note b { font-weight: 700; }
+    .farm-seasonal-progress { height: 10px; border-radius: var(--r-pill); background: var(--bg-mid); overflow: hidden; }
+    .farm-seasonal-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: var(--accent); transition: width .35s ease; }
+    .farm-seasonal-progress-fill.done { background: #16a34a; }
+    .farm-seasonal-progress-text { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; font-size: 11px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .farm-seasonal-rank { display: grid; grid-template-columns: 42px minmax(0, 1fr) 82px; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
     .farm-seasonal-rank:last-child { border-bottom: none; }
-    .farm-seasonal-rank-pos { font-weight: 900; color: #1d4ed8; }
-    .farm-seasonal-rank-name { min-width: 0; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .farm-seasonal-rank-qty { text-align: right; font-weight: 900; color: #1e3a8a; font-variant-numeric: tabular-nums; }
-    .farm-seasonal-prizes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
-    .farm-seasonal-prize { padding: 8px 9px; border: 1px solid rgba(37,99,235,.15); border-radius: 8px; background: rgba(255,255,255,.72); font-size: 12px; color: #334155; }
-    .farm-seasonal-prize b { color: #1e3a8a; }
-    .farm-seasonal-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface); }
-    .farm-seasonal-bonus { color: #15803d; font-weight: 900; }
+    .farm-seasonal-rank-pos { font-weight: 700; color: var(--accent); }
+    .farm-seasonal-rank-name { min-width: 0; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .farm-seasonal-rank-qty { text-align: right; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .farm-seasonal-prizes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2px 14px; margin-top: 6px; }
+    .farm-seasonal-prize { padding: 3px 0; font-size: 11.5px; color: var(--muted); }
+    .farm-seasonal-prize b { color: var(--text); font-weight: 700; }
+    .farm-seasonal-empty { padding: 18px 12px; text-align: center; color: var(--muted); font-size: 12px; }
+    .farm-seasonal-bonus { color: #15803d; font-weight: 700; }
     /* Ownership deeds (prawa własności) — one mini certificate per owned tile */
     /* Territory deed cards — same .fcc skeleton as plant/NFT/item cards, framed
        in a parchment-gold gradient (green for tiles inherited from the old
@@ -5906,7 +5994,7 @@
     /* Hub modal tab bar (Katalog / Mój Majątek / Jak to działa) */
     /* Wraps to a second row instead of ellipsising labels — with 7 tabs the old
        `flex: 1 1 0` squeezed them into „Mój M…" / „Jak to…" on narrow modals. */
-    .farm-hub-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin: 0 0 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+    .farm-hub-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin: 0 0 10px; background: var(--surface); border-radius: var(--r-md); }
     .farm-hub-tab { flex: 0 1 auto; min-width: max-content; padding: 9px 12px; border: none; border-radius: var(--r-sm); background: transparent; color: var(--muted); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; transition: background .12s, color .12s; }
     .farm-hub-tab:hover { color: var(--text); }
     .farm-hub-tab.active { background: var(--accent); color: #fff; font-weight: 700; box-shadow: var(--sh-sm); }
@@ -5951,7 +6039,6 @@
     .farm-cat-td-name { font-weight: 700; color: var(--text); }
     .farm-cat-name-wrap { display: flex; align-items: center; gap: 7px; min-height: 24px; }
     .farm-cat-table td { vertical-align: middle; }
-    .farm-cat-stan-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 6px; }
     .farm-cat-emoji-sm { font-size: 20px; }
     .farm-cat-table td.farm-rar-common, .farm-cat-table td.farm-rar-rare, .farm-cat-table td.farm-rar-epic, .farm-cat-table td.farm-rar-legendary { font-weight: 800; }
     .farm-cat-table td.farm-cat-own.yes { color: var(--accent); font-weight: 700; }
@@ -6076,7 +6163,7 @@
     .farm-nft-stat b { display: block; font-size: 13px; color: #5a3a0a; margin-top: 2px; }
     .farm-nft-card-flavor { font-size: 11.5px; font-style: italic; color: #7a5a1a; line-height: 1.4; }
     .farm-cat-foot, .farm-inv-foot { margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.4; }
-    .farm-inv-section-title { font-weight: 800; font-size: 13px; color: var(--text); margin: 14px 0 4px; }
+    .farm-inv-section-title { font-weight: 700; font-size: 13px; color: var(--text); margin: 16px 0 5px; }
     .farm-inv-section-title:first-child { margin-top: 2px; }
     .farm-cat-divider { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
     /* The advisor's <details> summary is already a bordered box (.cosmetics-summary) —
@@ -6092,47 +6179,55 @@
     .maj-section-head-left { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .maj-section-count { color: var(--dim); font-weight: 600; margin-left: 2px; }
     .maj-section-right { color: #b45309; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; text-transform: none; letter-spacing: 0; }
-    .maj-ledger-box { border: 1px solid var(--border); border-radius: 10px; background: var(--card); padding: 0 10px; }
+    /* ── Minimalist pass (2026-07-25) ─────────────────────────────────────────
+       Mój Majątek was a stack of boxes inside a box: the hub body is already a
+       bordered card, and every section then drew its own border, so a plain list
+       of crops read as five nested frames. The rule now: ONE frame (the hub
+       body). Inside it, structure comes from spacing, a hairline, or a flat tint
+       — never an outline. Weights top out at 700; 800/900 everywhere made the
+       whole panel shout at the same volume. */
+    .maj-ledger-box { padding: 0; }
     .maj-ledger-box .farm-market-row:first-of-type { border-top: none; }
-    .maj-crop-ico { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--surface); flex: 0 0 auto; }
+    .maj-crop-ico { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--surface); flex: 0 0 auto; }
     .maj-crop-ico .farm-ico { width: 18px; height: 18px; }
     .maj-crop-ico .farm-ico-emoji { font-size: 16px; }
     .maj-num { font-variant-numeric: tabular-nums; }
-    .maj-empty { border: 1px dashed var(--border-hi); border-radius: 10px; padding: 16px 14px; text-align: center; background: var(--surface); }
-    /* ── 🧺 Plony hero — prominent sell panel pinned to the top of Mój Majątek ── */
-    .maj-crops-hero { position: relative; overflow: hidden; border: 1px solid rgba(245,158,11,.45); border-radius: 14px; padding: 12px 12px 11px; margin-bottom: 6px; background: linear-gradient(160deg, color-mix(in srgb, #f59e0b 14%, var(--card)), var(--card) 72%); box-shadow: 0 4px 18px rgba(245,158,11,.12); }
-    .maj-crops-hero::after { content: ''; position: absolute; top: 0; left: -60%; width: 45%; height: 100%; background: linear-gradient(105deg, transparent, rgba(255,255,255,.2), transparent); transform: skewX(-18deg); animation: majHeroShine 1.3s ease-out .3s 1 both; pointer-events: none; }
-    @keyframes majHeroShine { from { left: -60%; } to { left: 135%; } }
+    .maj-empty { padding: 18px 14px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    /* ── 🧺 Plony — sell panel pinned to the top of Mój Majątek ── */
+    .maj-crops-hero { position: relative; border-radius: var(--r-md); padding: 12px 13px; margin-bottom: 4px;
+      background: color-mix(in srgb, #f59e0b 7%, var(--card)); }
     .maj-crops-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .maj-crops-title { font-size: 14px; font-weight: 900; color: var(--text); }
-    .maj-crops-total { font-size: 22px; font-weight: 900; color: #b45309; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
-    .maj-crops-sub { font-size: 11px; color: var(--muted); margin: 3px 0 10px; line-height: 1.35; }
-    .maj-crop-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 9px 10px; margin-top: 8px; animation: majCardIn .45s ease-out backwards; }
+    .maj-crops-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .maj-crops-total { font-size: 22px; font-weight: 700; color: #b45309; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+    .maj-crops-sub { font-size: 11px; color: var(--muted); margin: 3px 0 6px; line-height: 1.4; }
+    /* Rows, not cards: a hairline between them is enough separation. */
+    .maj-crop-card { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 3px 10px; align-items: center;
+      padding: 10px 0 9px; border-top: 1px solid var(--border); animation: majCardIn .45s ease-out backwards; }
     @keyframes majCardIn { from { opacity: 0; transform: translateY(9px); } }
-    .maj-crop-art { grid-row: span 2; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--surface); }
+    .maj-crop-art { grid-row: span 2; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
     .maj-crop-art .farm-ico { width: 30px; height: 30px; }
     .maj-crop-art .farm-ico-emoji { font-size: 26px; }
     .maj-crop-main { min-width: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-    .maj-crop-name { font-weight: 800; font-size: 13.5px; color: var(--text); }
-    .maj-crop-qty { font-weight: 900; font-size: 13.5px; color: #b45309; font-variant-numeric: tabular-nums; }
+    .maj-crop-name { font-weight: 600; font-size: 13.5px; color: var(--text); }
+    .maj-crop-qty { font-weight: 700; font-size: 13.5px; color: #b45309; font-variant-numeric: tabular-nums; }
     .maj-crop-side { grid-row: span 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-    .maj-crop-value { font-size: 15px; font-weight: 900; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .maj-crop-sell { border: none; border-radius: 9px; padding: 7px 14px; font-weight: 800; font-size: 12.5px; cursor: pointer; color: #3a2a06; background: linear-gradient(180deg, #fbbf24, #f59e0b); box-shadow: 0 2px 6px rgba(245,158,11,.35); transition: transform .12s ease, box-shadow .12s ease, filter .12s ease; }
-    .maj-crop-sell:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(245,158,11,.45); filter: brightness(1.04); }
-    .maj-crop-sell:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(245,158,11,.35); }
+    .maj-crop-value { font-size: 15px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .maj-crop-sell { border: none; border-radius: var(--r-sm); padding: 7px 14px; font-weight: 600; font-size: 12.5px; cursor: pointer;
+      color: #3a2a06; background: #fbbf24; transition: background .12s ease; }
+    .maj-crop-sell:hover { background: #f59e0b; }
     .maj-crop-meta { min-width: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
-    .maj-crop-bar { position: relative; height: 7px; border-radius: 4px; background: var(--surface); border: 1px solid var(--border); flex: 1 1 90px; min-width: 70px; max-width: 160px; overflow: hidden; }
+    .maj-crop-bar { position: relative; height: 5px; border-radius: var(--r-pill); background: var(--bg-mid); flex: 1 1 90px; min-width: 70px; max-width: 160px; overflow: hidden; }
     .maj-crop-bar i { position: absolute; top: 0; bottom: 0; left: 0; display: block; border-radius: 4px; animation: majBarGrow .9s cubic-bezier(.2,.8,.3,1) .2s backwards; }
     @keyframes majBarGrow { from { width: 0; } }
-    .maj-crop-bar i.up { background: linear-gradient(90deg, #4ade80, #16a34a); }
-    .maj-crop-bar i.flat { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
-    .maj-crop-bar i.down { background: linear-gradient(90deg, #fca5a5, #dc2626); }
-    .maj-crops-empty { text-align: center; padding: 12px 8px 10px; }
-    .maj-crops-empty .mce-ico { display: inline-block; font-size: 34px; transform-origin: 50% 0; animation: majBasketSway 2.6s ease-in-out infinite; }
+    .maj-crop-bar i.up { background: #16a34a; }
+    .maj-crop-bar i.flat { background: #f59e0b; }
+    .maj-crop-bar i.down { background: #dc2626; }
+    .maj-crops-empty { text-align: center; padding: 10px 8px 6px; }
+    .maj-crops-empty .mce-ico { display: inline-block; font-size: 30px; transform-origin: 50% 0; animation: majBasketSway 2.6s ease-in-out infinite; }
     @keyframes majBasketSway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
-    .maj-crops-empty b { display: block; margin-top: 6px; font-size: 13px; color: var(--text); }
-    .maj-crops-empty .mce-steps { margin-top: 7px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
-    @media (prefers-reduced-motion: reduce) { .maj-crops-hero::after, .maj-crop-card, .maj-crop-bar i, .maj-crops-empty .mce-ico { animation: none !important; } }
+    .maj-crops-empty b { display: block; margin-top: 6px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .maj-crops-empty .mce-steps { margin-top: 6px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+    @media (prefers-reduced-motion: reduce) { .maj-crop-card, .maj-crop-bar i, .maj-crops-empty .mce-ico { animation: none !important; } }
     .farm-v2-body .farm-card-sub { color: var(--muted); }
     /* ── Ogródek farm overhaul: Twemoji icons + collectible cards + wood theme ── */
     /* Crisp Twemoji SVG plant icons (sized to the container's font-size; emoji fallback) */
@@ -6165,34 +6260,38 @@
     .whatsnew-ok { width: 100%; padding: 8px; border: none; border-radius: var(--r-sm); background: var(--accent); color: #fff; font-weight: 600; font-size: 12px; cursor: pointer; }
     .whatsnew-ok:hover { background: #4f46e5; }
     /* 🏡 Działki — compact ownership chips (replaced poster-sized .fcc deeds) */
-    .deed-chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 6px; margin: 8px 0 4px; }
-    .deed-chip { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--border); border-left: 3px solid var(--dim); border-radius: var(--r-sm); background: var(--card); font-size: 12px; }
-    .deed-chip.deed-free { border-left-color: #22c55e; }
-    .deed-chip.deed-busy { border-left-color: #f59e0b; }
-    .deed-chip.deed-listed { border-left-color: #6366f1; }
-    .deed-chip.deed-mig { border-left-color: #a855f7; }
-    .deed-chip-label { font-weight: 700; font-size: 11px; letter-spacing: .02em; }
-    .deed-chip-status { color: var(--muted); font-weight: 500; }
-    .deed-chip-val { margin-left: auto; font-weight: 600; white-space: nowrap; }
+    /* Plots: a flat tinted chip with a status DOT, not a bordered card with a
+       coloured rail — the outline carried no information the dot doesn't. */
+    .deed-chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 4px; margin: 6px 0 4px; }
+    .deed-chip { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: var(--r-sm);
+      background: var(--surface-2); font-size: 12px; }
+    .deed-chip::before { content: ''; flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+    .deed-chip.deed-free::before { background: #22c55e; }
+    .deed-chip.deed-busy::before { background: #f59e0b; }
+    .deed-chip.deed-listed::before { background: #6366f1; }
+    .deed-chip.deed-mig::before { background: #a855f7; }
+    .deed-chip-label { font-weight: 600; font-size: 11px; letter-spacing: .02em; }
+    .deed-chip-status { color: var(--muted); font-weight: 400; }
+    .deed-chip-val { margin-left: auto; color: var(--muted); white-space: nowrap; }
     /* 🏅 Osiągnięcia */
     .farm-ach-picker { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
     .farm-ach-list { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
     @media (min-width: 720px) { .farm-ach-list { grid-template-columns: 1fr 1fr; } }
     .fac-tier.none { color: var(--muted); font-weight: 600; opacity: .65; }
-    .farm-ach-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px; background: var(--card); box-shadow: var(--sh-sm); }
-    .farm-ach-card.is-maxed { border-color: #f59e0b; box-shadow: 0 0 0 1px rgba(245,158,11,.35), var(--sh-md); }
+    .farm-ach-card { border-radius: var(--r-md); padding: 13px 14px; background: var(--surface-2); }
+    .farm-ach-card.is-maxed { background: #fffbeb; }
     .fac-head { display: flex; align-items: center; gap: 8px; }
     .fac-icon { font-size: 20px; line-height: 1; }
     .fac-title { font-weight: 700; flex: 1; font-size: 14px; }
-    .fac-bonus-pill { font-weight: 700; font-size: 12px; color: #15803d; background: rgba(34,197,94,.12); border-radius: var(--r-pill); padding: 3px 9px; white-space: nowrap; }
-    .fac-bonus-pill.zero { color: var(--muted); background: var(--surface); }
+    .fac-bonus-pill { font-weight: 700; font-size: 13px; color: #15803d; white-space: nowrap; }
+    .fac-bonus-pill.zero { color: var(--dim); font-weight: 400; }
     .fac-bonus { font-weight: 900; color: #16a34a; font-size: 13px; margin-top: 4px; }
     .fac-bar { position: relative; height: 6px; border-radius: var(--r-pill); background: var(--surface); overflow: hidden; margin: 10px 0 7px; }
     .fac-bar i { display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .3s; }
     .fac-tick { position: absolute; top: 0; width: 2px; height: 100%; background: var(--card); }
     .fac-tick.hit { background: rgba(255,255,255,.5); }
     .fac-foot { font-size: 12px; color: var(--muted); font-weight: 500; }
-    .farm-ach-effect { font-size: 12px; color: var(--muted); margin-top: 5px; padding-top: 5px; border-top: 1px dotted var(--border); }
+    .farm-ach-effect { font-size: 11.5px; color: var(--dim); margin-top: 7px; line-height: 1.45; }
     .ach-lb { margin-top: 6px; }
     .ach-lb > summary { cursor: pointer; font-size: 11px; font-weight: 700; color: var(--muted); list-style: none; padding: 3px 0; user-select: none; }
     .ach-lb > summary::-webkit-details-marker { display: none; }
@@ -6201,15 +6300,15 @@
     .ach-lb > summary:hover { color: var(--text); }
     .ach-lb-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 3px; }
     .ach-lb-table td { padding: 3px 4px; border-top: 1px solid var(--border); }
-    .ach-lb-table th { padding: 3px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 800; text-align: left; border-bottom: 1px solid var(--border); }
-    .ach-lb-table tr.is-me { font-weight: 800; background: rgba(245,158,11,.14); box-shadow: inset 2px 0 0 #f59e0b; }
+    .ach-lb-table th { padding: 3px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--dim); font-weight: 700; text-align: left; border-bottom: 1px solid var(--border); }
+    .ach-lb-table tr.is-me { font-weight: 700; background: rgba(245,158,11,.10); }
     .ach-lb-pos { width: 22px; color: var(--muted); }
     .ach-lb-val { text-align: right; font-weight: 600; width: 52px; }
     .ach-lb-tier { width: 54px; text-align: right; white-space: nowrap; }
     .fac-mine { font-size: 13px; margin-top: 1px; }
     .fac-mine b { font-size: 16px; }
     .fac-mine-tag { color: var(--muted); font-size: 11px; font-weight: 700; margin-left: 4px; }
-    .farm-section-block { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+    .farm-section-block { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--border); }
     .farm-block-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; letter-spacing: -.01em; }
     .farm-series-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
     .farm-series-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 10px; text-align: center; background: var(--card); transition: border-color .12s, box-shadow .12s; }
@@ -6259,16 +6358,16 @@
     .bcr-name { font-weight: 600; font-size: 13px; }
     .bcr-stat { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
     .breed-formula { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 2px; }
-    .bf-card { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); }
+    .bf-card { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: var(--r-sm); background: var(--surface); }
     .bf-card.bf-out { border: 0; background: linear-gradient(135deg, #f472b6, #a855f7, #38bdf8, #34d399, #fde047, #f472b6); background-size: 300% 300%; animation: fccHolo 6s linear infinite; }
-    .bf-op { color: var(--muted); font-weight: 900; }
+    .bf-op { color: var(--dim); font-weight: 600; }
     .bf-caption { font-size: 12px; color: var(--muted); flex: 1 1 180px; }
     .breed-facts { list-style: none; margin: 8px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
     .breed-facts li { display: flex; gap: 7px; align-items: flex-start; line-height: 1.5; }
     .bfx { flex: 0 0 auto; }
     .breed-cta { display: inline-flex; width: auto; padding: 9px 16px; }
     .farm-hybrid-feed { margin-top: 8px; }
-    .farm-hybrid-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 4px 0; border-bottom: 1px dotted var(--border); }
+    .farm-hybrid-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); }
     .fhr-parents { color: var(--muted); white-space: nowrap; }
     .fcc-inner { position: relative; border-radius: 11px; background: var(--card); padding: 10px 8px 9px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
     .fcc-gem { position: absolute; top: 7px; left: 7px; z-index: 3; min-width: 22px; height: 21px; padding: 0 6px; border-radius: 7px; background: linear-gradient(160deg, #334155, #0f172a); color: #fde68a; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 1px; box-shadow: 0 1px 3px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.28); }
@@ -6353,16 +6452,18 @@
        carved wooden planks, which made one navigation land in two visual
        languages depending on whether you were in the garden or in a window.)
        The wood stays where it is scenery — the bar they sit on, signs, fence. */
-    .farm-tool-btn { color: var(--text); text-shadow: none; border: 1px solid var(--border);
+    .farm-tool-btn { color: var(--muted); text-shadow: none; border: 1px solid var(--border);
       border-radius: var(--r-sm); font-weight: 600; font-size: 13px;
-      background: var(--card); box-shadow: var(--sh-sm); transition: background .12s, color .12s, border-color .12s; }
+      background: var(--card); box-shadow: none; transition: background .12s, color .12s, border-color .12s; }
     .farm-tool-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--card); }
     .farm-tool-btn.primary { border-color: transparent; background: var(--accent); color: #fff; font-weight: 700; text-shadow: none; box-shadow: var(--sh-sm); }
     .farm-tool-btn.primary:hover { background: #4f46e5; color: #fff; border-color: transparent; }
     /* Hub modal: clean white, matching the rest of the site (wood stays only on the farm side board) */
     /* One definition only — this used to be declared twice (the later copy
        silently dropped min-height, so an empty tab collapsed to nothing). */
-    .farm-hub-body { min-height: 120px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px; }
+    /* The ONLY frame in the hub — everything inside separates with space, a
+       hairline, or a flat tint. */
+    .farm-hub-body { min-height: 120px; background: var(--card); border-radius: var(--r-md); padding: 4px 2px 2px; }
     /* Box-buy store: owned-box banner + "open in inventory" hint */
     .farm-box-owned { margin-top: 10px; padding: 9px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; color: var(--text); background: var(--surface); border: 1px solid var(--border); text-align: center; }
     .farm-box-owned b { font-weight: 900; color: var(--accent); }
@@ -6488,6 +6589,9 @@
     .farm-chart-dot.trend-up { fill: #22c55e; }
     .farm-chart-dot.trend-down { fill: #ef4444; }
     .farm-price-foot { margin-top: 6px; font-size: 10.5px; color: var(--muted); }
+    .farm-price-sources { margin-top: 7px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--bg-mid);
+      font-size: 10.5px; line-height: 1.45; color: var(--muted); }
+    .farm-price-sources b { color: var(--text); }
     .farm-price-empty { font-size: 12px; color: var(--muted); padding: 22px 0; text-align: center; }
     .farm-sales-feed { margin-top: 24px; padding-top: 16px; border-top: 2px dashed var(--border); }
     .farm-sales-title { font-weight: 800; font-size: 14px; margin-bottom: 8px; }
@@ -6540,6 +6644,15 @@
     .farm-nftx-title { font-size: 17px; font-weight: 900; color: var(--text); }
     .farm-nftx-sub { font-size: 12px; color: var(--muted); font-weight: 700; }
     .farm-nftx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    /* Details now live in the same window as the edition grid (the old „Pokaż
+       wszystkie" button opened a second modal for them). */
+    .farm-nftx-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(106px, 1fr)); gap: 12px 14px; margin: 14px 0 0;
+      padding: 13px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .nftx-fact { min-width: 0; }
+    .nftx-fact > span { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--dim); }
+    .nftx-fact > b { display: block; margin-top: 2px; font-size: 14px; font-weight: 700; color: var(--text); }
+    .nftx-fact > small { display: block; font-size: 10px; color: var(--muted); }
+    .farm-nftx-source { margin-top: 11px; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
     .farm-nftx-slot { border: 1px solid var(--border); border-radius: 10px; padding: 8px 9px; background: var(--surface); }
     .farm-nftx-slot.minted { border-color: #f0c060; background: linear-gradient(160deg, #fffaf0, #fff2d6); }
     .farm-nftx-slot.mine { border-color: var(--accent); background: var(--acc-dim); }
@@ -14876,8 +14989,11 @@ async function fillBuyOrder(order, qty, ref, btn) {
   const { data, error } = await sb.rpc('fill_buy_order', args);
   btn.disabled = false; btn.textContent = 'Sprzedaj';
   if (error) { showToast('❌ ' + boErrMsg(error)); return; }
-  if (data?.coins_left !== undefined) { me.coins = data.coins_left; setText(headerCoins, me.coins); }
-  showToast('✅ Sprzedano! Otrzymałeś ' + Number(data?.total || 0).toLocaleString('pl-PL') + ' 🪙');
+  // Read the balance back from the server instead of trusting the payload: the
+  // caller here is the SELLER, and older deployments of fill_buy_order returned
+  // the BUYER's balance in coins_left (see supabase/marketplace-requests.sql).
+  await refreshMeCoins();
+  showToast('✅ Sprzedano! Otrzymałeś ' + Number(data?.seller_net ?? data?.total ?? 0).toLocaleString('pl-PL') + ' 🪙');
   await ensureFarmData({ force: true });
   loadShop();
   if (order.item_kind === 'farm_tile') await loadFarm();
@@ -23586,7 +23702,7 @@ async function loadFarm() {
       sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('gardens').select('*, profiles(nick)'),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes'),
       sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
       sb.rpc('farm_land_tax_quote'),
       sb.from('profiles').select('id,nick,is_admin,second_garden_unlocked'),
@@ -24375,25 +24491,82 @@ function farmTaxQuoteLocal() {
   };
 }
 
-function farmTaxStat(label, value) {
-  return el('div', { className: 'farm-tax-stat' }, el('span', {}, label), el('b', {}, value));
+function farmTaxRow(label, value, opts = {}) {
+  return el('div', { className: 'farm-tax-row' + (opts.cls ? ' ' + opts.cls : '') },
+    el('span', {}, label, opts.hint ? el('small', {}, opts.hint) : ''),
+    el('b', {}, value));
 }
 
+// „🏛️ Podatek gruntowy" — one headline sentence saying what you actually pay,
+// a capacity bar (free plots vs taxed excess), a small ledger, and the formula
+// hidden behind „Jak to działa?". Replaces the old stat-grid + wall of note text
+// (which also quoted a hardcoded July-3rd date that has long since passed).
 function farmTaxStatusCard(opts = {}) {
   const q = farmTaxQuoteLocal();
-  const hasProblem = q.excess_tiles > 0 || q.debt > 0;
-  const card = el('div', { className: 'farm-tax-card' + (hasProblem ? '' : ' ok') },
-    el('div', { className: 'farm-tax-title' }, hasProblem ? '🏛️ Podatek od nadmiaru działek' : '🏛️ Podatek od działek: w normie'),
-    el('div', { className: 'farm-tax-grid' },
-      farmTaxStat('Twoje działki', q.owned_tiles + '/' + q.fair_cap),
-      farmTaxStat('Nadmiar', String(q.excess_tiles)),
-      farmTaxStat('Podatek/dzień', q.daily_tax + ' 🪙'),
-      farmTaxStat('Dług', q.debt + ' 🪙')),
-    el('div', { className: 'farm-tax-note' },
-      'Pierwsza płatność podatku będzie w piątek 03.07.2026 o 00:00 i obejmie poprzedni zakończony dzień: czwartek 02.07.2026. ',
-      'Formuła: ', el('b', {}, q.tax_per_excess_sq + ' × nadmiar²'), ' dziennie. Działki z roślinkami Ogródka nie liczą się do limitu.'));
-  if (q.debt > 0 && opts.pay !== false) {
-    const payBtn = el('button', { className: 'farm-mini-btn primary' }, 'Spłać podatek');
+  const over = q.excess_tiles > 0;
+  const owing = q.debt > 0;
+  const tone = owing ? 'debt' : (over ? 'warn' : '');
+  const card = el('div', { className: 'farm-tax-card' + (tone ? ' ' + tone : '') });
+
+  card.append(el('div', { className: 'farm-tax-head' },
+    el('div', { className: 'farm-tax-title' }, '🏛️ Podatek gruntowy'),
+    el('div', { className: 'farm-tax-pill' + (tone ? ' ' + tone : '') },
+      owing ? ('Zaległość ' + q.debt + ' 🪙')
+            : (over ? (q.daily_tax + ' 🪙 / dzień') : 'Nie płacisz'))));
+
+  const lead = el('div', { className: 'farm-tax-lead' });
+  if (over) {
+    lead.append('Masz ', el('b', {}, q.owned_tiles + ' z ' + q.fair_cap), ' działek bez podatku — ',
+      el('b', {}, q.excess_tiles + (q.excess_tiles === 1 ? ' ponad limit' : ' ponad limitem')),
+      '. Codziennie o północy naliczamy ', el('b', {}, q.daily_tax + ' 🪙'), '.');
+  } else {
+    lead.append('Mieścisz się w limicie ', el('b', {}, q.owned_tiles + ' z ' + q.fair_cap),
+      ' działek — nic nie płacisz. Kolejna działka kosztowałaby ',
+      el('b', {}, q.tax_per_excess_sq + ' 🪙 / dzień'), ' podatku.');
+  }
+  card.append(lead);
+
+  // Capacity bar: one segment per plot up to the cap, plus the taxed excess.
+  const total = Math.max(q.fair_cap, q.owned_tiles);
+  if (total <= 24) {
+    const bar = el('div', { className: 'farm-tax-bar' });
+    for (let i = 0; i < total; i++) {
+      const cls = i >= q.fair_cap ? 'over' : (i < q.owned_tiles ? 'used' : '');
+      bar.append(el('div', { className: 'farm-tax-seg' + (cls ? ' ' + cls : '') }));
+    }
+    card.append(bar, el('div', { className: 'farm-tax-scale' },
+      el('span', {}, 'Twoje działki: ' + q.owned_tiles),
+      el('span', {}, 'Limit bez podatku: ' + q.fair_cap)));
+  }
+
+  const rows = el('div', { className: 'farm-tax-rows' });
+  rows.append(farmTaxRow('Limit bez podatku', q.fair_cap + ' ' + plCount(q.fair_cap, 'działka', 'działki', 'działek'),
+    { hint: q.normal_capacity + ' pól ÷ ' + q.participants + ' graczy' }));
+  if (over) {
+    rows.append(farmTaxRow('Podatek dzienny', q.daily_tax + ' 🪙',
+      { hint: q.tax_per_excess_sq + ' × ' + q.excess_tiles + '² (nadmiar)' }));
+  }
+  if (owing) {
+    rows.append(farmTaxRow('Zaległy podatek', q.debt + ' 🪙',
+      { cls: 'is-debt', hint: 'Rośnie o 10% dziennie i blokuje kupno kolejnych działek' }));
+  }
+  card.append(rows);
+
+  const help = el('details', { className: 'farm-tax-help' });
+  help.append(el('summary', {}, 'Jak to działa?'));
+  const ul = el('ul', {});
+  [
+    'Limit to sprawiedliwy udział: wszystkie pola farmy podzielone przez liczbę graczy z działkami. Im więcej graczy, tym niższy limit.',
+    'Za każdą działkę ponad limit płacisz ' + q.tax_per_excess_sq + ' 🪙 × nadmiar² dziennie — 1 ponad limit to ' + q.tax_per_excess_sq + ' 🪙, 2 to ' + (q.tax_per_excess_sq * 4) + ' 🪙, 3 to ' + (q.tax_per_excess_sq * 9) + ' 🪙.',
+    'Naliczamy o północy (czasu warszawskiego) za poprzedni zakończony dzień. Podatek ściągamy automatycznie z przychodów ze sprzedaży plonów i z Targowiska.',
+    'Nadmiar jest dozwolony — nikt nie zabroni Ci kupować. Dopiero NIESPŁACONY dług blokuje zakup kolejnych działek. Sadzenie nie jest blokowane nigdy.',
+    'Działki z roślinkami Ogródka (stare, migrowane) nie liczą się do limitu.',
+  ].forEach(t => ul.append(el('li', {}, t)));
+  help.append(ul);
+  card.append(help);
+
+  if (owing && opts.pay !== false) {
+    const payBtn = el('button', { className: 'farm-mini-btn primary' }, 'Spłać ' + q.debt + ' 🪙');
     payBtn.addEventListener('click', () => payFarmLandTax(payBtn));
     card.append(el('div', { className: 'farm-tax-actions' }, payBtn));
   }
@@ -24521,6 +24694,15 @@ function farmToolbar() {
     bar.append(b);
   });
   return bar;
+}
+
+// Polish counts take three forms (1 / 2-4 / 5+ with the teens exception), so a
+// chip that just concatenates a noun reads broken half the time („1 plonów").
+function plCount(n, one, few, many) {
+  const abs = Math.abs(n | 0);
+  if (abs === 1) return one;
+  const last = abs % 10, lastTwo = abs % 100;
+  return (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) ? few : many;
 }
 
 // One popup per plain-cell click: planted → rich detail modal; otherwise the
@@ -25183,7 +25365,7 @@ async function ensureFarmData(opts = {}) {
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes'),
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
@@ -25286,7 +25468,7 @@ function farmCatalogGroups(mdl) {
     rare: { title: '🌿 Rzadkie rośliny' },
     epic: { title: '✨ Epickie rośliny' },
     legendary: { title: '🏆 Legendarne' },
-    nft: { title: '💎 Karty NFT', sub: 'Limitowane, numerowane okazy — wypadają z tej samej skrzynki za ' + FARM_BOX_PRICE + ' 🪙. Sprzedaż między graczami dodamy później.' },
+    nft: { title: '💎 Karty NFT', sub: 'Limitowane, numerowane okazy — wypadają z tej samej skrzynki za ' + FARM_BOX_PRICE + ' 🪙. Można je sprzedawać innym graczom na Targowisku.' },
     hybrid: { title: '🧬 Hybrydy', sub: 'Nie wypadają ze skrzynek — powstają wyłącznie z krzyżowania dwóch kart NFT (🎒 Mój Majątek).' },
   };
   const order = ['common', 'rare', 'epic', 'legendary', 'nft', 'hybrid'];
@@ -25415,9 +25597,10 @@ function farmMyPlantedLevels(species) {
 // they've already passed), not just the ones above what they own. Levels are
 // uncapped, so show at least 1-10 and extend past the owned level when it's
 // higher; the row for the viewer's current level is highlighted.
-function farmCardLevelTable(d, price, ownedLevel) {
+function farmCardLevelTable(d, price, ownedLevel, opts = {}) {
+  const isNft = !!opts.nft;
   const body = el('tbody', {});
-  const endL = Math.max(10, (ownedLevel && ownedLevel >= 1) ? ownedLevel + 5 : 1);
+  const endL = Math.max(isNft ? 6 : 10, (ownedLevel && ownedLevel >= 1) ? ownedLevel + 5 : 1);
   // NPC price swings 30–100% of the max, so ≈ Zysk/doba is a low–high range
   // (same convention as the catalog overview row), not a single max-price number.
   const floorPrice = price != null ? price * 0.30 : null;
@@ -25427,7 +25610,12 @@ function farmCardLevelTable(d, price, ownedLevel) {
     const low = floorPrice != null ? farmPerDayIncome(d, floorPrice, L) : null;
     const high = price != null ? farmPerDayIncome(d, price, L) : null;
     const perDayTxt = high == null ? '—' : (low === high ? '≈ ' + high + ' 🪙' : '≈ ' + low + '–' + high + ' 🪙');
-    const cost = L === 1 ? '—' : (2 * (L - 1)) + ' kart + ' + (50 * (L - 1) * (L - 1)) + ' 🪙';
+    // Fungible cards level by consuming duplicates (level_up_card); NFTs level by
+    // MERGING a second instance of the same level into this one (level_up_nft) —
+    // same coin formula, completely different material cost, so label it honestly.
+    const cost = L === 1 ? '—'
+      : (isNft ? ('2. egzemplarz poz. ' + (L - 1) + ' + ' + (50 * (L - 1) * (L - 1)) + ' 🪙')
+               : ((2 * (L - 1)) + ' kart + ' + (50 * (L - 1) * (L - 1)) + ' 🪙'));
     const isOwned = !!(ownedLevel && L === ownedLevel);
     body.append(el('tr', { className: isOwned ? 'farm-cat-lvl-owned' : '' },
       el('td', {}, 'poz. ' + L + (isOwned ? ' • Twój' : '')),
@@ -25436,15 +25624,17 @@ function farmCardLevelTable(d, price, ownedLevel) {
       el('td', { className: 'farm-cat-perday' }, perDayTxt),
       el('td', {}, cost)));
   }
-  const headTxt = ownedLevel ? 'Twój obecny poziom: ' + ownedLevel : 'Nie masz jeszcze tej karty';
+  const headTxt = ownedLevel ? 'Twój obecny poziom: ' + ownedLevel : (isNft ? 'Nie masz egzemplarza tej edycji' : 'Nie masz jeszcze tej karty');
   return el('div', { className: 'farm-cat-lvl-wrap' },
     el('div', { className: 'farm-cat-lvl-head' }, headTxt),
     el('table', { className: 'farm-cat-lvl-table' },
       el('thead', {}, el('tr', {},
         el('th', {}, 'Poziom'), el('th', {}, 'Plon'), el('th', {}, 'Wzrost'),
-        el('th', {}, '≈ Zysk/doba'), el('th', {}, 'Koszt ulepszenia'))),
+        el('th', {}, '≈ Zysk/doba'), el('th', {}, isNft ? 'Koszt awansu (fuzja)' : 'Koszt ulepszenia'))),
       body),
-    el('div', { className: 'farm-cat-lvl-note' }, 'Plon ×(1 + 0,5·(poziom−1)) • wzrost ×0,92 na poziom (min. 24 h) • poziom „zapisuje się" przy sadzeniu • zysk liczony przy cenie 30–100% pułapu • brak górnego limitu poziomu — ulepszanie jest nieskończone, tylko coraz droższe.'));
+    el('div', { className: 'farm-cat-lvl-note' }, isNft
+      ? 'Plon ×(1 + 0,5·(poziom−1)) • wzrost ×0,92 na poziom (min. 24 h) • poziom żyje na KONKRETNYM egzemplarzu • awans = fuzja dwóch egzemplarzy tego samego poziomu (jeden ginie na zawsze) • zysk liczony przy cenie 30–100% pułapu.'
+      : 'Plon ×(1 + 0,5·(poziom−1)) • wzrost ×0,92 na poziom (min. 24 h) • poziom „zapisuje się" przy sadzeniu • zysk liczony przy cenie 30–100% pułapu • brak górnego limitu poziomu — ulepszanie jest nieskończone, tylko coraz droższe.'));
 }
 
 // Open the full per-level ladder for one card in its own modal window (instead
@@ -25519,15 +25709,10 @@ function farmCatalogTable(mdl) {
                          : el('span', { className: 'farm-cat-stan locked' }, '🔒')))
         : (f.have ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · 🃏 ' + f.have.count + '/' + (2 * f.have.level))
                   : el('span', { className: 'farm-cat-stan locked' }, '🔒'));
-      if (f.isNft) {
-        // Per-owner level breakdown lives one click away in openFarmNftExplorer
-        // (every serial slot + its owner), so the compact row only needs the
-        // action button — showing a global histogram here next to "my serials"
-        // read as duplicated info and forced the table to scroll horizontally.
-        const btn = el('button', { className: 'farm-mini-btn', style: { padding: '2px 6px', fontSize: '10px' }, title: 'Pokaż wszystkie egzemplarze tej edycji' }, 'Pokaż wszystkie');
-        btn.addEventListener('click', e => { e.stopPropagation(); openFarmNftExplorer(d.species); });
-        stanCell = el('div', { className: 'farm-cat-stan-wrap' }, btn, stanCell);  // przycisk po lewej
-      }
+      // NFT rows used to carry a separate „Pokaż wszystkie" button next to the
+      // ownership cell — one click for the stats, another for the edition. The
+      // row now opens ONE modal with both (openFarmNftExplorer), so the button
+      // (and the confusion about which click showed what) is gone.
       // Ile egzemplarzy żyje vs zostało „spalonych" w fuzjach/krzyżowaniu.
       const nftLive = f.isNft ? fmNft.filter(n => n.species === d.species).length : 0;
       const nftFused = f.isNft ? Math.max(0, f.minted - nftLive) : 0;
@@ -25535,7 +25720,8 @@ function farmCatalogTable(mdl) {
       // grow time, yield, price, and the full level ladder open in a modal on
       // click (openFarmLevelModal), not an inline accordion.
       const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable',
-        title: 'Kliknij, aby zobaczyć wszystkie poziomy' },
+        title: f.isNft ? 'Kliknij, aby zobaczyć pełne szczegóły edycji: statystyki, poziomy, wszystkie egzemplarze i historię'
+                       : 'Kliknij, aby zobaczyć wszystkie poziomy' },
         el('td', { className: 'farm-cat-td-name' },
           el('div', { className: 'farm-cat-name-wrap' },
             el('span', { className: 'farm-cat-chev' }, '▸'),
@@ -25549,7 +25735,11 @@ function farmCatalogTable(mdl) {
         el('td', { className: 'farm-cat-perday' },
           perDayTxt, perDayNote ? el('small', { className: 'farm-cat-perday-note' }, perDayNote) : ''),
         el('td', {}, stanCell));
-      mainTr.addEventListener('click', () => openFarmLevelModal(d, f.price, ownedLvl));
+      // NFT → the full edition window (stats + poziomy + every serial + historia);
+      // fungible card → the level ladder.
+      mainTr.addEventListener('click', () => f.isNft
+        ? openFarmNftExplorer(d.species)
+        : openFarmLevelModal(d, f.price, ownedLvl));
       tbody.append(mainTr);
     });
   });
@@ -25736,6 +25926,38 @@ function buildFarmLandSection(container) {
   container.append(farmTaxStatusCard());
 }
 
+// Human label + emoji for a crop_type harvested by MORE THAN ONE plant. Every
+// weekly NFT edition and every bred hybrid share `seasonal_bloom` (one crop, one
+// market row, one chart) so the game doesn't spawn 52 price charts a year.
+const FARM_SHARED_CROP_LABELS = {
+  seasonal_bloom: { label: 'Kwiat sezonowy', emoji: '🌸',
+                    note: 'Wspólny plon kolekcji sezonowych i hybryd — jedna cena skupu dla wszystkich.' },
+};
+
+// Crops (not plants) sorted by rarity of their best plant. Each entry carries the
+// plants that harvest into it, so the price card can name them.
+function farmCropGroups() {
+  const byCrop = new Map();
+  [...fmDefs.values()].forEach(d => {
+    if (!d.crop_type || !fmMarket.has(d.crop_type)) return;
+    if (!byCrop.has(d.crop_type)) byCrop.set(d.crop_type, []);
+    byCrop.get(d.crop_type).push(d);
+  });
+  return [...byCrop.entries()].map(([cropType, defs]) => {
+    defs.sort((a, b) => (FARM_RARITY_ORDER[b.rarity] - FARM_RARITY_ORDER[a.rarity]) || ((b.base_yield || 0) - (a.base_yield || 0)));
+    const shared = defs.length > 1 ? FARM_SHARED_CROP_LABELS[cropType] : null;
+    const rep = defs[0];
+    return {
+      cropType, defs, rep,
+      label: shared ? shared.label : rep.name,
+      emoji: shared ? shared.emoji : rep.emoji,
+      note: shared ? shared.note : null,
+      rarityRank: Math.min(...defs.map(d => FARM_RARITY_ORDER[d.rarity] ?? 9)),
+      weight: Math.max(...defs.map(d => d.draw_weight || 0)),
+    };
+  }).sort((a, b) => (a.rarityRank - b.rarityRank) || (b.weight - a.weight));
+}
+
 // „📈 Ceny" hub tab: per-crop current NPC price + trend + price-history chart.
 async function buildFarmMarketBody(bodyEl) {
   bodyEl.replaceChildren(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
@@ -25764,11 +25986,15 @@ async function buildFarmMarketBody(bodyEl) {
     el('div', { className: 'farm-cat-head-title' }, '📈 Ceny plonów u NPC'),
     el('div', { className: 'farm-cat-head-sub' }, 'Cena skupu waha się 2×/dobę (00:00 i 12:00) między 30% a 100% ceny maks. (linia przerywana). Sprzedaż chwilowo ją obniża, potem wraca do dziennego poziomu — sprzedawaj, gdy jest wysoko! Historia z 7 dni.'))));
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🌾 Ceny plonów'));
-  const defs = [...fmDefs.values()].sort((a, b) => (FARM_RARITY_ORDER[a.rarity] - FARM_RARITY_ORDER[b.rarity]) || ((b.draw_weight || 0) - (a.draw_weight || 0)));
+  // ONE card per CROP, not per plant. Several plants can share a crop_type — every
+  // weekly NFT edition and every bred hybrid harvests the same 'seasonal_bloom' —
+  // and they all share a single farm_market row, so a card per plant printed the
+  // identical price/chart N times and read as a bug ("why do they all cost the same?").
   const grid = el('div', { className: 'farm-price-grid' });
-  defs.forEach(d => {
-    const mkt = fmMarket.get(d.crop_type); if (!mkt) return;
-    const q = farmSellQuote(d.crop_type, 1);
+  farmCropGroups().forEach(grp => {
+    const d = grp.rep;
+    const mkt = fmMarket.get(grp.cropType); if (!mkt) return;
+    const q = farmSellQuote(grp.cropType, 1);
     const cur = q ? q.startPrice : +(farmMarketEffectivePrice(mkt) || mkt.cur_price);
     const seasonalBonus = farmActiveSeasonalBonus(d.crop_type);
     const isSeasonal = seasonalBonus > 0;
@@ -25781,9 +26007,9 @@ async function buildFarmMarketBody(bodyEl) {
     pts = farmSeasonalChartPoints(pts, seasonalBonus);
     const card = el('div', { className: 'farm-price-card' + (isSeasonal ? ' seasonal' : '') },
       el('div', { className: 'farm-price-head' },
-        el('div', { className: 'farm-price-ic' }, farmIcon(d.emoji)),
+        el('div', { className: 'farm-price-ic' }, farmIcon(grp.emoji)),
         el('div', { className: 'farm-price-meta' },
-          el('div', { className: 'farm-price-name' }, d.name,
+          el('div', { className: 'farm-price-name' }, grp.label,
             isSeasonal ? el('span', { className: 'farm-price-seasonal-badge' }, 'Wyzwanie +' + Number(fmSeasonalEvent.bonus_per_unit || 0) + ' 🪙') : null),
           el('div', { className: 'farm-price-now' },
             farmPriceLabel(displayPrice) + ' 🪙',
@@ -25791,6 +26017,13 @@ async function buildFarmMarketBody(bodyEl) {
               ? farmPricePercentChip(displayPrice, chartMax, 'NPC + premia kontraktu: ' + farmPriceLabel(displayPrice) + ' 🪙 = ' + Math.round(displayPrice / chartMax * 100) + '% ceny maks. z premią (' + farmPriceLabel(chartMax) + ' 🪙).')
               : farmTrendChip(d.crop_type),
             seasonalPrice ? el('span', { className: 'farm-price-seasonal-now' }, 'normalnie ~' + farmPriceLabel(cur) + ' 🪙') : null))));
+    // Shared crop → name the plants that harvest into it, so it's obvious the one
+    // price covers all of them (rather than looking like N plants priced the same).
+    if (grp.defs.length > 1) {
+      card.append(el('div', { className: 'farm-price-sources' },
+        el('b', {}, 'Plon z ' + grp.defs.length + ' roślin: '),
+        grp.defs.map(x => (x.emoji || '') + ' ' + x.name).join(' · ')));
+    }
     if (pts.length >= 2) card.append(farmPriceChart(pts, chartMax));
     else card.append(el('div', { className: 'farm-price-empty' }, 'Historia zbiera się od teraz — wróć później.'));
     card.append(el('div', { className: 'farm-price-foot' }, seasonalPrice
@@ -25934,50 +26167,101 @@ async function buildFarmSeasonalBody(bodyEl) {
   const price = ev.status === 'active' ? farmSeasonalPriceInfo(ev.crop_type, bonus) : null;
   const title = ev.status === 'upcoming' ? 'Następny kontrakt: ' : 'Kontrakt tygodnia: ';
   const statusCls = ev.status === 'active' ? ' active' : (ev.status === 'closed' ? ' closed' : '');
+  const barDone = !!ev.bar_filled || total >= target;
 
-  const card = el('div', { className: 'farm-seasonal-card' },
-    el('div', { className: 'farm-seasonal-head' },
-      el('div', { className: 'farm-seasonal-title' }, farmIcon(ev.emoji || def?.emoji || '🌱'), el('span', {}, title + cropName)),
-      el('div', { className: 'farm-seasonal-status' + statusCls }, farmSeasonalStatusText(ev))),
-    el('div', { className: 'farm-seasonal-sub' },
-      farmSeasonalDateRange(ev), ' · aktywna roślina: ', el('b', {}, cropName)),
-    (ev.status === 'active' && farmSeasonalNextInfo(ev)) ? (function () {
-      const nx = farmSeasonalNextInfo(ev);
-      return el('div', { className: 'farm-seasonal-sub farm-seasonal-next' },
-        '👉 Następny tydzień (od ', nx.from.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' }), '): ',
-        el('b', {}, farmIcon(nx.emoji), ' ' + nx.name));
-    })() : null,
-    el('div', { className: 'farm-seasonal-goals' },
-      el('div', { className: 'farm-seasonal-goal' },
-        el('b', {}, '1. Ranking'),
-        'Sprzedaj do skupu jak najwięcej ', cropName, '. Top 3 graczy dostaje nagrody.'),
-      el('div', { className: 'farm-seasonal-goal' },
-        el('b', {}, '2. Wspólny pasek'),
-        'Wszyscy razem nabijacie pasek. Po wypełnieniu każdy z min. 1 zaliczoną sztuką dostaje ', ev.bar_boxes, ' skrzynek.')),
-    price ? el('div', { className: 'farm-seasonal-price' },
-      el('div', { className: 'farm-seasonal-price-title' }, 'Cena zaliczonej sztuki'),
-      el('div', { className: 'farm-seasonal-price-grid' },
-        el('div', { className: 'farm-seasonal-price-stat' }, el('span', {}, 'Teraz'), el('b', {}, '~' + farmPriceLabel(price.seasonalNow) + ' 🪙')),
-        el('div', { className: 'farm-seasonal-price-stat' }, el('span', {}, 'Minimum'), el('b', {}, farmPriceLabel(price.minSeasonal) + ' 🪙')),
-        el('div', { className: 'farm-seasonal-price-stat' }, el('span', {}, 'Maksimum'), el('b', {}, farmPriceLabel(price.maxSeasonal) + ' 🪙'))),
+  // ── Header: what the contract is + how long it runs ───────────────────────
+  const card = el('div', { className: 'farm-seasonal-card' });
+  card.append(el('div', { className: 'farm-seasonal-head' },
+    el('div', { className: 'farm-seasonal-title' }, farmIcon(ev.emoji || def?.emoji || '🌱'), el('span', {}, title + cropName)),
+    el('div', { className: 'farm-seasonal-status' + statusCls },
+      farmSeasonalStatusText(ev) + ' · ' + farmSeasonalDateRange(ev))));
+
+  // ── One instruction line: exactly what to do and what you get for it ──────
+  const lead = el('div', { className: 'farm-seasonal-lead' });
+  if (ev.status === 'active') {
+    // Note the phrasing: the crop name is always quoted as a nominative label
+    // („punktuje: Pomidor"), never inflected into the sentence — Polish would
+    // need a different case per crop and every variant would read broken.
+    lead.append('W tym tygodniu punktuje: ', el('b', {}, cropName),
+      '. Sprzedawaj go do skupu NPC — każda sztuka zebrana w tym tygodniu daje ',
+      el('b', {}, '+' + bonus + ' 🪙'), ' premii ponad normalną cenę i liczy się do obu nagród poniżej.');
+  } else if (ev.status === 'upcoming') {
+    lead.append('Ten kontrakt jeszcze nie wystartował. Od poniedziałku punktuje: ', el('b', {}, cropName),
+      ' — sprzedaż da premię ', el('b', {}, '+' + bonus + ' 🪙'), ' za sztukę.');
+  } else {
+    lead.append('Kontrakt zakończony. Nagrody wypłacamy w poniedziałek o 00:00.');
+  }
+  card.append(lead);
+
+  // ── Price: one sentence, not a 3-cell grid of near-identical numbers ──────
+  if (price) {
+    card.append(el('div', { className: 'farm-seasonal-price' },
+      el('div', { className: 'farm-seasonal-price-main' },
+        el('span', {}, 'Dostajesz teraz'),
+        el('b', {}, '≈ ' + farmPriceLabel(price.seasonalNow) + ' 🪙'),
+        el('span', { className: 'fsp-unit' }, 'za sztukę')),
       el('div', { className: 'farm-seasonal-price-note' },
-        'To normalna cena skupu + premia kontraktu ', el('b', {}, '+' + bonus + ' 🪙'), '. Stare zapasy nie dostają premii.')) : null,
-    el('div', { className: 'farm-inv-section-title' }, '🎁 Wspólny pasek'),
-    el('div', { className: 'farm-seasonal-progress' },
-      el('div', { className: 'farm-seasonal-progress-fill' + (ev.bar_filled ? ' done' : ''), style: { width: pct + '%' } })),
-    el('div', { className: 'farm-seasonal-progress-text' },
-      el('span', {}, total + ' / ' + target + ' szt.'),
-      el('span', {}, ev.contributor_count + ' uczestników')),
-    el('div', { className: 'farm-tax-note' }, 'Po wypełnieniu paska każdy, kto sprzeda min. 1 zaliczoną sztukę, dostanie ' + ev.bar_boxes + ' skrzynek.'));
+        'Normalna cena skupu ', el('b', {}, '~' + farmPriceLabel(price.normalNow) + ' 🪙'),
+        ' + premia kontraktu ', el('b', {}, '+' + bonus + ' 🪙'), '. Cena skupu waha się, więc w tym tygodniu sztuka jest warta ',
+        farmPriceLabel(price.minSeasonal), '–', farmPriceLabel(price.maxSeasonal),
+        ' 🪙. Premię dostają tylko plony ZEBRANE w tym tygodniu — stare zapasy nie.')));
+  }
+
+  // ── The two rewards, each with its own progress/state ─────────────────────
+  const goals = el('div', { className: 'farm-seasonal-goals' });
+
+  const g1 = el('div', { className: 'farm-seasonal-goal' });
+  g1.append(el('div', { className: 'fsg-head' },
+    el('span', { className: 'fsg-num' }, '1'),
+    el('b', {}, 'Ranking — kto sprzeda najwięcej'),
+    el('span', { className: 'fsg-state' }, my ? ('Twoje miejsce: #' + my.rank) : 'Nie startujesz')));
+  g1.append(el('div', { className: 'fsg-body' }, 'Liczy się sama liczba sprzedanych sztuk. Nagrody dla najlepszej trójki:'));
+  g1.append(farmSeasonalPrizeList(ev));
+  goals.append(g1);
+
+  const g2 = el('div', { className: 'farm-seasonal-goal' + (barDone ? ' is-done' : '') });
+  g2.append(el('div', { className: 'fsg-head' },
+    el('span', { className: 'fsg-num' }, '2'),
+    el('b', {}, 'Wspólny pasek — całe biuro razem'),
+    el('span', { className: 'fsg-state' + (barDone ? ' ok' : '') }, barDone ? '✅ Wypełniony' : (pct + '%'))));
+  const g2body = el('div', { className: 'fsg-body' });
+  g2body.append(barDone
+      ? 'Cel osiągnięty! W poniedziałek każdy, kto sprzedał min. 1 zaliczoną sztukę, dostanie '
+      : 'Wszyscy nabijacie jeden wspólny licznik. Po jego wypełnieniu każdy, kto sprzedał min. 1 zaliczoną sztukę, dostanie ',
+    el('b', {}, ev.bar_boxes + ' skrzynek'), '.');
+  g2.append(g2body);
+  g2.append(el('div', { className: 'farm-seasonal-progress' },
+    el('div', { className: 'farm-seasonal-progress-fill' + (barDone ? ' done' : ''), style: { width: pct + '%' } })));
+  g2.append(el('div', { className: 'farm-seasonal-progress-text' },
+    el('span', {}, total + ' / ' + target + ' szt.' + (barDone && total > target ? ' (cel przekroczony)' : '')),
+    el('span', {}, ev.contributor_count + ' uczestników')));
+  goals.append(g2);
+  card.append(goals);
+
+  // ── Your standing ─────────────────────────────────────────────────────────
+  const mine = el('div', { className: 'farm-seasonal-mine' + (my ? ' has' : '') });
+  mine.append(el('div', { className: 'fsm-label' }, '👤 Twój wynik w tym kontrakcie'));
+  if (my) {
+    mine.append(el('div', { className: 'fsm-stats' },
+      el('div', {}, el('b', {}, String(my.qty)), el('span', {}, 'sztuk zaliczonych')),
+      el('div', {}, el('b', {}, '+' + my.event_bonus + ' 🪙'), el('span', {}, 'premii dotąd')),
+      el('div', {}, el('b', {}, '#' + my.rank), el('span', {}, 'miejsce w rankingu'))));
+  } else {
+    mine.append(el('div', { className: 'fsm-empty' }, ev.status === 'active'
+      ? 'Jeszcze nic nie sprzedałeś. Zbierz i sprzedaj choćby 1 sztukę — wpadasz do rankingu i łapiesz się na nagrodę z paska.'
+      : 'Kontrakt jeszcze nie wystartował.'));
+  }
+  card.append(mine);
+
+  // ── Next week teaser, as a quiet footer ───────────────────────────────────
+  const nx = ev.status === 'active' ? farmSeasonalNextInfo(ev) : null;
+  if (nx) {
+    card.append(el('div', { className: 'farm-seasonal-next' },
+      'Od ' + nx.from.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' }) + ' kontrakt na: ',
+      farmIcon(nx.emoji), el('b', {}, ' ' + nx.name), ' — warto już teraz zasadzić.'));
+  }
 
   bodyEl.append(card);
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🏆 Nagrody za ranking'));
-  bodyEl.append(farmSeasonalPrizeList(ev));
-
-  bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '👤 Twój wynik'));
-  bodyEl.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left' } },
-    my ? ('Sprzedano: ' + my.qty + ' szt. · premia: +' + my.event_bonus + ' 🪙 · miejsce: #' + my.rank)
-       : (ev.status === 'active' ? 'Sprzedaj co najmniej 1 sztukę aktywnej rośliny, żeby wejść do paska.' : 'Wyzwanie jeszcze nie wystartowało.')));
 
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🏆 Ranking'));
   if (!fmSeasonalLeaderboard.length) {
@@ -26471,7 +26755,10 @@ function farmBreedPreview(a, b) {
   // always better than both — mirrors farm_hybrid_stats() in the SQL.
   const baseY = Math.ceil(Math.max(sa.yield, sb2.yield) * BREED_YIELD_SYNERGY);
   const baseG = Math.max(1440, Math.floor(Math.min(sa.grow, sb2.grow) * BREED_GROW_SYNERGY));
-  const price = fmMarket.get('seasonal_bloom')?.base_price;
+  // Price comes from the RESULTING hybrid's own crop row (they all share
+  // 'seasonal_bloom' today, but reading the def keeps this correct if that changes).
+  const cropType = fmDefs.get(res?.species)?.crop_type || 'seasonal_bloom';
+  const price = fmMarket.get(cropType)?.base_price;
   const perDay = price != null ? Math.round(baseY * price / Math.max(1, baseG / 1440)) : null;
   const ed = res?.edition || 0;
   return { res, yield: baseY, grow: baseG, price, perDay,
@@ -26615,8 +26902,16 @@ async function breedNft(aId, bId, btn) {
   const h = data.hybrid || {};
   // Remove both parents; add the fresh hybrid instance to local state.
   fmNft = fmNft.filter(n => n.id !== aId && n.id !== bId);
+  // Carry the server's synergy stats into local state — without them the fresh
+  // hybrid would render with its SPECIES defaults (weaker than the parents it
+  // just burned) until the next full reload.
   fmNft.push({ id: h.id, species: h.species, serial_no: h.serial_no, edition_size: h.edition_size,
-               owner_id: me.id, nft_name: h.nft_name, level: 1, listed: false });
+               owner_id: me.id, nft_name: h.nft_name, level: 1, listed: false,
+               stat_yield: h.stat_yield ?? null, stat_grow_minutes: h.stat_grow_minutes ?? null });
+  // minted_count is the monotonic "minted ever" counter the catalog/edition grid
+  // reads; bump it locally so the hybrid's supply isn't one short until a reload.
+  const hDef = fmDefs.get(h.species);
+  if (hDef && hDef.minted_count != null) hDef.minted_count = Math.max(hDef.minted_count + 1, h.serial_no || 0);
   fmHybridFeed = null; fmAchMine = null; fmAchAll = null;  // refetch meta (feed + achievements)
   showToast('🧬 Wyhodowano „' + (h.name || 'hybrydę') + '" #' + h.serial_no + (h.curated ? ' ✨ (kultowy przepis!)' : '') + '!');
   refreshFarmHub(); renderFarmSelection();
@@ -26861,7 +27156,7 @@ async function openFarmNftExplorer(species) {
   const body = el('div', { className: 'farm-nftx-body' }, el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
   const modal = el('div', { className: 'modal farm-nftx-modal' },
     el('div', { className: 'modal-header' },
-      el('span', { className: 'modal-title' }, '💎 ' + (def.name || species) + ' — edycja'), closeX),
+      el('span', { className: 'modal-title' }, '💎 ' + (def.name || species) + ' — karta NFT'), closeX),
     body);
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
@@ -26893,6 +27188,11 @@ async function openFarmNftExplorer(species) {
     const nm = id => id ? (nick.get(id) || '?') : '—';
     const bySerial = new Map(); insts.forEach(i => bySerial.set(i.serial_no, i));
 
+    const mine = insts.filter(i => i.owner_id === me?.id);
+    const myLevel = mine.length ? Math.max(...mine.map(i => i.level || 1)) : undefined;
+    const price = fmMarket.get(def.crop_type)?.base_price;
+    const isHybrid = !!def.is_hybrid;
+
     body.replaceChildren();
     body.append(el('div', { className: 'farm-nftx-head' },
       farmIcon(def.emoji || '💎', 'farm-nftx-emoji'),
@@ -26902,6 +27202,31 @@ async function openFarmNftExplorer(species) {
           mintedEver + ' / ' + editionSize + ' wybitych' +
           (mintedEver > insts.length ? ' · 🔥 ' + (mintedEver - insts.length) + ' spalonych (fuzje)' : '') +
           ' · wartość ' + (editionSize ? Math.round(20000 / editionSize) : '?') + ' 🪙/szt'))));
+
+    // ── Details, in the SAME window as the edition (previously a second modal
+    //    behind a „Pokaż wszystkie" button, which split one card's info in two).
+    const facts = el('div', { className: 'farm-nftx-facts' });
+    const fact = (label, value, hint) => facts.append(el('div', { className: 'nftx-fact' },
+      el('span', {}, label), el('b', {}, value), hint ? el('small', {}, hint) : ''));
+    fact('Plon', farmYieldAtLevel(def, 1) + ' szt.', 'na poziomie 1');
+    fact('Czas wzrostu', farmGrowDaysLabel(farmGrowMinAtLevel(def, 1)), 'min. 24 h');
+    fact('Cena skupu', price != null ? ('do ' + price + ' 🪙') : '—', 'za sztukę plonu');
+    fact('≈ Zysk/doba', price != null
+      ? ('≈ ' + farmPerDayIncome(def, price * 0.30, 1) + '–' + farmPerDayIncome(def, price, 1) + ' 🪙') : '—',
+      'przy cenie 30–100%');
+    fact('Nakład', String(editionSize), 'egzemplarzy na zawsze');
+    fact('Masz', mine.length ? (mine.length + ' szt.') : '—',
+      mine.length ? ('poziom maks. ' + myLevel) : (isHybrid ? 'z krzyżowania' : 'ze skrzynek'));
+    body.append(facts);
+
+    body.append(el('div', { className: 'farm-nftx-source' }, isHybrid
+      ? '🧬 Hybryda — nie wypada ze skrzynek. Powstaje wyłącznie z krzyżowania dwóch kart NFT różnych gatunków (🎒 Mój Majątek → Krzyżowanie).'
+      : (def.series_week
+          ? '🗓️ Kolekcja sezonowa — wypada ze skrzynek do wyczerpania nakładu.'
+          : '📦 Wypada ze skrzynek, dopóki nakład się nie wyczerpie.')));
+
+    body.append(el('div', { className: 'farm-inv-section-title' }, '⬆️ Poziomy egzemplarza'));
+    body.append(farmCardLevelTable(def, price, myLevel, { nft: true }));
 
     // Edition grid: every slot 1..N — minted shows owner+name; a minted serial
     // with no live instance was burned as merge fuel; locked = not yet drawn.
@@ -27652,7 +27977,7 @@ async function loadFarmLootbox() {
     const [defsRes, colRes, nftRes, tilesRes, stateRes, taxRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes'),
       me ? sb.from('farm_tiles').select('owner_id,acquired_via').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
