@@ -480,8 +480,13 @@
       border-bottom: 1px solid var(--border);
       padding: 0 var(--page-pad); min-height: 58px; display: flex;
       align-items: center; justify-content: space-between;
-      gap: 12px; position: sticky; top: 0; z-index: 20;
+      gap: 12px; position: sticky; top: 0; z-index: 41;
     }
+    /* Chrome stack, highest last: page popovers (.gp-details-popover,
+       .ftbl-menu) 30 < .nav-tabs 40 < header 41 < modals/toasts 100+. The nav
+       has to outrank page popovers because its own dropdowns are trapped in its
+       stacking context (backdrop-filter creates one), and the header has to
+       outrank the nav so a mid-resize offset can't slide the bar over it. */
 
     .logo { font-size: 17px; font-weight: 800; letter-spacing: 0; min-width: 0; }
     .logo span { color: var(--accent); }
@@ -518,11 +523,13 @@
       backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px);
       padding: 5px var(--page-pad);
     }
-    /* Sticky only where the header is a guaranteed-58px single row — on a phone
-       it wraps to two rows, and a fixed 58px offset would slide the nav over it. */
-    @media (min-width: 761px) {
-      .nav-tabs { position: sticky; top: 58px; z-index: 19; }
-    }
+    /* Sticky at every width. The offset can't be the constant 58px the desktop
+       header is — on a phone the header wraps to two rows — so syncNavOffset()
+       measures it and publishes --nav-top (and --nav-h for anything that sticks
+       under the nav in turn). Being positioned is also what keeps the nav's
+       dropdowns above the page: without it the backdrop-filter stacking context
+       paints below every position:relative card on the page. */
+    .nav-tabs { position: sticky; top: var(--nav-top, 58px); z-index: 40; }
 
     .nav-tab {
       background: none; border: none; border-radius: var(--r-sm);
@@ -608,7 +615,18 @@
       .nav-tab, .nav-group-btn { padding: 8px 11px; font-size: 12px; }
       .nav-tab.has-nav-hint { justify-content: center; gap: 5px; }
       .nav-hint-badge { min-height: 16px; padding: 2px 5px; font-size: 9px; }
-      .nav-dropdown { min-width: 150px; }
+      /* One full-width sheet under the bar instead of a narrow popup hanging off
+         whichever pill was tapped: a wrapped bar puts group buttons anywhere on
+         the row, so an anchored menu can land half off-screen. .nav-group goes
+         static so the menu positions against .nav-tabs itself, and it scrolls —
+         „Gry" is taller than a phone viewport. */
+      .nav-group { position: static; }
+      .nav-dropdown, .nav-dropdown-right {
+        left: 8px; right: 8px; min-width: 0;
+        max-height: calc(100vh - var(--nav-top, 58px) - var(--nav-h, 44px) - 24px);
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+      }
+      .nav-dropdown .nav-tab, .nav-dropdown .nav-menu-item { padding: 12px 16px; font-size: 13px; }
     }
 
     /* ── ACTIVITY STRIP ── */
@@ -1987,9 +2005,14 @@
       .coins-badge, .btn-ghost { flex: 0 0 auto; }
       .header-nick { max-width: 90px; }
 
-      .nav-tab { flex: 1 0 auto; text-align: center; }
+      /* Content-sized, centered pills. Stretching them (flex-grow) split each
+         row's slack unevenly — „Ogródek" ballooned to half the bar while „Gry"
+         stayed tiny — and made the wrapped bar taller than it needs to be. */
+      .nav-tabs { justify-content: center; }
+      .nav-tab { flex: 0 1 auto; text-align: center; }
       .nav-dropdown .nav-tab { flex: none; text-align: left; }
-      .nav-tabs .nav-group-btn { flex: 1 0 auto; justify-content: center; }
+      .nav-tabs .nav-group-btn { flex: 0 1 auto; justify-content: center; }
+      .nav-sep { display: none; }
 
       main { padding-top: 20px; padding-bottom: 20px; }
       .markets-toolbar { align-items: stretch; flex-direction: column; }
@@ -4304,34 +4327,123 @@
     .ag-info { font-size: 13px; color: var(--muted); }
     .ag-info strong { color: var(--text); }
 
-    /* ── Game picker (Steam/Xbox style) ── */
+    /* ── Klasyfikacja generalna: medal table across all ten games ── */
+    .ag-podium {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px 16px 0; margin-bottom: 16px;
+    }
+    .ag-podium:empty { display: none; }
+    .ag-podium-title { font-size: 14px; font-weight: 800; }
+    .ag-podium-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+    .ag-podium-steps {
+      list-style: none; margin: 14px auto 0; padding: 0; max-width: 620px;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px; align-items: end;
+    }
+    .ag-pod { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; }
+    .ag-pod-nick {
+      font-size: 14px; font-weight: 800; max-width: 100%;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .ag-pod.is-1 .ag-pod-nick { font-size: 17px; }
+    .ag-pod-medals { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .ag-pod-medals b { color: var(--text); }
+    .ag-pod-games { font-size: 13px; letter-spacing: 1px; min-height: 16px; }
+    .ag-pod-step {
+      width: 100%; border-radius: 8px 8px 0 0; display: grid; place-items: center;
+      font-size: 22px; font-weight: 800; color: #fff;
+      background: linear-gradient(180deg, var(--dim), var(--muted));
+    }
+    .ag-pod.is-1 .ag-pod-step { height: 78px; background: linear-gradient(180deg, #fbbf24, #d97706); }
+    .ag-pod.is-2 .ag-pod-step { height: 58px; background: linear-gradient(180deg, #cbd5e1, #94a3b8); }
+    .ag-pod.is-3 .ag-pod-step { height: 44px; background: linear-gradient(180deg, #e0a173, #b45309); }
+    .ag-pod.is-me .ag-pod-nick { color: var(--accent); }
+    .ag-podium-empty { font-size: 12px; color: var(--dim); padding: 8px 0 14px; }
+
+    /* ── Game picker: live gameplay preview + records, one row per game ── */
     .ag-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 760px), 1fr));
       gap: 14px;
       margin-bottom: 24px;
     }
     .ag-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-      color: var(--text); cursor: pointer; text-align: left;
+      color: var(--text); cursor: pointer; text-align: left; font: inherit;
       transition: border-color .15s, box-shadow .15s, transform .1s;
-      overflow: hidden; display: flex; flex-direction: column;
+      display: grid; grid-template-columns: 232px minmax(150px, 1fr) 316px;
+      gap: 14px; padding: 12px;
     }
+    .ag-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .ag-card:hover { border-color: var(--accent); box-shadow: 0 4px 18px rgba(99,102,241,.18); transform: translateY(-2px); }
     .ag-card:active { transform: translateY(0); box-shadow: none; }
-    .ag-card-banner {
-      height: 90px; display: flex; align-items: center; justify-content: center;
-      font-size: 42px; background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
+
+    /* Preview stage — a canvas (or scaled-down real DOM) drawn by the game itself */
+    .ag-card-media {
+      position: relative; overflow: hidden; border-radius: 10px;
+      aspect-ratio: 16 / 9; background: #0b1220;
+      display: grid; place-items: center;
     }
-    .ag-card-body { padding: 10px 12px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
-    .ag-card-name { font-size: 13px; font-weight: 700; }
-    .ag-card-desc { font-size: 11px; color: var(--muted); line-height: 1.45; flex: 1; }
-    .ag-card-meta {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);
+    .ag-card-emoji { font-size: 40px; filter: saturate(.9); }
+    .ag-card-media.is-live .ag-card-emoji { display: none; }
+    .ag-card-media.is-failed .ag-card-emoji { opacity: .5; }
+    .ag-prev-canvas { display: block; max-width: 100%; max-height: 100%; pointer-events: none; }
+    /* DOM-rendered previews (Whack-a-Boss, Zamknij Popupy) run at their own
+       pixel size and are scaled to fit by agpScaleDom(); the overrides undo the
+       full-size game rules (.wb-arena min-height, .pp-arena max-width). */
+    .ag-prev-dom {
+      position: absolute; left: 50%; top: 50%; transform-origin: center center;
+      min-height: 0; max-width: none; margin: 0; pointer-events: none;
+      border-radius: 0;
     }
-    .ag-card-cost { font-size: 11px; font-weight: 700; color: var(--accent); }
-    .ag-card-tag  { font-size: 10px; color: var(--dim); font-weight: 500; letter-spacing: .3px; }
+
+    .ag-card-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+    .ag-card-head { display: flex; align-items: baseline; gap: 8px; }
+    .ag-card-name { font-size: 14px; font-weight: 800; }
+    .ag-card-tag  { font-size: 10px; color: var(--dim); font-weight: 600; letter-spacing: .3px; margin-left: auto; flex: none; }
+    .ag-card-desc { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+    .ag-card-cta  { font-size: 11px; font-weight: 700; color: var(--accent); margin-top: auto; padding-top: 6px; }
+
+    /* Records: two ranking columns — all-time first, then the current week */
+    .ag-card-scores {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
+      align-content: start; min-width: 0;
+      border-left: 1px solid var(--border); padding-left: 12px;
+    }
+    .ag-sb-label {
+      font-size: 9px; font-weight: 800; color: var(--dim);
+      letter-spacing: .07em; text-transform: uppercase;
+      padding-bottom: 4px; border-bottom: 1px solid var(--border); margin-bottom: 3px;
+    }
+    .ag-sb-list { list-style: none; margin: 0; padding: 0; min-width: 0; }
+    .ag-sb-item {
+      display: flex; align-items: baseline; gap: 6px;
+      font-size: 11.5px; line-height: 1.75; min-width: 0;
+    }
+    .ag-sb-rank { color: var(--dim); font-size: 10px; width: 13px; flex: none; }
+    .ag-sb-nick { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ag-sb-val  { font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
+    .ag-sb-item.is-first .ag-sb-nick { font-weight: 700; }
+    .ag-sb-item.is-first .ag-sb-val  { color: var(--accent); }
+    .ag-sb-item.is-me { background: var(--acc-dim); border-radius: 5px; margin: 0 -5px; padding: 0 5px; }
+    .ag-sb-item.is-me .ag-sb-nick { font-weight: 700; }
+    .ag-sb-empty { font-size: 11px; color: var(--dim); line-height: 1.9; }
+    .ag-sb-more {
+      grid-column: 1 / -1; margin-top: 6px; width: 100%;
+      background: none; border: 1px solid var(--border); border-radius: 7px;
+      color: var(--muted); cursor: pointer; font: inherit; font-size: 11px; font-weight: 700;
+      padding: 5px 8px; transition: color .15s, border-color .15s;
+    }
+    .ag-sb-more:hover { color: var(--text); border-color: var(--accent); }
+    .ag-sb-loading { grid-column: 1 / -1; font-size: 11px; color: var(--dim); }
+
+    @media (max-width: 860px) {
+      .ag-card { grid-template-columns: 1fr; gap: 10px; }
+      .ag-card-scores {
+        border-left: 0; border-top: 1px solid var(--border);
+        padding-left: 0; padding-top: 10px;
+      }
+    }
 
     /* ── Back button ── */
     #ag-back {
@@ -4395,7 +4507,7 @@
     .shop-category-filters {
       display: flex; gap: 8px; flex-wrap: wrap;
       margin: 18px 0 4px;
-      position: sticky; top: 58px; z-index: 15;
+      position: sticky; top: calc(var(--nav-top, 58px) + var(--nav-h, 44px)); z-index: 15;
       padding: 10px 0; background: var(--bg);
       border-bottom: 1px solid var(--border);
     }
@@ -4412,7 +4524,9 @@
     .shop-category-filter.active {
       background: var(--acc-dim); border-color: var(--accent); color: var(--accent);
     }
-    .shop-section { margin-top: 22px; scroll-margin-top: 124px; }
+    /* Clear the sticky header + nav when a category jump scrolls a section into
+       view — on a phone that chrome is ~169px, not the desktop 102px. */
+    .shop-section { margin-top: 22px; scroll-margin-top: calc(var(--nav-top, 58px) + var(--nav-h, 44px) + 22px); }
     .shop-section-head {
       display: flex; align-items: flex-end; justify-content: space-between;
       gap: 14px; margin-bottom: 4px;
@@ -8540,117 +8654,128 @@
         <h2>🎮 Wszystkie Gry</h2>
         <p class="ag-info">Zagraj w dowolną grę <strong>za darmo</strong>. Wyniki trafiają do oddzielnego rankingu arcade (bez nagród sezonowych).</p>
       </div>
+      <section class="ag-podium" id="ag-podium"></section>
       <div class="ag-grid">
-        <button class="ag-card" data-game="whack_boss">
-          <div class="ag-card-banner">🪲</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">Whack-a-Boss</div>
-            <div class="ag-card-desc">18 sekund intensywnego klikania. Kliknij bossa kiedy jest widoczny — nie klikaj gdy znika. Łańcuchy trafień budują combo.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+        <div class="ag-card" role="button" tabindex="0" data-game="whack_boss">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🪲</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">Whack-a-Boss</span>
               <span class="ag-card-tag">ZRĘCZNOŚCIOWA</span>
             </div>
+            <div class="ag-card-desc">18 sekund intensywnego klikania. Kliknij bossa kiedy jest widoczny — nie klikaj gdy znika. Łańcuchy trafień budują combo.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="bug_jumper">
-          <div class="ag-card-banner">🐛</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">Bug Jumper</div>
-            <div class="ag-card-desc">30 trudnych linii, losowa trasa w każdej rundzie. Przeskakuj przeszkody strzałkami i dotrzyj jak najwyżej.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+          <div class="ag-card-scores" data-scores="whack_boss"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="bug_jumper">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🐛</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">Bug Jumper</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
             </div>
+            <div class="ag-card-desc">30 trudnych linii, losowa trasa w każdej rundzie. Przeskakuj przeszkody strzałkami i dotrzyj jak najwyżej.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="flappy_pants">
-          <div class="ag-card-banner">👖</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">3 Pary Spodni</div>
-            <div class="ag-card-desc">Flappy Bird z parami spodni. Masz 3 życia — każde zderzenie kosztuje jedną parę. Wynik = liczba ominętych rur.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+          <div class="ag-card-scores" data-scores="bug_jumper"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="flappy_pants">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">👖</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">3 Pary Spodni</span>
               <span class="ag-card-tag">ARCADE</span>
             </div>
+            <div class="ag-card-desc">Flappy Bird z parami spodni. Masz 3 życia — każde zderzenie kosztuje jedną parę. Wynik = liczba ominiętych rur.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="snake">
-          <div class="ag-card-banner">🐍</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">Snake</div>
-            <div class="ag-card-desc">Klasyczny wąż na siatce 20×20. Zbieraj jabłka, unikaj ścian i własnego ogona. Masz 120 sekund.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+          <div class="ag-card-scores" data-scores="flappy_pants"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="snake">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🐍</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">Snake</span>
               <span class="ag-card-tag">KLASYCZNA</span>
             </div>
+            <div class="ag-card-desc">Klasyczny wąż na siatce 20×20. Zbieraj jabłka, unikaj ścian i własnego ogona. Masz 120 sekund.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="invoice_horde">
-          <div class="ag-card-banner">🎫</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">Najazd Ticketów</div>
-            <div class="ag-card-desc">Survival: jesteś informatykiem otoczonym ticketami. Uciekaj, prowadź rój za sobą i zamykaj zgłoszenia — boss CF soakuje 5 trafień.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+          <div class="ag-card-scores" data-scores="snake"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="invoice_horde">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🎫</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">Najazd Ticketów</span>
               <span class="ag-card-tag">SURVIVAL</span>
             </div>
+            <div class="ag-card-desc">Survival: jesteś informatykiem otoczonym ticketami. Uciekaj, prowadź rój za sobą i zamykaj zgłoszenia — boss CF soakuje 5 trafień.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="var_patrol">
-          <div class="ag-card-banner">📺</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">VAR Patrol</div>
+          <div class="ag-card-scores" data-scores="invoice_horde"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="var_patrol">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">📺</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">VAR Patrol</span>
+              <span class="ag-card-tag">REFLEKS</span>
+            </div>
             <div class="ag-card-desc">Pokój VAR: 60 sekund decyzji tylko o spalonym. Oglądaj stop-klatkę, wybierz GRA albo SPALONY, buduj serię.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
+          </div>
+          <div class="ag-card-scores" data-scores="var_patrol"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="egg_catch">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🥚</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">Łap Jajka</span>
               <span class="ag-card-tag">REFLEKS</span>
             </div>
+            <div class="ag-card-desc">Elektronika LCD: jajka staczają się z 4 kurzych grzęd, Ty łapiesz je koszykiem wilka. Trzy stłuczki kończą rundę.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="egg_catch">
-          <div class="ag-card-banner">🥚</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">Łap Jajka</div>
-            <div class="ag-card-desc">Elektronika LCD: jajka staczają się z 4 kurnych grzęd, Ty łapiesz je koszykiem wilka. Trzy stłuczki kończą rundę, a jajka lecą coraz szybciej.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
-              <span class="ag-card-tag">REFLEKS</span>
-            </div>
-          </div>
-        </button>
-        <button class="ag-card" data-game="super_mariusz">
-          <div class="ag-card-banner">🧢</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">„Super Mariusz"</div>
-            <div class="ag-card-desc">Brutalny hardmode speedrun po biurowym korytarzu. Jedno życie — kolce, teczki i przepaście zabijają od razu. Liczy się dystans, a wśród finisherów czas.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+          <div class="ag-card-scores" data-scores="egg_catch"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="super_mariusz">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🧢</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">„Super Mariusz”</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
             </div>
+            <div class="ag-card-desc">Brutalny hardmode speedrun po biurowym korytarzu. Jedno życie — kolce, teczki i przepaście zabijają od razu.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="tetris">
-          <div class="ag-card-banner">🧱</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">„Tetris G6"</div>
-            <div class="ag-card-desc">Klasyczna studnia 10×20: obracaj klocki i domykaj linie. Cztery naraz to „tetris" i najwięcej punktów. Co 10 linii robi się szybciej.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+          <div class="ag-card-scores" data-scores="super_mariusz"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="tetris">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🧱</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">„Tetris G6”</span>
               <span class="ag-card-tag">ŁAMIGŁÓWKA</span>
             </div>
+            <div class="ag-card-desc">Klasyczna studnia 10×20: obracaj klocki i domykaj linie. Cztery naraz to „tetris” i najwięcej punktów.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
-        <button class="ag-card" data-game="popup_panic">
-          <div class="ag-card-banner">🖱️</div>
-          <div class="ag-card-body">
-            <div class="ag-card-name">„Zamknij Popupy!"</div>
-            <div class="ag-card-desc">30 sekund biurowego koszmaru: zamykaj popupy zanim zasypią ekran. Czerwony malware ma zegar — nie zdążysz, łapiesz wirusa.</div>
-            <div class="ag-card-meta">
-              <span class="ag-card-cost">Za darmo</span>
+          <div class="ag-card-scores" data-scores="tetris"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="popup_panic">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🖱️</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">„Zamknij Popupy!”</span>
               <span class="ag-card-tag">REFLEKS</span>
             </div>
+            <div class="ag-card-desc">30 sekund biurowego koszmaru: zamykaj popupy zanim zasypią ekran. Czerwony malware ma zegar — nie zdążysz, łapiesz wirusa.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
-        </button>
+          <div class="ag-card-scores" data-scores="popup_panic"></div>
+        </div>
       </div>
     </div>
     <div id="ag-game-slot" class="hidden">
@@ -10276,6 +10401,34 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
 });
 
+// The sticky nav sits directly under the header, whose height is NOT a constant
+// — on a phone it wraps to two rows, and the coin badge/nick can grow it further
+// — so publish the measured heights as --nav-top / --nav-h. Everything that
+// sticks below the nav (.shop-category-filters, the mobile dropdown's
+// max-height) is expressed in terms of them.
+function syncNavOffset() {
+  const header = document.querySelector('#screen-app > header');
+  const nav = document.querySelector('#screen-app .nav-tabs');
+  const root = document.documentElement.style;
+  // Zero means #screen-app is still display:none (pre-login) — keep the CSS
+  // fallbacks until there is something real to measure. The ResizeObserver
+  // fires on the 0 -> visible transition, so this self-corrects at login.
+  const hh = header ? Math.round(header.getBoundingClientRect().height) : 0;
+  const nh = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
+  if (hh > 0) root.setProperty('--nav-top', hh + 'px');
+  if (nh > 0) root.setProperty('--nav-h', nh + 'px');
+}
+syncNavOffset();
+if (window.ResizeObserver) {
+  const navRo = new ResizeObserver(syncNavOffset);
+  const headerEl = document.querySelector('#screen-app > header');
+  const navEl = document.querySelector('#screen-app .nav-tabs');
+  if (headerEl) navRo.observe(headerEl);
+  if (navEl) navRo.observe(navEl);
+} else {
+  window.addEventListener('resize', syncNavOffset);
+}
+
 let fpPanelHome = null;
 let bjPanelHome = null;
 function restoreFlappyPanelHome() {
@@ -10327,14 +10480,41 @@ function returnAgPanelHome(gameType) {
   }
 }
 
+// The picker cards animate a live attract-mode of each game (games/previews.js,
+// lazy-loaded the same way the games themselves are). Preview code is optional
+// decoration: every call site tolerates it never having loaded.
+let _agPreviewScript = null;
+function ensurePreviewScript() {
+  if (_agPreviewScript) return _agPreviewScript;
+  _agPreviewScript = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'games/previews.js';
+    s.onload = () => resolve();
+    s.onerror = () => { _agPreviewScript = null; reject(new Error('previews')); };
+    document.body.appendChild(s);
+  });
+  return _agPreviewScript;
+}
+
+function startAgPreviews() {
+  ensurePreviewScript().then(() => agpStartPreviews()).catch(() => {});
+}
+
+function stopAgPreviews() {
+  if (typeof agpStopPreviews === 'function') agpStopPreviews();
+}
+
 function loadAllGamesTab() {
   show(document.getElementById('ag-picker'));
   hide(document.getElementById('ag-game-slot'));
+  startAgPreviews();
+  loadArcadePickerScores();
 }
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
   stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
+  stopAgPreviews();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
   allGamesSelectedGame = null;
@@ -10344,6 +10524,7 @@ function selectAllGame(gameType) {
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
   stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
+  stopAgPreviews();   // the picker's previews borrow the same canvas globals
 
   allGamesSelectedGame = gameType;
   allGamesMode = true;
@@ -10385,10 +10566,209 @@ async function recordArcadeScore(gameType, score) {
     p_score: score,
   });
   if (error) throw error;
+  agPickerScoresAt = 0;   // the picker must show this run when we go back
 }
 
 function formatArcadeScore(gameType, score) {
-  return String(Number(score) || 0);
+  const n = Number(score) || 0;
+  // Super Mariusz stores progress in tile columns, which means nothing on its
+  // own — show it the way the seasonal board does, as a percent of the course.
+  if (gameType === 'super_mariusz') return smProgressPct(n) + '%';
+  return n.toLocaleString('pl-PL');
+}
+
+// ── Picker records: two rankings per game, all-time first then this week ────
+// Two reads cover all ten games: arcade_leaderboard is already best-per-user
+// per game (so it doubles as the user_id -> nick map), and arcade_scores is
+// filtered to the running week and folded down to each player's best. Both are
+// paged — PostgREST caps a response at 1000 rows however big the .limit() is.
+const AG_PICKER_TOP_N = 5;
+let agPickerScoresAt = 0;
+let agPickerData = null;
+const agPickerExpanded = new Set();
+
+function agWeekStartISO() {
+  const monday = currentSeasonWeekStartStr();            // Warsaw calendar date
+  const utcMidnight = new Date(monday + 'T00:00:00Z');
+  const asWarsaw = new Date(utcMidnight.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }).replace(' ', 'T') + 'Z');
+  return new Date(utcMidnight.getTime() - (asWarsaw - utcMidnight)).toISOString();
+}
+
+function agScoreColumn(labelText, gameType, rows, expanded) {
+  const col = el('div', { className: 'ag-sb-col' });
+  col.append(el('div', { className: 'ag-sb-label' }, labelText));
+  if (!rows || !rows.length) {
+    col.append(el('div', { className: 'ag-sb-empty' }, '— brak wyników'));
+    return col;
+  }
+  const list = el('ol', { className: 'ag-sb-list' });
+  (expanded ? rows : rows.slice(0, AG_PICKER_TOP_N)).forEach((row, i) => {
+    const item = el('li', {
+      className: 'ag-sb-item' + (i === 0 ? ' is-first' : '') + (row.isMe ? ' is-me' : ''),
+    });
+    item.append(
+      el('span', { className: 'ag-sb-rank' }, (i + 1) + '.'),
+      el('span', { className: 'ag-sb-nick', title: row.nick }, row.nick),
+      el('span', { className: 'ag-sb-val' }, formatArcadeScore(gameType, row.score))
+    );
+    list.append(item);
+  });
+  col.append(list);
+  return col;
+}
+
+// ── Klasyfikacja generalna: one medal table over all ten games ─────────────
+// Raw scores can't be added up across games (30 is a perfect Bug Jumper run,
+// 30 is nothing in Tetris), so the overall ranking is an Olympic medal table:
+// each game's ALL-TIME top three hand out 🥇🥈🥉, and players are ordered by
+// golds, then silvers, then bronzes — the classic medal-table rule.
+function agGameLabels() {
+  const labels = {};
+  document.querySelectorAll('#ag-picker .ag-card').forEach(card => {
+    labels[card.dataset.game] = {
+      emoji: (card.querySelector('.ag-card-emoji')?.textContent || '🎮').trim(),
+      name: card.querySelector('.ag-card-name')?.textContent || card.dataset.game,
+    };
+  });
+  return labels;
+}
+
+function agMedalTable(byGame) {
+  const players = new Map();
+  Object.keys(byGame).forEach(gameType => {
+    (byGame[gameType].allTime || []).slice(0, 3).forEach((row, i) => {
+      let p = players.get(row.nick);
+      if (!p) {
+        p = { nick: row.nick, isMe: !!row.isMe, gold: 0, silver: 0, bronze: 0, goldGames: [] };
+        players.set(row.nick, p);
+      }
+      if (i === 0) { p.gold += 1; p.goldGames.push(gameType); }
+      else if (i === 1) p.silver += 1;
+      else p.bronze += 1;
+    });
+  });
+  return [...players.values()].sort((a, b) =>
+    b.gold - a.gold || b.silver - a.silver || b.bronze - a.bronze || a.nick.localeCompare(b.nick, 'pl'));
+}
+
+function renderArcadePodium(byGame) {
+  const wrap = document.getElementById('ag-podium');
+  if (!wrap) return;
+  const table = agMedalTable(byGame);
+  const labels = agGameLabels();
+  const head = el('div', {});
+  head.append(
+    el('div', { className: 'ag-podium-title' }, '🏆 Klasyfikacja generalna'),
+    el('div', { className: 'ag-podium-sub' },
+      'Liczą się rekordy wszech czasów w każdej z gier: 1. miejsce to 🥇, 2. to 🥈, 3. to 🥉. '
+      + 'Wygrywa ten, kto ma najwięcej złota (przy remisie decyduje srebro, potem brąz).')
+  );
+  if (!table.length) {
+    wrap.replaceChildren(head, el('div', { className: 'ag-podium-empty' }, 'Nikt jeszcze nie zagrał — pierwszy wynik od razu daje złoto.'));
+    return;
+  }
+  const steps = el('ol', { className: 'ag-podium-steps' });
+  // 2nd, 1st, 3rd — the shape of a real podium.
+  [1, 0, 2].forEach(index => {
+    const p = table[index];
+    if (!p) { steps.append(el('li', {})); return; }
+    const place = index + 1;
+    const step = el('li', { className: 'ag-pod is-' + place + (p.isMe ? ' is-me' : '') });
+    const medals = el('div', { className: 'ag-pod-medals' });
+    medals.append('🥇 ', el('b', {}, String(p.gold)), '  🥈 ', el('b', {}, String(p.silver)), '  🥉 ', el('b', {}, String(p.bronze)));
+    const games = el('div', {
+      className: 'ag-pod-games',
+      title: p.goldGames.map(g => labels[g]?.name || g).join(', '),
+    }, p.goldGames.map(g => labels[g]?.emoji || '🎮').join(''));
+    step.append(
+      el('div', { className: 'ag-pod-nick', title: p.nick }, p.nick),
+      medals,
+      games,
+      el('div', { className: 'ag-pod-step' }, String(place))
+    );
+    steps.append(step);
+  });
+  wrap.replaceChildren(head, steps);
+}
+
+function renderArcadePickerScores() {
+  const byGame = agPickerData || {};
+  renderArcadePodium(byGame);
+  document.querySelectorAll('#ag-picker .ag-card-scores').forEach(wrap => {
+    const gameType = wrap.dataset.scores;
+    const stats = byGame[gameType] || {};
+    const allTime = stats.allTime || [];
+    const week = stats.week || [];
+    const expanded = agPickerExpanded.has(gameType);
+    wrap.replaceChildren(
+      agScoreColumn('Rekord wszech czasów', gameType, allTime, expanded),
+      agScoreColumn('Ten tydzień', gameType, week, expanded)
+    );
+    const total = Math.max(allTime.length, week.length);
+    if (total > AG_PICKER_TOP_N) {
+      const more = el('button', { className: 'ag-sb-more', type: 'button' },
+        expanded ? 'Pokaż mniej' : 'Pokaż wszystkich (' + total + ')');
+      more.addEventListener('click', ev => {
+        ev.stopPropagation();          // the card itself starts the game
+        if (expanded) agPickerExpanded.delete(gameType);
+        else agPickerExpanded.add(gameType);
+        renderArcadePickerScores();
+      });
+      wrap.append(more);
+    }
+  });
+}
+
+// user_id -> best score per game, biggest first.
+function agRankRows(bestByUser, nicks) {
+  return Object.keys(bestByUser)
+    .map(userId => ({ score: bestByUser[userId], nick: nicks[userId] || '—', isMe: !!(me && userId === me.id) }))
+    .sort((a, b) => b.score - a.score);
+}
+
+async function loadArcadePickerScores(force = false) {
+  const wraps = document.querySelectorAll('#ag-picker .ag-card-scores');
+  if (!wraps.length) return;
+  if (!force && agPickerScoresAt && Date.now() - agPickerScoresAt < 60000) {
+    renderArcadePickerScores();
+    return;
+  }
+  if (!agPickerData) {
+    wraps.forEach(wrap => wrap.replaceChildren(el('div', { className: 'ag-sb-loading' }, 'Wczytuję rekordy…')));
+  }
+  const [allRes, weekRes] = await Promise.all([
+    sbFetchAll(() => sb.from('arcade_leaderboard')
+      .select('id, game_type, score, user_id, nick')
+      .order('game_type', { ascending: true }).order('id', { ascending: true })),
+    sbFetchAll(() => sb.from('arcade_scores')
+      .select('id, game_type, score, user_id, created_at')
+      .gte('created_at', agWeekStartISO())
+      .order('created_at', { ascending: true }).order('id', { ascending: true })),
+  ]);
+  if (allRes.error && weekRes.error) return;
+
+  const nicks = {};
+  const raw = {};   // gameType -> { all: {uid: best}, week: {uid: best} }
+  const bucket = gameType => (raw[gameType] = raw[gameType] || { all: {}, week: {} });
+  (allRes.data || []).forEach(row => {
+    nicks[row.user_id] = row.nick;
+    const b = bucket(row.game_type).all;
+    if (b[row.user_id] == null || row.score > b[row.user_id]) b[row.user_id] = row.score;
+  });
+  (weekRes.data || []).forEach(row => {
+    const b = bucket(row.game_type).week;
+    if (b[row.user_id] == null || row.score > b[row.user_id]) b[row.user_id] = row.score;
+  });
+
+  agPickerData = {};
+  Object.keys(raw).forEach(gameType => {
+    agPickerData[gameType] = {
+      allTime: agRankRows(raw[gameType].all, nicks),
+      week: agRankRows(raw[gameType].week, nicks),
+    };
+  });
+  agPickerScoresAt = Date.now();
+  renderArcadePickerScores();
 }
 
 async function loadArcadeScores(gameType) {
@@ -10437,8 +10817,19 @@ async function loadArcadeScores(gameType) {
   show(panel);
 }
 
-document.querySelectorAll('.ag-card').forEach(btn => {
-  btn.addEventListener('click', () => selectAllGame(btn.dataset.game));
+// The cards are role="button" divs, not <button>s, so the „Pokaż wszystkich"
+// toggle inside the records column can be a real nested button.
+document.querySelectorAll('.ag-card').forEach(card => {
+  card.addEventListener('click', ev => {
+    if (ev.target.closest('.ag-sb-more')) return;
+    selectAllGame(card.dataset.game);
+  });
+  card.addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    if (ev.target !== card) return;
+    ev.preventDefault();
+    selectAllGame(card.dataset.game);
+  });
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
@@ -10448,6 +10839,8 @@ document.getElementById('ag-back').addEventListener('click', () => {
   allGamesMode = false;
   show(document.getElementById('ag-picker'));
   hide(document.getElementById('ag-game-slot'));
+  startAgPreviews();
+  loadArcadePickerScores();
 });
 
 function switchTab(tab) {
