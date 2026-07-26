@@ -11,19 +11,24 @@ const TT_TICK_MS = 50;
 const TT_W = 10;                   // well width in cells
 const TT_H = 20;                   // well height in cells
 const TT_SPAWN_X = 3;              // x of the 4×4 piece box at spawn
-const TT_MAX_TICKS = 1200;         // 60 s round — the round ends on the clock, not just on a top-out
-const TT_MAX_EVENTS = 4000;        // max input events accepted per round
+// The round ends on a TOP-OUT, the way Tetris always has — the difficulty curve
+// is the timer. TT_MAX_TICKS is only a safety cap on replay cost. A fixed short
+// round was tried (60 s, 2026-07-26) and reverted the same day: it turned the
+// game into a hard-drop sprint with no room for the stack to develop.
+const TT_MAX_TICKS = 12000;        // 10 min hard cap
+const TT_MAX_EVENTS = 12000;       // max input events accepted per round
 const TT_MAX_ACTIONS_PER_TICK = 6; // more than this inside one 50 ms tick is bot-grade spam
 const TT_MAX_SCORE = 9999;         // anti-cheat ceiling
 const TT_LOCK_TICKS = 10;          // 0.5 s lock delay once the piece is grounded
 const TT_MAX_LOCK_RESETS = 12;     // a move/rotate can refresh the lock delay this often
-const TT_LINES_PER_LEVEL = 4;      // a 60 s round only fits ~15-25 lines, so levels must come fast
-const TT_MAX_LEVEL = 10;
+const TT_LINES_PER_LEVEL = 10;     // Tetris Guideline cadence
+const TT_MAX_LEVEL = 15;
 // Small, line-only scoring on purpose: a hero score_bonus item is worth its raw
-// effect_value here (TT_ITEM_SCORE_PER_POINT = 1 in tetris-action), so +5 has to
-// be a real chunk of a good run (~20-40) rather than rounding noise against
-// three-digit line scores. Drop points are 0 for the same reason — at 2/cell a
-// piece-spamming run would out-score every line cleared.
+// effect_value here (TT_ITEM_SCORE_PER_POINT = 1 in tetris-action), so +5 stays
+// a real chunk of a run rather than rounding noise against three-digit line
+// scores. Drop points are 0 for the same reason — at 2/cell a piece-spamming
+// run would out-score every line cleared. Deliberately NOT multiplied by level:
+// the level multiplier is what pushed the old scale into five digits.
 const TT_LINE_SCORES = [0, 1, 3, 5, 8]; // flat — NOT multiplied by level
 const TT_SOFT_DROP_POINTS = 0;     // per cell
 const TT_HARD_DROP_POINTS = 0;     // per cell
@@ -44,8 +49,10 @@ const TT_PIECES = [
   [0xC600, 0x2640, 0x0C60, 0x4C80], // Z
 ];
 
+// ~950 ms/row at level 1 down to 100 ms at level 10 — the classic Tetris
+// Guideline curve, which is what makes the early stack feel controllable.
 function ttGravityTicks(level) {
-  return Math.max(2, 13 - level);
+  return Math.max(2, 21 - level * 2);
 }
 
 function ttRng(st) {
@@ -344,20 +351,14 @@ function tetrisDraw() {
   ctx.font = '900 28px system-ui, sans-serif';
   ctx.fillText(st ? String(Math.min(TT_MAX_SCORE, st.score)) : '0', TT_SIDE_X, TT_PAD + 40);
 
-  // countdown to the end of the round
-  const ticksLeft = Math.max(0, TT_MAX_TICKS - (st?.tick || 0));
-  const secsLeft = Math.ceil(ticksLeft * TT_TICK_MS / 1000);
-  const timeColor = secsLeft <= 5 ? '#ef4444' : (secsLeft <= 15 ? '#f59e0b' : '#38bdf8');
+  // elapsed clock — the round ends on a top-out, so a marathon stopwatch is the
+  // useful reading, not a countdown. It only warns once the safety cap is near.
   ctx.fillStyle = '#94a3b8';
   ctx.font = '700 10px system-ui, sans-serif';
   ctx.fillText('CZAS', TT_SIDE_X, TT_PAD + 62);
-  ctx.fillStyle = timeColor;
+  ctx.fillStyle = ttClockColor(st?.tick || 0);
   ctx.font = '900 22px system-ui, sans-serif';
-  ctx.fillText(secsLeft + ' s', TT_SIDE_X, TT_PAD + 84);
-  ctx.fillStyle = '#0b1220';
-  ctx.fillRect(TT_SIDE_X, TT_PAD + 92, 68, 5);
-  ctx.fillStyle = timeColor;
-  ctx.fillRect(TT_SIDE_X, TT_PAD + 92, Math.round(68 * (ticksLeft / TT_MAX_TICKS)), 5);
+  ctx.fillText(ttClockLabel(st?.tick || 0), TT_SIDE_X, TT_PAD + 84);
 
   // next piece
   ctx.fillStyle = '#94a3b8';
@@ -391,6 +392,21 @@ function tetrisDraw() {
       ctx.fillText('do ' + (st.level + 1) + ' lvl: ' + (st.level * TT_LINES_PER_LEVEL - st.lines), TT_SIDE_X, TT_PAD + 300);
     }
   }
+}
+
+// Elapsed round time as m:ss. Shared by the canvas rail and the DOM stat tile.
+function ttClockLabel(tick) {
+  const secs = Math.floor(Math.max(0, tick) * TT_TICK_MS / 1000);
+  return Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+}
+
+// Neutral for the whole run; only the last minute of the 10 min safety cap
+// warns, so the colour means "the cap is about to end this", nothing else.
+function ttClockColor(tick) {
+  const secsLeft = Math.max(0, TT_MAX_TICKS - tick) * TT_TICK_MS / 1000;
+  if (secsLeft <= 30) return '#ef4444';
+  if (secsLeft <= 60) return '#f59e0b';
+  return '#e2e8f0';
 }
 
 function tetrisReducedMotion() {
@@ -480,10 +496,7 @@ function tetrisSetStats() {
   if (ttScoreEl) ttScoreEl.textContent = String(Math.min(TT_MAX_SCORE, st.score));
   if (ttLinesEl) ttLinesEl.textContent = String(st.lines);
   if (ttLevelEl) ttLevelEl.textContent = String(st.level);
-  if (ttTimeEl) {
-    const left = Math.max(0, TT_MAX_TICKS - st.tick);
-    ttTimeEl.textContent = Math.ceil(left * TT_TICK_MS / 1000) + ' s';
-  }
+  if (ttTimeEl) ttTimeEl.textContent = ttClockLabel(st.tick);
 }
 
 function tetrisQueueAction(a) {
@@ -531,7 +544,7 @@ function tetrisTick() {
     return;
   }
   if (st.tick >= TT_MAX_TICKS) {
-    rt.endedReason = 'koniec czasu';
+    rt.endedReason = 'limit 10 minut';
     finishTetrisRound();
     return;
   }
@@ -576,7 +589,7 @@ function beginTetrisRound(round, options = {}) {
   if (ttStartBtn) { ttStartBtn.disabled = true; ttStartBtn.textContent = 'Runda trwa'; }
   if (ttStatus) ttStatus.textContent = rt.archiveMode
     ? 'Demo — wynik nie zostanie zapisany.'
-    : 'Masz 60 sekund! ← → ruch, ↑ obrót, ↓ miękki zrzut, spacja = twardy zrzut.';
+    : 'Układaj linie! ← → ruch, ↑ obrót, ↓ miękki zrzut, spacja = twardy zrzut.';
   tetrisInitCanvas();
   tetrisSetStats();
   tetrisDraw();
