@@ -29,7 +29,7 @@ const FP_PIPE_SPEED = 130;
 const FP_PIPE_W = 54;
 const FP_GAP = 124;
 const FP_PIPE_SPACING = 210;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {

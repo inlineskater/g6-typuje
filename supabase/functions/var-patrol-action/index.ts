@@ -25,7 +25,7 @@ const VAR_ROUND_MS = 60_000;
 const VAR_REACTION_FLOOR_MS = 120;
 const VAR_REACTION_TOL_MS = 220;
 const ROUND_EXPIRES_SECONDS = 600;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 
 // Scenario verdict labels (Polish). Correct answer index (0/1) is stored server-side.
 const VERDICTS = {

@@ -289,7 +289,7 @@ BEGIN
       rank,
       score,
       accuracy,
-      CASE rank WHEN 1 THEN 500 WHEN 2 THEN 250 WHEN 3 THEN 100 END AS prize_coins
+      CASE rank WHEN 1 THEN 1000 WHEN 2 THEN 500 WHEN 3 THEN 200 END AS prize_coins
     FROM ranked
     WHERE rank <= 3
   ),
@@ -379,6 +379,9 @@ BEGIN
       s.submitted_at
     FROM public.whack_boss_scores s
     WHERE s.week_start = p_week_start
+      -- Only server-validated rounds can win coins.
+      -- (Was missing here but live on prod; written back 2026-07-26.)
+      AND s.client_meta @> '{"server_validated": true}'::jsonb
     ORDER BY s.user_id, s.score DESC, s.accuracy DESC, s.submitted_at ASC
   ),
   ranked AS (
@@ -397,7 +400,7 @@ BEGIN
       rank,
       score,
       accuracy,
-      CASE rank WHEN 1 THEN 500 WHEN 2 THEN 250 WHEN 3 THEN 100 END AS prize_coins
+      CASE rank WHEN 1 THEN 1000 WHEN 2 THEN 500 WHEN 3 THEN 200 END AS prize_coins
     FROM ranked
     WHERE rank <= 3
   ),

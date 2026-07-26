@@ -27,7 +27,7 @@ const ROUND_EXPIRES_SECONDS = 120;
 const MAX_TICKS = Math.floor(ROUND_DURATION_MS / TICK_MS); // 750
 const MAX_SCORE_PER_ROUND = 200; // anti-cheat ceiling
 const MAX_MOVES_PER_ROUND = 2000;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 
 const PLAYER_START = { x: 180, y: 180 };
 const PLAYER_SPEED = 9;

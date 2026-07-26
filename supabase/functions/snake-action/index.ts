@@ -23,7 +23,7 @@ const ROUND_EXPIRES_SECONDS = 7200;
 const MAX_TICKS = 100_000;
 const MAX_SCORE_PER_ROUND = 500;
 const MAX_MOVES_PER_ROUND = 100_000;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 const DIRS = {
   U: { x: 0, y: -1 },
   D: { x: 0, y: 1 },

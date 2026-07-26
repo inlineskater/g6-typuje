@@ -69,7 +69,8 @@ BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'not authenticated'; END IF;
   IF p_game_type NOT IN (
     'whack_boss', 'bug_jumper', 'flappy_pants', 'snake',
-    'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz', 'popup_panic'
+    'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz', 'popup_panic',
+    'tetris'
   ) THEN
     RAISE EXCEPTION 'invalid_game_type';
   END IF;
@@ -115,6 +116,7 @@ BEGIN
     WHEN 'egg_catch'     THEN 1000
     WHEN 'super_mariusz' THEN 455
     WHEN 'popup_panic'   THEN 2000
+    WHEN 'tetris'        THEN 999999
     ELSE NULL
   END;
   IF v_score_cap IS NULL THEN RAISE EXCEPTION 'invalid_game_type'; END IF;

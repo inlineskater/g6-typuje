@@ -31,7 +31,7 @@ const EC_SPAWN_GAP_START = 3;    // beats between spawns
 const EC_SPAWN_GAP_MIN = 2;
 const EC_SPAWN_GAP_DROP_LEVEL = 4;
 const ROUND_EXPIRES_SECONDS = 900;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {

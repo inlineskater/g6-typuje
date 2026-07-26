@@ -62,7 +62,7 @@ const SM_COURSE = [
 ];
 
 const ROUND_EXPIRES_SECONDS = 900;
-const PRIZES = [500, 250, 100];
+const PRIZES = [1000, 500, 200];
 
 // Progress can't be item-boosted (it would credit tiles the player never
 // reached), so score_bonus items convert to a completion-time bonus instead:

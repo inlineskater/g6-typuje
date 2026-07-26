@@ -36,7 +36,7 @@ const MAX_SCORE_PER_ROUND = 30;
 const ROUND_EXPIRES_SECONDS = 120;
 const MAX_MOVES_PER_ROUND = 400;
 const MOVE_TIME_TOLERANCE_MS = 12;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {

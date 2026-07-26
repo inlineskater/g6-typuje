@@ -235,7 +235,7 @@ BEGIN
       s.submitted_at
     FROM public.snake_scores s
     WHERE s.week_start = p_week_start
-    ORDER BY s.user_id, s.score DESC, s.submitted_at ASC
+    ORDER BY s.user_id, s.score DESC, s.duration_ms ASC, s.submitted_at ASC
   ),
   ranked AS (
     SELECT
@@ -243,7 +243,9 @@ BEGIN
       nick_snapshot,
       score,
       duration_ms,
-      (ROW_NUMBER() OVER (ORDER BY score DESC, submitted_at ASC))::integer AS rank
+      -- Snake's documented tiebreak: same apples → the FASTER run wins.
+      -- (Was missing here but live on prod; written back 2026-07-26.)
+      (ROW_NUMBER() OVER (ORDER BY score DESC, duration_ms ASC, submitted_at ASC))::integer AS rank
     FROM user_best
   ),
   winners AS (
@@ -253,7 +255,7 @@ BEGIN
       rank,
       score,
       duration_ms,
-      CASE rank WHEN 1 THEN 500 WHEN 2 THEN 250 WHEN 3 THEN 100 END AS prize_coins
+      CASE rank WHEN 1 THEN 1000 WHEN 2 THEN 500 WHEN 3 THEN 200 END AS prize_coins
     FROM ranked
     WHERE rank <= 3
   ),

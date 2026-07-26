@@ -44,7 +44,7 @@ const PP_MAX_EVENTS = 3000;        // max close events accepted per round
 const PP_MAX_SCORE = 2000;         // anti-cheat ceiling
 
 const ROUND_EXPIRES_SECONDS = 900;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {

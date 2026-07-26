@@ -202,7 +202,7 @@ BEGIN
       rank,
       ROUND(avg_score)::integer AS score,
       ROUND((avg_score / 30.0) * 100, 2) AS accuracy,
-      CASE rank WHEN 1 THEN 500 WHEN 2 THEN 250 WHEN 3 THEN 100 END AS prize_coins
+      CASE rank WHEN 1 THEN 1000 WHEN 2 THEN 500 WHEN 3 THEN 200 END AS prize_coins
     FROM ranked
     WHERE rank <= 3
   ),

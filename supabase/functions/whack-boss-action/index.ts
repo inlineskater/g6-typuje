@@ -17,7 +17,7 @@ const ROUND_DURATION_MS = 18_000;
 const ROUND_EXPIRES_SECONDS = 120;
 const MAX_HITS_PER_ROUND = 60;
 const TARGET_HIT_RADIUS = 12;
-const PRIZES = [100, 50, 25];
+const PRIZES = [1000, 500, 200];
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {

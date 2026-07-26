@@ -30,14 +30,15 @@ AS $$
     WHEN '2026-07-06' THEN 'egg_catch'  -- Łap Jajka debut
     WHEN '2026-07-13' THEN 'super_mariusz'  -- Super Mariusz debut
     WHEN '2026-07-20' THEN 'popup_panic'  -- Zamknij Popupy! debut
-    WHEN '2026-07-27' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch
+    WHEN '2026-07-27' THEN 'tetris'  -- Tetris G6 debut
+    WHEN '2026-08-03' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a week by the Tetris debut)
     -- SEASONAL_ROTATION from its 2026-05-18 Monday anchor.
     ELSE
       (ARRAY[
         'whack_boss','bug_jumper','flappy_pants','snake','invoice_horde',
-        'var_patrol','egg_catch','super_mariusz','popup_panic'
+        'var_patrol','egg_catch','super_mariusz','popup_panic','tetris'
       ])[
-        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 9) + 1
+        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 10) + 1
       ]
   END;
 $$;
@@ -133,5 +134,15 @@ SELECT cron.schedule(
       THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
       WHEN public.seasonal_game_for_week(public.popup_panic_week_start(now() - interval '7 days')) = 'popup_panic'
       THEN public.award_popup_panic_week(public.popup_panic_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+SELECT cron.schedule(
+  'tetris_weekly_awards',
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.tetris_week_start(now() - interval '7 days')) = 'tetris'
+      THEN public.award_tetris_week(public.tetris_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );

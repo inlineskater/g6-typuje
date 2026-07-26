@@ -4177,6 +4177,75 @@
       .pp-deadline > i { animation: none; }
     }
 
+    /* ── „Tetris G6" (tetris) — 10×20 well + next-piece rail ── */
+    .tt-arena {
+      position: relative; width: 100%; max-width: 380px; margin: 0 auto;
+      aspect-ratio: 340 / 500; overflow: hidden;
+      border-radius: 8px; border: 3px solid #1e293b;
+      background: linear-gradient(180deg, #111c2e 0%, #0a1120 100%);
+      box-shadow: 0 0 22px rgba(56,189,248,.16), inset 0 0 18px rgba(2,6,23,.8);
+      user-select: none; touch-action: manipulation;
+    }
+    .tt-arena canvas { display: block; width: 100%; height: 100%; }
+    .tt-pad {
+      /* width:100% is required — auto inline margins on a grid item otherwise
+         collapse it to fit-content instead of matching the arena above it. */
+      display: grid; gap: 8px; margin: 10px auto 0; width: 100%; max-width: 420px;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .tt-pad button {
+      min-height: 62px; border-radius: 10px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      font-size: 24px; font-weight: 800; line-height: 1;
+      transition: background .12s, border-color .12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tt-pad button:active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tt-pad .tt-pad-wide { grid-column: span 2; font-size: 15px; letter-spacing: .5px; }
+    /* The pad and the auto-fullscreen below share ONE breakpoint — the same
+       media query decides both, so a device never gets one without the other.
+       Mirrored in tetrisIsHandheld() (games/tetris.js). */
+    @media (min-width: 780px) and (hover: hover) {
+      .tt-pad { display: none; }
+    }
+
+    /* Handheld fullscreen. The CSS class is what actually drives the layout, so
+       iOS Safari — which has no element Fullscreen API — gets the same result;
+       requestFullscreen() is layered on top only to hide the browser chrome. */
+    body.tt-fs-open { overflow: hidden; }
+    .bj-game-panel.tt-fs {
+      position: fixed; inset: 0; z-index: 300; margin: 0;
+      border: none; border-radius: 0; padding: 8px;
+      display: flex; flex-direction: column; gap: 8px;
+      background: var(--card); overflow: hidden;
+    }
+    .bj-game-panel.tt-fs .bj-head,
+    .bj-game-panel.tt-fs .bj-rules { display: none; }
+    .bj-game-panel.tt-fs .bj-stats {
+      /* the ✕ sits over this row's top-right corner — keep it off the numbers */
+      flex: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+      padding-right: 42px;
+    }
+    .bj-game-panel.tt-fs .bj-stat { padding: 6px 10px; }
+    .bj-game-panel.tt-fs .bj-actions {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .bj-game-panel.tt-fs .bj-status { font-size: 11px; }
+    .bj-game-panel.tt-fs .tt-arena {
+      flex: 1 1 auto; min-height: 0; width: auto; max-width: 100%; margin: 0 auto;
+    }
+    .bj-game-panel.tt-fs .tt-pad { flex: none; margin-top: 0; }
+    .bj-game-panel.tt-fs .tt-pad button { min-height: 66px; }
+    .bj-game-panel.tt-fs .bj-actions { flex: none; }
+    .tt-fs-exit { display: none; }
+    .bj-game-panel.tt-fs .tt-fs-exit {
+      display: flex; align-items: center; justify-content: center;
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+      border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+      font-size: 15px; line-height: 1;
+    }
+
     /* ── Najazd Ticketów (Invoice Horde) ── */
     .ih-arena {
       max-width: 680px;
@@ -7643,9 +7712,9 @@
                 <p class="page-sub">18 sekund, szybkie kliknięcia i cotygodniowy ranking z nagrodami.</p>
               </div>
               <div class="wb-prizes" aria-label="Nagrody tygodniowe">
-                <span class="wb-prize">🥇 500 🪙</span>
-                <span class="wb-prize">🥈 250 🪙</span>
-                <span class="wb-prize">🥉 100 🪙</span>
+                <span class="wb-prize">🥇 1000 🪙</span>
+                <span class="wb-prize">🥈 500 🪙</span>
+                <span class="wb-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -7658,7 +7727,7 @@
                 <li><strong>Tydzień:</strong> startuje w poniedziałek o 00:00 i kończy się w niedzielę o 23:59:59 (Europe/Warsaw). <span id="wb-week-window">Zakres bieżącego tygodnia pojawi się po wczytaniu rankingu.</span></li>
                 <li><strong>Jak liczymy tydzień:</strong> serwer bierze czas zgłoszenia rundy w strefie Europe/Warsaw, wyznacza poniedziałek rozpoczynający ten tydzień i zapisuje wynik pod tą datą.</li>
                 <li><strong>Ranking tygodniowy:</strong> liczy się najlepszy wynik gracza w danym tygodniu. Remisy rozstrzyga wyższy procent trafień, a potem wcześniejsze zgłoszenie.</li>
-                <li><strong>Nagrody po zamknięciu tygodnia:</strong> 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
+                <li><strong>Nagrody po zamknięciu tygodnia:</strong> 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙 trafiają do top 3 z zamkniętego tygodnia.</li>
               </ul>
             </div>
 
@@ -7741,9 +7810,9 @@
                 <p class="page-sub">30 trudnych linii na szerokim torze, który zawsze wije się inaczej — omijaj robaki, telefony i bariery.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -7821,9 +7890,9 @@
                 <p class="page-sub">Lecisz parą spodni — trzepocz, by przelecieć przez szpary między wiszącymi spodniami. Masz 3 pary!</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -7899,9 +7968,9 @@
                 <p class="page-sub">Klasyczny Snake w wersji sezonowej: jedz jabłka, nie uderz w ścianę ani we własny ogon.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -7913,7 +7982,7 @@
                 <li><strong>Strzałki / WASD / swipe</strong> — steruj wężem po planszy.</li>
                 <li><strong>+1 pkt</strong> za każde jabłko. Zawrót o 180° jest blokowany.</li>
                 <li>Ściana albo własny ogon kończą rundę. Im dłużej grasz, tym lekko szybszy robi się wąż.</li>
-                <li>Nagrody po zamknięciu tygodnia: 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
               </ul>
             </div>
 
@@ -7978,9 +8047,9 @@
                 <p class="page-sub">Klasyk z ręcznej konsolki „Elektronika": jajka staczają się z 4 kurnych grzęd, a Ty łapiesz je koszykiem wilka. Trzy stłuczki i koniec — a jajka lecą coraz szybciej.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -7990,7 +8059,7 @@
                 <li><strong>Q / A / P / L</strong> — cztery pozycje koszyka (lewa góra / lewy dół / prawa góra / prawy dół). Działają też <strong>strzałki</strong> (←→ strona, ↑↓ wysokość) i <strong>tapnięcie ćwiartki</strong> ekranu.</li>
                 <li><strong>+1 pkt</strong> za każde złapane jajko. Jajko bez koszyka = 🍳 stłuczka.</li>
                 <li><strong>3 stłuczki kończą rundę.</strong> Z każdym poziomem jajka staczają się szybciej i lecą gęściej.</li>
-                <li>Nagrody po zamknięciu tygodnia: 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
               </ul>
             </div>
 
@@ -8055,9 +8124,9 @@
                 <p class="page-sub">Hardmode speedrun po biurowym korytarzu. Trasa jest BRUTALNA — kolce, krążące teczki i przepaście zabijają od razu, a większość podejść kończy się śmiercią. W rankingu liczy się najpierw dystans (jak daleko dotarłeś), a czas ukończenia rozstrzyga dopiero między tymi, którzy dobiegli do flagi.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -8068,7 +8137,7 @@
                 <li><strong>Jedno życie.</strong> Dotknięcie kolców, wroga albo wpadnięcie w przepaść kończy rundę natychmiast.</li>
                 <li><strong>Wynik = dystans.</strong> Im dalej dotrzesz na trasie, tym wyżej w rankingu — nawet po śmierci twój najdalszy zasięg (%) się liczy.</li>
                 <li>Dobiegniesz do flagi? Finisherzy zawsze stoją nad resztą, a między sobą rywalizują <strong>czasem ukończenia</strong> (krótszy = lepszy).</li>
-                <li>Nagrody po zamknięciu tygodnia: 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
               </ul>
             </div>
 
@@ -8133,9 +8202,9 @@
                 <p class="page-sub">Klasyczny biurowy koszmar: pulpit eksploduje losowymi popupami — błędy, spam, „wygrałeś iPhone'a", wirusy. Klikaj, żeby je zamykać. Masz 30 sekund. Jak nazbiera się ich za dużo naraz — zasypią Cię. A czerwony malware 🦠 musisz ubić, zanim zdąży zainfekować komputer.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -8146,7 +8215,7 @@
                 <li><strong>Za dużo naraz = koniec.</strong> Gdy na ekranie zbierze się <strong>12</strong> otwartych popupów, zasypią Cię.</li>
                 <li><strong>Malware ma zegar.</strong> Nie zamkniesz czerwonego popupa na czas — łapiesz wirusa i runda kończy się od razu.</li>
                 <li><strong>Tempo rośnie.</strong> Popupy wyskakują coraz szybciej, a pod koniec parami. Przetrwaj pełne 30 sekund!</li>
-                <li>Nagrody po zamknięciu tygodnia: 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
               </ul>
             </div>
 
@@ -8211,6 +8280,95 @@
       </div>
 
 
+      <!-- „Tetris G6" panel (classic falling-block stacker; gameType tetris) -->
+      <div id="seasonal-game-tetris" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <button type="button" class="tt-fs-exit" id="tt-fs-exit" aria-label="Zamknij pełny ekran">✕</button>
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">„Tetris G6" 🧱</h2>
+                <p class="page-sub">Klasyk wszech czasów w wersji biurowej: klocki spadają do studni 10×20, Ty je obracasz i układasz. Pełna linia znika i daje punkty — cztery naraz („tetris") dają ich najwięcej. Co 10 linii rośnie poziom i klocki lecą szybciej. Runda kończy się, gdy stos sięgnie sufitu.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
+              </div>
+            </div>
+
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać</div>
+              <ul>
+                <li><strong>← →</strong> ruch w bok (przytrzymaj, żeby przesuwać dalej), <strong>↑ / X</strong> obrót w prawo, <strong>Z</strong> obrót w lewo.</li>
+                <li><strong>↓</strong> miękki zrzut (+1 pkt za pole), <strong>spacja</strong> twardy zrzut (+2 pkt za pole i natychmiastowe zablokowanie klocka).</li>
+                <li><strong>Punkty za linie × poziom:</strong> 1 linia = 100, 2 = 300, 3 = 500, <strong>4 naraz („tetris") = 800</strong>. Opłaca się czekać na cztery.</li>
+                <li><strong>Poziom rośnie co 10 linii</strong> (maks. 15) — im wyżej, tym szybciej spadają klocki. Po wylądowaniu masz jeszcze pół sekundy na poprawkę.</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
+              </ul>
+            </div>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Wynik</div>
+                <div class="bj-stat-value" id="tt-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Linie</div>
+                <div class="bj-stat-value" id="tt-lines">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Poziom</div>
+                <div class="bj-stat-value" id="tt-level">1</div>
+              </div>
+            </div>
+
+            <div class="tt-arena" id="tt-arena">
+              <canvas id="tt-canvas"></canvas>
+            </div>
+
+            <div class="tt-pad" id="tt-pad" aria-label="Sterowanie dotykowe">
+              <button type="button" data-tt-act="0" aria-label="W lewo">◀</button>
+              <button type="button" data-tt-act="2" aria-label="Obrót">⟳</button>
+              <button type="button" data-tt-act="4" aria-label="Miękki zrzut">▼</button>
+              <button type="button" data-tt-act="1" aria-label="W prawo">▶</button>
+              <button type="button" class="tt-pad-wide" data-tt-act="3" aria-label="Obrót w lewo">⟲ OBRÓT</button>
+              <button type="button" class="tt-pad-wide" data-tt-act="5" aria-label="Twardy zrzut">⤓ ZRZUT</button>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="tt-start-btn">Start rundy</button>
+              <div class="bj-status" id="tt-status">Strzałki + spacja (albo przyciski poniżej planszy). Najlepszy wynik tygodnia trafia do rankingu.</div>
+            </div>
+          </section>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="tt-week-label"></span>
+              </div>
+              <div id="tt-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="tt-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
+              </div>
+              <div class="bj-awards" id="tt-awards"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
+
+
       <!-- Najazd Ticketów panel (IT-helpdesk survival season; gameType invoice_horde) -->
       <div id="seasonal-game-invoice-horde" class="hidden">
         <div class="bj-layout">
@@ -8221,9 +8379,9 @@
                 <p class="page-sub">Survival: jesteś informatykiem 🧑‍💻 i zamykasz zgłoszenia. Skrypt „ROZWIĄZANE" strzela sam, ale lawina ticketów rośnie bez końca — w końcu i tak Cię dopadną. Masz <strong>jedno życie</strong>: jeden dotyk i koniec. Stanie w miejscu = śmierć. Trzeba uciekać i prowadzić rój zgłoszeń za sobą.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -8234,7 +8392,7 @@
                 <li><strong>Skrypt zamyka sam</strong> najbliższy ticket w zasięgu. <strong>+1 pkt</strong> za każde rozwiązane zgłoszenie 🎫.</li>
                 <li><strong>Jedno życie</strong> — wystarczy, że jeden ticket Cię dotknie i koniec. Nie da się przeżyć w nieskończoność: chodzi o to, ile zamkniesz, zanim zginiesz.</li>
                 <li>Sztuczka: <strong>uciekaj i ciągnij rój za sobą</strong> — wtedy skrypt kosi zgłoszenia z tyłu, a Ty masz czysto z przodu. Stanie w miejscu = osaczenie.</li>
-                <li>„Tickety" pokazują, ile zgłoszeń teraz Cię goni. Liczy się tylko <strong>liczba rozwiązanych ticketów</strong> przed śmiercią. Nagrody: 🥇 500 🪙 · 🥈 250 🪙 · 🥉 100 🪙.</li>
+                <li>„Tickety" pokazują, ile zgłoszeń teraz Cię goni. Liczy się tylko <strong>liczba rozwiązanych ticketów</strong> przed śmiercią. Nagrody: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
               </ul>
             </div>
 
@@ -8295,9 +8453,9 @@
                 <p class="page-sub">Jesteś w pokoju VAR. Masz <strong>60 sekund</strong> na jak najwięcej decyzji: <strong>spalony czy gra</strong>. Błędne decyzje liczą się do celności, ale nie kończą rundy.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
-                <span class="bj-prize">🥇 500 🪙</span>
-                <span class="bj-prize">🥈 250 🪙</span>
-                <span class="bj-prize">🥉 100 🪙</span>
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
               </div>
             </div>
 
@@ -8468,6 +8626,17 @@
             <div class="ag-card-meta">
               <span class="ag-card-cost">Za darmo</span>
               <span class="ag-card-tag">PLATFORMÓWKA</span>
+            </div>
+          </div>
+        </button>
+        <button class="ag-card" data-game="tetris">
+          <div class="ag-card-banner">🧱</div>
+          <div class="ag-card-body">
+            <div class="ag-card-name">„Tetris G6"</div>
+            <div class="ag-card-desc">Klasyczna studnia 10×20: obracaj klocki i domykaj linie. Cztery naraz to „tetris" i najwięcej punktów. Co 10 linii robi się szybciej.</div>
+            <div class="ag-card-meta">
+              <span class="ag-card-cost">Za darmo</span>
+              <span class="ag-card-tag">ŁAMIGŁÓWKA</span>
             </div>
           </div>
         </button>
@@ -9291,11 +9460,12 @@ let invoiceHordeRuntime = null;
 let varPatrolRuntime = null;
 let superMariuszRuntime = null;
 let popupPanicRuntime = null;
+let tetrisRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 
 // ── Lazy-loaded seasonal game code ──────────────────────────────────────────
-// 8 of the 9 seasonal games' round/canvas/rendering code lives in its own
+// 9 of the 10 seasonal games' round/canvas/rendering code lives in its own
 // games/*.js file, fetched on first need (current-week seasonal tab, the
 // Wszystkie Gry arcade picker, or an admin test tab) instead of shipping with
 // every page load. Whack-a-Boss stays inline (its loader is entangled with
@@ -9311,6 +9481,7 @@ const LAZY_GAME_SCRIPTS = {
   egg_catch:     'games/egg-catch.js',
   super_mariusz: 'games/super-mariusz.js',
   popup_panic:   'games/popup-panic.js',
+  tetris:        'games/tetris.js',
 };
 const _gameScriptPromises = {};
 function ensureGameScript(gameType) {
@@ -9327,7 +9498,7 @@ function ensureGameScript(gameType) {
   return _gameScriptPromises[gameType];
 }
 // No-op stand-ins for the unconditional stop*Round() calls in doLogout(),
-// leaveAllGamesTab(), selectAllGame(), and switchTab() — those fire for all 9
+// leaveAllGamesTab(), selectAllGame(), and switchTab() — those fire for all 10
 // games regardless of which one (if any) has actually been loaded this
 // session. Each stub is overwritten by the real implementation the moment its
 // games/*.js file executes (a later top-level `function` declaration simply
@@ -9341,6 +9512,7 @@ function stopVarPatrolRound() {}
 function stopEggCatchRound() {}
 function stopSuperMariuszRound() {}
 function stopPopupPanicRound() {}
+function stopTetrisRound() {}
 const lwCharts = new Map();
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
@@ -9358,7 +9530,7 @@ const HERO_ITEM_SLOTS = [
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
 // Masculine forms (przedmiot), unlike FARM_RARITY_PL's feminine forms (karta).
 const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki', legendary: 'legendarny' };
-const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic']);
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic', 'tetris']);
 let heroItemDefs = [];
 let casinoLuckGlobalUntil = null; // shared „Amulet Bezwstydnego Fartu" buff end (casino_luck_status view)
 let casinoLuckStatusLoadedAt = 0;
@@ -9621,6 +9793,12 @@ const ppStatus        = document.getElementById('pp-status');
 const ppScoreEl       = document.getElementById('pp-score');
 const ppTimeEl        = document.getElementById('pp-time');
 const ppOpenEl        = document.getElementById('pp-open');
+const ttArena         = document.getElementById('tt-arena');
+const ttStartBtn      = document.getElementById('tt-start-btn');
+const ttStatus        = document.getElementById('tt-status');
+const ttScoreEl       = document.getElementById('tt-score');
+const ttLinesEl       = document.getElementById('tt-lines');
+const ttLevelEl       = document.getElementById('tt-level');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
@@ -9918,6 +10096,7 @@ async function doLogout() {
   stopWhackBossRound();
   stopSnakeRound();
   stopInvoiceHordeRound();
+  stopTetrisRound(); // also drops handheld fullscreen + the body scroll lock
   resetGardenState();
   resetHeroState();
   hide(screenApp);
@@ -10134,6 +10313,7 @@ const AG_PANEL_IDS = {
   egg_catch:     'seasonal-game-egg-catch',
   super_mariusz: 'seasonal-game-super-mariusz',
   popup_panic:   'seasonal-game-popup-panic',
+  tetris:        'seasonal-game-tetris',
 };
 let agPanelHome = {};
 
@@ -10154,7 +10334,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
   allGamesSelectedGame = null;
@@ -10163,7 +10343,7 @@ function leaveAllGamesTab() {
 function selectAllGame(gameType) {
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
 
   allGamesSelectedGame = gameType;
   allGamesMode = true;
@@ -10186,6 +10366,8 @@ function selectAllGame(gameType) {
       vpUpdateTimerBar(1);
       requestAnimationFrame(() => vpDrawIdle());
     }
+    // The panel just moved into #ag-game-slot, so its canvas needs re-measuring.
+    if (gameType === 'tetris') requestAnimationFrame(() => { tetrisInitCanvas(); tetrisDraw(); });
   });
   loadArcadeScores(gameType);
 }
@@ -10260,7 +10442,7 @@ document.querySelectorAll('.ag-card').forEach(btn => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -10273,7 +10455,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -11179,7 +11361,7 @@ const ACT_GAME_LABELS = {
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
   egg_catch: '🥚 Łap Jajka', super_mariusz: '🧢 Super Mariusz',
-  popup_panic: '🖱️ Zamknij Popupy',
+  popup_panic: '🖱️ Zamknij Popupy', tetris: '🧱 Tetris G6',
   arcade: '🕹️ Arkada',
 };
 // Casino games whose rapid plays are collapsed into one session row; an idle gap
@@ -11252,7 +11434,7 @@ async function buildActivityFeed() {
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
     whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, eggCatchRes,
-    superMariuszRes, popupPanicRes, arcadeRes, nftRes,
+    superMariuszRes, popupPanicRes, tetrisRes, arcadeRes, nftRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -11268,6 +11450,7 @@ async function buildActivityFeed() {
     ranged(sb.from('egg_catch_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('super_mariusz_scores').select('user_id,nick_snapshot,score,completion_ms,completed,submitted_at'), 'submitted_at'),
     ranged(sb.from('popup_panic_scores').select(scoreSel), 'submitted_at'),
+    ranged(sb.from('tetris_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
     ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
@@ -11355,6 +11538,7 @@ async function buildActivityFeed() {
   pushScores(varPatrolRes.data, 'var_patrol');
   pushScores(eggCatchRes.data, 'egg_catch');
   pushScores(popupPanicRes.data, 'popup_panic');
+  pushScores(tetrisRes.data, 'tetris');
   (superMariuszRes.data || []).forEach(s => {
     const tail = s.completed ? 'ukończył trasę w ' + smFormatTime(s.completion_ms) : 'DNF — ' + smProgressPct(s.score) + '% trasy';
     entries.push({ nick: nickOf(s), ts: s.submitted_at, cat: 'game',
@@ -11670,6 +11854,13 @@ function setupRealtime() {
       if (activeTab === 'whack-boss') ensureGameScript('popup_panic').then(() => loadPopupPanicState(false));
       await refreshMeCoins();
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tetris_scores' }, () => {
+      if (activeTab === 'whack-boss') ensureGameScript('tetris').then(() => loadTetrisState(false));
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tetris_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') ensureGameScript('tetris').then(() => loadTetrisState(false));
+      await refreshMeCoins();
+    })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, () => {
       if (activeTab === 'whack-boss') ensureGameScript('invoice_horde').then(() => loadInvoiceHordeState(false));
     })
@@ -11906,6 +12097,7 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'popup_panic_scores' }, scheduleActivityRebuild)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tetris_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'farm_nft_transfers' }, scheduleActivityRebuild)
@@ -12192,7 +12384,7 @@ async function loadSeasonHistory() {
         .limit(20);
     }
 
-    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, smRes, ppRes, liveRes] = await Promise.all([
+    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, smRes, ppRes, ttRes, liveRes] = await Promise.all([
       sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('bug_jumper_weekly_awards').select('week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id').order('week_start', { ascending: false }).order('rank'),
       sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
@@ -12202,11 +12394,12 @@ async function loadSeasonHistory() {
       sb.from('egg_catch_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('super_mariusz_recent_awards').select('week_start,user_id,nick,rank,score,completion_ms,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       sb.from('popup_panic_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+      sb.from('tetris_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
       liveScoresQuery,
     ]);
 
     // Build pending entries from live scores (dedup by user, keep best score)
-    const PENDING_PRIZES = [500, 250, 100];
+    const PENDING_PRIZES = [1000, 500, 200];
     const seen = new Set();
     const pendingEntries = [];
     for (const r of (liveRes.data || [])) {
@@ -12236,6 +12429,7 @@ async function loadSeasonHistory() {
       ...mapSeasonAwardRows(ecRes.data, 'egg_catch'),
       ...mapSeasonAwardRows(smRes.data, 'super_mariusz'),
       ...mapSeasonAwardRows(ppRes.data, 'popup_panic'),
+      ...mapSeasonAwardRows(ttRes.data, 'tetris'),
       ...pendingEntries,
     ];
     if (wrap) {
@@ -19736,6 +19930,7 @@ const SEASONAL_ROTATION = [
   { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },
   { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },
   { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },
+  { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
@@ -19745,7 +19940,8 @@ const SEASONAL_OVERRIDES = {
   '2026-07-06': { gameType: 'egg_catch', displayName: 'Łap Jajka 🥚' },  // debut
   '2026-07-13': { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },  // debut
   '2026-07-20': { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },  // debut
-  '2026-07-27': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch
+  '2026-07-27': { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },  // debut
+  '2026-08-03': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch, pushed a week by the Tetris debut
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -20233,6 +20429,7 @@ function loadSeasonalTab(showSpinner = true) {
   const ecPanel       = document.getElementById('seasonal-game-egg-catch');
   const smPanel       = document.getElementById('seasonal-game-super-mariusz');
   const ppPanel       = document.getElementById('seasonal-game-popup-panic');
+  const ttPanel       = document.getElementById('seasonal-game-tetris');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -20244,6 +20441,7 @@ function loadSeasonalTab(showSpinner = true) {
   const isEC = current.gameType === 'egg_catch';
   const isSM = current.gameType === 'super_mariusz';
   const isPP = current.gameType === 'popup_panic';
+  const isTT = current.gameType === 'tetris';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
@@ -20253,6 +20451,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (ecPanel) { if (isEC) show(ecPanel); else hide(ecPanel); }
   if (smPanel) { if (isSM) show(smPanel); else hide(smPanel); }
   if (ppPanel) { if (isPP) show(ppPanel); else hide(ppPanel); }
+  if (ttPanel) { if (isTT) show(ttPanel); else hide(ttPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -20263,6 +20462,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isEC && eggCatchRuntime?.playing) stopEggCatchRound();
   if (!isSM && superMariuszRuntime?.playing) stopSuperMariuszRound();
   if (!isPP && popupPanicRuntime?.playing) stopPopupPanicRound();
+  if (!isTT && tetrisRuntime?.playing) stopTetrisRound();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
@@ -20272,6 +20472,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (eggCatchRuntime) eggCatchRuntime.archiveMode = false;
   if (superMariuszRuntime) superMariuszRuntime.archiveMode = false;
   if (popupPanicRuntime) popupPanicRuntime.archiveMode = false;
+  if (tetrisRuntime) tetrisRuntime.archiveMode = false;
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) ensureGameScript('bug_jumper').then(() => loadBugJumperState(showSpinner));
   if (isFP) ensureGameScript('flappy_pants').then(() => loadFlappyPantsState(showSpinner));
@@ -20281,6 +20482,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (isEC) ensureGameScript('egg_catch').then(() => loadEggCatchState(showSpinner));
   if (isSM) ensureGameScript('super_mariusz').then(() => loadSuperMariuszState(showSpinner));
   if (isPP) ensureGameScript('popup_panic').then(() => loadPopupPanicState(showSpinner));
+  if (isTT) ensureGameScript('tetris').then(() => loadTetrisState(showSpinner));
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
@@ -22439,6 +22641,7 @@ function smProgressPct(score) {
 }
 
 // ── "Zamknij Popupy!" (popup_panic) ── lazy-loaded from games/popup-panic.js on demand (loadSeasonalTab / selectAllGame via ensureGameScript) ──
+// ── "Tetris G6" (tetris) ── lazy-loaded from games/tetris.js on demand (loadSeasonalTab / selectAllGame via ensureGameScript) ──
 // ── Najazd Faktur (Invoice Horde) ── lazy-loaded from games/invoice-horde.js on demand (loadSeasonalTab / selectAllGame / admin test tab via ensureGameScript) ──
 // ── Garden (Ogródek) ──────────────────────────────────────────────────────
 const PLANT_STAGES = {
