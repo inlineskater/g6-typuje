@@ -931,7 +931,9 @@ const AGP_DEFS = {
       while (p.acc >= TT_TICK_MS) {
         p.acc -= TT_TICK_MS;
         const st = p.st;
-        if (st.dead) {
+        // a real round also ends on the 60 s clock — restart there too, or the
+        // preview would sit forever on a 0 s countdown
+        if (st.dead || st.tick >= TT_MAX_TICKS) {
           p.deadFor += TT_TICK_MS;
           if (p.deadFor > 1200) agpTetrisReset(p);
           continue;

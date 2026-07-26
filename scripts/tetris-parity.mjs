@@ -13,15 +13,15 @@
 const TT_W = 10;
 const TT_H = 20;
 const TT_SPAWN_X = 3;
-const TT_MAX_TICKS = 12000;
-const TT_MAX_SCORE = 999999;
+const TT_MAX_TICKS = 1200;
+const TT_MAX_SCORE = 9999;
 const TT_LOCK_TICKS = 10;
 const TT_MAX_LOCK_RESETS = 12;
-const TT_LINES_PER_LEVEL = 10;
-const TT_MAX_LEVEL = 15;
-const TT_LINE_SCORES = [0, 100, 300, 500, 800];
-const TT_SOFT_DROP_POINTS = 1;
-const TT_HARD_DROP_POINTS = 2;
+const TT_LINES_PER_LEVEL = 4;
+const TT_MAX_LEVEL = 10;
+const TT_LINE_SCORES = [0, 1, 3, 5, 8];
+const TT_SOFT_DROP_POINTS = 0;
+const TT_HARD_DROP_POINTS = 0;
 const TT_KICKS = [0, -1, 1, -2, 2];
 const TT_A_LEFT = 0, TT_A_RIGHT = 1, TT_A_CW = 2, TT_A_CCW = 3, TT_A_SOFT = 4, TT_A_HARD = 5;
 const TT_PIECES = [
@@ -35,7 +35,7 @@ const TT_PIECES = [
 ];
 
 function makeSim() {
-  function gravityTicks(level) { return Math.max(2, 21 - level * 2); }
+  function gravityTicks(level) { return Math.max(2, 13 - level); }
   function rng(st) {
     st.rngState = (Math.imul(st.rngState, 1664525) + 1013904223) >>> 0;
     return st.rngState / 4294967296;
@@ -116,7 +116,7 @@ function makeSim() {
     }
     if (cleared > 0) {
       st.lines += cleared;
-      st.score += TT_LINE_SCORES[cleared] * st.level;
+      st.score += TT_LINE_SCORES[cleared];
       st.level = Math.min(TT_MAX_LEVEL, 1 + Math.floor(st.lines / TT_LINES_PER_LEVEL));
     }
     if (ev) { ev.locks += 1; ev.cleared += cleared; }
@@ -345,7 +345,7 @@ function drive(seed, policyName, rnd, tickCap) {
 // ── fuzz ─────────────────────────────────────────────────────────────────────
 const POLICIES = ['heuristic', 'random', 'spam', 'dropper', 'leftWall', 'idle'];
 const N = 600;
-const TICK_CAP = 3000; // 2.5 min of play — enough to reach level 3+ with the bot
+const TICK_CAP = TT_MAX_TICKS; // a full 60 s round
 let mismatches = 0;
 let maxScore = 0;
 let maxLines = 0;

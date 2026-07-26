@@ -11,17 +11,22 @@ const TT_TICK_MS = 50;
 const TT_W = 10;                   // well width in cells
 const TT_H = 20;                   // well height in cells
 const TT_SPAWN_X = 3;              // x of the 4×4 piece box at spawn
-const TT_MAX_TICKS = 12000;        // 10 min hard cap
-const TT_MAX_EVENTS = 12000;       // max input events accepted per round
+const TT_MAX_TICKS = 1200;         // 60 s round — the round ends on the clock, not just on a top-out
+const TT_MAX_EVENTS = 4000;        // max input events accepted per round
 const TT_MAX_ACTIONS_PER_TICK = 6; // more than this inside one 50 ms tick is bot-grade spam
-const TT_MAX_SCORE = 999999;       // anti-cheat ceiling
+const TT_MAX_SCORE = 9999;         // anti-cheat ceiling
 const TT_LOCK_TICKS = 10;          // 0.5 s lock delay once the piece is grounded
 const TT_MAX_LOCK_RESETS = 12;     // a move/rotate can refresh the lock delay this often
-const TT_LINES_PER_LEVEL = 10;
-const TT_MAX_LEVEL = 15;
-const TT_LINE_SCORES = [0, 100, 300, 500, 800]; // × level
-const TT_SOFT_DROP_POINTS = 1;     // per cell
-const TT_HARD_DROP_POINTS = 2;     // per cell
+const TT_LINES_PER_LEVEL = 4;      // a 60 s round only fits ~15-25 lines, so levels must come fast
+const TT_MAX_LEVEL = 10;
+// Small, line-only scoring on purpose: a hero score_bonus item is worth its raw
+// effect_value here (TT_ITEM_SCORE_PER_POINT = 1 in tetris-action), so +5 has to
+// be a real chunk of a good run (~20-40) rather than rounding noise against
+// three-digit line scores. Drop points are 0 for the same reason — at 2/cell a
+// piece-spamming run would out-score every line cleared.
+const TT_LINE_SCORES = [0, 1, 3, 5, 8]; // flat — NOT multiplied by level
+const TT_SOFT_DROP_POINTS = 0;     // per cell
+const TT_HARD_DROP_POINTS = 0;     // per cell
 const TT_KICKS = [0, -1, 1, -2, 2]; // horizontal wall-kick offsets tried on rotation
 
 // Actions — the only thing the client logs.
@@ -40,7 +45,7 @@ const TT_PIECES = [
 ];
 
 function ttGravityTicks(level) {
-  return Math.max(2, 21 - level * 2);
+  return Math.max(2, 13 - level);
 }
 
 function ttRng(st) {
@@ -131,7 +136,7 @@ function ttLockPiece(st, ev) {
   }
   if (cleared > 0) {
     st.lines += cleared;
-    st.score += TT_LINE_SCORES[cleared] * st.level;
+    st.score += TT_LINE_SCORES[cleared];
     st.level = Math.min(TT_MAX_LEVEL, 1 + Math.floor(st.lines / TT_LINES_PER_LEVEL));
   }
   if (ev) { ev.locks += 1; ev.cleared += cleared; }
@@ -327,37 +332,63 @@ function tetrisDraw() {
   ctx.lineWidth = 2;
   ctx.strokeRect(TT_PAD - 1, TT_PAD - 1, TT_WELL_W + 2, TT_WELL_H + 2);
 
-  // side panel: next piece + level
+  // ── side rail: the full HUD lives on the canvas, so it stays readable in
+  // fullscreen (where the DOM stat row is cramped) and in the arcade previews.
+  ctx.textAlign = 'left';
+
+  // score — the headline number
   ctx.fillStyle = '#94a3b8';
   ctx.font = '700 10px system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('NASTĘPNY', TT_SIDE_X, TT_PAD + 12);
+  ctx.fillText('WYNIK', TT_SIDE_X, TT_PAD + 12);
+  ctx.fillStyle = '#facc15';
+  ctx.font = '900 28px system-ui, sans-serif';
+  ctx.fillText(st ? String(Math.min(TT_MAX_SCORE, st.score)) : '0', TT_SIDE_X, TT_PAD + 40);
+
+  // countdown to the end of the round
+  const ticksLeft = Math.max(0, TT_MAX_TICKS - (st?.tick || 0));
+  const secsLeft = Math.ceil(ticksLeft * TT_TICK_MS / 1000);
+  const timeColor = secsLeft <= 5 ? '#ef4444' : (secsLeft <= 15 ? '#f59e0b' : '#38bdf8');
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '700 10px system-ui, sans-serif';
+  ctx.fillText('CZAS', TT_SIDE_X, TT_PAD + 62);
+  ctx.fillStyle = timeColor;
+  ctx.font = '900 22px system-ui, sans-serif';
+  ctx.fillText(secsLeft + ' s', TT_SIDE_X, TT_PAD + 84);
   ctx.fillStyle = '#0b1220';
-  ctx.fillRect(TT_SIDE_X, TT_PAD + 20, 68, 60);
+  ctx.fillRect(TT_SIDE_X, TT_PAD + 92, 68, 5);
+  ctx.fillStyle = timeColor;
+  ctx.fillRect(TT_SIDE_X, TT_PAD + 92, Math.round(68 * (ticksLeft / TT_MAX_TICKS)), 5);
+
+  // next piece
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '700 10px system-ui, sans-serif';
+  ctx.fillText('NASTĘPNY', TT_SIDE_X, TT_PAD + 116);
+  ctx.fillStyle = '#0b1220';
+  ctx.fillRect(TT_SIDE_X, TT_PAD + 124, 68, 60);
   ctx.strokeStyle = '#334155';
   ctx.lineWidth = 1;
-  ctx.strokeRect(TT_SIDE_X + .5, TT_PAD + 20.5, 68, 60);
+  ctx.strokeRect(TT_SIDE_X + .5, TT_PAD + 124.5, 68, 60);
   if (st && !st.dead) {
-    ttDrawPieceMask(ctx, st.next, 0, TT_SIDE_X + 6, TT_PAD + 28, 14, false);
+    ttDrawPieceMask(ctx, st.next, 0, TT_SIDE_X + 6, TT_PAD + 132, 14, false);
   }
   if (st) {
     ctx.fillStyle = '#94a3b8';
     ctx.font = '700 10px system-ui, sans-serif';
-    ctx.fillText('POZIOM', TT_SIDE_X, TT_PAD + 108);
+    ctx.fillText('POZIOM', TT_SIDE_X, TT_PAD + 208);
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '900 22px system-ui, sans-serif';
-    ctx.fillText(String(st.level), TT_SIDE_X, TT_PAD + 132);
+    ctx.fillText(String(st.level), TT_SIDE_X, TT_PAD + 232);
     ctx.fillStyle = '#94a3b8';
     ctx.font = '700 10px system-ui, sans-serif';
-    ctx.fillText('LINIE', TT_SIDE_X, TT_PAD + 162);
+    ctx.fillText('LINIE', TT_SIDE_X, TT_PAD + 258);
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '900 22px system-ui, sans-serif';
-    ctx.fillText(String(st.lines), TT_SIDE_X, TT_PAD + 186);
+    ctx.fillText(String(st.lines), TT_SIDE_X, TT_PAD + 282);
     // next level in: how many more lines until gravity steps up
     if (st.level < TT_MAX_LEVEL) {
       ctx.fillStyle = '#64748b';
       ctx.font = '700 9px system-ui, sans-serif';
-      ctx.fillText('do ' + (st.level + 1) + ' lvl: ' + (st.level * TT_LINES_PER_LEVEL - st.lines), TT_SIDE_X, TT_PAD + 204);
+      ctx.fillText('do ' + (st.level + 1) + ' lvl: ' + (st.level * TT_LINES_PER_LEVEL - st.lines), TT_SIDE_X, TT_PAD + 300);
     }
   }
 }
@@ -449,6 +480,10 @@ function tetrisSetStats() {
   if (ttScoreEl) ttScoreEl.textContent = String(Math.min(TT_MAX_SCORE, st.score));
   if (ttLinesEl) ttLinesEl.textContent = String(st.lines);
   if (ttLevelEl) ttLevelEl.textContent = String(st.level);
+  if (ttTimeEl) {
+    const left = Math.max(0, TT_MAX_TICKS - st.tick);
+    ttTimeEl.textContent = Math.ceil(left * TT_TICK_MS / 1000) + ' s';
+  }
 }
 
 function tetrisQueueAction(a) {
@@ -496,7 +531,7 @@ function tetrisTick() {
     return;
   }
   if (st.tick >= TT_MAX_TICKS) {
-    rt.endedReason = 'limit 10 minut';
+    rt.endedReason = 'koniec czasu';
     finishTetrisRound();
     return;
   }
@@ -541,7 +576,7 @@ function beginTetrisRound(round, options = {}) {
   if (ttStartBtn) { ttStartBtn.disabled = true; ttStartBtn.textContent = 'Runda trwa'; }
   if (ttStatus) ttStatus.textContent = rt.archiveMode
     ? 'Demo — wynik nie zostanie zapisany.'
-    : 'Układaj linie! ← → ruch, ↑ obrót, ↓ miękki zrzut, spacja = twardy zrzut.';
+    : 'Masz 60 sekund! ← → ruch, ↑ obrót, ↓ miękki zrzut, spacja = twardy zrzut.';
   tetrisInitCanvas();
   tetrisSetStats();
   tetrisDraw();

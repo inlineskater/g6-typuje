@@ -28,17 +28,22 @@ const TT_TICK_MS = 50;
 const TT_W = 10;                   // well width in cells
 const TT_H = 20;                   // well height in cells
 const TT_SPAWN_X = 3;              // x of the 4×4 piece box at spawn
-const TT_MAX_TICKS = 12000;        // 10 min hard cap
-const TT_MAX_EVENTS = 12000;       // max input events accepted per round
+const TT_MAX_TICKS = 1200;         // 60 s round — the round ends on the clock, not just on a top-out
+const TT_MAX_EVENTS = 4000;        // max input events accepted per round
 const TT_MAX_ACTIONS_PER_TICK = 6; // more than this inside one 50 ms tick is bot-grade spam
-const TT_MAX_SCORE = 999999;       // anti-cheat ceiling
+const TT_MAX_SCORE = 9999;         // anti-cheat ceiling
 const TT_LOCK_TICKS = 10;          // 0.5 s lock delay once the piece is grounded
 const TT_MAX_LOCK_RESETS = 12;     // a move/rotate can refresh the lock delay this often
-const TT_LINES_PER_LEVEL = 10;
-const TT_MAX_LEVEL = 15;
-const TT_LINE_SCORES = [0, 100, 300, 500, 800]; // × level
-const TT_SOFT_DROP_POINTS = 1;     // per cell
-const TT_HARD_DROP_POINTS = 2;     // per cell
+const TT_LINES_PER_LEVEL = 4;      // a 60 s round only fits ~15-25 lines, so levels must come fast
+const TT_MAX_LEVEL = 10;
+// Small, line-only scoring on purpose: a hero score_bonus item is worth its raw
+// effect_value here (TT_ITEM_SCORE_PER_POINT = 1), so +5 has to be a real chunk
+// of a good run (~20-40) rather than rounding noise against three-digit line
+// scores. Drop points are 0 for the same reason — at 2/cell a piece-spamming
+// run would out-score every line cleared.
+const TT_LINE_SCORES = [0, 1, 3, 5, 8]; // flat — NOT multiplied by level
+const TT_SOFT_DROP_POINTS = 0;     // per cell
+const TT_HARD_DROP_POINTS = 0;     // per cell
 const TT_KICKS = [0, -1, 1, -2, 2]; // horizontal wall-kick offsets tried on rotation
 
 // Actions — the only thing the client logs.
@@ -57,7 +62,7 @@ const TT_PIECES = [
 ];
 
 function ttGravityTicks(level) {
-  return Math.max(2, 21 - level * 2);
+  return Math.max(2, 13 - level);
 }
 
 function ttRng(st) {
@@ -148,7 +153,7 @@ function ttLockPiece(st, ev) {
   }
   if (cleared > 0) {
     st.lines += cleared;
-    st.score += TT_LINE_SCORES[cleared] * st.level;
+    st.score += TT_LINE_SCORES[cleared];
     st.level = Math.min(TT_MAX_LEVEL, 1 + Math.floor(st.lines / TT_LINES_PER_LEVEL));
   }
   if (ev) { ev.locks += 1; ev.cleared += cleared; }
@@ -254,10 +259,11 @@ function ttReplay(seed, events, untilTick) {
 
 const ROUND_EXPIRES_SECONDS = 1800;
 const PRIZES = [1000, 500, 200];
-// Hero score_bonus items are worth this many Tetris points each (a +5 item is
-// roughly one level-1 Tetris quad) — the raw +N of the other seasonal games is
-// meaningless against three-digit line scores.
-const TT_ITEM_SCORE_PER_POINT = 100;
+// Hero score_bonus items are worth this many Tetris points each. Line scoring is
+// deliberately small (a quad is 8, a strong 60 s run lands ~20-40), so the raw
+// +N of the other seasonal games is exactly the right scale here: a +5 item is
+// worth more than a whole tetris.
+const TT_ITEM_SCORE_PER_POINT = 1;
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {

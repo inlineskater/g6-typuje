@@ -4249,6 +4249,9 @@
       flex: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
       padding-right: 42px;
     }
+    /* Fullscreen is tight and the canvas rail already prints the level — drop
+       the tile so Wynik/Czas/Linie stay on one comfortable row. */
+    .bj-game-panel.tt-fs #tt-stat-level { display: none; }
     .bj-game-panel.tt-fs .bj-stat { padding: 6px 10px; }
     .bj-game-panel.tt-fs .bj-actions {
       display: flex; align-items: center; gap: 10px;
@@ -8402,7 +8405,7 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">„Tetris G6" 🧱</h2>
-                <p class="page-sub">Klasyk wszech czasów w wersji biurowej: klocki spadają do studni 10×20, Ty je obracasz i układasz. Pełna linia znika i daje punkty — cztery naraz („tetris") dają ich najwięcej. Co 10 linii rośnie poziom i klocki lecą szybciej. Runda kończy się, gdy stos sięgnie sufitu.</p>
+                <p class="page-sub">Klasyk wszech czasów w wersji biurowej: klocki spadają do studni 10×20, Ty je obracasz i układasz. Pełna linia znika i daje punkty — cztery naraz („tetris") dają ich najwięcej. Co 4 linie rośnie poziom i klocki lecą szybciej. <strong>Runda trwa 60 sekund</strong> (albo krócej, jeśli stos sięgnie sufitu), więc liczy się każda sekunda.</p>
               </div>
               <div class="bj-prizes" aria-label="Nagrody tygodniowe">
                 <span class="bj-prize">🥇 1000 🪙</span>
@@ -8415,9 +8418,11 @@
               <div class="bj-rules-title">Jak grać</div>
               <ul>
                 <li><strong>← →</strong> ruch w bok (przytrzymaj, żeby przesuwać dalej), <strong>↑ / X</strong> obrót w prawo, <strong>Z</strong> obrót w lewo.</li>
-                <li><strong>↓</strong> miękki zrzut (+1 pkt za pole), <strong>spacja</strong> twardy zrzut (+2 pkt za pole i natychmiastowe zablokowanie klocka).</li>
-                <li><strong>Punkty za linie × poziom:</strong> 1 linia = 100, 2 = 300, 3 = 500, <strong>4 naraz („tetris") = 800</strong>. Opłaca się czekać na cztery.</li>
-                <li><strong>Poziom rośnie co 10 linii</strong> (maks. 15) — im wyżej, tym szybciej spadają klocki. Po wylądowaniu masz jeszcze pół sekundy na poprawkę.</li>
+                <li><strong>↓</strong> miękki zrzut, <strong>spacja</strong> twardy zrzut (klocek spada na dół i od razu się blokuje — najszybszy sposób na kolejny klocek).</li>
+                <li><strong>Masz 60 sekund.</strong> Zegar tyka na planszy obok wyniku; runda kończy się z ostatnią sekundą albo wtedy, gdy stos sięgnie sufitu.</li>
+                <li><strong>Punkty tylko za linie:</strong> 1 linia = 1, 2 = 3, 3 = 5, <strong>4 naraz („tetris") = 8</strong>. Za samo zrzucanie klocków nie ma nic — opłaca się czekać na cztery.</li>
+                <li><strong>Poziom rośnie co 4 linie</strong> (maks. 10) — im wyżej, tym szybciej spadają klocki. Po wylądowaniu masz jeszcze pół sekundy na poprawkę.</li>
+                <li><strong>Przedmioty specjalne</strong> z bonusem do wyniku dorzucają swoje punkty 1:1 — przy takiej skali punktów +5 to więcej niż cały „tetris".</li>
                 <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
               </ul>
             </div>
@@ -8428,10 +8433,14 @@
                 <div class="bj-stat-value" id="tt-score">0</div>
               </div>
               <div class="bj-stat">
+                <div class="bj-stat-label">Czas</div>
+                <div class="bj-stat-value" id="tt-time">60 s</div>
+              </div>
+              <div class="bj-stat">
                 <div class="bj-stat-label">Linie</div>
                 <div class="bj-stat-value" id="tt-lines">0</div>
               </div>
-              <div class="bj-stat">
+              <div class="bj-stat" id="tt-stat-level">
                 <div class="bj-stat-label">Poziom</div>
                 <div class="bj-stat-value" id="tt-level">1</div>
               </div>
@@ -8759,7 +8768,7 @@
               <span class="ag-card-name">„Tetris G6”</span>
               <span class="ag-card-tag">ŁAMIGŁÓWKA</span>
             </div>
-            <div class="ag-card-desc">Klasyczna studnia 10×20: obracaj klocki i domykaj linie. Cztery naraz to „tetris” i najwięcej punktów.</div>
+            <div class="ag-card-desc">Klasyczna studnia 10×20: obracaj klocki i domykaj linie. Masz 60 sekund — cztery linie naraz to „tetris” i najwięcej punktów.</div>
             <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
           <div class="ag-card-scores" data-scores="tetris"></div>
@@ -9924,6 +9933,7 @@ const ttStatus        = document.getElementById('tt-status');
 const ttScoreEl       = document.getElementById('tt-score');
 const ttLinesEl       = document.getElementById('tt-lines');
 const ttLevelEl       = document.getElementById('tt-level');
+const ttTimeEl        = document.getElementById('tt-time');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
@@ -10619,7 +10629,8 @@ function agScoreColumn(labelText, gameType, rows, expanded) {
 
 // ── Klasyfikacja generalna: one medal table over all ten games ─────────────
 // Raw scores can't be added up across games (30 is a perfect Bug Jumper run,
-// 30 is nothing in Tetris), so the overall ranking is an Olympic medal table:
+// 30 is an excellent Tetris minute, 30 is a weak Łap Jajka score), so the
+// overall ranking is an Olympic medal table:
 // each game's ALL-TIME top three hand out 🥇🥈🥉, and players are ordered by
 // golds, then silvers, then bronzes — the classic medal-table rule.
 function agGameLabels() {

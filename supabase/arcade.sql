@@ -116,7 +116,7 @@ BEGIN
     WHEN 'egg_catch'     THEN 1000
     WHEN 'super_mariusz' THEN 455
     WHEN 'popup_panic'   THEN 2000
-    WHEN 'tetris'        THEN 999999
+    WHEN 'tetris'        THEN 9999
     ELSE NULL
   END;
   IF v_score_cap IS NULL THEN RAISE EXCEPTION 'invalid_game_type'; END IF;
