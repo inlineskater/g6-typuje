@@ -254,6 +254,10 @@ AS $$
           SELECT prize_coins FROM public.super_mariusz_weekly_awards
           UNION ALL
           SELECT prize_coins FROM public.popup_panic_weekly_awards
+          UNION ALL
+          -- Every seasonal game must be listed here or its prizes never count
+          -- as minted supply. Tetris shipped missing from this UNION.
+          SELECT prize_coins FROM public.tetris_weekly_awards
         ) _awards
       ), 0::bigint)::numeric AS prizes_minted,
 

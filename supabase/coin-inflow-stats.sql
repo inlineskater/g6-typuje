@@ -186,7 +186,12 @@ AS $$
     SELECT user_id, prize_coins, awarded_at FROM public.super_mariusz_weekly_awards
     UNION ALL
     SELECT user_id, prize_coins, awarded_at FROM public.popup_panic_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.tetris_weekly_awards
   ),
+  -- NOTE: this UNION must list EVERY seasonal game. It is the one place that
+  -- has to be touched when a game joins SEASONAL_ROTATION — tetris shipped
+  -- without it, so Tetris prize payouts were invisible to the Wpływy card.
   seasonal_inflows AS (
     SELECT
       user_id,
