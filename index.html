@@ -25791,10 +25791,38 @@ function farmPricePercentChip(cur, max, title) {
   return el('span', { className: 'farm-trend ' + cls, title }, arrow + ' ' + pct + '% maks.');
 }
 
+// Distinct NFT species the logged-in player owns — the metric both achievement
+// bonuses below are counted in. fmNft holds EVERY instance (the table is public
+// SELECT), so it has to be filtered by owner.
+function farmMyNftSpecies() {
+  const out = new Set();
+  if (!me) return out;
+  fmNft.forEach(n => { if (n.owner_id === me.id) out.add(n.species); });
+  return out;
+}
+
+// „Renoma Kolekcjonera": +2% NPC sale price per distinct NFT species owned,
+// capped +30%. Mirror of farm_collector_bonus() in farm-collector-perks.sql.
+function farmCollectorBonus() {
+  return Math.min(0.30, 0.02 * farmMyNftSpecies().size);
+}
+
+// „Sezonowy Łowca": +2% on the weekly contract premium per distinct WEEKLY-SERIES
+// species owned, capped +20%. Mirror of farm_seasonal_bonus() in
+// farm-achievements.sql (which joins farm_card_defs on series_week IS NOT NULL).
+function farmSeasonalAchBonus() {
+  let n = 0;
+  farmMyNftSpecies().forEach(sp => { if (fmDefs.get(sp)?.series_week) n++; });
+  return Math.min(0.20, 0.02 * n);
+}
+
 // Client-side replica of sell_crop_to_npc's pricing (farm.sql): recover cur_price
 // toward the day's anchor at 12%/hr, then ONE per-transaction drop scaled by size
 // (0.5%/unit, capped 40%); the batch is charged the average of pre/post (floor 30%
 // of base). Lets us preview exactly what a sale pays and how far it dips the price.
+// Both achievement bonuses are applied here too — the server scales proceeds by
+// (1 + collector) and the contract premium by (1 + seasonal), so leaving them out
+// made the confirm dialog quote up to 30% / 20% LESS than the sale actually pays.
 function farmSellQuote(crop, qty) {
   const mkt = fmMarket.get(crop);
   if (!mkt) return null;
@@ -25805,12 +25833,15 @@ function farmSellQuote(crop, qty) {
   const dropFrac = Math.min(0.40, 0.005 * qty);
   const startPrice = curEff;
   const endPrice = Math.max(floor, curEff * (1 - dropFrac));
-  const proceeds = Math.round(qty * ((startPrice + endPrice) / 2));
+  const collector = farmCollectorBonus();
+  const proceeds = Math.round(qty * ((startPrice + endPrice) / 2) * (1 + collector));
   const eventQty = farmSeasonalEligibleQty(crop, qty);
-  const eventBonus = eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0);
+  const eventBonus = Math.round(eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0)
+                                * (1 + farmSeasonalAchBonus()));
   return { base, startPrice, endPrice, proceeds, dropPct: Math.round(dropFrac * 100),
     startMaxPct: Math.round(startPrice / base * 100),
     endMaxPct: Math.round(endPrice / base * 100),
+    collectorPct: Math.round(collector * 100),
     eventQty, eventBonus, totalProceeds: proceeds + eventBonus };
 }
 
@@ -25843,6 +25874,12 @@ function farmSellConfirm(crop, maxQty, afterSell) {
     qtyLabel.replaceChildren(farmIcon(def?.emoji || '🧺'), ' ' + (def?.name || crop) + ' ×' + currentQty);
     priceLabel.replaceChildren(fmt(q.startPrice) + ' → ' + fmt(q.endPrice) + ' 🪙');
     proceedsLabel.replaceChildren('~' + q.proceeds + ' 🪙');
+    // 🏅 = „Renoma Kolekcjonera" — the NPC premium is already inside q.proceeds,
+    // so name it here rather than leaving the higher number unexplained.
+    if (q.collectorPct > 0) proceedsLabel.append(
+      el('span', { className: 'farm-seasonal-bonus', style: { marginLeft: '6px' },
+                   title: 'Renoma Kolekcjonera: +2% za każdy posiadany gatunek NFT (maks. +30%)' },
+        '🏅 +' + q.collectorPct + '%'));
     bonusLabel.replaceChildren(q.eventBonus > 0
       ? ('+' + q.eventBonus + ' 🪙 za kontrakt (' + q.eventQty + ' szt.)')
       : '—');
