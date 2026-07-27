@@ -24309,7 +24309,7 @@ async function loadFarm() {
       sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
       sb.from('gardens').select('*, profiles(nick)'),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes,stat_value'),
       sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
       sb.rpc('farm_land_tax_quote'),
       sb.from('profiles').select('id,nick,is_admin,second_garden_unlocked'),
@@ -25972,7 +25972,7 @@ async function ensureFarmData(opts = {}) {
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes,stat_value'),
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
@@ -26982,13 +26982,23 @@ function farmNftFlavor(n) {
   return FARM_NFT_FLAVORS[(n.serial_no + (n.species ? n.species.length : 0)) % FARM_NFT_FLAVORS.length];
 }
 
+// Net worth of one NFT instance. Mirrors the three SQL valuation sites
+// (user_assets_value / user_net_worth_breakdown / economy_stats): a bred hybrid
+// may carry a per-level `stat_value` override, because the „Dziki Mieszaniec"
+// catch-all's edition of 500 would otherwise value it at 40 × level.
+function farmNftValue(n) {
+  const lvl = n.level || 1;
+  if (n.stat_value != null) return Math.round(n.stat_value * lvl);
+  return n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null;
+}
+
 // Trading-card detail for a serialized NFT plant (click an NFT in Mój Majątek).
 function openFarmNftModal(n) {
   const def = fmDefs.get(n.species) || {};
   const rar = def.rarity || 'legendary';
   const lvl = n.level || 1;
   const stars = lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '';
-  const value = n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null;
+  const value = farmNftValue(n);
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
@@ -27307,6 +27317,7 @@ function farmBreedingSection() {
   [['🔥', 'Obie karty-rodzice znikają NA ZAWSZE.'],
    ['⚡', 'Hybryda zarabia o 15% więcej na dobę i rośnie o 5% krócej niż lepszy z rodziców — liczone od ich AKTUALNYCH poziomów i cen skupu ich plonów.'],
    ['🎚️', 'Hybryda dziedziczy poziom lepszego rodzica, więc awanse nie przepadają przy krzyżowaniu.'],
+   ['💼', 'Wartość w majątku hybrydy nigdy nie spada poniżej wartości lepszego rodzica.'],
    ['✨', 'Wybrane pary dają kultowy przepis (np. 🌹+🌻 → „Słoneczna Róża"), reszta „Dzikiego Mieszańca 🌈".'],
    ['🪙', 'Koszt rośnie z poziomem rodziców; odznaka „Mistrz Hybryd" go obniża.']
   ].forEach(([ic, tx]) => ul.append(el('li', {}, el('span', { className: 'bfx' }, ic), tx)));
@@ -27358,7 +27369,9 @@ function farmNftStats(n) {
   const perDayExact = price != null ? yieldExact * price / (grow / 1440) : null;
   const perDay = perDayExact != null ? Math.round(perDayExact) : null;
   return { def, lvl, baseY, baseG, yield: yield_, yieldExact, grow, price, perDay, perDayExact,
-           value: n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null };
+           vbasis: n.stat_value != null ? n.stat_value
+                 : (n.edition_size ? 20000 / n.edition_size : 0),
+           value: farmNftValue(n) };
 }
 
 // Synergy result for a parent pair — the client mirror of farm_hybrid_stats().
@@ -27394,11 +27407,18 @@ function farmBreedPreview(a, b) {
   const effG = Math.max(1440, Math.floor(statGrow * gmult));
   const perDay = price != null ? Math.round(effY * price / (effG / 1440)) : null;
   const ed = res?.edition || 0;
-  return { res, level: lvl, statYield, statGrow, yield: effY, grow: effG, price, perDay,
-           value: ed ? Math.round(20000 / ed * lvl) : null,
+  // Net worth floor: never worth less than the better parent that was burned. The
+  // species formula covers the 6 curated recipes, but „Dziki Mieszaniec" (edition
+  // 500 ⇒ 40/level) needs a per-level override. Mirrors farm_hybrid_stats().
+  const bestParentValue = Math.max(sa.value || 0, sb2.value || 0);
+  const speciesValue = ed ? Math.round(20000 / ed * lvl) : 0;
+  const statValue = speciesValue >= bestParentValue ? null
+                  : Math.ceil(bestParentValue / lvl);
+  return { res, level: lvl, statYield, statGrow, statValue, yield: effY, grow: effG, price, perDay,
+           value: statValue != null ? Math.round(statValue * lvl) : speciesValue,
            bestParentYield: Math.round(bestParentYield),
            bestParentPerDay: Math.round(bestParentPerDay),
-           bestParentValue: Math.max(sa.value || 0, sb2.value || 0),
+           bestParentValue,
            cost: Math.round(400 * ((a.level || 1) + (b.level || 1)) *
                  (1 - Math.min(0.30, 0.05 * (fmAchMine?.hybrids_bred || 0)))) };
 }
@@ -28565,7 +28585,7 @@ function renderFarmHelpInto(bodyEl) {
         step(b('Stała szansa dla wszystkich: '), 'szansa na NFT jest ', b('taka sama dla każdego'), ' i ', b('nie zmienia się'), ' od tego, ile NFT już masz. Na skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na jakiekolwiek NFT'), ' (zwykła), ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true)) + '') + ' (⭐ Złota). Dokładne szanse per karta są w 📖 Katalogu.'),
         step(b('Wyprzedaż edycji: '), 'gdy edycja się wyczerpie, karta znika z puli losowań i w Katalogu ma status „wyprzedane".'),
         step(b('Sadzenie: '), 'sadzisz je jak każdą kartę i mają najmocniejsze staty (największy plon i cena NPC). Uwaga: ', b('poziom siedzi na konkretnym egzemplarzu'), ' — sadzisz wybrany numer, a rośnie zgodnie z jego poziomem.'),
-        step(b('Wartość w majątku'), ' (Net Worth, 💼 Portfel) = ', b('20000 ÷ wielkość edycji × poziom'), ' za egzemplarz — mniejsza edycja i wyższy poziom = cenniejsza karta.'))),
+        step(b('Wartość w majątku'), ' (Net Worth, 💼 Portfel) = ', b('20000 ÷ wielkość edycji × poziom'), ' za egzemplarz — mniejsza edycja i wyższy poziom = cenniejsza karta. Wyjątek: ', b('hybryda z krzyżowania'), ' nigdy nie jest warta mniej niż lepszy z rodziców, których pochłonęła (inaczej „Dziki Mieszaniec" o nakładzie 500 byłby wart grosze).'))),
 
     farmHelpSection('🔀 Ulepszanie NFT (łączenie egzemplarzy)',
       P('NFT ', b('nie ulepsza się duplikatami'), ' jak zwykłe karty. Poziom siedzi na ', b('każdym pojedynczym, numerowanym egzemplarzu'), ' z osobna, więc żeby awansować, ', b('łączysz dwa egzemplarze'), ' tej samej rośliny w jeden mocniejszy.'),
@@ -28612,7 +28632,7 @@ async function loadFarmLootbox() {
     const [defsRes, colRes, nftRes, tilesRes, stateRes, taxRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes'),
+      sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes,stat_value'),
       me ? sb.from('farm_tiles').select('owner_id,acquired_via').eq('owner_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),

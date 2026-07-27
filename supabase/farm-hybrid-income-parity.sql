@@ -61,13 +61,74 @@
 --  (ceil on yield, floor on grow), so the +15% promise can only ever be met or beaten,
 --  never missed. At lvl 1 both reduce to the identity, so nothing changes for those.
 --
---  Note this REDUCES but cannot eliminate the net-worth loss: parents of different
---  edition sizes are worth different amounts, so max(level) can't reproduce their sum.
---  Screenshot pair: 5000 + 2000 burned → 5000 minted (was 2500).
+--  VALUE FLOOR (the „Dziki Mieszaniec" hole)
+--  ----------------------------------------
+--  Level inheritance fixed the value regression for the 6 CURATED recipes, but not
+--  for the catch-all: `wild_hybrid` has edition_size 500 (deliberately huge so
+--  breeding never dead-ends), and net worth is round(20000 / edition_size × level),
+--  so it was worth 40 × level. Breeding an uncatalogued pair turned a 5000-value
+--  card into a 40-value one. Edition sizing cannot fix this — you'd need an edition
+--  of 8 to be worth 2500, which defeats the point of a catch-all.
+--
+--  So value gets the same treatment yield and grow already had: a PER-INSTANCE
+--  override. `farm_nft_instances.stat_value` holds the value **per level** (the
+--  instance-level replacement for `20000 / edition_size`), and breeding sets it to
+--  the better parent's per-level value whenever that beats the species formula.
+--  NULL — every non-bred card, and every hybrid whose own formula already wins —
+--  means "use the species formula", so nothing else in the economy shifts.
+--
+--  Value scales with level through the override too, so a later merge still works.
+--
+--  This makes the guarantee complete: a bred hybrid is never worth less than the
+--  better parent it consumed. It does NOT reproduce the SUM of both parents —
+--  level_up_nft isn't sum-preserving either above level 1 (two poz.2 → one poz.3
+--  loses 2500), so "at least the better parent" is the consistent promise.
 --
 --  Existing hybrids are NOT retro-fitted (only 3 have ever been bred); this changes
 --  what future breeds mint.
 -- ════════════════════════════════════════════════════════════════════════════
+
+-- ── Per-instance net-worth override ───────────────────────────────────────
+ALTER TABLE public.farm_nft_instances ADD COLUMN IF NOT EXISTS stat_value integer;
+COMMENT ON COLUMN public.farm_nft_instances.stat_value IS
+  'Per-instance net-worth value PER LEVEL (bred hybrids, when the species formula '
+  'would value them below the parent they consumed). NULL = round(20000/edition_size).';
+
+-- Teach the three net-worth consumers about it. Every one of them contains the
+-- identical expression, so patch the LIVE definition in place rather than
+-- re-transcribing three functions (economy_stats alone is 12 KB, and CLAUDE.md
+-- warns that deployed copies drift from the repo). Guarded on 'ni.stat_value', so
+-- re-running never nests the COALESCE.
+--   · user_assets_value        (leaderboard-net-worth-items.sql) — leaderboard + economy_stats holdings
+--   · user_net_worth_breakdown (leaderboard-net-worth-items.sql) — 💼 Portfel Bilans rows
+--   · economy_stats            (economy-stats.sql)               — Skarbiec G6 hero_items/farm buckets
+DO $patch$
+DECLARE
+  r      record;
+  olddef text;
+  newdef text;
+  n      integer := 0;
+BEGIN
+  FOR r IN
+    SELECT p.oid, p.proname
+      FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+     WHERE ns.nspname = 'public'
+       AND p.proname IN ('user_assets_value', 'user_net_worth_breakdown', 'economy_stats')
+  LOOP
+    olddef := pg_get_functiondef(r.oid);
+    IF position('ni.stat_value' in olddef) > 0 THEN CONTINUE; END IF;   -- already patched
+    newdef := replace(olddef,
+      'round(20000.0 / ni.edition_size * ni.level)',
+      'COALESCE(round(ni.stat_value * ni.level), round(20000.0 / ni.edition_size * ni.level))');
+    IF newdef = olddef THEN
+      RAISE EXCEPTION 'farm-hybrid-income-parity: NFT value expression not found in %() — '
+                      'it was reworded upstream; re-check the valuation sites by hand', r.proname;
+    END IF;
+    EXECUTE newdef;
+    n := n + 1;
+  END LOOP;
+  RAISE NOTICE 'stat_value wired into % net-worth function(s)', n;
+END $patch$;
 
 -- ── Synergy preview / mint stats ───────────────────────────────────────────
 -- Gains a 3rd argument, so breed_nft can pass the species it ACTUALLY resolved
@@ -86,7 +147,9 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
            COALESCE(i.stat_yield, d.base_yield) * (1 + (i.level - 1) * 0.5) AS y,
            GREATEST(1440, COALESCE(i.stat_grow_minutes, d.base_grow_minutes)
                           * power(0.92, i.level - 1)) AS g,
-           COALESCE(m.base_price, 0) AS price
+           COALESCE(m.base_price, 0) AS price,
+           -- per-level value basis, mirroring the net-worth formula
+           COALESCE(i.stat_value, 20000.0 / i.edition_size) AS vbasis
       FROM public.farm_nft_instances i
       JOIN public.farm_card_defs d ON d.species = i.species
       LEFT JOIN public.farm_market m ON m.crop_type = d.crop_type
@@ -97,6 +160,7 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
            min(g) AS min_g,
            max(y * price / (g / 1440.0)) AS best_income,   -- coins/day, per parent
            max(level) AS lvl,                              -- inherited by the hybrid
+           max(round(vbasis * level)) AS best_parent_value, -- net worth floor
            min(species) AS sp_lo,
            max(species) AS sp_hi
       FROM p
@@ -121,9 +185,10 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   calc AS (
     SELECT hd.species, hd.price, hd.base_yield, hd.edition_size,
            GREATEST(1440, floor(agg.min_g * 0.95)) AS grow_eff,
-           agg.max_y, agg.min_g, agg.best_income, agg.lvl,
+           agg.max_y, agg.min_g, agg.best_income, agg.lvl, agg.best_parent_value,
            (1 + (agg.lvl - 1) * 0.5)  AS ymult,
-           power(0.92, agg.lvl - 1)   AS gmult
+           power(0.92, agg.lvl - 1)   AS gmult,
+           round(20000.0 / hd.edition_size * agg.lvl) AS species_value
       FROM agg, hd
   ),
   eff AS (
@@ -145,7 +210,12 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   fin AS (
     SELECT e.*,
            ceil (e.yield_eff / e.ymult - 1e-9) AS stat_yield,
-           floor(e.grow_eff  / e.gmult + 1e-9) AS stat_grow
+           floor(e.grow_eff  / e.gmult + 1e-9) AS stat_grow,
+           -- per-level value basis, stored ONLY when the species formula would
+           -- value the hybrid below the parent it consumed (the wild_hybrid hole).
+           -- ceil, so round(stat_value × lvl) can never dip under the floor.
+           CASE WHEN e.species_value >= e.best_parent_value THEN NULL
+                ELSE ceil(e.best_parent_value / e.lvl) END AS stat_value
       FROM eff e
   )
   SELECT json_build_object(
@@ -153,13 +223,14 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     'level',               lvl::int,
     'stat_yield',          stat_yield::int,
     'stat_grow_minutes',   stat_grow::int,
+    'stat_value',          stat_value::int,
     -- what the player sees / the field actually produces
     'yield',               round(stat_yield * ymult)::int,
     'grow_minutes',        GREATEST(1440, floor(stat_grow * gmult))::int,
     'hybrid_species',      species,
     'hybrid_price',        price::int,
-    'value',               CASE WHEN edition_size IS NOT NULL
-                                THEN round(20000.0 / edition_size * lvl)::int END,
+    'value',               COALESCE(round(stat_value * lvl), species_value)::int,
+    'parent_best_value',   best_parent_value::int,
     'per_day',             CASE WHEN price > 0 THEN round(
                              round(stat_yield * ymult) * price
                              / (GREATEST(1440, floor(stat_grow * gmult)) / 1440.0))::int END,
@@ -201,6 +272,7 @@ DECLARE
   v_stat_yield integer;
   v_stat_grow  integer;
   v_level      integer;
+  v_stat_value integer;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_a = p_b THEN RAISE EXCEPTION 'same_instance'; END IF;
@@ -259,16 +331,17 @@ BEGIN
   -- stat_yield / stat_grow_minutes are the BASE stats — level is re-applied by
   -- harvest_crop / plant_crop, so storing the effective values here would
   -- double-count it.
-  SELECT (h->>'stat_yield')::int, (h->>'stat_grow_minutes')::int, (h->>'level')::int
-    INTO v_stat_yield, v_stat_grow, v_level
+  SELECT (h->>'stat_yield')::int, (h->>'stat_grow_minutes')::int, (h->>'level')::int,
+         (h->>'stat_value')::int
+    INTO v_stat_yield, v_stat_grow, v_level, v_stat_value
     FROM public.farm_hybrid_stats(v_a.id, v_b.id, v_hybrid) AS h;
 
   INSERT INTO public.farm_nft_instances
     (species, serial_no, edition_size, owner_id, acquired_from, nft_name, level,
-     stat_yield, stat_grow_minutes)
+     stat_yield, stat_grow_minutes, stat_value)
   VALUES
     (v_hybrid, v_serial, v_def.edition_size, v_user, 'breeding', v_name, v_level,
-     v_stat_yield, v_stat_grow)
+     v_stat_yield, v_stat_grow, v_stat_value)
   RETURNING id INTO v_id;
 
   UPDATE public.farm_card_defs SET minted_count = minted_count + 1 WHERE species = v_hybrid;
@@ -305,6 +378,7 @@ BEGIN
       'edition_size', v_def.edition_size, 'nft_name', v_name,
       'name', v_def.name, 'emoji', v_def.emoji, 'level', v_level,
       'stat_yield', v_stat_yield, 'stat_grow_minutes', v_stat_grow,
+      'stat_value', v_stat_value,
       'parent_a', json_build_object('species', v_a.species, 'serial_no', v_a.serial_no),
       'parent_b', json_build_object('species', v_b.species, 'serial_no', v_b.serial_no),
       'curated', v_hybrid <> 'wild_hybrid'));
