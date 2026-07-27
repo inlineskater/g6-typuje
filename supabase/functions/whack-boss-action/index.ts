@@ -42,6 +42,24 @@ function asNumber(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+// The round schedule is written as `${JSON.stringify(schedule)}::jsonb`, which
+// postgres.js double-encodes into a jsonb *string scalar* instead of an array
+// (same quirk as client_meta / var-patrol). The driver then reads it back as a
+// JS string, so a plain `Array.isArray` check yields [] — every target is
+// discarded and the round scores 0. Coerce both shapes back into an array.
+function coerceSchedule(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function randInt(min, max) {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
@@ -258,12 +276,13 @@ async function startRound(userId) {
   `;
   if (!profile) throw gameError("Profil nie istnieje.");
 
+  const schedule = buildSchedule();
   const [round] = await db`
     insert into public.whack_boss_rounds
       (user_id, nick_snapshot, schedule, duration_ms, expires_at)
     values
-      (${userId}, ${profile.nick}, ${JSON.stringify(buildSchedule())}::jsonb, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
-    returning id, schedule, started_at, expires_at
+      (${userId}, ${profile.nick}, ${JSON.stringify(schedule)}::jsonb, ${ROUND_DURATION_MS}, now() + (${ROUND_EXPIRES_SECONDS} || ' seconds')::interval)
+    returning id, started_at, expires_at
   `;
 
   return {
@@ -271,7 +290,10 @@ async function startRound(userId) {
     round: {
       id: round.id,
       durationMs: ROUND_DURATION_MS,
-      schedule: round.schedule,
+      // Send the in-memory schedule, never the DB round-trip: the stored value
+      // comes back as a double-encoded string and the client's Array.isArray
+      // check would drop it, leaving the arena empty for the whole round.
+      schedule,
       startedAt: round.started_at,
       serverNow: new Date().toISOString(),
       expiresAt: round.expires_at,
@@ -305,7 +327,7 @@ async function submitRound(userId, body) {
     const minSubmitAt = new Date(round.started_at).getTime() + asInt(round.duration_ms, ROUND_DURATION_MS) - 750;
     if (Date.now() < minSubmitAt) throw gameError("Runda jeszcze trwa.");
 
-    const schedule = Array.isArray(round.schedule) ? round.schedule : [];
+    const schedule = coerceSchedule(round.schedule);
     const hitEvents = parseHitEvents(body.hitEvents);
     const missEvents = parseMissEvents(body.missEvents);
     const validated = validateHits(schedule, hitEvents);
