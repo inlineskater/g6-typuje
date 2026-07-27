@@ -1358,23 +1358,55 @@
     .hz-pl-neg { color: var(--no); }
     .tx-show-all { display: block; margin: 12px auto 0; }
 
-    /* ── RANKING GRID ── */
-    .ranking-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-      min-height: calc(100dvh - 140px);
+    /* ── STATYSTYKI: własna pozycja ──
+       The first thing a player wants on this tab is "where do I stand", so the
+       four headline numbers sit above the grid and each one opens the ranking
+       it comes from. */
+    .stats-hero {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+      gap: 10px; margin: 4px 0 22px;
     }
-    @media (max-width: 768px) { .ranking-grid { grid-template-columns: 1fr; gap: 12px; } }
+    .st-tile {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md);
+      padding: 12px 14px; box-shadow: var(--sh-sm); cursor: pointer; text-align: left;
+      font-family: inherit; color: var(--text); display: flex; flex-direction: column; gap: 2px;
+      transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    .st-tile:hover { border-color: var(--accent); box-shadow: var(--sh-md); transform: translateY(-1px); }
+    .st-tile-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted); }
+    .st-tile-value { font-size: 21px; font-weight: 800; line-height: 1.15;
+      letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .st-tile-sub { font-size: 11.5px; font-weight: 600; color: var(--dim); }
+    .st-tile-sub .st-rank { color: var(--accent); font-weight: 800; }
+    .st-pos { color: var(--yes); }
+    .st-neg { color: var(--no); }
+
+    /* ── RANKING GRID ── */
+    .stats-band-label {
+      font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); margin: 0 0 9px; display: flex; align-items: center; gap: 9px;
+    }
+    .stats-band-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    /* Explicit column counts, not auto-fit: the Rankingi band has FOUR cards, and
+       an auto-fit 3-up leaves the fourth stranded alone on its own row. */
+    .ranking-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 26px; }
+    @media (min-width: 720px) { .ranking-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (min-width: 1120px) { .ranking-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .ranking-grid:last-child { margin-bottom: 0; }
     .ranking-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 16px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column;
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md);
+      padding: 15px 16px 13px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column;
       transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
-      box-shadow: 0 1px 3px rgba(15,23,42,.03);
+      box-shadow: var(--sh-sm);
     }
     .ranking-card[data-detail]:hover {
-      border-color: var(--accent);
-      box-shadow: 0 4px 20px var(--acc-dim);
+      border-color: var(--border-hi);
+      box-shadow: var(--sh-md);
       transform: translateY(-2px);
     }
+    /* Charts have no intrinsic height — the canvas fills whatever the body gets. */
+    .ranking-card.is-chart .ranking-card-body { height: 210px; }
     .fb-sort-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 4px; }
     .fb-sort-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
       color: var(--muted); margin-right: 2px; }
@@ -1385,23 +1417,29 @@
     .fb-sort-btn.active { border-color: var(--accent); background: var(--acc-dim); color: var(--accent); font-weight: 800; }
     .ranking-card-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
     .ranking-card[data-detail] .ranking-card-title {
-      display: flex; justify-content: space-between; align-items: center; width: 100%;
-      font-size: 13px; font-weight: 800; margin-bottom: 12px; color: var(--text);
+      display: flex; justify-content: space-between; align-items: baseline; gap: 10px; width: 100%;
+      font-size: 13.5px; font-weight: 800; margin-bottom: 10px; color: var(--text);
     }
+    /* Every card is clickable, so the affordance stays quiet until hover rather
+       than shouting an accent pill nine times on one screen. */
     .ranking-card[data-detail] .ranking-card-title::after {
-      content: 'Szczegóły ➔';
-      font-size: 10px; font-weight: 800; color: var(--accent);
-      background: var(--acc-dim); padding: 3px 8px; border-radius: 99px;
-      opacity: 0.85; transition: all 0.2s ease; text-transform: uppercase;
-      letter-spacing: .05em; display: inline-block; flex-shrink: 0;
+      content: 'Szczegóły ›';
+      font-size: 11px; font-weight: 700; color: var(--dim);
+      transition: color .2s ease, transform .2s ease;
+      white-space: nowrap; flex-shrink: 0;
     }
     .ranking-card[data-detail]:hover .ranking-card-title::after {
-      opacity: 1; background: var(--accent); color: #ffffff;
-      transform: translateX(3px);
+      color: var(--accent); transform: translateX(2px);
     }
     .ranking-card-hint { font-size: 10px; font-weight: 700; color: var(--muted);
       text-transform: none; letter-spacing: 0; margin-left: 4px; }
+    /* On a phone the subtitle wraps the title onto two lines and shoves the
+       „Szczegóły" affordance out of line — the card name alone is enough there. */
+    @media (max-width: 520px) { .ranking-card-hint { display: none; } }
     .ranking-card-body { flex: 1; overflow: hidden; }
+    .rc-more { display: block; margin-top: 8px; font-size: 11px; font-weight: 700;
+      color: var(--muted); text-align: center; }
+    .ranking-card:hover .rc-more { color: var(--accent); }
     .coin-race-canvas { width: 100%; height: 100%; display: block; }
     .coin-race-detail-canvas { width: 100%; height: 340px; display: block; margin: 4px 0 12px; }
     .coin-race-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
@@ -1415,6 +1453,54 @@
     }
     .coin-race-tooltip-row { display: flex; align-items: center; gap: 6px; font-weight: 600; }
     .coin-race-tooltip-date { font-size: 10px; color: var(--muted); }
+    /* ── 🎯 Trafność prognoz ── */
+    .calib-thin td { opacity: .55; }
+    .calib-bar-cell { width: 120px; }
+    .calib-bar { height: 6px; border-radius: 3px; background: var(--surface); overflow: hidden; min-width: 70px; }
+    .calib-bar-fill { height: 100%; background: var(--dim); border-radius: 3px; }
+    .calib-bar-fill.is-good { background: var(--yes); }
+    .calib-bar-fill.is-bad { background: var(--no); }
+
+    /* ── 🏅 Medale sezonowe ── */
+    .medal-counts { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .medal-counts span { margin-right: 7px; }
+    .medal-counts span:last-child { margin-right: 0; }
+    .medal-counts .is-zero { opacity: .3; font-weight: 600; }
+    .medal-games { font-size: 12px; color: var(--muted); max-width: 300px; }
+
+    /* ── 📅 Aktywność ── */
+    .act-streak { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .act-streak.is-hot { color: #ea580c; }
+    .act-streak.is-zero { color: var(--dim); font-weight: 600; }
+    .act-top { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+    .act-seen { white-space: nowrap; }
+    .act-bar-cell { min-width: 160px; }
+    .act-bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden;
+      background: var(--surface); margin-bottom: 4px; }
+    .act-bar-seg { height: 100%; }
+    .act-legend { display: flex; flex-wrap: wrap; gap: 5px 14px; margin: 12px 0 2px; }
+    .act-legend-item { display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11.5px; font-weight: 600; color: var(--muted); }
+    .act-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    /* One colour per area of the portal, reused by the bar and its legend. */
+    .act-casino      { background: #dc2626; }
+    .act-games       { background: #6366f1; }
+    .act-farm        { background: #16a34a; }
+    .act-markets     { background: #0ea5e9; }
+    .act-football    { background: #f59e0b; }
+    .act-marketplace { background: #a855f7; }
+    .act-canvas      { background: #ec4899; }
+
+    .lb-toolbar { justify-content: space-between; gap: 10px; }
+    .lb-search {
+      height: 32px; width: 200px; max-width: 100%; padding: 4px 11px; font-family: inherit;
+      font-size: 13px; font-weight: 600; color: var(--text); background: var(--card);
+      border: 1px solid var(--border); border-radius: var(--r-pill); outline: none;
+      transition: border-color .15s;
+    }
+    .lb-search:focus { border-color: var(--accent); }
+    .lb-table th.is-sorted { color: var(--accent); }
+    .lb-table td.is-sorted { background: var(--acc-dim); }
     .lb-row-clickable { cursor: pointer; }
     .lb-row-clickable:hover td { background: var(--acc-dim); }
     .user-profile-back { margin-bottom: 14px; }
@@ -7145,59 +7231,92 @@
   <div id="tab-leaderboard" class="hidden">
     <main>
       <h2 class="page-title">Statystyki 📊</h2>
-      <p class="page-sub">Pulpit menedżerski G6: finanse, hazard, wyścigi i historyczne logi. Wybierz panel oznaczony jako <span style="display:inline-block; font-size: 9px; font-weight: 800; color: var(--accent); background: var(--acc-dim); padding: 1px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; vertical-align: middle;">Szczegóły ➔</span>, aby otworzyć pełny ranking.</p>
+      <p class="page-sub">Kliknij kartę, aby otworzyć pełne zestawienie — a w środku kliknij dowolnego gracza, żeby zobaczyć jego portfel i historię coinów.</p>
 
+      <div class="stats-hero" id="stats-hero"></div>
+
+      <div class="stats-band-label">Rankingi graczy</div>
       <div class="ranking-grid">
-        <div class="ranking-card" data-detail="ranking">
-          <div class="ranking-card-title">🪙 Gotówka</div>
+        <div class="ranking-card" data-detail="ranking-cash">
+          <div class="ranking-card-title"><span>🪙 Gotówka</span></div>
           <div class="ranking-card-body" id="leaderboard-cash-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
-        <div class="ranking-card" data-detail="ranking">
-          <div class="ranking-card-title">💎 Net Worth</div>
+        <div class="ranking-card" data-detail="ranking-net">
+          <div class="ranking-card-title"><span>💎 Net Worth</span></div>
           <div class="ranking-card-body" id="leaderboard-net-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
-        <div class="ranking-card" data-detail="coin-race-cash">
+        <div class="ranking-card" data-detail="calibration">
+          <div class="ranking-card-title"><span>🎯 Trafność prognoz <span class="ranking-card-hint">rozstrzygnięte rynki</span></span></div>
+          <div class="ranking-card-body" id="calibration-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card" data-detail="hazardista">
+          <div class="ranking-card-title"><span>🎰 Hazardista <span class="ranking-card-hint">bilans kasyna</span></span></div>
+          <div class="ranking-card-body" id="hazardista-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-band-label">Osiągnięcia i aktywność</div>
+      <div class="ranking-grid">
+        <div class="ranking-card" data-detail="medals">
+          <div class="ranking-card-title"><span>🏅 Medale sezonowe <span class="ranking-card-hint">wszystkie gry</span></span></div>
+          <div class="ranking-card-body" id="medals-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card" data-detail="activity">
+          <div class="ranking-card-title"><span>📅 Aktywność <span class="ranking-card-hint">dni, seria, co gra</span></span></div>
+          <div class="ranking-card-body" id="activity-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-band-label">Przepływ coinów</div>
+      <div class="ranking-grid cols-3">
+        <div class="ranking-card" data-detail="coin-inflows">
+          <div class="ranking-card-title"><span>💸 Łączne wpływy coinów</span></div>
+          <div class="ranking-card-body" id="coin-inflows-wrap">
+            <div class="loading-center"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="ranking-card is-chart" data-detail="coin-race-cash">
           <div class="ranking-card-title"><span>📈 Wyścig gotówki <span class="ranking-card-hint">ostatnie 7 dni</span></span></div>
           <div class="ranking-card-body" id="coin-race-cash-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
-        <div class="ranking-card" data-detail="coin-race-net">
+        <div class="ranking-card is-chart" data-detail="coin-race-net">
           <div class="ranking-card-title"><span>📈 Wyścig Net Worth <span class="ranking-card-hint">ostatnie 7 dni</span></span></div>
           <div class="ranking-card-body" id="coin-race-net-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
-        <div class="ranking-card" data-detail="coin-inflows">
-          <div class="ranking-card-title">💸 Łączne wpływy coinów</div>
-          <div class="ranking-card-body" id="coin-inflows-wrap">
-            <div class="loading-center"><div class="spinner"></div></div>
-          </div>
-        </div>
+      </div>
+
+      <div class="stats-band-label">Historia</div>
+      <div class="ranking-grid cols-3">
         <div class="ranking-card" data-detail="seasons">
-          <div class="ranking-card-title">🎮 Sezony gier</div>
+          <div class="ranking-card-title"><span>🎮 Sezony gier</span></div>
           <div class="ranking-card-body" id="seasons-preview-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
-        <div class="ranking-card" data-detail="hazardista">
-          <div class="ranking-card-title">🎰 Hazardista</div>
-          <div class="ranking-card-body" id="hazardista-wrap">
-            <div class="loading-center"><div class="spinner"></div></div>
-          </div>
-        </div>
         <div class="ranking-card" data-detail="hazard-history">
-          <div class="ranking-card-title">🎰 Historia — Hazard</div>
+          <div class="ranking-card-title"><span>🎰 Historia — Hazard</span></div>
           <div class="ranking-card-body" id="hazard-history-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
         </div>
         <div class="ranking-card" data-detail="market-history">
-          <div class="ranking-card-title">📈 Historia — Rynki</div>
+          <div class="ranking-card-title"><span>📈 Historia — Rynki</span></div>
           <div class="ranking-card-body" id="transaction-history-wrap">
             <div class="loading-center"><div class="spinner"></div></div>
           </div>
@@ -9415,6 +9534,18 @@ let showAllHazard = false;
 let _lbData = [], _lbCalib = {}, _hazardistaData = [], _coinInflowStats = [];
 let _coinInflowLoaded = false, _coinInflowError = '';
 let _lbSort = 'net_worth';
+// Top-20 id order per metric — the leaderboard view is fetched twice (once per
+// sort), so these are what „#N w rankingu" on the hero tiles reads.
+let _lbCashOrder = [], _lbNetOrder = [];
+// id → { nick, is_admin } for EVERY player (the two ranking reads are capped at
+// 20 rows each). Calibration and medals need names for people who may not be in
+// either top-20, and need the admin flag to exclude staff.
+let _playerIndex = new Map();
+let _activityStats = [], _activityLoaded = false, _activityError = '';
+// Assigned by initRankingModal(); lets any preview table open a player's wallet
+// straight from the Statystyki grid instead of only from inside the modal, and
+// lets the hero tiles open the same detail panels the cards do.
+let openStatsUserProfile = null, openStatsDetail = null;
 let _coinInflowSort = 'total_inflow';
 let _coinRaceSeries = [], _coinRaceBounds = null, _coinRaceRAF = new WeakMap();
 let _coinRaceRaw = [], _coinRaceMode = 'coins';
@@ -12845,6 +12976,7 @@ async function loadSeasonHistory() {
       wrap.replaceChildren();
       buildSeasonHistorySections(wrap, true);
     }
+    renderMedalsPreview(document.getElementById('medals-wrap'));
   } catch {
     if (wrap) wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px' } }, 'Błąd ładowania.'));
   }
@@ -12866,15 +12998,27 @@ async function loadLeaderboard() {
   const seasonPromise = loadSeasonHistory();
   loadCoinRace(seasonPromise);
 
-  const [leaderboardRes, leaderboardNetRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes] = await Promise.all([
+  const [leaderboardRes, leaderboardNetRes, tradesRes, marketsRes, allTradesRes, gameRes, hazardRes, playersRes] = await Promise.all([
     sb.from('leaderboard').select('*').neq('is_admin', true).order('coins', { ascending: false }).limit(20),
     sb.from('leaderboard').select('*').neq('is_admin', true).order('net_worth', { ascending: false }).limit(20),
     sb.from('trades').select('id, created_at, market_id, nick_snapshot, side, amount, shares, p_yes_after').order('created_at', { ascending: false }).limit(500),
     sb.from('markets').select('id, icon, title, resolved, resolution, yes_shares, no_shares'),
-    sb.from('trades').select('market_id, user_id, side, amount, shares').limit(5000),
+    // PostgREST caps a response at 1000 rows whatever .limit() asks for, so this
+    // has to page — it feeds both the resolved-market payout math AND the
+    // Trafność prognoz hit rate, and a truncated slice silently skews both.
+    sbFetchAll(() => sb.from('trades').select('market_id, user_id, side, amount, shares')
+      .order('created_at', { ascending: true }).order('id', { ascending: true })),
     sb.from('game_transactions').select('*').neq('is_admin', true).order('created_at', { ascending: false }).limit(500),
     sb.from('hazard_stats').select('*').neq('is_admin', true).order('total_pl', { ascending: false }),
+    // Every player, not just a top-20 slice: Trafność and Medale need nicks for
+    // people who may rank outside both money lists, plus the staff flag.
+    sb.from('leaderboard').select('id, nick, is_admin'),
   ]);
+  _playerIndex = new Map((playersRes.data || []).map(r => [r.id, { nick: r.nick, isAdmin: !!r.is_admin }]));
+  // loadSeasonHistory() runs concurrently and may have rendered the medal table
+  // before the index existed (falling back to nick snapshots, and unable to drop
+  // staff). Now that it's here, repaint with the real names + admin filter.
+  renderMedalsPreview(document.getElementById('medals-wrap'));
 
   if (leaderboardRes.error) {
     const errNode = () => el('p', { style: { color: 'var(--no)', fontSize: '14px', padding: '24px' } }, DB_ERROR_MESSAGE);
@@ -12890,8 +13034,12 @@ async function loadLeaderboard() {
     [...cashData, ...netData].forEach(r => { if (!byId.has(r.id)) byId.set(r.id, r); });
     _lbData = [...byId.values()];
     _lbCalib = calibByUser;
+    _lbCashOrder = cashData.map(r => r.id);
+    _lbNetOrder = netData.map(r => r.id);
     renderLeaderboardTable(cashWrap, cashData, 'coins');
     renderLeaderboardTable(netWrap, netData, 'net');
+    renderCalibrationPreview(document.getElementById('calibration-wrap'));
+    renderStatsHero();
   }
 
   renderHazardista(hazardistaWrap, hazardRes.data || []);
@@ -12907,6 +13055,7 @@ async function loadLeaderboard() {
   renderHazardHistory(hazardHistWrap, getFilteredHazardRows());
 
   loadCoinInflowStats();
+  loadActivityStats();
   loadEconomyStats();
 }
 
@@ -13255,6 +13404,433 @@ function renderNetWorthBreakdown(container, b) {
   );
 }
 
+// ── „Twoja pozycja" hero strip ────────────────────────────────────────────
+// Four headline numbers for the logged-in player, each opening the ranking it
+// was taken from. Re-run from every loader that feeds it (leaderboard,
+// hazardista, coin inflows) — it rebuilds from globals, so partial data just
+// renders as „—" until the rest lands.
+function renderStatsHero() {
+  const wrap = document.getElementById('stats-hero');
+  if (!wrap || !me) return;
+
+  const rankOf = order => {
+    const i = order.indexOf(me.id);
+    return i >= 0 ? i + 1 : null;
+  };
+  const rankSub = rank => rank
+    ? el('span', {}, 'miejsce ', el('span', { className: 'st-rank' }, '#' + rank), ' w Top 20')
+    : el('span', {}, 'poza Top 20');
+
+  const tile = (label, value, sub, detail, valueClass) => {
+    const t = el('button', { className: 'st-tile', type: 'button' },
+      el('span', { className: 'st-tile-label' }, label),
+      el('span', { className: 'st-tile-value' + (valueClass ? ' ' + valueClass : '') }, value),
+      el('span', { className: 'st-tile-sub' }, sub)
+    );
+    t.addEventListener('click', () => openStatsDetail && openStatsDetail(detail));
+    return t;
+  };
+
+  const lbRow = (_lbData || []).find(r => r.id === me.id);
+  const netWorth = lbRow ? Math.round(+lbRow.net_worth || 0) : null;
+  const hz = (_hazardistaData || []).find(r => r.user_id === me.id);
+  const hzPl = hz ? Math.round(+hz.total_pl || 0) : null;
+  const inflow = (_coinInflowStats || []).find(r => r.user_id === me.id);
+
+  wrap.replaceChildren(
+    tile('🪙 Gotówka', fmtNum(me.coins) + ' 🪙', rankSub(rankOf(_lbCashOrder)), 'ranking-cash'),
+    tile('💎 Net Worth', netWorth == null ? '—' : fmtNum(netWorth) + ' 🪙', rankSub(rankOf(_lbNetOrder)), 'ranking-net'),
+    tile('🎰 Bilans kasyna',
+      hzPl == null ? '—' : (hzPl > 0 ? '+' : '') + fmtNum(hzPl) + ' 🪙',
+      el('span', {}, hzPl == null ? 'brak gier' : hzPl >= 0 ? 'na plusie' : 'na minusie'),
+      'hazardista',
+      hzPl == null ? null : hzPl >= 0 ? 'st-pos' : 'st-neg'),
+    tile('💸 Zarobione coiny',
+      inflow ? fmtNum(inflow.total_inflow) + ' 🪙' : '—',
+      el('span', {}, 'bez startowych 1000 🪙'),
+      'coin-inflows')
+  );
+}
+
+// Preview tables live outside the ranking-modal IIFE, so this is the shared way
+// they hand a row off to the player wallet. `coins` comes from _lbData (the
+// wallet headline needs it); rows for players outside both top-20 lists stay
+// non-clickable rather than opening a profile with a wrong balance.
+function makeStatsRowClickable(tr, userId, nick) {
+  const row = (_lbData || []).find(r => r.id === userId);
+  if (!row || !openStatsUserProfile) return tr;
+  tr.classList.add('lb-row-clickable');
+  tr.addEventListener('click', e => {
+    e.stopPropagation();
+    openStatsUserProfile(userId, nick, +row.coins || 0);
+  });
+  return tr;
+}
+
+function statsNick(userId, fallback) {
+  return _playerIndex.get(userId)?.nick || fallback || '?';
+}
+function statsIsAdmin(userId) {
+  return !!_playerIndex.get(userId)?.isAdmin;
+}
+function statsEmpty(wrap, text) {
+  wrap.replaceChildren(el('p', { style: { color: 'var(--muted)', fontSize: '12px', padding: '12px' } }, text));
+}
+
+// ── 🎯 Trafność prognoz ───────────────────────────────────────────────────
+// buildCalibrationByUser() has been computing this on every stats load since
+// forever and nothing ever rendered it. One row per player: how many resolved
+// markets they took a side on, and how often that side won. A player is counted
+// once per market (their first trade's side), so spamming trades on one market
+// can't inflate the sample.
+// Raw hit rate always flatters a tiny sample — 1/1 is 100%. Every current
+// player has already called at least 5 resolved markets, so requiring 5 to be
+// ranked costs nobody a place and stops a single lucky guess taking the crown.
+const CALIB_MIN_MARKETS = 5;
+
+function calibrationRows() {
+  return Object.entries(_lbCalib || {})
+    .filter(([uid, c]) => c && c.total > 0 && !statsIsAdmin(uid))
+    .map(([uid, c]) => ({
+      user_id: uid,
+      nick: statsNick(uid),
+      correct: c.correct,
+      total: c.total,
+      pct: c.total > 0 ? (c.correct / c.total) * 100 : 0,
+    }))
+    // Ranked among players with a usable sample; everyone else is listed after
+    // them so a 1-for-1 lucky guess never tops the table.
+    .sort((a, b) => {
+      const aQ = a.total >= CALIB_MIN_MARKETS, bQ = b.total >= CALIB_MIN_MARKETS;
+      if (aQ !== bQ) return aQ ? -1 : 1;
+      return b.pct - a.pct || b.total - a.total || a.nick.localeCompare(b.nick, 'pl');
+    });
+}
+
+function calibPctCell(row) {
+  const cls = row.pct >= 60 ? 'tx-pl-profit' : row.pct < 40 ? 'tx-pl-loss' : 'tx-pl-flat';
+  return el('td', { className: 'tx-pl ' + cls }, Math.round(row.pct) + '%');
+}
+
+function renderCalibrationPreview(wrap) {
+  if (!wrap) return;
+  const rows = calibrationRows();
+  if (!rows.length) { statsEmpty(wrap, 'Brak rozstrzygniętych rynków.'); return; }
+  const shown = rows.slice(0, 8);
+  const trs = shown.map((row, i) => makeStatsRowClickable(el('tr', {},
+    el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+    el('td', { className: 'lb-nick' + (row.user_id === me.id ? ' me' : '') },
+      row.nick + (row.user_id === me.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-coins' }, row.correct + '/' + row.total),
+    calibPctCell(row)
+  ), row.user_id, row.nick));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Trafione'), el('th', {}, 'Skuteczność')
+      )),
+      el('tbody', {}, ...trs)
+    ),
+    el('span', { className: 'rc-more' }, 'Kto najlepiej typuje rynki ›')
+  );
+}
+
+function renderCalibrationDetail(container) {
+  const rows = calibrationRows();
+  if (!rows.length) { container.append(el('p', {}, 'Żaden rynek nie został jeszcze rozstrzygnięty.')); return; }
+  const trs = rows.map((row, i) => {
+    const thin = row.total < CALIB_MIN_MARKETS;
+    const tr = el('tr', { className: 'lb-row-clickable' + (thin ? ' calib-thin' : '') },
+      // Thin samples are listed, not ranked — a position number next to 100%
+      // would read as „worse than 38%" rather than „not enough data".
+      el('td', { className: 'lb-rank' + (i === 0 && !thin ? ' gold' : '') },
+        thin ? '—' : i === 0 ? '🥇' : String(i + 1)),
+      el('td', { className: 'lb-nick' + (row.user_id === me.id ? ' me' : '') },
+        row.nick + (row.user_id === me.id ? ' (Ty)' : '')),
+      el('td', {}, String(row.total)),
+      el('td', {}, String(row.correct)),
+      el('td', {}, String(row.total - row.correct)),
+      calibPctCell(row),
+      el('td', { className: 'calib-bar-cell' },
+        el('div', { className: 'calib-bar' }, el('div', {
+          className: 'calib-bar-fill' + (row.pct >= 60 ? ' is-good' : row.pct < 40 ? ' is-bad' : ''),
+          style: { width: Math.max(2, row.pct) + '%' },
+        })))
+    );
+    if (openStatsUserProfile) tr.addEventListener('click', () => openStatsUserProfile(row.user_id, row.nick, +(_lbData.find(r => r.id === row.user_id)?.coins) || 0));
+    return tr;
+  });
+  container.append(
+    el('table', { className: 'lb-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Rynków'), el('th', {}, 'Trafione'),
+        el('th', {}, 'Chybione'), el('th', {}, 'Skuteczność'), el('th', {}, '')
+      )),
+      el('tbody', {}, ...trs)
+    ),
+    el('div', { className: 'lb-legend' },
+      el('p', {}, el('strong', {}, 'Jak to liczymy'), ' — bierzemy tylko rynki, które zostały już rozstrzygnięte. Liczy się strona, którą obstawiłeś jako pierwszą; kolejne zakłady na tym samym rynku nic nie zmieniają, więc nie da się „nabić" statystyki.'),
+      el('p', {}, el('strong', {}, 'Wyszarzone wiersze'), ' — mniej niż ' + CALIB_MIN_MARKETS + ' rozstrzygniętych rynków. Za mała próbka, żeby mówić o skuteczności (1/1 to też 100%), więc lądują na końcu tabeli.'),
+      el('p', {}, 'Skuteczność to nie to samo co zysk — trafienie taniego faworyta płaci mniej niż trafienie outsidera.')
+    ),
+    el('p', { className: 'lb-click-hint' }, '👆 Kliknij gracza, aby zobaczyć historię coinów')
+  );
+}
+
+// ── 🏅 Medale sezonowe ────────────────────────────────────────────────────
+// Olympic medal table over every weekly seasonal award ever paid, across all
+// ten games. Scores can't be summed across games (30 is a perfect Bug Jumper
+// run and nothing in Tetris), so podium places are the only fair common unit.
+function medalTable() {
+  const by = new Map();
+  (_seasonHistory || []).forEach(a => {
+    // Pending rows are this week's LIVE standings, not awarded medals yet.
+    if (a.isPending || !a.user_id || !a.rank || a.rank > 3) return;
+    if (statsIsAdmin(a.user_id)) return;
+    if (!by.has(a.user_id)) {
+      by.set(a.user_id, { user_id: a.user_id, nick: statsNick(a.user_id, a.nick), g: 0, s: 0, b: 0, coins: 0, games: new Map() });
+    }
+    const row = by.get(a.user_id);
+    row[a.rank === 1 ? 'g' : a.rank === 2 ? 's' : 'b']++;
+    row.coins += +a.prize_coins || 0;
+    row.games.set(a.gameType, (row.games.get(a.gameType) || 0) + (a.rank === 1 ? 1 : 0));
+  });
+  return [...by.values()].sort((x, y) =>
+    y.g - x.g || y.s - x.s || y.b - x.b || y.coins - x.coins || x.nick.localeCompare(y.nick, 'pl'));
+}
+
+function medalCountsCell(row) {
+  return el('td', { className: 'medal-counts' },
+    el('span', { className: row.g ? '' : 'is-zero' }, '🥇' + row.g),
+    el('span', { className: row.s ? '' : 'is-zero' }, '🥈' + row.s),
+    el('span', { className: row.b ? '' : 'is-zero' }, '🥉' + row.b)
+  );
+}
+
+function renderMedalsPreview(wrap) {
+  if (!wrap) return;
+  const rows = medalTable();
+  if (!rows.length) { statsEmpty(wrap, 'Nikt jeszcze nie stanął na podium.'); return; }
+  const shown = rows.slice(0, 8);
+  const trs = shown.map((row, i) => makeStatsRowClickable(el('tr', {},
+    el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+    el('td', { className: 'lb-nick' + (row.user_id === me.id ? ' me' : '') },
+      row.nick + (row.user_id === me.id ? ' (Ty)' : '')),
+    medalCountsCell(row),
+    el('td', { className: 'lb-net' }, fmtNum(row.coins) + ' 🪙')
+  ), row.user_id, row.nick));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Medale'), el('th', {}, 'Nagrody')
+      )),
+      el('tbody', {}, ...trs)
+    ),
+    el('span', { className: 'rc-more' }, rows.length > 8
+      ? '+ ' + (rows.length - 8) + ' ' + plCount(rows.length - 8, 'gracz', 'gracze', 'graczy') + ' — cała tabela ›'
+      : 'Podium tygodniowych gier sezonowych ›')
+  );
+}
+
+function renderMedalsDetail(container) {
+  const rows = medalTable();
+  if (!rows.length) {
+    container.append(el('p', {}, 'Nikt jeszcze nie stanął na podium gry sezonowej.'));
+    return;
+  }
+  const trs = rows.map((row, i) => {
+    // Which games someone actually WON — the reason a medal table beats a
+    // points total: it says what you're good at, not just how much you played.
+    const golds = [...row.games.entries()].filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([g, n]) => (ACT_GAME_LABELS[g] || g) + (n > 1 ? ' ×' + n : ''));
+    const tr = el('tr', { className: 'lb-row-clickable' },
+      el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
+      el('td', { className: 'lb-nick' + (row.user_id === me.id ? ' me' : '') },
+        row.nick + (row.user_id === me.id ? ' (Ty)' : '')),
+      medalCountsCell(row),
+      el('td', {}, String(row.g + row.s + row.b)),
+      el('td', { className: 'medal-games' }, golds.length ? golds.join(' · ') : '—'),
+      el('td', { className: 'lb-net' }, fmtNum(row.coins) + ' 🪙')
+    );
+    if (openStatsUserProfile) tr.addEventListener('click', () => openStatsUserProfile(row.user_id, row.nick, +(_lbData.find(r => r.id === row.user_id)?.coins) || 0));
+    return tr;
+  });
+  container.append(
+    el('table', { className: 'lb-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, 'Medale'), el('th', {}, 'Razem'),
+        el('th', {}, 'Wygrane gry 🥇'), el('th', {}, 'Nagrody')
+      )),
+      el('tbody', {}, ...trs)
+    ),
+    el('div', { className: 'lb-legend' },
+      el('p', {}, el('strong', {}, 'Jedna gra na tydzień'), ' — co poniedziałek rano wypłacane jest podium poprzedniego tygodnia (🥇 1000 / 🥈 500 / 🥉 200 🪙). Tabela zbiera wszystkie takie podia ze wszystkich gier sezonowych.'),
+      el('p', {}, el('strong', {}, 'Kolejność'), ' — jak na olimpiadzie: najpierw złota, potem srebrne, potem brązowe. Wyników nie da się sumować między grami, więc liczą się miejsca, nie punkty.'),
+      el('p', {}, 'Bieżący, jeszcze nierozliczony tydzień się nie liczy — pojawi się tu po poniedziałkowej wypłacie.')
+    ),
+    el('p', { className: 'lb-click-hint' }, '👆 Kliknij gracza, aby zobaczyć historię coinów')
+  );
+}
+
+// ── 📅 Aktywność ──────────────────────────────────────────────────────────
+// Backed by player_activity_stats() (supabase/activity-stats.sql). It has to be
+// a server-side aggregate: casino spin tables and seasonal *_scores are own-row
+// RLS and canvas_paint_log has no client grants, so the browser cannot see what
+// anyone else played.
+const ACT_KINDS = [
+  ['casino',      '🎰', 'Kasyno'],
+  ['games',       '🎮', 'Gry'],
+  ['farm',        '🌱', 'Ogródek'],
+  ['markets',     '📊', 'Rynki'],
+  ['football',    '⚽', 'Mundial'],
+  ['marketplace', '🛍️', 'Targowisko'],
+  ['canvas',      '🎨', 'Płótno'],
+];
+const ACT_KIND_BY_KEY = new Map(ACT_KINDS.map(([k, icon, label]) => [k, { icon, label }]));
+
+function actKindLabel(kind) {
+  const k = ACT_KIND_BY_KEY.get(kind);
+  return k ? k.icon + ' ' + k.label : '—';
+}
+
+// „dziś" / „wczoraj" / „3 dni temu" — a bare date makes you do the arithmetic.
+function actLastSeenLabel(iso) {
+  if (!iso) return '—';
+  const startOfDay = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const days = Math.round((startOfDay(new Date()) - startOfDay(new Date(iso))) / 86400000);
+  if (days <= 0) return 'dziś';
+  if (days === 1) return 'wczoraj';
+  if (days < 31) return days + ' dni temu';
+  return new Date(iso).toLocaleDateString('pl-PL');
+}
+
+async function loadActivityStats() {
+  const wrap = document.getElementById('activity-wrap');
+  if (wrap) wrap.replaceChildren(makeSpinner());
+  try {
+    const { data, error } = await sb.rpc('player_activity_stats');
+    _activityLoaded = true;
+    if (error) {
+      _activityError = error.message || 'Błąd ładowania danych.';
+      if (wrap) statsEmpty(wrap, 'Brak funkcji player_activity_stats w bazie — uruchom supabase/activity-stats.sql.');
+      return;
+    }
+    _activityError = '';
+    _activityStats = data || [];
+    if (wrap) renderActivityPreview(wrap);
+  } catch (err) {
+    _activityLoaded = true;
+    _activityError = err?.message || 'Błąd ładowania danych.';
+    if (wrap) statsEmpty(wrap, 'Błąd ładowania danych.');
+  }
+}
+
+// Longest live streak first — that's the actual contest. Everyone who played
+// today ties on „Ostatnio", so sorting by last seen alone ordered the top of the
+// card by nothing a reader can see. Broken streaks fall back to recency.
+function activityRows() {
+  return [...(_activityStats || [])].sort((a, b) =>
+    (+b.streak_days || 0) - (+a.streak_days || 0) ||
+    new Date(b.last_active_at || 0) - new Date(a.last_active_at || 0) ||
+    (+b.active_days || 0) - (+a.active_days || 0));
+}
+
+function actStreakCell(row) {
+  const n = +row.streak_days || 0;
+  return el('td', { className: 'act-streak' + (n >= 3 ? ' is-hot' : n ? '' : ' is-zero') },
+    n ? '🔥 ' + n : '—');
+}
+
+function renderActivityPreview(wrap) {
+  if (!wrap) return;
+  const rows = activityRows();
+  if (!rows.length) { statsEmpty(wrap, 'Brak aktywności.'); return; }
+  const trs = rows.slice(0, 8).map(row => makeStatsRowClickable(el('tr', {},
+    el('td', { className: 'lb-nick' + (row.user_id === me.id ? ' me' : '') },
+      statsNick(row.user_id, row.nick) + (row.user_id === me.id ? ' (Ty)' : '')),
+    el('td', { className: 'lb-coins act-seen' }, actLastSeenLabel(row.last_active_at)),
+    actStreakCell(row),
+    el('td', { className: 'lb-coins act-top' }, actKindLabel(row.top_kind))
+  ), row.user_id, row.nick));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Nick'), el('th', {}, 'Ostatnio'), el('th', {}, 'Seria'), el('th', {}, 'Najczęściej')
+      )),
+      el('tbody', {}, ...trs)
+    ),
+    el('span', { className: 'rc-more' }, 'Dni gry, serie i pełne rozbicie ›')
+  );
+}
+
+function renderActivityDetail(container) {
+  if (!_activityLoaded) {
+    container.replaceChildren(makeSpinner());
+    loadActivityStats().then(() => { container.replaceChildren(); renderActivityDetail(container); });
+    return;
+  }
+  if (_activityError) {
+    container.append(
+      el('p', {}, 'Nie udało się wczytać aktywności.'),
+      el('p', { style: { color: 'var(--muted)', fontSize: '12px' } },
+        'Uruchom supabase/activity-stats.sql w Supabase SQL Editor, aby włączyć ten panel.')
+    );
+    return;
+  }
+  const rows = activityRows();
+  if (!rows.length) { container.append(el('p', {}, 'Brak aktywności.')); return; }
+
+  const trs = rows.map(row => {
+    const total = Math.max(1, +row.total_events || 0);
+    // A stacked bar reads faster than seven numbers: the shape IS the answer to
+    // „co ten ktoś właściwie robi".
+    const bar = el('div', { className: 'act-bar' });
+    ACT_KINDS.forEach(([key, , label]) => {
+      const n = +row[key] || 0;
+      if (!n) return;
+      bar.append(el('div', {
+        className: 'act-bar-seg act-' + key,
+        style: { width: (n / total * 100) + '%' },
+        title: label + ': ' + fmtNum(n),
+      }));
+    });
+    const tr = el('tr', { className: 'lb-row-clickable' },
+      el('td', { className: 'lb-nick' + (row.user_id === me.id ? ' me' : '') },
+        statsNick(row.user_id, row.nick) + (row.user_id === me.id ? ' (Ty)' : '')),
+      el('td', { className: 'lb-coins act-seen' }, actLastSeenLabel(row.last_active_at)),
+      el('td', {}, fmtNum(row.active_days)),
+      actStreakCell(row),
+      el('td', { className: 'lb-coins' }, fmtNum(row.best_streak)),
+      el('td', {}, fmtNum(row.total_events)),
+      el('td', { className: 'lb-coins' }, fmtNum(row.events_30d)),
+      el('td', { className: 'act-bar-cell' }, bar, el('span', { className: 'act-top' }, actKindLabel(row.top_kind)))
+    );
+    if (openStatsUserProfile) tr.addEventListener('click', () => openStatsUserProfile(row.user_id, row.nick, +(_lbData.find(r => r.id === row.user_id)?.coins) || 0));
+    return tr;
+  });
+
+  container.append(
+    el('table', { className: 'lb-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Nick'), el('th', {}, 'Ostatnio'), el('th', {}, 'Dni gry'), el('th', {}, 'Seria'),
+        el('th', {}, 'Rekord serii'), el('th', {}, 'Akcji'), el('th', {}, 'Ost. 30 dni'), el('th', {}, 'Co gra')
+      )),
+      el('tbody', {}, ...trs)
+    ),
+    el('div', { className: 'act-legend' },
+      ...ACT_KINDS.map(([key, icon, label]) => el('span', { className: 'act-legend-item' },
+        el('i', { className: 'act-swatch act-' + key }), icon + ' ' + label))
+    ),
+    el('div', { className: 'lb-legend' },
+      el('p', {}, el('strong', {}, 'Dni gry'), ' — liczba różnych dni, w których cokolwiek zrobiłeś w portalu. ', el('strong', {}, 'Seria'), ' — ile dni z rzędu trwa to teraz (liczy się dziś albo wczoraj, inaczej seria jest przerwana).'),
+      el('p', {}, el('strong', {}, 'Akcji'), ' — pojedyncze zdarzenia: każdy spin w kasynie, każda runda gry, każdy zakład, sprzedaż plonów czy postawiony piksel.'),
+      el('p', {}, 'Doby liczymy według czasu warszawskiego, tak jak nagrody tygodniowe i podlewanie.')
+    ),
+    el('p', { className: 'lb-click-hint' }, '👆 Kliknij gracza, aby zobaczyć historię coinów')
+  );
+}
+
 // Compact single-metric preview table. `mode`: 'coins' → Gotówka column,
 // 'net' → Net Worth column. `data` is expected pre-sorted for that metric.
 function renderLeaderboardTable(wrap, data, mode = 'coins') {
@@ -13263,19 +13839,28 @@ function renderLeaderboardTable(wrap, data, mode = 'coins') {
     return;
   }
   const isNet = mode === 'net';
-  const rows = data.map((row, i) => el('tr', {},
+  // The card is a preview — a full 20-row table made these two cards several
+  // times taller than every other one in the grid. The rest is in the modal.
+  const LIMIT = 8;
+  const shown = data.slice(0, LIMIT);
+  const rows = shown.map((row, i) => makeStatsRowClickable(el('tr', {},
     el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
     el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
+    // One line per player here — the „+N poza gotówką" split doubles every row's
+    // height, and the Net Worth card sitting next to this one already shows the
+    // with-holdings figure. The full breakdown stays in the modal.
     isNet
       ? el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
-      : lbCoinsCell(row)
-  ));
+      : el('td', { className: 'lb-coins' }, fmtNum(row.coins) + ' 🪙')
+  ), row.id, row.nick));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
       el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, isNet ? 'Net Worth' : 'Gotówka'))),
       el('tbody', {}, ...rows)
     ),
-    el('p', { className: 'lb-click-hint' }, 'Kliknij gracza, aby zobaczyć historię →')
+    el('span', { className: 'rc-more' }, data.length > LIMIT
+      ? '+ ' + (data.length - LIMIT) + ' ' + plCount(data.length - LIMIT, 'gracz', 'gracze', 'graczy') + ' — pełny ranking ›'
+      : 'Kliknij gracza, aby zobaczyć jego portfel ›')
   );
 }
 
@@ -13437,16 +14022,18 @@ function renderHazardista(wrap, data) {
   const losers = filteredData.filter(r => r.total_pl < 0).sort((a, b) => a.total_pl - b.total_pl).slice(0, 3);
   const items = [...winners.map(r => ({ nick: r.nick, pl: r.total_pl, pos: true, uid: r.user_id })),
                  ...losers.map(r => ({ nick: r.nick, pl: r.total_pl, pos: false, uid: r.user_id }))];
-  const rows = items.map(r => el('tr', {},
+  const rows = items.map(r => makeStatsRowClickable(el('tr', {},
     el('td', { className: 'lb-nick' + (r.uid === me.id ? ' me' : '') }, r.nick),
     el('td', { className: 'tx-pl ' + (r.pos ? 'tx-pl-profit' : 'tx-pl-loss') }, (r.pos ? '+' : '') + r.pl + ' 🪙')
-  ));
+  ), r.uid, r.nick));
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
       el('thead', {}, el('tr', {}, el('th', {}, 'Nick'), el('th', {}, 'Bilans'))),
       el('tbody', {}, ...rows)
-    )
+    ),
+    el('span', { className: 'rc-more' }, 'Najwięksi wygrani i przegrani — pełna tabela ›')
   );
+  renderStatsHero();
 }
 
 function normalizeCoinInflowRow(row) {
@@ -13501,12 +14088,12 @@ function renderCoinInflowPreview(wrap, data) {
     return;
   }
 
-  const rows = ranked.slice(0, 5).map((row, i) => el('tr', {},
+  const rows = ranked.slice(0, 8).map((row, i) => makeStatsRowClickable(el('tr', {},
     el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
     el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
     el('td', { className: 'lb-net' }, fmtNum(row.total_inflow) + ' 🪙'),
     el('td', { className: 'lb-coins' }, fmtNum(row.returns_cashouts) + ' zwrotów')
-  ));
+  ), row.user_id, row.nick));
 
   wrap.replaceChildren(
     el('table', { className: 'lb-table-compact' },
@@ -13515,8 +14102,9 @@ function renderCoinInflowPreview(wrap, data) {
       )),
       el('tbody', {}, ...rows)
     ),
-    el('p', { className: 'lb-click-hint' }, 'Bez startowych 1000 🪙 · kliknij po rozbicie →')
+    el('span', { className: 'rc-more' }, 'Bez startowych 1000 🪙 — rozbicie na źródła ›')
   );
+  renderStatsHero();
 }
 
 const COIN_INFLOW_SORTS = [
@@ -14509,12 +15097,30 @@ function renderCoinRaceDetail(container) {
   const body = document.getElementById('ranking-detail-body');
   const title = document.getElementById('ranking-detail-title');
   const closeBtn = document.getElementById('ranking-detail-close');
+  let _lbQuery = '';
+
+  // The Gotówka and Net Worth cards open the SAME table, pre-sorted by the
+  // metric that was clicked — the sort toggle inside then swaps between them.
+  function rankingTitle() {
+    return _lbSort === 'coins' ? '🪙 Ranking — Gotówka' : '💎 Ranking — Net Worth';
+  }
 
   function openModal(detail) {
     body.replaceChildren();
-    if (detail === 'ranking') {
-      title.textContent = '🏆 Ranking graczy';
+    if (detail === 'ranking' || detail === 'ranking-cash' || detail === 'ranking-net') {
+      if (detail === 'ranking-cash') _lbSort = 'coins';
+      else if (detail === 'ranking-net') _lbSort = 'net_worth';
+      title.textContent = rankingTitle();
       renderFullLeaderboard(body);
+    } else if (detail === 'calibration') {
+      title.textContent = '🎯 Trafność prognoz';
+      renderCalibrationDetail(body);
+    } else if (detail === 'medals') {
+      title.textContent = '🏅 Medale sezonowe';
+      renderMedalsDetail(body);
+    } else if (detail === 'activity') {
+      title.textContent = '📅 Aktywność graczy';
+      renderActivityDetail(body);
     } else if (detail === 'hazardista') {
       title.textContent = '🎰 Hazardista';
       renderFullHazardista(body);
@@ -14561,6 +15167,13 @@ function renderCoinRaceDetail(container) {
     card.addEventListener('click', () => openModal(card.dataset.detail));
   });
 
+  // Reachable from the preview tables / hero tiles in the Statystyki grid.
+  openStatsDetail = openModal;
+  openStatsUserProfile = (userId, nick, coins, opts) => {
+    overlay.classList.remove('hidden');
+    openUserProfile(userId, nick, coins, opts);
+  };
+
   const walletBtn = document.getElementById('wallet-btn');
   if (walletBtn) walletBtn.addEventListener('click', async () => {
     if (!me) return;
@@ -14578,32 +15191,66 @@ function renderCoinRaceDetail(container) {
   function renderFullLeaderboard(container) {
     const data = _lbData;
     if (!data || !data.length) { container.append(el('p', {}, 'Brak graczy.')); return; }
-    const sorted = [...data].sort((a, b) => (+b[_lbSort] || 0) - (+a[_lbSort] || 0));
-    const rows = sorted.map((row, i) => {
-      const tr = el('tr', { className: 'lb-row-clickable' },
-        el('td', { className: 'lb-rank' + (i === 0 ? ' gold' : '') }, i === 0 ? '🥇' : String(i + 1)),
-        el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
-        lbCoinsCell(row),
-        el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙')
-      );
-      tr.addEventListener('click', () => openUserProfile(row.id, row.nick, row.coins));
-      return tr;
+    const isCash = _lbSort === 'coins';
+    // Rank is assigned before filtering so searching for a nick still shows that
+    // player's real position, not their position among the search hits.
+    const ranked = [...data]
+      .sort((a, b) => (+b[_lbSort] || 0) - (+a[_lbSort] || 0))
+      .map((row, i) => ({ row, rank: i + 1 }));
+
+    const tbody = el('tbody', {});
+    const empty = el('p', { className: 'lb-click-hint hidden' }, 'Nikt taki nie gra w Top 20.');
+    const fillRows = () => {
+      const q = _lbQuery.trim().toLowerCase();
+      const hits = q ? ranked.filter(({ row }) => (row.nick || '').toLowerCase().includes(q)) : ranked;
+      empty.classList.toggle('hidden', hits.length > 0);
+      tbody.replaceChildren(...hits.map(({ row, rank }) => {
+        const cash = lbCoinsCell(row);
+        const net = el('td', { className: 'lb-net' }, fmtNum(row.net_worth) + ' 🪙');
+        (isCash ? cash : net).classList.add('is-sorted');
+        const tr = el('tr', { className: 'lb-row-clickable' },
+          el('td', { className: 'lb-rank' + (rank === 1 ? ' gold' : '') }, rank === 1 ? '🥇' : String(rank)),
+          el('td', { className: 'lb-nick' + (row.id === me.id ? ' me' : '') }, row.nick + (row.id === me.id ? ' (Ty)' : '')),
+          cash, net
+        );
+        tr.addEventListener('click', () => openUserProfile(row.id, row.nick, row.coins));
+        return tr;
+      }));
+    };
+
+    const search = el('input', {
+      type: 'search', className: 'lb-search', placeholder: '🔍 Szukaj gracza…', value: _lbQuery,
     });
+    search.addEventListener('input', () => { _lbQuery = search.value; fillRows(); });
+
     const sortBtn = (key, label) => {
       const b = el('button', { className: 'fb-sort-btn' + (_lbSort === key ? ' active' : '') }, label);
-      b.addEventListener('click', () => { if (_lbSort === key) return; _lbSort = key; container.replaceChildren(); renderFullLeaderboard(container); });
+      b.addEventListener('click', () => {
+        if (_lbSort === key) return;
+        _lbSort = key;
+        title.textContent = rankingTitle();
+        container.replaceChildren();
+        renderFullLeaderboard(container);
+      });
       return b;
     };
+    const thCash = el('th', {}, '🪙 Gotówka');
+    const thNet = el('th', {}, '💎 Net Worth');
+    (isCash ? thCash : thNet).classList.add('is-sorted');
     container.append(
-      el('div', { className: 'fb-sort-bar' },
-        el('span', { className: 'fb-sort-label' }, 'Sortuj:'),
-        sortBtn('net_worth', '💎 Net Worth'),
-        sortBtn('coins', '🪙 Gotówka')
+      el('div', { className: 'fb-sort-bar lb-toolbar' },
+        el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
+          el('span', { className: 'fb-sort-label' }, 'Sortuj:'),
+          sortBtn('net_worth', '💎 Net Worth'),
+          sortBtn('coins', '🪙 Gotówka')
+        ),
+        search
       ),
       el('table', { className: 'lb-table' },
-        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), el('th', {}, '🪙 Gotówka'), el('th', {}, '💎 Net Worth'))),
-        el('tbody', {}, ...rows)
+        el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Nick'), thCash, thNet)),
+        tbody
       ),
+      empty,
       el('div', { className: 'lb-legend' },
         el('p', {}, el('strong', {}, '🪙 Gotówka'), ' — wolne coiny, którymi możesz teraz obracać.'),
         el('p', {}, el('strong', {}, '💎 Net Worth'), ' — cały majątek: gotówka + coiny w otwartych zakładach (Mundial, rynki), stack w pokerze oraz wartość Twoich przedmiotów i certyfikatów.'),
@@ -14611,6 +15258,7 @@ function renderCoinRaceDetail(container) {
       ),
       el('p', { className: 'lb-click-hint' }, '👆 Kliknij gracza, aby zobaczyć historię coinów')
     );
+    fillRows();
   }
 
   async function openUserProfile(userId, nick, coins, opts = {}) {
@@ -14621,7 +15269,7 @@ function renderCoinRaceDetail(container) {
     let backBtn = null;
     if (!opts.wallet) {
       backBtn = el('button', { className: 'btn-ghost user-profile-back' }, '← Wróć do rankingu');
-      backBtn.addEventListener('click', () => { body.replaceChildren(); title.textContent = '🏆 Ranking graczy'; renderFullLeaderboard(body); });
+      backBtn.addEventListener('click', () => { body.replaceChildren(); title.textContent = rankingTitle(); renderFullLeaderboard(body); });
       body.append(backBtn);
     }
     body.append(makeSpinner());
