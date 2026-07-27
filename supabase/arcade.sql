@@ -70,7 +70,7 @@ BEGIN
   IF p_game_type NOT IN (
     'whack_boss', 'bug_jumper', 'flappy_pants', 'snake',
     'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz', 'popup_panic',
-    'tetris'
+    'tetris', 'healer_dungeon'
   ) THEN
     RAISE EXCEPTION 'invalid_game_type';
   END IF;
@@ -117,6 +117,10 @@ BEGIN
     WHEN 'super_mariusz' THEN 455
     WHEN 'popup_panic'   THEN 2000
     WHEN 'tetris'        THEN 9999
+    -- „Uzdrowiciel G6": score is pulls cleared. Arcade scores are client-
+    -- reported, so this cap is the only guard on this path; 100 pulls is far
+    -- beyond any real run.
+    WHEN 'healer_dungeon' THEN 100
     ELSE NULL
   END;
   IF v_score_cap IS NULL THEN RAISE EXCEPTION 'invalid_game_type'; END IF;

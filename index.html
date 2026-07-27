@@ -4199,6 +4199,137 @@
     .sn-prompt strong { color: var(--text); }
     .sn-prompt code { color: #22c55e; font-weight: 800; }
 
+    /* ── „Uzdrowiciel G6" (healer_dungeon) — WoW Classic raid-frame healer ──
+       DOM, not canvas: health bars, cast bars and cooldown buttons are natively
+       DOM widgets, and popup_panic already set the precedent for a DOM game.
+       Dark WoW-UI palette so the party frames read at a glance under pressure. */
+    .hd-arena {
+      --hd-bg: #12151c; --hd-panel: #1b202b; --hd-line: #2c3444;
+      --hd-text: #e6e9f0; --hd-dim: #93a0b8;
+      --hd-mana: #3b82f6; --hd-hp: #22c55e; --hd-warn: #f59e0b; --hd-crit: #ef4444;
+      background: var(--hd-bg); border: 1px solid var(--hd-line); border-radius: var(--r-md);
+      padding: 14px; color: var(--hd-text); user-select: none;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .hd-bar { position: relative; height: 100%; background: #0c0f15; border-radius: 4px; overflow: hidden; }
+    .hd-bar-fill { height: 100%; width: 0; border-radius: 4px; transition: width .1s linear; }
+
+    /* Party frames */
+    .hd-frames { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .hd-frame {
+      background: var(--hd-panel); border: 2px solid var(--hd-line); border-radius: var(--r-sm);
+      padding: 9px 10px; font-family: inherit; color: inherit; cursor: pointer; text-align: left;
+      display: flex; flex-direction: column; gap: 6px; transition: border-color .12s, box-shadow .12s;
+    }
+    .hd-frame.is-target { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.22); }
+    .hd-frame.is-low { animation: hd-pulse .7s ease-in-out infinite; }
+    .hd-frame.is-dead { opacity: .4; filter: grayscale(1); }
+    @keyframes hd-pulse { 50% { border-color: var(--hd-crit); } }
+    .hd-frame-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+    .hd-frame-name { font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hd-name-short { display: none; }
+    .hd-frame-hp { font-size: 11px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .hd-bar-hp { height: 18px; }
+    .hd-bar-hp .hd-bar-fill { background: var(--hd-hp); }
+    .hd-bar-hp .hd-bar-fill.is-warn { background: var(--hd-warn); }
+    .hd-bar-hp .hd-bar-fill.is-crit { background: var(--hd-crit); }
+    .hd-hots { display: flex; gap: 3px; min-height: 15px; }
+    .hd-hot { font-size: 11px; line-height: 15px; }
+
+    /* The pack you are fighting */
+    .hd-pack-head { display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 11.5px; font-weight: 700; margin-bottom: 4px; }
+    .hd-pack-name { color: var(--hd-text); }
+    .hd-pack-text { color: var(--hd-dim); font-variant-numeric: tabular-nums; }
+    .hd-bar-pack { height: 10px; }
+    .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+
+    /* Cast bar — only visible while Healing Touch is channelling */
+    .hd-cast { display: flex; align-items: center; gap: 8px; height: 16px; opacity: 0; transition: opacity .12s; }
+    .hd-cast.is-on { opacity: 1; }
+    .hd-bar-cast { flex: 1; height: 10px; }
+    .hd-bar-cast .hd-bar-fill { background: #facc15; }
+    .hd-cast-label { font-size: 11px; font-weight: 700; color: #facc15; white-space: nowrap; }
+
+    /* Mana + the 5-second-rule readout, the most important number on screen */
+    .hd-mana { display: flex; align-items: center; gap: 10px; }
+    .hd-bar-mana { flex: 1; height: 14px; }
+    .hd-bar-mana .hd-bar-fill { background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); }
+    .hd-mana-text { font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .hd-fsr {
+      font-size: 11px; font-weight: 800; white-space: nowrap; padding: 3px 9px;
+      border-radius: var(--r-pill); background: #24292f; color: var(--hd-dim);
+      border: 1px solid var(--hd-line); transition: background .15s, color .15s;
+    }
+    .hd-fsr.is-on { background: rgba(59,130,246,.22); color: #93c5fd; border-color: #3b82f6; }
+
+    /* Spell bar */
+    .hd-spells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .hd-spell {
+      position: relative; background: var(--hd-panel); border: 2px solid var(--hd-line);
+      border-radius: var(--r-sm); padding: 8px 9px 9px; font-family: inherit; color: inherit;
+      cursor: pointer; text-align: left; display: grid; gap: 1px;
+      grid-template-columns: auto 1fr; grid-template-areas: "key icon" "name name" "cost cost";
+      transition: border-color .12s, opacity .12s;
+    }
+    .hd-spell.is-ready { border-color: #3b82f6; }
+    .hd-spell.is-poor { opacity: .45; }
+    .hd-spell.is-cd { opacity: .6; border-color: var(--hd-warn); }
+    .hd-spell-key { grid-area: key; font-size: 10px; font-weight: 800; color: var(--hd-dim);
+      border: 1px solid var(--hd-line); border-radius: 4px; padding: 0 5px; justify-self: start; }
+    .hd-spell-icon { grid-area: icon; font-size: 15px; justify-self: end; }
+    .hd-spell-name { grid-area: name; font-size: 12px; font-weight: 800; margin-top: 3px; }
+    .hd-spell-cost { grid-area: cost; font-size: 10.5px; font-weight: 700; color: var(--hd-dim); }
+    .hd-spell-cd { position: absolute; right: 8px; bottom: 7px; font-size: 10.5px;
+      font-weight: 800; color: var(--hd-warn); font-variant-numeric: tabular-nums; }
+
+    /* Rest window: drink, pick an upgrade, or pull early */
+    .hd-rest { display: none; border-top: 1px solid var(--hd-line); padding-top: 11px; }
+    .hd-rest.is-on { display: block; }
+    .hd-rest-head { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      flex-wrap: wrap; margin-bottom: 6px; }
+    .hd-rest-label { font-size: 12px; font-weight: 800; color: #93c5fd; font-variant-numeric: tabular-nums; }
+    .hd-rest-actions { display: flex; gap: 6px; }
+    .hd-rest-btn { font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer;
+      padding: 5px 11px; border-radius: var(--r-pill); border: 1px solid var(--hd-line);
+      background: var(--hd-panel); color: var(--hd-text); }
+    .hd-rest-btn:hover { border-color: #3b82f6; }
+    .hd-rest-btn.is-go { background: #1d4ed8; border-color: #3b82f6; }
+    .hd-bar-rest { height: 6px; }
+    .hd-bar-rest .hd-bar-fill { background: #93c5fd; }
+    .hd-upgrades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .hd-up {
+      background: var(--hd-panel); border: 2px solid var(--hd-line); border-radius: var(--r-sm);
+      padding: 9px 10px; font-family: inherit; color: inherit; cursor: pointer; text-align: left;
+      display: flex; flex-direction: column; gap: 2px; transition: border-color .12s, opacity .12s;
+    }
+    .hd-up:hover { border-color: #facc15; }
+    .hd-up.is-locked { opacity: .4; cursor: default; }
+    .hd-up-icon { font-size: 17px; }
+    .hd-up-name { font-size: 12px; font-weight: 800; }
+    .hd-up-desc { font-size: 10.5px; font-weight: 600; color: var(--hd-dim); line-height: 1.35; }
+    .hd-stats-value { font-size: 13px !important; letter-spacing: -.01em; }
+    .hd-rules > summary { cursor: pointer; list-style: none; }
+    .hd-rules > summary::-webkit-details-marker { display: none; }
+    .hd-rules > summary::after { content: ' ▾'; color: var(--muted); font-weight: 700; }
+    .hd-rules:not([open]) > summary::after { content: ' ▸'; }
+
+    @media (max-width: 620px) {
+      .hd-arena { padding: 10px; gap: 10px; }
+      .hd-frames { gap: 6px; }
+      .hd-frame { padding: 7px; }
+      /* Name and HP each get their own row — side by side, "1305 / 1400" eats
+         the whole 100px frame and ellipsises the name down to nothing. */
+      .hd-frame-head { flex-direction: column; align-items: flex-start; gap: 0; }
+      .hd-frame-name { font-size: 11px; }
+      .hd-name-long { display: none; }
+      .hd-name-short { display: inline; }
+      .hd-frame-hp { font-size: 10px; }
+      .hd-spells, .hd-upgrades { gap: 6px; }
+      .hd-spell-name, .hd-up-name { font-size: 11px; }
+      .hd-spell-cost, .hd-up-desc { font-size: 10px; }
+    }
+
     /* ── „Zamknij Popupy!" (popup_panic) — fake-desktop popup frenzy ── */
     .pp-arena {
       position: relative; width: 100%; max-width: 720px; margin: 0 auto;
@@ -8616,6 +8747,114 @@
       </div>
 
 
+      <!-- Uzdrowiciel G6 panel (WoW Classic resto-druid healer; gameType healer_dungeon).
+           PHASE 1: arcade-only. Lives here with the seasonal panels so promoting
+           it later is a SEASONAL_ROTATION entry, not a move. No board sidebar
+           yet — there is no seasonal table behind it. -->
+      <div id="seasonal-game-healer-dungeon" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">„Uzdrowiciel G6" 💚</h2>
+                <p class="page-sub">Jesteś <strong>druidem-uzdrowicielem</strong> w trzyosobowej drużynie: tank, Ty i DPS. Loch nie ma końca — każda kolejna grupa bije mocniej. Runda kończy się, gdy <strong>ktokolwiek padnie</strong>. Wynik = liczba wyczyszczonych grup.</p>
+              </div>
+            </div>
+
+            <details class="bj-rules hd-rules" id="hd-rules" open>
+              <summary class="bj-rules-title">Jak grać</summary>
+              <ul>
+                <li><strong>Q / W / E</strong> wybiera cel (albo kliknij pasek życia), <strong>1</strong> Odnowa, <strong>2</strong> Dziki Wzrost, <strong>3</strong> Uzdrawiający Dotyk.</li>
+                <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many <em>stoi</em> przez 5 sekund. Wskaźnik pod paskiem many pokazuje, kiedy znowu zaczniesz odzyskiwać manę — luka bez czarów to darmowa mana.</li>
+                <li><strong>Odnowa</strong> jest najoszczędniejsza (2,44 HP za manę), <strong>Uzdrawiający Dotyk</strong> najdroższy (1,75). Spamowanie dużego leczenia wygrywa walkę i przegrywa loch.</li>
+                <li><strong>Dziki Wzrost</strong> leczy całą drużynę — trzymaj go na obrażenia obszarowe, które przychodzą co ~7 s.</li>
+                <li><strong>Między grupami siadasz i pijesz</strong> — ale rzucenie czaru Cię podnosi (<strong>R</strong> = usiądź z powrotem). Przerwa <strong>skraca się z każdą grupą</strong>: przy pierwszej masz 15 s, przy dwudziestej już tylko 5.</li>
+                <li>Po każdej grupie <strong>wybierasz jedno ulepszenie</strong> z trzech. Nie wybierzesz do końca przerwy — dostaniesz pierwsze z brzegu.</li>
+                <li><strong>Spacja</strong> = ruszaj dalej od razu, nie czekając na koniec przerwy.</li>
+              </ul>
+            </details>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Wyczyszczone grupy</div>
+                <div class="bj-stat-value" id="hd-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Grupa</div>
+                <div class="bj-stat-value" id="hd-pull">1</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Mana</div>
+                <div class="bj-stat-value" id="hd-mana-stat">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Statystyki</div>
+                <div class="bj-stat-value hd-stats-value" id="hd-stats">—</div>
+              </div>
+            </div>
+
+            <div class="hd-arena" id="hd-arena">
+              <div class="hd-frames" id="hd-frames"></div>
+
+              <div class="hd-pack">
+                <div class="hd-pack-head">
+                  <span class="hd-pack-name" id="hd-pack-name">—</span>
+                  <span class="hd-pack-text" id="hd-pack-text">—</span>
+                </div>
+                <div class="hd-bar hd-bar-pack"><div class="hd-bar-fill" id="hd-pack-fill"></div></div>
+              </div>
+
+              <div class="hd-cast" id="hd-cast">
+                <div class="hd-bar hd-bar-cast"><div class="hd-bar-fill" data-fill></div></div>
+                <span class="hd-cast-label" data-label></span>
+              </div>
+
+              <div class="hd-mana">
+                <div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" id="hd-mana-fill"></div></div>
+                <span class="hd-mana-text" id="hd-mana-text">0 / 0</span>
+                <span class="hd-fsr" id="hd-fsr">💧 regeneracja</span>
+              </div>
+
+              <div class="hd-spells" id="hd-spells">
+                <button type="button" class="hd-spell" data-spell="0">
+                  <span class="hd-spell-key">1</span><span class="hd-spell-icon">🌿</span>
+                  <span class="hd-spell-name">Odnowa</span>
+                  <span class="hd-spell-cost">90 many</span><span class="hd-spell-cd" data-cd></span>
+                </button>
+                <button type="button" class="hd-spell" data-spell="1">
+                  <span class="hd-spell-key">2</span><span class="hd-spell-icon">🌳</span>
+                  <span class="hd-spell-name">Dziki Wzrost</span>
+                  <span class="hd-spell-cost">280 many</span><span class="hd-spell-cd" data-cd></span>
+                </button>
+                <button type="button" class="hd-spell" data-spell="2">
+                  <span class="hd-spell-key">3</span><span class="hd-spell-icon">✋</span>
+                  <span class="hd-spell-name">Uzdrawiający Dotyk</span>
+                  <span class="hd-spell-cost">240 many</span><span class="hd-spell-cd" data-cd></span>
+                </button>
+              </div>
+
+              <div class="hd-rest" id="hd-rest">
+                <div class="hd-rest-head">
+                  <span class="hd-rest-label" id="hd-rest-label">Przerwa</span>
+                  <div class="hd-rest-actions">
+                    <button type="button" class="hd-rest-btn" id="hd-drink">🍺 Pij (R)</button>
+                    <button type="button" class="hd-rest-btn is-go" id="hd-pull-btn">⚔️ Ruszaj (spacja)</button>
+                  </div>
+                </div>
+                <div class="hd-bar hd-bar-rest"><div class="hd-bar-fill" id="hd-rest-fill"></div></div>
+                <div class="hd-upgrades" id="hd-upgrades"></div>
+              </div>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="hd-start">Wejdź do lochu</button>
+              <div class="bj-status" id="hd-status">Trzy czary, trzy paski życia i coraz mniej many. Powodzenia.</div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+
       <!-- Najazd Ticketów panel (IT-helpdesk survival season; gameType invoice_horde) -->
       <div id="seasonal-game-invoice-horde" class="hidden">
         <div class="bj-layout">
@@ -8896,6 +9135,18 @@
             <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
           <div class="ag-card-scores" data-scores="tetris"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="healer_dungeon">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">💚</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">„Uzdrowiciel G6”</span>
+              <span class="ag-card-tag">NOWOŚĆ · RPG</span>
+            </div>
+            <div class="ag-card-desc">Jesteś druidem-uzdrowicielem w trzyosobowej drużynie. Loch nie ma końca, mana się nie odnawia sama, a przerwa na picie robi się coraz krótsza. Padnie ktokolwiek — koniec rundy.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
+          </div>
+          <div class="ag-card-scores" data-scores="healer_dungeon"></div>
         </div>
         <div class="ag-card" role="button" tabindex="0" data-game="popup_panic">
           <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🖱️</span></div>
@@ -9752,6 +10003,7 @@ const LAZY_GAME_SCRIPTS = {
   super_mariusz: 'games/super-mariusz.js',
   popup_panic:   'games/popup-panic.js',
   tetris:        'games/tetris.js',
+  healer_dungeon:'games/healer-dungeon.js',
 };
 const _gameScriptPromises = {};
 function ensureGameScript(gameType) {
@@ -9783,6 +10035,7 @@ function stopEggCatchRound() {}
 function stopSuperMariuszRound() {}
 function stopPopupPanicRound() {}
 function stopTetrisRound() {}
+function stopHealerDungeonRound() {}
 const lwCharts = new Map();
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
@@ -10368,6 +10621,7 @@ async function doLogout() {
   stopSnakeRound();
   stopInvoiceHordeRound();
   stopTetrisRound(); // also drops handheld fullscreen + the body scroll lock
+  stopHealerDungeonRound();
   resetGardenState();
   resetHeroState();
   hide(screenApp);
@@ -10613,6 +10867,7 @@ const AG_PANEL_IDS = {
   super_mariusz: 'seasonal-game-super-mariusz',
   popup_panic:   'seasonal-game-popup-panic',
   tetris:        'seasonal-game-tetris',
+  healer_dungeon:'seasonal-game-healer-dungeon',
 };
 let agPanelHome = {};
 
@@ -10659,7 +10914,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound();
   stopAgPreviews();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
@@ -10669,7 +10924,7 @@ function leaveAllGamesTab() {
 function selectAllGame(gameType) {
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound();
   stopAgPreviews();   // the picker's previews borrow the same canvas globals
 
   allGamesSelectedGame = gameType;
@@ -10695,6 +10950,8 @@ function selectAllGame(gameType) {
     }
     // The panel just moved into #ag-game-slot, so its canvas needs re-measuring.
     if (gameType === 'tetris') requestAnimationFrame(() => { tetrisInitCanvas(); tetrisDraw(); });
+    // DOM game: the frames are built on demand, so paint an idle party now.
+    if (gameType === 'healer_dungeon') requestAnimationFrame(() => stopHealerDungeonRound());
   });
   loadArcadeScores(gameType);
 }
@@ -10980,7 +11237,7 @@ document.querySelectorAll('.ag-card').forEach(card => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -10995,7 +11252,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }

@@ -619,6 +619,69 @@ function agpMariuszReset(p) {
   p.deadFor = 0;
 }
 
+// ── Uzdrowiciel G6 — real sim, triage bot, real party frames ────────────────
+
+function agpHealerReset(p) {
+  p.st = hdInitState((Date.now() ^ 0x5eed) >>> 0);
+  p.deadFor = 0;
+}
+
+// Deliberately imperfect: it tops up whoever is lowest and answers AoE with
+// Wild Growth, but never weaves for the 5-second rule — so the preview shows a
+// party under real pressure with mana visibly draining, which is the game.
+function agpHealerBot(st) {
+  // Take the upgrade and pull straight away. A real rest is 5-15 s of full bars
+  // and nothing moving — correct in game, dead air in a thumbnail — so the
+  // preview stays permanently in combat, which is what it is advertising.
+  if (st.phase === 'rest') {
+    if (!st.upgradePicked) return [{ a: HD_A_UPGRADE, t: 0 }];
+    return [{ a: HD_A_PULL, t: 0 }];
+  }
+  if (st.gcd > 0 || st.cast) return null;
+  let low = 0, lowPct = 2;
+  for (let i = 0; i < 3; i += 1) {
+    const pct = st.hp[i] / st.maxHp[i];
+    if (pct < lowPct) { lowPct = pct; low = i; }
+  }
+  const hurt = st.hp.filter((hp, i) => hp < st.maxHp[i] * 0.8).length;
+  if (hurt >= 2 && st.wgCd === 0 && st.mana >= HD_COST[HD_SP_WG]) return [{ a: HD_A_WG, t: 0 }];
+  if (lowPct < 0.45 && st.mana >= HD_COST[HD_SP_HT]) return [{ a: HD_A_HT, t: low }];
+  if (lowPct < 0.9 && st.mana >= HD_COST[HD_SP_REJUV]) return [{ a: HD_A_REJUV, t: low }];
+  return null;
+}
+
+function agpHealerRender(p) {
+  const st = p.st;
+  const host = p.host;
+  for (let i = 0; i < 3; i += 1) {
+    const frame = host.querySelector('.hd-frame[data-f="' + i + '"]');
+    if (!frame) continue;
+    const pct = st.maxHp[i] > 0 ? Math.max(0, st.hp[i] / st.maxHp[i] * 100) : 0;
+    const fill = frame.querySelector('[data-fill]');
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.className = 'hd-bar-fill' + (pct < 35 ? ' is-crit' : pct < 65 ? ' is-warn' : '');
+    }
+    frame.classList.toggle('is-low', st.hp[i] > 0 && pct < 35);
+    const hots = frame.querySelector('[data-hots]');
+    if (hots) {
+      const want = st.hots.filter(h => h.tgt === i).map(h => h.kind === HD_SP_REJUV ? '🌿' : '🌳').join('');
+      if (hots.dataset.v !== want) { hots.dataset.v = want; hots.textContent = want; }
+    }
+  }
+  const pack = host.querySelector('[data-packfill]');
+  if (pack) pack.style.width = (st.packMax > 0 ? Math.max(0, st.packHp / st.packMax * 100) : 0) + '%';
+  const name = host.querySelector('[data-pack]');
+  if (name) {
+    const want = st.phase === 'rest' ? 'Przerwa — pijesz' : hdPackName(st.pull);
+    if (name.textContent !== want) name.textContent = want;
+  }
+  const mana = host.querySelector('[data-mana]');
+  if (mana) mana.style.width = (st.mana / hdMaxMana(st) * 100) + '%';
+  const fsr = host.querySelector('[data-fsr]');
+  if (fsr) fsr.classList.toggle('is-on', st.fsr >= HD_FSR_TICKS || st.drinking);
+}
+
 // ── Zamknij Popupy! — real simulation, real popup markup, bot with a delay ───
 
 function agpPopupReset(p) {
@@ -918,6 +981,48 @@ const AGP_DEFS = {
         ppAdvanceTick(st, agpPopupBotCloses(st));
       }
       agpPopupRender(p);
+    },
+    draw() { /* DOM-driven */ },
+  },
+
+  // „Uzdrowiciel G6" — the real hdAdvanceTick driven by a small triage bot, so
+  // the preview shows genuine bar movement (damage in, HoTs ticking back up)
+  // rather than a scripted animation. Builds its own frames instead of cloning
+  // #hd-frames: the real ones may not exist yet, and cloning them would fight
+  // with healerRenderFrames() over the same nodes.
+  healer_dungeon: {
+    dep: 'healer_dungeon', dom: true, vw: 520, vh: 250,
+    init(p) {
+      p.host.className = 'ag-prev-dom hd-arena is-playing';
+      p.host.style.width = p.vw + 'px';
+      p.host.style.height = p.vh + 'px';
+      p.host.innerHTML =
+        '<div class="hd-frames">' +
+        [0, 1, 2].map(i =>
+          '<div class="hd-frame" data-f="' + i + '">' +
+          '<div class="hd-frame-head"><span class="hd-frame-name">' + HD_SLOT_ICONS[i] + ' ' + HD_SLOT_SHORT[i] + '</span></div>' +
+          '<div class="hd-bar hd-bar-hp"><div class="hd-bar-fill" data-fill></div></div>' +
+          '<div class="hd-hots" data-hots></div></div>').join('') +
+        '</div>' +
+        '<div class="hd-pack"><div class="hd-pack-head"><span class="hd-pack-name" data-pack></span></div>' +
+        '<div class="hd-bar hd-bar-pack"><div class="hd-bar-fill" data-packfill></div></div></div>' +
+        '<div class="hd-mana"><div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" data-mana></div></div>' +
+        '<span class="hd-fsr" data-fsr>💧</span></div>';
+      agpHealerReset(p);
+    },
+    step(p, dt) {
+      p.acc += dt;
+      while (p.acc >= HD_TICK_MS) {
+        p.acc -= HD_TICK_MS;
+        const st = p.st;
+        if (st.dead || st.tick >= 2400) {
+          p.deadFor += HD_TICK_MS;
+          if (p.deadFor > 1200) agpHealerReset(p);
+          continue;
+        }
+        hdAdvanceTick(st, agpHealerBot(st));
+      }
+      agpHealerRender(p);
     },
     draw() { /* DOM-driven */ },
   },
