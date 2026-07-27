@@ -241,15 +241,20 @@ CREATE INDEX IF NOT EXISTS farm_land_tax_events_user_time_idx
 -- so the fixed NFT weights (2/1/1/1 below) are ~half the pool vs the original
 -- values. See that file for the resulting static per-box NFT chances.
 INSERT INTO public.farm_card_defs (species, name, emoji, rarity, draw_weight, base_grow_minutes, base_yield, crop_type) VALUES
-  ('carrot',     'Marchewka',  '🥕', 'common', 60, 1440,  4,  'carrot'),
-  ('potato',     'Ziemniak',   '🥔', 'common', 56, 1440,  5,  'potato'),
-  ('tomato',     'Pomidor',    '🍅', 'common', 48, 1440,  6,  'tomato'),
-  ('corn',       'Kukurydza',  '🌽', 'rare',   26, 2880, 12,  'corn'),
-  ('chili',      'Papryczka',  '🌶️', 'rare',   24, 2880, 11,  'chili'),
-  ('strawberry', 'Truskawka',  '🍓', 'rare',   18, 2880, 15,  'strawberry'),
-  ('pumpkin',    'Dynia',      '🎃', 'epic',   10, 4320, 30,  'pumpkin'),
-  ('grapes',     'Winogrona',  '🍇', 'epic',    8, 4320, 35,  'grapes'),
-  ('pineapple',  'Ananas',     '🍍', 'epic',    6, 5760, 45,  'pineapple')
+  -- draw_weight: kept in sync with the absolute SETs in farm-static-nft-odds.sql
+  -- (×2.2 the original seed). Scaling the FUNGIBLE side is how NFT rarity is
+  -- tuned — NFT/weekly-edition weights stay 1-2 because the series seed re-applies
+  -- them on every run. Changing these without changing that file (or vice versa)
+  -- means whichever ran last silently wins.
+  ('carrot',     'Marchewka',  '🥕', 'common', 132, 1440,  4,  'carrot'),
+  ('potato',     'Ziemniak',   '🥔', 'common', 123, 1440,  5,  'potato'),
+  ('tomato',     'Pomidor',    '🍅', 'common', 106, 1440,  6,  'tomato'),
+  ('corn',       'Kukurydza',  '🌽', 'rare',    57, 2880, 12,  'corn'),
+  ('chili',      'Papryczka',  '🌶️', 'rare',    53, 2880, 11,  'chili'),
+  ('strawberry', 'Truskawka',  '🍓', 'rare',    40, 2880, 15,  'strawberry'),
+  ('pumpkin',    'Dynia',      '🎃', 'epic',    22, 4320, 30,  'pumpkin'),
+  ('grapes',     'Winogrona',  '🍇', 'epic',    18, 4320, 35,  'grapes'),
+  ('pineapple',  'Ananas',     '🍍', 'epic',    13, 5760, 45,  'pineapple')
 ON CONFLICT (species) DO UPDATE SET
   name = EXCLUDED.name, emoji = EXCLUDED.emoji, rarity = EXCLUDED.rarity,
   draw_weight = EXCLUDED.draw_weight, base_grow_minutes = EXCLUDED.base_grow_minutes,

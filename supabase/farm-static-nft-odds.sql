@@ -18,16 +18,30 @@
 --      • The voucher (free-tile) territory decay divisor stays UNCHANGED — this
 --        change is only about NFT card odds, per the product decision.
 --      • The gold box keeps its 5 draws + guaranteed rare-or-better first draw.
---   2. NFT share HALVED vs the old 0-owned baseline. Rather than fractional NFT
---      weights, every NON-NFT `draw_weight` is DOUBLED (absolute, idempotent
---      values below); NFT weights stay 2/1/1/1. That cuts the NFT fraction of
---      the pool roughly in half.
+--   2. NFT share REDUCED vs the old 0-owned baseline. Rather than fractional NFT
+--      weights, every NON-NFT `draw_weight` is scaled up (absolute, idempotent
+--      values below); NFT weights stay 2/1/1/1 and weekly editions keep the 1-2
+--      the series seed gives them. Originally ×2 (halving the NFT share); raised
+--      to ×2.2 on 2026-07-27 to make NFTs a further ≥2× rarer (see below).
 --
---      Resulting static per-box chances (distinct draws, computed exactly):
---        STANDARD box (3 draws):  ANY NFT ≈ 6.91%
---          Diamentowa Róża 2.80% · Słonecznik/Lotos/Banan 1.40% each
---        GOLD box (5 draws, rare+ floor): ANY NFT ≈ 16.44%
---          Diamentowa Róża 6.80% · Słonecznik/Lotos/Banan 3.44% each
+--      2026-07-27 — „at least 2× rarer" pass. ×2 alone lands at 1.94×/1.88×,
+--      short of the target: over 3 distinct draws WITHOUT replacement, halving
+--      the per-draw share does not halve the per-box chance, and the gold box's
+--      rare+ floor concentrates the legendary pool further. ×2.2 clears 2× in
+--      every edition configuration — worst case 2.06× (3 live editions at
+--      weight 2, gold box); best 2.19×. Verified by running index.html's own
+--      farmBoxChancePct against the live pool.
+--
+--      Per-box chances with THREE live weekly editions at weight 2 (the state
+--      the rolling series window normally holds — see farm-nft-series-window):
+--        STANDARD box (3 draws):          ANY NFT 8.21% → 3.84%   (2.14× rarer)
+--          per edition                    2.78% → 1.30%
+--        GOLD box (5 draws, rare+ floor): ANY NFT 19.32% → 9.40%  (2.06× rarer)
+--
+--      These move as editions sell out and the window rotates — the numbers are
+--      NOT hardcoded anywhere. index.html computes them live from the same
+--      weights via farmAnyNftChancePct/farmCardBoxChancePct, so the shop, the
+--      odds table and the catalog follow this file automatically.
 --
 --   3. Lootbox opening LOG. A new public-SELECT `farm_lootbox_opens` table
 --      records one row per box opened (who, which box type, what dropped),
@@ -39,17 +53,41 @@
 -- catalog/help odds copy, and the seed weights in farm.sql (updated alongside).
 
 -- ── 0. Rebalanced draw weights (idempotent absolute values) ─────────────────
--- Non-NFT weights doubled vs the original farm.sql seed; NFT weights unchanged.
--- Absolute SETs (not `weight*2`) so a re-run is idempotent.
-UPDATE public.farm_card_defs SET draw_weight = 60 WHERE species = 'carrot';
-UPDATE public.farm_card_defs SET draw_weight = 56 WHERE species = 'potato';
-UPDATE public.farm_card_defs SET draw_weight = 48 WHERE species = 'tomato';
-UPDATE public.farm_card_defs SET draw_weight = 26 WHERE species = 'corn';
-UPDATE public.farm_card_defs SET draw_weight = 24 WHERE species = 'chili';
-UPDATE public.farm_card_defs SET draw_weight = 18 WHERE species = 'strawberry';
-UPDATE public.farm_card_defs SET draw_weight = 10 WHERE species = 'pumpkin';
-UPDATE public.farm_card_defs SET draw_weight =  8 WHERE species = 'grapes';
-UPDATE public.farm_card_defs SET draw_weight =  6 WHERE species = 'pineapple';
+-- Non-NFT weights are ×2.2 the original farm.sql seed (2026-07-27; was ×2).
+-- Absolute SETs (not `weight*2.2`) so a re-run is idempotent.
+--
+-- ⚠️ SCALE THE FUNGIBLE WEIGHTS, NEVER THE NFT ONES. Weekly edition weights are
+-- re-seeded (1 or 2) by farm-weekly-nft-series.sql's ON CONFLICT DO UPDATE every
+-- time that file runs, so an UPDATE against an NFT row silently reverts on the
+-- next re-run — and future editions would keep arriving at the old odds. Moving
+-- the fungible side is the only lever that sticks and that new editions inherit.
+UPDATE public.farm_card_defs SET draw_weight = 132 WHERE species = 'carrot';
+UPDATE public.farm_card_defs SET draw_weight = 123 WHERE species = 'potato';
+UPDATE public.farm_card_defs SET draw_weight = 106 WHERE species = 'tomato';
+UPDATE public.farm_card_defs SET draw_weight =  57 WHERE species = 'corn';
+UPDATE public.farm_card_defs SET draw_weight =  53 WHERE species = 'chili';
+UPDATE public.farm_card_defs SET draw_weight =  40 WHERE species = 'strawberry';
+UPDATE public.farm_card_defs SET draw_weight =  22 WHERE species = 'pumpkin';
+UPDATE public.farm_card_defs SET draw_weight =  18 WHERE species = 'grapes';
+UPDATE public.farm_card_defs SET draw_weight =  13 WHERE species = 'pineapple';
+
+-- Freeze the ×2 era's odds onto the opens that happened under them. The „fart"
+-- (luck) factor is observed ÷ expected, and the client falls back to the CURRENT
+-- live rate whenever farm_lootbox_opens.nft_p is NULL — so without this, the
+-- ×2.2 change would silently re-score 527 historical opens against odds that
+-- never applied to them and hand everyone a luck boost. Same mechanism (and same
+-- reasoning) as the nft_p column added by farm-lootbox-backfill.sql.
+-- Bounded by the cutover timestamp so it is idempotent and never touches opens
+-- logged after the change — those correctly use the new live rate.
+-- NOTE: an approximation. The era's live rate drifted (roughly 6.9% → 8.2% as
+-- editions rotated) and hit 0% during the sold-out droughts that
+-- farm-nft-series-window.sql later fixed, so a per-open reconstruction is not
+-- possible; this uses the era headline players were actually shown.
+UPDATE public.farm_lootbox_opens
+   SET nft_p = CASE WHEN box_type = 'gold' THEN 0.1644 ELSE 0.0691 END
+ WHERE nft_p IS NULL
+   AND backfilled IS NOT TRUE
+   AND created_at < '2026-07-27T18:00:00+02:00';
 -- NFT weights stay 2 / 1 / 1 / 1 (diamond_rose / golden_sunflower / crystal_lotus / aeae_banana).
 UPDATE public.farm_card_defs SET draw_weight = 2 WHERE species = 'diamond_rose';
 UPDATE public.farm_card_defs SET draw_weight = 1 WHERE species = 'golden_sunflower';
