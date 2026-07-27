@@ -121,6 +121,10 @@ EXCEPTION WHEN undefined_table THEN NULL; END $$;
 -- ── RPC: breed_nft ─────────────────────────────────────────────────────────
 -- Cost: 400 * (levelA + levelB) coins, burned. Both parents destroyed; one
 -- serialized hybrid minted to the caller.
+--
+-- ⚠️ SUPERSEDED by supabase/farm-hybrid-income-parity.sql — that file passes the
+-- resolved hybrid species into farm_hybrid_stats so the minted stats are priced
+-- against the crop the hybrid actually harvests. Re-run it after re-running this.
 CREATE OR REPLACE FUNCTION public.breed_nft(p_a uuid, p_b uuid)
 RETURNS json
 LANGUAGE plpgsql
@@ -275,6 +279,12 @@ GRANT SELECT ON public.farm_hybrid_recent TO anon, authenticated;
 --      yield = ceil(max(parentYield)  × 1.15)   → out-yields both parents
 --      grow  = floor(min(parentGrow)  × 0.95)   → faster than both parents
 --  NULL columns mean "use the species default" (every non-bred card).
+--
+--  ⚠️ SUPERSEDED by supabase/farm-hybrid-income-parity.sql. The unit-count rule
+--  below is NOT enough: hybrids harvest 'seasonal_bloom' (price 50) while premium
+--  parents harvest crops worth 80–120, so +15% units could still mean HALF the
+--  coins/day. That file re-derives yield from parent INCOME. Re-run it after
+--  re-running this one.
 ALTER TABLE public.farm_nft_instances ADD COLUMN IF NOT EXISTS stat_yield integer;
 ALTER TABLE public.farm_nft_instances ADD COLUMN IF NOT EXISTS stat_grow_minutes integer;
 COMMENT ON COLUMN public.farm_nft_instances.stat_yield IS

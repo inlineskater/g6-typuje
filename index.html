@@ -10300,7 +10300,7 @@ const WHATS_NEW = {
   title: 'Co nowego w Ogródku',
   items: [
     ['🗓️', 'Co poniedziałek NOWA limitowana kolekcja NFT — nakład jest mały, kto pierwszy ten lepszy.'],
-    ['🧬', 'Krzyżowanie kart: dwie różne karty NFT → jedna hybryda, lepsza od obu rodziców.'],
+    ['🧬', 'Krzyżowanie kart: dwie różne karty NFT → jedna hybryda o 15% wyższym zysku/dobę i krótszym wzroście niż lepszy z rodziców.'],
     ['🏅', 'Osiągnięcia: 5 torów z pasywnymi bonusami (lepsze ceny, szybszy wzrost, większe zbiory).'],
     ['✨', 'Odświeżony wygląd Ogródka i nowe „Laboratorium krzyżowania".'],
   ],
@@ -27305,6 +27305,7 @@ function farmBreedingSection() {
     el('span', { className: 'bf-caption' }, 'dwie różne karty NFT → jedna nowa, numerowana hybryda')));
   const ul = el('ul', { className: 'breed-facts' });
   [['🔥', 'Obie karty-rodzice znikają NA ZAWSZE.'],
+   ['⚡', 'Hybryda zarabia o 15% więcej na dobę i rośnie o 5% krócej niż lepszy z rodziców — liczone od ich AKTUALNYCH poziomów i cen skupu ich plonów.'],
    ['✨', 'Wybrane pary dają kultowy przepis (np. 🌹+🌻 → „Słoneczna Róża"), reszta „Dzikiego Mieszańca 🌈".'],
    ['🪙', 'Koszt rośnie z poziomem rodziców; odznaka „Mistrz Hybryd" go obniża.']
   ].forEach(([ic, tx]) => ul.append(el('li', {}, el('span', { className: 'bfx' }, ic), tx)));
@@ -27335,7 +27336,9 @@ function farmBreedingSection() {
 // A dedicated window: parent A on the left, parent B on the right, and the
 // resulting hybrid in the middle — with full stats for all three, so the player
 // can compare BEFORE burning two cards. Mirrors farm_hybrid_stats() in
-// supabase/farm-nft-breeding.sql: yield = ceil(max×1.15), grow = max(24h, min×0.95).
+// supabase/farm-hybrid-income-parity.sql: grow = max(24h, min(parentGrow)×0.95),
+// and yield is derived so the hybrid EARNS 15% more per day than the better
+// parent — units alone aren't enough, because hybrids harvest a cheaper crop.
 const BREED_YIELD_SYNERGY = 1.15;
 const BREED_GROW_SYNERGY  = 0.95;
 
@@ -27345,11 +27348,15 @@ function farmNftStats(n) {
   const lvl = n.level || 1;
   const baseY = n.stat_yield != null ? n.stat_yield : (def.base_yield || 0);
   const baseG = n.stat_grow_minutes != null ? n.stat_grow_minutes : (def.base_grow_minutes || 0);
-  const yield_ = Math.round(baseY * (1 + (lvl - 1) * 0.5));
+  // yieldExact/grow stay UNROUNDED — farm_hybrid_stats() derives the synergy from
+  // these, and rounding here would drift this preview from the minted card.
+  const yieldExact = baseY * (1 + (lvl - 1) * 0.5);
+  const yield_ = Math.round(yieldExact);
   const grow = Math.max(1440, baseG * Math.pow(0.92, lvl - 1));
   const price = fmMarket.get(def.crop_type)?.base_price;
-  const perDay = price != null ? Math.round(yield_ * price / Math.max(1, grow / 1440)) : null;
-  return { def, lvl, baseY, baseG, yield: yield_, grow, price, perDay,
+  const perDayExact = price != null ? yieldExact * price / (grow / 1440) : null;
+  const perDay = perDayExact != null ? Math.round(perDayExact) : null;
+  return { def, lvl, baseY, baseG, yield: yield_, yieldExact, grow, price, perDay, perDayExact,
            value: n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null };
 }
 
@@ -27358,20 +27365,28 @@ function farmBreedPreview(a, b) {
   if (!a || !b) return null;
   const sa = farmNftStats(a), sb2 = farmNftStats(b);
   const res = farmBreedResult(a.species, b.species);
-  // Derived from the parents' EFFECTIVE (level-scaled) stats, so the hybrid is
-  // always better than both — mirrors farm_hybrid_stats() in the SQL.
-  const baseY = Math.ceil(Math.max(sa.yield, sb2.yield) * BREED_YIELD_SYNERGY);
   const baseG = Math.max(1440, Math.floor(Math.min(sa.grow, sb2.grow) * BREED_GROW_SYNERGY));
-  // Price comes from the RESULTING hybrid's own crop row (they all share
-  // 'seasonal_bloom' today, but reading the def keeps this correct if that changes).
-  const cropType = fmDefs.get(res?.species)?.crop_type || 'seasonal_bloom';
-  const price = fmMarket.get(cropType)?.base_price;
-  const perDay = price != null ? Math.round(baseY * price / Math.max(1, baseG / 1440)) : null;
+  // Price comes from the RESULTING hybrid's own crop row — every hybrid harvests
+  // 'seasonal_bloom' today, which is worth far less than the premium parents'
+  // dedicated crops, so it MUST be part of the synergy math.
+  const hybridDef = fmDefs.get(res?.species) || {};
+  const price = fmMarket.get(hybridDef.crop_type || 'seasonal_bloom')?.base_price;
+  // Synergy is measured in COINS/DAY, not units: yield is whatever it takes to
+  // out-earn the better parent by 15% at the hybrid's own crop price. Floors keep
+  // the old unit promise and the catalogue card as lower bounds.
+  // Mirrors farm_hybrid_stats() in supabase/farm-hybrid-income-parity.sql.
+  const bestParentPerDay = Math.max(sa.perDayExact || 0, sb2.perDayExact || 0);
+  const bestParentYield = Math.max(sa.yieldExact, sb2.yieldExact);
+  const baseY = Math.max(
+    price ? Math.ceil(bestParentPerDay * BREED_YIELD_SYNERGY * (baseG / 1440) / price - 1e-9) : 0,
+    Math.ceil(bestParentYield * BREED_YIELD_SYNERGY - 1e-9),
+    hybridDef.base_yield || 0);
+  const perDay = price != null ? Math.round(baseY * price / (baseG / 1440)) : null;
   const ed = res?.edition || 0;
   return { res, yield: baseY, grow: baseG, price, perDay,
            value: ed ? Math.round(20000 / ed) : null,
-           bestParentYield: Math.max(sa.yield, sb2.yield),
-           bestParentPerDay: Math.max(sa.perDay || 0, sb2.perDay || 0),
+           bestParentYield: Math.round(bestParentYield),
+           bestParentPerDay: Math.round(bestParentPerDay),
            cost: Math.round(400 * ((a.level || 1) + (b.level || 1)) *
                  (1 - Math.min(0.30, 0.05 * (fmAchMine?.hybrids_bred || 0)))) };
 }
@@ -27465,7 +27480,7 @@ function openFarmBreedModal() {
         breedStatRow('Zysk/doba', prev.perDay != null ? ('≈ ' + prev.perDay + ' 🪙') : '—',
                      { good: (prev.perDay || 0) > prev.bestParentPerDay }),
         breedStatRow('Wartość', prev.value != null ? (prev.value + ' 🪙') : '—'),
-        el('div', { className: 'bl-synergy' }, '⚡ Synergia: +15% plonu i −5% czasu wzrostu wobec lepszego rodzica'));
+        el('div', { className: 'bl-synergy' }, '⚡ Synergia: +15% zysku/dobę i −5% czasu wzrostu wobec lepszego rodzica'));
     }
     grid.append(mid);
     grid.append(breedSlot('Rodzic B', B, () => choose('B')));
