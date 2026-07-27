@@ -241,20 +241,21 @@ CREATE INDEX IF NOT EXISTS farm_land_tax_events_user_time_idx
 -- so the fixed NFT weights (2/1/1/1 below) are ~half the pool vs the original
 -- values. See that file for the resulting static per-box NFT chances.
 INSERT INTO public.farm_card_defs (species, name, emoji, rarity, draw_weight, base_grow_minutes, base_yield, crop_type) VALUES
-  -- draw_weight: kept in sync with the absolute SETs in farm-static-nft-odds.sql
-  -- (×2.2 the original seed). Scaling the FUNGIBLE side is how NFT rarity is
-  -- tuned — NFT/weekly-edition weights stay 1-2 because the series seed re-applies
-  -- them on every run. Changing these without changing that file (or vice versa)
-  -- means whichever ran last silently wins.
-  ('carrot',     'Marchewka',  '🥕', 'common', 132, 1440,  4,  'carrot'),
-  ('potato',     'Ziemniak',   '🥔', 'common', 123, 1440,  5,  'potato'),
-  ('tomato',     'Pomidor',    '🍅', 'common', 106, 1440,  6,  'tomato'),
-  ('corn',       'Kukurydza',  '🌽', 'rare',    57, 2880, 12,  'corn'),
-  ('chili',      'Papryczka',  '🌶️', 'rare',    53, 2880, 11,  'chili'),
-  ('strawberry', 'Truskawka',  '🍓', 'rare',    40, 2880, 15,  'strawberry'),
-  ('pumpkin',    'Dynia',      '🎃', 'epic',    22, 4320, 30,  'pumpkin'),
-  ('grapes',     'Winogrona',  '🍇', 'epic',    18, 4320, 35,  'grapes'),
-  ('pineapple',  'Ananas',     '🍍', 'epic',    13, 5760, 45,  'pineapple')
+  -- draw_weight: kept in sync with the absolute SETs in farm-static-nft-odds.sql,
+  -- which solves them so a standard box = 1.0% ANY NFT. Scaling the FUNGIBLE side
+  -- is how NFT rarity is tuned — NFT and weekly-edition weights stay small ints
+  -- because farm-weekly-nft-series.sql re-applies them on every run. Changing
+  -- these without changing that file (or vice versa) means whichever ran last
+  -- silently wins. Only the RATIO matters, so the absolute size is free.
+  ('carrot',     'Marchewka',  '🥕', 'common', 520, 1440,  4,  'carrot'),
+  ('potato',     'Ziemniak',   '🥔', 'common', 485, 1440,  5,  'potato'),
+  ('tomato',     'Pomidor',    '🍅', 'common', 415, 1440,  6,  'tomato'),
+  ('corn',       'Kukurydza',  '🌽', 'rare',   225, 2880, 12,  'corn'),
+  ('chili',      'Papryczka',  '🌶️', 'rare',   205, 2880, 11,  'chili'),
+  ('strawberry', 'Truskawka',  '🍓', 'rare',   155, 2880, 15,  'strawberry'),
+  ('pumpkin',    'Dynia',      '🎃', 'epic',    85, 4320, 30,  'pumpkin'),
+  ('grapes',     'Winogrona',  '🍇', 'epic',    70, 4320, 35,  'grapes'),
+  ('pineapple',  'Ananas',     '🍍', 'epic',    50, 5760, 45,  'pineapple')
 ON CONFLICT (species) DO UPDATE SET
   name = EXCLUDED.name, emoji = EXCLUDED.emoji, rarity = EXCLUDED.rarity,
   draw_weight = EXCLUDED.draw_weight, base_grow_minutes = EXCLUDED.base_grow_minutes,

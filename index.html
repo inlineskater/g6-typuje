@@ -25280,6 +25280,16 @@ function farmNftDroughtBanner() {
   return b;
 }
 
+// „≈ 1 na N skrzynek" — the intuitive reading of a sub-percent chance. Derived
+// from the same live figure as the percentage, so the two can never disagree.
+// Returns null when nothing can drop (drought) or the odds are not small enough
+// for the framing to add anything.
+function farmBoxesPerNftLabel(draws, rareFloor) {
+  const pct = farmAnyNftChancePct(draws, rareFloor);
+  if (!Number.isFinite(pct) || pct <= 0 || pct > 25) return null;
+  return 'średnio 1 na ' + Math.round(100 / pct) + ' skrzynek';
+}
+
 // The 💎 line on a box card. During a drought „0.00%" is technically true but
 // far too quiet for a headline feature — say it plainly instead.
 function farmBoxNftFeatText(draws, rareFloor, suffix) {
@@ -28600,7 +28610,7 @@ function renderFarmHelpInto(bodyEl) {
     farmHelpSection('📦 2. Skrzynka z nasionami',
       P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w ', b('🎒 Moim Majątku'), ' (z animowanym odkrywaniem kart).'),
       P('Karty mają rzadkość: ', b('zwykłe'), ' są częste i szybkie, ', b('epickie'), ' są rzadkie, ale dają dużo więcej plonu. Szanse teraz: ', b(oddsTxt), '.'),
-      P('💎 ', b('Karty NFT: '), 'stała szansa dla wszystkich — ', b('nie maleje'), ', gdy masz już jakieś NFT. Na jedną skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na dowolne NFT'), ' (zwykła) i ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true))), ' (⭐ Złota). Edycje są limitowane — gdy się wyprzedadzą, znikają z puli.'),
+      P('💎 ', b('Karty NFT: '), 'to ', b('najrzadsze'), ' karty w grze. Szansa jest ', b('stała dla wszystkich'), ' i ', b('nie maleje'), ', gdy masz już jakieś NFT. Na jedną skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na dowolne NFT'), ' (zwykła, czyli ', farmBoxesPerNftLabel(FARM_BOX_DRAWS, false) || '—', ') i ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true))), ' (⭐ Złota). Edycje są limitowane — gdy się wyprzedadzą, znikają z puli.'),
       P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.'),
       P('⭐ ', b('Złota Skrzynia'), ' ', b('nie jest już w sprzedaży'), '. Dawała ', b(FARM_GOLDBOX_DRAWS + ' kart'), ' z ', b('gwarancją min. 1 rzadkiej'), '. Jeśli masz jeszcze nieotwarte sztuki, otworzysz je w ', b('🎒 Moim Majątku'), ' — kupić nowych już nie można.')),
 
@@ -28747,13 +28757,15 @@ function farmBoxOddsTable() {
   });
   const anyStd = farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false));
   const anyGold = farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true));
+  const perBoxStd = farmBoxesPerNftLabel(FARM_BOX_DRAWS, false);
   return el('div', { className: 'farm-box-odds-table' },
     el('div', { className: 'farm-box-odds-title' }, '🎲 Co możesz wylosować'),
     farmNftDroughtBanner(),
     el('div', { className: 'farm-box-odds-summary' },
       el('span', {}, '💎 Dowolne NFT na skrzynkę: '),
       el('b', {}, '📦 ' + anyStd), el('span', {}, ' · '),
-      el('b', { className: 'farm-odds-gold' }, '⭐ ' + anyGold)),
+      el('b', { className: 'farm-odds-gold' }, '⭐ ' + anyGold),
+      perBoxStd ? el('span', { className: 'farm-cat-legend' }, ' (📦 ' + perBoxStd + ')') : ''),
     el('div', { className: 'farm-cat-table-wrap' },
       el('table', { className: 'farm-cat-table' },
         el('thead', {}, el('tr', {},

@@ -24,24 +24,30 @@
 --      the series seed gives them. Originally ×2 (halving the NFT share); raised
 --      to ×2.2 on 2026-07-27 to make NFTs a further ≥2× rarer (see below).
 --
---      2026-07-27 — „at least 2× rarer" pass. ×2 alone lands at 1.94×/1.88×,
---      short of the target: over 3 distinct draws WITHOUT replacement, halving
---      the per-draw share does not halve the per-box chance, and the gold box's
---      rare+ floor concentrates the legendary pool further. ×2.2 clears 2× in
---      every edition configuration — worst case 2.06× (3 live editions at
---      weight 2, gold box); best 2.19×. Verified by running index.html's own
---      farmBoxChancePct against the live pool.
+--      2026-07-27 — TARGET: 1.0% ANY NFT per standard box. The weights above
+--      are solved (bisection against index.html's own farmBoxChancePct) so the
+--      standard box lands on exactly 1.0% with the window the series rotation
+--      normally holds: THREE live weekly editions (farm-nft-series-window.sql).
 --
---      Per-box chances with THREE live weekly editions at weight 2 (the state
---      the rolling series window normally holds — see farm-nft-series-window):
---        STANDARD box (3 draws):          ANY NFT 8.21% → 3.84%   (2.14× rarer)
---          per edition                    2.78% → 1.30%
---        GOLD box (5 draws, rare+ floor): ANY NFT 19.32% → 9.40%  (2.06× rarer)
+--        STANDARD box (3 draws):          ANY NFT 8.21% → 1.00%
+--          per edition                    2.78% → 0.34%
+--        GOLD box (5 draws, rare+ floor): ANY NFT 19.32% → 2.52%
 --
---      These move as editions sell out and the window rotates — the numbers are
---      NOT hardcoded anywhere. index.html computes them live from the same
---      weights via farmAnyNftChancePct/farmCardBoxChancePct, so the shop, the
---      odds table and the catalog follow this file automatically.
+--      ⚠️ 1.0% IS A PROPERTY OF A FULL 3-EDITION WINDOW, not a constant. The
+--      chance is proportional to how much NFT weight is live, so it degrades to
+--      ~0.67% with two editions and ~0.34% with one, and 0% when all are sold
+--      out. That is why farm-weekly-nft-series.sql now seeds EVERY edition at
+--      draw_weight 2 (it used to give the small 5-6 card editions weight 1,
+--      which alone made the headline swing 0.67-1.0% week to week depending on
+--      which editions happened to be in the window). Per-edition scarcity is
+--      expressed by edition_size, which is the honest lever — weighting a small
+--      edition down as well penalised it twice.
+--
+--      Nothing here is hardcoded in the client: index.html computes every shown
+--      figure live from these weights via farmAnyNftChancePct /
+--      farmCardBoxChancePct, so the shop, the odds table, the catalog and the
+--      help copy follow this file automatically and stay truthful as editions
+--      sell out. Do not paste these percentages into UI strings.
 --
 --   3. Lootbox opening LOG. A new public-SELECT `farm_lootbox_opens` table
 --      records one row per box opened (who, which box type, what dropped),
@@ -53,23 +59,25 @@
 -- catalog/help odds copy, and the seed weights in farm.sql (updated alongside).
 
 -- ── 0. Rebalanced draw weights (idempotent absolute values) ─────────────────
--- Non-NFT weights are ×2.2 the original farm.sql seed (2026-07-27; was ×2).
--- Absolute SETs (not `weight*2.2`) so a re-run is idempotent.
+-- Non-NFT weights are ~×8.64 the original farm.sql seed, chosen so a standard
+-- box lands on a headline ANY-NFT chance of exactly 1.0% (2026-07-27; the seed
+-- was ×1, then ×2, then ×2.2 earlier the same day).
+-- Absolute SETs (not `weight*N`) so a re-run is idempotent.
 --
 -- ⚠️ SCALE THE FUNGIBLE WEIGHTS, NEVER THE NFT ONES. Weekly edition weights are
 -- re-seeded (1 or 2) by farm-weekly-nft-series.sql's ON CONFLICT DO UPDATE every
 -- time that file runs, so an UPDATE against an NFT row silently reverts on the
 -- next re-run — and future editions would keep arriving at the old odds. Moving
 -- the fungible side is the only lever that sticks and that new editions inherit.
-UPDATE public.farm_card_defs SET draw_weight = 132 WHERE species = 'carrot';
-UPDATE public.farm_card_defs SET draw_weight = 123 WHERE species = 'potato';
-UPDATE public.farm_card_defs SET draw_weight = 106 WHERE species = 'tomato';
-UPDATE public.farm_card_defs SET draw_weight =  57 WHERE species = 'corn';
-UPDATE public.farm_card_defs SET draw_weight =  53 WHERE species = 'chili';
-UPDATE public.farm_card_defs SET draw_weight =  40 WHERE species = 'strawberry';
-UPDATE public.farm_card_defs SET draw_weight =  22 WHERE species = 'pumpkin';
-UPDATE public.farm_card_defs SET draw_weight =  18 WHERE species = 'grapes';
-UPDATE public.farm_card_defs SET draw_weight =  13 WHERE species = 'pineapple';
+UPDATE public.farm_card_defs SET draw_weight = 520 WHERE species = 'carrot';
+UPDATE public.farm_card_defs SET draw_weight = 485 WHERE species = 'potato';
+UPDATE public.farm_card_defs SET draw_weight = 415 WHERE species = 'tomato';
+UPDATE public.farm_card_defs SET draw_weight = 225 WHERE species = 'corn';
+UPDATE public.farm_card_defs SET draw_weight = 205 WHERE species = 'chili';
+UPDATE public.farm_card_defs SET draw_weight = 155 WHERE species = 'strawberry';
+UPDATE public.farm_card_defs SET draw_weight =  85 WHERE species = 'pumpkin';
+UPDATE public.farm_card_defs SET draw_weight =  70 WHERE species = 'grapes';
+UPDATE public.farm_card_defs SET draw_weight =  50 WHERE species = 'pineapple';
 
 -- Freeze the ×2 era's odds onto the opens that happened under them. The „fart"
 -- (luck) factor is observed ÷ expected, and the client falls back to the CURRENT

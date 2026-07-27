@@ -74,21 +74,31 @@ ON CONFLICT (crop_type) DO UPDATE SET
 -- edition_size is intentionally VARIED per week. is_active is computed at seed
 -- time; the cron below activates the rest once their Monday arrives.
 -- Columns: species, name, emoji, rarity, draw_weight, grow_min, yield, edition, series_week
+--
+-- ⚠️ draw_weight is 2 for EVERY edition and should stay that way. The headline
+-- „1.0% NFT per standard box" that farm-static-nft-odds.sql solves for is a
+-- property of the total NFT weight live in the rotation window, so a mixed bag
+-- of 1s and 2s (the old seeding, which gave the small 5-6 card editions weight 1)
+-- made the advertised chance swing 0.67-1.0% depending on which editions
+-- happened to be in the window that week. Per-edition scarcity belongs in
+-- edition_size, which already makes small editions run out sooner; weighting
+-- them down as well penalised them twice. Tune overall NFT rarity by scaling the
+-- FUNGIBLE weights in farm-static-nft-odds.sql, never by editing these.
 INSERT INTO public.farm_card_defs
   (species, name, emoji, rarity, draw_weight, base_grow_minutes, base_yield, crop_type, edition_size, series_week, is_active)
 VALUES
   ('lavender_provence', 'Lawenda Prowansalska',   '🪻', 'legendary', 2, 4320,  70, 'seasonal_bloom',  8, DATE '2026-07-27', DATE '2026-07-27' <= public.farm_current_series_monday()),
   ('golden_harvest',    'Złociste Żniwa',         '🌾', 'legendary', 2, 4320,  75, 'seasonal_bloom', 10, DATE '2026-08-03', DATE '2026-08-03' <= public.farm_current_series_monday()),
   ('garden_hollyhock',  'Malwa Ogrodowa',         '🌺', 'legendary', 2, 4320,  70, 'seasonal_bloom',  8, DATE '2026-08-10', DATE '2026-08-10' <= public.farm_current_series_monday()),
-  ('imperial_dahlia',   'Dalia Cesarska',         '🌼', 'legendary', 1, 4320,  85, 'seasonal_bloom',  6, DATE '2026-08-17', DATE '2026-08-17' <= public.farm_current_series_monday()),
+  ('imperial_dahlia',   'Dalia Cesarska',         '🌼', 'legendary', 2, 4320,  85, 'seasonal_bloom',  6, DATE '2026-08-17', DATE '2026-08-17' <= public.farm_current_series_monday()),
   ('golden_marigold',   'Aksamitka Złota',        '🏵️', 'legendary', 2, 4320,  70, 'seasonal_bloom',  8, DATE '2026-08-24', DATE '2026-08-24' <= public.farm_current_series_monday()),
   ('vine_grape',        'Grono Winne',            '🍇', 'legendary', 2, 4320,  80, 'seasonal_bloom',  8, DATE '2026-08-31', DATE '2026-08-31' <= public.farm_current_series_monday()),
-  ('noble_boletus',     'Borowik Szlachetny',     '🍄', 'legendary', 1, 4320,  90, 'seasonal_bloom',  6, DATE '2026-09-07', DATE '2026-09-07' <= public.farm_current_series_monday()),
+  ('noble_boletus',     'Borowik Szlachetny',     '🍄', 'legendary', 2, 4320,  90, 'seasonal_bloom',  6, DATE '2026-09-07', DATE '2026-09-07' <= public.farm_current_series_monday()),
   ('autumn_heather',    'Wrzos Jesienny',         '🌿', 'legendary', 2, 4320,  70, 'seasonal_bloom',  8, DATE '2026-09-14', DATE '2026-09-14' <= public.farm_current_series_monday()),
   ('sweet_chestnut',    'Kasztan Jadalny',        '🌰', 'legendary', 2, 4320,  80, 'seasonal_bloom',  8, DATE '2026-09-21', DATE '2026-09-21' <= public.farm_current_series_monday()),
-  ('giant_pumpkin',     'Dynia Olbrzymia',        '🎃', 'legendary', 1, 5760, 100, 'seasonal_bloom',  5, DATE '2026-09-28', DATE '2026-09-28' <= public.farm_current_series_monday()),
+  ('giant_pumpkin',     'Dynia Olbrzymia',        '🎃', 'legendary', 2, 5760, 100, 'seasonal_bloom',  5, DATE '2026-09-28', DATE '2026-09-28' <= public.farm_current_series_monday()),
   ('fiery_maple',       'Klon Ognisty',           '🍁', 'legendary', 2, 4320,  75, 'seasonal_bloom',  8, DATE '2026-10-05', DATE '2026-10-05' <= public.farm_current_series_monday()),
-  ('royal_chrysanth',   'Chryzantema Królewska',  '💮', 'legendary', 1, 4320,  90, 'seasonal_bloom',  6, DATE '2026-10-12', DATE '2026-10-12' <= public.farm_current_series_monday())
+  ('royal_chrysanth',   'Chryzantema Królewska',  '💮', 'legendary', 2, 4320,  90, 'seasonal_bloom',  6, DATE '2026-10-12', DATE '2026-10-12' <= public.farm_current_series_monday())
 ON CONFLICT (species) DO UPDATE SET
   name = EXCLUDED.name, emoji = EXCLUDED.emoji, rarity = EXCLUDED.rarity,
   draw_weight = EXCLUDED.draw_weight, base_grow_minutes = EXCLUDED.base_grow_minutes,
