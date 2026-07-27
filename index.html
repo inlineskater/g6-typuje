@@ -23353,9 +23353,11 @@ const FARM_BOX_PRICE = 100;
 const FARM_BOX_DRAWS = 3;   // distinct cards per lootbox — mirror open_farm_lootbox v_draws
 const FARM_BOX_BULK_BUY_MAX = 50;   // mirror buy_farm_lootbox p_qty cap (farm.sql)
 const FARM_BOX_BULK_OPEN_MAX = 20;  // mirror open_farm_lootboxes v_max (farm-bulk-lootbox.sql)
-const FARM_GOLDBOX_PRICE = 500;
+// ⭐ „Złota Skrzynia" is WITHDRAWN FROM SALE (2026-07-27, supabase/farm-goldbox-no-sale.sql):
+// buy_farm_goldbox is revoked/disabled server-side and there is no buy UI left, so
+// there is no FARM_GOLDBOX_PRICE any more — only opening an already-owned box works.
+// (Sealed gold boxes are still valued 500 in net worth; that lives in SQL.)
 const FARM_GOLDBOX_DRAWS = 5;       // mirror open_farm_goldbox v_draws (farm-goldbox.sql)
-const FARM_GOLDBOX_BULK_BUY_MAX = 50;   // mirror buy_farm_goldbox p_qty cap (farm-goldbox.sql)
 const FARM_GOLDBOX_BULK_OPEN_MAX = 20;  // mirror open_farm_goldboxes v_max (farm-goldbox.sql)
 const FARM_TILE_BASE_PRICE = 350;
 const FARM_TILE_PRICE_CAP = 50000;
@@ -28329,7 +28331,9 @@ function buildFarmBoxesBody(bodyEl) {
     )
   );
 
-  bodyEl.append(el('div', { className: 'lootbox-row', style: { padding: '10px 4px' } }, buyCard, farmGoldBoxCardEl()));
+  // Only the standard box is for sale — the ⭐ Złota Skrzynia was withdrawn
+  // (2026-07-27); owners still open theirs from the row above.
+  bodyEl.append(el('div', { className: 'lootbox-row', style: { padding: '10px 4px' } }, buyCard));
 
   const oddsWrap = el('div', { className: 'lootbox-odds-wrap hidden', style: { margin: '8px 4px 0' } }, farmBoxOddsTable());
   const oddsBtn = el('button', { className: 'lootbox-odds-toggle', style: { width: 'calc(100% - 8px)', margin: '8px 4px 0' } },
@@ -28541,7 +28545,7 @@ function renderFarmHelpInto(bodyEl) {
       P('Karty mają rzadkość: ', b('zwykłe'), ' są częste i szybkie, ', b('epickie'), ' są rzadkie, ale dają dużo więcej plonu. Szanse teraz: ', b(oddsTxt), '.'),
       P('💎 ', b('Karty NFT: '), 'stała szansa dla wszystkich — ', b('nie maleje'), ', gdy masz już jakieś NFT. Na jedną skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na dowolne NFT'), ' (zwykła) i ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true))), ' (⭐ Złota). Edycje są limitowane — gdy się wyprzedadzą, znikają z puli.'),
       P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.'),
-      P('⭐ ', b('Złota Skrzynia'), ' (', b(FARM_GOLDBOX_PRICE + ' 🪙'), ') daje ', b(FARM_GOLDBOX_DRAWS + ' kart'), ' z ', b('gwarancją min. 1 rzadkiej'), ' i większą szansą na ', b('💎 NFT'), ' oraz ', b('🎁 działkę'), '.')),
+      P('⭐ ', b('Złota Skrzynia'), ' ', b('nie jest już w sprzedaży'), '. Dawała ', b(FARM_GOLDBOX_DRAWS + ' kart'), ' z ', b('gwarancją min. 1 rzadkiej'), '. Jeśli masz jeszcze nieotwarte sztuki, otworzysz je w ', b('🎒 Moim Majątku'), ' — kupić nowych już nie można.')),
 
     farmHelpSection('🃏 3. Karty i łączenie (poziomy)',
       P('Karta to ', b('przepis na roślinę'), ' — sadzisz ją ile chcesz, ', b('nie znika'), ' po posadzeniu. Powtórki tej samej karty (np. drugą Marchewkę) nazywamy ', b('duplikatami'), '.'),
@@ -28581,7 +28585,7 @@ function renderFarmHelpInto(bodyEl) {
       P(b('Jak działa kolekcja:')),
       el('ul', { className: 'farm-help-list' },
         step(b('Numer seryjny: '), 'każdy egzemplarz ma własny numer, np. „#3 / 25" — trzecia wybita sztuka z całej edycji 25.'),
-        step(b('Skąd: '), 'zdobywasz je ze zwykłej skrzynki za ' + FARM_BOX_PRICE + ' 🪙 (te same 3 losowania) albo z ⭐ Złotej Skrzyni — wypadają rzadko, nie ma osobnego zakupu.'),
+        step(b('Skąd: '), 'zdobywasz je ze zwykłej skrzynki za ' + FARM_BOX_PRICE + ' 🪙 (te same 3 losowania) — wypadają rzadko, nie ma osobnego zakupu. ⭐ Złota Skrzynia jest ', b('wycofana ze sprzedaży'), ' (liczy się tylko, jeśli masz jeszcze nieotwartą).'),
         step(b('Stała szansa dla wszystkich: '), 'szansa na NFT jest ', b('taka sama dla każdego'), ' i ', b('nie zmienia się'), ' od tego, ile NFT już masz. Na skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na jakiekolwiek NFT'), ' (zwykła), ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true)) + '') + ' (⭐ Złota). Dokładne szanse per karta są w 📖 Katalogu.'),
         step(b('Wyprzedaż edycji: '), 'gdy edycja się wyczerpie, karta znika z puli losowań i w Katalogu ma status „wyprzedane".'),
         step(b('Sadzenie: '), 'sadzisz je jak każdą kartę i mają najmocniejsze staty (największy plon i cena NPC). Uwaga: ', b('poziom siedzi na konkretnym egzemplarzu'), ' — sadzisz wybrany numer, a rośnie zgodnie z jego poziomem.'),
@@ -28720,22 +28724,6 @@ function farmBoxBuyControls() {
   return el('div', { className: 'farm-qty-row' }, stepper.node, buyBtn);
 }
 
-// Buy controls for the ⭐ premium „Złota Skrzynia" — clone of farmBoxBuyControls
-// using FARM_GOLDBOX_PRICE/FARM_GOLDBOX_BULK_BUY_MAX and buy_farm_goldbox.
-function farmGoldBoxBuyControls() {
-  const maxBuy = Math.max(1, Math.min(FARM_GOLDBOX_BULK_BUY_MAX, Math.floor((me?.coins || 0) / FARM_GOLDBOX_PRICE)));
-  const label = el('span', {}, '🛒 Kup 1 skrzynkę');
-  const price = el('span', { className: 'lootbox-buy-price' }, FARM_GOLDBOX_PRICE + ' 🪙');
-  const buyBtn = el('button', { className: 'lootbox-buy' }, label, price);
-  buyBtn.disabled = !(me && (me.coins || 0) >= FARM_GOLDBOX_PRICE);
-  const stepper = farmQtyStepper({ max: maxBuy, onChange: q => {
-    label.textContent = '🛒 Kup ' + plBoxes(q);
-    price.textContent = (q * FARM_GOLDBOX_PRICE) + ' 🪙';
-  } });
-  buyBtn.addEventListener('click', () => buyFarmGoldbox(buyBtn, stepper.get()));
-  return el('div', { className: 'farm-qty-row' }, stepper.node, buyBtn);
-}
-
 function renderFarmLootboxStore() {
   const box = document.getElementById('farm-lootbox-content');
   if (!box) return;
@@ -28783,26 +28771,27 @@ function renderFarmLootboxStore() {
       owned,
       oddsBtn,
       oddsWrap));
-  box.append(el('div', { className: 'lootbox-row' }, card, farmGoldBoxCardEl()));
+  const row = el('div', { className: 'lootbox-row' }, card);
+  const gold = farmGoldBoxCardEl();
+  if (gold) row.append(gold);
+  box.append(row);
 }
 
-// ⭐ „Złota Skrzynia" premium lootbox card — sits next to the standard box
-// in the Sklep store (side by side in a .lootbox-row). Same catalog/art/
-// pack-opening animation, boosted odds.
+// ⭐ „Złota Skrzynia" — WITHDRAWN FROM SALE (2026-07-27). There is no buy path
+// left anywhere (the RPC is revoked server-side too), so this card is only a
+// courtesy reminder for players still holding sealed gold boxes: it returns
+// null for everyone else instead of advertising an unbuyable box.
 function farmGoldBoxCardEl() {
+  if ((fmGoldBoxes || 0) <= 0) return null;
+
   const feat = (icon, text) => el('li', { className: 'lootbox-feat' },
     el('span', { className: 'lootbox-feat-ic' }, icon), el('span', {}, text));
 
-  const owned = el('div', { className: 'lootbox-owned' + (fmGoldBoxes > 0 ? ' has' : '') });
-  if (fmGoldBoxes > 0) {
-    const openBtn = el('button', { className: 'lootbox-open-btn' }, '🎒 Otwórz w Majątku');
-    openBtn.addEventListener('click', () => openFarmHub('inventory'));
-    owned.append(
-      el('div', { className: 'lootbox-owned-txt' }, el('b', {}, '⭐ ×' + fmGoldBoxes), ' do otwarcia'),
-      openBtn);
-  } else {
-    owned.append(el('div', { className: 'lootbox-owned-txt muted' }, 'Po zakupie otworzysz skrzynię w 🎒 Moim Majątku (Ogródek).'));
-  }
+  const openBtn = el('button', { className: 'lootbox-open-btn' }, '🎒 Otwórz w Majątku');
+  openBtn.addEventListener('click', () => openFarmHub('inventory'));
+  const owned = el('div', { className: 'lootbox-owned has' },
+    el('div', { className: 'lootbox-owned-txt' }, el('b', {}, '⭐ ×' + fmGoldBoxes), ' do otwarcia'),
+    openBtn);
 
   return el('div', { className: 'lootbox-card is-gold' },
     el('div', { className: 'lootbox-hero' },
@@ -28812,14 +28801,13 @@ function farmGoldBoxCardEl() {
       el('div', { className: 'lootbox-head' },
         el('div', {},
           el('div', { className: 'lootbox-name' }, 'Złota Skrzynia'),
-          el('div', { className: 'lootbox-tag' }, 'Premium')),
-        el('div', { className: 'lootbox-pricetag' }, FARM_GOLDBOX_PRICE + ' 🪙')),
+          el('div', { className: 'lootbox-tag' }, 'Wycofana ze sprzedaży')),
+        el('div', { className: 'lootbox-pricetag' }, '—')),
       el('ul', { className: 'lootbox-feats' },
+        feat('🚫', 'nie jest już w sprzedaży'),
         feat('🃏', FARM_GOLDBOX_DRAWS + ' kart naraz'),
         feat('🔒', 'gwarantowana min. 1 rzadka karta'),
-        feat('💎', 'karta NFT: ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true)) + ' na skrzynię'),
-        feat('🎁', 'większa szansa na darmową działkę')),
-      farmGoldBoxBuyControls(),
+        feat('💎', 'karta NFT: ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true)) + ' na skrzynię')),
       owned));
 }
 
@@ -28871,20 +28859,9 @@ async function buyFarmLootbox(btn, qty) {
   if (farmModalEl) refreshFarmHub();
 }
 
-// Step 1 (gold): buy sealed ⭐ gold boxes (BURN 500 each). Clone of buyFarmLootbox.
-async function buyFarmGoldbox(btn, qty) {
-  qty = Math.min(FARM_GOLDBOX_BULK_BUY_MAX, Math.max(1, Math.floor(qty || 1)));
-  const cost = qty * FARM_GOLDBOX_PRICE;
-  if ((me?.coins || 0) < cost) { showToast('Za mało coinów — ' + plBoxes(qty) + ' kosztuje ' + cost + ' 🪙.'); return; }
-  if (btn) btn.disabled = true;
-  const { data, error } = await sb.rpc('buy_farm_goldbox', { p_qty: qty });
-  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
-  if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
-  if (typeof data.boxes_gold === 'number') fmGoldBoxes = data.boxes_gold;
-  showToast('⭐ Kupiono ' + plBoxes(qty) + '! Otwórz w 🎒 Moim Majątku.');
-  renderFarmLootboxStore();
-  if (farmModalEl) refreshFarmHub();
-}
+// NOTE: there is deliberately no buyFarmGoldbox() — the ⭐ Złota Skrzynia was
+// withdrawn from sale on 2026-07-27 and buy_farm_goldbox is revoked/disabled
+// server-side (supabase/farm-goldbox-no-sale.sql). Only opening survives.
 
 // Applies one box's cards[] payload to local state (collection counts, defs, NFTs).
 // Boxes are opened sequentially server-side, so applying packs in order leaves
@@ -28934,7 +28911,7 @@ async function openFarmLootbox(btn, qty) {
 // the gold RPCs/state; reuses the same pack-opening animation unchanged.
 async function openFarmGoldbox(btn, qty) {
   qty = Math.min(FARM_GOLDBOX_BULK_OPEN_MAX, Math.max(1, Math.floor(qty || 1)));
-  if ((fmGoldBoxes || 0) < qty) { showToast(qty > 1 ? ('Masz tylko ' + plBoxes(fmGoldBoxes || 0) + '.') : ('Nie masz Złotych Skrzyń — kup w Sklepie (' + FARM_GOLDBOX_PRICE + ' 🪙).')); return; }
+  if ((fmGoldBoxes || 0) < qty) { showToast(qty > 1 ? ('Masz tylko ' + plBoxes(fmGoldBoxes || 0) + '.') : 'Nie masz Złotych Skrzyń — są wycofane ze sprzedaży.'); return; }
   if (btn) btn.disabled = true;
   const { data, error } = qty > 1
     ? await sb.rpc('open_farm_goldboxes', { p_qty: qty })

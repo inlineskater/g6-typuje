@@ -41,6 +41,12 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── A2. RPC: buy_farm_goldbox ────────────────────────────────────────────────
+-- ⚠️ SUPERSEDED (2026-07-27): the gold box is WITHDRAWN FROM SALE. The LIVE
+-- buy_farm_goldbox is the disabled stub in supabase/farm-goldbox-no-sale.sql
+-- (always raises 'goldbox_not_for_sale', EXECUTE revoked from authenticated),
+-- and the frontend has no buy UI. RE-RUN farm-goldbox-no-sale.sql after
+-- re-running this file, or the box goes back on sale server-side. The body
+-- below is kept only so the sale CAN be restored deliberately.
 -- BURN 500 per box and add sealed (unopened) gold boxes to the buyer's
 -- inventory. Opened later via open_farm_goldbox (same two-step flow as the
 -- standard box: buy in the Sklep, open from 🎒 Mój Majątek). Reason
