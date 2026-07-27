@@ -99,6 +99,10 @@ ON CONFLICT (species) DO UPDATE SET
               OR (EXCLUDED.series_week <= public.farm_current_series_monday());
 
 -- ── Weekly activation (flip is_active on once series_week arrives) ──────────
+-- ⚠️ SUPERSEDED by supabase/farm-nft-series-window.sql, which activates each
+-- edition 2 weeks EARLY so the pool always holds three overlapping editions
+-- (one edition alone sells out in a day and leaves the boxes with no NFT to
+-- give). Re-run that file after re-running this one.
 CREATE OR REPLACE FUNCTION public.farm_activate_weekly_nft()
 RETURNS integer
 LANGUAGE plpgsql
@@ -255,6 +259,9 @@ REVOKE ALL ON FUNCTION public.farm_mint_random_event_nft(uuid) FROM PUBLIC, anon
 -- ════════════════════════════════════════════════════════════════════════════
 --  Public read: active + upcoming series for the UI preview
 -- ════════════════════════════════════════════════════════════════════════════
+-- ⚠️ SUPERSEDED by supabase/farm-nft-series-window.sql — `activated`/`droppable`
+-- there use farm_nft_series_horizon() so they match the widened activation
+-- window the draw functions actually see. Re-run that file after this one.
 CREATE OR REPLACE VIEW public.farm_nft_series_schedule WITH (security_invoker = true) AS
   SELECT
     d.species, d.name, d.emoji, d.rarity, d.edition_size, d.minted_count,

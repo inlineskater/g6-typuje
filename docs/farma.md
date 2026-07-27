@@ -1,6 +1,6 @@
 # Ogródek (Farma) i Skrzynki
 
-Opis logiki z `supabase/farm.sql` (+ `farm-price-history.sql`, `farm-marketplace.sql`, `nft-leveling-rework.sql`, `nft-merge-fixes.sql`) oraz UI w `index.html`. Zakładka w aplikacji nazywa się **🌱 Ogródek**; kod wewnętrznie używa nazwy `farm`.
+Opis logiki z `supabase/farm.sql` (+ `farm-price-history.sql`, `farm-marketplace.sql`, `nft-leveling-rework.sql`, `nft-merge-fixes.sql`, `farm-static-nft-odds.sql`, `farm-weekly-nft-series.sql`, `farm-nft-series-window.sql`) oraz UI w `index.html`. Zakładka w aplikacji nazywa się **🌱 Ogródek**; kod wewnętrznie używa nazwy `farm`.
 
 ## Pętla gry
 
@@ -40,16 +40,20 @@ Naliczanie: codziennie o **00:00 Europe/Warsaw** za poprzedni dzień (pierwsza p
 
 Jedna skrzynka: **100 🪙** (`buy_farm_lootbox`, BURN `farm_box_buy`), kupowana w Sklepie, otwierana w Moim Majątku (`open_farm_lootbox`). Otwarcie losuje **3 różne** aktywne karty (ważone `draw_weight`; NFT tylko dopóki edycja niewyprzedana — o podaży decyduje licznik `farm_card_defs.minted_count`, więc spalone w fuzjach egzemplarze nie wracają do puli).
 
-Nowy gracz dostaje jednorazowo **3 darmowe skrzynki** (`claim_farm_starter`); dopóki nie ma żadnej ziemi ani vouchera, w tych 3 otwarciach ma **gwarantowany voucher na darmową działkę**. Naturalna szansa vouchera to 7%, dzielona przez 3 za każde posiadane pole/voucher. Analogicznie każde posiadane NFT dzieli wagę kolejnych NFT przez 3 (anti-hoarding).
+Nowy gracz dostaje jednorazowo **3 darmowe skrzynki** (`claim_farm_starter`); dopóki nie ma żadnej ziemi ani vouchera, w tych 3 otwarciach ma **gwarantowany voucher na darmową działkę**. Naturalna szansa vouchera to 7%, dzielona przez 3 za każde posiadane pole/voucher.
 
-Bazowe wagi (suma 133, z czego NFT 5):
+**Szansa na NFT jest stała dla każdego** (`supabase/farm-static-nft-odds.sql`, 17.07.2026) — dawny anti-hoarding (waga dzielona przez `3^posiadane_NFT`) został usunięty; jedynym ograniczeniem podaży jest limit nakładu edycji. Przy okazji wagi wszystkich kart nie-NFT zostały podwojone, więc udział NFT jest o połowę mniejszy niż w pierwotnej tabeli.
+
+Bazowe wagi (suma 262, z czego NFT 6):
 
 | Rzadkość | Wagi | Szansa/losowanie |
 |---|---:|---:|
-| zwykła (🥕 30, 🥔 28, 🍅 24) | 82 | 61.7% |
-| rzadka (🌽 13, 🌶️ 12, 🍓 9) | 34 | 25.6% |
-| epicka (🎃 5, 🍇 4, 🍍 3) | 12 | 9.0% |
-| NFT (🌹 2, 🌻 1, 🪷 1, 🍌 1) | 5 | 3.8% |
+| zwykła (🥕 60, 🥔 56, 🍅 48) | 164 | 62.6% |
+| rzadka (🌽 26, 🌶️ 24, 🍓 18) | 68 | 26.0% |
+| epicka (🎃 10, 🍇 8, 🍍 6) | 24 | 9.2% |
+| NFT (żywe edycje tygodniowe, 1–2 każda) | 6 | 2.3% |
+
+Wiersz NFT jest **zmienny** — to suma wag edycji aktualnie w puli (patrz niżej), a nie stała. Na całą skrzynkę (3 losowania) daje to **≈ 6.9% na dowolne NFT**; aplikacja liczy tę wartość na żywo z `farm_card_defs` (`farmAnyNftChancePct`), więc nie trzeba jej tu aktualizować ręcznie.
 
 Czasy wzrostu/plony bazowe: zwykłe 1 dzień, rzadkie 2 dni, epickie 3–4 dni; dokładne statystyki i aktualne ceny pokazuje w aplikacji **📖 Katalog** (liczone na żywo z `farm_card_defs`/`farm_market`).
 
@@ -62,7 +66,7 @@ Druga, droższa skrzynka (`supabase/farm-goldbox.sql`), całkowicie niezależna 
 - Dawna cena: **500 🪙** za sztukę (BURN `farm_goldbox_buy`) — już niedostępna.
 - Otwarcie losuje **5 kart** (zamiast 3), z gwarancją, że przynajmniej jedno trafienie będzie **rzadkie lub lepsze** (rare/epic/legendary), jeśli taka karta jest w ogóle losowalna.
 - Szansa na voucher na działkę jest wyższa: baza **0.15** (zamiast 0.07), dzielona tak samo przez posiadane pola/vouchery.
-- Waga kolejnych NFT tego samego gatunku maleje szybciej — dzielona przez `2^liczba_posiadanych_NFT` (zamiast przez 3 jak w zwykłej skrzynce).
+- Szansa na NFT jest **stała**, tak samo jak w zwykłej skrzynce — dawne dzielenie wagi przez `2^liczba_posiadanych_NFT` zostało usunięte razem z anti-hoardingiem. Dzięki 5 losowaniom i gwarancji rzadkiej karty wychodzi **≈ 16.4% na dowolne NFT** na skrzynię (dzielnik terytorium przy voucherze został bez zmian).
 - Nie bierze udziału w starterowym gwarantowanym voucherze (`claim_farm_starter`) — to tylko dla zwykłych skrzynek.
 - W wycenie majątku (Net Worth) każda nieotworzona Złota Skrzynia liczy się jako **500 🪙**.
 
@@ -121,7 +125,19 @@ Nagrody są rozliczane w poniedziałek dokładnie o **00:00 Europe/Warsaw**. Har
 
 ## Karty NFT (legendarne, numerowane)
 
-Karty z `edition_size` to limitowane NFT: 🌹 Diamentowa Róża (25 szt.), 🌻 Złoty Słonecznik (15), 🪷 Kryształowy Lotos (10), 🍌 Królewski Banan Ae Ae (8 — najrzadszy i najmocniejszy). Wypadają z tej samej skrzynki; przy trafieniu serwer mintuje unikalny numer seryjny + zabawne imię-personę do `farm_nft_instances` (kolejny serial pochodzi z monotonicznego `minted_count`, nie z liczby żywych egzemplarzy).
+Karty z `edition_size` to limitowane NFT. Wypadają z tej samej skrzynki; przy trafieniu serwer mintuje unikalny numer seryjny + zabawne imię-personę do `farm_nft_instances` (kolejny serial pochodzi z monotonicznego `minted_count`, nie z liczby żywych egzemplarzy).
+
+Pierwsza czwórka — 🌹 Diamentowa Róża (25 szt.), 🌻 Złoty Słonecznik (15), 🪷 Kryształowy Lotos (10), 🍌 Królewski Banan Ae Ae (8) — jest **w całości wyprzedana** (stan 27.07.2026), więc ze skrzynek lecą już tylko kolekcje tygodniowe opisane niżej. Hybrydy z krzyżowania też mają `edition_size`, ale `draw_weight = 0`, więc nigdy nie wypadają ze skrzynki.
+
+### Kolekcje tygodniowe (okno 3 edycji)
+
+`supabase/farm-weekly-nft-series.sql` + `supabase/farm-nft-series-window.sql`. Co poniedziałek 00:00 Europe/Warsaw startuje nowa limitowana kolekcja (`series_week`, nakład 5–10 sztuk, wszystkie zbierają wspólny plon `seasonal_bloom`). Edycja leci, aż wyczerpie się nakład.
+
+Jedna edycja naraz **nie wytrzymywała własnego tygodnia**: biuro otwiera ~320 zwykłych + ~70 złotych skrzynek tygodniowo, co przy obecnych wagach daje **≈ 14 oczekiwanych trafień NFT** przy nakładzie 8 (Lawenda Prowansalska straciła 4 z 8 numerów w pierwszych 8 godzinach swojego poniedziałku). Po wyprzedaniu wszystkich żywych edycji filtr `minted_count < edition_size` wyrzuca je z puli i skrzynka **po cichu przestaje dawać NFT** — nie ma błędu, `pool_empty` leci dopiero, gdy pula jest pusta całkowicie (niemożliwe, dopóki żyje 9 nielimitowanych roślin), więc gracz dostaje same zwykłe karty za pełną cenę.
+
+Dlatego edycje aktywują się **2 tygodnie wcześniej** (`farm_nft_series_lead_weeks()`, mirror `FARM_NFT_SERIES_LEAD_WEEKS` w `index.html`): w puli krążą zawsze **3 kolekcje** (bieżąca + 2 kolejne), a co poniedziałek dochodzi jedna nowa. Podaż tygodniowa jest ta sama — to wygładzenie, nie inflacja. Funkcje losujące są **nietknięte**: filtrują już `is_active AND draw_weight > 0 AND minted_count < edition_size`, więc wystarczyło poszerzyć horyzont aktywacji (`farm_activate_weekly_nft()` + widok `farm_nft_series_schedule`, oba używają `farm_nft_series_horizon()`). `series_week` nadal oznacza ogłoszoną premierę, a `farm_mint_random_event_nft` (nagroda dla zwycięzcy Wyzwania) nadal preferuje kolekcję bieżącego tygodnia.
+
+Gdyby pula mimo to kiedyś zeszła do zera NFT, aplikacja mówi to wprost zamiast pokazywać ciche „0.00%": `farmNftPoolStatus()`/`farmNftDroughtBanner()`/`farmBoxNftFeatText()` wstawiają bursztynowy baner na obie karty skrzynek i w tabelę szans, a linijka 💎 zmienia się na „brak — wszystkie edycje wyprzedane" wraz z nazwą kolekcji wchodzącej w poniedziałek.
 
 **Poziom siedzi na egzemplarzu** (`farm_nft_instances.level`), nie na gatunku:
 
@@ -146,4 +162,5 @@ Klient nie zapisuje tabel farmy bezpośrednio — wszystkie mutacje to RPC `SECU
 - Pasma kotwicy (30–100%) w `roll_farm_prices()`; matematyka sprzedaży zduplikowana w `sell_crop_to_npc` + `farmSellQuote`.
 - Kontrakty tygodnia: rotacja i start w `farm_seasonal_species_for_week()`, target paska i premia w `ensure_farm_seasonal_event()`, nagrody w `award_farm_seasonal_week()`.
 - Cena skrzynki: `FARM_BOX_PRICE` w `index.html` **i** `v_cost` w `buy_farm_lootbox` — zmieniać razem.
+- Podaż NFT na tydzień: `edition_size` w rotacji (`farm-weekly-nft-series.sql`) **i** szerokość okna `farm_nft_series_lead_weeks()` / `FARM_NFT_SERIES_LEAD_WEEKS` — zmieniać razem, bo razem decydują, ile numerów jest w puli naraz. Rotację trzymaj zgodną z `NFT_SERIES_ROTATION` w `index.html`.
 - Na żywej bazie używaj `supabase/farm-anti-hoarding.sql` zamiast pełnego `farm.sql` (pełny plik resetuje ceny rynku).
