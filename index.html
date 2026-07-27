@@ -10300,7 +10300,7 @@ const WHATS_NEW = {
   title: 'Co nowego w Ogródku',
   items: [
     ['🗓️', 'Co poniedziałek NOWA limitowana kolekcja NFT — nakład jest mały, kto pierwszy ten lepszy.'],
-    ['🧬', 'Krzyżowanie kart: dwie różne karty NFT → jedna hybryda o 15% wyższym zysku/dobę i krótszym wzroście niż lepszy z rodziców.'],
+    ['🧬', 'Krzyżowanie kart: dwie różne karty NFT → jedna hybryda o 15% wyższym zysku/dobę i krótszym wzroście niż lepszy z rodziców, dziedzicząca jego poziom.'],
     ['🏅', 'Osiągnięcia: 5 torów z pasywnymi bonusami (lepsze ceny, szybszy wzrost, większe zbiory).'],
     ['✨', 'Odświeżony wygląd Ogródka i nowe „Laboratorium krzyżowania".'],
   ],
@@ -27306,6 +27306,7 @@ function farmBreedingSection() {
   const ul = el('ul', { className: 'breed-facts' });
   [['🔥', 'Obie karty-rodzice znikają NA ZAWSZE.'],
    ['⚡', 'Hybryda zarabia o 15% więcej na dobę i rośnie o 5% krócej niż lepszy z rodziców — liczone od ich AKTUALNYCH poziomów i cen skupu ich plonów.'],
+   ['🎚️', 'Hybryda dziedziczy poziom lepszego rodzica, więc awanse nie przepadają przy krzyżowaniu.'],
    ['✨', 'Wybrane pary dają kultowy przepis (np. 🌹+🌻 → „Słoneczna Róża"), reszta „Dzikiego Mieszańca 🌈".'],
    ['🪙', 'Koszt rośnie z poziomem rodziców; odznaka „Mistrz Hybryd" go obniża.']
   ].forEach(([ic, tx]) => ul.append(el('li', {}, el('span', { className: 'bfx' }, ic), tx)));
@@ -27377,16 +27378,27 @@ function farmBreedPreview(a, b) {
   // Mirrors farm_hybrid_stats() in supabase/farm-hybrid-income-parity.sql.
   const bestParentPerDay = Math.max(sa.perDayExact || 0, sb2.perDayExact || 0);
   const bestParentYield = Math.max(sa.yieldExact, sb2.yieldExact);
-  const baseY = Math.max(
+  const yieldEff = Math.max(
     price ? Math.ceil(bestParentPerDay * BREED_YIELD_SYNERGY * (baseG / 1440) / price - 1e-9) : 0,
     Math.ceil(bestParentYield * BREED_YIELD_SYNERGY - 1e-9),
     hybridDef.base_yield || 0);
-  const perDay = price != null ? Math.round(baseY * price / (baseG / 1440)) : null;
+  // The hybrid inherits the BETTER parent's level, so net worth (20000/edition ×
+  // level) doesn't collapse when a levelled parent is burned. Level is re-applied
+  // by harvest_crop/plant_crop, so back the STORED base stats out of the targets
+  // above — otherwise it would be counted twice.
+  const lvl = Math.max(a.level || 1, b.level || 1);
+  const ymult = 1 + (lvl - 1) * 0.5, gmult = Math.pow(0.92, lvl - 1);
+  const statYield = Math.ceil(yieldEff / ymult - 1e-9);
+  const statGrow = Math.floor(baseG / gmult + 1e-9);
+  const effY = Math.round(statYield * ymult);
+  const effG = Math.max(1440, Math.floor(statGrow * gmult));
+  const perDay = price != null ? Math.round(effY * price / (effG / 1440)) : null;
   const ed = res?.edition || 0;
-  return { res, yield: baseY, grow: baseG, price, perDay,
-           value: ed ? Math.round(20000 / ed) : null,
+  return { res, level: lvl, statYield, statGrow, yield: effY, grow: effG, price, perDay,
+           value: ed ? Math.round(20000 / ed * lvl) : null,
            bestParentYield: Math.round(bestParentYield),
            bestParentPerDay: Math.round(bestParentPerDay),
+           bestParentValue: Math.max(sa.value || 0, sb2.value || 0),
            cost: Math.round(400 * ((a.level || 1) + (b.level || 1)) *
                  (1 - Math.min(0.30, 0.05 * (fmAchMine?.hybrids_bred || 0)))) };
 }
@@ -27474,13 +27486,14 @@ function openFarmBreedModal() {
         el('div', { className: 'bl-art bl-art-holo' }, r.emoji || '🌈'),
         el('div', { className: 'bl-name' }, r.name),
         el('div', { className: 'bl-sub' }, r.curated ? '✨ Kultowy przepis' : 'Brak przepisu — Dziki Mieszaniec'),
-        breedStatRow('Poziom', '1'),
+        breedStatRow('Poziom', String(prev.level), { good: prev.level > 1 }),
         breedStatRow('Plon', prev.yield + ' szt.', { good: prev.yield > prev.bestParentYield }),
         breedStatRow('Wzrost', farmGrowLabel(prev.grow), { good: true }),
         breedStatRow('Zysk/doba', prev.perDay != null ? ('≈ ' + prev.perDay + ' 🪙') : '—',
                      { good: (prev.perDay || 0) > prev.bestParentPerDay }),
-        breedStatRow('Wartość', prev.value != null ? (prev.value + ' 🪙') : '—'),
-        el('div', { className: 'bl-synergy' }, '⚡ Synergia: +15% zysku/dobę i −5% czasu wzrostu wobec lepszego rodzica'));
+        breedStatRow('Wartość', prev.value != null ? (prev.value + ' 🪙') : '—',
+                     { good: (prev.value || 0) >= prev.bestParentValue }),
+        el('div', { className: 'bl-synergy' }, '⚡ Synergia: +15% zysku/dobę i −5% czasu wzrostu wobec lepszego rodzica; hybryda dziedziczy poziom lepszego rodzica'));
     }
     grid.append(mid);
     grid.append(breedSlot('Rodzic B', B, () => choose('B')));

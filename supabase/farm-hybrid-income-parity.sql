@@ -44,6 +44,27 @@
 --  No schema change: stat_yield / stat_grow_minutes already exist, and plant_crop /
 --  harvest_crop already COALESCE onto them.
 --
+--  LEVEL INHERITANCE
+--  -----------------
+--  Hybrids used to mint at level 1, so breeding also destroyed net worth: an NFT is
+--  valued round(20000 / edition_size × level), and burning a poz.2 parent for a poz.1
+--  child threw away half its worth. The hybrid now mints at max(parentLevels).
+--
+--  That means the STORED stats must be BACKED OUT of the effective targets, because
+--  level is applied a second time downstream:
+--      harvest_crop: round(stat_yield        × (1 + (lvl-1) × 0.5))
+--      plant_crop:   max(1440, stat_grow_minutes × 0.92^(lvl-1))
+--  so we store
+--      stat_yield        = ceil (yieldEff / (1 + (lvl-1) × 0.5))
+--      stat_grow_minutes = floor(growEff  / 0.92^(lvl-1))
+--  and the field values come back out as the intended targets. Rounding is directional
+--  (ceil on yield, floor on grow), so the +15% promise can only ever be met or beaten,
+--  never missed. At lvl 1 both reduce to the identity, so nothing changes for those.
+--
+--  Note this REDUCES but cannot eliminate the net-worth loss: parents of different
+--  edition sizes are worth different amounts, so max(level) can't reproduce their sum.
+--  Screenshot pair: 5000 + 2000 burned → 5000 minted (was 2500).
+--
 --  Existing hybrids are NOT retro-fitted (only 3 have ever been bred); this changes
 --  what future breeds mint.
 -- ════════════════════════════════════════════════════════════════════════════
@@ -61,7 +82,7 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     -- EFFECTIVE (level-scaled) parent stats + the price of the crop each one
     -- actually harvests. Unrounded on purpose: the client mirror rounds only for
     -- display, and rounding here would drift the two previews apart.
-    SELECT i.species,
+    SELECT i.species, i.level,
            COALESCE(i.stat_yield, d.base_yield) * (1 + (i.level - 1) * 0.5) AS y,
            GREATEST(1440, COALESCE(i.stat_grow_minutes, d.base_grow_minutes)
                           * power(0.92, i.level - 1)) AS g,
@@ -75,6 +96,7 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     SELECT max(y) AS max_y,
            min(g) AS min_g,
            max(y * price / (g / 1440.0)) AS best_income,   -- coins/day, per parent
+           max(level) AS lvl,                              -- inherited by the hybrid
            min(species) AS sp_lo,
            max(species) AS sp_hi
       FROM p
@@ -90,50 +112,70 @@ RETURNS json LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
       FROM agg
   ),
   hd AS (
-    SELECT h.species, d.base_yield, COALESCE(m.base_price, 0) AS price
+    SELECT h.species, d.base_yield, d.edition_size, COALESCE(m.base_price, 0) AS price
       FROM h
       JOIN public.farm_card_defs d ON d.species = h.species
       LEFT JOIN public.farm_market m ON m.crop_type = d.crop_type
   ),
+  -- EFFECTIVE targets: what the card must actually deliver in the field.
   calc AS (
-    SELECT hd.species, hd.price, hd.base_yield,
-           GREATEST(1440, floor(agg.min_g * 0.95)) AS grow,
-           agg.max_y, agg.min_g, agg.best_income
+    SELECT hd.species, hd.price, hd.base_yield, hd.edition_size,
+           GREATEST(1440, floor(agg.min_g * 0.95)) AS grow_eff,
+           agg.max_y, agg.min_g, agg.best_income, agg.lvl,
+           (1 + (agg.lvl - 1) * 0.5)  AS ymult,
+           power(0.92, agg.lvl - 1)   AS gmult
       FROM agg, hd
   ),
-  final AS (
+  eff AS (
     SELECT c.*,
            GREATEST(
              -- income parity: out-earn the better parent by 15% at the hybrid's
              -- own crop price (the −1e-9 keeps ceil() identical to the JS mirror
              -- when the quotient lands exactly on an integer)
              CASE WHEN c.price > 0
-                  THEN ceil(c.best_income * 1.15 * (c.grow / 1440.0) / c.price - 1e-9)
+                  THEN ceil(c.best_income * 1.15 * (c.grow_eff / 1440.0) / c.price - 1e-9)
                   ELSE 0 END,
              ceil(c.max_y * 1.15 - 1e-9),        -- floor: the old unit promise
              c.base_yield                        -- floor: the catalogue card
-           ) AS yield
+           ) AS yield_eff
       FROM calc c
+  ),
+  -- Back out the BASE stats to store, so the level multiplier downstream
+  -- REPRODUCES the targets above instead of applying on top of them.
+  fin AS (
+    SELECT e.*,
+           ceil (e.yield_eff / e.ymult - 1e-9) AS stat_yield,
+           floor(e.grow_eff  / e.gmult + 1e-9) AS stat_grow
+      FROM eff e
   )
   SELECT json_build_object(
-    'yield',               yield::int,
-    'grow_minutes',        grow::int,
+    -- what breed_nft writes onto the instance
+    'level',               lvl::int,
+    'stat_yield',          stat_yield::int,
+    'stat_grow_minutes',   stat_grow::int,
+    -- what the player sees / the field actually produces
+    'yield',               round(stat_yield * ymult)::int,
+    'grow_minutes',        GREATEST(1440, floor(stat_grow * gmult))::int,
     'hybrid_species',      species,
     'hybrid_price',        price::int,
-    'per_day',             CASE WHEN price > 0
-                                THEN round(yield * price / (grow / 1440.0))::int
-                                ELSE NULL END,
+    'value',               CASE WHEN edition_size IS NOT NULL
+                                THEN round(20000.0 / edition_size * lvl)::int END,
+    'per_day',             CASE WHEN price > 0 THEN round(
+                             round(stat_yield * ymult) * price
+                             / (GREATEST(1440, floor(stat_grow * gmult)) / 1440.0))::int END,
     'parent_max_yield',    max_y::int,
     'parent_min_grow',     min_g::int,
     'parent_best_per_day', round(best_income)::int)
-  FROM final;
+  FROM fin;
 $$;
 GRANT EXECUTE ON FUNCTION public.farm_hybrid_stats(uuid, uuid, text) TO authenticated;
 
--- ── breed_nft: pass the RESOLVED hybrid species to the stats function ──────
--- Verbatim copy of the farm-nft-breeding.sql definition with one change: the
--- farm_hybrid_stats call now carries v_hybrid (post sold-out fallback), so the
--- minted stats are priced against the crop the hybrid will really harvest.
+-- ── breed_nft: resolved species in, level + backed-out base stats out ──────
+-- Copy of the farm-nft-breeding.sql definition with two changes: the
+-- farm_hybrid_stats call now carries v_hybrid (post sold-out fallback) so the
+-- minted stats are priced against the crop the hybrid will really harvest, and
+-- the instance is minted at the INHERITED level with the backed-out base stats
+-- rather than hardcoded level 1.
 CREATE OR REPLACE FUNCTION public.breed_nft(p_a uuid, p_b uuid)
 RETURNS json
 LANGUAGE plpgsql
@@ -158,6 +200,7 @@ DECLARE
   v_id      uuid;
   v_stat_yield integer;
   v_stat_grow  integer;
+  v_level      integer;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_a = p_b THEN RAISE EXCEPTION 'same_instance'; END IF;
@@ -212,16 +255,19 @@ BEGIN
   v_name := public.farm_nft_persona(v_hybrid, v_nft_idx);
 
   -- Synergy stats: +15% coins/day over the better parent, priced against
-  -- v_hybrid's own crop (see farm_hybrid_stats).
-  SELECT (h->>'yield')::int, (h->>'grow_minutes')::int
-    INTO v_stat_yield, v_stat_grow
+  -- v_hybrid's own crop, at the inherited level (see farm_hybrid_stats).
+  -- stat_yield / stat_grow_minutes are the BASE stats — level is re-applied by
+  -- harvest_crop / plant_crop, so storing the effective values here would
+  -- double-count it.
+  SELECT (h->>'stat_yield')::int, (h->>'stat_grow_minutes')::int, (h->>'level')::int
+    INTO v_stat_yield, v_stat_grow, v_level
     FROM public.farm_hybrid_stats(v_a.id, v_b.id, v_hybrid) AS h;
 
   INSERT INTO public.farm_nft_instances
     (species, serial_no, edition_size, owner_id, acquired_from, nft_name, level,
      stat_yield, stat_grow_minutes)
   VALUES
-    (v_hybrid, v_serial, v_def.edition_size, v_user, 'breeding', v_name, 1,
+    (v_hybrid, v_serial, v_def.edition_size, v_user, 'breeding', v_name, v_level,
      v_stat_yield, v_stat_grow)
   RETURNING id INTO v_id;
 
@@ -257,7 +303,7 @@ BEGIN
     'hybrid', json_build_object(
       'id', v_id, 'species', v_hybrid, 'serial_no', v_serial,
       'edition_size', v_def.edition_size, 'nft_name', v_name,
-      'name', v_def.name, 'emoji', v_def.emoji,
+      'name', v_def.name, 'emoji', v_def.emoji, 'level', v_level,
       'stat_yield', v_stat_yield, 'stat_grow_minutes', v_stat_grow,
       'parent_a', json_build_object('species', v_a.species, 'serial_no', v_a.serial_no),
       'parent_b', json_build_object('species', v_b.species, 'serial_no', v_b.serial_no),
