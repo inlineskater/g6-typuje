@@ -20910,37 +20910,15 @@ function newWhackBossRuntime() {
     combo: 0,
     maxCombo: 0,
     lastHitIndex: -2,
-    difficulty: 0,
-    nextSpawnAt: 620,
   };
 }
 
-function whackBossNextDuration(difficulty) {
-  return Math.max(320, Math.round(900 - difficulty * 25));
-}
-
-function whackBossNextGap(difficulty) {
-  return Math.max(70, Math.round(130 - difficulty * 4));
-}
-
-function whackBossRandInt(min, max) {
-  return min + Math.floor(Math.random() * (max - min + 1));
-}
-
-function spawnWhackBossTarget(elapsed) {
-  const rt = whackBossRuntime;
-  if (!rt) return;
-  const target = {
-    index: rt.schedule.length,
-    startMs: elapsed,
-    durationMs: whackBossNextDuration(rt.difficulty),
-    x: whackBossRandInt(12, 88),
-    y: whackBossRandInt(16, 84),
-    spawnedPerf: performance.now(),
-  };
-  rt.schedule.push(target);
-  showWhackBossTarget(target);
-}
+// NOTE: the client does not spawn targets. `schedule` is issued by
+// whack-boss-action on `start` and only replayed here — tickWhackBossRound
+// reveals whichever scheduled target the clock is inside. The old client-side
+// spawner (spawnWhackBossTarget + its difficulty/nextSpawnAt pacing) was
+// removed when scoring moved server-side; keep it that way, or the server's
+// hit validation will reject every click it never scheduled.
 
 function stopWhackBossRound() {
   if (whackBossRuntime?.timer) clearInterval(whackBossRuntime.timer);
@@ -22762,7 +22740,6 @@ function beginWhackBossRound(round) {
     ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
     : 0;
   whackBossRuntime.startPerf = performance.now() - serverElapsed;
-  whackBossRuntime.nextSpawnAt = Math.max(serverElapsed, 620);
 
   if (wbReady) hide(wbReady);
   if (wbArena) wbArena.classList.add('playing');
@@ -22886,16 +22863,8 @@ if (wbTarget) {
     rt.maxCombo = Math.max(rt.maxCombo, rt.combo);
     rt.lastHitIndex = targetIndex;
 
-    const target = rt.schedule[targetIndex];
-    const reactionMs = target ? performance.now() - target.spawnedPerf : 999;
-    const fastBonus = reactionMs < 350 ? 0.5 : 0;
-    rt.difficulty += 1 + fastBonus;
-
-    const elapsed = atMs;
-    rt.nextSpawnAt = elapsed + whackBossNextGap(rt.difficulty);
-
     showWhackBossFloat('+1', coords.x, coords.y);
-    updateWhackBossStats(rt.durationMs - elapsed);
+    updateWhackBossStats(rt.durationMs - atMs);
 
     setTimeout(() => {
       if (whackBossRuntime?.currentIndex === targetIndex) hideWhackBossTarget();
