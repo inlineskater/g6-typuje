@@ -32,6 +32,16 @@
 --    the weekly cadence properly started — a head-start week nobody else
 --    could have earned. Weeks before 2026-06-01 are excluded.
 --
+-- 5. Sezonowe MISSING GAMES (2026-07-27): the union listed only the first 8
+--    *_scores tables, so „Zamknij Popupy!" (popup_panic, week of 2026-07-20)
+--    and „Tetris G6" (tetris, week of 2026-07-27) earned nobody a ticket —
+--    including the breadth bonus for anyone whose only seasonal play was one
+--    of those. Tetris is the last game before the 31.07 cutoff, so the whole
+--    final week counted for nothing. Both are now unioned in.
+--    ⚠️ This union must list EVERY game in SEASONAL_ROTATION (index.html /
+--    seasonal_game_for_week() in season-award-gating.sql). Adding a seasonal
+--    game means adding its *_scores table here too.
+--
 -- Everything else was verified correct: mundial/rynek/kasyno/sezonowe counts,
 -- ogrod/ozdoby/dzialki ownership math (ozdoby checks `equipped` jsonb — a
 -- decorated plant — NOT the owned-accessories array), breadth ×2 over the 7
@@ -69,6 +79,8 @@ seasonal AS (
     UNION ALL SELECT user_id, week_start FROM var_patrol_scores
     UNION ALL SELECT user_id, week_start FROM egg_catch_scores
     UNION ALL SELECT user_id, week_start FROM super_mariusz_scores
+    UNION ALL SELECT user_id, week_start FROM popup_panic_scores
+    UNION ALL SELECT user_id, week_start FROM tetris_scores
   ) s WHERE wk >= '2026-06-01' GROUP BY user_id),
 farm AS (
   SELECT user_id, LEAST(8, count(DISTINCT d)) t FROM (
