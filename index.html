@@ -4200,8 +4200,11 @@
     .sn-prompt code { color: #22c55e; font-weight: 800; }
 
     /* ── „Uzdrowiciel G6" (healer_dungeon) — WoW Classic raid-frame healer ──
-       DOM, not canvas: health bars, cast bars and cooldown buttons are natively
-       DOM widgets, and popup_panic already set the precedent for a DOM game.
+       A HYBRID, and deliberately so: the battlefield above is a canvas (a
+       HoMM3-style hex field with sprites, lunges and floating combat text),
+       while everything you actually operate — raid frames, cast bar, spell
+       buttons — stays DOM, because health bars and cooldown buttons are native
+       DOM widgets and text in them stays crisp and selectable-free at any zoom.
        Dark WoW-UI palette so the party frames read at a glance under pressure. */
     .hd-arena {
       --hd-bg: #12151c; --hd-panel: #1b202b; --hd-line: #2c3444;
@@ -4214,81 +4217,168 @@
     .hd-bar { position: relative; height: 100%; background: #0c0f15; border-radius: 4px; overflow: hidden; }
     .hd-bar-fill { height: 100%; width: 0; border-radius: 4px; transition: width .1s linear; }
 
-    /* Party frames */
-    .hd-frames { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    /* ── the battlefield ── */
+    .hd-stage-wrap {
+      position: relative; border-radius: var(--r-sm); overflow: hidden;
+      border: 1px solid var(--hd-line); background: #0f131b; line-height: 0;
+    }
+    #hd-stage { display: block; width: 100%; height: auto; aspect-ratio: 760 / 300; }
+
+    /* ── the two-column working area: raid frames left, your kit right ── */
+    .hd-main { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+    .hd-side { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+
+    /* ── raid frames, stacked one over the other ── */
+    .hd-frames { display: grid; grid-template-columns: 1fr; gap: 5px; }
     .hd-frame {
       background: var(--hd-panel); border: 2px solid var(--hd-line); border-radius: var(--r-sm);
-      padding: 9px 10px; font-family: inherit; color: inherit; cursor: pointer; text-align: left;
-      display: flex; flex-direction: column; gap: 6px; transition: border-color .12s, box-shadow .12s;
+      padding: 6px 8px; display: flex; flex-direction: column; gap: 4px;
+      font-family: inherit; color: inherit; text-align: left; cursor: pointer;
     }
     .hd-frame.is-target { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.22); }
     .hd-frame.is-low { animation: hd-pulse .7s ease-in-out infinite; }
+    /* The telegraphed boss hit will kill this one through everything already
+       landing on them — the loudest state in the UI, on purpose. */
+    .hd-frame.is-doomed { animation: hd-doomed .45s ease-in-out infinite; }
     .hd-frame.is-dead { opacity: .4; filter: grayscale(1); }
     @keyframes hd-pulse { 50% { border-color: var(--hd-crit); } }
+    @keyframes hd-doomed {
+      50% { border-color: #fff; box-shadow: 0 0 0 3px rgba(239,68,68,.45); }
+    }
     .hd-frame-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
     .hd-frame-name { font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hd-name-short { display: none; }
+    .hd-frame-key {
+      display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 3px;
+      border: 1px solid var(--hd-line); background: #0c0f15;
+      font-size: 9px; font-weight: 800; color: var(--hd-dim); vertical-align: 1px;
+    }
     .hd-frame-hp { font-size: 11px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .hd-bar-hp { height: 18px; }
+    .hd-bar-hp { height: 20px; }
     .hd-bar-hp .hd-bar-fill { background: var(--hd-hp); }
     .hd-bar-hp .hd-bar-fill.is-warn { background: var(--hd-warn); }
     .hd-bar-hp .hd-bar-fill.is-crit { background: var(--hd-crit); }
-    .hd-hots { display: flex; gap: 3px; min-height: 15px; }
-    .hd-hot { font-size: 11px; line-height: 15px; }
+    .hd-bar-mini { height: 6px; }
+    .hd-bar-mini .hd-bar-fill { background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); }
 
-    /* The pack you are fighting */
+    /* Heal prediction: the pale striped block sitting on the missing health,
+       showing what is already on its way from HoTs and the in-flight cast. */
+    .hd-pred-heal {
+      position: absolute; top: 0; bottom: 0; width: 0; opacity: 0;
+      background: repeating-linear-gradient(115deg,
+        rgba(134,239,172,.62) 0 6px, rgba(134,239,172,.34) 6px 12px);
+      border-right: 1px solid rgba(187,247,208,.85);
+      transition: width .1s linear, left .1s linear, opacity .12s;
+      pointer-events: none;
+    }
+    .hd-pred-heal.is-on { opacity: 1; }
+    /* Incoming boss hit: eaten out of the RIGHT edge of the current health, so
+       "does this bar survive the cast?" is one glance, not arithmetic. */
+    .hd-pred-dmg {
+      position: absolute; top: 0; bottom: 0; width: 0; opacity: 0;
+      background: repeating-linear-gradient(115deg,
+        rgba(15,4,6,.62) 0 5px, rgba(127,29,29,.5) 5px 10px);
+      border-left: 2px solid #fb7185;
+      transition: width .1s linear, left .1s linear, opacity .12s;
+      pointer-events: none;
+    }
+    .hd-pred-dmg.is-on { opacity: 1; }
+    .hd-pred-dmg.is-lethal { animation: hd-lethal .45s ease-in-out infinite; }
+    @keyframes hd-lethal { 50% { border-left-color: #fff; background-color: rgba(239,68,68,.4); } }
+    .hd-pred-num {
+      position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+      font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;
+      color: transparent; text-shadow: 0 1px 2px rgba(0,0,0,.9); pointer-events: none;
+    }
+    .hd-pred-num.is-heal { color: #bbf7d0; }
+    .hd-pred-num.is-lethal { color: #fecaca; }
+
+    .hd-hots { display: flex; gap: 3px; min-height: 16px; flex-wrap: wrap; }
+    .hd-hot {
+      font-size: 9.5px; font-weight: 800; line-height: 16px; padding: 0 4px;
+      border-radius: 3px; background: #0c0f15; border: 1px solid var(--hd-line);
+      font-variant-numeric: tabular-nums;
+    }
+    .hd-hot-rejuv { border-color: rgba(74,222,128,.55); color: #86efac; }
+    .hd-hot-wg { border-color: rgba(163,230,53,.55); color: #bef264; }
+    .hd-hot-cast { border-color: rgba(250,204,21,.6); color: #fde047; }
+
+    /* ── enemy pack bar ── */
     .hd-pack-head { display: flex; justify-content: space-between; align-items: baseline;
-      font-size: 11.5px; font-weight: 700; margin-bottom: 4px; }
-    .hd-pack-name { color: var(--hd-text); }
+      gap: 8px; font-size: 12px; font-weight: 800; margin-bottom: 4px; }
+    .hd-pack-name { color: var(--hd-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hd-pack-text { color: var(--hd-dim); font-variant-numeric: tabular-nums; }
-    .hd-bar-pack { height: 10px; }
+    .hd-bar-pack { height: 12px; }
     .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+    .hd-pack.is-boss .hd-pack-name { color: #fca5a5; letter-spacing: .02em; }
+    .hd-pack.is-boss .hd-bar-pack { box-shadow: 0 0 0 1px rgba(248,113,113,.55); }
+    .hd-pack.is-boss .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #7f1d1d, #dc2626, #fb7185); }
 
-    /* Cast bar — only visible while Healing Touch is channelling */
+    /* ── your cast bar ── */
     .hd-cast { display: flex; align-items: center; gap: 8px; height: 16px; opacity: 0; transition: opacity .12s; }
     .hd-cast.is-on { opacity: 1; }
     .hd-bar-cast { flex: 1; height: 10px; }
     .hd-bar-cast .hd-bar-fill { background: #facc15; }
     .hd-cast-label { font-size: 11px; font-weight: 700; color: #facc15; white-space: nowrap; }
 
-    /* Mana + the 5-second-rule readout, the most important number on screen */
+    /* ── mana ── */
     .hd-mana { display: flex; align-items: center; gap: 10px; }
-    .hd-bar-mana { flex: 1; height: 14px; }
+    .hd-bar-mana { flex: 1; height: 15px; }
     .hd-bar-mana .hd-bar-fill { background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); }
     .hd-mana-text { font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .hd-fsr {
-      font-size: 11px; font-weight: 800; white-space: nowrap; padding: 3px 9px;
+      font-size: 10.5px; font-weight: 800; padding: 2px 8px; white-space: nowrap;
       border-radius: var(--r-pill); background: #24292f; color: var(--hd-dim);
       border: 1px solid var(--hd-line); transition: background .15s, color .15s;
+      font-variant-numeric: tabular-nums;
     }
     .hd-fsr.is-on { background: rgba(59,130,246,.22); color: #93c5fd; border-color: #3b82f6; }
 
-    /* Spell bar */
-    .hd-spells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    /* ── spells ── */
+    .hd-spells { display: grid; grid-template-columns: 1fr; gap: 6px; }
     .hd-spell {
       position: relative; background: var(--hd-panel); border: 2px solid var(--hd-line);
-      border-radius: var(--r-sm); padding: 8px 9px 9px; font-family: inherit; color: inherit;
-      cursor: pointer; text-align: left; display: grid; gap: 1px;
-      grid-template-columns: auto 1fr; grid-template-areas: "key icon" "name name" "cost cost";
-      transition: border-color .12s, opacity .12s;
+      border-radius: var(--r-sm); padding: 7px 9px; cursor: pointer;
+      font-family: inherit; color: inherit; text-align: left;
+      display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px;
+      grid-template-areas: 'key name icon' 'key eff icon';
+      align-items: center;
     }
     .hd-spell.is-ready { border-color: #3b82f6; }
     .hd-spell.is-poor { opacity: .45; }
     .hd-spell.is-cd { opacity: .6; border-color: var(--hd-warn); }
-    .hd-spell-key { grid-area: key; font-size: 10px; font-weight: 800; color: var(--hd-dim);
-      border: 1px solid var(--hd-line); border-radius: 4px; padding: 0 5px; justify-self: start; }
-    .hd-spell-icon { grid-area: icon; font-size: 15px; justify-self: end; }
-    .hd-spell-name { grid-area: name; font-size: 12px; font-weight: 800; margin-top: 3px; }
-    .hd-spell-cost { grid-area: cost; font-size: 10.5px; font-weight: 700; color: var(--hd-dim); }
-    .hd-spell-cd { position: absolute; right: 8px; bottom: 7px; font-size: 10.5px;
-      font-weight: 800; color: var(--hd-warn); font-variant-numeric: tabular-nums; }
+    .hd-spell-key { grid-area: key; font-size: 11px; font-weight: 800; color: var(--hd-dim);
+      border: 1px solid var(--hd-line); border-radius: 4px; padding: 3px 7px; background: #0c0f15; }
+    .hd-spell-icon { grid-area: icon; font-size: 17px; }
+    .hd-spell-name { grid-area: name; font-size: 12px; font-weight: 800; }
+    .hd-spell-eff { grid-area: eff; font-size: 10px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; }
+    .hd-spell-cd { position: absolute; right: 32px; top: 50%; transform: translateY(-50%);
+      font-size: 12px; font-weight: 800; color: var(--hd-warn); font-variant-numeric: tabular-nums; }
 
-    /* Rest window: drink, pick an upgrade, or pull early */
+    /* ── stat legend: what every statistic is currently doing for you ── */
+    .hd-legend { display: flex; flex-direction: column; gap: 2px;
+      border-top: 1px solid var(--hd-line); padding-top: 8px; }
+    .hd-leg-row {
+      display: grid; grid-template-columns: 16px minmax(78px, auto) 1fr; gap: 2px 7px;
+      align-items: baseline; padding: 3px 0; font-size: 11px;
+    }
+    .hd-leg-icon { font-size: 12px; }
+    .hd-leg-name { font-weight: 800; }
+    .hd-leg-val {
+      display: inline-block; margin-left: 5px; min-width: 15px; padding: 0 4px;
+      border-radius: 3px; background: #0c0f15; border: 1px solid var(--hd-line);
+      font-size: 10px; text-align: center; color: #facc15; font-variant-numeric: tabular-nums;
+    }
+    .hd-leg-now { font-weight: 700; color: #93c5fd; font-variant-numeric: tabular-nums; }
+    .hd-leg-why { grid-column: 2 / -1; font-size: 10px; font-weight: 600; color: var(--hd-dim); line-height: 1.35; }
+
+    /* ── the rest window ── */
     .hd-rest { display: none; border-top: 1px solid var(--hd-line); padding-top: 11px; }
     .hd-rest.is-on { display: block; }
     .hd-rest-head { display: flex; justify-content: space-between; align-items: center; gap: 10px;
-      flex-wrap: wrap; margin-bottom: 6px; }
+      flex-wrap: wrap; margin-bottom: 7px; }
     .hd-rest-label { font-size: 12px; font-weight: 800; color: #93c5fd; font-variant-numeric: tabular-nums; }
+    .hd-rest-label.is-boss { color: #fca5a5; }
     .hd-rest-actions { display: flex; gap: 6px; }
     .hd-rest-btn { font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer;
       padding: 5px 11px; border-radius: var(--r-pill); border: 1px solid var(--hd-line);
@@ -4297,16 +4387,19 @@
     .hd-rest-btn.is-go { background: #1d4ed8; border-color: #3b82f6; }
     .hd-bar-rest { height: 6px; }
     .hd-bar-rest .hd-bar-fill { background: #93c5fd; }
-    .hd-upgrades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    /* Two cards, not three — a three-card hand nearly always held the obvious
+       pick, so the choice was free. */
+    .hd-upgrades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .hd-up {
       background: var(--hd-panel); border: 2px solid var(--hd-line); border-radius: var(--r-sm);
-      padding: 9px 10px; font-family: inherit; color: inherit; cursor: pointer; text-align: left;
-      display: flex; flex-direction: column; gap: 2px; transition: border-color .12s, opacity .12s;
+      padding: 10px; cursor: pointer; font-family: inherit; color: inherit; text-align: left;
+      display: flex; flex-direction: column; gap: 3px;
     }
     .hd-up:hover { border-color: #facc15; }
     .hd-up.is-locked { opacity: .4; cursor: default; }
-    .hd-up-icon { font-size: 17px; }
-    .hd-up-name { font-size: 12px; font-weight: 800; }
+    .hd-up-icon { font-size: 18px; }
+    .hd-up-name { font-size: 12.5px; font-weight: 800; }
+    .hd-up-delta { font-size: 11px; font-weight: 800; color: #86efac; font-variant-numeric: tabular-nums; }
     .hd-up-desc { font-size: 10.5px; font-weight: 600; color: var(--hd-dim); line-height: 1.35; }
     .hd-stats-value { font-size: 13px !important; letter-spacing: -.01em; }
     .hd-rules > summary { cursor: pointer; list-style: none; }
@@ -4314,20 +4407,29 @@
     .hd-rules > summary::after { content: ' ▾'; color: var(--muted); font-weight: 700; }
     .hd-rules:not([open]) > summary::after { content: ' ▸'; }
 
+    @media (max-width: 900px) {
+      /* Below this the two columns are too narrow for the frames to stay
+         legible — stack the kit under the raid frames instead. */
+      .hd-main { grid-template-columns: 1fr; }
+      .hd-spells { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .hd-spell { grid-template-areas: 'key icon icon' 'name name name' 'eff eff eff'; align-items: start; }
+      .hd-spell-icon { justify-self: end; }
+      .hd-spell-cd { right: 9px; top: auto; bottom: 7px; transform: none; font-size: 11px; }
+    }
     @media (max-width: 620px) {
       .hd-arena { padding: 10px; gap: 10px; }
-      .hd-frames { gap: 6px; }
-      .hd-frame { padding: 7px; }
+      .hd-frame { padding: 6px 7px; }
       /* Name and HP each get their own row — side by side, "1305 / 1400" eats
-         the whole 100px frame and ellipsises the name down to nothing. */
+         the frame and ellipsises the name down to nothing. */
       .hd-frame-head { flex-direction: column; align-items: flex-start; gap: 0; }
       .hd-frame-name { font-size: 11px; }
       .hd-name-long { display: none; }
       .hd-name-short { display: inline; }
       .hd-frame-hp { font-size: 10px; }
-      .hd-spells, .hd-upgrades { gap: 6px; }
+      .hd-upgrades { gap: 6px; }
       .hd-spell-name, .hd-up-name { font-size: 11px; }
-      .hd-spell-cost, .hd-up-desc { font-size: 10px; }
+      .hd-spell-eff, .hd-up-desc { font-size: 9.5px; }
+      .hd-leg-why { display: none; }   /* the title tooltip still carries it */
     }
 
     /* ── „Zamknij Popupy!" (popup_panic) — fake-desktop popup frenzy ── */
@@ -8757,19 +8859,22 @@
             <div class="bj-head">
               <div>
                 <h2 class="page-title">„Uzdrowiciel G6" 💚</h2>
-                <p class="page-sub">Jesteś <strong>druidem-uzdrowicielem</strong> w trzyosobowej drużynie: tank, Ty i DPS. Loch nie ma końca — każda kolejna grupa bije mocniej. Runda kończy się, gdy <strong>ktokolwiek padnie</strong>. Wynik = liczba wyczyszczonych grup.</p>
+                <p class="page-sub">Jesteś <strong>druidem-uzdrowicielem</strong> w pięcioosobowej drużynie: tank, Ty i trzech DPS-ów. Loch nie ma końca — każda kolejna grupa bije mocniej, a <strong>co piąta to boss</strong>. Runda kończy się, gdy <strong>ktokolwiek padnie</strong>. Wynik = liczba wyczyszczonych grup.</p>
               </div>
             </div>
 
             <details class="bj-rules hd-rules" id="hd-rules" open>
               <summary class="bj-rules-title">Jak grać</summary>
               <ul>
-                <li><strong>Q / W / E</strong> wybiera cel (albo kliknij pasek życia), <strong>1</strong> Odnowa, <strong>2</strong> Dziki Wzrost, <strong>3</strong> Uzdrawiający Dotyk.</li>
-                <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many <em>stoi</em> przez 5 sekund. Wskaźnik pod paskiem many pokazuje, kiedy znowu zaczniesz odzyskiwać manę — luka bez czarów to darmowa mana.</li>
+                <li><strong>Q / W / E / R / T</strong> wybiera cel (albo kliknij ramkę), <strong>1</strong> Odnowa, <strong>2</strong> Dziki Wzrost, <strong>3</strong> Uzdrawiający Dotyk. <strong>D</strong> = usiądź i pij.</li>
+                <li><strong>Zapowiedź leczenia.</strong> Jasny, pasiasty kawałek na pasku życia to leczenie, które <em>już leci</em> — wszystkie tyknięcia HoT-ów plus czar w locie. Jeśli ramka wygląda nisko, ale jest zakryta na zielono, nie marnuj na nią GCD.</li>
+                <li><strong>Czerwony kawałek</strong> zjadany z prawej strony paska to cios bossa, który zaraz wyląduje. Miga na biało, gdy zabije cel — wtedy musisz leczyć <em>zanim</em> spadnie.</li>
+                <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many <em>stoi</em> przez 5 sekund. Wskaźnik obok paska many pokazuje, kiedy znowu zaczniesz odzyskiwać manę — luka bez czarów to darmowa mana.</li>
                 <li><strong>Odnowa</strong> jest najoszczędniejsza (2,44 HP za manę), <strong>Uzdrawiający Dotyk</strong> najdroższy (1,75). Spamowanie dużego leczenia wygrywa walkę i przegrywa loch.</li>
-                <li><strong>Dziki Wzrost</strong> leczy całą drużynę — trzymaj go na obrażenia obszarowe, które przychodzą co ~7 s.</li>
-                <li><strong>Między grupami siadasz i pijesz</strong> — ale rzucenie czaru Cię podnosi (<strong>R</strong> = usiądź z powrotem). Przerwa <strong>skraca się z każdą grupą</strong>: przy pierwszej masz 15 s, przy dwudziestej już tylko 5.</li>
-                <li>Po każdej grupie <strong>wybierasz jedno ulepszenie</strong> z trzech. Nie wybierzesz do końca przerwy — dostaniesz pierwsze z brzegu.</li>
+                <li><strong>Dziki Wzrost</strong> leczy <strong>całą piątkę</strong> — trzymaj go na obrażenia obszarowe, które przychodzą co ~6,5 s.</li>
+                <li><strong>☠️ Boss co 5. grupę.</strong> Ma ~2,3× więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową: <em>Cios Decyzyjny</em> (ogromne obrażenia w tanka) i <em>Reorganizacja</em> (w całą drużynę). Masz 3,5 s, żeby przygotować leczenie. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
+                <li><strong>Między grupami siadasz i pijesz</strong> — ale rzucenie czaru Cię podnosi (<strong>D</strong> = usiądź z powrotem). Przerwa <strong>skraca się z każdą grupą</strong>: przy pierwszej masz 12,4 s, przy piętnastej już 4,5. Po bossie dostajesz kilka sekund więcej.</li>
+                <li>Po każdej grupie <strong>wybierasz jedno z dwóch ulepszeń</strong>. Karta pokazuje dokładnie, co daje. Nie wybierzesz do końca przerwy — dostaniesz pierwsze z brzegu.</li>
                 <li><strong>Spacja</strong> = ruszaj dalej od razu, nie czekając na koniec przerwy.</li>
               </ul>
             </details>
@@ -8794,9 +8899,11 @@
             </div>
 
             <div class="hd-arena" id="hd-arena">
-              <div class="hd-frames" id="hd-frames"></div>
+              <!-- HoMM3-style hex battlefield. Everything on it is drawn from the
+                   same simulation state the frames read, so it can never drift. -->
+              <div class="hd-stage-wrap"><canvas id="hd-stage"></canvas></div>
 
-              <div class="hd-pack">
+              <div class="hd-pack" id="hd-pack">
                 <div class="hd-pack-head">
                   <span class="hd-pack-name" id="hd-pack-name">—</span>
                   <span class="hd-pack-text" id="hd-pack-text">—</span>
@@ -8804,40 +8911,50 @@
                 <div class="hd-bar hd-bar-pack"><div class="hd-bar-fill" id="hd-pack-fill"></div></div>
               </div>
 
-              <div class="hd-cast" id="hd-cast">
-                <div class="hd-bar hd-bar-cast"><div class="hd-bar-fill" data-fill></div></div>
-                <span class="hd-cast-label" data-label></span>
-              </div>
+              <div class="hd-main">
+                <div class="hd-frames" id="hd-frames"></div>
 
-              <div class="hd-mana">
-                <div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" id="hd-mana-fill"></div></div>
-                <span class="hd-mana-text" id="hd-mana-text">0 / 0</span>
-                <span class="hd-fsr" id="hd-fsr">💧 regeneracja</span>
-              </div>
+                <div class="hd-side">
+                  <div class="hd-cast" id="hd-cast">
+                    <div class="hd-bar hd-bar-cast"><div class="hd-bar-fill" data-fill></div></div>
+                    <span class="hd-cast-label" data-label></span>
+                  </div>
 
-              <div class="hd-spells" id="hd-spells">
-                <button type="button" class="hd-spell" data-spell="0">
-                  <span class="hd-spell-key">1</span><span class="hd-spell-icon">🌿</span>
-                  <span class="hd-spell-name">Odnowa</span>
-                  <span class="hd-spell-cost">90 many</span><span class="hd-spell-cd" data-cd></span>
-                </button>
-                <button type="button" class="hd-spell" data-spell="1">
-                  <span class="hd-spell-key">2</span><span class="hd-spell-icon">🌳</span>
-                  <span class="hd-spell-name">Dziki Wzrost</span>
-                  <span class="hd-spell-cost">280 many</span><span class="hd-spell-cd" data-cd></span>
-                </button>
-                <button type="button" class="hd-spell" data-spell="2">
-                  <span class="hd-spell-key">3</span><span class="hd-spell-icon">✋</span>
-                  <span class="hd-spell-name">Uzdrawiający Dotyk</span>
-                  <span class="hd-spell-cost">240 many</span><span class="hd-spell-cd" data-cd></span>
-                </button>
+                  <div class="hd-mana">
+                    <div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" id="hd-mana-fill"></div></div>
+                    <span class="hd-mana-text" id="hd-mana-text">0 / 0</span>
+                    <span class="hd-fsr" id="hd-fsr">💧 regeneracja</span>
+                  </div>
+
+                  <div class="hd-spells" id="hd-spells">
+                    <button type="button" class="hd-spell" data-spell="0">
+                      <span class="hd-spell-key">1</span><span class="hd-spell-icon">🌿</span>
+                      <span class="hd-spell-name">Odnowa — HoT 12 s, 1 cel</span>
+                      <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
+                    </button>
+                    <button type="button" class="hd-spell" data-spell="1">
+                      <span class="hd-spell-key">2</span><span class="hd-spell-icon">🌳</span>
+                      <span class="hd-spell-name">Dziki Wzrost — cała drużyna</span>
+                      <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
+                    </button>
+                    <button type="button" class="hd-spell" data-spell="2">
+                      <span class="hd-spell-key">3</span><span class="hd-spell-icon">✋</span>
+                      <span class="hd-spell-name">Uzdrawiający Dotyk — kanał 2,5 s</span>
+                      <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
+                    </button>
+                  </div>
+
+                  <!-- What each statistic is currently doing for you, in real
+                       numbers, so picking an upgrade is never a guess. -->
+                  <div class="hd-legend" id="hd-legend"></div>
+                </div>
               </div>
 
               <div class="hd-rest" id="hd-rest">
                 <div class="hd-rest-head">
                   <span class="hd-rest-label" id="hd-rest-label">Przerwa</span>
                   <div class="hd-rest-actions">
-                    <button type="button" class="hd-rest-btn" id="hd-drink">🍺 Pij (R)</button>
+                    <button type="button" class="hd-rest-btn" id="hd-drink">🍺 Pij (D)</button>
                     <button type="button" class="hd-rest-btn is-go" id="hd-pull-btn">⚔️ Ruszaj (spacja)</button>
                   </div>
                 </div>
@@ -8848,7 +8965,7 @@
 
             <div class="bj-actions">
               <button class="btn-primary bj-start-btn" id="hd-start">Wejdź do lochu</button>
-              <div class="bj-status" id="hd-status">Trzy czary, trzy paski życia i coraz mniej many. Powodzenia.</div>
+              <div class="bj-status" id="hd-status">Pięć pasków życia, trzy czary i coraz mniej many. Co piąta grupa to boss. Powodzenia.</div>
             </div>
           </section>
         </div>

@@ -623,6 +623,12 @@ function agpMariuszReset(p) {
 
 function agpHealerReset(p) {
   p.st = hdInitState((Date.now() ^ 0x5eed) >>> 0);
+  // A real healer runtime, so hdDraw()/hdConsumeFx()/hdStepFx() run unmodified
+  // against it — the battlefield in the thumbnail is the battlefield in the
+  // game, down to the floating combat text.
+  p.rt = newHealerRuntime();
+  p.rt.sim = p.st;
+  p.rt.playing = true;
   p.deadFor = 0;
 }
 
@@ -639,47 +645,15 @@ function agpHealerBot(st) {
   }
   if (st.gcd > 0 || st.cast) return null;
   let low = 0, lowPct = 2;
-  for (let i = 0; i < 3; i += 1) {
+  for (let i = 0; i < HD_PARTY; i += 1) {
     const pct = st.hp[i] / st.maxHp[i];
     if (pct < lowPct) { lowPct = pct; low = i; }
   }
   const hurt = st.hp.filter((hp, i) => hp < st.maxHp[i] * 0.8).length;
-  if (hurt >= 2 && st.wgCd === 0 && st.mana >= HD_COST[HD_SP_WG]) return [{ a: HD_A_WG, t: 0 }];
+  if (hurt >= 3 && st.wgCd === 0 && st.mana >= HD_COST[HD_SP_WG]) return [{ a: HD_A_WG, t: 0 }];
   if (lowPct < 0.45 && st.mana >= HD_COST[HD_SP_HT]) return [{ a: HD_A_HT, t: low }];
   if (lowPct < 0.9 && st.mana >= HD_COST[HD_SP_REJUV]) return [{ a: HD_A_REJUV, t: low }];
   return null;
-}
-
-function agpHealerRender(p) {
-  const st = p.st;
-  const host = p.host;
-  for (let i = 0; i < 3; i += 1) {
-    const frame = host.querySelector('.hd-frame[data-f="' + i + '"]');
-    if (!frame) continue;
-    const pct = st.maxHp[i] > 0 ? Math.max(0, st.hp[i] / st.maxHp[i] * 100) : 0;
-    const fill = frame.querySelector('[data-fill]');
-    if (fill) {
-      fill.style.width = pct + '%';
-      fill.className = 'hd-bar-fill' + (pct < 35 ? ' is-crit' : pct < 65 ? ' is-warn' : '');
-    }
-    frame.classList.toggle('is-low', st.hp[i] > 0 && pct < 35);
-    const hots = frame.querySelector('[data-hots]');
-    if (hots) {
-      const want = st.hots.filter(h => h.tgt === i).map(h => h.kind === HD_SP_REJUV ? '🌿' : '🌳').join('');
-      if (hots.dataset.v !== want) { hots.dataset.v = want; hots.textContent = want; }
-    }
-  }
-  const pack = host.querySelector('[data-packfill]');
-  if (pack) pack.style.width = (st.packMax > 0 ? Math.max(0, st.packHp / st.packMax * 100) : 0) + '%';
-  const name = host.querySelector('[data-pack]');
-  if (name) {
-    const want = st.phase === 'rest' ? 'Przerwa — pijesz' : hdPackName(st.pull);
-    if (name.textContent !== want) name.textContent = want;
-  }
-  const mana = host.querySelector('[data-mana]');
-  if (mana) mana.style.width = (st.mana / hdMaxMana(st) * 100) + '%';
-  const fsr = host.querySelector('[data-fsr]');
-  if (fsr) fsr.classList.toggle('is-on', st.fsr >= HD_FSR_TICKS || st.drinking);
 }
 
 // ── Zamknij Popupy! — real simulation, real popup markup, bot with a delay ───
@@ -985,31 +959,15 @@ const AGP_DEFS = {
     draw() { /* DOM-driven */ },
   },
 
-  // „Uzdrowiciel G6" — the real hdAdvanceTick driven by a small triage bot, so
-  // the preview shows genuine bar movement (damage in, HoTs ticking back up)
-  // rather than a scripted animation. Builds its own frames instead of cloning
-  // #hd-frames: the real ones may not exist yet, and cloning them would fight
-  // with healerRenderFrames() over the same nodes.
+  // „Uzdrowiciel G6" — the real hdAdvanceTick driven by a small triage bot,
+  // rendered through the game's own hdDraw() on the HoMM3 hex battlefield. It
+  // used to be a DOM preview that rebuilt three raid frames by hand; the party
+  // is five strong now and the frames are only half the screen, so the preview
+  // shows the thing worth showing and stays honest by construction.
   healer_dungeon: {
-    dep: 'healer_dungeon', dom: true, vw: 520, vh: 250,
-    init(p) {
-      p.host.className = 'ag-prev-dom hd-arena is-playing';
-      p.host.style.width = p.vw + 'px';
-      p.host.style.height = p.vh + 'px';
-      p.host.innerHTML =
-        '<div class="hd-frames">' +
-        [0, 1, 2].map(i =>
-          '<div class="hd-frame" data-f="' + i + '">' +
-          '<div class="hd-frame-head"><span class="hd-frame-name">' + HD_SLOT_ICONS[i] + ' ' + HD_SLOT_SHORT[i] + '</span></div>' +
-          '<div class="hd-bar hd-bar-hp"><div class="hd-bar-fill" data-fill></div></div>' +
-          '<div class="hd-hots" data-hots></div></div>').join('') +
-        '</div>' +
-        '<div class="hd-pack"><div class="hd-pack-head"><span class="hd-pack-name" data-pack></span></div>' +
-        '<div class="hd-bar hd-bar-pack"><div class="hd-bar-fill" data-packfill></div></div></div>' +
-        '<div class="hd-mana"><div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" data-mana></div></div>' +
-        '<span class="hd-fsr" data-fsr>💧</span></div>';
-      agpHealerReset(p);
-    },
+    dep: 'healer_dungeon',
+    size: () => [HD_CS_W, HD_CS_H],
+    init(p) { agpHealerReset(p); },
     step(p, dt) {
       p.acc += dt;
       while (p.acc >= HD_TICK_MS) {
@@ -1021,10 +979,15 @@ const AGP_DEFS = {
           continue;
         }
         hdAdvanceTick(st, agpHealerBot(st));
+        hdConsumeFx(p.rt);
       }
-      agpHealerRender(p);
+      hdStepFx(p.rt, dt);
     },
-    draw() { /* DOM-driven */ },
+    draw(p) {
+      const oc = hdCtx, ort = healerRuntime;
+      hdCtx = p.ctx; healerRuntime = p.rt;
+      try { hdDraw(); } finally { hdCtx = oc; healerRuntime = ort; }
+    },
   },
 
   tetris: {
