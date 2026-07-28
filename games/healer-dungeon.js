@@ -586,13 +586,13 @@ function hdReducedMotion() {
 // Pointy-top hexes laid out in true hex space, then squashed vertically so the
 // floor reads as a table you are looking down at rather than a flat tile map —
 // which is exactly the trick HoMM3's battlefield uses.
-const HD_CS_W = 760, HD_CS_H = 300, HD_MAX_DPR = 2;
+const HD_CS_W = 760, HD_CS_H = 400, HD_MAX_DPR = 2;
 const HD_HEX_COLS = 11, HD_HEX_ROWS = 7;
 const HD_HEX_W = 62;
 const HD_HEX_R = HD_HEX_W / Math.sqrt(3);      // circumradius of a pointy-top hex
-const HD_HEX_SQUASH = 0.62;                    // the top-down foreshortening
+const HD_HEX_SQUASH = 0.85;                    // the top-down foreshortening
 const HD_HEX_VSTEP = HD_HEX_R * 1.5 * HD_HEX_SQUASH;
-const HD_HEX_X0 = 44, HD_HEX_Y0 = 46;
+const HD_HEX_X0 = 44, HD_HEX_Y0 = 66;
 
 // Formation. Tank alone on the front line, the two casters in the back column,
 // the melee/ranged dps fanned out between them — the same "who is exposed" read
@@ -640,12 +640,145 @@ let hdCtx = null;
 function hdInitCanvas() {
   const cv = hdEl('hd-stage');
   if (!cv) return null;
-  const dpr = Math.min(HD_MAX_DPR, window.devicePixelRatio || 1);
+  // The backing store is sized from the canvas's ON-SCREEN size, not from a
+  // nominal devicePixelRatio: the console is inside a CSS transform, so its
+  // layout pixels are not screen pixels. getBoundingClientRect() reports the
+  // post-transform box, which is exactly the number of real pixels we have to
+  // fill — without this the battlefield goes soft the moment the viewport is
+  // bigger than the console's virtual size (any 1920×1080 screen).
+  // The element box is not the drawn box: the canvas is `object-fit: contain`,
+  // so the picture is letterboxed inside it and only the binding axis is full
+  // size. Sizing off rect.width alone over-allocated the backing store by the
+  // letterbox ratio on any tall box.
+  const rect = cv.getBoundingClientRect();
+  const shown = Math.min(rect.width || HD_CS_W, (rect.height || HD_CS_H) * (HD_CS_W / HD_CS_H));
+  const dpr = Math.max(1, Math.min(HD_MAX_DPR, shown / HD_CS_W * (window.devicePixelRatio || 1)));
   const w = Math.round(HD_CS_W * dpr), h = Math.round(HD_CS_H * dpr);
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   const ctx = cv.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return ctx;
+}
+
+// ── Fit-to-viewport console ─────────────────────────────────────────────────
+// Fixed virtual sizes, scaled by one transform. See the CSS block in index.html
+// for why scaling beats fluid units here: the guarantee is "never scrolls, at
+// any window size", and five raid frames plus a battlefield have a real minimum
+// height that fluid layout can only satisfy by clipping.
+const HD_VIEW_LAND = [1600, 900];
+const HD_VIEW_PORT = [440, 900];
+
+let hdViewOpen = false;
+
+// Measure the CONTAINER, not the window. `.hd-fit` is position:fixed inset:0,
+// so its own box is by definition the space the console has to fit into — no
+// guessing which of innerWidth / visualViewport / clientWidth is authoritative
+// in this browser, and no way for those to disagree with reality (a pane that
+// reported a bogus visualViewport of 117×240 while the document was 1280 wide
+// is what prompted this). Window metrics remain the fallback.
+function hdViewportSize() {
+  const fit = hdEl('hd-fit');
+  if (fit) {
+    const r = fit.getBoundingClientRect();
+    if (r.width >= 200 && r.height >= 200) return [Math.round(r.width), Math.round(r.height)];
+  }
+  const de = document.documentElement;
+  return [
+    Math.max(240, de.clientWidth || window.innerWidth || 1024),
+    Math.max(240, de.clientHeight || window.innerHeight || 720),
+  ];
+}
+
+// Pick whichever console actually ends up BIGGER on this screen, by rendered
+// area. A width/aspect rule looked obvious and was wrong for a phone held
+// sideways: 812×375 is under any sane "narrow" threshold, so it chose the
+// portrait console and painted a 183 px strip down the middle of an 812 px
+// screen, when the landscape one would have filled 667×375. Comparing the two
+// candidates directly cannot get that backwards, and needs no thresholds.
+function hdPickView(vw, vh) {
+  const land = Math.min(vw / HD_VIEW_LAND[0], vh / HD_VIEW_LAND[1]);
+  const port = Math.min(vw / HD_VIEW_PORT[0], vh / HD_VIEW_PORT[1]);
+  const areaLand = land * land * HD_VIEW_LAND[0] * HD_VIEW_LAND[1];
+  const areaPort = port * port * HD_VIEW_PORT[0] * HD_VIEW_PORT[1];
+  return areaPort > areaLand;
+}
+
+function hdIsHandheld() {
+  return !(window.matchMedia && window.matchMedia('(min-width: 900px) and (hover: hover)').matches);
+}
+
+function hdLayout() {
+  const con = hdEl('hd-console');
+  if (!con) return;
+  const size = hdViewportSize();
+  const portrait = hdPickView(size[0], size[1]);
+  const view = portrait ? HD_VIEW_PORT : HD_VIEW_LAND;
+  const scale = Math.min(size[0] / view[0], size[1] / view[1]);
+  con.classList.toggle('is-portrait', portrait);
+  con.style.setProperty('--hd-cw', view[0] + 'px');
+  con.style.setProperty('--hd-ch', view[1] + 'px');
+  con.style.setProperty('--hd-scale', String(scale));
+  // A phone held sideways has ~375 px of height for a 900 px console, which
+  // scales the text down to about 5 px. Everything still fits and still works —
+  // it is simply too small to read, so say so rather than pretend otherwise.
+  const fit = hdEl('hd-fit');
+  if (fit) fit.classList.toggle('is-cramped', scale < 0.55 && hdIsHandheld());
+}
+
+// requestFullscreen() needs a live user gesture, so this only succeeds when
+// called straight out of a click handler. It is a bonus either way: the fixed
+// .hd-fit overlay is what actually delivers the fullscreen layout, which is why
+// iOS Safari — no element Fullscreen API at all — behaves identically.
+function hdRequestFullscreen() {
+  if (!hdIsHandheld() || document.fullscreenElement) return;
+  const el = document.documentElement;
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (fn) { try { fn.call(el); } catch (e) { /* not fatal, CSS already took over */ } }
+}
+
+function hdExitFullscreen() {
+  if (!document.fullscreenElement) return;
+  const fn = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fn) { try { fn.call(document); } catch (e) { /* ignore */ } }
+}
+
+function healerEnterView() {
+  if (hdViewOpen) return;
+  hdViewOpen = true;
+  document.documentElement.classList.add('hd-view-open');
+  window.addEventListener('resize', hdLayout);
+  window.addEventListener('orientationchange', hdLayout);
+  document.addEventListener('fullscreenchange', hdLayout);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', hdLayout);
+  hdLayout();
+  healerRender();
+}
+
+function healerExitView() {
+  if (!hdViewOpen) return;
+  hdViewOpen = false;
+  document.documentElement.classList.remove('hd-view-open');
+  window.removeEventListener('resize', hdLayout);
+  window.removeEventListener('orientationchange', hdLayout);
+  document.removeEventListener('fullscreenchange', hdLayout);
+  if (window.visualViewport) window.visualViewport.removeEventListener('resize', hdLayout);
+  hdExitFullscreen();
+  healerStopRaf();
+}
+
+function healerLeaveGame() {
+  healerExitView();
+  // Reuse the picker's own back button so there is exactly one teardown path.
+  const back = document.getElementById('ag-back');
+  if (back) back.click();
+}
+
+function healerToggleHelp(on) {
+  const help = hdEl('hd-help');
+  if (!help) return;
+  const show = on === undefined ? !help.classList.contains('is-on') : !!on;
+  help.classList.toggle('is-on', show);
+  if (show) healerRenderHelpStats();
 }
 
 function hdHexPath(ctx, x, y, scale) {
@@ -1245,13 +1378,31 @@ function healerRenderLegend() {
   lines.forEach(l => {
     const row = document.createElement('div');
     row.className = 'hd-leg-row';
-    row.title = l.why;
+    row.title = l.name + ' — ' + l.why;
     row.innerHTML =
       '<span class="hd-leg-icon">' + l.icon + '</span>' +
       '<span class="hd-leg-name">' + l.name + '<span class="hd-leg-val">' + l.val + '</span></span>' +
-      '<span class="hd-leg-now">' + l.now + '</span>' +
-      '<span class="hd-leg-why">' + l.why + '</span>';
+      '<span class="hd-leg-now">' + l.now + '</span>';
     box.appendChild(row);
+  });
+  if (hdEl('hd-help') && hdEl('hd-help').classList.contains('is-on')) healerRenderHelpStats();
+}
+
+// The [?] overlay has the room the live strip does not, so the prose answer to
+// „what do these statistics actually do" lives there, next to each stat's
+// current value.
+function healerRenderHelpStats() {
+  const st = healerRuntime && healerRuntime.sim;
+  const box = hdEl('hd-help-stats');
+  if (!st || !box) return;
+  box.replaceChildren();
+  hdStatLines(st).forEach(l => {
+    const cell = document.createElement('div');
+    cell.className = 'hd-help-stat';
+    cell.innerHTML =
+      '<b>' + l.icon + ' ' + l.name + '</b> — teraz: <i>' + l.now + '</i>' +
+      '<span>' + l.why + '</span>';
+    box.appendChild(cell);
   });
 }
 
@@ -1448,8 +1599,8 @@ function stopHealerDungeonRound() {
   healerRuntime = newHealerRuntime();
   healerRuntime.archiveMode = archive;
   healerRuntime.sim = hdInitState(1);
-  const arena = hdEl('hd-arena');
-  if (arena) arena.classList.remove('is-playing');
+  const con = hdEl('hd-console');
+  if (con) con.classList.remove('is-playing');
   const startBtn = hdEl('hd-start');
   if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Wejdź do lochu'; }
   const rest = hdEl('hd-rest');
@@ -1469,14 +1620,9 @@ function beginHealerDungeonRound(seed, options) {
   rt.archiveMode = !!opts.archiveMode;
   rt.target = HD_TANK;
   healerBuildFrames();
-  const arena = hdEl('hd-arena');
-  if (arena) arena.classList.add('is-playing');
-  // The rules are long and this arena is tall — together they push the party
-  // frames below the fold on a laptop. Read them once, then they fold away and
-  // the board scrolls into view the moment the run starts.
-  const rules = hdEl('hd-rules');
-  if (rules) rules.open = false;
-  if (arena && arena.scrollIntoView) arena.scrollIntoView({ block: 'nearest' });
+  const con = hdEl('hd-console');
+  if (con) con.classList.add('is-playing');   // hides the start/result card
+  healerToggleHelp(false);
   const startBtn = hdEl('hd-start');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Loch trwa'; }
   const status = hdEl('hd-status');
@@ -1489,6 +1635,9 @@ function beginHealerDungeonRound(seed, options) {
 async function startHealerDungeonRound() {
   const rt = healerRuntime;
   if (rt && (rt.playing || rt.submitting)) return;
+  // Synchronously, BEFORE the first await: requestFullscreen() only works while
+  // a user gesture is live, and awaiting payArcadeEntry() first would spend it.
+  hdRequestFullscreen();
   // Phase 1 is arcade-only: there is no Edge Function to ask for a round, so
   // the seed is local. pay_arcade_entry still runs — it is the auth/game-type
   // check every other arcade game makes before a round.
@@ -1506,8 +1655,8 @@ async function finishHealerDungeonRound() {
   rt.playing = false;
   rt.submitting = true;
   if (rt.timer) clearTimeout(rt.timer);
-  const arena = hdEl('hd-arena');
-  if (arena) arena.classList.remove('is-playing');
+  const con = hdEl('hd-console');
+  if (con) con.classList.remove('is-playing');   // brings the result card back
   const rest = hdEl('hd-rest');
   if (rest) rest.classList.remove('is-on');
   healerRender();
@@ -1516,10 +1665,12 @@ async function finishHealerDungeonRound() {
   const bosses = rt.sim.bossesKilled;
   const startBtn = hdEl('hd-start');
   const status = hdEl('hd-status');
+  const title = hdEl('hd-startcard-title');
   const reason = rt.endedReason ? ' · ' + rt.endedReason : '';
   const bossTxt = bosses ? ' · bossów: ' + bosses : '';
   rt.submitting = false;
   if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Jeszcze raz'; }
+  if (title) title.textContent = '☠️ ' + score + (score === 1 ? ' grupa' : score < 5 ? ' grupy' : ' grup');
 
   if (allGamesMode) {
     try {
@@ -1541,9 +1692,16 @@ const HD_KEY_TARGET = { q: 0, w: 1, e: 2, r: 3, t: 4 };
 
 function healerKeyDown(ev) {
   const rt = healerRuntime;
-  if (!rt || !rt.playing) return;
   const arena = hdEl('hd-arena');
   if (!arena || !arena.offsetParent) return;    // panel not on screen
+  if (ev.key === 'Escape') {
+    // Esc closes the help overlay first, then leaves the game — but only when
+    // the browser is not in native fullscreen, where Esc is the browser's.
+    if (hdEl('hd-help') && hdEl('hd-help').classList.contains('is-on')) { healerToggleHelp(false); return; }
+    if (!document.fullscreenElement) healerLeaveGame();
+    return;
+  }
+  if (!rt || !rt.playing) return;
   const k = ev.key;
   if (HD_KEY_SPELL[k] !== undefined) {
     ev.preventDefault();
@@ -1572,6 +1730,12 @@ function healerSetupOnce() {
   if (drinkBtn) drinkBtn.addEventListener('click', () => healerQueueAction(HD_A_DRINK, 0));
   const pullBtn = hdEl('hd-pull-btn');
   if (pullBtn) pullBtn.addEventListener('click', () => healerQueueAction(HD_A_PULL, 0));
+  const helpBtn = hdEl('hd-help-btn');
+  if (helpBtn) helpBtn.addEventListener('click', () => healerToggleHelp());
+  const helpClose = hdEl('hd-help-close');
+  if (helpClose) helpClose.addEventListener('click', () => healerToggleHelp(false));
+  const exitBtn = hdEl('hd-exit');
+  if (exitBtn) exitBtn.addEventListener('click', healerLeaveGame);
 }
 
 healerSetupOnce();
