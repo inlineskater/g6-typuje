@@ -2,7 +2,7 @@ import fs from 'fs';
 const src = fs.readFileSync('games/healer-dungeon.js','utf8');
 // take only the parity block (the sim) — the rest touches document/window
 const block = src.slice(src.indexOf('const HD_TICK_MS'), src.indexOf('// ╚═══ PARITY BLOCK END'));
-const mod = new Function(block + '\nreturn {hdInitState,hdAdvanceTick,hdStartPull,hdPartyDps,hdMaxMana,hdRestTicks,hdRegenPerTick,hdCanCast,hdHealAmt,hdIncomingHeal,hdIncomingDamage,hdBossPending,hdIsBoss,hdEnragePct,HD_FSR_TICKS,HD_COST,HD_A_REJUV,HD_A_WG,HD_A_HT,HD_A_DRINK,HD_A_PULL,HD_A_UPGRADE,HD_SP_REJUV,HD_SP_WG,HD_SP_HT,HD_MAX_TICKS,HD_TANK,HD_HEAL,HD_PARTY,HD_BOSS_EVERY,HD_UPGRADE_CHOICES,HD_CB_BUSTER,HD_HT_HEAL,HD_REJUV_AMOUNTS,HD_WG_AMOUNTS};')();
+const mod = new Function(block + '\nreturn {hdInitState,hdAdvanceTick,hdStartPull,hdApplyUpgrade,hdPartyDps,hdMaxMana,hdRestTicks,hdRegenPerTick,hdCanCast,hdHealAmt,hdIncomingHeal,hdIncomingDamage,hdBossPending,hdIsBoss,hdEnragePct,HD_FSR_TICKS,HD_COST,HD_A_REJUV,HD_A_WG,HD_A_HT,HD_A_DRINK,HD_A_PULL,HD_A_UPGRADE,HD_SP_REJUV,HD_SP_WG,HD_SP_HT,HD_MAX_TICKS,HD_TANK,HD_HEAL,HD_PARTY,HD_BOSS_EVERY,HD_UPGRADE_CHOICES,HD_UPGRADE_COUNT,HD_UP_STEP,HD_CB_BUSTER,HD_HT_HEAL,HD_REJUV_AMOUNTS,HD_WG_AMOUNTS};')();
 const M = mod;
 const SLOTS = ['Tank','Ty','Łotr','Łucznik','Mag'];
 
@@ -51,6 +51,63 @@ console.log('— party shape —');
   const st = M.hdInitState(1);
   ok('five party members', st.hp.length===5 && M.HD_PARTY===5, 'hp='+st.hp.join(','));
   ok('two upgrade choices offered', M.HD_UPGRADE_CHOICES===2);
+  ok('three upgrade stats, not five', M.HD_UPGRADE_COUNT===3 && 'heal' in st.stats && 'hp' in st.stats && 'dmg' in st.stats,
+     Object.keys(st.stats).join(','));
+}
+
+console.log('— the three stats each do their one thing —');
+{
+  const base = M.hdInitState(1);
+  const heal = M.hdInitState(1); M.hdApplyUpgrade(heal, 0);
+  const hp   = M.hdInitState(1); M.hdApplyUpgrade(hp, 1);
+  const dmg  = M.hdInitState(1); M.hdApplyUpgrade(dmg, 2);
+  ok('Moc leczenia raises heals AND the mana pool',
+     M.hdHealAmt(heal,100) > M.hdHealAmt(base,100) && M.hdMaxMana(heal) > M.hdMaxMana(base),
+     M.hdHealAmt(base,100)+'→'+M.hdHealAmt(heal,100)+', mana '+M.hdMaxMana(base)+'→'+M.hdMaxMana(heal));
+  // Życie used to be tank-only (Wytrzymałość). With a cleave and a per-target
+  // jittered AoE the back four die as often as the tank, so it must lift all 5.
+  const liftedAll = hp.maxHp.every((v,i)=> v > base.maxHp[i]);
+  ok('Życie lifts the WHOLE party, not just the tank', liftedAll, base.maxHp.join('/')+' → '+hp.maxHp.join('/'));
+  ok('Życie tops up current HP as well as max', hp.hp.every((v,i)=> v === hp.maxHp[i]));
+  ok('Obrażenia speeds the kill', M.hdPartyDps(dmg) > M.hdPartyDps(base),
+     M.hdPartyDps(base)+' → '+M.hdPartyDps(dmg));
+}
+
+console.log('— cleave hits two DIFFERENT heroes —');
+{
+  // Drive many cleaves and confirm the pair is always distinct and always two.
+  let pairs=0, sameSlot=0, wrongCount=0;
+  for (let seed=1; seed<=60; seed++) {
+    const st = M.hdInitState(seed);
+    st.hp = st.maxHp.map(v=>v*1000);          // survive long enough to observe
+    st.maxHp = st.hp.slice();
+    for (let i=0;i<400 && !st.dead;i++) {
+      M.hdAdvanceTick(st, null);
+      const hits = st.fx.filter(f=>f.k==='dmg' && f.src==='cleave');
+      if (!hits.length) continue;
+      pairs++;
+      if (hits.length !== 2) wrongCount++;
+      else if (hits[0].slot === hits[1].slot) sameSlot++;
+    }
+  }
+  ok('cleaves actually fire', pairs > 100, pairs+' cleaves');
+  ok('always exactly two victims', wrongCount===0, wrongCount+' bad');
+  ok('never the same hero twice', sameSlot===0, sameSlot+' duplicates');
+}
+
+console.log('— the AoE pulse fans the party out —');
+{
+  // One shared jitter roll left all five bars identical, which made the party
+  // read as a single health pool. Per-target rolls must desync them.
+  const st = M.hdInitState(3);
+  let seen = null;
+  for (let i=0;i<200 && !st.dead;i++) {
+    M.hdAdvanceTick(st, null);
+    const aoe = st.fx.filter(f=>f.k==='dmg' && f.src==='aoe');
+    if (aoe.length === 5) { seen = aoe.map(f=>f.amt); break; }
+  }
+  ok('an AoE pulse lands on all five', seen && seen.length===5, JSON.stringify(seen));
+  ok('and not for identical amounts', seen && new Set(seen).size > 1, JSON.stringify(seen));
 }
 
 console.log('— 5-second rule —');

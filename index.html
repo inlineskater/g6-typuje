@@ -4215,7 +4215,7 @@
     html.hd-view-open, html.hd-view-open body { overflow: hidden !important; }
     .hd-fit {
       position: fixed; inset: 0; z-index: 500; overflow: hidden;
-      background: #070a0f; display: flex; align-items: center; justify-content: center;
+      background: #e7ebf1; display: flex; align-items: center; justify-content: center;
     }
     /* Shown only when the console had to be scaled below ~0.55 on a handheld —
        i.e. a phone held sideways, where 900 px of virtual height collapses the
@@ -4223,14 +4223,15 @@
     .hd-rotate {
       position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
       z-index: 3; display: none; max-width: min(92%, 460px); text-align: center;
-      background: rgba(9,12,18,.94); border: 1px solid #2c3444; border-radius: var(--r-pill);
-      padding: 7px 15px; color: #93c5fd; font-size: 13px; font-weight: 700; line-height: 1.35;
+      background: #fff; border: 1px solid #d8e0ea; border-radius: var(--r-pill);
+      padding: 7px 15px; color: #1d4ed8; font-size: 13px; font-weight: 700; line-height: 1.35;
+      box-shadow: 0 4px 16px rgba(15,23,42,.14);
     }
     .hd-fit.is-cramped .hd-rotate { display: block; }
     .hd-console {
-      --hd-bg: #12151c; --hd-panel: #1b202b; --hd-line: #2c3444;
-      --hd-text: #e6e9f0; --hd-dim: #93a0b8;
-      --hd-mana: #3b82f6; --hd-hp: #22c55e; --hd-warn: #f59e0b; --hd-crit: #ef4444;
+      --hd-bg: #ffffff; --hd-panel: #f6f8fb; --hd-line: #d8e0ea;
+      --hd-text: #0f172a; --hd-dim: #64748b;
+      --hd-mana: #2563eb; --hd-hp: #16a34a; --hd-warn: #d97706; --hd-crit: #dc2626;
       position: relative; flex: none; overflow: hidden;
       width: var(--hd-cw, 1600px); height: var(--hd-ch, 900px);
       transform: scale(var(--hd-scale, 1)); transform-origin: center center;
@@ -4264,7 +4265,7 @@
     .hd-stage-wrap {
       position: relative; flex: 1 1 auto; min-width: 0;
       display: flex; align-items: center; justify-content: center; overflow: hidden;
-      border: 1px solid var(--hd-line); border-radius: var(--r-sm); background: #0f131b;
+      border: 1px solid var(--hd-line); border-radius: var(--r-sm); background: #eef2f7;
     }
     /* object-fit does the letterboxing. Sizing the canvas with height:100% +
        aspect-ratio instead looked simpler but silently overflowed: it assumed
@@ -4275,35 +4276,49 @@
        same way when it sizes the backing store. */
     #hd-stage { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-    .hd-bar { position: relative; height: 100%; background: #0c0f15; border-radius: 4px; overflow: hidden; }
+    .hd-bar { position: relative; height: 100%; background: #dfe6ee; border-radius: 4px; overflow: hidden; }
     .hd-bar-fill { height: 100%; width: 0; border-radius: 4px; transition: width .1s linear; }
 
     /* ── raid frames, stacked one over the other ── */
-    .hd-frames { flex: 0 0 420px; display: flex; flex-direction: column; gap: 6px; }
+    /* Left of the battlefield: the frames are what you actually read under
+       pressure, so they sit where reading starts. .hd-board's DOM order puts
+       them first, which also makes the tab order match the 1-5 target keys. */
+    .hd-frames { flex: 0 0 430px; display: flex; flex-direction: column; gap: 6px; }
     .hd-frame {
-      flex: 1 1 0; min-height: 0;
-      background: var(--hd-panel); border: 2px solid var(--hd-line); border-radius: var(--r-sm);
-      padding: 7px 9px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
+      position: relative; flex: 1 1 0; min-height: 0;
+      background: #fff; border: 1px solid var(--hd-line); border-radius: var(--r-sm);
+      padding: 7px 10px 7px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
       font-family: inherit; color: inherit; text-align: left; cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15,23,42,.05);
     }
-    .hd-frame.is-target { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.22); }
+    /* Class colour stripe down the left edge, like a WoW raid frame's border. */
+    .hd-frame::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+      border-radius: var(--r-sm) 0 0 var(--r-sm); background: var(--hd-cls, #94a3b8);
+    }
+    .hd-frame[data-slot="0"] { --hd-cls: #64748b; }
+    .hd-frame[data-slot="1"] { --hd-cls: #22c55e; }
+    .hd-frame[data-slot="2"] { --hd-cls: #eab308; }
+    .hd-frame[data-slot="3"] { --hd-cls: #84cc16; }
+    .hd-frame[data-slot="4"] { --hd-cls: #3b82f6; }
+    .hd-frame.is-target { border-color: #d97706; box-shadow: 0 0 0 2px rgba(217,119,6,.28); }
     .hd-frame.is-low { animation: hd-pulse .7s ease-in-out infinite; }
     /* The telegraphed boss hit will kill this one through everything already
        landing on them — the loudest state in the UI, on purpose. */
     .hd-frame.is-doomed { animation: hd-doomed .45s ease-in-out infinite; }
     .hd-frame.is-dead { opacity: .4; filter: grayscale(1); }
-    @keyframes hd-pulse { 50% { border-color: var(--hd-crit); } }
-    @keyframes hd-doomed { 50% { border-color: #fff; box-shadow: 0 0 0 3px rgba(239,68,68,.45); } }
+    @keyframes hd-pulse { 50% { border-color: var(--hd-crit); background: #fff5f5; } }
+    @keyframes hd-doomed { 50% { border-color: var(--hd-crit); box-shadow: 0 0 0 3px rgba(220,38,38,.45); background: #fee2e2; } }
     .hd-frame-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
     .hd-frame-name { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hd-name-short { display: none; }
     .hd-frame-key {
       display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 3px;
-      border: 1px solid var(--hd-line); background: #0c0f15;
-      font-size: 9px; font-weight: 800; color: var(--hd-dim); vertical-align: 1px;
+      border: 1px solid var(--hd-line); background: #eef2f7;
+      font-size: 10px; font-weight: 800; color: var(--hd-dim); vertical-align: 1px;
     }
-    .hd-frame-hp { font-size: 12.5px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .hd-bar-hp { height: 22px; flex: none; }
+    .hd-frame-hp { font-size: 12.5px; font-weight: 800; color: var(--hd-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .hd-bar-hp { height: 24px; flex: none; }
     .hd-bar-hp .hd-bar-fill { background: var(--hd-hp); }
     .hd-bar-hp .hd-bar-fill.is-warn { background: var(--hd-warn); }
     .hd-bar-hp .hd-bar-fill.is-crit { background: var(--hd-crit); }
@@ -4315,8 +4330,8 @@
     .hd-pred-heal {
       position: absolute; top: 0; bottom: 0; width: 0; opacity: 0;
       background: repeating-linear-gradient(115deg,
-        rgba(134,239,172,.62) 0 6px, rgba(134,239,172,.34) 6px 12px);
-      border-right: 1px solid rgba(187,247,208,.85);
+        rgba(74,222,128,.85) 0 7px, rgba(134,239,172,.85) 7px 14px);
+      border-right: 2px solid #15803d;
       transition: width .1s linear, left .1s linear, opacity .12s; pointer-events: none;
     }
     .hd-pred-heal.is-on { opacity: 1; }
@@ -4325,30 +4340,30 @@
     .hd-pred-dmg {
       position: absolute; top: 0; bottom: 0; width: 0; opacity: 0;
       background: repeating-linear-gradient(115deg,
-        rgba(15,4,6,.62) 0 5px, rgba(127,29,29,.5) 5px 10px);
-      border-left: 2px solid #fb7185;
+        rgba(153,27,27,.85) 0 5px, rgba(220,38,38,.7) 5px 10px);
+      border-left: 2px solid #7f1d1d;
       transition: width .1s linear, left .1s linear, opacity .12s; pointer-events: none;
     }
     .hd-pred-dmg.is-on { opacity: 1; }
     .hd-pred-dmg.is-lethal { animation: hd-lethal .45s ease-in-out infinite; }
-    @keyframes hd-lethal { 50% { border-left-color: #fff; background-color: rgba(239,68,68,.4); } }
+    @keyframes hd-lethal { 50% { border-left-color: #fff; background-color: rgba(255,255,255,.55); } }
     .hd-pred-num {
       position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-      font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums;
-      color: transparent; text-shadow: 0 1px 2px rgba(0,0,0,.9); pointer-events: none;
+      font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+      color: transparent; text-shadow: 0 1px 2px rgba(255,255,255,.95); pointer-events: none;
     }
-    .hd-pred-num.is-heal { color: #bbf7d0; }
-    .hd-pred-num.is-lethal { color: #fecaca; }
+    .hd-pred-num.is-heal { color: #14532d; }
+    .hd-pred-num.is-lethal { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.85); }
 
     .hd-hots { display: flex; gap: 3px; min-height: 18px; flex-wrap: wrap; flex: none; }
     .hd-hot {
       font-size: 11.5px; font-weight: 800; line-height: 18px; padding: 0 5px;
-      border-radius: 3px; background: #0c0f15; border: 1px solid var(--hd-line);
+      border-radius: 3px; background: #fff; border: 1px solid var(--hd-line);
       font-variant-numeric: tabular-nums;
     }
-    .hd-hot-rejuv { border-color: rgba(74,222,128,.55); color: #86efac; }
-    .hd-hot-wg { border-color: rgba(163,230,53,.55); color: #bef264; }
-    .hd-hot-cast { border-color: rgba(250,204,21,.6); color: #fde047; }
+    .hd-hot-rejuv { border-color: #86efac; background: #f0fdf4; color: #15803d; }
+    .hd-hot-wg { border-color: #bef264; background: #f7fee7; color: #4d7c0f; }
+    .hd-hot-cast { border-color: #fcd34d; background: #fffbeb; color: #b45309; }
 
     /* ── enemy pack bar ── */
     .hd-pack { flex: none; }
@@ -4363,23 +4378,20 @@
     .hd-pack.is-boss .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #7f1d1d, #dc2626, #fb7185); }
 
     /* ── the bottom strip: cast bar, mana, spells, live stat readout ── */
+    /* No full-width cast bar here any more: a readout about ONE hero belongs on
+       that hero, so hdDrawSelfCast() paints it under your character instead. */
     .hd-strip { flex: none; display: flex; flex-direction: column; gap: 7px; }
-    .hd-cast { display: flex; align-items: center; gap: 8px; height: 14px; opacity: 0; transition: opacity .12s; }
-    .hd-cast.is-on { opacity: 1; }
-    .hd-bar-cast { flex: 1; height: 10px; }
-    .hd-bar-cast .hd-bar-fill { background: #facc15; }
-    .hd-cast-label { font-size: 11.5px; font-weight: 700; color: #facc15; white-space: nowrap; }
     .hd-mana { display: flex; align-items: center; gap: 10px; }
     .hd-bar-mana { flex: 1; height: 16px; }
     .hd-bar-mana .hd-bar-fill { background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); }
     .hd-mana-text { font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .hd-fsr {
       font-size: 11px; font-weight: 800; padding: 2px 9px; white-space: nowrap;
-      border-radius: var(--r-pill); background: #24292f; color: var(--hd-dim);
+      border-radius: var(--r-pill); background: #eef2f7; color: var(--hd-dim);
       border: 1px solid var(--hd-line); transition: background .15s, color .15s;
       font-variant-numeric: tabular-nums;
     }
-    .hd-fsr.is-on { background: rgba(59,130,246,.22); color: #93c5fd; border-color: #3b82f6; }
+    .hd-fsr.is-on { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
 
     .hd-spells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .hd-spell {
@@ -4392,8 +4404,8 @@
     .hd-spell.is-ready { border-color: #3b82f6; }
     .hd-spell.is-poor { opacity: .45; }
     .hd-spell.is-cd { opacity: .6; border-color: var(--hd-warn); }
-    .hd-spell-key { grid-area: key; font-size: 11px; font-weight: 800; color: var(--hd-dim);
-      border: 1px solid var(--hd-line); border-radius: 4px; padding: 3px 8px; background: #0c0f15; }
+    .hd-spell-key { grid-area: key; font-size: 12px; font-weight: 800; color: var(--hd-text);
+      border: 1px solid var(--hd-line); border-radius: 4px; padding: 3px 9px; background: #eef2f7; }
     .hd-spell-icon { grid-area: icon; font-size: 18px; }
     .hd-spell-name { grid-area: name; font-size: 12.5px; font-weight: 800; }
     .hd-spell-eff { grid-area: eff; font-size: 12px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; }
@@ -4406,17 +4418,17 @@
     .hd-legend { display: flex; gap: 7px; border-top: 1px solid var(--hd-line); padding-top: 7px; }
     .hd-leg-row {
       flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; gap: 5px;
-      background: #0c0f15; border: 1px solid var(--hd-line); border-radius: 6px; padding: 5px 8px;
+      background: var(--hd-panel); border: 1px solid var(--hd-line); border-radius: 6px; padding: 5px 8px;
     }
     .hd-leg-icon { font-size: 13px; }
     .hd-leg-name { font-size: 12px; font-weight: 800; white-space: nowrap; }
     .hd-leg-val {
       display: inline-block; margin-left: 4px; min-width: 15px; padding: 0 4px;
-      border-radius: 3px; background: #1b202b; border: 1px solid var(--hd-line);
-      font-size: 10px; text-align: center; color: #facc15; font-variant-numeric: tabular-nums;
+      border-radius: 3px; background: #fff; border: 1px solid var(--hd-line);
+      font-size: 10px; text-align: center; color: #b45309; font-variant-numeric: tabular-nums;
     }
     .hd-leg-now {
-      font-size: 12px; font-weight: 700; color: #93c5fd; font-variant-numeric: tabular-nums;
+      font-size: 12px; font-weight: 700; color: #1d4ed8; font-variant-numeric: tabular-nums;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: auto;
     }
     .hd-leg-why { display: none; }
@@ -4424,15 +4436,15 @@
     /* ── overlays over the battlefield ── */
     .hd-rest, .hd-startcard {
       position: absolute; left: 50%; transform: translateX(-50%);
-      background: rgba(9,12,18,.93); border: 1px solid var(--hd-line);
-      border-radius: var(--r-md); padding: 13px 16px; backdrop-filter: blur(3px);
+      background: rgba(255,255,255,.97); border: 1px solid var(--hd-line);
+      border-radius: var(--r-md); padding: 13px 16px; box-shadow: 0 8px 28px rgba(15,23,42,.16);
     }
     .hd-rest { display: none; bottom: 12px; width: min(660px, calc(100% - 24px)); }
     .hd-rest.is-on { display: block; }
     .hd-rest-head { display: flex; justify-content: space-between; align-items: center; gap: 10px;
       flex-wrap: wrap; margin-bottom: 7px; }
-    .hd-rest-label { font-size: 13px; font-weight: 800; color: #93c5fd; font-variant-numeric: tabular-nums; }
-    .hd-rest-label.is-boss { color: #fca5a5; }
+    .hd-rest-label { font-size: 13px; font-weight: 800; color: #1d4ed8; font-variant-numeric: tabular-nums; }
+    .hd-rest-label.is-boss { color: #b91c1c; }
     .hd-rest-actions { display: flex; gap: 6px; }
     .hd-rest-btn { font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
       padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--hd-line);
@@ -4440,7 +4452,7 @@
     .hd-rest-btn:hover { border-color: #3b82f6; }
     .hd-rest-btn.is-go { background: #1d4ed8; border-color: #3b82f6; }
     .hd-bar-rest { height: 6px; }
-    .hd-bar-rest .hd-bar-fill { background: #93c5fd; }
+    .hd-bar-rest .hd-bar-fill { background: #3b82f6; }
     /* Two cards, not three — a three-card hand nearly always held the obvious
        pick, so the choice was free. */
     .hd-upgrades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
@@ -4449,11 +4461,11 @@
       padding: 10px; cursor: pointer; font-family: inherit; color: inherit; text-align: left;
       display: flex; flex-direction: column; gap: 3px;
     }
-    .hd-up:hover { border-color: #facc15; }
+    .hd-up:hover { border-color: #d97706; background: #fffbeb; }
     .hd-up.is-locked { opacity: .4; cursor: default; }
     .hd-up-icon { font-size: 18px; }
     .hd-up-name { font-size: 12.5px; font-weight: 800; }
-    .hd-up-delta { font-size: 11px; font-weight: 800; color: #86efac; font-variant-numeric: tabular-nums; }
+    .hd-up-delta { font-size: 11.5px; font-weight: 800; color: #15803d; font-variant-numeric: tabular-nums; }
     .hd-up-desc { font-size: 11.5px; font-weight: 600; color: var(--hd-dim); line-height: 1.35; }
 
     .hd-startcard {
@@ -4475,21 +4487,21 @@
     /* ── the [?] overlay: rules plus the full stat explanations ── */
     .hd-help {
       position: absolute; inset: 0; z-index: 5; display: none;
-      background: rgba(8,11,17,.97); padding: 18px 20px; overflow: auto;
+      background: rgba(255,255,255,.985); padding: 18px 20px; overflow: auto;
     }
     .hd-help.is-on { display: block; }
     .hd-help h3 { font-size: 16px; margin: 0 0 8px; }
-    .hd-help h4 { font-size: 13px; margin: 14px 0 6px; color: #93c5fd; }
+    .hd-help h4 { font-size: 13px; margin: 14px 0 6px; color: #1d4ed8; }
     .hd-help ul { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.65; }
     .hd-help li { margin-bottom: 5px; }
     .hd-help-close { position: absolute; top: 14px; right: 16px; }
     .hd-help-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
     .hd-help-stat {
-      background: #12151c; border: 1px solid var(--hd-line); border-radius: 7px; padding: 8px 10px;
+      background: var(--hd-panel); border: 1px solid var(--hd-line); border-radius: 7px; padding: 8px 10px;
       font-size: 11.5px; line-height: 1.45;
     }
     .hd-help-stat b { font-size: 12.5px; }
-    .hd-help-stat i { color: #93c5fd; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hd-help-stat i { color: #1d4ed8; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
     .hd-help-stat span { display: block; color: var(--hd-dim); font-weight: 600; margin-top: 2px; }
 
     /* ── portrait console (phones) ── */
@@ -4511,7 +4523,7 @@
     .hd-console.is-portrait .hd-hot { font-size: 11px; line-height: 17px; padding: 0 4px; }
     .hd-console.is-portrait .hd-spell { padding: 6px 7px; grid-template-columns: 1fr;
       grid-template-areas: 'key' 'name' 'eff'; gap: 1px; }
-    .hd-console.is-portrait .hd-spell-key { justify-self: start; padding: 1px 6px; }
+    .hd-console.is-portrait .hd-spell-key { justify-self: start; padding: 1px 7px; }
     .hd-console.is-portrait .hd-spell-icon { display: none; }
     .hd-console.is-portrait .hd-spell-name { font-size: 12px; }
     .hd-console.is-portrait .hd-spell-eff { font-size: 11px; }
@@ -8973,6 +8985,10 @@
 
             <div class="hd-arena" id="hd-arena">
               <div class="hd-board">
+                <!-- Raid frames first in DOM order, so they render on the LEFT
+                     and the tab order matches the 1-5 target keys. -->
+                <div class="hd-frames" id="hd-frames"></div>
+
                 <!-- HoMM3-style hex battlefield. Everything on it is drawn from
                      the same simulation state the frames read, so it can never
                      drift. The rest window and the start/result card are
@@ -9000,8 +9016,6 @@
                     <div class="hd-status" id="hd-status">Pięć pasków życia, trzy czary i coraz mniej many. Naciśnij <strong>?</strong> po zasady.</div>
                   </div>
                 </div>
-
-                <div class="hd-frames" id="hd-frames"></div>
               </div>
 
               <div class="hd-pack" id="hd-pack">
@@ -9013,11 +9027,6 @@
               </div>
 
               <div class="hd-strip">
-                <div class="hd-cast" id="hd-cast">
-                  <div class="hd-bar hd-bar-cast"><div class="hd-bar-fill" data-fill></div></div>
-                  <span class="hd-cast-label" data-label></span>
-                </div>
-
                 <div class="hd-mana">
                   <div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" id="hd-mana-fill"></div></div>
                   <span class="hd-mana-text" id="hd-mana-text">0 / 0</span>
@@ -9026,17 +9035,17 @@
 
                 <div class="hd-spells" id="hd-spells">
                   <button type="button" class="hd-spell" data-spell="0">
-                    <span class="hd-spell-key">1</span><span class="hd-spell-icon">🌿</span>
+                    <span class="hd-spell-key">Q</span><span class="hd-spell-icon">🌿</span>
                     <span class="hd-spell-name">Odnowa — HoT 12 s, 1 cel</span>
                     <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
                   </button>
                   <button type="button" class="hd-spell" data-spell="1">
-                    <span class="hd-spell-key">2</span><span class="hd-spell-icon">🌳</span>
+                    <span class="hd-spell-key">W</span><span class="hd-spell-icon">🌳</span>
                     <span class="hd-spell-name">Dziki Wzrost — cała drużyna</span>
                     <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
                   </button>
                   <button type="button" class="hd-spell" data-spell="2">
-                    <span class="hd-spell-key">3</span><span class="hd-spell-icon">✋</span>
+                    <span class="hd-spell-key">E</span><span class="hd-spell-icon">✋</span>
                     <span class="hd-spell-name">Uzdrawiający Dotyk — kanał 2,5 s</span>
                     <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
                   </button>
@@ -9052,11 +9061,12 @@
               <button type="button" class="hd-icon-btn hd-help-close" id="hd-help-close" title="Zamknij">✕</button>
               <h3>Jak grać</h3>
               <ul>
-                <li><strong>Q / W / E / R / T</strong> wybiera cel (albo kliknij ramkę), <strong>1</strong> Odnowa, <strong>2</strong> Dziki Wzrost, <strong>3</strong> Uzdrawiający Dotyk. <strong>D</strong> = usiądź i pij, <strong>spacja</strong> = ruszaj dalej od razu.</li>
+                <li><strong>1 – 5</strong> wybiera cel — albo po prostu <strong>kliknij bohatera</strong> na polu bitwy lub jego ramkę. Czary: <strong>Q</strong> Odnowa, <strong>W</strong> Dziki Wzrost, <strong>E</strong> Uzdrawiający Dotyk. <strong>D</strong> = usiądź i pij, <strong>spacja</strong> = ruszaj dalej od razu.</li>
                 <li><strong>Zapowiedź leczenia.</strong> Jasny, pasiasty kawałek na pasku życia to leczenie, które <em>już leci</em> — wszystkie tyknięcia HoT-ów plus czar w locie. Jeśli ramka wygląda nisko, ale jest zakryta na zielono, nie marnuj na nią GCD.</li>
                 <li><strong>Czerwony kawałek</strong> zjadany z prawej strony paska to cios bossa, który zaraz wyląduje. Ramka miga na biało, gdy cios zabije cel <em>mimo</em> całego leczenia w locie — wtedy musisz dołożyć, zanim spadnie.</li>
                 <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many <em>stoi</em> przez 5 sekund. Wskaźnik obok paska many pokazuje, kiedy znowu zaczniesz odzyskiwać manę — luka bez czarów to darmowa mana.</li>
                 <li><strong>Odnowa</strong> jest najoszczędniejsza (2,44 HP za manę), <strong>Uzdrawiający Dotyk</strong> najdroższy (1,75). Spamowanie dużego leczenia wygrywa walkę i przegrywa loch. <strong>Dziki Wzrost</strong> leczy całą piątkę — trzymaj go na obrażenia obszarowe, które przychodzą co ~6,5 s.</li>
+                <li><strong>Obrażenia sypią się z czterech stron:</strong> tank obrywa co 1,5 s, co ~6,5 s przychodzi fala w całą drużynę (każdy dostaje trochę inaczej), co ~8,5 s ktoś losowy z tyłu dostaje mocny cios, a co ~5,5 s <em>dwóch</em> losowych bohaterów naraz. Paski nigdy nie spadają równo — dlatego patrz, kto jest najniżej, a nie kto jest „następny w kolejce".</li>
                 <li><strong>☠️ Boss co 5. grupę.</strong> Ma ~2,3× więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową: <em>Cios Decyzyjny</em> (ogromne obrażenia w tanka) i <em>Reorganizacja</em> (w całą drużynę). Masz 3,5 s, żeby przygotować leczenie. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
                 <li><strong>Między grupami siadasz i pijesz</strong> — ale rzucenie czaru Cię podnosi (<strong>D</strong> = usiądź z powrotem). Przerwa <strong>skraca się z każdą grupą</strong>: przy pierwszej masz 12,4 s, przy piętnastej już 4,5. Po bossie dostajesz kilka sekund więcej.</li>
                 <li>Po każdej grupie <strong>wybierasz jedno z dwóch ulepszeń</strong>. Nie wybierzesz do końca przerwy — dostaniesz pierwsze z brzegu.</li>

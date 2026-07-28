@@ -45,11 +45,19 @@ const HD_BASE_HP = [1500, 820, 900, 860, 780];
 
 // Your resources. Every stat starts at 0 and only upgrades move it, so the
 // opening pull is always identical — the "generic, overall the same" ask.
+// THREE stats, not five (2026-07-28). Duch (regen) and Pośpiech (cast speed)
+// are gone: they changed a number in the background rather than anything you
+// do, and every point spent describing them was a point not spent on the
+// encounter. What is left maps onto the three things a healer actually feels —
+// how hard the party hits, how hard you heal, how much health there is to work
+// with. Mana still has an upgrade path, because Moc leczenia widens the pool AND
+// raises HP-per-mana; regen and cast speed are now fixed constants.
 const HD_BASE_MANA = 1200;
-const HD_MANA_PER_INT = 30;
-const HD_HEAL_PCT_PER_INT = 4;   // +4% healing per point of Intelekt
-const HD_REGEN_BASE = 40;        // mana per SECOND outside the 5 s window
-const HD_REGEN_PER_SPIRIT = 4;
+const HD_MANA_PER_HEAL_PT = 17;  // Moc leczenia widens the pool as well
+const HD_HEAL_PCT_PER_PT = 4;    // ... and raises every heal
+const HD_HP_PCT_PER_PT = 3;      // Życie: max HP for the WHOLE party, not just the tank
+const HD_DPS_PER_PT = 11;        // Obrażenia: how fast the pack dies
+const HD_REGEN_BASE = 40;        // mana per SECOND outside the 5 s window — fixed
 const HD_FSR_TICKS = 50;         // the 5-second rule, in ticks
 const HD_DRINK_PER_SEC = 120;    // ~10 s to fill an opening mana pool
 // Out-of-combat health regen, per mille of max HP per SECOND. Deliberately
@@ -90,11 +98,17 @@ const HD_DPS_BASE = 90, HD_DPS_PER_PULL = 22, HD_DPS_PER_STR = 8;   // per secon
 // makes late normal pulls lethal in their own right, which is what puts scores
 // in between the bosses again.
 const HD_MELEE_PERIOD = 15;      // tank auto-attack every 1.5 s
-const HD_MELEE_BASE = 56, HD_MELEE_PER_PULL = 10;
+const HD_MELEE_BASE = 58, HD_MELEE_PER_PULL = 11;
 const HD_AOE_PERIOD = 65;        // raid pulse every 6.5 s, now on all five
-const HD_AOE_BASE = 27, HD_AOE_PER_PULL = 9;
+const HD_AOE_BASE = 28, HD_AOE_PER_PULL = 10;
 const HD_SPIKE_PERIOD = 85;      // spike on a random non-tank every 8.5 s
-const HD_SPIKE_BASE = 90, HD_SPIKE_PER_PULL = 19;
+const HD_SPIKE_BASE = 92, HD_SPIKE_PER_PULL = 21;
+// Cleave: two DIFFERENT random party members at once, on its own beat. Added
+// with the 3-stat pass to put the complexity that came out of the upgrade
+// screen back into the encounter — with only melee/AoE/spike the damage pattern
+// repeated every 8.5 s and healing settled into a fixed rotation.
+const HD_CLEAVE_PERIOD = 55;     // every 5.5 s
+const HD_CLEAVE_BASE = 58, HD_CLEAVE_PER_PULL = 13;
 // ~13 s to sit and drink at pull 1, down to 4.5 s past pull 14. This shrinking
 // window IS the difficulty curve — no dungeon timer needed.
 const HD_REST_BASE = 130, HD_REST_PER_PULL = 6, HD_REST_MIN = 45;
@@ -128,13 +142,13 @@ const HD_BOSS_ENRAGE_TICKS = 230;  // 23 s
 const HD_BOSS_ENRAGE_PER_SEC = 5;  // +5 percentage points of damage per second
 const HD_BOSS_REST_BONUS = 45;     // a boss buys you 4.5 s of extra drinking
 
-// Upgrades — 2 of these 5 are offered after every pull. Two, not three: a
+// Upgrades — 2 of these 3 are offered after every pull. Two, not three: a
 // three-card hand nearly always contains the obvious pick, so the choice was
 // free. Two forces a genuine trade-off.
-const HD_UP_INT = 0, HD_UP_SPIRIT = 1, HD_UP_STAM = 2, HD_UP_STR = 3, HD_UP_HASTE = 4;
-const HD_UPGRADE_COUNT = 5;
+const HD_UP_HEAL = 0, HD_UP_HP = 1, HD_UP_DMG = 2;
+const HD_UPGRADE_COUNT = 3;
 const HD_UPGRADE_CHOICES = 2;
-const HD_UP_STEP = [3, 3, 3, 3, 2];
+const HD_UP_STEP = [2, 2, 2];
 
 // Actions the runtime logs.
 const HD_A_REJUV = 0, HD_A_WG = 1, HD_A_HT = 2;
@@ -152,25 +166,26 @@ function hdJitter(st, base) {
   return Math.max(1, Math.floor(base * (90 + hdRnd(st, 21)) / 100));
 }
 
-function hdMaxMana(st) { return HD_BASE_MANA + HD_MANA_PER_INT * st.stats.int; }
+function hdMaxMana(st) { return HD_BASE_MANA + HD_MANA_PER_HEAL_PT * st.stats.heal; }
 function hdHealAmt(st, base) {
-  return Math.floor(base * (100 + HD_HEAL_PCT_PER_INT * st.stats.int) / 100);
+  return Math.floor(base * (100 + HD_HEAL_PCT_PER_PT * st.stats.heal) / 100);
 }
-function hdRegenPerTick(st) {
-  return Math.floor((HD_REGEN_BASE + HD_REGEN_PER_SPIRIT * st.stats.spirit) / 10);
-}
+function hdRegenPerTick(st) { return Math.floor(HD_REGEN_BASE / 10); }
 function hdPartyDps(st) {
-  return HD_DPS_BASE + HD_DPS_PER_PULL * st.pull + HD_DPS_PER_STR * st.stats.str;
+  return HD_DPS_BASE + HD_DPS_PER_PULL * st.pull + HD_DPS_PER_PT * st.stats.dmg;
 }
 function hdPartyDpsPerTick(st) { return Math.floor(hdPartyDps(st) / 10); }
-function hdGcdTicks(st) { return Math.max(9, HD_GCD_TICKS - st.stats.haste); }
-function hdCastTicks(st) { return Math.max(15, HD_HT_CAST_TICKS - st.stats.haste); }
+function hdGcdTicks(st) { return HD_GCD_TICKS; }
+function hdCastTicks(st) { return HD_HT_CAST_TICKS; }
 function hdRestTicks(pull) {
   const base = Math.max(HD_REST_MIN, HD_REST_BASE - HD_REST_PER_PULL * pull);
   return hdIsBoss(pull) ? base + HD_BOSS_REST_BONUS : base;
 }
+// Życie scales the WHOLE party, not just the tank: with a cleave and a
+// per-target-jittered AoE in the mix, the squishy back four are as likely to be
+// the one that dies as the tank is.
 function hdMaxHpFor(st, slot) {
-  return slot === HD_TANK ? HD_BASE_HP[HD_TANK] + 60 * st.stats.stam : HD_BASE_HP[slot];
+  return Math.floor(HD_BASE_HP[slot] * (100 + HD_HP_PCT_PER_PT * st.stats.hp) / 100);
 }
 function hdIsBoss(pull) { return pull % HD_BOSS_EVERY === 0; }
 
@@ -209,9 +224,9 @@ function hdInitState(seed) {
     restLeft: 0, restMax: 0,
     drinking: false,
     upgrades: [], upgradePicked: false,
-    stats: { int: 0, spirit: 0, stam: 0, str: 0, haste: 0 },
+    stats: { heal: 0, hp: 0, dmg: 0 },
     dead: false, deadWho: -1,
-    meleeT: HD_MELEE_PERIOD, aoeT: HD_AOE_PERIOD, spikeT: HD_SPIKE_PERIOD,
+    meleeT: HD_MELEE_PERIOD, aoeT: HD_AOE_PERIOD, spikeT: HD_SPIKE_PERIOD, cleaveT: HD_CLEAVE_PERIOD,
     healingDone: 0, manaSpent: 0, overheal: 0,
     // Cosmetic event feed for the battlefield renderer. Cleared every tick and
     // NEVER read by the simulation, so a server transcription can drop it (or
@@ -233,6 +248,7 @@ function hdStartPull(st) {
   st.meleeT = HD_MELEE_PERIOD;
   st.aoeT = HD_AOE_PERIOD;
   st.spikeT = HD_SPIKE_PERIOD;
+  st.cleaveT = HD_CLEAVE_PERIOD;
   st.fightTick = 0;
   st.bossCast = null;
   st.bossCastT = HD_BOSS_CAST_FIRST;
@@ -255,19 +271,17 @@ function hdBeginRest(st) {
 
 function hdApplyUpgrade(st, up) {
   const step = HD_UP_STEP[up];
-  if (up === HD_UP_INT) {
-    st.stats.int += step;                       // bigger pool + stronger heals
-  } else if (up === HD_UP_SPIRIT) {
-    st.stats.spirit += step;
-  } else if (up === HD_UP_STAM) {
-    const before = st.maxHp[HD_TANK];
-    st.stats.stam += step;
-    st.maxHp[HD_TANK] = hdMaxHpFor(st, HD_TANK);
-    st.hp[HD_TANK] += st.maxHp[HD_TANK] - before;   // new HP arrives filled
-  } else if (up === HD_UP_STR) {
-    st.stats.str += step;
+  if (up === HD_UP_HEAL) {
+    st.stats.heal += step;                      // bigger pool + stronger heals
+  } else if (up === HD_UP_HP) {
+    st.stats.hp += step;
+    for (let i = 0; i < HD_PARTY; i += 1) {
+      const before = st.maxHp[i];
+      st.maxHp[i] = hdMaxHpFor(st, i);
+      if (st.hp[i] > 0) st.hp[i] += st.maxHp[i] - before;   // new HP arrives filled
+    }
   } else {
-    st.stats.haste += step;
+    st.stats.dmg += step;
   }
   st.upgradePicked = true;
 }
@@ -518,8 +532,15 @@ function hdAdvanceTick(st, actions) {
   st.aoeT -= 1;
   if (st.aoeT <= 0) {
     st.aoeT = HD_AOE_PERIOD;
-    const dmg = hdScaleDmg(st, hdJitter(st, HD_AOE_BASE + HD_AOE_PER_PULL * st.pull), aoePct);
-    for (let i = 0; i < HD_PARTY; i += 1) { hdDamage(st, i, dmg, 'aoe'); if (st.dead) return; }
+    // Jitter is rolled PER TARGET, not once for the pulse. One shared roll left
+    // all five bars in lockstep, so the party read as a single health pool and
+    // the answer was always the same spell; independent rolls fan the bars out
+    // and make you actually choose who is worst off.
+    const base = HD_AOE_BASE + HD_AOE_PER_PULL * st.pull;
+    for (let i = 0; i < HD_PARTY; i += 1) {
+      hdDamage(st, i, hdScaleDmg(st, hdJitter(st, base), aoePct), 'aoe');
+      if (st.dead) return;
+    }
   }
 
   st.spikeT -= 1;
@@ -527,6 +548,20 @@ function hdAdvanceTick(st, actions) {
     st.spikeT = HD_SPIKE_PERIOD;
     const tgt = 1 + hdRnd(st, HD_PARTY - 1);
     hdDamage(st, tgt, hdScaleDmg(st, hdJitter(st, HD_SPIKE_BASE + HD_SPIKE_PER_PULL * st.pull), 100), 'spike');
+    if (st.dead) return;
+  }
+
+  // Cleave — two DIFFERENT party members, anyone including the tank.
+  st.cleaveT -= 1;
+  if (st.cleaveT <= 0) {
+    st.cleaveT = HD_CLEAVE_PERIOD;
+    const base = HD_CLEAVE_BASE + HD_CLEAVE_PER_PULL * st.pull;
+    const a = hdRnd(st, HD_PARTY);
+    let b = hdRnd(st, HD_PARTY - 1);
+    if (b >= a) b += 1;                       // pick a second, distinct slot
+    hdDamage(st, a, hdScaleDmg(st, hdJitter(st, base), 100), 'cleave');
+    if (st.dead) return;
+    hdDamage(st, b, hdScaleDmg(st, hdJitter(st, base), 100), 'cleave');
   }
 }
 // ╚═══ PARITY BLOCK END ══════════════════════════════════════════════════════╝
@@ -535,21 +570,19 @@ function hdAdvanceTick(st, actions) {
 const HD_SLOT_NAMES = ['Tank', 'Ty (Druid)', 'Łotr', 'Łucznik', 'Mag'];
 const HD_SLOT_SHORT = ['Tank', 'Ty', 'Łotr', 'Łucz.', 'Mag'];
 const HD_SLOT_ICONS = ['🛡️', '💚', '🗡️', '🏹', '🔮'];
-const HD_SLOT_COLORS = ['#94a3b8', '#4ade80', '#facc15', '#a3e635', '#60a5fa'];
-const HD_TARGET_KEYS = ['Q', 'W', 'E', 'R', 'T'];
+const HD_SLOT_COLORS = ['#64748b', '#22c55e', '#eab308', '#84cc16', '#3b82f6'];
+const HD_TARGET_KEYS = ['1', '2', '3', '4', '5'];
 
 const HD_SPELL_META = [
-  { key: '1', icon: '🌿', name: 'Odnowa',             hint: 'HoT · 12 s · 1 cel' },
-  { key: '2', icon: '🌳', name: 'Dziki Wzrost',       hint: 'HoT · 8 s · CAŁA drużyna' },
-  { key: '3', icon: '✋', name: 'Uzdrawiający Dotyk', hint: 'kanał 2,5 s · duże leczenie' },
+  { key: 'Q', icon: '🌿', name: 'Odnowa',             hint: 'HoT · 12 s · 1 cel' },
+  { key: 'W', icon: '🌳', name: 'Dziki Wzrost',       hint: 'HoT · 8 s · CAŁA drużyna' },
+  { key: 'E', icon: '✋', name: 'Uzdrawiający Dotyk', hint: 'kanał 2,5 s · duże leczenie' },
 ];
 
 const HD_UPGRADE_META = [
-  { icon: '🧠', name: 'Intelekt',     desc: 'Większa pula many i mocniejszy każdy czar.' },
-  { icon: '💧', name: 'Duch',         desc: 'Szybsza regeneracja many poza zasadą 5 sekund.' },
-  { icon: '🛡️', name: 'Wytrzymałość', desc: 'Tank ma większy bufor życia na cios bossa.' },
-  { icon: '⚔️', name: 'Siła',         desc: 'Drużyna szybciej zabija — krótsze walki, mniej obrażeń.' },
-  { icon: '⚡', name: 'Pośpiech',     desc: 'Krótsze GCD i szybsze rzucanie — więcej czarów.' },
+  { icon: '💚', name: 'Moc leczenia', desc: 'Każdy czar leczy więcej i masz większą pulę many.' },
+  { icon: '❤️', name: 'Życie',        desc: 'Więcej zdrowia dla CAŁEJ drużyny — większy bufor na błąd.' },
+  { icon: '⚔️', name: 'Obrażenia',    desc: 'Drużyna szybciej zabija — krótsze walki, mniej ciosów.' },
 ];
 
 // Office monsters, because the rest of the portal is an office.
@@ -804,20 +837,21 @@ function hdRoundRect(ctx, x, y, w, h, r) {
 }
 
 function hdDrawField(ctx, rt, st) {
-  // floor
+  // Pale stone floor. The whole console went light in 2026-07-28; a dark arena
+  // inside white chrome read as two different apps bolted together.
   const g = ctx.createLinearGradient(0, 0, 0, HD_CS_H);
-  g.addColorStop(0, '#161b26');
-  g.addColorStop(0.55, '#1b2130');
-  g.addColorStop(1, '#232b3c');
+  g.addColorStop(0, '#f2f5f9');
+  g.addColorStop(0.55, '#e8edf4');
+  g.addColorStop(1, '#dde4ee');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, HD_CS_W, HD_CS_H);
 
   // a boss arena is lit red — you can tell what you walked into before you read
   // a single label
   if (st && st.isBoss && st.phase === 'fight') {
-    const rg = ctx.createRadialGradient(HD_CS_W * 0.66, HD_CS_H * 0.5, 20, HD_CS_W * 0.66, HD_CS_H * 0.5, 330);
-    rg.addColorStop(0, 'rgba(190,30,40,.26)');
-    rg.addColorStop(1, 'rgba(190,30,40,0)');
+    const rg = ctx.createRadialGradient(HD_CS_W * 0.66, HD_CS_H * 0.5, 20, HD_CS_W * 0.66, HD_CS_H * 0.5, 340);
+    rg.addColorStop(0, 'rgba(220,38,38,.16)');
+    rg.addColorStop(1, 'rgba(220,38,38,0)');
     ctx.fillStyle = rg;
     ctx.fillRect(0, 0, HD_CS_W, HD_CS_H);
   }
@@ -829,9 +863,9 @@ function hdDrawField(ctx, rt, st) {
       const p = hdHexXY(c, r);
       if (p[0] > HD_CS_W - 12) continue;
       hdHexPath(ctx, p[0], p[1], 0.94);
-      ctx.fillStyle = (c + r) % 2 ? 'rgba(255,255,255,.014)' : 'rgba(255,255,255,.03)';
+      ctx.fillStyle = (c + r) % 2 ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.24)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(148,163,184,.14)';
+      ctx.strokeStyle = 'rgba(100,116,139,.26)';
       ctx.stroke();
     }
   }
@@ -840,10 +874,10 @@ function hdDrawField(ctx, rt, st) {
   if (rt && st && st.hp[rt.target] > 0) {
     const p = hdPartyXY(rt.target);
     hdHexPath(ctx, p[0], p[1], 0.94);
-    ctx.fillStyle = 'rgba(250,204,21,.16)';
+    ctx.fillStyle = 'rgba(217,119,6,.20)';
     ctx.fill();
-    ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 2.5;
     ctx.stroke();
     ctx.lineWidth = 1;
   }
@@ -851,16 +885,18 @@ function hdDrawField(ctx, rt, st) {
   // and the tiles a boss ability is about to land on
   if (st && st.bossCast) {
     const buster = st.bossCast.kind === HD_CB_BUSTER;
-    const pulse = 0.18 + 0.16 * Math.sin((rt ? rt.time : 0) / 110);
+    const pulse = 0.20 + 0.16 * Math.sin((rt ? rt.time : 0) / 110);
     for (let i = 0; i < HD_PARTY; i += 1) {
       if (buster && i !== HD_TANK) continue;
       if (st.hp[i] <= 0) continue;
       const p = hdPartyXY(i);
       hdHexPath(ctx, p[0], p[1], 0.94);
-      ctx.fillStyle = 'rgba(239,68,68,' + pulse.toFixed(3) + ')';
+      ctx.fillStyle = 'rgba(220,38,38,' + pulse.toFixed(3) + ')';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(248,113,113,.75)';
+      ctx.strokeStyle = 'rgba(220,38,38,.8)';
+      ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.lineWidth = 1;
     }
   }
 }
@@ -877,13 +913,13 @@ function hdDrawUnit(ctx, o) {
   ctx.save();
   if (o.dead) ctx.globalAlpha = 0.28;
 
-  ctx.fillStyle = 'rgba(0,0,0,.42)';
+  ctx.fillStyle = 'rgba(30,41,59,.22)';
   ctx.beginPath();
   ctx.ellipse(x, y + 4, 21 * s, 7 * s, 0, 0, Math.PI * 2);
   ctx.fill();
 
   if (o.glow > 0) {
-    ctx.fillStyle = 'rgba(74,222,128,' + (0.45 * o.glow).toFixed(3) + ')';
+    ctx.fillStyle = 'rgba(34,197,94,' + (0.42 * o.glow).toFixed(3) + ')';
     ctx.beginPath();
     ctx.ellipse(x, y - 16 * s, 30 * s, 26 * s, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -892,12 +928,12 @@ function hdDrawUnit(ctx, o) {
   const top = y - 6 - h;
   const pg = ctx.createLinearGradient(0, top, 0, top + h);
   pg.addColorStop(0, o.color);
-  pg.addColorStop(1, 'rgba(0,0,0,.55)');
+  pg.addColorStop(1, o.color2 || 'rgba(15,23,42,.42)');
   hdRoundRect(ctx, x - w / 2, top, w, h, 7 * s);
   ctx.fillStyle = pg;
   ctx.fill();
   ctx.lineWidth = 2;
-  ctx.strokeStyle = o.flash > 0 ? '#fecaca' : 'rgba(0,0,0,.55)';
+  ctx.strokeStyle = o.flash > 0 ? '#dc2626' : 'rgba(30,41,59,.5)';
   ctx.stroke();
 
   if (o.flash > 0) {
@@ -914,39 +950,98 @@ function hdDrawUnit(ctx, o) {
   if (o.count > 1) {
     const bw = 24 * s, bh = 15 * s;
     hdRoundRect(ctx, x + w / 2 - bw + 4, y - 4, bw, bh, 4);
-    ctx.fillStyle = 'rgba(9,12,18,.92)';
+    ctx.fillStyle = 'rgba(255,255,255,.95)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(148,163,184,.5)';
+    ctx.strokeStyle = 'rgba(71,85,105,.55)';
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = '700 ' + Math.round(10 * s) + 'px system-ui, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 ' + Math.round(10 * s) + 'px system-ui, sans-serif';
     ctx.fillText(String(o.count), x + w / 2 - bw / 2 + 4, y + bh / 2 - 4);
   }
 
+  // ── WoW-style nameplate above the head ──
+  // Name, then a health bar carrying the same three readings the raid frame
+  // does: current health, the incoming-heal ghost stacked on the missing part,
+  // and the pending boss hit eaten out of the right edge. Being able to read
+  // "who is about to die" without looking away from the battlefield is the
+  // whole reason the plates exist.
   if (o.hpPct !== undefined) {
-    const bw = 40 * s;
-    ctx.fillStyle = 'rgba(6,9,14,.85)';
-    ctx.fillRect(x - bw / 2, top - 9, bw, 5);
-    ctx.fillStyle = o.hpPct < 35 ? '#ef4444' : o.hpPct < 65 ? '#f59e0b' : '#22c55e';
-    ctx.fillRect(x - bw / 2, top - 9, bw * o.hpPct / 100, 5);
+    const bw = 66 * s, bh = 7 * s, by = top - 12 * s;
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.fillRect(x - bw / 2 - 1, by - 1, bw + 2, bh + 2);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(x - bw / 2, by, bw, bh);
+    const hpW = bw * o.hpPct / 100;
+    ctx.fillStyle = o.hpPct < 35 ? '#dc2626' : o.hpPct < 65 ? '#d97706' : '#16a34a';
+    ctx.fillRect(x - bw / 2, by, hpW, bh);
     if (o.predPct > 0) {
-      ctx.fillStyle = 'rgba(134,239,172,.75)';
-      ctx.fillRect(x - bw / 2 + bw * o.hpPct / 100, top - 9,
-        bw * Math.min(o.predPct, 100 - o.hpPct) / 100, 5);
+      ctx.fillStyle = 'rgba(74,222,128,.78)';
+      ctx.fillRect(x - bw / 2 + hpW, by, bw * Math.min(o.predPct, 100 - o.hpPct) / 100, bh);
     }
-    ctx.strokeStyle = 'rgba(0,0,0,.6)';
+    if (o.dmgPct > 0) {
+      const dw = bw * Math.min(o.dmgPct, o.hpPct) / 100;
+      ctx.fillStyle = o.doomed ? 'rgba(255,255,255,.85)' : 'rgba(127,29,29,.66)';
+      ctx.fillRect(x - bw / 2 + hpW - dw, by, dw, bh);
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - bw / 2 + hpW - dw, by);
+      ctx.lineTo(x - bw / 2 + hpW - dw, by + bh);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = o.doomed ? '#dc2626' : 'rgba(51,65,85,.6)';
+    ctx.lineWidth = o.doomed ? 1.8 : 1;
+    ctx.strokeRect(x - bw / 2, by, bw, bh);
     ctx.lineWidth = 1;
-    ctx.strokeRect(x - bw / 2, top - 9, bw, 5);
-  }
 
-  if (o.label) {
-    ctx.fillStyle = 'rgba(226,232,240,.78)';
-    ctx.font = '700 10px system-ui, sans-serif';
-    ctx.fillText(o.label, x, top - 17);
+    if (o.label) {
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '800 ' + Math.round(11 * s) + 'px system-ui, sans-serif';
+      ctx.fillText(o.label, x, by - 8 * s);
+    }
+  } else if (o.label) {
+    ctx.fillStyle = '#334155';
+    ctx.font = '800 11px system-ui, sans-serif';
+    ctx.fillText(o.label, x, top - 12);
   }
 
   ctx.restore();
+}
+
+// Your cast bar, under YOUR character rather than spanning the whole console —
+// it is a readout about one hero, so it belongs on that hero.
+function hdDrawSelfCast(ctx, st) {
+  if (!st.cast) return;
+  const p = hdPartyXY(HD_HEAL);
+  const total = hdCastTicks(st);
+  const done = (total - st.cast.left) / total;
+  // Clamped into the canvas: the healer stands in the back-left column at
+  // x = 44, so a 96 px bar centred on them hangs 4 px off the left edge.
+  const w = 96, h = 11;
+  const x = Math.max(4, Math.min(HD_CS_W - w - 4, p[0] - w / 2));
+  const y = p[1] + 12;
+
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+  hdRoundRect(ctx, x - 2, y - 2, w + 4, h + 4, 4);
+  ctx.fill();
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(x, y, w, h);
+  const cg = ctx.createLinearGradient(x, 0, x + w, 0);
+  cg.addColorStop(0, '#f59e0b');
+  cg.addColorStop(1, '#fbbf24');
+  ctx.fillStyle = cg;
+  ctx.fillRect(x, y, w * done, h);
+  ctx.strokeStyle = 'rgba(51,65,85,.55)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = '800 9px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Centre on the BAR, not on the hero — they differ once the clamp kicks in.
+  ctx.fillText('✋ ' + HD_SLOT_SHORT[st.cast.target] + ' · ' + (st.cast.left / 10).toFixed(1) + 's', x + w / 2, y + h / 2);
 }
 
 function hdDrawBossCast(ctx, rt, st) {
@@ -957,29 +1052,29 @@ function hdDrawBossCast(ctx, rt, st) {
   const w = 168, h = 13, x = p[0] - w / 2, y = p[1] - 108;
 
   hdRoundRect(ctx, x - 4, y - 17, w + 8, h + 22, 5);
-  ctx.fillStyle = 'rgba(9,12,18,.9)';
+  ctx.fillStyle = 'rgba(255,255,255,.96)';
   ctx.fill();
-  ctx.strokeStyle = 'rgba(248,113,113,.8)';
+  ctx.strokeStyle = 'rgba(220,38,38,.85)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = '#fecaca';
+  ctx.fillStyle = '#991b1b';
   ctx.font = '800 11px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(meta.icon + ' ' + meta.name, p[0], y - 8);
 
-  ctx.fillStyle = 'rgba(0,0,0,.6)';
+  ctx.fillStyle = '#e2e8f0';
   ctx.fillRect(x, y, w, h);
   const cg = ctx.createLinearGradient(x, 0, x + w, 0);
   cg.addColorStop(0, '#b91c1c');
-  cg.addColorStop(1, '#f87171');
+  cg.addColorStop(1, '#ef4444');
   ctx.fillStyle = cg;
   ctx.fillRect(x, y, w * done, h);
-  ctx.strokeStyle = 'rgba(248,113,113,.9)';
+  ctx.strokeStyle = 'rgba(185,28,28,.9)';
   ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
 
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#0f172a';
   ctx.font = '800 10px system-ui, sans-serif';
   ctx.fillText((st.bossCast.left / 10).toFixed(1) + ' s — ' + meta.desc, p[0], y + h / 2);
 }
@@ -1006,6 +1101,8 @@ function hdDraw() {
     const p = hdPartyXY(i);
     const dead = st.hp[i] <= 0;
     const hpPct = hdPct(st.hp[i], st.maxHp[i]);
+    const incoming = dead ? 0 : hdIncomingHeal(st, i);
+    const dmg = dead ? 0 : hdIncomingDamage(st, i);
     units.push({
       row: HD_PARTY_CELL[i][1],
       x: p[0], y: p[1] + (dead ? 0 : bob * Math.sin((rt.time + i * 420) / 520) * 2),
@@ -1017,8 +1114,10 @@ function hdDraw() {
       dead: dead,
       count: 1,
       hpPct: hpPct,
-      predPct: hdPct(hdIncomingHeal(st, i), st.maxHp[i]),
-      label: HD_SLOT_SHORT[i],
+      predPct: hdPct(incoming, st.maxHp[i]),
+      dmgPct: hdPct(dmg, st.maxHp[i]),
+      doomed: dmg > 0 && dmg >= st.hp[i] + incoming,
+      label: HD_SLOT_SHORT[i] + (rt.target === i ? ' ◄' : ''),
     });
   }
 
@@ -1032,7 +1131,7 @@ function hdDraw() {
         row: cell[1],
         x: p[0], y: p[1] + bob * Math.sin((rt.time + i * 330) / 460) * 2,
         glyph: hdPackGlyph(st.pull),
-        color: st.isBoss ? (enraged ? '#dc2626' : '#7f1d1d') : '#4c1d24',
+        color: st.isBoss ? (enraged ? '#dc2626' : '#991b1b') : '#7f1d3a',
         lunge: rt.mobLunge[i] > 0 ? -Math.sin((1 - rt.mobLunge[i] / 320) * Math.PI) * 20 : 0,
         flash: Math.max(0, rt.mobFlash[i] / 240),
         glow: 0,
@@ -1047,6 +1146,7 @@ function hdDraw() {
   units.sort((a, b) => a.row - b.row);
   for (let i = 0; i < units.length; i += 1) hdDrawUnit(ctx, units[i]);
 
+  hdDrawSelfCast(ctx, st);
   if (!resting && st.isBoss) hdDrawBossCast(ctx, rt, st);
 
   // floating combat text
@@ -1057,8 +1157,8 @@ function hdDraw() {
     const t = 1 - n.life / n.max;
     ctx.globalAlpha = Math.max(0, 1 - t * t);
     ctx.font = '800 ' + n.size + 'px system-ui, sans-serif';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(0,0,0,.7)';
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = 'rgba(255,255,255,.92)';
     ctx.strokeText(n.text, n.x, n.y - t * 34);
     ctx.fillStyle = n.col;
     ctx.fillText(n.text, n.x, n.y - t * 34);
@@ -1066,21 +1166,21 @@ function hdDraw() {
   ctx.globalAlpha = 1;
 
   if (resting) {
-    ctx.fillStyle = 'rgba(9,12,18,.62)';
+    ctx.fillStyle = 'rgba(241,245,249,.78)';
     ctx.fillRect(0, 0, HD_CS_W, HD_CS_H);
-    ctx.fillStyle = '#93c5fd';
+    ctx.fillStyle = '#1d4ed8';
     ctx.font = '800 20px system-ui, sans-serif';
     ctx.fillText('🍺 Przerwa — ' + (st.restLeft / 10).toFixed(1) + ' s', HD_CS_W / 2, HD_CS_H / 2 - 12);
-    ctx.fillStyle = 'rgba(226,232,240,.72)';
+    ctx.fillStyle = '#475569';
     ctx.font = '700 12px system-ui, sans-serif';
     ctx.fillText(hdIsBoss(st.pull + 1) ? '☠️ Następny: BOSS — ' + hdPackName(st.pull + 1)
       : 'Następna grupa: ' + hdPackName(st.pull + 1), HD_CS_W / 2, HD_CS_H / 2 + 14);
   }
 
   if (st.dead) {
-    ctx.fillStyle = 'rgba(60,6,10,.6)';
+    ctx.fillStyle = 'rgba(254,226,226,.82)';
     ctx.fillRect(0, 0, HD_CS_W, HD_CS_H);
-    ctx.fillStyle = '#fecaca';
+    ctx.fillStyle = '#991b1b';
     ctx.font = '800 22px system-ui, sans-serif';
     ctx.fillText('☠️ ' + HD_SLOT_NAMES[st.deadWho] + ' zginął', HD_CS_W / 2, HD_CS_H / 2);
   }
@@ -1127,19 +1227,20 @@ function hdConsumeFx(rt) {
       const heavy = f.src === 'buster' || f.src === 'nuke';
       rt.num.push({
         x: p[0] + (Math.random() * 20 - 10), y: p[1] - 48,
-        text: '-' + f.amt, col: heavy ? '#fb7185' : '#f87171',
+        text: '-' + f.amt, col: heavy ? '#b91c1c' : '#dc2626',
         size: heavy ? 18 : 13, life: heavy ? 1300 : 1000, max: heavy ? 1300 : 1000,
       });
       rt.flash[f.slot] = 260;
       if (f.src === 'melee' || f.src === 'buster') rt.mobLunge[0] = 320;
       if (f.src === 'spike') rt.mobLunge[1] = 320;
+      if (f.src === 'cleave') rt.mobLunge[2 % rt.mobLunge.length] = 320;
       if (f.src === 'aoe') rt.shake = Math.max(rt.shake, 220);
       if (heavy) rt.shake = Math.max(rt.shake, 380);
     } else if (f.k === 'heal') {
       const p = hdPartyXY(f.slot);
       rt.num.push({
         x: p[0] + (Math.random() * 20 - 10), y: p[1] - 56,
-        text: '+' + f.amt, col: f.spell === HD_SP_HT ? '#bbf7d0' : '#86efac',
+        text: '+' + f.amt, col: f.spell === HD_SP_HT ? '#15803d' : '#16a34a',
         size: f.spell === HD_SP_HT ? 17 : 12, life: 900, max: 900,
       });
       rt.glow[f.slot] = 320;
@@ -1193,6 +1294,46 @@ function healerSetTarget(slot) {
   if (!rt) return;
   rt.target = slot;
   healerRenderFrames();
+}
+
+// ── Clicking a hero on the battlefield ──────────────────────────────────────
+// Mapping a click back into canvas coordinates has to undo TWO transforms: the
+// console's CSS scale (which getBoundingClientRect already accounts for, since
+// it reports the post-transform box) and the canvas's own `object-fit: contain`
+// letterboxing, which getBoundingClientRect does NOT — the element box is not
+// the drawn box.
+function hdCanvasPoint(ev) {
+  const cv = hdEl('hd-stage');
+  if (!cv) return null;
+  const r = cv.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  const fit = Math.min(r.width / HD_CS_W, r.height / HD_CS_H);
+  const drawW = HD_CS_W * fit, drawH = HD_CS_H * fit;
+  const ox = r.left + (r.width - drawW) / 2;
+  const oy = r.top + (r.height - drawH) / 2;
+  return [(ev.clientX - ox) / fit, (ev.clientY - oy) / fit];
+}
+
+// Nearest living party member to the click, within a generous radius — the
+// sprites are small once the console scales down, so hit boxes are forgiving.
+function hdHeroAt(x, y) {
+  let best = -1, bestD = 58 * 58;
+  for (let i = 0; i < HD_PARTY; i += 1) {
+    const p = hdPartyXY(i);
+    const dx = x - p[0], dy = y - (p[1] - 22);   // aim at the body, not the feet
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
+function healerStageClick(ev) {
+  const rt = healerRuntime;
+  if (!rt || !rt.sim) return;
+  const pt = hdCanvasPoint(ev);
+  if (!pt) return;
+  const slot = hdHeroAt(pt[0], pt[1]);
+  if (slot >= 0 && rt.sim.hp[slot] > 0) healerSetTarget(slot);
 }
 
 // ── Raid frames ─────────────────────────────────────────────────────────────
@@ -1348,21 +1489,15 @@ function healerRenderSpells() {
 // actually moves.
 function hdStatLines(st) {
   return [
-    { icon: '🧠', name: 'Intelekt', val: st.stats.int,
-      now: hdMaxMana(st) + ' many · leczenie +' + (HD_HEAL_PCT_PER_INT * st.stats.int) + '%',
-      why: 'Większa pula many i mocniejszy każdy czar — jedyna statystyka, która robi obie rzeczy naraz.' },
-    { icon: '💧', name: 'Duch', val: st.stats.spirit,
-      now: (HD_REGEN_BASE + HD_REGEN_PER_SPIRIT * st.stats.spirit) + ' many/s poza walką',
-      why: 'Działa TYLKO poza zasadą 5 sekund — im dłuższe przerwy w rzucaniu, tym więcej z niego masz.' },
-    { icon: '🛡️', name: 'Wytrzymałość', val: st.stats.stam,
-      now: 'Tank ' + hdMaxHpFor(st, HD_TANK) + ' HP',
-      why: 'Bufor na cios bossa: większa pula to więcej sekund na reakcję, zanim tank spadnie do zera.' },
-    { icon: '⚔️', name: 'Siła', val: st.stats.str,
+    { icon: '💚', name: 'Moc leczenia', val: st.stats.heal,
+      now: '+' + (HD_HEAL_PCT_PER_PT * st.stats.heal) + '% · ' + hdMaxMana(st) + ' many',
+      why: 'Podnosi każdy czar i poszerza pulę many, więc jednocześnie leczysz mocniej i dłużej. To jedyna statystyka, która poprawia leczenie na jednostkę many.' },
+    { icon: '❤️', name: 'Życie', val: st.stats.hp,
+      now: '+' + (HD_HP_PCT_PER_PT * st.stats.hp) + '% HP · tank ' + hdMaxHpFor(st, HD_TANK),
+      why: 'Więcej zdrowia dla całej piątki — nie leczy za Ciebie, ale daje sekundy na reakcję, zanim ktoś spadnie do zera.' },
+    { icon: '⚔️', name: 'Obrażenia', val: st.stats.dmg,
       now: 'Drużyna ' + hdPartyDps(st) + ' obr./s',
-      why: 'Krótsze walki = mniej ciosów w drużynę i mniej wydanej many. Bossów też nie zdąży ogarnąć wściekłość.' },
-    { icon: '⚡', name: 'Pośpiech', val: st.stats.haste,
-      now: 'GCD ' + (hdGcdTicks(st) / 10).toFixed(1) + ' s · kanał ' + (hdCastTicks(st) / 10).toFixed(1) + ' s',
-      why: 'Więcej czarów w tej samej walce — ale mana kończy się wtedy szybciej.' },
+      why: 'Krótsze walki to mniej ciosów w drużynę i mniej wydanej many. Bossa też nie zdąży ogarnąć wściekłość.' },
   ];
 }
 
@@ -1425,23 +1560,6 @@ function healerRenderBars() {
       : '⏳ ' + ((HD_FSR_TICKS - st.fsr) / 10).toFixed(1) + ' s';
   }
 
-  const cast = hdEl('hd-cast');
-  if (cast) {
-    if (st.cast) {
-      cast.classList.add('is-on');
-      const total = hdCastTicks(st);
-      const done = total - st.cast.left;
-      const fill = cast.querySelector('[data-fill]');
-      if (fill) fill.style.width = hdPct(done, total) + '%';
-      const label = cast.querySelector('[data-label]');
-      if (label) label.textContent = '✋ Uzdrawiający Dotyk → ' + HD_SLOT_SHORT[st.cast.target];
-    } else {
-      cast.classList.remove('is-on');
-      const fill = cast.querySelector('[data-fill]');
-      if (fill) fill.style.width = '0%';
-    }
-  }
-
   const pack = hdEl('hd-pack');
   if (pack) pack.classList.toggle('is-boss', st.isBoss && st.phase !== 'rest');
   const packFill = hdEl('hd-pack-fill');
@@ -1457,7 +1575,7 @@ function healerRenderBars() {
   setStat('hd-score', String(st.pullsCleared));
   setStat('hd-pull', st.pull + (st.isBoss ? ' ☠️' : ''));
   setStat('hd-mana-stat', String(st.mana));
-  setStat('hd-stats', '🧠' + st.stats.int + ' 💧' + st.stats.spirit + ' 🛡️' + st.stats.stam + ' ⚔️' + st.stats.str + ' ⚡' + st.stats.haste);
+  setStat('hd-stats', '💚' + st.stats.heal + '  ❤️' + st.stats.hp + '  ⚔️' + st.stats.dmg);
 }
 
 function healerRenderRest() {
@@ -1501,12 +1619,12 @@ function healerRenderRest() {
 // is never a guess about what "+3 Intelekt" means.
 function hdUpgradeDelta(st, up) {
   const step = HD_UP_STEP[up];
-  if (up === HD_UP_INT) return '+' + (HD_MANA_PER_INT * step) + ' many · leczenie +' + (HD_HEAL_PCT_PER_INT * step) + '%';
-  if (up === HD_UP_SPIRIT) return '+' + (HD_REGEN_PER_SPIRIT * step) + ' many/s poza walką';
-  if (up === HD_UP_STAM) return '+' + (60 * step) + ' HP tanka';
-  if (up === HD_UP_STR) return '+' + (HD_DPS_PER_STR * step) + ' obr./s drużyny';
-  const gcd = Math.max(9, HD_GCD_TICKS - st.stats.haste - step);
-  return 'GCD ' + (gcd / 10).toFixed(1) + ' s (z ' + (hdGcdTicks(st) / 10).toFixed(1) + ' s)';
+  if (up === HD_UP_HEAL) return 'leczenie +' + (HD_HEAL_PCT_PER_PT * step) + '% · +' + (HD_MANA_PER_HEAL_PT * step) + ' many';
+  if (up === HD_UP_HP) {
+    const after = Math.floor(HD_BASE_HP[HD_TANK] * (100 + HD_HP_PCT_PER_PT * (st.stats.hp + step)) / 100);
+    return 'HP +' + (HD_HP_PCT_PER_PT * step) + '% · tank ' + hdMaxHpFor(st, HD_TANK) + ' → ' + after;
+  }
+  return '+' + (HD_DPS_PER_PT * step) + ' obr./s (' + hdPartyDps(st) + ' → ' + (hdPartyDps(st) + HD_DPS_PER_PT * step) + ')';
 }
 
 function healerRender() {
@@ -1626,7 +1744,7 @@ function beginHealerDungeonRound(seed, options) {
   const startBtn = hdEl('hd-start');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Loch trwa'; }
   const status = hdEl('hd-status');
-  if (status) status.textContent = 'Utrzymaj piątkę przy życiu. 1 Odnowa · 2 Dziki Wzrost · 3 Uzdrawiający Dotyk · Q/W/E/R/T cel. Co 5. grupa to boss.';
+  if (status) status.textContent = 'Utrzymaj piątkę przy życiu. Q Odnowa · W Dziki Wzrost · E Uzdrawiający Dotyk · 1-5 lub klik w bohatera = cel. Co 5. grupa to boss.';
   healerRender();
   rt.nextTickAt = performance.now() + HD_TICK_MS;
   rt.timer = setTimeout(healerTick, HD_TICK_MS);
@@ -1686,9 +1804,10 @@ async function finishHealerDungeonRound() {
 }
 
 // ── Input ───────────────────────────────────────────────────────────────────
-const HD_KEY_SPELL = { 1: HD_A_REJUV, 2: HD_A_WG, 3: HD_A_HT };
-// R is a target key now that the party is five strong; drinking moved to D.
-const HD_KEY_TARGET = { q: 0, w: 1, e: 2, r: 3, t: 4 };
+// Spells on Q/W/E (left hand, where the action bar lives in every MMO), targets
+// on 1-5 (one digit per party slot, top to bottom in the frames). Drinking is D.
+const HD_KEY_SPELL = { q: HD_A_REJUV, w: HD_A_WG, e: HD_A_HT };
+const HD_KEY_TARGET = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
 
 function healerKeyDown(ev) {
   const rt = healerRuntime;
@@ -1703,13 +1822,13 @@ function healerKeyDown(ev) {
   }
   if (!rt || !rt.playing) return;
   const k = ev.key;
-  if (HD_KEY_SPELL[k] !== undefined) {
+  if (HD_KEY_TARGET[k] !== undefined) { ev.preventDefault(); healerSetTarget(HD_KEY_TARGET[k]); return; }
+  const low = typeof k === 'string' ? k.toLowerCase() : '';
+  if (HD_KEY_SPELL[low] !== undefined) {
     ev.preventDefault();
-    healerQueueAction(HD_KEY_SPELL[k], rt.target);
+    healerQueueAction(HD_KEY_SPELL[low], rt.target);
     return;
   }
-  const low = typeof k === 'string' ? k.toLowerCase() : '';
-  if (HD_KEY_TARGET[low] !== undefined) { ev.preventDefault(); healerSetTarget(HD_KEY_TARGET[low]); return; }
   if (low === 'd') { ev.preventDefault(); healerQueueAction(HD_A_DRINK, 0); return; }
   if (k === ' ') { ev.preventDefault(); healerQueueAction(HD_A_PULL, 0); }
 }
@@ -1736,6 +1855,17 @@ function healerSetupOnce() {
   if (helpClose) helpClose.addEventListener('click', () => healerToggleHelp(false));
   const exitBtn = hdEl('hd-exit');
   if (exitBtn) exitBtn.addEventListener('click', healerLeaveGame);
+  const stage = hdEl('hd-stage');
+  if (stage) {
+    stage.addEventListener('click', healerStageClick);
+    // Hover feedback: the cursor tells you a hero is clickable before you click.
+    stage.addEventListener('mousemove', ev => {
+      const rt = healerRuntime;
+      const pt = rt && rt.sim ? hdCanvasPoint(ev) : null;
+      const slot = pt ? hdHeroAt(pt[0], pt[1]) : -1;
+      stage.style.cursor = (slot >= 0 && rt.sim.hp[slot] > 0) ? 'pointer' : 'default';
+    });
+  }
 }
 
 healerSetupOnce();
