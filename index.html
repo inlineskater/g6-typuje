@@ -6802,7 +6802,7 @@
     .farm-nft-name { font-size: 11px; font-weight: 700; color: #7a5a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .farm-nft-serial { font-size: 12px; font-weight: 900; color: #b45309; margin-top: 2px; }
     /* NFT trading-card detail modal */
-    .farm-nft-modal { max-width: 340px; }
+    .farm-nft-modal { max-width: 400px; }
     .farm-nft-card { position: relative; border-radius: 16px; padding: 16px 14px 14px; text-align: center; color: #3a2a06; background: linear-gradient(165deg, #fffaf0, #ffe8b0); border: 3px solid #f59e0b; box-shadow: 0 8px 28px rgba(245,158,11,.35), inset 0 1px 0 rgba(255,255,255,.6); }
     .farm-nft-card-serial { position: absolute; top: 10px; right: 12px; font-size: 12px; font-weight: 900; color: #b45309; }
     .farm-nft-card-art { width: 96px; height: 96px; margin: 6px auto 8px; display: flex; align-items: center; justify-content: center; border-radius: 14px; background: radial-gradient(circle at 50% 36%, #fff, #ffeec2); box-shadow: inset 0 0 0 1px rgba(180,83,9,.2); }
@@ -6815,6 +6815,22 @@
     .farm-nft-stat span { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: #92600c; font-weight: 800; }
     .farm-nft-stat b { display: block; font-size: 13px; color: #5a3a0a; margin-top: 2px; }
     .farm-nft-card-flavor { font-size: 11.5px; font-style: italic; color: #7a5a1a; line-height: 1.4; }
+    /* Zysk/doba headline + full stat sheet under the trading card. The NPC price
+       swings 30-100% of the catalog max, so income is always a RANGE; the meter
+       shows where today's price sits inside that band. */
+    .nftm-income { margin-top: 12px; padding: 12px 14px 11px; border-radius: 14px; text-align: center; color: #3a2a06; background: linear-gradient(165deg, #fffdf5, #fff1cf); border: 1px solid rgba(180,83,9,.28); }
+    .nftm-income-head { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: #92600c; }
+    .nftm-income-val { font-size: 23px; font-weight: 700; color: #5a3a0a; line-height: 1.2; margin-top: 1px; }
+    .nftm-income-sub { font-size: 11px; color: #7a5a1a; margin-top: 1px; }
+    .nftm-meter { position: relative; height: 7px; border-radius: 999px; margin: 11px 2px 7px; background: linear-gradient(90deg, #f5e3bd, #f0b429); }
+    .nftm-meter-pin { position: absolute; top: -4px; width: 3px; height: 15px; border-radius: 2px; background: #5a3a0a; box-shadow: 0 0 0 2px rgba(255,255,255,.8); transform: translateX(-50%); }
+    .nftm-now { font-size: 12.5px; font-weight: 700; color: #5a3a0a; }
+    .nftm-note { font-size: 11px; color: #7a5a1a; line-height: 1.4; margin-top: 6px; }
+    .nftm-sec { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--muted); margin: 15px 0 1px; }
+    .nftm-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 1px; border-top: 1px solid var(--border); font-size: 13px; }
+    .nftm-row > span { color: var(--muted); white-space: nowrap; }
+    .nftm-row > b { font-weight: 700; text-align: right; }
+    .nftm-row.money > b { color: var(--accent); }
     .farm-cat-foot, .farm-inv-foot { margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.4; }
     .farm-inv-section-title { font-weight: 700; font-size: 13px; color: var(--text); margin: 16px 0 5px; }
     .farm-inv-section-title:first-child { margin-top: 2px; }
@@ -6881,6 +6897,31 @@
     .maj-crops-empty b { display: block; margin-top: 6px; font-size: 13px; font-weight: 700; color: var(--text); }
     .maj-crops-empty .mce-steps { margin-top: 6px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
     @media (prefers-reduced-motion: reduce) { .maj-crop-card, .maj-crop-bar i, .maj-crops-empty .mce-ico { animation: none !important; } }
+    /* ── 🌟 Co zasadzić — ranked shortlist, rows on hairlines (no nested boxes) ── */
+    .maj-advisor { margin: 4px 0 2px; }
+    .maj-advisor-sub { font-size: 11px; color: var(--muted); line-height: 1.4; margin: 2px 0 4px; }
+    .maj-advisor-foot { font-size: 10.5px; color: var(--muted); line-height: 1.45; margin-top: 7px; }
+    .maj-adv-row { display: grid; grid-template-columns: 18px 30px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+      padding: 8px 1px; border-top: 1px solid var(--border); }
+    .maj-adv-rank { font-size: 11px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+    .maj-adv-row.is-top .maj-adv-rank { color: #b45309; }
+    .maj-adv-row.is-bonus { background: color-mix(in srgb, #f59e0b 6%, transparent); }
+    .maj-adv-ico { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; }
+    .maj-adv-ico .farm-ico { width: 24px; height: 24px; }
+    .maj-adv-ico .farm-ico-emoji { font-size: 21px; }
+    .maj-adv-id { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .maj-adv-id > b { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .maj-adv-num { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }
+    .maj-adv-num > b { font-size: 14px; font-weight: 700; color: #b45309; font-variant-numeric: tabular-nums; }
+    .maj-adv-sub { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* The left meta line carries plon/wzrost — the numbers the ranking is about —
+       so let it wrap rather than ellipsise them away on a phone. */
+    .maj-adv-id .maj-adv-sub { white-space: normal; overflow: visible; line-height: 1.35; }
+    @media (max-width: 420px) {
+      .maj-adv-row { grid-template-columns: 16px 26px minmax(0, 1fr) auto; gap: 8px; }
+      .maj-adv-id > b { font-size: 12.5px; }
+    }
     .farm-v2-body .farm-card-sub { color: var(--muted); }
     /* ── Ogródek farm overhaul: Twemoji icons + collectible cards + wood theme ── */
     /* Crisp Twemoji SVG plant icons (sized to the container's font-size; emoji fallback) */
@@ -26719,8 +26760,11 @@ function renderFarmSelectionBody() {
             entries.push({ def, level: 1, name: def.name, disabled: true, disabledLabel: 'Wszystkie w użyciu' });
             return;
           }
+          // `inst` rides along so the income projection uses THIS egzemplarz's
+          // effective stats — a bred hybrid's stat_yield/stat_grow_minutes differ
+          // from the species def, which would otherwise misprice it here.
           insts.forEach(inst => entries.push({
-            def, level: inst.level || 1,
+            def, inst, level: inst.level || 1,
             name: (inst.nft_name ? inst.nft_name + ' ' : '') + '#' + inst.serial_no,
             onPick: (btn) => plantCrop(fmSel.x, fmSel.y, def.species, inst.id, btn),
           }));
@@ -27385,12 +27429,15 @@ function farmPerDayIncome(d, price, level = 1) {
 // weekly contract the per-unit premium (`bonusPerUnit`) is folded straight into
 // the price, so `seasonal` rows report their real boosted income. Returns null
 // when the crop has no market row (can't estimate). Used by the picker entries.
-function farmPlantIncomeCalc(def, level) {
+// `over` lets a caller substitute the effective stats of ONE instance — a bred
+// hybrid carries its own stat_yield/stat_grow_minutes, which differ from the
+// species def the fungible path derives everything from.
+function farmPlantIncomeCalc(def, level, over) {
   const mkt = def && fmMarket.get(def.crop_type);
   if (!mkt || mkt.base_price == null) return null;
   const base = +mkt.base_price;
-  const yld = farmYieldAtLevel(def, level);
-  const growMin = farmGrowMinAtLevel(def, level);
+  const yld = over?.yld != null ? over.yld : farmYieldAtLevel(def, level);
+  const growMin = over?.growMin != null ? over.growMin : farmGrowMinAtLevel(def, level);
   const growDays = Math.max(1, growMin / 1440);
   const activeBonus = farmActiveSeasonalBonus(def.crop_type);
   const eventBounds = activeBonus > 0 ? farmSeasonalEventBounds() : null;
@@ -27399,24 +27446,104 @@ function farmPlantIncomeCalc(def, level) {
   const readyBeforeContractEnds = !!(eventBounds && Date.now() + growMin * 60000 < eventBounds.to);
   const bonusPerUnit = readyBeforeContractEnds ? activeBonus : 0;
   const unitLow = base * 0.30 + bonusPerUnit, unitHigh = base + bonusPerUnit;
+  // What the NPC pays RIGHT NOW (recovered toward today's anchor), so the range
+  // can be shown with a "you are here" marker instead of two abstract bounds.
+  const cur = farmMarketEffectivePrice(mkt);
+  const unitNow = cur + bonusPerUnit;
   return {
     base, yld, growMin, growDays, bonusPerUnit, seasonal: bonusPerUnit > 0,
     totalLow: Math.round(yld * unitLow), totalHigh: Math.round(yld * unitHigh),
     dayLow: Math.round(yld * unitLow / growDays), dayHigh: Math.round(yld * unitHigh / growDays),
     seasonalTotal: Math.round(yld * bonusPerUnit),               // premium portion (for the badge)
+    cur, curPct: base > 0 ? Math.round(cur / base * 100) : 0,
+    totalNow: Math.round(yld * unitNow), dayNow: Math.round(yld * unitNow / growDays),
   };
+}
+
+// Effective (level-scaled) stats of ONE owned NFT instance at an arbitrary level.
+// Mirrors plant_crop / harvest_crop, but reads the instance's own stored base
+// stats first (bred hybrids override the species def — see farmNftStats).
+function farmNftStatsAtLevel(n, L) {
+  const def = fmDefs.get(n.species) || {};
+  const baseY = n.stat_yield != null ? n.stat_yield : (def.base_yield || 0);
+  const baseG = n.stat_grow_minutes != null ? n.stat_grow_minutes : (def.base_grow_minutes || 0);
+  return { def, yld: Math.round(baseY * (1 + (L - 1) * 0.5)),
+           growMin: Math.max(1440, baseG * Math.pow(0.92, L - 1)) };
+}
+
+// Income projection for one NFT INSTANCE — the same 30-100% price band as
+// farmPlantIncomeCalc, driven by that instance's own effective stats.
+function farmNftIncomeCalc(n, level) {
+  const L = level || n.level || 1;
+  const s = farmNftStatsAtLevel(n, L);
+  return farmPlantIncomeCalc(s.def, L, { yld: s.yld, growMin: s.growMin });
+}
+
+// Empty owned tiles a crop could actually go into. fmTiles already drops
+// `acquired_via='migration'` rows on load, but the check is kept so this stays
+// correct if that ever changes — plant_crop rejects zen tiles and listed ones.
+function farmFreeTileCount() {
+  let n = 0;
+  fmTiles.forEach(t => {
+    if (t.owner_id === me?.id && !t.planted_species && !t.listed && t.acquired_via !== 'migration') n++;
+  });
+  return n;
+}
+
+// Every card / egzemplarz the player could put in the ground RIGHT NOW, ranked by
+// the best daily income it could produce. Eligibility mirrors the plant picker
+// (and plant_crop): a fungible card at level 2+ is an unlimited seed, a level-1
+// card is capped by how many copies aren't already planted, and an NFT is one
+// planting per unlisted, unplanted egzemplarz. NFTs are priced off their own
+// instance stats, since a bred hybrid's differ from the species def.
+function farmPlantableRanking() {
+  const out = [];
+  const plantedIds = farmPlantedNftIds();
+  const plantedCounts = new Map();
+  fmTiles.forEach(t => {
+    if (t.owner_id === me?.id && t.planted_species) {
+      plantedCounts.set(t.planted_species, (plantedCounts.get(t.planted_species) || 0) + 1);
+    }
+  });
+
+  fmNft.forEach(n => {
+    if (n.owner_id !== me?.id || n.listed || plantedIds.has(n.id)) return;
+    const def = fmDefs.get(n.species);
+    if (!def) return;
+    const lvl = n.level || 1;
+    out.push({ def, inst: n, nft: true, level: lvl, free: 1, calc: farmNftIncomeCalc(n, lvl),
+      name: (n.nft_name ? n.nft_name + ' ' : '') + '#' + n.serial_no, sub: def.name });
+  });
+
+  fmCollection.forEach(c => {
+    const def = fmDefs.get(c.species);
+    if (!def || def.edition_size != null) return;        // NFT species are handled above
+    const lvl = c.level || 1;
+    const free = lvl >= 2 ? Infinity : Math.max(0, (c.count || 0) - (plantedCounts.get(c.species) || 0));
+    if (free <= 0) return;
+    out.push({ def, nft: false, level: lvl, free, calc: farmPlantIncomeCalc(def, lvl),
+      name: def.name, sub: FARM_RARITY_PL[def.rarity] || def.rarity || '' });
+  });
+
+  // „Najwyższy możliwy zarobek" = the top of the price band; ties break on what
+  // the crop would actually pay today, then on the shorter grow time.
+  return out.filter(r => r.calc)
+    .sort((a, b) => b.calc.dayHigh - a.calc.dayHigh
+                 || b.calc.dayNow - a.calc.dayNow
+                 || a.calc.growMin - b.calc.growMin);
 }
 
 // One plant-picker entry: identity (icon · name · level) on the left, then grow
 // time, yield, and the income projection (daily / per-harvest ranges) on the
 // right. A weekly-contract crop gets a 🏆 badge and its premium is already folded
 // into both income ranges.
-// `entry` = { def, level, name, onPick(btn), disabled, disabledLabel }.
+// `entry` = { def, inst?, level, name, onPick(btn), disabled, disabledLabel } —
+// `inst` is set for NFT egzemplarze so the projection uses their own stats.
 function farmPlantPickEntry(entry) {
-  const { def, level, name, disabled, disabledLabel, onPick } = entry;
+  const { def, inst, level, name, disabled, disabledLabel, onPick } = entry;
   const rar = def.rarity || 'common';
   const isNft = def.edition_size != null;
-  const calc = farmPlantIncomeCalc(def, level);
+  const calc = inst ? farmNftIncomeCalc(inst, level) : farmPlantIncomeCalc(def, level);
   const seasonal = !!(calc && calc.seasonal);
   const money = (lo, hi) => (lo === hi ? String(lo) : lo + '–' + hi) + ' 🪙';
   const entryEl = el('div', { className: 'fpk-entry farm-cat-row-' + rar + (disabled ? ' disabled' : ' pickable') + (seasonal ? ' fpk-bonus' : ''),
@@ -28263,6 +28390,94 @@ function farmNftValue(n) {
   return n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null;
 }
 
+// Headline „Zysk / doba" for one NFT instance. It is deliberately a RANGE: the
+// NPC price is re-anchored to 30-100% of the catalog max twice a day, so a single
+// number would be a lie in one direction or the other. The meter marks where
+// today's price actually sits inside that band.
+function farmNftIncomeBlock(n, calc) {
+  const box = el('div', { className: 'nftm-income' });
+  box.append(el('div', { className: 'nftm-income-head' }, 'Zysk / doba'));
+  if (!calc) {
+    box.append(el('div', { className: 'nftm-income-val' }, '—'),
+      el('div', { className: 'nftm-income-sub' }, 'Brak notowań skupu dla tego plonu.'));
+    return box;
+  }
+  const money = (lo, hi) => lo === hi ? (lo + ' 🪙') : (lo + ' – ' + hi + ' 🪙');
+  box.append(el('div', { className: 'nftm-income-val' }, '≈ ' + money(calc.dayLow, calc.dayHigh)),
+    el('div', { className: 'nftm-income-sub' }, 'przy cenie skupu 30–100% pułapu (' + calc.base + ' 🪙/szt.)'));
+  // Where today's price sits in the 30-100% band → 0-100% of the meter.
+  const pos = Math.max(0, Math.min(100, (calc.curPct - 30) / 70 * 100));
+  box.append(el('div', { className: 'nftm-meter', title: 'NPC płaci dziś ' + calc.cur.toFixed(1) + ' 🪙/szt. = ' + calc.curPct + '% pułapu' },
+    el('div', { className: 'nftm-meter-pin', style: { left: pos + '%' } })));
+  box.append(el('div', { className: 'nftm-now' },
+    'Dziś: ≈ ' + calc.dayNow + ' 🪙/dobę · skup ' + calc.curPct + '% pułapu'));
+  if (calc.seasonal) box.append(el('div', { className: 'nftm-note' },
+    '🏆 Kontrakt tygodnia: +' + calc.bonusPerUnit + ' 🪙/szt. jest już wliczony (łącznie +' + calc.seasonalTotal + ' 🪙 za zbiór).'));
+  const coll = farmCollectorBonus();
+  if (coll > 0) box.append(el('div', { className: 'nftm-note' },
+    '🏅 Renoma Kolekcjonera dorzuca +' + Math.round(coll * 100) + '% do wypłaty ze skupu: ≈ '
+    + money(Math.round(calc.dayLow * (1 + coll)), Math.round(calc.dayHigh * (1 + coll))) + ' / dobę.'));
+  box.append(el('div', { className: 'nftm-note' },
+    'Cena losuje się na nowo o 00:00 i 12:00, a każda sprzedaż chwilowo ją zbija — dolna granica to realny scenariusz, nie najgorszy możliwy.'));
+  return box;
+}
+
+// Full stat sheet under the trading card: what the card yields, what it earns,
+// where it is right now, and what the next merge level would change.
+function farmNftStatSheet(n, st, calc) {
+  const def = st.def;
+  const wrap = el('div', { className: 'nftm-sheet' });
+  const row = (label, value, cls) => el('div', { className: 'nftm-row' + (cls ? ' ' + cls : '') },
+    el('span', {}, label), el('b', {}, value));
+  const sec = t => el('div', { className: 'nftm-sec' }, t);
+  const money = (lo, hi) => lo === hi ? (lo + ' 🪙') : (lo + ' – ' + hi + ' 🪙');
+
+  // Which crop this plant harvests into — several plants share `seasonal_bloom`.
+  const cropDefs = [...fmDefs.values()].filter(d => d.crop_type === def.crop_type);
+  const shared = cropDefs.length > 1 ? FARM_SHARED_CROP_LABELS[def.crop_type] : null;
+  const cropLabel = shared ? (shared.emoji + ' ' + shared.label)
+                           : ((def.emoji || '🌱') + ' ' + (def.name || def.crop_type || '—'));
+  const perWeek = st.grow ? (7 / Math.max(1, st.grow / 1440)) : null;
+
+  wrap.append(sec('Uprawa'),
+    row('Plon z jednego zbioru', st.yield + ' szt.'),
+    row('Czas wzrostu', farmGrowDaysLabel(st.grow)),
+    row('Zbiorów w tygodniu', perWeek ? ('≈ ' + perWeek.toFixed(1).replace('.', ',')) : '—'),
+    row('Zbierany plon', cropLabel));
+  if (calc) wrap.append(
+    row('Cena skupu teraz', calc.cur.toFixed(1).replace('.', ',') + ' 🪙/szt. (' + calc.curPct + '% pułapu)'),
+    row('Pułap ceny', calc.base + ' 🪙/szt.'),
+    sec('Zarobek'),
+    row('Za jeden zbiór', money(calc.totalLow, calc.totalHigh), 'money'),
+    row('Na dobę', money(calc.dayLow, calc.dayHigh), 'money'),
+    row('Na dobę — dziś', '≈ ' + calc.dayNow + ' 🪙', 'money'));
+
+  // Where the card is right now — a planted or listed card can't be merged/planted.
+  let tileKey = null, tile = null;
+  fmTiles.forEach((t, key) => { if (t.planted_instance_id === n.id) { tileKey = key; tile = t; } });
+  let status;
+  if (n.listed) status = '🏷️ Wystawiona na Targowisku';
+  else if (tile) {
+    const ready = tile.ready_at && Date.now() >= new Date(tile.ready_at).getTime();
+    status = '🌱 Działka [' + tileKey + ']'
+           + (ready ? ' — gotowa do zbioru' : ' — zbiór ' + farmHarvestWhen(tile.ready_at));
+  } else status = '🎒 W kolekcji — gotowa do zasadzenia';
+
+  const next = farmNftStatsAtLevel(n, st.lvl + 1);
+  const nextCalc = farmNftIncomeCalc(n, st.lvl + 1);
+  wrap.append(sec('Karta'),
+    row('Egzemplarz', '#' + n.serial_no + ' / ' + n.edition_size),
+    row('Poziom', String(st.lvl)),
+    row('Wartość w Net Worth', st.value != null ? (st.value + ' 🪙') : '—'),
+    row('Status', status),
+    sec('Po awansie na poz. ' + (st.lvl + 1)),
+    row('Plon', next.yld + ' szt.'),
+    row('Czas wzrostu', farmGrowDaysLabel(next.growMin)),
+    row('Zysk / doba', nextCalc ? money(nextCalc.dayLow, nextCalc.dayHigh) : '—', 'money'),
+    row('Koszt fuzji', '2. egzemplarz poz. ' + st.lvl + ' + ' + (50 * st.lvl * st.lvl) + ' 🪙'));
+  return wrap;
+}
+
 // Trading-card detail for a serialized NFT plant (click an NFT in Mój Majątek).
 function openFarmNftModal(n) {
   const def = fmDefs.get(n.species) || {};
@@ -28276,7 +28491,8 @@ function openFarmNftModal(n) {
   const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
   closeX.addEventListener('click', close);
   const stat = (label, val) => el('div', { className: 'farm-nft-stat' }, el('span', {}, label), el('b', {}, val));
-  const growMin = def.base_grow_minutes ? def.base_grow_minutes * Math.pow(0.92, lvl - 1) : null;
+  const st = farmNftStats(n);                      // effective, instance-aware (hybrids carry their own stats)
+  const calc = farmNftIncomeCalc(n);               // 30-100% price band → zysk/doba od-do
   const isHybrid = NFT_HYBRID_SPECIES.has(n.species);
   const card = el('div', { className: 'farm-nft-card rar-' + rar + (isHybrid ? ' is-hybrid' : '') },
     el('div', { className: 'farm-nft-card-serial' }, '#' + n.serial_no + ' / ' + n.edition_size + (lvl > 1 ? ' · Poz. ' + lvl : '')),
@@ -28285,13 +28501,15 @@ function openFarmNftModal(n) {
     el('div', { className: 'farm-nft-card-species farm-rar-' + rar }, (def.name || n.species) + ' · ' + (isHybrid ? '🧬 Hybryda' : (FARM_RARITY_PL[rar] || rar)) + ' NFT'),
     el('div', { className: 'farm-nft-card-stats' },
       stat('Poziom', lvl + (lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '')),
-      stat('Plon', (def.base_yield || '?') + ' szt.'),
-      stat('Wzrost', growMin ? farmGrowLabel(Math.max(1440, growMin)) : '?'),
+      stat('Plon', st.yield + ' szt.'),
+      stat('Wzrost', farmGrowDaysLabel(st.grow)),
       stat('Wartość', value != null ? (value + ' 🪙') : '?')),
     el('div', { className: 'farm-nft-card-flavor' }, '„' + farmNftFlavor(n) + '"'));
   const modal = el('div', { className: 'modal farm-nft-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, '💎 Karta NFT'), closeX),
-    card);
+    card,
+    farmNftIncomeBlock(n, calc),
+    farmNftStatSheet(n, st, calc));
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
@@ -29283,11 +29501,74 @@ function majCropsHero() {
   return hero;
 }
 
+// 🌟 Co zasadzić — the short answer to "which of my cards is worth the tile?".
+// Ranks plant cards AND NFT egzemplarze together (a level-3 Marchewka can beat a
+// level-1 NFT), showing only what is free to plant right now. TOP_N is small on
+// purpose: this is a nudge above the collection, not a second catalog.
+const MAJ_ADVISOR_TOP_N = 6;
+function majPlantAdvisor() {
+  const box = el('div', { className: 'maj-advisor' });
+  const ranked = farmPlantableRanking();
+  const freeTiles = farmFreeTileCount();
+  const shown = Math.min(ranked.length, MAJ_ADVISOR_TOP_N);
+  // The count is what's ON SCREEN — a header reading "· 7" above six rows just
+  // makes the reader recount. The leftovers are named in the footnote instead.
+  box.append(majSectionHead('🌟', 'Co zasadzić', shown || null, null, { divider: false }));
+
+  if (!ranked.length) {
+    box.append(el('div', { className: 'farm-empty maj-empty' },
+      'Nie masz wolnej karty do zasadzenia — wszystkie siedzą już na działkach albo są wystawione na Targowisku. Otwórz skrzynkę 📦, żeby dobrać nowe.'));
+    return box;
+  }
+
+  box.append(el('div', { className: 'maj-advisor-sub' },
+    'Twoje karty i NFT gotowe do gleby, od najwyższego możliwego zarobku na dobę. '
+    + (freeTiles > 0
+        ? ('Masz ' + freeTiles + ' ' + plCount(freeTiles, 'wolną działkę', 'wolne działki', 'wolnych działek') + '.')
+        : 'Nie masz wolnej działki — kup nową lub zbierz plon z zajętej.')));
+
+  ranked.slice(0, MAJ_ADVISOR_TOP_N).forEach((r, i) => {
+    const c = r.calc;
+    const row = el('div', { className: 'maj-adv-row' + (i === 0 ? ' is-top' : '') + (c.seasonal ? ' is-bonus' : ''),
+      title: c.seasonal
+        ? 'Kontrakt tygodnia dolicza +' + c.bonusPerUnit + ' 🪙/szt., co podnosi CAŁY zakres — bez kontraktu ta karta zarabia mniej.'
+        : '' });
+    // A fungible level-1 card is limited by free copies; level 2+ is an unlimited
+    // seed, so say so rather than printing "×Infinity".
+    const copies = r.nft ? null : (r.free === Infinity ? '∞ sadzeń' : ('×' + r.free + ' ' + plCount(r.free, 'wolna', 'wolne', 'wolnych')));
+    row.append(
+      el('span', { className: 'maj-adv-rank' }, String(i + 1)),
+      el('span', { className: 'maj-adv-ico' }, farmIcon(r.def.emoji || (r.nft ? '💎' : '🌱'))),
+      el('span', { className: 'maj-adv-id' },
+        el('b', {}, r.name + (r.level > 1 ? ' · poz. ' + r.level : '')),
+        el('span', { className: 'maj-adv-sub' },
+          [r.nft ? '💎 ' + r.sub : r.sub, farmGrowDaysLabel(c.growMin), c.yld + ' szt.', copies,
+           // A weekly contract lifts BOTH ends of the range, so a row that owes its
+           // ranking to the premium has to say so — otherwise it looks like a
+           // permanently better card and stops being one the moment the week ends.
+           c.seasonal ? '🏆 kontrakt +' + c.bonusPerUnit + '/szt' : null]
+            .filter(Boolean).join(' · '))),
+      el('span', { className: 'maj-adv-num' },
+        el('b', {}, '≈ ' + c.dayHigh + ' 🪙/d'),
+        el('span', { className: 'maj-adv-sub' }, 'min ' + c.dayLow + ' · dziś ' + c.dayNow)));
+    box.append(row);
+  });
+
+  const rest = ranked.length - shown;
+  box.append(el('div', { className: 'maj-advisor-foot' },
+    'Sortowane po górnej granicy (cena skupu 100% pułapu). „min" to ta sama karta przy 30% pułapu, „dziś" — przy dzisiejszej cenie. Kliknij pustą działkę na polu, żeby zasadzić.'
+    + (rest > 0 ? ' Poza czołówką czeka jeszcze ' + rest + ' ' + plCount(rest, 'karta', 'karty', 'kart') + '.' : '')));
+  return box;
+}
+
 function buildFarmInventoryBody(bodyEl) {
   bodyEl.replaceChildren();
 
   // 🧺 Plony first — selling is the page's most common action.
   bodyEl.append(majCropsHero());
+
+  // 🌟 Co zasadzić — right under the crops, so "sell" and "plant next" sit together.
+  bodyEl.append(majPlantAdvisor());
 
   if (fmVouchers > 0) {
     bodyEl.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left', marginBottom: '8px' } },
