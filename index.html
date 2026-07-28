@@ -4203,15 +4203,19 @@
        The game NEVER scrolls, at any window size. It renders into a CONSOLE of
        fixed virtual size — 1600×900 landscape, 440×900 portrait — which a single
        transform scales to fit the viewport (the same trick the picker previews
-       use in agpScaleDom). Fluid units alone could not make that guarantee: five
-       raid frames, a spell rail, a stat strip and a battlefield all have real
-       minimum heights, so below some viewport they must either scroll, clip, or
-       scale — and scaling is the only one of the three that keeps every readout
-       on screen. Because the console's size is FIXED, every inner measurement
-       below is a plain pixel value that always adds up; nothing reflows.
+       use in agpScaleDom). Fluid units alone could not make that guarantee: a
+       character pane, a spellbook, five raid frames and a battlefield all have
+       real minimum heights, so below some viewport they must either scroll,
+       clip, or scale — and scaling is the only one of the three that keeps every
+       readout on screen. Because the console's size is FIXED, every inner
+       measurement below is a plain pixel value that always adds up.
        The takeover is also what makes „always fullscreen on mobile" work on iOS
        Safari, which has no element Fullscreen API — the fixed overlay is the
-       mechanism, the native call is a bonus that only hides the URL bar. */
+       mechanism, the native call is a bonus that only hides the URL bar.
+
+       Layout reads left-to-right the way an MMO does: YOUR character pane (with
+       your cast bar directly under it and your spellbook under that), then the
+       party's raid frames, then the world. */
     html.hd-view-open, html.hd-view-open body { overflow: hidden !important; }
     .hd-fit {
       position: fixed; inset: 0; z-index: 500; overflow: hidden;
@@ -4243,8 +4247,6 @@
     /* ── top bar ── */
     .hd-topbar { display: flex; align-items: center; gap: 8px; flex: none; min-width: 0; }
     .hd-brand { font-size: 17px; font-weight: 800; white-space: nowrap; margin-right: 4px; }
-    /* The stat chip is the one that may not fit a narrow console: let it be the
-       thing that shrinks, so the ?/✕ buttons are never pushed off the edge. */
     .hd-chip {
       background: var(--hd-panel); border: 1px solid var(--hd-line); border-radius: var(--r-pill);
       padding: 4px 11px; font-size: 12px; font-weight: 700; color: var(--hd-dim); white-space: nowrap;
@@ -4259,78 +4261,170 @@
     }
     .hd-icon-btn:hover { border-color: var(--hd-mana); }
 
-    /* ── the middle row: battlefield beside the raid frames ── */
+    /* ── the three columns ── */
     .hd-arena { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 9px; }
     .hd-board { flex: 1 1 auto; min-height: 0; display: flex; gap: 10px; }
+    .hd-left { flex: 0 0 252px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    .hd-stagecol { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
     .hd-stage-wrap {
-      position: relative; flex: 1 1 auto; min-width: 0;
+      position: relative; flex: 1 1 auto; min-height: 0;
       display: flex; align-items: center; justify-content: center; overflow: hidden;
       border: 1px solid var(--hd-line); border-radius: var(--r-sm); background: #eef2f7;
     }
-    /* object-fit does the letterboxing. Sizing the canvas with height:100% +
-       aspect-ratio instead looked simpler but silently overflowed: it assumed
-       the wrap is always wider than 2.53× its height, and in the landscape
-       console the board row is ~636 tall against ~1142 wide (1.8:1), so the
-       derived width came out at 1611 px inside a 1142 px box. `contain` fits
-       whichever axis binds; hdInitCanvas() recomputes the real drawn size the
-       same way when it sizes the backing store. */
+    /* object-fit does the letterboxing — the drawn box is never the element box,
+       and hdInitCanvas() recomputes the real drawn size the same way when it
+       sizes the backing store. */
     #hd-stage { display: block; width: 100%; height: 100%; object-fit: contain; }
 
     .hd-bar { position: relative; height: 100%; background: #dfe6ee; border-radius: 4px; overflow: hidden; }
     .hd-bar-fill { height: 100%; width: 0; border-radius: 4px; transition: width .1s linear; }
 
-    /* ── raid frames, stacked one over the other ── */
-    /* Left of the battlefield: the frames are what you actually read under
-       pressure, so they sit where reading starts. .hd-board's DOM order puts
-       them first, which also makes the tab order match the 1-5 target keys. */
-    .hd-frames { flex: 0 0 430px; display: flex; flex-direction: column; gap: 6px; }
+    /* ── YOUR character pane, WoW-style ── */
+    .hd-char {
+      flex: none; background: var(--hd-panel); border: 1px solid var(--hd-line);
+      border-radius: var(--r-sm); padding: 10px;
+    }
+    .hd-char-head { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+    .hd-char-portrait {
+      width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+      border-radius: 8px; border: 2px solid #22c55e; background: #ecfdf5; font-size: 21px;
+    }
+    .hd-char-name { font-size: 13.5px; font-weight: 800; line-height: 1.2; }
+    .hd-char-sub { font-size: 11px; font-weight: 700; color: var(--hd-dim); }
+    .hd-mana { display: flex; align-items: center; gap: 7px; }
+    .hd-bar-mana { flex: 1; height: 16px; }
+    .hd-bar-mana .hd-bar-fill { background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); }
+    .hd-mana-text { font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .hd-fsr {
+      display: block; margin-top: 6px; text-align: center;
+      font-size: 11px; font-weight: 800; padding: 3px 9px; white-space: nowrap;
+      border-radius: var(--r-pill); background: #eef2f7; color: var(--hd-dim);
+      border: 1px solid var(--hd-line); transition: background .15s, color .15s;
+      font-variant-numeric: tabular-nums;
+    }
+    .hd-fsr.is-on { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+
+    /* Stat rows, laid out like a character sheet: label on the left, the number
+       it currently buys on the right. */
+    .hd-legend { margin-top: 9px; border-top: 1px solid var(--hd-line); padding-top: 8px;
+      display: flex; flex-direction: column; gap: 3px; }
+    .hd-leg-row { display: flex; align-items: baseline; gap: 6px; font-size: 11.5px; }
+    .hd-leg-icon { font-size: 13px; }
+    .hd-leg-name { font-weight: 800; white-space: nowrap; }
+    .hd-leg-val {
+      display: inline-block; margin-left: 3px; min-width: 16px; padding: 0 4px;
+      border-radius: 3px; background: #fff; border: 1px solid var(--hd-line);
+      font-size: 10px; text-align: center; color: #b45309; font-variant-numeric: tabular-nums;
+    }
+    .hd-leg-now {
+      font-size: 11px; font-weight: 700; color: #1d4ed8; font-variant-numeric: tabular-nums;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: auto;
+    }
+    .hd-leg-why { display: none; }
+
+    /* ── your cast bar, directly under the character pane ── */
+    .hd-castbar {
+      position: relative; flex: none; height: 22px; border-radius: 5px; overflow: hidden;
+      background: #e2e8f0; border: 1px solid var(--hd-line);
+      opacity: .35; transition: opacity .12s;
+    }
+    .hd-castbar.is-on { opacity: 1; border-color: #f59e0b; }
+    .hd-castbar-fill {
+      position: absolute; inset: 0; width: 0;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24); transition: width .1s linear;
+    }
+    .hd-castbar-label {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      font-size: 11px; font-weight: 800; color: #0f172a; white-space: nowrap;
+    }
+
+    /* ── spellbook ── */
+    .hd-spells { flex: none; display: flex; flex-direction: column; gap: 6px; }
+    .hd-spell {
+      position: relative; background: #fff; border: 1px solid var(--hd-line);
+      border-radius: var(--r-sm); padding: 6px; cursor: pointer;
+      font-family: inherit; color: inherit; text-align: left;
+      display: grid; grid-template-columns: auto 1fr; gap: 2px 9px;
+      grid-template-areas: 'icon name' 'icon eff'; align-items: center;
+    }
+    .hd-spell.is-ready { border-color: #2563eb; box-shadow: 0 0 0 1px rgba(37,99,235,.25); }
+    .hd-spell.is-poor { opacity: .45; }
+    .hd-spell-slot {
+      grid-area: icon; position: relative; width: 42px; height: 42px; flex: none;
+      border-radius: 6px; border: 1px solid var(--hd-line); background: var(--hd-panel);
+      display: grid; place-items: center; font-size: 21px; overflow: hidden;
+    }
+    /* The WoW global-cooldown sweep: a dark wedge over the icon that unwinds as
+       the spell becomes usable again. This is the whole answer to „why can't I
+       cast on the next hero immediately" — the GCD was invisible before. */
+    .hd-spell-sweep {
+      position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: conic-gradient(rgba(15,23,42,.62) var(--sweep, 0turn), transparent 0);
+      transition: opacity .07s;
+    }
+    .hd-spell.is-cd .hd-spell-sweep { opacity: 1; }
+    .hd-spell-key {
+      position: absolute; left: 2px; top: 1px; z-index: 2;
+      font-size: 10px; font-weight: 800; color: var(--hd-text);
+      text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+    }
+    .hd-spell-name { grid-area: name; font-size: 12.5px; font-weight: 800; }
+    .hd-spell-eff { grid-area: eff; font-size: 11px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; }
+    .hd-spell-cd {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      font-size: 14px; font-weight: 800; color: var(--hd-warn);
+      font-variant-numeric: tabular-nums; text-shadow: 0 0 4px #fff;
+    }
+
+    /* ── raid frames, Grid/VuhDo style: the CELL is the health bar ── */
+    .hd-frames { flex: 0 0 400px; display: flex; flex-direction: column; gap: 5px; }
     .hd-frame {
-      position: relative; flex: 1 1 0; min-height: 0;
-      background: #fff; border: 1px solid var(--hd-line); border-radius: var(--r-sm);
-      padding: 7px 10px 7px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
-      font-family: inherit; color: inherit; text-align: left; cursor: pointer;
-      box-shadow: 0 1px 2px rgba(15,23,42,.05);
+      position: relative; flex: 1 1 0; min-height: 0; overflow: hidden;
+      background: #cbd5e1;                     /* the drained part of the bar */
+      border: 1px solid #94a3b8; border-radius: 4px;
+      padding: 5px 8px; display: flex; flex-direction: column; justify-content: space-between;
+      font-family: inherit; color: #0f172a; text-align: left; cursor: pointer;
     }
-    /* Class colour stripe down the left edge, like a WoW raid frame's border. */
-    .hd-frame::before {
-      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
-      border-radius: var(--r-sm) 0 0 var(--r-sm); background: var(--hd-cls, #94a3b8);
+    /* the health fill itself, in class colour */
+    .hd-frame-fill {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+      background: var(--hd-cls, #94a3b8); transition: width .1s linear;
     }
-    .hd-frame[data-slot="0"] { --hd-cls: #64748b; }
-    .hd-frame[data-slot="1"] { --hd-cls: #22c55e; }
-    .hd-frame[data-slot="2"] { --hd-cls: #eab308; }
-    .hd-frame[data-slot="3"] { --hd-cls: #84cc16; }
-    .hd-frame[data-slot="4"] { --hd-cls: #3b82f6; }
-    .hd-frame.is-target { border-color: #d97706; box-shadow: 0 0 0 2px rgba(217,119,6,.28); }
-    .hd-frame.is-low { animation: hd-pulse .7s ease-in-out infinite; }
-    /* The telegraphed boss hit will kill this one through everything already
-       landing on them — the loudest state in the UI, on purpose. */
+    .hd-frame[data-slot="0"] { --hd-cls: #a8b3c2; }
+    .hd-frame[data-slot="1"] { --hd-cls: #4ade80; }
+    .hd-frame[data-slot="2"] { --hd-cls: #fde047; }
+    .hd-frame[data-slot="3"] { --hd-cls: #bef264; }
+    .hd-frame[data-slot="4"] { --hd-cls: #7dd3fc; }
+    .hd-frame > *:not(.hd-frame-fill):not(.hd-pred-heal):not(.hd-pred-dmg) { position: relative; z-index: 2; }
+    .hd-frame.is-target { border-color: #b45309; box-shadow: inset 0 0 0 2px #f59e0b; }
+    .hd-frame.is-low .hd-frame-fill { animation: hd-pulse .7s ease-in-out infinite; }
     .hd-frame.is-doomed { animation: hd-doomed .45s ease-in-out infinite; }
-    .hd-frame.is-dead { opacity: .4; filter: grayscale(1); }
-    @keyframes hd-pulse { 50% { border-color: var(--hd-crit); background: #fff5f5; } }
-    @keyframes hd-doomed { 50% { border-color: var(--hd-crit); box-shadow: 0 0 0 3px rgba(220,38,38,.45); background: #fee2e2; } }
-    .hd-frame-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-    .hd-frame-name { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hd-frame.is-dead { opacity: .45; filter: grayscale(1); }
+    @keyframes hd-pulse { 50% { background: #fca5a5; } }
+    @keyframes hd-doomed { 50% { border-color: #fff; box-shadow: inset 0 0 0 3px var(--hd-crit); } }
+
+    .hd-frame-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+    .hd-frame-name {
+      font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      text-shadow: 0 1px 2px rgba(255,255,255,.75);
+    }
     .hd-name-short { display: none; }
     .hd-frame-key {
-      display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 3px;
-      border: 1px solid var(--hd-line); background: #eef2f7;
-      font-size: 10px; font-weight: 800; color: var(--hd-dim); vertical-align: 1px;
+      flex: none; padding: 0 5px; border-radius: 3px;
+      border: 1px solid rgba(15,23,42,.25); background: rgba(255,255,255,.7);
+      font-size: 10px; font-weight: 800; color: #334155;
     }
-    .hd-frame-hp { font-size: 12.5px; font-weight: 800; color: var(--hd-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .hd-bar-hp { height: 24px; flex: none; }
-    .hd-bar-hp .hd-bar-fill { background: var(--hd-hp); }
-    .hd-bar-hp .hd-bar-fill.is-warn { background: var(--hd-warn); }
-    .hd-bar-hp .hd-bar-fill.is-crit { background: var(--hd-crit); }
-    .hd-bar-mini { height: 6px; flex: none; }
-    .hd-bar-mini .hd-bar-fill { background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); }
+    .hd-frame-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 6px; }
+    .hd-frame-hp {
+      font-size: 12.5px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
+      white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,.75);
+    }
 
-    /* Heal prediction: the pale striped block sitting on the missing health,
-       showing what is already on its way from HoTs and the in-flight cast. */
+    /* Heal prediction: the pale striped block sitting on the missing health. */
     .hd-pred-heal {
-      position: absolute; top: 0; bottom: 0; width: 0; opacity: 0;
+      position: absolute; top: 0; bottom: 0; width: 0; opacity: 0; z-index: 1;
       background: repeating-linear-gradient(115deg,
-        rgba(74,222,128,.85) 0 7px, rgba(134,239,172,.85) 7px 14px);
+        rgba(34,197,94,.9) 0 7px, rgba(134,239,172,.9) 7px 14px);
       border-right: 2px solid #15803d;
       transition: width .1s linear, left .1s linear, opacity .12s; pointer-events: none;
     }
@@ -4338,7 +4432,7 @@
     /* Incoming boss hit: eaten out of the RIGHT edge of the current health, so
        "does this bar survive the cast?" is one glance, not arithmetic. */
     .hd-pred-dmg {
-      position: absolute; top: 0; bottom: 0; width: 0; opacity: 0;
+      position: absolute; top: 0; bottom: 0; width: 0; opacity: 0; z-index: 1;
       background: repeating-linear-gradient(115deg,
         rgba(153,27,27,.85) 0 5px, rgba(220,38,38,.7) 5px 10px);
       border-left: 2px solid #7f1d1d;
@@ -4348,90 +4442,40 @@
     .hd-pred-dmg.is-lethal { animation: hd-lethal .45s ease-in-out infinite; }
     @keyframes hd-lethal { 50% { border-left-color: #fff; background-color: rgba(255,255,255,.55); } }
     .hd-pred-num {
-      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
       font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
-      color: transparent; text-shadow: 0 1px 2px rgba(255,255,255,.95); pointer-events: none;
+      color: transparent; white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,.9);
     }
     .hd-pred-num.is-heal { color: #14532d; }
-    .hd-pred-num.is-lethal { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.85); }
+    .hd-pred-num.is-lethal { color: #7f1d1d; text-shadow: 0 1px 3px rgba(255,255,255,.95); }
 
-    .hd-hots { display: flex; gap: 3px; min-height: 18px; flex-wrap: wrap; flex: none; }
+    /* buff icons, bottom-right corner of the cell like Grid's indicators */
+    .hd-hots { display: flex; gap: 3px; align-items: center; }
     .hd-hot {
-      font-size: 11.5px; font-weight: 800; line-height: 18px; padding: 0 5px;
-      border-radius: 3px; background: #fff; border: 1px solid var(--hd-line);
+      font-size: 10.5px; font-weight: 800; line-height: 16px; padding: 0 4px;
+      border-radius: 3px; background: rgba(255,255,255,.88); border: 1px solid rgba(15,23,42,.2);
       font-variant-numeric: tabular-nums;
     }
-    .hd-hot-rejuv { border-color: #86efac; background: #f0fdf4; color: #15803d; }
-    .hd-hot-wg { border-color: #bef264; background: #f7fee7; color: #4d7c0f; }
-    .hd-hot-cast { border-color: #fcd34d; background: #fffbeb; color: #b45309; }
+    .hd-hot-rejuv { color: #15803d; }
+    .hd-hot-wg { color: #4d7c0f; }
+    .hd-hot-cast { color: #b45309; }
+    /* the healer's own mana, as Grid draws it: a hairline along the bottom edge */
+    .hd-frame-mana {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+      background: rgba(15,23,42,.18); z-index: 2;
+    }
+    .hd-frame-mana i { display: block; height: 100%; width: 0; background: var(--hd-mana); transition: width .1s linear; }
 
-    /* ── enemy pack bar ── */
+    /* ── enemy pack bar, under the battlefield ── */
     .hd-pack { flex: none; }
     .hd-pack-head { display: flex; justify-content: space-between; align-items: baseline;
       gap: 8px; font-size: 12.5px; font-weight: 800; margin-bottom: 4px; }
     .hd-pack-name { color: var(--hd-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hd-pack-text { color: var(--hd-dim); font-variant-numeric: tabular-nums; }
-    .hd-bar-pack { height: 12px; }
+    .hd-bar-pack { height: 14px; }
     .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #b91c1c, #ef4444); }
-    .hd-pack.is-boss .hd-pack-name { color: #fca5a5; letter-spacing: .02em; }
-    .hd-pack.is-boss .hd-bar-pack { box-shadow: 0 0 0 1px rgba(248,113,113,.55); }
-    .hd-pack.is-boss .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #7f1d1d, #dc2626, #fb7185); }
-
-    /* ── the bottom strip: cast bar, mana, spells, live stat readout ── */
-    /* No full-width cast bar here any more: a readout about ONE hero belongs on
-       that hero, so hdDrawSelfCast() paints it under your character instead. */
-    .hd-strip { flex: none; display: flex; flex-direction: column; gap: 7px; }
-    .hd-mana { display: flex; align-items: center; gap: 10px; }
-    .hd-bar-mana { flex: 1; height: 16px; }
-    .hd-bar-mana .hd-bar-fill { background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); }
-    .hd-mana-text { font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .hd-fsr {
-      font-size: 11px; font-weight: 800; padding: 2px 9px; white-space: nowrap;
-      border-radius: var(--r-pill); background: #eef2f7; color: var(--hd-dim);
-      border: 1px solid var(--hd-line); transition: background .15s, color .15s;
-      font-variant-numeric: tabular-nums;
-    }
-    .hd-fsr.is-on { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
-
-    .hd-spells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-    .hd-spell {
-      position: relative; background: var(--hd-panel); border: 2px solid var(--hd-line);
-      border-radius: var(--r-sm); padding: 7px 10px; cursor: pointer;
-      font-family: inherit; color: inherit; text-align: left;
-      display: grid; grid-template-columns: auto 1fr auto; gap: 1px 9px;
-      grid-template-areas: 'key name icon' 'key eff icon'; align-items: center;
-    }
-    .hd-spell.is-ready { border-color: #3b82f6; }
-    .hd-spell.is-poor { opacity: .45; }
-    .hd-spell.is-cd { opacity: .6; border-color: var(--hd-warn); }
-    .hd-spell-key { grid-area: key; font-size: 12px; font-weight: 800; color: var(--hd-text);
-      border: 1px solid var(--hd-line); border-radius: 4px; padding: 3px 9px; background: #eef2f7; }
-    .hd-spell-icon { grid-area: icon; font-size: 18px; }
-    .hd-spell-name { grid-area: name; font-size: 12.5px; font-weight: 800; }
-    .hd-spell-eff { grid-area: eff; font-size: 12px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; }
-    .hd-spell-cd { position: absolute; right: 36px; top: 50%; transform: translateY(-50%);
-      font-size: 13px; font-weight: 800; color: var(--hd-warn); font-variant-numeric: tabular-nums; }
-
-    /* Live stat readout — one cell per statistic, showing what it is buying you
-       RIGHT NOW. The prose explaining each one lives in the [?] overlay, which
-       has room for it; here the title attribute carries it. */
-    .hd-legend { display: flex; gap: 7px; border-top: 1px solid var(--hd-line); padding-top: 7px; }
-    .hd-leg-row {
-      flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; gap: 5px;
-      background: var(--hd-panel); border: 1px solid var(--hd-line); border-radius: 6px; padding: 5px 8px;
-    }
-    .hd-leg-icon { font-size: 13px; }
-    .hd-leg-name { font-size: 12px; font-weight: 800; white-space: nowrap; }
-    .hd-leg-val {
-      display: inline-block; margin-left: 4px; min-width: 15px; padding: 0 4px;
-      border-radius: 3px; background: #fff; border: 1px solid var(--hd-line);
-      font-size: 10px; text-align: center; color: #b45309; font-variant-numeric: tabular-nums;
-    }
-    .hd-leg-now {
-      font-size: 12px; font-weight: 700; color: #1d4ed8; font-variant-numeric: tabular-nums;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: auto;
-    }
-    .hd-leg-why { display: none; }
+    .hd-pack.is-boss .hd-pack-name { color: #b91c1c; letter-spacing: .02em; }
+    .hd-pack.is-boss .hd-bar-pack { box-shadow: 0 0 0 1px rgba(220,38,38,.55); }
+    .hd-pack.is-boss .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #7f1d1d, #dc2626, #f87171); }
 
     /* ── overlays over the battlefield ── */
     .hd-rest, .hd-startcard {
@@ -4439,23 +4483,19 @@
       background: rgba(255,255,255,.97); border: 1px solid var(--hd-line);
       border-radius: var(--r-md); padding: 13px 16px; box-shadow: 0 8px 28px rgba(15,23,42,.16);
     }
-    .hd-rest { display: none; bottom: 12px; width: min(660px, calc(100% - 24px)); }
+    .hd-rest { display: none; bottom: 12px; width: min(600px, calc(100% - 24px)); }
     .hd-rest.is-on { display: block; }
     .hd-rest-head { display: flex; justify-content: space-between; align-items: center; gap: 10px;
-      flex-wrap: wrap; margin-bottom: 7px; }
-    .hd-rest-label { font-size: 13px; font-weight: 800; color: #1d4ed8; font-variant-numeric: tabular-nums; }
+      flex-wrap: wrap; margin-bottom: 9px; }
+    .hd-rest-label { font-size: 13px; font-weight: 800; color: #1d4ed8; }
     .hd-rest-label.is-boss { color: #b91c1c; }
-    .hd-rest-actions { display: flex; gap: 6px; }
-    .hd-rest-btn { font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
-      padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--hd-line);
-      background: var(--hd-panel); color: var(--hd-text); }
-    .hd-rest-btn:hover { border-color: #3b82f6; }
-    .hd-rest-btn.is-go { background: #1d4ed8; border-color: #3b82f6; }
-    .hd-bar-rest { height: 6px; }
-    .hd-bar-rest .hd-bar-fill { background: #3b82f6; }
+    .hd-rest-btn { font-family: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer;
+      padding: 7px 15px; border-radius: var(--r-pill); border: 1px solid #3b82f6;
+      background: #1d4ed8; color: #fff; }
+    .hd-rest-btn:disabled { opacity: .4; cursor: default; background: #94a3b8; border-color: #94a3b8; }
     /* Two cards, not three — a three-card hand nearly always held the obvious
-       pick, so the choice was free. */
-    .hd-upgrades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
+       pick, so the choice was free. Nothing is ever auto-picked. */
+    .hd-upgrades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .hd-up {
       background: var(--hd-panel); border: 2px solid var(--hd-line); border-radius: var(--r-sm);
       padding: 10px; cursor: pointer; font-family: inherit; color: inherit; text-align: left;
@@ -4463,6 +4503,7 @@
     }
     .hd-up:hover { border-color: #d97706; background: #fffbeb; }
     .hd-up.is-locked { opacity: .4; cursor: default; }
+    .hd-up.is-taken { opacity: 1; border-color: #16a34a; background: #f0fdf4; }
     .hd-up-icon { font-size: 18px; }
     .hd-up-name { font-size: 12.5px; font-weight: 800; }
     .hd-up-delta { font-size: 11.5px; font-weight: 800; color: #15803d; font-variant-numeric: tabular-nums; }
@@ -4509,30 +4550,30 @@
     .hd-console.is-portrait .hd-brand { font-size: 14px; }
     .hd-console.is-portrait .hd-chip { padding: 3px 8px; font-size: 11px; }
     .hd-console.is-portrait .hd-chip-hide { display: none; }
+    /* one column, world first, then the party, then your own kit */
     .hd-console.is-portrait .hd-board { flex-direction: column; gap: 7px; }
-    .hd-console.is-portrait .hd-stage-wrap { flex: 0 0 222px; }   /* 420 wide & 760:400 = 221 tall, so no letterbox */
-    .hd-console.is-portrait .hd-frames { flex: 1 1 auto; min-height: 0; gap: 4px; }
-    .hd-console.is-portrait .hd-frame { padding: 5px 7px; gap: 3px; }
-    .hd-console.is-portrait .hd-frame-head { flex-direction: column; align-items: flex-start; gap: 0; }
-    .hd-console.is-portrait .hd-frame-name { font-size: 12.5px; }
+    .hd-console.is-portrait .hd-stagecol { order: 1; flex: 0 0 auto; }
+    .hd-console.is-portrait .hd-stage-wrap { flex: 0 0 222px; }
+    .hd-console.is-portrait .hd-frames { order: 2; flex: 1 1 auto; min-height: 0; gap: 4px; }
+    .hd-console.is-portrait .hd-left { order: 3; flex: 0 0 auto; gap: 6px; }
+    .hd-console.is-portrait .hd-char { padding: 7px; }
+    .hd-console.is-portrait .hd-char-head { display: none; }   /* the topbar already names you */
+    .hd-console.is-portrait .hd-legend { display: none; }      /* topbar chip carries the values */
+    .hd-console.is-portrait .hd-castbar { height: 19px; }
+    .hd-console.is-portrait .hd-spells { flex-direction: row; gap: 5px; }
+    .hd-console.is-portrait .hd-spell {
+      flex: 1 1 0; min-width: 0; padding: 4px;
+      grid-template-columns: 1fr; grid-template-areas: 'icon' 'name'; justify-items: center; gap: 1px;
+    }
+    .hd-console.is-portrait .hd-spell-slot { width: 38px; height: 38px; font-size: 19px; }
+    .hd-console.is-portrait .hd-spell-name { font-size: 10px; text-align: center; }
+    .hd-console.is-portrait .hd-spell-eff { display: none; }
+    .hd-console.is-portrait .hd-frame { padding: 4px 6px; }
+    .hd-console.is-portrait .hd-frame-name { font-size: 12px; }
     .hd-console.is-portrait .hd-name-long { display: none; }
     .hd-console.is-portrait .hd-name-short { display: inline; }
     .hd-console.is-portrait .hd-frame-hp { font-size: 11.5px; }
-    .hd-console.is-portrait .hd-bar-hp { height: 18px; }
-    .hd-console.is-portrait .hd-hots { min-height: 15px; }
-    .hd-console.is-portrait .hd-hot { font-size: 11px; line-height: 17px; padding: 0 4px; }
-    .hd-console.is-portrait .hd-spell { padding: 6px 7px; grid-template-columns: 1fr;
-      grid-template-areas: 'key' 'name' 'eff'; gap: 1px; }
-    .hd-console.is-portrait .hd-spell-key { justify-self: start; padding: 1px 7px; }
-    .hd-console.is-portrait .hd-spell-icon { display: none; }
-    .hd-console.is-portrait .hd-spell-name { font-size: 12px; }
-    .hd-console.is-portrait .hd-spell-eff { font-size: 11px; }
-    .hd-console.is-portrait .hd-spell-cd { right: 7px; top: auto; bottom: 5px; transform: none; font-size: 11px; }
-    /* No stat strip on a phone: the topbar chip already shows every value and
-       the [?] overlay explains them, so this was ~100 px of duplicated 8 px text
-       squeezing the raid frames. The frames take the space instead. */
-    .hd-console.is-portrait .hd-legend { display: none; }
-    .hd-console.is-portrait .hd-chip-stats { display: inline-block; }
+    .hd-console.is-portrait .hd-hot { font-size: 10px; line-height: 15px; padding: 0 3px; }
     .hd-console.is-portrait .hd-rest { width: calc(100% - 16px); bottom: 8px; padding: 10px; }
     .hd-console.is-portrait .hd-upgrades { grid-template-columns: 1fr 1fr; gap: 6px; }
     .hd-console.is-portrait .hd-up { padding: 7px; }
@@ -8985,75 +9026,86 @@
 
             <div class="hd-arena" id="hd-arena">
               <div class="hd-board">
-                <!-- Raid frames first in DOM order, so they render on the LEFT
-                     and the tab order matches the 1-5 target keys. -->
-                <div class="hd-frames" id="hd-frames"></div>
 
-                <!-- HoMM3-style hex battlefield. Everything on it is drawn from
-                     the same simulation state the frames read, so it can never
-                     drift. The rest window and the start/result card are
-                     overlays on top of it rather than rows in the layout, so the
-                     console height never changes between phases. -->
-                <div class="hd-stage-wrap">
-                  <canvas id="hd-stage"></canvas>
-
-                  <div class="hd-rest" id="hd-rest">
-                    <div class="hd-rest-head">
-                      <span class="hd-rest-label" id="hd-rest-label">Przerwa</span>
-                      <div class="hd-rest-actions">
-                        <button type="button" class="hd-rest-btn" id="hd-drink">🍺 Pij (D)</button>
-                        <button type="button" class="hd-rest-btn is-go" id="hd-pull-btn">⚔️ Ruszaj (spacja)</button>
+                <!-- YOUR character: the pane, your cast bar directly under it,
+                     and your spellbook under that. Reads like an MMO's left
+                     rail, and it is where the GCD sweep lives. -->
+                <div class="hd-left">
+                  <div class="hd-char">
+                    <div class="hd-char-head">
+                      <span class="hd-char-portrait">💚</span>
+                      <div>
+                        <div class="hd-char-name">Ty — Druid</div>
+                        <div class="hd-char-sub">Uzdrowiciel</div>
                       </div>
                     </div>
-                    <div class="hd-bar hd-bar-rest"><div class="hd-bar-fill" id="hd-rest-fill"></div></div>
-                    <div class="hd-upgrades" id="hd-upgrades"></div>
+                    <div class="hd-mana">
+                      <div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" id="hd-mana-fill"></div></div>
+                      <span class="hd-mana-text" id="hd-mana-text">0 / 0</span>
+                    </div>
+                    <span class="hd-fsr" id="hd-fsr">regeneracja</span>
+                    <div class="hd-legend" id="hd-legend"></div>
                   </div>
 
-                  <div class="hd-startcard" id="hd-startcard">
-                    <div class="hd-startcard-title" id="hd-startcard-title">„Uzdrowiciel G6" 💚</div>
-                    <div class="hd-startcard-sub">Jesteś <strong>druidem-uzdrowicielem</strong> w pięcioosobowej drużynie. Loch nie ma końca, każda grupa bije mocniej, a <strong>co piąta to boss</strong>. Runda kończy się, gdy ktokolwiek padnie.</div>
-                    <button class="hd-start-btn" id="hd-start">Wejdź do lochu</button>
-                    <div class="hd-status" id="hd-status">Pięć pasków życia, trzy czary i coraz mniej many. Naciśnij <strong>?</strong> po zasady.</div>
+                  <div class="hd-castbar" id="hd-cast">
+                    <div class="hd-castbar-fill" data-fill></div>
+                    <span class="hd-castbar-label" data-label>—</span>
+                  </div>
+
+                  <div class="hd-spells" id="hd-spells">
+                    <button type="button" class="hd-spell" data-spell="0">
+                      <span class="hd-spell-slot">🌿<span class="hd-spell-sweep" data-sweep></span><span class="hd-spell-key">Q</span></span>
+                      <span class="hd-spell-name">Odnowa</span>
+                      <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
+                    </button>
+                    <button type="button" class="hd-spell" data-spell="1">
+                      <span class="hd-spell-slot">🌳<span class="hd-spell-sweep" data-sweep></span><span class="hd-spell-key">W</span></span>
+                      <span class="hd-spell-name">Dziki Wzrost</span>
+                      <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
+                    </button>
+                    <button type="button" class="hd-spell" data-spell="2">
+                      <span class="hd-spell-slot">✋<span class="hd-spell-sweep" data-sweep></span><span class="hd-spell-key">E</span></span>
+                      <span class="hd-spell-name">Uzdrawiający Dotyk</span>
+                      <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              <div class="hd-pack" id="hd-pack">
-                <div class="hd-pack-head">
-                  <span class="hd-pack-name" id="hd-pack-name">—</span>
-                  <span class="hd-pack-text" id="hd-pack-text">—</span>
+                <!-- the party -->
+                <div class="hd-frames" id="hd-frames"></div>
+
+                <!-- the world. The rest window and the start/result card are
+                     overlays on the battlefield rather than rows, so the console
+                     height never changes between phases. -->
+                <div class="hd-stagecol">
+                  <div class="hd-stage-wrap">
+                    <canvas id="hd-stage"></canvas>
+
+                    <div class="hd-rest" id="hd-rest">
+                      <div class="hd-rest-head">
+                        <span class="hd-rest-label" id="hd-rest-label">Przerwa</span>
+                        <button type="button" class="hd-rest-btn" id="hd-pull-btn">⚔️ Ruszaj (spacja)</button>
+                      </div>
+                      <div class="hd-upgrades" id="hd-upgrades"></div>
+                    </div>
+
+                    <div class="hd-startcard" id="hd-startcard">
+                      <div class="hd-startcard-title" id="hd-startcard-title">„Uzdrowiciel G6" 💚</div>
+                      <div class="hd-startcard-sub">Jesteś <strong>druidem-uzdrowicielem</strong> w pięcioosobowej drużynie. Loch nie ma końca, każda grupa bije mocniej, a <strong>co piąta to boss</strong>. Runda kończy się, gdy ktokolwiek padnie.</div>
+                      <button class="hd-start-btn" id="hd-start">Wejdź do lochu</button>
+                      <div class="hd-status" id="hd-status">Jedna pula many musi wystarczyć na całą walkę. Naciśnij <strong>?</strong> po zasady.</div>
+                    </div>
+                  </div>
+
+                  <div class="hd-pack" id="hd-pack">
+                    <div class="hd-pack-head">
+                      <span class="hd-pack-name" id="hd-pack-name">—</span>
+                      <span class="hd-pack-text" id="hd-pack-text">—</span>
+                    </div>
+                    <div class="hd-bar hd-bar-pack"><div class="hd-bar-fill" id="hd-pack-fill"></div></div>
+                  </div>
                 </div>
-                <div class="hd-bar hd-bar-pack"><div class="hd-bar-fill" id="hd-pack-fill"></div></div>
-              </div>
 
-              <div class="hd-strip">
-                <div class="hd-mana">
-                  <div class="hd-bar hd-bar-mana"><div class="hd-bar-fill" id="hd-mana-fill"></div></div>
-                  <span class="hd-mana-text" id="hd-mana-text">0 / 0</span>
-                  <span class="hd-fsr" id="hd-fsr">💧 regeneracja</span>
-                </div>
-
-                <div class="hd-spells" id="hd-spells">
-                  <button type="button" class="hd-spell" data-spell="0">
-                    <span class="hd-spell-key">Q</span><span class="hd-spell-icon">🌿</span>
-                    <span class="hd-spell-name">Odnowa — HoT 12 s, 1 cel</span>
-                    <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
-                  </button>
-                  <button type="button" class="hd-spell" data-spell="1">
-                    <span class="hd-spell-key">W</span><span class="hd-spell-icon">🌳</span>
-                    <span class="hd-spell-name">Dziki Wzrost — cała drużyna</span>
-                    <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
-                  </button>
-                  <button type="button" class="hd-spell" data-spell="2">
-                    <span class="hd-spell-key">E</span><span class="hd-spell-icon">✋</span>
-                    <span class="hd-spell-name">Uzdrawiający Dotyk — kanał 2,5 s</span>
-                    <span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>
-                  </button>
-                </div>
-
-                <!-- What each statistic is currently buying you, in real numbers.
-                     The prose explaining them lives in the [?] overlay. -->
-                <div class="hd-legend" id="hd-legend"></div>
               </div>
             </div>
 
@@ -9061,15 +9113,17 @@
               <button type="button" class="hd-icon-btn hd-help-close" id="hd-help-close" title="Zamknij">✕</button>
               <h3>Jak grać</h3>
               <ul>
-                <li><strong>1 – 5</strong> wybiera cel — albo po prostu <strong>kliknij bohatera</strong> na polu bitwy lub jego ramkę. Czary: <strong>Q</strong> Odnowa, <strong>W</strong> Dziki Wzrost, <strong>E</strong> Uzdrawiający Dotyk. <strong>D</strong> = usiądź i pij, <strong>spacja</strong> = ruszaj dalej od razu.</li>
+                <li><strong>1 – 5</strong> wybiera cel — albo po prostu <strong>kliknij bohatera</strong> na polu bitwy lub jego ramkę. Czary: <strong>Q</strong> Odnowa, <strong>W</strong> Dziki Wzrost, <strong>E</strong> Uzdrawiający Dotyk. <strong>Spacja</strong> = ruszaj na następną grupę.</li>
+                <li><strong>Globalny cooldown (GCD).</strong> Po każdym czarze wszystkie czary są zablokowane na 1,5 s — dlatego nie da się rzucić Odnowy na jednego bohatera i <em>od razu</em> na następnego. Ikona w księdze czarów zaciemnia się i odkręca jak zegar, a obok stoi licznik: to znaczy „jeszcze nie". Planuj kolejność celów z wyprzedzeniem.</li>
+                <li><strong>Pasek rzucania</strong> pod Twoją postacią pokazuje kanałowanie Uzdrawiającego Dotyku. W tym czasie nie rzucisz nic innego.</li>
                 <li><strong>Zapowiedź leczenia.</strong> Jasny, pasiasty kawałek na pasku życia to leczenie, które <em>już leci</em> — wszystkie tyknięcia HoT-ów plus czar w locie. Jeśli ramka wygląda nisko, ale jest zakryta na zielono, nie marnuj na nią GCD.</li>
                 <li><strong>Czerwony kawałek</strong> zjadany z prawej strony paska to cios bossa, który zaraz wyląduje. Ramka miga na biało, gdy cios zabije cel <em>mimo</em> całego leczenia w locie — wtedy musisz dołożyć, zanim spadnie.</li>
-                <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many <em>stoi</em> przez 5 sekund. Wskaźnik obok paska many pokazuje, kiedy znowu zaczniesz odzyskiwać manę — luka bez czarów to darmowa mana.</li>
-                <li><strong>Odnowa</strong> jest najoszczędniejsza (2,44 HP za manę), <strong>Uzdrawiający Dotyk</strong> najdroższy (1,75). Spamowanie dużego leczenia wygrywa walkę i przegrywa loch. <strong>Dziki Wzrost</strong> leczy całą piątkę — trzymaj go na obrażenia obszarowe, które przychodzą co ~6,5 s.</li>
-                <li><strong>Obrażenia sypią się z czterech stron:</strong> tank obrywa co 1,5 s, co ~6,5 s przychodzi fala w całą drużynę (każdy dostaje trochę inaczej), co ~8,5 s ktoś losowy z tyłu dostaje mocny cios, a co ~5,5 s <em>dwóch</em> losowych bohaterów naraz. Paski nigdy nie spadają równo — dlatego patrz, kto jest najniżej, a nie kto jest „następny w kolejce".</li>
-                <li><strong>☠️ Boss co 5. grupę.</strong> Ma ~2,3× więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową: <em>Cios Decyzyjny</em> (ogromne obrażenia w tanka) i <em>Reorganizacja</em> (w całą drużynę). Masz 3,5 s, żeby przygotować leczenie. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
-                <li><strong>Między grupami siadasz i pijesz</strong> — ale rzucenie czaru Cię podnosi (<strong>D</strong> = usiądź z powrotem). Przerwa <strong>skraca się z każdą grupą</strong>: przy pierwszej masz 12,4 s, przy piętnastej już 4,5. Po bossie dostajesz kilka sekund więcej.</li>
-                <li>Po każdej grupie <strong>wybierasz jedno z dwóch ulepszeń</strong>. Nie wybierzesz do końca przerwy — dostaniesz pierwsze z brzegu.</li>
+                <li><strong>Jedna pula many na jedną walkę.</strong> Między grupami życie i mana wracają do pełna, więc cała trudność siedzi <em>w środku</em> walki. Spamowanie najtańszego czaru zużywa 60 many na sekundę, a walka trwa ~21 s — pełny pasek starcza dokładnie na jedną grupę. Dalej wchodzi się tylko lecząc <em>oszczędniej</em>.</li>
+                <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many stoi przez 5 sekund. Przerwa bez czarów w środku walki to darmowa mana — wskaźnik pod paskiem many pokazuje, kiedy znowu zaczniesz odzyskiwać.</li>
+                <li><strong>Odnowa</strong> jest najoszczędniejsza (2,44 HP za manę), <strong>Uzdrawiający Dotyk</strong> najdroższy (1,75). <strong>Dziki Wzrost</strong> leczy całą piątkę — trzymaj go na obrażenia obszarowe.</li>
+                <li><strong>Obrażenia sypią się z czterech stron:</strong> tank obrywa co 1,8 s, co ~8 s przychodzi fala w całą drużynę (każdy dostaje trochę inaczej), co ~10,5 s ktoś losowy z tyłu dostaje mocny cios, a co ~7 s <em>dwóch</em> losowych bohaterów naraz. Paski nigdy nie spadają równo — patrz, kto jest najniżej.</li>
+                <li><strong>☠️ Boss co 5. grupę.</strong> Ma dużo więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową: <em>Cios Decyzyjny</em> (ogromne obrażenia w tanka) i <em>Reorganizacja</em> (w całą drużynę). Masz 3,5 s, żeby przygotować leczenie. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
+                <li><strong>Grupa trwa, aż zginie</strong> — nie ma żadnego zegara. Przerwa też trwa dowolnie długo: wybierz ulepszenie i ruszaj, kiedy będziesz gotowy.</li>
               </ul>
               <h4>Co robią statystyki</h4>
               <div class="hd-help-stats" id="hd-help-stats"></div>

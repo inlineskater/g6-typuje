@@ -2,7 +2,7 @@ import fs from 'fs';
 const src = fs.readFileSync('games/healer-dungeon.js','utf8');
 // take only the parity block (the sim) — the rest touches document/window
 const block = src.slice(src.indexOf('const HD_TICK_MS'), src.indexOf('// ╚═══ PARITY BLOCK END'));
-const mod = new Function(block + '\nreturn {hdInitState,hdAdvanceTick,hdStartPull,hdApplyUpgrade,hdPartyDps,hdMaxMana,hdRestTicks,hdRegenPerTick,hdCanCast,hdHealAmt,hdIncomingHeal,hdIncomingDamage,hdBossPending,hdIsBoss,hdEnragePct,HD_FSR_TICKS,HD_COST,HD_A_REJUV,HD_A_WG,HD_A_HT,HD_A_DRINK,HD_A_PULL,HD_A_UPGRADE,HD_SP_REJUV,HD_SP_WG,HD_SP_HT,HD_MAX_TICKS,HD_TANK,HD_HEAL,HD_PARTY,HD_BOSS_EVERY,HD_UPGRADE_CHOICES,HD_UPGRADE_COUNT,HD_UP_STEP,HD_CB_BUSTER,HD_HT_HEAL,HD_REJUV_AMOUNTS,HD_WG_AMOUNTS};')();
+const mod = new Function(block + '\nreturn {hdInitState,hdAdvanceTick,hdStartPull,hdApplyUpgrade,hdPartyDps,hdMaxMana,hdRegenPerTick,hdCanCast,hdHealAmt,hdIncomingHeal,hdIncomingDamage,hdBossPending,hdIsBoss,hdEnragePct,HD_FSR_TICKS,HD_COST,HD_A_REJUV,HD_A_WG,HD_A_HT,HD_A_PULL,HD_A_UPGRADE,HD_SP_REJUV,HD_SP_WG,HD_SP_HT,HD_MAX_TICKS,HD_TANK,HD_HEAL,HD_PARTY,HD_BOSS_EVERY,HD_UPGRADE_CHOICES,HD_UPGRADE_COUNT,HD_UP_STEP,HD_CB_BUSTER,HD_HT_HEAL,HD_REJUV_AMOUNTS,HD_WG_AMOUNTS};')();
 const M = mod;
 const SLOTS = ['Tank','Ty','Łotr','Łucznik','Mag'];
 
@@ -31,8 +31,9 @@ const policy = (st, low, lp) => {
 };
 
 const drive = (st) => {
-  if (st.phase==='rest' && !st.upgradePicked) return [{a:M.HD_A_UPGRADE,t:0}];
-  if (st.gcd>0 || st.cast || st.phase==='rest') return null;
+  // Rest no longer advances by itself: the bot has to pick a bonus and pull.
+  if (st.phase==='rest') return [{a: st.upgradePicked ? M.HD_A_PULL : M.HD_A_UPGRADE, t:0}];
+  if (st.gcd>0 || st.cast) return null;
   let low=0,lp=2; for(let i=0;i<M.HD_PARTY;i++){const p=st.hp[i]/st.maxHp[i]; if(p<lp){lp=p;low=i;}}
   return policy(st, low, lp);
 };
@@ -184,8 +185,13 @@ console.log('— bosses —');
   const st5 = M.hdInitState(9);
   while (st5.pull < 5 && !st5.dead && st5.tick < 6000) M.hdAdvanceTick(st5, drive(st5));
   const packHpAt = (pull) => { const s = M.hdInitState(1); s.pull = pull; M.hdStartPull(s); return s.packMax; };
-  ok('the boss pull is much fatter than a normal pack',
-     packHpAt(5) > packHpAt(4) * 1.9,
+  // A boss is a MECHANICS step, not an HP sponge. Once a normal pull runs ~21 s
+  // and every pull starts from full, a 1.5×-HP boss is simply unsurvivable at
+  // any ramp that also makes normal pulls matter — the sweep could not find a
+  // single config with both. So the boss is only modestly fatter, and what
+  // makes it a boss is the telegraphed casts and the enrage tested below.
+  ok('the boss pull is a step up, but not an HP sponge',
+     packHpAt(5) > packHpAt(4) * 1.15 && packHpAt(5) < packHpAt(4) * 1.6,
      packHpAt(4) + ' → ' + packHpAt(5) + ' HP');
 
   // telegraph: a cast must be visible for a meaningful window before it lands
@@ -211,25 +217,25 @@ console.log('— enrage —');
   ok('enrage ramps late', M.hdEnragePct(b)>150, M.hdEnragePct(b)+'%');
 }
 
-console.log('— rest window shrinks with depth —');
-{
-  const r1=M.hdRestTicks(1), r9=M.hdRestTicks(9), r14=M.hdRestTicks(14), r60=M.hdRestTicks(60);
-  ok('pull 1 = 12.4 s', r1===124, 'r1='+r1);
-  ok('shrinks monotonically between non-boss pulls', r1>r9 && r9>r14, `${r1} > ${r9} > ${r14}`);
-  ok('floors at 45 ticks (4.5 s)', r60===45+45 || M.hdRestTicks(59)===45, 'r59='+M.hdRestTicks(59));
-  ok('a boss buys extra drinking time', M.hdRestTicks(10) > M.hdRestTicks(9), M.hdRestTicks(10)+' > '+M.hdRestTicks(9));
-}
-
-console.log('— drinking —');
+console.log('— the rest belongs to the player, not to a timer —');
 {
   const st = M.hdInitState(5);
-  st.phase='rest'; st.restLeft=200; st.restMax=200; st.drinking=true; st.mana=100; st.upgrades=[0,1];
-  M.hdAdvanceTick(st,null);
-  ok('drinking regens fast', st.mana===112, 'mana='+st.mana);
-  M.hdAdvanceTick(st, [{a:M.HD_A_REJUV, t:0}]);
-  ok('casting stands you up (drinking stops)', st.drinking===false);
-  M.hdAdvanceTick(st, [{a:M.HD_A_DRINK, t:0}]);
-  ok('R sits you back down', st.drinking===true);
+  st.packHp = 1; st.hp = st.maxHp.map(v=>Math.floor(v*0.3)); st.mana = 40;
+  let g=0; while (st.phase!=='rest' && g++<400) M.hdAdvanceTick(st, null);
+  ok('a cleared pull drops into rest', st.phase==='rest', st.phase);
+  ok('rest restores the whole party to full', st.hp.every((v,i)=>v===st.maxHp[i]), st.hp.join('/'));
+  ok('rest restores mana to full', st.mana===M.hdMaxMana(st), st.mana+'/'+M.hdMaxMana(st));
+
+  const before = st.pull;
+  for (let i=0;i<3000;i++) M.hdAdvanceTick(st, null);   // 5 minutes of nothing
+  ok('rest never expires on its own', st.phase==='rest' && st.pull===before, 'phase='+st.phase+' pull='+st.pull);
+
+  M.hdAdvanceTick(st, [{a:M.HD_A_PULL,t:0}]);
+  ok('cannot pull before taking a bonus', st.phase==='rest' && st.pull===before, 'pull='+st.pull);
+  M.hdAdvanceTick(st, [{a:M.HD_A_UPGRADE,t:1}]);
+  ok('the bonus is only ever chosen, never auto-picked', st.upgradePicked===true);
+  M.hdAdvanceTick(st, [{a:M.HD_A_PULL,t:0}]);
+  ok('and then the pull goes through', st.phase==='fight' && st.pull===before+1, 'pull='+st.pull);
 }
 
 console.log('— determinism —');
@@ -266,7 +272,7 @@ console.log('— fight length —');
     const dps = Math.floor(M.hdPartyDps(st)/10);
     let ticks=0, left=st.packMax;
     while(left>0){left-=dps;ticks++;}
-    console.log(`  pull ${String(n).padStart(2)}${M.hdIsBoss(n)?' ☠️':'   '}: ${String(st.packMax).padStart(5)} HP · ${(ticks/10).toFixed(1)}s fight, ${(M.hdRestTicks(n)/10).toFixed(1)}s rest`);
+    console.log(`  pull ${String(n).padStart(2)}${M.hdIsBoss(n)?' ☠️':'   '}: ${String(st.packMax).padStart(5)} HP · ${(ticks/10).toFixed(1)}s fight`);
   }
 }
 
@@ -295,7 +301,7 @@ console.log('— the healer must actually matter —');
 {
   const runs=[];
   for (const seed of [1,2,3,4,5,6]) {
-    const st = runBot(seed, (s)=> s.phase==='rest' && !s.upgradePicked ? [{a:M.HD_A_UPGRADE,t:0}] : null);
+    const st = runBot(seed, (s)=> s.phase==='rest' ? [{a: s.upgradePicked ? M.HD_A_PULL : M.HD_A_UPGRADE, t:0}] : null);
     runs.push(st.pullsCleared);
   }
   const worst = Math.max(...runs);

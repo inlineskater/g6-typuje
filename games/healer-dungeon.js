@@ -2,17 +2,24 @@
 //
 // You are the healer. A FIVE-man party (tank / you / three dps) walks an endless
 // dungeon; every pull is harder than the last, EVERY FIFTH PULL IS A BOSS, and
-// the run ends the moment anyone hits 0 HP. Score = pulls cleared.
+// the run ends the moment anyone hits 0 HP. Score = pulls cleared. A pull runs
+// until the pack is dead — it is never on a clock.
 //
-// The whole game is CLASSIC MANA MANAGEMENT — there is deliberately no dungeon
-// timer. The pressure comes from the rest window between pulls SHRINKING with
-// depth (hdRestTicks): pull 1 gives 13 s to sit and drink, pull 15+ gives 4.5 s.
-// So you enter late pulls progressively more drained while the damage climbs,
-// and whether you survive was decided by how efficiently you healed ten pulls
-// ago. Three mechanics feed that, all straight out of Classic:
-//   • 5-second rule — spirit regen is ZERO for 5 s after any mana spend.
+// ALL the pressure is INSIDE a single pull (2026-07-28 rework). There is no
+// dungeon timer, no rest timer and no drinking: between pulls you sit as long
+// as you like, health and mana come back to full, you pick a bonus, and you
+// pull when YOU are ready. Removing drinking while making the rest window
+// unlimited leaves no third option — out-of-combat regen would refill the bar
+// anyway, so making the player watch it tick up is tedium, not a decision.
+//
+// What that buys is a clean per-pull skill check: one mana bar has to cover one
+// fight. A pull runs ~21 s and spamming the cheap heal costs 60 mana/s, so a
+// full 1200-mana bar is almost exactly one fight's worth — you get deeper only
+// by healing more efficiently than that, not by healing more.
+//   • 5-second rule — regen is ZERO for 5 s after any mana spend, so the gaps
+//     you leave inside a fight are where your next fight's mana comes from.
 //   • spell efficiency — Odnowa 2.44 HP/mana vs Uzdrawiający Dotyk 1.75.
-//   • drinking is slow, and casting stands you up.
+//   • the party's own health pool is a buffer you are allowed to spend.
 //
 // BOSSES (every 5th pull) are the one place the game telegraphs instead of
 // grinding: the boss spends 3.5 s casting a named ability with a visible bar,
@@ -59,13 +66,6 @@ const HD_HP_PCT_PER_PT = 3;      // Życie: max HP for the WHOLE party, not just
 const HD_DPS_PER_PT = 11;        // Obrażenia: how fast the pack dies
 const HD_REGEN_BASE = 40;        // mana per SECOND outside the 5 s window — fixed
 const HD_FSR_TICKS = 50;         // the 5-second rule, in ticks
-const HD_DRINK_PER_SEC = 120;    // ~10 s to fill an opening mana pool
-// Out-of-combat health regen, per mille of max HP per SECOND. Deliberately
-// small: at the first pass (3%/s) a 13.5 s rest healed ~675 HP against a pull
-// that only dealt ~300, so the party survived four pulls with NO healing at all
-// and the healer was decorative. At 3‰/s a rest gives back a fraction, which is
-// what forces the real decision — top the party up, or sit and drink?
-const HD_OOC_REGEN_PERMIL = 3;
 
 // Spells. The HP-per-mana spread is the whole skill test: Odnowa is the
 // efficient filler, Dziki Wzrost answers the AoE pulse, Uzdrawiający Dotyk is
@@ -87,7 +87,10 @@ const HD_WG_CD_TICKS = 80;       // 8 s
 // at a near-constant ~10 s all the way down. Difficulty must come from incoming
 // damage vs your mana, not from fights that grind on for half a minute — the
 // first tuning pass had pull 10 taking 35 s and a whole run over ten minutes.
-const HD_PACK_HP_BASE = 900, HD_PACK_HP_PER_PULL = 240;
+// Pulls run ~21 s rather than ~10 s: with the between-pull economy gone, the
+// fight itself has to be long enough to hold a decision curve, and "harder but
+// a bit slower to play" means fewer, weightier moments — not faster inputs.
+const HD_PACK_HP_BASE = 1800, HD_PACK_HP_PER_PULL = 470;
 const HD_DPS_BASE = 90, HD_DPS_PER_PULL = 22, HD_DPS_PER_STR = 8;   // per second
 // Incoming damage has to make healing mandatory from the very first pull, and
 // the 5-man tuning pass pushed it up again: five bars to keep alive is only
@@ -97,34 +100,33 @@ const HD_DPS_BASE = 90, HD_DPS_PER_PULL = 22, HD_DPS_PER_STR = 8;   // per secon
 // field was 4, 9 or 14 and the leaderboard was three buckets. A steeper ramp
 // makes late normal pulls lethal in their own right, which is what puts scores
 // in between the bosses again.
-const HD_MELEE_PERIOD = 15;      // tank auto-attack every 1.5 s
-const HD_MELEE_BASE = 58, HD_MELEE_PER_PULL = 11;
-const HD_AOE_PERIOD = 65;        // raid pulse every 6.5 s, now on all five
-const HD_AOE_BASE = 28, HD_AOE_PER_PULL = 10;
-const HD_SPIKE_PERIOD = 85;      // spike on a random non-tank every 8.5 s
-const HD_SPIKE_BASE = 92, HD_SPIKE_PER_PULL = 21;
+const HD_MELEE_PERIOD = 18;      // tank auto-attack every 1.8 s
+const HD_MELEE_BASE = 78, HD_MELEE_PER_PULL = 19;
+const HD_AOE_PERIOD = 80;        // raid pulse every 8 s, on all five
+const HD_AOE_BASE = 28, HD_AOE_PER_PULL = 17;
+const HD_SPIKE_PERIOD = 105;     // spike on a random non-tank every 10.5 s
+const HD_SPIKE_BASE = 92, HD_SPIKE_PER_PULL = 36;
 // Cleave: two DIFFERENT random party members at once, on its own beat. Added
 // with the 3-stat pass to put the complexity that came out of the upgrade
 // screen back into the encounter — with only melee/AoE/spike the damage pattern
 // repeated every 8.5 s and healing settled into a fixed rotation.
-const HD_CLEAVE_PERIOD = 55;     // every 5.5 s
-const HD_CLEAVE_BASE = 58, HD_CLEAVE_PER_PULL = 13;
-// ~13 s to sit and drink at pull 1, down to 4.5 s past pull 14. This shrinking
-// window IS the difficulty curve — no dungeon timer needed.
-const HD_REST_BASE = 130, HD_REST_PER_PULL = 6, HD_REST_MIN = 45;
+const HD_CLEAVE_PERIOD = 70;     // every 7 s
+const HD_CLEAVE_BASE = 58, HD_CLEAVE_PER_PULL = 22;
+// No rest constants any more: the rest lasts exactly as long as the player
+// wants it to (see hdBeginRest).
 
 // ── Bosses: every fifth pull ────────────────────────────────────────────────
 // A boss is not "a pack with more HP". It is the only encounter that tells you
 // what is coming and when, which is the one thing that makes pre-healing — and
 // therefore the heal-prediction overlay — a real decision instead of a readout.
 const HD_BOSS_EVERY = 5;
-const HD_BOSS_HP_MULT_PCT = 225;   // ~23 s fight instead of ~10 s
+const HD_BOSS_HP_MULT_PCT = 110;   // ~23 s against a ~21 s normal pull
 // Kept modest on purpose. A boss fight is ~2.3× as LONG as a normal pull, so a
 // multiplier on its auto-attack is paid ~2.3× over; at 130% the very first boss
 // (pull 5, when you have had four upgrades) killed half the field, which is one
 // boss too early for an 8-pull target. The scary part of a boss is meant to be
 // the telegraphed cast you can answer, not the autoattack you cannot.
-const HD_BOSS_MELEE_PCT = 116;
+const HD_BOSS_MELEE_PCT = 100;
 const HD_BOSS_AOE_PCT = 120;
 const HD_BOSS_CAST_FIRST = 55;     // first telegraph 5.5 s in
 const HD_BOSS_CAST_PERIOD = 90;    // then one every 9 s
@@ -138,9 +140,8 @@ const HD_BOSS_BUSTER_BASE = 285, HD_BOSS_BUSTER_PER_PULL = 44;   // tank only
 const HD_BOSS_NUKE_BASE = 105, HD_BOSS_NUKE_PER_PULL = 15;       // whole party
 // Kill it or it kills you: past this the boss gains damage every second. Set
 // just INSIDE a clean ~25 s kill, so a party that skipped Siła feels it.
-const HD_BOSS_ENRAGE_TICKS = 230;  // 23 s
+const HD_BOSS_ENRAGE_TICKS = 280;  // 28 s — just past a clean kill
 const HD_BOSS_ENRAGE_PER_SEC = 5;  // +5 percentage points of damage per second
-const HD_BOSS_REST_BONUS = 45;     // a boss buys you 4.5 s of extra drinking
 
 // Upgrades — 2 of these 3 are offered after every pull. Two, not three: a
 // three-card hand nearly always contains the obvious pick, so the choice was
@@ -152,7 +153,7 @@ const HD_UP_STEP = [2, 2, 2];
 
 // Actions the runtime logs.
 const HD_A_REJUV = 0, HD_A_WG = 1, HD_A_HT = 2;
-const HD_A_DRINK = 3, HD_A_PULL = 4, HD_A_UPGRADE = 5;
+const HD_A_PULL = 3, HD_A_UPGRADE = 4;
 
 function hdRng(st) {
   st.rngState = (Math.imul(st.rngState, 1664525) + 1013904223) >>> 0;
@@ -177,10 +178,6 @@ function hdPartyDps(st) {
 function hdPartyDpsPerTick(st) { return Math.floor(hdPartyDps(st) / 10); }
 function hdGcdTicks(st) { return HD_GCD_TICKS; }
 function hdCastTicks(st) { return HD_HT_CAST_TICKS; }
-function hdRestTicks(pull) {
-  const base = Math.max(HD_REST_MIN, HD_REST_BASE - HD_REST_PER_PULL * pull);
-  return hdIsBoss(pull) ? base + HD_BOSS_REST_BONUS : base;
-}
 // Życie scales the WHOLE party, not just the tank: with a cleave and a
 // per-target-jittered AoE in the mix, the squishy back four are as likely to be
 // the one that dies as the tank is.
@@ -221,9 +218,7 @@ function hdInitState(seed) {
     fightTick: 0,
     bossCast: null,          // { kind, left, total }
     bossCastT: 0,
-    restLeft: 0, restMax: 0,
-    drinking: false,
-    upgrades: [], upgradePicked: false,
+    upgrades: [], upgradePicked: false, pickedIdx: -1,
     stats: { heal: 0, hp: 0, dmg: 0 },
     dead: false, deadWho: -1,
     meleeT: HD_MELEE_PERIOD, aoeT: HD_AOE_PERIOD, spikeT: HD_SPIKE_PERIOD, cleaveT: HD_CLEAVE_PERIOD,
@@ -252,17 +247,27 @@ function hdStartPull(st) {
   st.fightTick = 0;
   st.bossCast = null;
   st.bossCastT = HD_BOSS_CAST_FIRST;
-  st.drinking = false;
 }
 
+// The rest has NO timer. It ends when the player says so, and only after they
+// have taken a bonus — nothing is ever auto-picked or skipped.
 function hdBeginRest(st) {
   st.phase = 'rest';
-  st.restMax = hdRestTicks(st.pull);
-  st.restLeft = st.restMax;
-  st.drinking = true;        // you sit down automatically; casting stands you up
   st.upgradePicked = false;
+  st.pickedIdx = -1;
   st.bossCast = null;
-  // Two distinct upgrades drawn from the five.
+  st.cast = null;
+  st.hots.length = 0;
+  st.gcd = 0;
+  st.wgCd = 0;
+  st.fsr = HD_FSR_TICKS;
+  // Full restore. With drinking gone and the rest unlimited, out-of-combat
+  // regen would refill everything anyway — charging the player 30 s of watching
+  // a bar fill is tedium, not a decision. So every pull is a fresh check and
+  // the difficulty lives entirely inside the fight.
+  for (let i = 0; i < HD_PARTY; i += 1) st.hp[i] = st.maxHp[i];
+  st.mana = hdMaxMana(st);
+  // Two distinct upgrades drawn from the three.
   const pool = [];
   for (let i = 0; i < HD_UPGRADE_COUNT; i += 1) pool.push(i);
   st.upgrades = [];
@@ -313,7 +318,6 @@ function hdSpend(st, cost) {
   if (st.mana < 0) st.mana = 0;
   st.manaSpent += cost;
   st.fsr = 0;                 // the 5-second rule restarts on every spend
-  st.drinking = false;        // casting stands you up
 }
 
 // Refreshing a HoT of the same kind on the same target replaces it, exactly
@@ -395,19 +399,15 @@ function hdApplyAction(st, a, t) {
   if (a === HD_A_REJUV) hdCast(st, HD_SP_REJUV, t);
   else if (a === HD_A_WG) hdCast(st, HD_SP_WG, t);
   else if (a === HD_A_HT) hdCast(st, HD_SP_HT, t);
-  else if (a === HD_A_DRINK) { if (st.phase === 'rest') st.drinking = true; }
-  else if (a === HD_A_PULL) { if (st.phase === 'rest') { hdAutoPickUpgrade(st); hdNextPull(st); } }
+  // Pulling is BLOCKED until a bonus has been taken — „always allow to select
+  // the bonus" means it can never be auto-picked out from under the player.
+  else if (a === HD_A_PULL) { if (st.phase === 'rest' && st.upgradePicked) hdNextPull(st); }
   else if (a === HD_A_UPGRADE) {
     if (st.phase === 'rest' && !st.upgradePicked && t >= 0 && t < st.upgrades.length) {
+      st.pickedIdx = t;
       hdApplyUpgrade(st, st.upgrades[t]);
     }
   }
-}
-
-// If the rest window runs out (or you pull early) without a pick, the first
-// card is taken for you — deterministic, and never silently skips a level.
-function hdAutoPickUpgrade(st) {
-  if (!st.upgradePicked && st.upgrades.length) hdApplyUpgrade(st, st.upgrades[0]);
 }
 
 function hdNextPull(st) {
@@ -441,9 +441,7 @@ function hdAdvanceTick(st, actions) {
   if (st.gcd > 0) st.gcd -= 1;
   if (st.wgCd > 0) st.wgCd -= 1;
   const maxMana = hdMaxMana(st);
-  if (st.drinking && st.phase === 'rest') {
-    st.mana = Math.min(maxMana, st.mana + Math.floor(HD_DRINK_PER_SEC / 10));
-  } else if (st.fsr >= HD_FSR_TICKS) {
+  if (st.fsr >= HD_FSR_TICKS) {
     // Spirit regen only OUTSIDE the five-second window — the whole point.
     st.mana = Math.min(maxMana, st.mana + hdRegenPerTick(st));
   }
@@ -463,22 +461,9 @@ function hdAdvanceTick(st, actions) {
   hdTickHots(st);
   if (st.dead) return;
 
-  if (st.phase === 'rest') {
-    // Out-of-combat health regen: nowhere near enough once the window is down
-    // to five seconds.
-    // Applied once a second rather than every tick: the per-tick amount would
-    // floor to a wildly different effective rate for each party member's pool.
-    if (st.tick % 10 === 0) {
-      for (let i = 0; i < HD_PARTY; i += 1) {
-        if (st.hp[i] > 0 && st.hp[i] < st.maxHp[i]) {
-          st.hp[i] = Math.min(st.maxHp[i], st.hp[i] + Math.max(1, Math.floor(st.maxHp[i] * HD_OOC_REGEN_PERMIL / 1000)));
-        }
-      }
-    }
-    st.restLeft -= 1;
-    if (st.restLeft <= 0) { hdAutoPickUpgrade(st); hdNextPull(st); }
-    return;
-  }
+  // Resting: nothing ticks down and nothing advances. hdBeginRest already put
+  // health and mana back to full; the pull starts when the player pulls.
+  if (st.phase === 'rest') return;
 
   // ── the pull ──
   st.fightTick += 1;
@@ -1009,41 +994,6 @@ function hdDrawUnit(ctx, o) {
   ctx.restore();
 }
 
-// Your cast bar, under YOUR character rather than spanning the whole console —
-// it is a readout about one hero, so it belongs on that hero.
-function hdDrawSelfCast(ctx, st) {
-  if (!st.cast) return;
-  const p = hdPartyXY(HD_HEAL);
-  const total = hdCastTicks(st);
-  const done = (total - st.cast.left) / total;
-  // Clamped into the canvas: the healer stands in the back-left column at
-  // x = 44, so a 96 px bar centred on them hangs 4 px off the left edge.
-  const w = 96, h = 11;
-  const x = Math.max(4, Math.min(HD_CS_W - w - 4, p[0] - w / 2));
-  const y = p[1] + 12;
-
-  ctx.fillStyle = 'rgba(255,255,255,.95)';
-  hdRoundRect(ctx, x - 2, y - 2, w + 4, h + 4, 4);
-  ctx.fill();
-  ctx.fillStyle = '#e2e8f0';
-  ctx.fillRect(x, y, w, h);
-  const cg = ctx.createLinearGradient(x, 0, x + w, 0);
-  cg.addColorStop(0, '#f59e0b');
-  cg.addColorStop(1, '#fbbf24');
-  ctx.fillStyle = cg;
-  ctx.fillRect(x, y, w * done, h);
-  ctx.strokeStyle = 'rgba(51,65,85,.55)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-
-  ctx.fillStyle = '#0f172a';
-  ctx.font = '800 9px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  // Centre on the BAR, not on the hero — they differ once the clamp kicks in.
-  ctx.fillText('✋ ' + HD_SLOT_SHORT[st.cast.target] + ' · ' + (st.cast.left / 10).toFixed(1) + 's', x + w / 2, y + h / 2);
-}
-
 function hdDrawBossCast(ctx, rt, st) {
   if (!st.bossCast) return;
   const p = hdMobXY(0, true);
@@ -1146,7 +1096,6 @@ function hdDraw() {
   units.sort((a, b) => a.row - b.row);
   for (let i = 0; i < units.length; i += 1) hdDrawUnit(ctx, units[i]);
 
-  hdDrawSelfCast(ctx, st);
   if (!resting && st.isBoss) hdDrawBossCast(ctx, rt, st);
 
   // floating combat text
@@ -1170,7 +1119,7 @@ function hdDraw() {
     ctx.fillRect(0, 0, HD_CS_W, HD_CS_H);
     ctx.fillStyle = '#1d4ed8';
     ctx.font = '800 20px system-ui, sans-serif';
-    ctx.fillText('🍺 Przerwa — ' + (st.restLeft / 10).toFixed(1) + ' s', HD_CS_W / 2, HD_CS_H / 2 - 12);
+    ctx.fillText('Przerwa — pełne życie i mana', HD_CS_W / 2, HD_CS_H / 2 - 12);
     ctx.fillStyle = '#475569';
     ctx.font = '700 12px system-ui, sans-serif';
     ctx.fillText(hdIsBoss(st.pull + 1) ? '☠️ Następny: BOSS — ' + hdPackName(st.pull + 1)
@@ -1350,22 +1299,21 @@ function healerBuildFrames() {
     frame.className = 'hd-frame';
     frame.dataset.slot = String(i);
     frame.innerHTML =
-      '<div class="hd-frame-head">' +
+      '<div class="hd-frame-fill" data-fill></div>' +
+      '<div class="hd-pred-heal" data-pred></div>' +
+      '<div class="hd-pred-dmg" data-dmg></div>' +
+      '<div class="hd-frame-top">' +
         '<span class="hd-frame-name">' + HD_SLOT_ICONS[i] +
           ' <span class="hd-name-long">' + HD_SLOT_NAMES[i] + '</span>' +
-          '<span class="hd-name-short">' + HD_SLOT_SHORT[i] + '</span>' +
-          '<span class="hd-frame-key">' + HD_TARGET_KEYS[i] + '</span>' +
-        '</span>' +
+          '<span class="hd-name-short">' + HD_SLOT_SHORT[i] + '</span></span>' +
+        '<span class="hd-frame-key">' + HD_TARGET_KEYS[i] + '</span>' +
+      '</div>' +
+      '<div class="hd-frame-bottom">' +
         '<span class="hd-frame-hp" data-hp></span>' +
-      '</div>' +
-      '<div class="hd-bar hd-bar-hp">' +
-        '<div class="hd-bar-fill" data-fill></div>' +
-        '<div class="hd-pred-heal" data-pred></div>' +
-        '<div class="hd-pred-dmg" data-dmg></div>' +
         '<span class="hd-pred-num" data-prednum></span>' +
+        '<span class="hd-hots" data-hots></span>' +
       '</div>' +
-      (i === HD_HEAL ? '<div class="hd-bar hd-bar-mini"><div class="hd-bar-fill" data-mana></div></div>' : '') +
-      '<div class="hd-hots" data-hots></div>';
+      (i === HD_HEAL ? '<div class="hd-frame-mana"><i data-mana></i></div>' : '');
     frame.addEventListener('click', () => healerSetTarget(i));
     wrap.appendChild(frame);
   }
@@ -1385,10 +1333,7 @@ function healerRenderFrames() {
     frame.classList.toggle('is-low', !dead && pct < 35);
 
     const fill = frame.querySelector('[data-fill]');
-    if (fill) {
-      fill.style.width = pct + '%';
-      fill.className = 'hd-bar-fill' + (pct < 35 ? ' is-crit' : pct < 65 ? ' is-warn' : '');
-    }
+    if (fill) fill.style.width = pct + '%';
 
     // Incoming heal: a translucent ghost sitting on top of the missing health,
     // clipped to the gap, exactly like the WoW raid-frame prediction.
@@ -1429,10 +1374,11 @@ function healerRenderFrames() {
     frame.classList.toggle('is-doomed', lethal);
 
     const hp = frame.querySelector('[data-hp]');
-    if (hp) hp.textContent = dead ? '☠️ 0' : st.hp[i] + ' / ' + st.maxHp[i];
+    if (hp) hp.textContent = dead ? '☠️' : st.hp[i] + ' / ' + st.maxHp[i];
 
     const mana = frame.querySelector('[data-mana]');
     if (mana) mana.style.width = hdPct(st.mana, hdMaxMana(st)) + '%';
+    void 0;
 
     const hots = frame.querySelector('[data-hots]');
     if (hots) {
@@ -1464,21 +1410,38 @@ function healerRenderFrames() {
 function healerRenderSpells() {
   const st = healerRuntime && healerRuntime.sim;
   if (!st) return;
+  const gcdTotal = hdGcdTicks(st);
+  const castTotal = hdCastTicks(st);
   document.querySelectorAll('#hd-spells .hd-spell').forEach(btn => {
     const spell = Number(btn.dataset.spell);
     const poor = st.mana < HD_COST[spell];
-    const cd = spell === HD_SP_WG && st.wgCd > 0;
+
+    // Everything that can stop this button working, as one countdown: the
+    // global cooldown, the in-flight cast, and (Wild Growth only) its own
+    // cooldown. The sweep shows whichever has longest to run — that is exactly
+    // the question "can I press this right now".
+    let left = st.gcd, total = gcdTotal;
+    if (st.cast && st.cast.left > left) { left = st.cast.left; total = castTotal; }
+    if (spell === HD_SP_WG && st.wgCd > left) { left = st.wgCd; total = HD_WG_CD_TICKS; }
+
     btn.classList.toggle('is-poor', poor);
-    btn.classList.toggle('is-cd', cd);
-    btn.classList.toggle('is-ready', !poor && !cd && st.gcd === 0 && !st.cast);
+    btn.classList.toggle('is-cd', left > 0);
+    btn.classList.toggle('is-ready', !poor && left <= 0);
+
+    const sweep = btn.querySelector('[data-sweep]');
+    if (sweep) sweep.style.setProperty('--sweep', (total > 0 ? left / total : 0).toFixed(3) + 'turn');
+
     const cdEl = btn.querySelector('[data-cd]');
-    if (cdEl) cdEl.textContent = cd ? (st.wgCd / 10).toFixed(1) + ' s' : '';
+    // Only the long waits get a number; a 1.5 s GCD ticking digits every frame
+    // is noise, and the sweep already says "not yet".
+    if (cdEl) cdEl.textContent = left > gcdTotal ? (left / 10).toFixed(1) : '';
+
     const effEl = btn.querySelector('[data-eff]');
     if (effEl) {
       const heal = spell === HD_SP_REJUV ? hdHealAmt(st, 220)
         : spell === HD_SP_WG ? hdHealAmt(st, 180) * HD_PARTY
         : hdHealAmt(st, HD_HT_HEAL);
-      effEl.textContent = heal + ' HP · ' + (heal / HD_COST[spell]).toFixed(2) + ' HP/manę';
+      effEl.textContent = HD_COST[spell] + ' many · ' + heal + ' HP · ' + (heal / HD_COST[spell]).toFixed(2) + '/mana';
     }
   });
 }
@@ -1554,10 +1517,24 @@ function healerRenderBars() {
   const fsr = hdEl('hd-fsr');
   if (fsr) {
     const regenning = st.fsr >= HD_FSR_TICKS;
-    fsr.classList.toggle('is-on', regenning || st.drinking);
-    fsr.textContent = st.drinking ? '🍺 pijesz'
-      : regenning ? '💧 +' + (hdRegenPerTick(st) * 10) + '/s'
+    fsr.classList.toggle('is-on', regenning);
+    fsr.textContent = regenning ? '+' + (hdRegenPerTick(st) * 10) + '/s'
       : '⏳ ' + ((HD_FSR_TICKS - st.fsr) / 10).toFixed(1) + ' s';
+  }
+
+  const cast = hdEl('hd-cast');
+  if (cast) {
+    cast.classList.toggle('is-on', !!st.cast);
+    const fill = cast.querySelector('[data-fill]');
+    const label = cast.querySelector('[data-label]');
+    if (st.cast) {
+      const total = hdCastTicks(st);
+      if (fill) fill.style.width = hdPct(total - st.cast.left, total) + '%';
+      if (label) label.textContent = '✋ ' + HD_SLOT_SHORT[st.cast.target] + ' · ' + (st.cast.left / 10).toFixed(1) + ' s';
+    } else {
+      if (fill) fill.style.width = '0%';
+      if (label) label.textContent = st.gcd > 0 ? 'GCD ' + (st.gcd / 10).toFixed(1) + ' s' : 'gotowy';
+    }
   }
 
   const pack = hdEl('hd-pack');
@@ -1585,17 +1562,21 @@ function healerRenderRest() {
   if (st.phase !== 'rest') { panel.classList.remove('is-on'); return; }
   panel.classList.add('is-on');
 
-  const bar = hdEl('hd-rest-fill');
-  if (bar) bar.style.width = hdPct(st.restLeft, st.restMax) + '%';
   const label = hdEl('hd-rest-label');
   if (label) {
-    label.textContent = (hdIsBoss(st.pull + 1) ? '☠️ BOSS za ' : 'Następna grupa za ') + (st.restLeft / 10).toFixed(1) + ' s';
+    label.textContent = st.upgradePicked
+      ? (hdIsBoss(st.pull + 1) ? '☠️ Następny: BOSS — gotowy?' : 'Gotowy na następną grupę?')
+      : 'Wybierz ulepszenie, żeby ruszyć dalej';
     label.classList.toggle('is-boss', hdIsBoss(st.pull + 1));
   }
+  // „Ruszaj" stays disabled until a bonus is taken — the sim refuses the pull
+  // anyway, and a button that silently does nothing is worse than a dim one.
+  const go = hdEl('hd-pull-btn');
+  if (go) go.disabled = !st.upgradePicked;
 
   const cards = hdEl('hd-upgrades');
   if (!cards) return;
-  const signature = st.pull + ':' + st.upgrades.join(',') + ':' + (st.upgradePicked ? 1 : 0);
+  const signature = st.pull + ':' + st.upgrades.join(',') + ':' + (st.upgradePicked ? 1 : 0) + ':' + st.pickedIdx;
   if (cards.dataset.sig === signature) return;   // don't rebuild 10×/s
   cards.dataset.sig = signature;
   cards.replaceChildren();
@@ -1603,7 +1584,10 @@ function healerRenderRest() {
     const meta = HD_UPGRADE_META[up];
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'hd-up' + (st.upgradePicked ? ' is-locked' : '');
+    // Once picked, the chosen card stays highlighted and the other dims — the
+    // player should be able to see what they just took before pulling.
+    const taken = st.upgradePicked && st.pickedIdx === i;
+    card.className = 'hd-up' + (st.upgradePicked ? (taken ? ' is-taken' : ' is-locked') : '');
     card.disabled = st.upgradePicked;
     card.innerHTML =
       '<span class="hd-up-icon">' + meta.icon + '</span>' +
@@ -1829,7 +1813,6 @@ function healerKeyDown(ev) {
     healerQueueAction(HD_KEY_SPELL[low], rt.target);
     return;
   }
-  if (low === 'd') { ev.preventDefault(); healerQueueAction(HD_A_DRINK, 0); return; }
   if (k === ' ') { ev.preventDefault(); healerQueueAction(HD_A_PULL, 0); }
 }
 
@@ -1845,8 +1828,6 @@ function healerSetupOnce() {
   });
   const startBtn = hdEl('hd-start');
   if (startBtn) startBtn.addEventListener('click', startHealerDungeonRound);
-  const drinkBtn = hdEl('hd-drink');
-  if (drinkBtn) drinkBtn.addEventListener('click', () => healerQueueAction(HD_A_DRINK, 0));
   const pullBtn = hdEl('hd-pull-btn');
   if (pullBtn) pullBtn.addEventListener('click', () => healerQueueAction(HD_A_PULL, 0));
   const helpBtn = hdEl('hd-help-btn');
