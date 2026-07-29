@@ -622,7 +622,8 @@ function agpMariuszReset(p) {
 // ── Uzdrowiciel G6 — real sim, triage bot, real party frames ────────────────
 
 function agpHealerReset(p) {
-  p.st = hdInitState((Date.now() ^ 0x5eed) >>> 0);
+  // A random class each cycle, so the card advertises all three.
+  p.st = hdInitState((Date.now() ^ 0x5eed) >>> 0, Math.floor(Math.random() * HD_CLASSES.length));
   // A real healer runtime, so hdDraw()/hdConsumeFx()/hdStepFx() run unmodified
   // against it — the battlefield in the thumbnail is the battlefield in the
   // game, down to the floating combat text.
@@ -650,9 +651,10 @@ function agpHealerBot(st) {
     if (pct < lowPct) { lowPct = pct; low = i; }
   }
   const hurt = st.hp.filter((hp, i) => hp < st.maxHp[i] * 0.8).length;
-  if (hurt >= 3 && st.wgCd === 0 && st.mana >= HD_COST[HD_SP_WG]) return [{ a: HD_A_WG, t: 0 }];
-  if (lowPct < 0.45 && st.mana >= HD_COST[HD_SP_HT]) return [{ a: HD_A_HT, t: low }];
-  if (lowPct < 0.9 && st.mana >= HD_COST[HD_SP_REJUV]) return [{ a: HD_A_REJUV, t: low }];
+  // Slot-based, so the same bot drives whichever class the preview rolled.
+  if (hurt >= 3 && st.cd[HD_SP_RAID] === 0 && st.mana >= hdCost(st, HD_SP_RAID)) return [{ a: HD_A_RAID, t: 0 }];
+  if (lowPct < 0.45 && st.cd[HD_SP_BIG] === 0 && st.mana >= hdCost(st, HD_SP_BIG)) return [{ a: HD_A_BIG, t: low }];
+  if (lowPct < 0.9 && st.mana >= hdCost(st, HD_SP_FILL)) return [{ a: HD_A_FILL, t: low }];
   return null;
 }
 

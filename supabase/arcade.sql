@@ -117,10 +117,14 @@ BEGIN
     WHEN 'super_mariusz' THEN 455
     WHEN 'popup_panic'   THEN 2000
     WHEN 'tetris'        THEN 9999
-    -- „Uzdrowiciel G6": score is pulls cleared. Arcade scores are client-
-    -- reported, so this cap is the only guard on this path; 100 pulls is far
-    -- beyond any real run.
-    WHEN 'healer_dungeon' THEN 100
+    -- „Uzdrowiciel G6": the score is POINTS, not pulls (2026-07-29) — pull
+    -- depth (bosses ×2) + effective healing scaled by precision + a tempo
+    -- bonus for pulling quickly after a rest. A good run measures ~2000-3000
+    -- and the deepest plausible one is around 20000. Arcade scores are
+    -- client-reported, so this cap is the only guard on this path.
+    -- ⚠️ Rows written before 2026-07-29 hold PULLS CLEARED (1-20) and are not
+    -- comparable with anything above; delete them if the board looks odd.
+    WHEN 'healer_dungeon' THEN 30000
     ELSE NULL
   END;
   IF v_score_cap IS NULL THEN RAISE EXCEPTION 'invalid_game_type'; END IF;

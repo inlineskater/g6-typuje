@@ -41,79 +41,178 @@
 const HD_TICK_MS = 100;
 const HD_MAX_TICKS = 12000;      // 20 min — replay-cost safety cap, NOT a game timer
 const HD_MAX_EVENTS = 6000;
-const HD_MAX_SCORE = 100;        // mirrors the arcade.sql score cap
+const HD_MAX_SCORE = 30000;      // mirrors the arcade.sql score cap
 
 // Party slots. Five, not three: three health bars is a party, five is a raid
-// frame — and it makes the AoE pulse hit five targets, which is what turns
-// Dziki Wzrost from a nice-to-have into the spell the run is built around.
+// frame — and it makes the AoE pulse hit five targets, which is what turns the
+// raid-wide spell from a nice-to-have into the spell the run is built around.
 const HD_PARTY = 5;
 const HD_TANK = 0, HD_HEAL = 1;
 const HD_BASE_HP = [1500, 820, 900, 860, 780];
 
 // Your resources. Every stat starts at 0 and only upgrades move it, so the
-// opening pull is always identical — the "generic, overall the same" ask.
+// opening pull is always identical whichever class you took.
 // THREE stats, not five (2026-07-28). Duch (regen) and Pośpiech (cast speed)
 // are gone: they changed a number in the background rather than anything you
-// do, and every point spent describing them was a point not spent on the
-// encounter. What is left maps onto the three things a healer actually feels —
-// how hard the party hits, how hard you heal, how much health there is to work
-// with. Mana still has an upgrade path, because Moc leczenia widens the pool AND
-// raises HP-per-mana; regen and cast speed are now fixed constants.
-const HD_BASE_MANA = 1200;
-const HD_MANA_PER_HEAL_PT = 17;  // Moc leczenia widens the pool as well
+// do. What is left maps onto the three things a healer actually feels — how
+// hard the party hits, how hard you heal, how much health there is to work
+// with. Mana still has an upgrade path, because Moc leczenia widens the pool
+// AND raises HP-per-mana; regen is a fixed constant plus a random perk.
+const HD_BASE_MANA = 1500;
+const HD_MANA_PER_HEAL_PT = 20;  // Moc leczenia widens the pool as well
 const HD_HEAL_PCT_PER_PT = 4;    // ... and raises every heal
 const HD_HP_PCT_PER_PT = 3;      // Życie: max HP for the WHOLE party, not just the tank
 const HD_DPS_PER_PT = 11;        // Obrażenia: how fast the pack dies
-const HD_REGEN_BASE = 40;        // mana per SECOND outside the 5 s window — fixed
+const HD_REGEN_BASE = 40;        // mana per SECOND outside the 5 s window
 const HD_FSR_TICKS = 50;         // the 5-second rule, in ticks
 
-// Spells. The HP-per-mana spread is the whole skill test: Odnowa is the
-// efficient filler, Dziki Wzrost answers the AoE pulse, Uzdrawiający Dotyk is
-// the panic button you cannot afford to lean on.
-const HD_SP_REJUV = 0, HD_SP_WG = 1, HD_SP_HT = 2;
-const HD_GCD_TICKS = 15;         // 1.5 s
-const HD_COST = [90, 330, 240];
-const HD_HT_CAST_TICKS = 25;     // 2.5 s
-const HD_HT_HEAL = 420;
-const HD_REJUV_PERIOD = 30;      // a tick every 3 s
-const HD_REJUV_AMOUNTS = [55, 55, 55, 55];
-const HD_WG_PERIOD = 20;         // a tick every 2 s
-const HD_WG_AMOUNTS = [60, 50, 40, 30];   // decaying, like the real spell
-const HD_WG_CD_TICKS = 80;       // 8 s
+// ── Spells ──────────────────────────────────────────────────────────────────
+// THREE CLASSES (2026-07-29), each with the same three ROLES in the same three
+// slots, so every readout, every keybind and every bot policy is class-generic:
+//   slot 0 (Q) — the efficient filler you cast most of the time
+//   slot 1 (W) — the raid-wide answer to the AoE pulse, on a cooldown
+//   slot 2 (E) — the expensive panic button you cannot afford to lean on
+// "Same power" is a HARD constraint and it is enforced numerically, not by
+// feel: every class's filler sits at ~2.4 HP per mana, its raid spell at ~2.7
+// across five targets, and its panic button at ~1.75. What differs is WHEN the
+// healing lands, which is the entire identity of a healing class:
+//   Druid   — HoTs. Nothing is wasted, but everything arrives late, so you heal
+//             damage that has not happened yet.
+//   Kapłan  — absorbs. The shield stops the hit instead of repairing it, which
+//             is perfect against a telegraphed cast and pure waste otherwise.
+//   Paladyn — direct heals. Instant, exact, reactive — and the one class whose
+//             panic button has no cast time at all, paid for with a cooldown.
+const HD_SP_FILL = 0, HD_SP_RAID = 1, HD_SP_BIG = 2;
+const HD_SPELL_SLOTS = 3;
+const HD_K_HOT = 0, HD_K_DIRECT = 1, HD_K_SHIELD = 2;
+
+// Casts and the GCD are FAST (2026-07-29): the global cooldown came down from
+// 1.5 s to 1.1 s and every cast time with it. A healer's inputs should feel
+// like reflexes, not like queuing orders. Note this makes mana bite HARDER, not
+// softer — the spam rate went from 60 to ~82 mana/s against the same regen —
+// which is why the pool was widened in the same pass.
+const HD_GCD_TICKS = 11;         // 1.1 s
+const HD_GCD_MIN = 7;            // the Skupienie perk can shave it to 0.7 s
+
+const HD_CLASSES = [
+  {
+    id: 'druid', name: 'Druid', icon: '🌿', portrait: '💚', color: '#16a34a',
+    tag: 'HoT-y · lecz z wyprzedzeniem',
+    blurb: 'Leczenie sączy się w czasie. Nic się nie marnuje, ale nic nie dzieje się od razu — rzucaj, zanim zaboli.',
+    spells: [
+      // The tick RATE is the druid's balance knob, not the totals: at one tick
+      // every 3 s the HoT delivered the same HP per mana as the other two
+      // fillers but arrived so late that spike damage killed the target first,
+      // and the class measured ~20% behind on identical numbers. Ticking every
+      // 2 s keeps the power promise byte-for-byte and closes the gap, because
+      // what was wrong was LATENCY, never throughput.
+      { key: 'Q', icon: '🌿', name: 'Odnowa', kind: HD_K_HOT, all: false,
+        cost: 90, cast: 0, cd: 0, period: 20, amounts: [55, 55, 55, 55],
+        hint: 'HoT · 8 s · 1 cel' },
+      { key: 'W', icon: '🌳', name: 'Dziki Wzrost', kind: HD_K_HOT, all: true,
+        cost: 330, cast: 0, cd: 80, period: 15, amounts: [60, 50, 40, 30],
+        hint: 'HoT · 6 s · CAŁA drużyna' },
+      { key: 'E', icon: '✋', name: 'Uzdrawiający Dotyk', kind: HD_K_DIRECT, all: false,
+        cost: 240, cast: 16, cd: 0, amount: 420,
+        hint: 'rzucanie 1,6 s · duże leczenie' },
+    ],
+  },
+  {
+    id: 'priest', name: 'Kapłan', icon: '✨', portrait: '🙏', color: '#2563eb',
+    tag: 'Tarcze · zatrzymaj cios, zanim padnie',
+    blurb: 'Tarcza pochłania obrażenia zamiast je naprawiać — idealna na zapowiedziany czar bossa, zmarnowana, gdy nic nie przyjdzie.',
+    spells: [
+      { key: 'Q', icon: '🛡️', name: 'Tarcza Słowa', kind: HD_K_SHIELD, all: false,
+        cost: 95, cast: 0, cd: 0, amount: 230, dur: 120,
+        hint: 'pochłania 230 obr. · 12 s · 1 cel' },
+      { key: 'W', icon: '✨', name: 'Modlitwa Uzdrowienia', kind: HD_K_DIRECT, all: true,
+        cost: 320, cast: 0, cd: 80, amount: 175,
+        hint: 'natychmiast · CAŁA drużyna' },
+      { key: 'E', icon: '🕊️', name: 'Wielkie Leczenie', kind: HD_K_DIRECT, all: false,
+        cost: 265, cast: 20, cd: 0, amount: 470,
+        hint: 'rzucanie 2 s · bardzo duże leczenie' },
+    ],
+  },
+  {
+    id: 'paladin', name: 'Paladyn', icon: '🔨', portrait: '⚜️', color: '#d97706',
+    tag: 'Leczenie wprost · reaguj na to, co widzisz',
+    blurb: 'Żadnych opóźnień i żadnych zapowiedzi: leczysz dokładnie tyle, ile trzeba, dokładnie wtedy, kiedy trzeba — jeśli zdążysz.',
+    spells: [
+      { key: 'Q', icon: '☀️', name: 'Święte Światło', kind: HD_K_DIRECT, all: false,
+        cost: 125, cast: 14, cd: 0, amount: 300,
+        hint: 'rzucanie 1,4 s · 1 cel' },
+      { key: 'W', icon: '🔔', name: 'Błogosławieństwo', kind: HD_K_DIRECT, all: true,
+        cost: 315, cast: 0, cd: 80, amount: 170,
+        hint: 'natychmiast · CAŁA drużyna' },
+      { key: 'E', icon: '🤲', name: 'Ręka Opatrzności', kind: HD_K_DIRECT, all: false,
+        cost: 320, cast: 0, cd: 150, amount: 560,
+        hint: 'natychmiast · 15 s odnowienia' },
+    ],
+  },
+];
+
+// ── Random perks ────────────────────────────────────────────────────────────
+// The third card in every rest is a RANDOM talent drawn from this pool, so no
+// two runs build the same healer. They stack, and every one of them changes
+// something you can feel at the keyboard rather than a background number — the
+// same bar the three stats have to clear.
+const HD_PK_REGEN = 0, HD_PK_GCD = 1, HD_PK_CHEAP = 2, HD_PK_PHOENIX = 3;
+const HD_PK_CDR = 4, HD_PK_WARD = 5, HD_PK_CRIT = 6, HD_PK_FURY = 7;
+const HD_PERK_COUNT = 8;
+const HD_PK_REGEN_STEP = 10;     // +10 mana/s outside the 5 s window
+const HD_PK_CHEAP_STEP = 7;      // −7% mana cost, floored at 60%
+const HD_PK_CHEAP_FLOOR = 60;
+const HD_PK_CDR_STEP = 15;       // raid spell cooldown −1,5 s, floored at 3 s
+const HD_PK_CDR_FLOOR = 30;
+const HD_PK_WARD_STEP = 6;       // −6% damage taken
+const HD_PK_CRIT_STEP = 10;      // +10% chance a heal crits
+const HD_PK_CRIT_MULT = 165;     // ... for +65%
+const HD_PK_FURY_DPS = 25;       // +25 party dps
+const HD_PK_FURY_DMG = 8;        // ... at +8% damage taken
+const HD_DMG_TAKEN_FLOOR = 50;   // no stack of wards can halve the game twice
+
+// ── Score ───────────────────────────────────────────────────────────────────
+// „Pulls cleared" alone made every leaderboard a three-bucket affair and told
+// you nothing about HOW you cleared them. The score is now points, banked pull
+// by pull, from three things a healer actually controls:
+//   • DEPTH  — each pull is worth more than the last, bosses double.
+//   • HEALING — effective healing only, then scaled by PRECISION: overhealing
+//     is the healer's cardinal sin, so a wasted heal costs you its own points.
+//     Absorbed damage counts as effective; a shield that expires unused does
+//     not (it lands in overheal, exactly like a heal into a full bar).
+//   • TEMPO  — the rest is free and unlimited, which is right for the mechanic
+//     and terrible for pace. So time pressure comes back as SCORE: the longer
+//     you sit between pulls, the smaller the tempo bonus for that pull. Nobody
+//     is ever forced to pull early; you just get paid for confidence.
+const HD_SCORE_PULL_BASE = 100;
+const HD_SCORE_PULL_STEP = 25;
+const HD_SCORE_BOSS_MULT = 2;
+const HD_SCORE_HEAL_PER_PT = 120;   // 1 point per 120 HP of effective healing
+const HD_SCORE_TEMPO_MAX = 60;
+const HD_SCORE_TEMPO_DECAY = 4;     // points lost per second spent resting
 
 // Encounter script for pull n. Fixed shape; only the damage jitter, the spike
 // target and the boss's choice of ability roll off the RNG.
 // Party damage scales with the pull alongside pack HP, which holds fight length
-// at a near-constant ~10 s all the way down. Difficulty must come from incoming
-// damage vs your mana, not from fights that grind on for half a minute — the
-// first tuning pass had pull 10 taking 35 s and a whole run over ten minutes.
-// Pulls run ~21 s rather than ~10 s: with the between-pull economy gone, the
-// fight itself has to be long enough to hold a decision curve, and "harder but
-// a bit slower to play" means fewer, weightier moments — not faster inputs.
+// at a near-constant ~21 s all the way down. Difficulty must come from incoming
+// damage vs your mana, not from fights that grind on for half a minute.
 const HD_PACK_HP_BASE = 1800, HD_PACK_HP_PER_PULL = 470;
-const HD_DPS_BASE = 90, HD_DPS_PER_PULL = 22, HD_DPS_PER_STR = 8;   // per second
-// Incoming damage has to make healing mandatory from the very first pull, and
-// the 5-man tuning pass pushed it up again: five bars to keep alive is only
-// harder if the pulse actually threatens the squishy ones.
+const HD_DPS_BASE = 90, HD_DPS_PER_PULL = 22;   // per second
 // The per-pull SLOPES matter more than the bases: with a shallow slope the bot
 // cruised every normal pull and died only ever on a boss, so every score in the
 // field was 4, 9 or 14 and the leaderboard was three buckets. A steeper ramp
-// makes late normal pulls lethal in their own right, which is what puts scores
-// in between the bosses again.
+// makes late normal pulls lethal in their own right.
 const HD_MELEE_PERIOD = 18;      // tank auto-attack every 1.8 s
-const HD_MELEE_BASE = 78, HD_MELEE_PER_PULL = 19;
+const HD_MELEE_BASE = 86, HD_MELEE_PER_PULL = 21;
 const HD_AOE_PERIOD = 80;        // raid pulse every 8 s, on all five
-const HD_AOE_BASE = 28, HD_AOE_PER_PULL = 17;
+const HD_AOE_BASE = 31, HD_AOE_PER_PULL = 19;
 const HD_SPIKE_PERIOD = 105;     // spike on a random non-tank every 10.5 s
-const HD_SPIKE_BASE = 92, HD_SPIKE_PER_PULL = 36;
-// Cleave: two DIFFERENT random party members at once, on its own beat. Added
-// with the 3-stat pass to put the complexity that came out of the upgrade
-// screen back into the encounter — with only melee/AoE/spike the damage pattern
-// repeated every 8.5 s and healing settled into a fixed rotation.
+const HD_SPIKE_BASE = 101, HD_SPIKE_PER_PULL = 40;
+// Cleave: two DIFFERENT random party members at once, on its own beat — with
+// only melee/AoE/spike the damage pattern repeated every 8.5 s and healing
+// settled into a fixed rotation.
 const HD_CLEAVE_PERIOD = 70;     // every 7 s
-const HD_CLEAVE_BASE = 58, HD_CLEAVE_PER_PULL = 22;
-// No rest constants any more: the rest lasts exactly as long as the player
-// wants it to (see hdBeginRest).
+const HD_CLEAVE_BASE = 64, HD_CLEAVE_PER_PULL = 24;
 
 // ── Bosses: every fifth pull ────────────────────────────────────────────────
 // A boss is not "a pack with more HP". It is the only encounter that tells you
@@ -123,36 +222,33 @@ const HD_BOSS_EVERY = 5;
 const HD_BOSS_HP_MULT_PCT = 110;   // ~23 s against a ~21 s normal pull
 // Kept modest on purpose. A boss fight is ~2.3× as LONG as a normal pull, so a
 // multiplier on its auto-attack is paid ~2.3× over; at 130% the very first boss
-// (pull 5, when you have had four upgrades) killed half the field, which is one
-// boss too early for an 8-pull target. The scary part of a boss is meant to be
-// the telegraphed cast you can answer, not the autoattack you cannot.
+// killed half the field, which is one boss too early for an 8-pull target.
 const HD_BOSS_MELEE_PCT = 100;
 const HD_BOSS_AOE_PCT = 120;
 const HD_BOSS_CAST_FIRST = 55;     // first telegraph 5.5 s in
 const HD_BOSS_CAST_PERIOD = 90;    // then one every 9 s
-const HD_BOSS_CAST_TICKS = 35;     // 3.5 s of warning — two GCDs to react
+const HD_BOSS_CAST_TICKS = 35;     // 3.5 s of warning — three GCDs to react
 const HD_CB_BUSTER = 0, HD_CB_NUKE = 1;
 // The buster's PER-PULL slope is deliberately shallower than its base is big:
-// a steep slope turned every boss into a pass/fail HP check (the whole field
-// died on pull 5 or pull 10 and nowhere else), while a fat flat hit stays scary
-// at every depth without becoming a wall you either clear or do not.
-const HD_BOSS_BUSTER_BASE = 285, HD_BOSS_BUSTER_PER_PULL = 44;   // tank only
-const HD_BOSS_NUKE_BASE = 105, HD_BOSS_NUKE_PER_PULL = 15;       // whole party
-// Kill it or it kills you: past this the boss gains damage every second. Set
-// just INSIDE a clean ~25 s kill, so a party that skipped Siła feels it.
+// a steep slope turned every boss into a pass/fail HP check, while a fat flat
+// hit stays scary at every depth without becoming a wall.
+const HD_BOSS_BUSTER_BASE = 310, HD_BOSS_BUSTER_PER_PULL = 46;   // tank only
+const HD_BOSS_NUKE_BASE = 115, HD_BOSS_NUKE_PER_PULL = 16;       // whole party
+// Kill it or it kills you: past this the boss gains damage every second.
 const HD_BOSS_ENRAGE_TICKS = 280;  // 28 s — just past a clean kill
 const HD_BOSS_ENRAGE_PER_SEC = 5;  // +5 percentage points of damage per second
 
-// Upgrades — 2 of these 3 are offered after every pull. Two, not three: a
-// three-card hand nearly always contains the obvious pick, so the choice was
-// free. Two forces a genuine trade-off.
+// Upgrades after every pull: TWO of the three stats plus ONE random perk, so
+// the stat line always advances and the wildcard is always on the table.
 const HD_UP_HEAL = 0, HD_UP_HP = 1, HD_UP_DMG = 2;
 const HD_UPGRADE_COUNT = 3;
-const HD_UPGRADE_CHOICES = 2;
+const HD_STAT_CHOICES = 2;
+const HD_UPGRADE_CHOICES = HD_STAT_CHOICES + 1;
 const HD_UP_STEP = [2, 2, 2];
+const HD_UK_STAT = 0, HD_UK_PERK = 1;
 
 // Actions the runtime logs.
-const HD_A_REJUV = 0, HD_A_WG = 1, HD_A_HT = 2;
+const HD_A_FILL = 0, HD_A_RAID = 1, HD_A_BIG = 2;
 const HD_A_PULL = 3, HD_A_UPGRADE = 4;
 
 function hdRng(st) {
@@ -167,17 +263,46 @@ function hdJitter(st, base) {
   return Math.max(1, Math.floor(base * (90 + hdRnd(st, 21)) / 100));
 }
 
+function hdClass(st) { return HD_CLASSES[st.cls] || HD_CLASSES[0]; }
+function hdSpell(st, slot) { return hdClass(st).spells[slot]; }
+function hdCost(st, slot) {
+  const pct = Math.max(HD_PK_CHEAP_FLOOR, 100 - HD_PK_CHEAP_STEP * st.perks[HD_PK_CHEAP]);
+  return Math.max(1, Math.floor(hdSpell(st, slot).cost * pct / 100));
+}
+function hdSpellCd(st, slot) {
+  const sp = hdSpell(st, slot);
+  if (!sp.cd) return 0;
+  if (slot !== HD_SP_RAID) return sp.cd;
+  return Math.max(HD_PK_CDR_FLOOR, sp.cd - HD_PK_CDR_STEP * st.perks[HD_PK_CDR]);
+}
+function hdCastTicks(st, slot) { return hdSpell(st, slot).cast; }
+function hdGcdTicks(st) { return Math.max(HD_GCD_MIN, HD_GCD_TICKS - st.perks[HD_PK_GCD]); }
+
 function hdMaxMana(st) { return HD_BASE_MANA + HD_MANA_PER_HEAL_PT * st.stats.heal; }
 function hdHealAmt(st, base) {
   return Math.floor(base * (100 + HD_HEAL_PCT_PER_PT * st.stats.heal) / 100);
 }
-function hdRegenPerTick(st) { return Math.floor(HD_REGEN_BASE / 10); }
+// The actual roll, as opposed to the predicted baseline: only this one may
+// consume RNG, and only when the crit perk is held — so a player without it
+// sees a bit-identical run to the one they would have seen before the perk
+// existed, and hdIncomingHeal (which the raid frames call every frame) stays
+// free of side effects.
+function hdHealRoll(st, base) {
+  const amt = hdHealAmt(st, base);
+  const chance = HD_PK_CRIT_STEP * st.perks[HD_PK_CRIT];
+  if (chance > 0 && hdRnd(st, 100) < chance) {
+    return { amt: Math.floor(amt * HD_PK_CRIT_MULT / 100), crit: true };
+  }
+  return { amt: amt, crit: false };
+}
+function hdRegenPerTick(st) {
+  return Math.floor((HD_REGEN_BASE + HD_PK_REGEN_STEP * st.perks[HD_PK_REGEN]) / 10);
+}
 function hdPartyDps(st) {
-  return HD_DPS_BASE + HD_DPS_PER_PULL * st.pull + HD_DPS_PER_PT * st.stats.dmg;
+  return HD_DPS_BASE + HD_DPS_PER_PULL * st.pull + HD_DPS_PER_PT * st.stats.dmg
+    + HD_PK_FURY_DPS * st.perks[HD_PK_FURY];
 }
 function hdPartyDpsPerTick(st) { return Math.floor(hdPartyDps(st) / 10); }
-function hdGcdTicks(st) { return HD_GCD_TICKS; }
-function hdCastTicks(st) { return HD_HT_CAST_TICKS; }
 // Życie scales the WHOLE party, not just the tank: with a cleave and a
 // per-target-jittered AoE in the mix, the squishy back four are as likely to be
 // the one that dies as the tank is.
@@ -185,6 +310,13 @@ function hdMaxHpFor(st, slot) {
   return Math.floor(HD_BASE_HP[slot] * (100 + HD_HP_PCT_PER_PT * st.stats.hp) / 100);
 }
 function hdIsBoss(pull) { return pull % HD_BOSS_EVERY === 0; }
+
+// Everything that changes how hard the party is hit, in one place, so the boss
+// telegraph's estimate and the hit it eventually lands agree exactly.
+function hdDmgTakenPct(st) {
+  return Math.max(HD_DMG_TAKEN_FLOOR,
+    100 - HD_PK_WARD_STEP * st.perks[HD_PK_WARD] + HD_PK_FURY_DMG * st.perks[HD_PK_FURY]);
+}
 
 // Enrage: a flat percentage on top of EVERY point of boss damage, growing once
 // the fight has run past HD_BOSS_ENRAGE_TICKS.
@@ -195,24 +327,26 @@ function hdEnragePct(st) {
   return 100 + HD_BOSS_ENRAGE_PER_SEC * Math.floor(over / 10);
 }
 function hdScaleDmg(st, amt, pct) {
-  return Math.max(1, Math.floor(amt * pct / 100 * hdEnragePct(st) / 100));
+  return Math.max(1, Math.floor(amt * pct / 100 * hdEnragePct(st) / 100 * hdDmgTakenPct(st) / 100));
 }
 
-function hdInitState(seed) {
+function hdInitState(seed, cls) {
   const st = {
     rngState: (Number(seed) >>> 0) || 1,
+    cls: Math.max(0, Math.min(HD_CLASSES.length - 1, Number(cls) || 0)),
     tick: 0,
     phase: 'fight',          // 'fight' | 'rest' | 'dead'
     pull: 1,
     pullsCleared: 0,
     bossesKilled: 0,
     hp: [], maxHp: [],
+    shield: [], shieldT: [],
     mana: 0,
     fsr: HD_FSR_TICKS,       // starts fully regenerating
     gcd: 0,
-    cast: null,              // { spell, target, left }
-    wgCd: 0,
-    hots: [],                // { tgt, kind, left, next, idx }
+    cast: null,              // { slot, target, left, total }
+    cd: [0, 0, 0],
+    hots: [],                // { tgt, slot, left, next, idx }
     packHp: 0, packMax: 0,
     isBoss: false,
     fightTick: 0,
@@ -220,15 +354,28 @@ function hdInitState(seed) {
     bossCastT: 0,
     upgrades: [], upgradePicked: false, pickedIdx: -1,
     stats: { heal: 0, hp: 0, dmg: 0 },
+    perks: [],
+    phoenix: 0,
     dead: false, deadWho: -1,
     meleeT: HD_MELEE_PERIOD, aoeT: HD_AOE_PERIOD, spikeT: HD_SPIKE_PERIOD, cleaveT: HD_CLEAVE_PERIOD,
-    healingDone: 0, manaSpent: 0, overheal: 0,
+    healingDone: 0, manaSpent: 0, overheal: 0, absorbed: 0,
+    // score, banked pull by pull, with its three components kept apart so the
+    // end card can show WHERE the points came from
+    score: 0, scPull: 0, scHeal: 0, scTempo: 0,
+    pullHealed: 0, pullOverheal: 0, pullTempo: HD_SCORE_TEMPO_MAX,
+    restTicks: 0,
     // Cosmetic event feed for the battlefield renderer. Cleared every tick and
     // NEVER read by the simulation, so a server transcription can drop it (or
     // keep it — it changes nothing).
     fx: [],
   };
-  for (let i = 0; i < HD_PARTY; i += 1) { st.maxHp[i] = hdMaxHpFor(st, i); st.hp[i] = st.maxHp[i]; }
+  for (let i = 0; i < HD_PERK_COUNT; i += 1) st.perks[i] = 0;
+  for (let i = 0; i < HD_PARTY; i += 1) {
+    st.maxHp[i] = hdMaxHpFor(st, i);
+    st.hp[i] = st.maxHp[i];
+    st.shield[i] = 0;
+    st.shieldT[i] = 0;
+  }
   st.mana = hdMaxMana(st);
   hdStartPull(st);
   return st;
@@ -247,10 +394,17 @@ function hdStartPull(st) {
   st.fightTick = 0;
   st.bossCast = null;
   st.bossCastT = HD_BOSS_CAST_FIRST;
+  st.phoenix = st.perks[HD_PK_PHOENIX];   // the cheat-death charges refresh per pull
+  st.pullHealed = 0;
+  st.pullOverheal = 0;
+  // The tempo bonus for THIS pull is locked in the moment you pull, from how
+  // long the rest before it lasted. Nothing decays once the fight starts.
+  st.pullTempo = Math.max(0, HD_SCORE_TEMPO_MAX - Math.floor(st.restTicks * HD_SCORE_TEMPO_DECAY / 10));
 }
 
 // The rest has NO timer. It ends when the player says so, and only after they
-// have taken a bonus — nothing is ever auto-picked or skipped.
+// have taken a bonus — nothing is ever auto-picked or skipped. What it does
+// have is a price: every second here costs tempo points on the next pull.
 function hdBeginRest(st) {
   st.phase = 'rest';
   st.upgradePicked = false;
@@ -259,26 +413,37 @@ function hdBeginRest(st) {
   st.cast = null;
   st.hots.length = 0;
   st.gcd = 0;
-  st.wgCd = 0;
+  st.cd = [0, 0, 0];
   st.fsr = HD_FSR_TICKS;
+  st.restTicks = 0;
+  for (let i = 0; i < HD_PARTY; i += 1) { st.shield[i] = 0; st.shieldT[i] = 0; }
   // Full restore. With drinking gone and the rest unlimited, out-of-combat
   // regen would refill everything anyway — charging the player 30 s of watching
   // a bar fill is tedium, not a decision. So every pull is a fresh check and
   // the difficulty lives entirely inside the fight.
   for (let i = 0; i < HD_PARTY; i += 1) st.hp[i] = st.maxHp[i];
   st.mana = hdMaxMana(st);
-  // Two distinct upgrades drawn from the three.
+  // Two distinct stats, then one random perk.
   const pool = [];
   for (let i = 0; i < HD_UPGRADE_COUNT; i += 1) pool.push(i);
   st.upgrades = [];
-  for (let i = 0; i < HD_UPGRADE_CHOICES; i += 1) st.upgrades.push(pool.splice(hdRnd(st, pool.length), 1)[0]);
+  for (let i = 0; i < HD_STAT_CHOICES; i += 1) {
+    st.upgrades.push({ k: HD_UK_STAT, i: pool.splice(hdRnd(st, pool.length), 1)[0] });
+  }
+  st.upgrades.push({ k: HD_UK_PERK, i: hdRnd(st, HD_PERK_COUNT) });
 }
 
 function hdApplyUpgrade(st, up) {
-  const step = HD_UP_STEP[up];
-  if (up === HD_UP_HEAL) {
+  if (up.k === HD_UK_PERK) {
+    st.perks[up.i] += 1;
+    if (up.i === HD_PK_PHOENIX) st.phoenix += 1;
+    st.upgradePicked = true;
+    return;
+  }
+  const step = HD_UP_STEP[up.i];
+  if (up.i === HD_UP_HEAL) {
     st.stats.heal += step;                      // bigger pool + stronger heals
-  } else if (up === HD_UP_HP) {
+  } else if (up.i === HD_UP_HP) {
     st.stats.hp += step;
     for (let i = 0; i < HD_PARTY; i += 1) {
       const before = st.maxHp[i];
@@ -291,11 +456,35 @@ function hdApplyUpgrade(st, up) {
   st.upgradePicked = true;
 }
 
+// Damage lands on the shield first. Absorbed damage counts as EFFECTIVE healing
+// (it is the priest's entire output), which is also what keeps the precision
+// term in the score honest across classes.
 function hdDamage(st, slot, amount, src) {
   if (st.dead || st.hp[slot] <= 0) return;
-  st.hp[slot] -= amount;
-  st.fx.push({ k: 'dmg', slot: slot, amt: amount, src: src });
+  let amt = amount;
+  if (st.shield[slot] > 0) {
+    const abs = Math.min(st.shield[slot], amt);
+    st.shield[slot] -= abs;
+    amt -= abs;
+    st.absorbed += abs;
+    st.healingDone += abs;
+    st.pullHealed += abs;
+    st.fx.push({ k: 'absorb', slot: slot, amt: abs });
+    if (st.shield[slot] <= 0) { st.shield[slot] = 0; st.shieldT[slot] = 0; }
+    if (amt <= 0) return;
+  }
+  st.hp[slot] -= amt;
+  st.fx.push({ k: 'dmg', slot: slot, amt: amt, src: src });
   if (st.hp[slot] <= 0) {
+    // Serce Feniksa: one charge per stack, refreshed every pull, turns the
+    // killing blow into 1 HP. It is the only thing in the game that undoes a
+    // mistake, which is why it is a perk and not a stat.
+    if (st.phoenix > 0) {
+      st.phoenix -= 1;
+      st.hp[slot] = 1;
+      st.fx.push({ k: 'phoenix', slot: slot });
+      return;
+    }
     st.hp[slot] = 0;
     st.dead = true;
     st.deadWho = slot;
@@ -303,14 +492,31 @@ function hdDamage(st, slot, amount, src) {
   }
 }
 
-function hdHeal(st, slot, amount, spell) {
+function hdHeal(st, slot, amount, slotSpell, crit) {
   if (st.hp[slot] <= 0) return;
   const room = st.maxHp[slot] - st.hp[slot];
   const applied = Math.min(room, amount);
   st.hp[slot] += applied;
   st.healingDone += applied;
+  st.pullHealed += applied;
   st.overheal += amount - applied;
-  if (applied > 0) st.fx.push({ k: 'heal', slot: slot, amt: applied, spell: spell });
+  st.pullOverheal += amount - applied;
+  if (applied > 0) st.fx.push({ k: 'heal', slot: slot, amt: applied, spell: slotSpell, crit: !!crit });
+}
+
+// A shield REPLACES whatever was on that target, exactly like Power Word:
+// Shield. What is left when it expires is counted as overheal — a shield that
+// never got hit was wasted mana in precisely the same way a heal into a full
+// health bar was.
+function hdAddShield(st, slot, amount, dur, crit) {
+  if (st.hp[slot] <= 0) return;
+  if (st.shield[slot] > 0) {
+    st.overheal += st.shield[slot];
+    st.pullOverheal += st.shield[slot];
+  }
+  st.shield[slot] = amount;
+  st.shieldT[slot] = dur;
+  st.fx.push({ k: 'shield', slot: slot, amt: amount, crit: !!crit });
 }
 
 function hdSpend(st, cost) {
@@ -320,15 +526,15 @@ function hdSpend(st, cost) {
   st.fsr = 0;                 // the 5-second rule restarts on every spend
 }
 
-// Refreshing a HoT of the same kind on the same target replaces it, exactly
+// Refreshing a HoT from the same slot on the same target replaces it, exactly
 // like re-applying Rejuvenation in game.
-function hdAddHot(st, tgt, kind) {
+function hdAddHot(st, tgt, slot) {
+  if (st.hp[tgt] <= 0) return;
   for (let i = st.hots.length - 1; i >= 0; i -= 1) {
-    if (st.hots[i].tgt === tgt && st.hots[i].kind === kind) st.hots.splice(i, 1);
+    if (st.hots[i].tgt === tgt && st.hots[i].slot === slot) st.hots.splice(i, 1);
   }
-  const period = kind === HD_SP_REJUV ? HD_REJUV_PERIOD : HD_WG_PERIOD;
-  const len = kind === HD_SP_REJUV ? HD_REJUV_AMOUNTS.length : HD_WG_AMOUNTS.length;
-  st.hots.push({ tgt: tgt, kind: kind, left: len, next: period, idx: 0 });
+  const sp = hdSpell(st, slot);
+  st.hots.push({ tgt: tgt, slot: slot, left: sp.amounts.length, next: sp.period, idx: 0 });
 }
 
 // ── Heal prediction ─────────────────────────────────────────────────────────
@@ -336,13 +542,18 @@ function hdAddHot(st, tgt, kind) {
 // through plus every remaining tick of every HoT on them. This is what the
 // green ghost segment on the raid frame draws, and it is the readout that tells
 // you "they look low but they are already covered — spend the GCD elsewhere".
+// Shields are NOT in here: they are already applied, and the frame paints them
+// as their own block over the health bar.
 function hdIncomingHeal(st, slot) {
   let sum = 0;
-  if (st.cast && st.cast.target === slot) sum += hdHealAmt(st, HD_HT_HEAL);
+  if (st.cast) {
+    const sp = hdSpell(st, st.cast.slot);
+    if (sp.kind === HD_K_DIRECT && (sp.all || st.cast.target === slot)) sum += hdHealAmt(st, sp.amount);
+  }
   for (let i = 0; i < st.hots.length; i += 1) {
     const h = st.hots[i];
     if (h.tgt !== slot) continue;
-    const table = h.kind === HD_SP_REJUV ? HD_REJUV_AMOUNTS : HD_WG_AMOUNTS;
+    const table = hdSpell(st, h.slot).amounts;
     for (let j = h.idx; j < table.length; j += 1) sum += hdHealAmt(st, table[j]);
   }
   return sum;
@@ -363,42 +574,61 @@ function hdIncomingDamage(st, slot) {
   if (p.kind === HD_CB_BUSTER) return slot === HD_TANK ? p.amt : 0;
   return p.amt;
 }
+// Does this bar survive the telegraphed cast? Health plus what is already
+// flying at them plus what their shield will eat, against the pending hit.
+function hdSurvives(st, slot) {
+  const dmg = hdIncomingDamage(st, slot);
+  if (dmg <= 0) return true;
+  return st.hp[slot] + hdIncomingHeal(st, slot) + st.shield[slot] > dmg;
+}
 
-function hdCanCast(st, spell) {
+function hdCanCast(st, slot) {
   if (st.dead || st.cast) return false;
   if (st.gcd > 0) return false;
-  if (st.mana < HD_COST[spell]) return false;
-  if (spell === HD_SP_WG && st.wgCd > 0) return false;
+  if (st.cd[slot] > 0) return false;
+  if (st.mana < hdCost(st, slot)) return false;
   return true;
 }
 
-function hdCast(st, spell, target) {
-  if (!hdCanCast(st, spell)) return false;
+// What a spell actually does once it goes off — shared by the instant path and
+// by the cast bar completing, so a cast and an instant of the same kind can
+// never drift apart.
+function hdResolveSpell(st, slot, target) {
+  const sp = hdSpell(st, slot);
+  const from = sp.all ? 0 : target;
+  const to = sp.all ? HD_PARTY - 1 : target;
+  for (let i = from; i <= to; i += 1) {
+    if (sp.kind === HD_K_HOT) {
+      hdAddHot(st, i, slot);
+    } else if (sp.kind === HD_K_SHIELD) {
+      const r = hdHealRoll(st, sp.amount);
+      hdAddShield(st, i, r.amt, sp.dur, r.crit);
+    } else {
+      const r = hdHealRoll(st, sp.amount);
+      hdHeal(st, i, r.amt, slot, r.crit);
+    }
+  }
+}
+
+function hdCast(st, slot, target) {
+  if (!hdCanCast(st, slot)) return false;
   const tgt = target >= 0 && target < HD_PARTY ? target : HD_TANK;
-  if (spell === HD_SP_HT) {
-    // The only cast-time spell: mana is committed up front, the heal lands when
-    // the cast completes.
-    hdSpend(st, HD_COST[HD_SP_HT]);
-    st.cast = { spell: spell, target: tgt, left: hdCastTicks(st) };
-    st.gcd = hdGcdTicks(st);
+  const sp = hdSpell(st, slot);
+  // Mana is committed up front on a cast, exactly as it is on an instant.
+  hdSpend(st, hdCost(st, slot));
+  st.gcd = hdGcdTicks(st);
+  if (sp.cd) st.cd[slot] = hdSpellCd(st, slot);
+  if (sp.cast > 0) {
+    st.cast = { slot: slot, target: tgt, left: sp.cast, total: sp.cast };
     return true;
   }
-  hdSpend(st, HD_COST[spell]);
-  st.gcd = hdGcdTicks(st);
-  if (spell === HD_SP_REJUV) {
-    hdAddHot(st, tgt, HD_SP_REJUV);
-  } else {
-    for (let i = 0; i < HD_PARTY; i += 1) hdAddHot(st, i, HD_SP_WG);
-    st.wgCd = HD_WG_CD_TICKS;
-  }
+  hdResolveSpell(st, slot, tgt);
   return true;
 }
 
 function hdApplyAction(st, a, t) {
   if (st.dead) return;
-  if (a === HD_A_REJUV) hdCast(st, HD_SP_REJUV, t);
-  else if (a === HD_A_WG) hdCast(st, HD_SP_WG, t);
-  else if (a === HD_A_HT) hdCast(st, HD_SP_HT, t);
+  if (a === HD_A_FILL || a === HD_A_RAID || a === HD_A_BIG) hdCast(st, a, t);
   // Pulling is BLOCKED until a bonus has been taken — „always allow to select
   // the bonus" means it can never be auto-picked out from under the player.
   else if (a === HD_A_PULL) { if (st.phase === 'rest' && st.upgradePicked) hdNextPull(st); }
@@ -420,13 +650,41 @@ function hdTickHots(st) {
     const h = st.hots[i];
     h.next -= 1;
     if (h.next > 0) continue;
-    const table = h.kind === HD_SP_REJUV ? HD_REJUV_AMOUNTS : HD_WG_AMOUNTS;
-    hdHeal(st, h.tgt, hdHealAmt(st, table[h.idx]), h.kind);
+    const sp = hdSpell(st, h.slot);
+    const r = hdHealRoll(st, sp.amounts[h.idx]);
+    hdHeal(st, h.tgt, r.amt, h.slot, r.crit);
     h.idx += 1;
     h.left -= 1;
-    h.next = h.kind === HD_SP_REJUV ? HD_REJUV_PERIOD : HD_WG_PERIOD;
+    h.next = sp.period;
     if (h.left <= 0) st.hots.splice(i, 1);
   }
+}
+
+function hdTickShields(st) {
+  for (let i = 0; i < HD_PARTY; i += 1) {
+    if (st.shieldT[i] <= 0) continue;
+    st.shieldT[i] -= 1;
+    if (st.shieldT[i] > 0) continue;
+    // expired unused — that was wasted mana, and the score says so
+    st.overheal += st.shield[i];
+    st.pullOverheal += st.shield[i];
+    st.shield[i] = 0;
+  }
+}
+
+// Bank the points for a pull the moment it is cleared, so the live score is
+// always the score you would submit if you died right now.
+function hdBankPull(st) {
+  const depth = (HD_SCORE_PULL_BASE + HD_SCORE_PULL_STEP * (st.pull - 1))
+    * (st.isBoss ? HD_SCORE_BOSS_MULT : 1);
+  const total = st.pullHealed + st.pullOverheal;
+  const precision = total > 0 ? Math.floor(st.pullHealed * 100 / total) : 100;
+  const healPts = Math.floor(Math.floor(st.pullHealed / HD_SCORE_HEAL_PER_PT) * precision / 100);
+  st.scPull += depth;
+  st.scHeal += healPts;
+  st.scTempo += st.pullTempo;
+  st.score = st.scPull + st.scHeal + st.scTempo;
+  st.fx.push({ k: 'clear', depth: depth, heal: healPts, tempo: st.pullTempo, precision: precision });
 }
 
 function hdAdvanceTick(st, actions) {
@@ -439,7 +697,7 @@ function hdAdvanceTick(st, actions) {
 
   // ── resources ──
   if (st.gcd > 0) st.gcd -= 1;
-  if (st.wgCd > 0) st.wgCd -= 1;
+  for (let i = 0; i < HD_SPELL_SLOTS; i += 1) if (st.cd[i] > 0) st.cd[i] -= 1;
   const maxMana = hdMaxMana(st);
   if (st.fsr >= HD_FSR_TICKS) {
     // Spirit regen only OUTSIDE the five-second window — the whole point.
@@ -453,17 +711,20 @@ function hdAdvanceTick(st, actions) {
   if (st.cast) {
     st.cast.left -= 1;
     if (st.cast.left <= 0) {
-      hdHeal(st, st.cast.target, hdHealAmt(st, HD_HT_HEAL), HD_SP_HT);
+      const c = st.cast;
       st.cast = null;
+      hdResolveSpell(st, c.slot, c.target);
     }
   }
 
   hdTickHots(st);
+  hdTickShields(st);
   if (st.dead) return;
 
-  // Resting: nothing ticks down and nothing advances. hdBeginRest already put
-  // health and mana back to full; the pull starts when the player pulls.
-  if (st.phase === 'rest') return;
+  // Resting: nothing ticks down and nothing advances except the clock the tempo
+  // bonus is measured against. hdBeginRest already put health and mana back to
+  // full; the pull starts when the player pulls.
+  if (st.phase === 'rest') { st.restTicks += 1; return; }
 
   // ── the pull ──
   st.fightTick += 1;
@@ -472,6 +733,7 @@ function hdAdvanceTick(st, actions) {
     st.packHp = 0;
     st.pullsCleared += 1;
     if (st.isBoss) st.bossesKilled += 1;
+    hdBankPull(st);
     hdBeginRest(st);
     return;
   }
@@ -552,22 +814,39 @@ function hdAdvanceTick(st, actions) {
 // ╚═══ PARITY BLOCK END ══════════════════════════════════════════════════════╝
 
 // ── Presentation ────────────────────────────────────────────────────────────
-const HD_SLOT_NAMES = ['Tank', 'Ty (Druid)', 'Łotr', 'Łucznik', 'Mag'];
+// Slot 1 is you, and what „you" are depends on the class picked before the
+// run, so the label is a function rather than a constant.
+const HD_SLOT_NAMES = ['Tank', 'Ty', 'Łotr', 'Łucznik', 'Mag'];
 const HD_SLOT_SHORT = ['Tank', 'Ty', 'Łotr', 'Łucz.', 'Mag'];
 const HD_SLOT_ICONS = ['🛡️', '💚', '🗡️', '🏹', '🔮'];
 const HD_SLOT_COLORS = ['#64748b', '#22c55e', '#eab308', '#84cc16', '#3b82f6'];
 const HD_TARGET_KEYS = ['1', '2', '3', '4', '5'];
 
-const HD_SPELL_META = [
-  { key: 'Q', icon: '🌿', name: 'Odnowa',             hint: 'HoT · 12 s · 1 cel' },
-  { key: 'W', icon: '🌳', name: 'Dziki Wzrost',       hint: 'HoT · 8 s · CAŁA drużyna' },
-  { key: 'E', icon: '✋', name: 'Uzdrawiający Dotyk', hint: 'kanał 2,5 s · duże leczenie' },
-];
+function hdSlotName(st, i) {
+  if (i !== HD_HEAL) return HD_SLOT_NAMES[i];
+  return 'Ty (' + (st ? hdClass(st).name : 'Druid') + ')';
+}
+function hdSlotIcon(st, i) {
+  if (i !== HD_HEAL) return HD_SLOT_ICONS[i];
+  return st ? hdClass(st).icon : HD_SLOT_ICONS[HD_HEAL];
+}
 
 const HD_UPGRADE_META = [
   { icon: '💚', name: 'Moc leczenia', desc: 'Każdy czar leczy więcej i masz większą pulę many.' },
   { icon: '❤️', name: 'Życie',        desc: 'Więcej zdrowia dla CAŁEJ drużyny — większy bufor na błąd.' },
   { icon: '⚔️', name: 'Obrażenia',    desc: 'Drużyna szybciej zabija — krótsze walki, mniej ciosów.' },
+];
+
+// The random third card. Order matches the HD_PK_* constants.
+const HD_PERK_META = [
+  { icon: '💧', name: 'Duch Lasu',     desc: 'Regeneracja many poza 5-sekundowym oknem rośnie.' },
+  { icon: '⚡', name: 'Skupienie',     desc: 'Krótszy globalny cooldown — więcej czarów na sekundę.' },
+  { icon: '🪙', name: 'Oszczędność',   desc: 'Wszystkie czary kosztują mniej many.' },
+  { icon: '🪶', name: 'Serce Feniksa', desc: 'Raz na grupę śmiertelny cios zostawia cel przy 1 HP.' },
+  { icon: '🔁', name: 'Bystrość',      desc: 'Krótsze odnowienie czaru na całą drużynę.' },
+  { icon: '🛡️', name: 'Wiara',        desc: 'Cała drużyna dostaje mniej obrażeń.' },
+  { icon: '✨', name: 'Iskra Życia',   desc: 'Część leczenia trafia krytycznie za +65%.' },
+  { icon: '🔥', name: 'Furia',         desc: 'Drużyna bije mocniej, ale sama też obrywa mocniej.' },
 ];
 
 // Office monsters, because the rest of the portal is an office.
@@ -769,7 +1048,9 @@ function healerEnterView() {
   document.addEventListener('fullscreenchange', hdLayout);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', hdLayout);
   hdLayout();
+  healerRenderClassPicker();
   healerRender();
+  healerMaybeTutorial();
 }
 
 function healerExitView() {
@@ -964,6 +1245,17 @@ function hdDrawUnit(ctx, o) {
       ctx.fillStyle = 'rgba(74,222,128,.78)';
       ctx.fillRect(x - bw / 2 + hpW, by, bw * Math.min(o.predPct, 100 - o.hpPct) / 100, bh);
     }
+    // An absorb shield sits ON TOP of the bar, running past its right end if it
+    // is bigger than the missing health — the way every game draws absorbs,
+    // because a shield is extra effective health, not restored health.
+    if (o.shieldPct > 0) {
+      const sw = bw * Math.min(o.shieldPct, 60) / 100;
+      ctx.fillStyle = 'rgba(125,211,252,.85)';
+      ctx.fillRect(x - bw / 2 + Math.min(hpW, bw - sw), by, sw, bh);
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x - bw / 2 + Math.min(hpW, bw - sw) + 0.5, by + 0.5, sw - 1, bh - 1);
+    }
     if (o.dmgPct > 0) {
       const dw = bw * Math.min(o.dmgPct, o.hpPct) / 100;
       ctx.fillStyle = o.doomed ? 'rgba(255,255,255,.85)' : 'rgba(127,29,29,.66)';
@@ -1056,7 +1348,7 @@ function hdDraw() {
     units.push({
       row: HD_PARTY_CELL[i][1],
       x: p[0], y: p[1] + (dead ? 0 : bob * Math.sin((rt.time + i * 420) / 520) * 2),
-      glyph: dead ? '💀' : HD_SLOT_ICONS[i],
+      glyph: dead ? '💀' : hdSlotIcon(st, i),
       color: HD_SLOT_COLORS[i],
       lunge: rt.lunge[i] > 0 ? Math.sin((1 - rt.lunge[i] / 300) * Math.PI) * 18 : 0,
       flash: Math.max(0, rt.flash[i] / 260),
@@ -1066,7 +1358,8 @@ function hdDraw() {
       hpPct: hpPct,
       predPct: hdPct(incoming, st.maxHp[i]),
       dmgPct: hdPct(dmg, st.maxHp[i]),
-      doomed: dmg > 0 && dmg >= st.hp[i] + incoming,
+      shieldPct: dead ? 0 : hdPct(st.shield[i], st.maxHp[i]),
+      doomed: dmg > 0 && !hdSurvives(st, i),
       label: HD_SLOT_SHORT[i] + (rt.target === i ? ' ◄' : ''),
     });
   }
@@ -1131,7 +1424,7 @@ function hdDraw() {
     ctx.fillRect(0, 0, HD_CS_W, HD_CS_H);
     ctx.fillStyle = '#991b1b';
     ctx.font = '800 22px system-ui, sans-serif';
-    ctx.fillText('☠️ ' + HD_SLOT_NAMES[st.deadWho] + ' zginął', HD_CS_W / 2, HD_CS_H / 2);
+    ctx.fillText('☠️ ' + hdSlotName(st, st.deadWho) + ' zginął', HD_CS_W / 2, HD_CS_H / 2);
   }
 
   ctx.restore();
@@ -1152,6 +1445,7 @@ function newHealerRuntime() {
     queuedTick: 0,
     target: HD_TANK,
     builtFrames: false,
+    builtSpells: -1,
     endedReason: '',
     // battlefield animation state — cosmetic only
     time: 0, shake: 0, atkT: 0,
@@ -1187,12 +1481,30 @@ function hdConsumeFx(rt) {
       if (heavy) rt.shake = Math.max(rt.shake, 380);
     } else if (f.k === 'heal') {
       const p = hdPartyXY(f.slot);
+      const big = f.spell === HD_SP_BIG;
       rt.num.push({
         x: p[0] + (Math.random() * 20 - 10), y: p[1] - 56,
-        text: '+' + f.amt, col: f.spell === HD_SP_HT ? '#15803d' : '#16a34a',
-        size: f.spell === HD_SP_HT ? 17 : 12, life: 900, max: 900,
+        text: (f.crit ? '✦+' : '+') + f.amt, col: f.crit ? '#065f46' : big ? '#15803d' : '#16a34a',
+        size: f.crit ? 19 : big ? 17 : 12, life: 900, max: 900,
       });
       rt.glow[f.slot] = 320;
+    } else if (f.k === 'absorb') {
+      // Absorbed damage reads as a heal that happened before the hit, which is
+      // exactly what it is — but in the shield's own blue so you can tell the
+      // priest's output from everyone else's at a glance.
+      const p = hdPartyXY(f.slot);
+      rt.num.push({
+        x: p[0] + (Math.random() * 20 - 10), y: p[1] - 52,
+        text: '⛊' + f.amt, col: '#0369a1', size: 13, life: 850, max: 850,
+      });
+    } else if (f.k === 'shield') {
+      rt.glow[f.slot] = 260;
+    } else if (f.k === 'phoenix') {
+      const p = hdPartyXY(f.slot);
+      rt.num.push({
+        x: p[0], y: p[1] - 62, text: '🪶 1 HP!', col: '#b45309', size: 20, life: 1500, max: 1500,
+      });
+      rt.shake = Math.max(rt.shake, 420);
     } else if (f.k === 'cast') {
       rt.shake = Math.max(rt.shake, 140);
     }
@@ -1298,20 +1610,20 @@ function healerBuildFrames() {
     frame.type = 'button';
     frame.className = 'hd-frame';
     frame.dataset.slot = String(i);
+    const st = healerRuntime && healerRuntime.sim;
     frame.innerHTML =
       '<div class="hd-frame-fill" data-fill></div>' +
       '<div class="hd-pred-heal" data-pred></div>' +
       '<div class="hd-pred-dmg" data-dmg></div>' +
+      '<div class="hd-shield" data-shield></div>' +
       '<div class="hd-frame-top">' +
-        '<span class="hd-frame-name">' + HD_SLOT_ICONS[i] +
-          ' <span class="hd-name-long">' + HD_SLOT_NAMES[i] + '</span>' +
+        '<span class="hd-frame-name">' + hdSlotIcon(st, i) +
+          ' <span class="hd-name-long">' + hdSlotName(st, i) + '</span>' +
           '<span class="hd-name-short">' + HD_SLOT_SHORT[i] + '</span></span>' +
-        '<span class="hd-frame-key">' + HD_TARGET_KEYS[i] + '</span>' +
-      '</div>' +
-      '<div class="hd-frame-bottom">' +
         '<span class="hd-frame-hp" data-hp></span>' +
         '<span class="hd-pred-num" data-prednum></span>' +
         '<span class="hd-hots" data-hots></span>' +
+        '<span class="hd-frame-key">' + HD_TARGET_KEYS[i] + '</span>' +
       '</div>' +
       (i === HD_HEAL ? '<div class="hd-frame-mana"><i data-mana></i></div>' : '');
     frame.addEventListener('click', () => healerSetTarget(i));
@@ -1354,7 +1666,9 @@ function healerRenderFrames() {
     // survive the cast when hp + incoming > dmg. (Written the other way round
     // first, which made a well-covered target read as MORE likely to die the
     // more healing you had landed on it — the exact opposite of the point.)
-    const lethal = dmg > 0 && dmg >= st.hp[i] + incoming;
+    // A shield is on that side too, so hdSurvives() owns the answer and the
+    // frame just draws it.
+    const lethal = dmg > 0 && !hdSurvives(st, i);
     const dmgEl = frame.querySelector('[data-dmg]');
     if (dmgEl) {
       dmgEl.style.left = Math.max(0, pct - dmgPct) + '%';
@@ -1363,13 +1677,26 @@ function healerRenderFrames() {
       dmgEl.classList.toggle('is-lethal', lethal);
     }
 
+    // The absorb block: laid over the bar starting at current health, and — if
+    // the shield is bigger than the gap — pushed back so it always stays fully
+    // visible. A shield is extra effective health, not restored health.
+    const shield = dead ? 0 : st.shield[i];
+    const shEl = frame.querySelector('[data-shield]');
+    if (shEl) {
+      const shPct = Math.min(45, hdPct(shield, st.maxHp[i]));
+      shEl.style.left = Math.min(pct, 100 - shPct) + '%';
+      shEl.style.width = shPct + '%';
+      shEl.classList.toggle('is-on', shield > 0);
+    }
+
     const num = frame.querySelector('[data-prednum]');
     if (num) {
       let txt = '';
       if (incoming > 0) txt = '+' + incoming;
+      if (shield > 0) txt = (txt ? txt + ' ' : '') + '⛊' + shield;
       if (dmg > 0) txt = (txt ? txt + ' ' : '') + '−' + dmg;
       num.textContent = txt;
-      num.className = 'hd-pred-num' + (lethal ? ' is-lethal' : incoming > 0 ? ' is-heal' : '');
+      num.className = 'hd-pred-num' + (lethal ? ' is-lethal' : incoming > 0 || shield > 0 ? ' is-heal' : '');
     }
     frame.classList.toggle('is-doomed', lethal);
 
@@ -1378,28 +1705,28 @@ function healerRenderFrames() {
 
     const mana = frame.querySelector('[data-mana]');
     if (mana) mana.style.width = hdPct(st.mana, hdMaxMana(st)) + '%';
-    void 0;
 
     const hots = frame.querySelector('[data-hots]');
     if (hots) {
       const mine = st.hots.filter(h => h.tgt === i);
-      const sig = mine.map(h => h.kind + ':' + h.left).join('|') + (st.cast && st.cast.target === i ? '|c' : '');
+      const casting = st.cast && (hdSpell(st, st.cast.slot).all || st.cast.target === i);
+      const sig = mine.map(h => h.slot + ':' + h.left).join('|') + (casting ? '|c' : '');
       if (hots.dataset.sig !== sig) {
         hots.dataset.sig = sig;
         hots.replaceChildren();
         mine.forEach(h => {
-          const period = h.kind === HD_SP_REJUV ? HD_REJUV_PERIOD : HD_WG_PERIOD;
+          const sp = hdSpell(st, h.slot);
           const pip = document.createElement('span');
-          pip.className = 'hd-hot hd-hot-' + (h.kind === HD_SP_REJUV ? 'rejuv' : 'wg');
-          pip.textContent = (h.kind === HD_SP_REJUV ? '🌿' : '🌳') + Math.ceil(h.left * period / 10);
-          pip.title = (h.kind === HD_SP_REJUV ? 'Odnowa' : 'Dziki Wzrost') + ' — ' + h.left + ' tyknięć';
+          pip.className = 'hd-hot hd-hot-' + (h.slot === HD_SP_FILL ? 'rejuv' : 'wg');
+          pip.textContent = sp.icon + Math.ceil(h.left * sp.period / 10);
+          pip.title = sp.name + ' — ' + h.left + ' tyknięć';
           hots.appendChild(pip);
         });
-        if (st.cast && st.cast.target === i) {
+        if (casting) {
           const pip = document.createElement('span');
           pip.className = 'hd-hot hd-hot-cast';
-          pip.textContent = '✋';
-          pip.title = 'Uzdrawiający Dotyk w locie';
+          pip.textContent = hdSpell(st, st.cast.slot).icon;
+          pip.title = hdSpell(st, st.cast.slot).name + ' w locie';
           hots.appendChild(pip);
         }
       }
@@ -1407,22 +1734,63 @@ function healerRenderFrames() {
   });
 }
 
+// What one cast of this spell is worth, in HP, right now — summed over every
+// tick and every target it touches. This is the number the „HP na manę" figure
+// on the button divides by the cost, and it is also what makes „same power"
+// checkable at a glance across the three classes.
+function hdSpellOutput(st, slot) {
+  const sp = hdSpell(st, slot);
+  let per = 0;
+  if (sp.kind === HD_K_HOT) {
+    for (let i = 0; i < sp.amounts.length; i += 1) per += hdHealAmt(st, sp.amounts[i]);
+  } else {
+    per = hdHealAmt(st, sp.amount);
+  }
+  return per * (sp.all ? HD_PARTY : 1);
+}
+
+// The spellbook is rebuilt whenever the class changes — the buttons ARE the
+// class, so nothing about them can be static markup.
+function healerBuildSpells() {
+  const wrap = hdEl('hd-spells');
+  const st = healerRuntime && healerRuntime.sim;
+  if (!wrap || !st) return;
+  wrap.replaceChildren();
+  for (let slot = 0; slot < HD_SPELL_SLOTS; slot += 1) {
+    const sp = hdSpell(st, slot);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'hd-spell';
+    btn.dataset.spell = String(slot);
+    btn.title = sp.name + ' — ' + sp.hint;
+    btn.innerHTML =
+      '<span class="hd-spell-slot">' + sp.icon +
+        '<span class="hd-spell-sweep" data-sweep></span>' +
+        '<span class="hd-spell-key">' + sp.key + '</span></span>' +
+      '<span class="hd-spell-name">' + sp.name + '</span>' +
+      '<span class="hd-spell-eff" data-eff>—</span><span class="hd-spell-cd" data-cd></span>';
+    wrap.appendChild(btn);
+  }
+  healerRuntime.builtSpells = st.cls;
+}
+
 function healerRenderSpells() {
   const st = healerRuntime && healerRuntime.sim;
   if (!st) return;
+  if (healerRuntime.builtSpells !== st.cls) healerBuildSpells();
   const gcdTotal = hdGcdTicks(st);
-  const castTotal = hdCastTicks(st);
   document.querySelectorAll('#hd-spells .hd-spell').forEach(btn => {
-    const spell = Number(btn.dataset.spell);
-    const poor = st.mana < HD_COST[spell];
+    const slot = Number(btn.dataset.spell);
+    const cost = hdCost(st, slot);
+    const poor = st.mana < cost;
 
     // Everything that can stop this button working, as one countdown: the
-    // global cooldown, the in-flight cast, and (Wild Growth only) its own
-    // cooldown. The sweep shows whichever has longest to run — that is exactly
-    // the question "can I press this right now".
+    // global cooldown, the in-flight cast, and this spell's own cooldown. The
+    // sweep shows whichever has longest to run — that is exactly the question
+    // "can I press this right now".
     let left = st.gcd, total = gcdTotal;
-    if (st.cast && st.cast.left > left) { left = st.cast.left; total = castTotal; }
-    if (spell === HD_SP_WG && st.wgCd > left) { left = st.wgCd; total = HD_WG_CD_TICKS; }
+    if (st.cast && st.cast.left > left) { left = st.cast.left; total = st.cast.total; }
+    if (st.cd[slot] > left) { left = st.cd[slot]; total = hdSpellCd(st, slot); }
 
     btn.classList.toggle('is-poor', poor);
     btn.classList.toggle('is-cd', left > 0);
@@ -1432,16 +1800,14 @@ function healerRenderSpells() {
     if (sweep) sweep.style.setProperty('--sweep', (total > 0 ? left / total : 0).toFixed(3) + 'turn');
 
     const cdEl = btn.querySelector('[data-cd]');
-    // Only the long waits get a number; a 1.5 s GCD ticking digits every frame
+    // Only the long waits get a number; a 1.1 s GCD ticking digits every frame
     // is noise, and the sweep already says "not yet".
     if (cdEl) cdEl.textContent = left > gcdTotal ? (left / 10).toFixed(1) : '';
 
     const effEl = btn.querySelector('[data-eff]');
     if (effEl) {
-      const heal = spell === HD_SP_REJUV ? hdHealAmt(st, 220)
-        : spell === HD_SP_WG ? hdHealAmt(st, 180) * HD_PARTY
-        : hdHealAmt(st, HD_HT_HEAL);
-      effEl.textContent = HD_COST[spell] + ' many · ' + heal + ' HP · ' + (heal / HD_COST[spell]).toFixed(2) + '/mana';
+      const out = hdSpellOutput(st, slot);
+      effEl.textContent = cost + ' many · ' + out + ' HP · ' + (out / cost).toFixed(2) + '/mana';
     }
   });
 }
@@ -1464,12 +1830,37 @@ function hdStatLines(st) {
   ];
 }
 
+// What one more stack of a perk would concretely do, in the same units the
+// legend prints — so the random card is never a guess.
+function hdPerkNow(st, i) {
+  const n = st.perks[i];
+  if (i === HD_PK_REGEN) return (HD_REGEN_BASE + HD_PK_REGEN_STEP * n) + ' many/s';
+  if (i === HD_PK_GCD) return 'GCD ' + (hdGcdTicks(st) / 10).toFixed(1) + ' s';
+  if (i === HD_PK_CHEAP) return 'koszty ' + Math.max(HD_PK_CHEAP_FLOOR, 100 - HD_PK_CHEAP_STEP * n) + '%';
+  if (i === HD_PK_PHOENIX) return n + ' × na grupę';
+  if (i === HD_PK_CDR) return 'odnowienie ' + (hdSpellCd(st, HD_SP_RAID) / 10).toFixed(1) + ' s';
+  if (i === HD_PK_WARD) return 'obrażenia ' + hdDmgTakenPct(st) + '%';
+  if (i === HD_PK_CRIT) return HD_PK_CRIT_STEP * n + '% szansy';
+  return '+' + (HD_PK_FURY_DPS * n) + ' obr./s · ' + hdDmgTakenPct(st) + '% otrzymywanych';
+}
+
+// Only the perks actually held, so an empty run shows nothing at all.
+function hdPerkLines(st) {
+  const out = [];
+  for (let i = 0; i < HD_PERK_COUNT; i += 1) {
+    if (!st.perks[i]) continue;
+    out.push({ icon: HD_PERK_META[i].icon, name: HD_PERK_META[i].name, val: st.perks[i],
+      now: hdPerkNow(st, i), why: HD_PERK_META[i].desc });
+  }
+  return out;
+}
+
 function healerRenderLegend() {
   const st = healerRuntime && healerRuntime.sim;
   const box = hdEl('hd-legend');
   if (!st || !box) return;
-  const lines = hdStatLines(st);
-  const sig = lines.map(l => l.val + l.now).join('|');
+  const lines = hdStatLines(st).concat(hdPerkLines(st));
+  const sig = lines.map(l => l.name + l.val + l.now).join('|');
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
   box.replaceChildren();
@@ -1494,7 +1885,7 @@ function healerRenderHelpStats() {
   const box = hdEl('hd-help-stats');
   if (!st || !box) return;
   box.replaceChildren();
-  hdStatLines(st).forEach(l => {
+  hdStatLines(st).concat(hdPerkLines(st)).forEach(l => {
     const cell = document.createElement('div');
     cell.className = 'hd-help-stat';
     cell.innerHTML =
@@ -1507,6 +1898,17 @@ function healerRenderHelpStats() {
 function healerRenderBars() {
   const st = healerRuntime && healerRuntime.sim;
   if (!st) return;
+  // The character pane names whatever class is currently seated, including
+  // while you are still deciding on the start card.
+  const cl = hdClass(st);
+  const portrait = hdEl('hd-char-portrait');
+  if (portrait && portrait.textContent !== cl.portrait) portrait.textContent = cl.portrait;
+  const cname = hdEl('hd-char-name');
+  if (cname) cname.textContent = 'Ty — ' + cl.name;
+  const csub = hdEl('hd-char-sub');
+  if (csub) csub.textContent = cl.tag;
+  const brand = hdEl('hd-brand-class');
+  if (brand) brand.textContent = cl.icon + ' ' + cl.name;
   const maxMana = hdMaxMana(st);
   const manaFill = hdEl('hd-mana-fill');
   if (manaFill) manaFill.style.width = hdPct(st.mana, maxMana) + '%';
@@ -1528,9 +1930,13 @@ function healerRenderBars() {
     const fill = cast.querySelector('[data-fill]');
     const label = cast.querySelector('[data-label]');
     if (st.cast) {
-      const total = hdCastTicks(st);
+      const sp = hdSpell(st, st.cast.slot);
+      const total = st.cast.total;
       if (fill) fill.style.width = hdPct(total - st.cast.left, total) + '%';
-      if (label) label.textContent = '✋ ' + HD_SLOT_SHORT[st.cast.target] + ' · ' + (st.cast.left / 10).toFixed(1) + ' s';
+      if (label) {
+        label.textContent = sp.icon + ' ' + (sp.all ? 'drużyna' : HD_SLOT_SHORT[st.cast.target]) +
+          ' · ' + (st.cast.left / 10).toFixed(1) + ' s';
+      }
     } else {
       if (fill) fill.style.width = '0%';
       if (label) label.textContent = st.gcd > 0 ? 'GCD ' + (st.gcd / 10).toFixed(1) + ' s' : 'gotowy';
@@ -1549,10 +1955,55 @@ function healerRenderBars() {
   }
 
   const setStat = (id, v) => { const e = hdEl(id); if (e) e.textContent = v; };
-  setStat('hd-score', String(st.pullsCleared));
+  setStat('hd-score', hdNum(st.score));
+  setStat('hd-cleared', String(st.pullsCleared));
   setStat('hd-pull', st.pull + (st.isBoss ? ' ☠️' : ''));
   setStat('hd-mana-stat', String(st.mana));
   setStat('hd-stats', '💚' + st.stats.heal + '  ❤️' + st.stats.hp + '  ⚔️' + st.stats.dmg);
+  healerRenderScorecard();
+}
+
+// Thousands separator, Polish style, without dragging Intl into a hot loop.
+function hdNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+// ── Live score card ─────────────────────────────────────────────────────────
+// It sits in the space the shorter raid frames freed up, and it exists because
+// a points score that only appears when you die is a score nobody can play
+// towards. Every row is a lever: go deeper, waste less, sit around less.
+function healerRenderScorecard() {
+  const st = healerRuntime && healerRuntime.sim;
+  const box = hdEl('hd-scorecard');
+  if (!st || !box) return;
+  const heals = st.healingDone + st.overheal;
+  const precision = heals > 0 ? Math.floor(st.healingDone * 100 / heals) : 100;
+  // What THIS pull would pay if it were cleared right now: a live preview of
+  // the depth points, so the boss's ×2 is visible before you commit to it.
+  const nextDepth = (HD_SCORE_PULL_BASE + HD_SCORE_PULL_STEP * (st.pull - 1))
+    * (st.isBoss ? HD_SCORE_BOSS_MULT : 1);
+  const rows = [
+    ['🏅', 'Głębokość', hdNum(st.scPull), st.phase === 'rest' ? '' : '+' + nextDepth + ' za tę grupę'],
+    ['💚', 'Leczenie', hdNum(st.scHeal), 'celność ' + precision + '%'],
+    ['⏱️', 'Tempo', hdNum(st.scTempo), st.phase === 'rest'
+      ? 'teraz +' + Math.max(0, HD_SCORE_TEMPO_MAX - Math.floor(st.restTicks * HD_SCORE_TEMPO_DECAY / 10))
+      : 'max +' + HD_SCORE_TEMPO_MAX],
+  ];
+  const sig = st.score + '|' + rows.map(r => r[2] + r[3]).join('|');
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  box.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 'hd-sc-total';
+  head.innerHTML = '<span>Wynik</span><b>' + hdNum(st.score) + '</b>';
+  box.appendChild(head);
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'hd-sc-row';
+    row.innerHTML = '<span class="hd-sc-icon">' + r[0] + '</span>' +
+      '<span class="hd-sc-name">' + r[1] + '</span>' +
+      '<span class="hd-sc-note">' + r[3] + '</span>' +
+      '<b class="hd-sc-val">' + r[2] + '</b>';
+    box.appendChild(row);
+  });
 }
 
 function healerRenderRest() {
@@ -1581,17 +2032,21 @@ function healerRenderRest() {
   cards.dataset.sig = signature;
   cards.replaceChildren();
   st.upgrades.forEach((up, i) => {
-    const meta = HD_UPGRADE_META[up];
+    const perk = up.k === HD_UK_PERK;
+    const meta = perk ? HD_PERK_META[up.i] : HD_UPGRADE_META[up.i];
     const card = document.createElement('button');
     card.type = 'button';
-    // Once picked, the chosen card stays highlighted and the other dims — the
+    // Once picked, the chosen card stays highlighted and the others dim — the
     // player should be able to see what they just took before pulling.
     const taken = st.upgradePicked && st.pickedIdx === i;
-    card.className = 'hd-up' + (st.upgradePicked ? (taken ? ' is-taken' : ' is-locked') : '');
+    card.className = 'hd-up' + (perk ? ' is-perk' : '') +
+      (st.upgradePicked ? (taken ? ' is-taken' : ' is-locked') : '');
     card.disabled = st.upgradePicked;
     card.innerHTML =
+      (perk ? '<span class="hd-up-tag">talent</span>' : '') +
       '<span class="hd-up-icon">' + meta.icon + '</span>' +
-      '<span class="hd-up-name">' + meta.name + ' +' + HD_UP_STEP[up] + '</span>' +
+      '<span class="hd-up-name">' + meta.name +
+        (perk ? (st.perks[up.i] ? ' ' + (st.perks[up.i] + 1) : '') : ' +' + HD_UP_STEP[up.i]) + '</span>' +
       '<span class="hd-up-delta">' + hdUpgradeDelta(st, up) + '</span>' +
       '<span class="hd-up-desc">' + meta.desc + '</span>';
     card.addEventListener('click', () => { healerQueueAction(HD_A_UPGRADE, i); });
@@ -1602,13 +2057,25 @@ function healerRenderRest() {
 // What this card actually buys, in the same units the legend shows — so a pick
 // is never a guess about what "+3 Intelekt" means.
 function hdUpgradeDelta(st, up) {
-  const step = HD_UP_STEP[up];
-  if (up === HD_UP_HEAL) return 'leczenie +' + (HD_HEAL_PCT_PER_PT * step) + '% · +' + (HD_MANA_PER_HEAL_PT * step) + ' many';
-  if (up === HD_UP_HP) {
+  if (up.k === HD_UK_PERK) return hdPerkDelta(st, up.i);
+  const step = HD_UP_STEP[up.i];
+  if (up.i === HD_UP_HEAL) return 'leczenie +' + (HD_HEAL_PCT_PER_PT * step) + '% · +' + (HD_MANA_PER_HEAL_PT * step) + ' many';
+  if (up.i === HD_UP_HP) {
     const after = Math.floor(HD_BASE_HP[HD_TANK] * (100 + HD_HP_PCT_PER_PT * (st.stats.hp + step)) / 100);
     return 'HP +' + (HD_HP_PCT_PER_PT * step) + '% · tank ' + hdMaxHpFor(st, HD_TANK) + ' → ' + after;
   }
   return '+' + (HD_DPS_PER_PT * step) + ' obr./s (' + hdPartyDps(st) + ' → ' + (hdPartyDps(st) + HD_DPS_PER_PT * step) + ')';
+}
+
+// Same idea for the random card: the before → after of the one number it
+// moves. Computed against a throwaway copy of the stat rather than by
+// restating the formula, so the card can never disagree with the sim.
+function hdPerkDelta(st, i) {
+  const before = hdPerkNow(st, i);
+  st.perks[i] += 1;
+  const after = hdPerkNow(st, i);
+  st.perks[i] -= 1;
+  return before === after ? after : before + ' → ' + after;
 }
 
 function healerRender() {
@@ -1676,7 +2143,7 @@ function healerTick() {
   healerRender();
 
   if (st.dead) {
-    rt.endedReason = HD_SLOT_NAMES[st.deadWho] + ' zginął';
+    rt.endedReason = hdSlotName(st, st.deadWho) + ' zginął';
     finishHealerDungeonRound();
     return;
   }
@@ -1700,14 +2167,15 @@ function stopHealerDungeonRound() {
   const archive = (rt && rt.archiveMode) || false;
   healerRuntime = newHealerRuntime();
   healerRuntime.archiveMode = archive;
-  healerRuntime.sim = hdInitState(1);
+  healerRuntime.sim = hdInitState(1, hdPickedClass());
   const con = hdEl('hd-console');
   if (con) con.classList.remove('is-playing');
   const startBtn = hdEl('hd-start');
   if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Wejdź do lochu'; }
   const rest = hdEl('hd-rest');
   if (rest) rest.classList.remove('is-on');
-  if (!healerRuntime.builtFrames) healerBuildFrames();
+  healerBuildFrames();
+  healerRenderClassPicker();
   healerRender();
 }
 
@@ -1717,21 +2185,88 @@ function beginHealerDungeonRound(seed, options) {
   healerRuntime = newHealerRuntime();
   const rt = healerRuntime;
   rt.seed = Number(seed) || 1;
-  rt.sim = hdInitState(rt.seed);
+  rt.sim = hdInitState(rt.seed, opts.cls === undefined ? hdPickedClass() : opts.cls);
   rt.playing = true;
   rt.archiveMode = !!opts.archiveMode;
   rt.target = HD_TANK;
   healerBuildFrames();
   const con = hdEl('hd-console');
   if (con) con.classList.add('is-playing');   // hides the start/result card
+  const result = hdEl('hd-result');
+  if (result) { result.classList.remove('is-on'); result.replaceChildren(); }
+  const cardTitle = hdEl('hd-startcard-title');
+  if (cardTitle) cardTitle.textContent = '„Uzdrowiciel G6" 💚';
   healerToggleHelp(false);
+  healerToggleTutorial(false);
   const startBtn = hdEl('hd-start');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Loch trwa'; }
   const status = hdEl('hd-status');
-  if (status) status.textContent = 'Utrzymaj piątkę przy życiu. Q Odnowa · W Dziki Wzrost · E Uzdrawiający Dotyk · 1-5 lub klik w bohatera = cel. Co 5. grupa to boss.';
-  healerRender();
+  const cl = hdClass(rt.sim);
+  if (status) {
+    status.textContent = cl.icon + ' ' + cl.name + ' — ' +
+      cl.spells.map(sp => sp.key + ' ' + sp.name).join(' · ') +
+      ' · 1-5 lub klik w bohatera = cel. Co 5. grupa to boss.';
+  }
+  healerRender();   // healerRenderBars owns the brand/portrait/class labels
   rt.nextTickAt = performance.now() + HD_TICK_MS;
   rt.timer = setTimeout(healerTick, HD_TICK_MS);
+}
+
+// ── Class selection ─────────────────────────────────────────────────────────
+// Picked on the start card, before the run, and remembered between sessions —
+// a healer main does not want to re-choose every time. The three are balanced
+// to the same HP-per-mana, so this is a question of how you want to play, not
+// of which one is better.
+const HD_CLASS_KEY = 'hd_class_v1';
+let hdClassChoice = null;
+
+function hdPickedClass() {
+  if (hdClassChoice != null) return hdClassChoice;
+  let stored = 0;
+  try { stored = Number(localStorage.getItem(HD_CLASS_KEY)) || 0; } catch (e) { stored = 0; }
+  hdClassChoice = Math.max(0, Math.min(HD_CLASSES.length - 1, stored));
+  return hdClassChoice;
+}
+
+function hdSetClass(idx) {
+  hdClassChoice = Math.max(0, Math.min(HD_CLASSES.length - 1, idx | 0));
+  try { localStorage.setItem(HD_CLASS_KEY, String(hdClassChoice)); } catch (e) { /* private mode */ }
+  const rt = healerRuntime;
+  // Re-seat the idle sim so the frames, spellbook and legend immediately show
+  // the class you are looking at, without starting anything.
+  if (rt && !rt.playing) {
+    rt.sim = hdInitState(1, hdClassChoice);
+    healerBuildFrames();
+    healerBuildSpells();
+    healerRender();
+  }
+  healerRenderClassPicker();
+}
+
+function healerRenderClassPicker() {
+  const box = hdEl('hd-classes');
+  if (!box) return;
+  const cur = hdPickedClass();
+  if (box.dataset.sig === String(cur) && box.childElementCount) return;
+  box.dataset.sig = String(cur);
+  box.replaceChildren();
+  HD_CLASSES.forEach((cl, i) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'hd-class' + (i === cur ? ' is-on' : '');
+    card.style.setProperty('--hd-clr', cl.color);
+    card.innerHTML =
+      '<span class="hd-class-icon">' + cl.icon + '</span>' +
+      '<span class="hd-class-name">' + cl.name + '</span>' +
+      '<span class="hd-class-tag">' + cl.tag + '</span>' +
+      '<span class="hd-class-spells">' +
+        cl.spells.map(sp => sp.icon + ' ' + sp.name).join('<br>') + '</span>';
+    card.title = cl.blurb;
+    card.addEventListener('click', () => hdSetClass(i));
+    box.appendChild(card);
+  });
+  const blurb = hdEl('hd-class-blurb');
+  if (blurb) blurb.textContent = HD_CLASSES[cur].blurb;
 }
 
 async function startHealerDungeonRound() {
@@ -1763,40 +2298,74 @@ async function finishHealerDungeonRound() {
   if (rest) rest.classList.remove('is-on');
   healerRender();
 
-  const score = Math.min(HD_MAX_SCORE, rt.sim.pullsCleared);
-  const bosses = rt.sim.bossesKilled;
+  const st = rt.sim;
+  const score = Math.max(0, Math.min(HD_MAX_SCORE, st.score));
   const startBtn = hdEl('hd-start');
   const status = hdEl('hd-status');
   const title = hdEl('hd-startcard-title');
   const reason = rt.endedReason ? ' · ' + rt.endedReason : '';
-  const bossTxt = bosses ? ' · bossów: ' + bosses : '';
   rt.submitting = false;
   if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Jeszcze raz'; }
-  if (title) title.textContent = '☠️ ' + score + (score === 1 ? ' grupa' : score < 5 ? ' grupy' : ' grup');
+  if (title) title.textContent = '🏆 ' + hdNum(score) + ' pkt';
+
+  // The result card gets the whole breakdown, because a points score you
+  // cannot take apart is a points score you cannot improve.
+  const sub = hdEl('hd-result');
+  if (sub) {
+    const heals = st.healingDone + st.overheal;
+    const precision = heals > 0 ? Math.floor(st.healingDone * 100 / heals) : 100;
+    sub.classList.add('is-on');
+    sub.replaceChildren();
+    const rows = [
+      ['🏅', 'Głębokość', hdNum(st.scPull), st.pullsCleared + ' grup · ' + st.bossesKilled + ' bossów'],
+      ['💚', 'Leczenie', hdNum(st.scHeal), hdNum(st.healingDone) + ' HP · celność ' + precision + '%'],
+      ['⏱️', 'Tempo', hdNum(st.scTempo), 'za szybkie ruszanie po przerwie'],
+    ];
+    rows.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'hd-sc-row';
+      row.innerHTML = '<span class="hd-sc-icon">' + r[0] + '</span>' +
+        '<span class="hd-sc-name">' + r[1] + '</span>' +
+        '<span class="hd-sc-note">' + r[3] + '</span>' +
+        '<b class="hd-sc-val">' + r[2] + '</b>';
+      sub.appendChild(row);
+    });
+  }
 
   if (allGamesMode) {
     try {
       await recordArcadeScore('healer_dungeon', score);
-      if (status) status.textContent = 'Wyczyszczone grupy: ' + score + bossTxt + reason + ' · zapisano w rankingu arcade!';
+      if (status) status.textContent = hdClass(st).name + reason + ' · zapisano w rankingu arcade!';
       loadArcadeScores('healer_dungeon');
     } catch (e) {
-      if (status) status.textContent = 'Wyczyszczone grupy: ' + score + bossTxt + reason + ' (błąd zapisu).';
+      if (status) status.textContent = hdClass(st).name + reason + ' (błąd zapisu wyniku).';
     }
     return;
   }
-  if (status) status.textContent = 'Demo — wyczyszczone grupy: ' + score + bossTxt + reason + ' (nie zapisano).';
+  if (status) status.textContent = 'Demo — ' + hdNum(score) + ' pkt' + reason + ' (nie zapisano).';
 }
 
 // ── Input ───────────────────────────────────────────────────────────────────
 // Spells on Q/W/E (left hand, where the action bar lives in every MMO), targets
-// on 1-5 (one digit per party slot, top to bottom in the frames). Drinking is D.
-const HD_KEY_SPELL = { q: HD_A_REJUV, w: HD_A_WG, e: HD_A_HT };
+// on 1-5 (one digit per party slot, top to bottom in the frames). The keys map
+// to SLOTS, not to named spells, so they mean the same three things whichever
+// class you took.
+const HD_KEY_SPELL = { q: HD_A_FILL, w: HD_A_RAID, e: HD_A_BIG };
 const HD_KEY_TARGET = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
 
 function healerKeyDown(ev) {
   const rt = healerRuntime;
   const arena = hdEl('hd-arena');
   if (!arena || !arena.offsetParent) return;    // panel not on screen
+  const tut = hdEl('hd-tut');
+  if (tut && tut.classList.contains('is-on')) {
+    // While the tutorial is up it owns the keyboard: Enter/→/space advance,
+    // Esc closes. Nothing should reach the game underneath.
+    if (ev.key === 'Escape') { ev.preventDefault(); healerToggleTutorial(false); return; }
+    if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'ArrowRight') { ev.preventDefault(); healerTutorialStep(1); return; }
+    if (ev.key === 'ArrowLeft') { ev.preventDefault(); healerTutorialStep(-1); return; }
+    return;
+  }
   if (ev.key === 'Escape') {
     // Esc closes the help overlay first, then leaves the game — but only when
     // the browser is not in native fullscreen, where Esc is the browser's.
@@ -1814,6 +2383,84 @@ function healerKeyDown(ev) {
     return;
   }
   if (k === ' ') { ev.preventDefault(); healerQueueAction(HD_A_PULL, 0); }
+}
+
+// ── First-run tutorial ──────────────────────────────────────────────────────
+// Six cards, shown once on the very first visit and replayable any time from
+// the [?] overlay. A healing sim has more moving parts than any other game in
+// the arcade — five bars, a prediction overlay, a mana rule and a score with
+// three terms — and the old answer was a wall of text behind a button nobody
+// pressed. This is the same information, one idea at a time, before the first
+// pull rather than after the first death.
+const HD_TUT_KEY = 'hd_tutorial_v1';
+const HD_TUTORIAL = [
+  { icon: '💚', title: 'Jesteś jedynym uzdrowicielem',
+    body: 'Pięcioosobowa drużyna sama zabija potwory — Ty tylko utrzymujesz ją przy życiu. Runda kończy się w sekundzie, w której ktokolwiek spadnie do zera. Loch nie ma końca: każda kolejna grupa bije mocniej.' },
+  { icon: '🎯', title: 'Wybierz cel, potem czar',
+    body: 'Cel: klawisze <b>1-5</b>, kliknięcie ramki albo kliknięcie bohatera na polu bitwy. Czary: <b>Q</b> tani i oszczędny, <b>W</b> na całą drużynę (z odnowieniem), <b>E</b> duży ratunkowy. Po każdym czarze jest <b>globalny cooldown ~1,1 s</b> — ikona odkręca się jak zegar.' },
+  { icon: '👁️', title: 'Paski mówią wszystko',
+    body: 'Jasny pasiasty kawałek = leczenie, które <b>już leci</b> — nie marnuj na ten cel kolejnego czaru. Czerwony kawałek zjadany z prawej = cios bossa, który zaraz wyląduje. Ramka miga na biało, gdy ten cios zabije cel <b>mimo</b> całego leczenia w drodze.' },
+  { icon: '💧', title: 'Mana to cała trudność',
+    body: 'Między grupami życie i mana wracają do pełna, więc jedna pula many musi wystarczyć na jedną walkę. <b>Zasada 5 sekund:</b> po każdym czarze regeneracja stoi przez 5 s — przerwy, które zostawisz w środku walki, to mana na następną. Leczysz nie <i>więcej</i>, tylko <i>oszczędniej</i>.' },
+  { icon: '🏆', title: 'Wynik to punkty, nie liczba grup',
+    body: '<b>Głębokość</b> — każda kolejna grupa warta więcej, boss ×2. <b>Leczenie</b> — punkty za efektywne leczenie, ale przelanie (leczenie w pełny pasek) je zjada. <b>Tempo</b> — im szybciej ruszysz po przerwie, tym większy bonus. Nikt Cię nie goni; po prostu odwaga się opłaca.' },
+  { icon: '⭐', title: 'Po każdej grupie wybierasz bonus',
+    body: 'Dostajesz trzy karty: dwie statystyki (leczenie / życie drużyny / obrażenia) i jeden <b>losowy talent</b> — regeneracja, krótszy cooldown, tańsze czary, krytyki, a nawet jednorazowe uniknięcie śmierci. Za każdym razem inne, więc każdy przebieg buduje innego uzdrowiciela.' },
+];
+let hdTutStep = 0;
+
+function hdTutorialSeen() {
+  try { return localStorage.getItem(HD_TUT_KEY) === '1'; } catch (e) { return false; }
+}
+function hdMarkTutorialSeen() {
+  try { localStorage.setItem(HD_TUT_KEY, '1'); } catch (e) { /* private mode */ }
+}
+
+function healerToggleTutorial(on) {
+  const box = hdEl('hd-tut');
+  if (!box) return;
+  const show = on === undefined ? !box.classList.contains('is-on') : !!on;
+  box.classList.toggle('is-on', show);
+  if (show) { hdTutStep = 0; healerRenderTutorial(); } else { hdMarkTutorialSeen(); }
+}
+
+// Advancing past the last card closes it — „Dalej" turning into „Zaczynamy!"
+// is the whole exit, so there is never a dead end.
+function healerTutorialStep(delta) {
+  const next = hdTutStep + delta;
+  if (next < 0) return;
+  if (next >= HD_TUTORIAL.length) { healerToggleTutorial(false); return; }
+  hdTutStep = next;
+  healerRenderTutorial();
+}
+
+function healerRenderTutorial() {
+  const body = hdEl('hd-tut-body');
+  const dots = hdEl('hd-tut-dots');
+  const next = hdEl('hd-tut-next');
+  const prev = hdEl('hd-tut-prev');
+  if (!body) return;
+  const step = HD_TUTORIAL[hdTutStep];
+  body.innerHTML =
+    '<div class="hd-tut-icon">' + step.icon + '</div>' +
+    '<h4>' + step.title + '</h4>' +
+    '<p>' + step.body + '</p>';
+  if (dots) {
+    dots.replaceChildren();
+    HD_TUTORIAL.forEach((_, i) => {
+      const dot = document.createElement('i');
+      dot.className = 'hd-tut-dot' + (i === hdTutStep ? ' is-on' : '');
+      dots.appendChild(dot);
+    });
+  }
+  if (prev) prev.disabled = hdTutStep === 0;
+  if (next) next.textContent = hdTutStep === HD_TUTORIAL.length - 1 ? '✔ Zaczynamy!' : 'Dalej →';
+}
+
+// Called when the panel opens. Only the very first visit gets it unprompted.
+function healerMaybeTutorial() {
+  if (hdTutorialSeen()) return;
+  healerToggleTutorial(true);
 }
 
 function healerSetupOnce() {
@@ -1834,6 +2481,14 @@ function healerSetupOnce() {
   if (helpBtn) helpBtn.addEventListener('click', () => healerToggleHelp());
   const helpClose = hdEl('hd-help-close');
   if (helpClose) helpClose.addEventListener('click', () => healerToggleHelp(false));
+  const tutBtn = hdEl('hd-tut-btn');
+  if (tutBtn) tutBtn.addEventListener('click', () => { healerToggleHelp(false); healerToggleTutorial(true); });
+  const tutNext = hdEl('hd-tut-next');
+  if (tutNext) tutNext.addEventListener('click', () => healerTutorialStep(1));
+  const tutPrev = hdEl('hd-tut-prev');
+  if (tutPrev) tutPrev.addEventListener('click', () => healerTutorialStep(-1));
+  const tutSkip = hdEl('hd-tut-skip');
+  if (tutSkip) tutSkip.addEventListener('click', () => healerToggleTutorial(false));
   const exitBtn = hdEl('hd-exit');
   if (exitBtn) exitBtn.addEventListener('click', healerLeaveGame);
   const stage = hdEl('hd-stage');
