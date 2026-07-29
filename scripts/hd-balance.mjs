@@ -4,14 +4,16 @@ const src = fs.readFileSync('games/healer-dungeon.js','utf8');
 const block = src.slice(src.indexOf('const HD_TICK_MS'), src.indexOf('// ╚═══ PARITY BLOCK END'));
 const EXPORTS = ['hdInitState','hdAdvanceTick','hdStartPull','hdApplyUpgrade','hdPartyDps','hdMaxMana',
   'hdRegenPerTick','hdCanCast','hdHealAmt','hdIncomingHeal','hdIncomingDamage','hdSurvives','hdBossPending',
-  'hdIsBoss','hdEnragePct','hdCost','hdSpell','hdSpellCd','hdClass','hdGcdTicks','hdDmgTakenPct','hdBankPull',
-  'HD_SCORE_HEAL_PER_PT',
+  'hdIsBoss','hdEnragePct','hdCost','hdSpell','hdSpellCd','hdCastTicks','hdClass','hdGcdTicks','hdFsrTicks',
+  'hdDmgTakenPct','hdBankPull','hdAffix','hdLivingDps','hdPartyDpsPerTick','hdBossAbilityRaw',
+  'HD_SCORE_HEAL_PER_PT','HD_SCORE_DEPTH_EVERY',
   'HD_FSR_TICKS','HD_A_FILL','HD_A_RAID','HD_A_BIG','HD_A_PULL','HD_A_UPGRADE','HD_SP_FILL','HD_SP_RAID',
-  'HD_SP_BIG','HD_MAX_TICKS','HD_TANK','HD_HEAL','HD_PARTY','HD_BOSS_EVERY','HD_UPGRADE_CHOICES',
-  'HD_UPGRADE_COUNT','HD_STAT_CHOICES','HD_UP_STEP','HD_CB_BUSTER','HD_CLASSES','HD_K_HOT','HD_K_DIRECT',
-  'HD_K_SHIELD','HD_PERK_COUNT','HD_PK_PHOENIX','HD_PK_CRIT','HD_PK_WARD','HD_PK_GCD','HD_PK_CDR',
-  'HD_UK_STAT','HD_UK_PERK','HD_SCORE_TEMPO_MAX','HD_SCORE_TEMPO_DECAY','HD_SCORE_PULL_BASE',
-  'HD_SCORE_PULL_STEP','HD_SCORE_BOSS_MULT','HD_MAX_SCORE','HD_GCD_TICKS'];
+  'HD_SP_BIG','HD_SPELL_SLOTS','HD_MAX_TICKS','HD_TANK','HD_HEAL','HD_PARTY','HD_BOSS_EVERY',
+  'HD_UPGRADE_CHOICES','HD_UPGRADE_COUNT','HD_UP_STEP','HD_CB_BUSTER','HD_CB_NUKE','HD_CB_FOCUS','HD_CB_DRAIN',
+  'HD_BOSS_ABILITIES','HD_BOSS_KIT_SIZE','HD_CLASSES','HD_K_HOT','HD_K_DIRECT','HD_K_SHIELD','HD_AFFIXES',
+  'HD_PERK_COUNT','HD_PK_PHOENIX','HD_PK_CRIT','HD_PK_WARD','HD_PK_GCD','HD_PK_CDR','HD_PK_FSR','HD_PK_RAID',
+  'HD_PK_HASTE','HD_PK_REVIVE','HD_REVIVE_TICKS','HD_UK_STAT','HD_UK_PERK','HD_SCORE_TEMPO_MAX',
+  'HD_SCORE_TEMPO_SEC','HD_SCORE_BOSS_MULT','HD_MAX_SCORE','HD_GCD_TICKS','HD_TWO_PERK_PCT'];
 const M = new Function(block + '\nreturn {' + EXPORTS.join(',') + '};')();
 const SLOTS = ['Tank','Ty','Łotr','Łucznik','Mag'];
 const CLASSES = M.HD_CLASSES.map((c,i)=>({i, id:c.id, name:c.name}));
@@ -90,8 +92,7 @@ console.log('— party shape —');
 {
   const st = M.hdInitState(1);
   ok('five party members', st.hp.length===5 && M.HD_PARTY===5, 'hp='+st.hp.join(','));
-  ok('three cards offered: two stats + one random talent',
-     M.HD_UPGRADE_CHOICES===3 && M.HD_STAT_CHOICES===2);
+  ok('three cards offered every rest', M.HD_UPGRADE_CHOICES===3);
   ok('three upgrade stats', M.HD_UPGRADE_COUNT===3 && 'heal' in st.stats && 'hp' in st.stats && 'dmg' in st.stats,
      Object.keys(st.stats).join(','));
 }
@@ -194,39 +195,56 @@ console.log('— random talents —');
   const P = (i) => ({k:M.HD_UK_PERK, i});
   const base = M.hdInitState(1);
   const gcd = M.hdInitState(1); M.hdApplyUpgrade(gcd, P(M.HD_PK_GCD));
-  ok('every rest offers exactly one talent among the cards', (() => {
-    let seenPerk = 0, seenStat = 0;
-    for (let seed=1; seed<=40; seed++) {
-      const st = M.hdInitState(seed);
-      st.packHp = 1;
-      let g=0; while (st.phase!=='rest' && g++<400) M.hdAdvanceTick(st, null);
-      const perks = st.upgrades.filter(u=>u.k===M.HD_UK_PERK).length;
-      const stats = st.upgrades.filter(u=>u.k===M.HD_UK_STAT).length;
-      if (perks === 1) seenPerk++;
-      if (stats === M.HD_STAT_CHOICES) seenStat++;
-    }
-    return seenPerk === 40 && seenStat === 40;
-  })());
-  ok('the two stat cards are always distinct', (() => {
-    for (let seed=1; seed<=60; seed++) {
-      const st = M.hdInitState(seed);
-      st.packHp = 1;
-      let g=0; while (st.phase!=='rest' && g++<400) M.hdAdvanceTick(st, null);
-      const stats = st.upgrades.filter(u=>u.k===M.HD_UK_STAT).map(u=>u.i);
-      if (new Set(stats).size !== stats.length) return false;
-    }
-    return true;
-  })());
+  // The SHAPE of the hand is rolled too — usually 2 stats + 1 talent, sometimes
+  // 1 + 2 — so you cannot plan around the choice either. What must never vary:
+  // there is always at least one of each, and never a duplicate card.
+  const hands = [];
+  for (let seed=1; seed<=200; seed++) {
+    const st = M.hdInitState(seed);
+    st.packHp = 1;
+    let g=0; while (st.phase!=='rest' && g++<400) M.hdAdvanceTick(st, null);
+    hands.push(st.upgrades);
+  }
+  ok('every hand is exactly three cards', hands.every(h => h.length === 3));
+  ok('every hand has at least one stat AND at least one talent',
+     hands.every(h => h.some(u=>u.k===M.HD_UK_STAT) && h.some(u=>u.k===M.HD_UK_PERK)));
+  ok('no card is ever offered twice in the same hand',
+     hands.every(h => new Set(h.map(u=>u.k+':'+u.i)).size === h.length));
+  const twoPerkShare = hands.filter(h => h.filter(u=>u.k===M.HD_UK_PERK).length === 2).length / hands.length;
+  ok('the 1-stat/2-talent hand really does show up', twoPerkShare > 0.15 && twoPerkShare < 0.6,
+     (twoPerkShare*100).toFixed(0)+'% of hands');
   ok('the talent pool is actually varied', (() => {
     const seen = new Set();
-    for (let seed=1; seed<=200; seed++) {
-      const st = M.hdInitState(seed);
-      st.packHp = 1;
-      let g=0; while (st.phase!=='rest' && g++<400) M.hdAdvanceTick(st, null);
-      st.upgrades.filter(u=>u.k===M.HD_UK_PERK).forEach(u=>seen.add(u.i));
-    }
+    hands.forEach(h => h.filter(u=>u.k===M.HD_UK_PERK).forEach(u=>seen.add(u.i)));
     return seen.size === M.HD_PERK_COUNT;
-  })(), M.HD_PERK_COUNT+' talents');
+  })(), M.HD_PERK_COUNT+' talents, all seen');
+  ok('twelve talents, not the original eight', M.HD_PERK_COUNT === 12, String(M.HD_PERK_COUNT));
+  const fsr = M.hdInitState(1); M.hdApplyUpgrade(fsr, P(M.HD_PK_FSR));
+  ok('Medytacja shortens the 5-second rule', M.hdFsrTicks(fsr) < M.hdFsrTicks(base),
+     M.hdFsrTicks(base)+' → '+M.hdFsrTicks(fsr));
+  const raidP = M.hdInitState(1); M.hdApplyUpgrade(raidP, P(M.HD_PK_RAID));
+  ok('Moc Grupowa boosts the raid spell and nothing else',
+     M.hdHealAmt(raidP, 100, M.HD_SP_RAID) > M.hdHealAmt(base, 100, M.HD_SP_RAID) &&
+     M.hdHealAmt(raidP, 100, M.HD_SP_FILL) === M.hdHealAmt(base, 100, M.HD_SP_FILL));
+  // ⚠️ Szybkie Ręce must land for EVERY class. Scoped to the panic button it was
+  // a dead card for the paladin, whose panic button is already instant — and a
+  // talent that does nothing for the class you picked is the worst possible
+  // outcome of a random draw.
+  for (const c of CLASSES) {
+    const b = M.hdInitState(1, c.i);
+    const h = M.hdInitState(1, c.i); M.hdApplyUpgrade(h, P(M.HD_PK_HASTE));
+    let helped = false, broke = false;
+    for (let slot = 0; slot < M.HD_SPELL_SLOTS; slot += 1) {
+      const before = M.hdCastTicks(b, slot), after = M.hdCastTicks(h, slot);
+      if (before > 0 && after < before) helped = true;
+      if (before === 0 && after !== 0) broke = true;
+    }
+    ok(c.name + ': Szybkie Ręce actually does something', helped && !broke);
+  }
+  ok('Szybkie Ręce never turns an instant into a cast', (() => {
+    const h = M.hdInitState(1, 2); M.hdApplyUpgrade(h, P(M.HD_PK_HASTE));
+    return M.hdCastTicks(h, M.HD_SP_RAID) === 0;
+  })());
   ok('Skupienie really shortens the GCD', M.hdGcdTicks(gcd) < M.hdGcdTicks(base),
      M.hdGcdTicks(base)+' → '+M.hdGcdTicks(gcd));
   const ward = M.hdInitState(1); M.hdApplyUpgrade(ward, P(M.HD_PK_WARD));
@@ -247,6 +265,254 @@ console.log('— random talents —');
     for (let i=0;i<20;i++) M.hdApplyUpgrade(s, P(M.HD_PK_WARD));
     return M.hdDmgTakenPct(s) >= 50;
   })());
+}
+
+// ── EVERY SPELL, EVERY CLASS ────────────────────────────────────────────────
+// Nine spells, checked one at a time against what the button promises: it costs
+// what it says, it takes the global cooldown, it honours its own cast time and
+// cooldown, and it lands on exactly the targets it claims. This is the check
+// that would have caught a spell silently doing nothing.
+console.log('— every spell does what its button says —');
+{
+  for (const c of CLASSES) {
+    for (let slot = 0; slot < M.HD_SPELL_SLOTS; slot += 1) {
+      const sp = M.hdSpell(M.hdInitState(1, c.i), slot);
+      const label = c.name + ' ' + sp.key + ' ' + sp.name;
+
+      // cost + GCD + own cooldown, from a clean state
+      const st = M.hdInitState(31, c.i);
+      st.hp = st.maxHp.map(v => Math.floor(v * 0.4));   // room to heal into
+      const manaBefore = st.mana;
+      // Snapshot BEFORE the tick: an instant resolves on the very tick that
+      // casts it, so a snapshot taken afterwards sees no change at all — which
+      // is exactly how the first version of this check "passed" a spell that
+      // had already fired.
+      const before = st.hp.slice();
+      const shieldBefore = st.shield.slice();
+      const cast = M.hdAdvanceTick(st, [{a: slot, t: 2}]) || true;
+      ok(label + ': costs exactly what the button says',
+         manaBefore - st.mana === M.hdCost(st, slot), (manaBefore - st.mana) + ' vs ' + M.hdCost(st, slot));
+      ok(label + ': takes the global cooldown', st.gcd > 0, 'gcd=' + st.gcd);
+      // the tick that casts it also ticks the cooldown down by one
+      ok(label + ': own cooldown matches its table',
+         st.cd[slot] === (sp.cd ? M.hdSpellCd(st, slot) - 1 : 0), 'cd=' + st.cd[slot]);
+      void cast;
+
+      // a cast-time spell must be ON the cast bar and deliver only when it ends
+      if (sp.cast > 0) {
+        ok(label + ': is on the cast bar for its full cast time',
+           st.cast && st.cast.slot === slot && st.cast.total === M.hdCastTicks(st, slot),
+           st.cast ? st.cast.total + ' ticks' : 'NOT CASTING');
+        ok(label + ': heals nothing until the cast finishes',
+           st.hp.every((v, i) => v === before[i]) && st.shield.every((v, i) => v === shieldBefore[i]));
+      }
+
+      // now let anything still in flight land, and check WHO it touched
+      for (let i = 0; i < 60 && (st.cast || (sp.kind === M.HD_K_HOT && st.hots.length)); i += 1) {
+        st.phase = 'rest';                       // freeze the encounter, keep ticks
+        M.hdAdvanceTick(st, null);
+      }
+      if (sp.kind === M.HD_K_SHIELD) {
+        const shielded = st.shield.map((v, i) => v > shieldBefore[i]);
+        ok(label + ': shields exactly its declared targets',
+           sp.all ? shielded.every(Boolean) : (shielded[2] && shielded.filter(Boolean).length === 1),
+           st.shield.join('/'));
+        ok(label + ': the absorb is the size the button promises',
+           st.shield[2] === M.hdHealAmt(st, sp.amount, slot), st.shield[2] + '');
+      } else {
+        const healed = st.hp.map((v, i) => v > before[i]);
+        ok(label + ': heals exactly its declared targets',
+           sp.all ? healed.every(Boolean) : (healed[2] && healed.filter(Boolean).length === 1),
+           healed.map(v => v ? 'Y' : '-').join(''));
+      }
+      if (sp.kind === M.HD_K_HOT) {
+        const s2 = M.hdInitState(31, c.i);
+        s2.hp = s2.maxHp.map(v => 1);
+        s2.phase = 'rest';
+        M.hdAdvanceTick(s2, [{a: slot, t: 2}]);
+        let ticks = 0;
+        for (let i = 0; i < 400 && s2.hots.some(h => h.tgt === 2); i += 1) {
+          const hp = s2.hp[2];
+          M.hdAdvanceTick(s2, null);
+          if (s2.hp[2] > hp) ticks += 1;
+        }
+        ok(label + ': ticks exactly ' + sp.amounts.length + ' times', ticks === sp.amounts.length,
+           ticks + ' ticks');
+      }
+
+      // a single-target spell must refuse a corpse rather than eat the GCD
+      if (!sp.all) {
+        const s3 = M.hdInitState(5, c.i);
+        s3.hp[2] = 0;
+        const m3 = s3.mana;
+        M.hdAdvanceTick(s3, [{a: slot, t: 2}]);
+        ok(label + ': refuses to fire on a corpse', s3.mana === m3 && s3.gcd === 0,
+           'mana ' + m3 + '→' + s3.mana + ' gcd=' + s3.gcd);
+      }
+
+      // and it must refuse when you cannot pay for it
+      const s4 = M.hdInitState(5, c.i);
+      s4.mana = M.hdCost(s4, slot) - 1;
+      M.hdAdvanceTick(s4, [{a: slot, t: 0}]);
+      ok(label + ': refuses when the mana is not there', s4.gcd === 0 && !s4.cast, 'gcd=' + s4.gcd);
+    }
+  }
+}
+
+// ── DEATHS NO LONGER END THE RUN ────────────────────────────────────────────
+console.log('— the run ends only when the HEALER dies —');
+{
+  const st = M.hdInitState(7);
+  st.hp[3] = 1;
+  let g = 0;
+  while (st.hp[3] > 0 && g++ < 400 && !st.dead) M.hdAdvanceTick(st, null);
+  ok('an ally can fall without ending the run', st.hp[3] === 0 && !st.dead && st.phase === 'fight',
+     'dead=' + st.dead + ' phase=' + st.phase);
+  ok('the death is counted', st.deaths >= 1, String(st.deaths));
+
+  // ... and it costs the party his damage for the rest of the pull
+  const full = M.hdInitState(7);
+  ok('a corpse stops contributing damage', M.hdPartyDpsPerTick(st) < M.hdPartyDpsPerTick(full),
+     M.hdPartyDpsPerTick(full) + ' → ' + M.hdPartyDpsPerTick(st));
+  ok('the pack does NOT get weaker to compensate', M.hdLivingDps(st) === M.HD_PARTY - 2);
+
+  // the healer dying IS the end
+  const s2 = M.hdInitState(7);
+  s2.hp[M.HD_HEAL] = 1;
+  let g2 = 0;
+  while (!s2.dead && g2++ < 400) M.hdAdvanceTick(s2, null);
+  ok('the healer dying ends the run', s2.dead && s2.deadWho === M.HD_HEAL, 'who=' + s2.deadWho);
+
+  // the fallen come back at the rest, so a death costs the pull, never the run
+  const s3 = M.hdInitState(9);
+  s3.hp[4] = 0;
+  s3.packHp = 1;
+  let g3 = 0;
+  while (s3.phase !== 'rest' && g3++ < 400 && !s3.dead) M.hdAdvanceTick(s3, null);
+  ok('the rest picks the fallen back up', s3.phase === 'rest' && s3.hp[4] === s3.maxHp[4],
+     'hp=' + s3.hp[4]);
+
+  // with the tank down the pack turns on whoever is left, harder
+  const s4 = M.hdInitState(11);
+  s4.hp[M.HD_TANK] = 0;
+  let hitSomeoneElse = false;
+  for (let i = 0; i < 200 && !s4.dead; i += 1) {
+    M.hdAdvanceTick(s4, null);
+    if (s4.fx.some(f => f.k === 'dmg' && f.src === 'melee' && f.slot !== M.HD_TANK)) hitSomeoneElse = true;
+  }
+  ok('with the tank down the melee finds a new target', hitSomeoneElse);
+
+  // Wskrzeszenie must actually stand someone back up mid-fight
+  const s5 = M.hdInitState(3);
+  M.hdApplyUpgrade(s5, {k: M.HD_UK_PERK, i: M.HD_PK_REVIVE});
+  s5.hp[3] = 1;
+  let revived = false;
+  for (let i = 0; i < 600 && !s5.dead; i += 1) {
+    M.hdAdvanceTick(s5, null);
+    if (s5.fx.some(f => f.k === 'revive')) { revived = true; break; }
+  }
+  ok('Wskrzeszenie stands a fallen ally back up', revived && s5.hp[3] > 0, 'hp=' + s5.hp[3]);
+}
+
+// ── RANDOMNESS: affixes and boss kits ───────────────────────────────────────
+console.log('— every pull is a different pull —');
+{
+  ok('pull 1 is never modified, so the game can be learned', (() => {
+    for (let seed = 1; seed <= 60; seed++) if (M.hdInitState(seed).affix !== 0) return false;
+    return true;
+  })());
+  const seen = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    const st = M.hdInitState(seed);
+    st.pull = 2 + (seed % 8);
+    M.hdStartPull(st);
+    seen.add(st.affix);
+  }
+  ok('every affix actually shows up', seen.size === M.HD_AFFIXES.length,
+     seen.size + '/' + M.HD_AFFIXES.length);
+  // An affix has to CHANGE the fight, not just print a label. hdStartPull rolls
+  // the affix itself, so the only honest way to sample one is to keep rolling
+  // until it comes up and read the pull it actually built.
+  const rollUntil = (affix) => {
+    for (let seed = 1; seed <= 4000; seed++) {
+      const st = M.hdInitState(seed);
+      st.pull = 4;
+      M.hdStartPull(st);
+      if (st.affix === affix) return st;
+    }
+    return null;
+  };
+  const plain = rollUntil(0);
+  let hpDiffers = 0, timerDiffers = 0, missing = 0;
+  for (let a = 1; a < M.HD_AFFIXES.length; a++) {
+    const st = rollUntil(a);
+    if (!st) { missing++; continue; }
+    if (st.packMax !== plain.packMax) hpDiffers++;
+    if (st.meleeT !== plain.meleeT || st.aoeT !== plain.aoeT ||
+        st.spikeT !== plain.spikeT || st.cleaveT !== plain.cleaveT) timerDiffers++;
+  }
+  ok('every affix is reachable', missing === 0, missing + ' unreachable');
+  ok('affixes change pack health', hpDiffers >= 3, hpDiffers + ' affixes move the HP pool');
+  ok('affixes change the damage rhythm', timerDiffers >= 3, timerDiffers + ' affixes move the timers');
+
+  // the draining affix has to actually cost mana
+  const drainIdx = M.HD_AFFIXES.findIndex(a => a.drain);
+  const dr = M.hdInitState(2);
+  dr.pull = 3; M.hdStartPull(dr); dr.affix = drainIdx;
+  dr.mana = 1000;
+  let drained = false;
+  for (let i = 0; i < 120 && !dr.dead; i++) {
+    M.hdAdvanceTick(dr, null);
+    if (dr.fx.some(f => f.k === 'drain')) { drained = true; break; }
+  }
+  ok('the draining affix really takes mana', drained);
+}
+
+console.log('— every boss is a different boss —');
+{
+  const kits = new Set();
+  const abilities = new Set();
+  for (let seed = 1; seed <= 200; seed++) {
+    const st = M.hdInitState(seed);
+    st.pull = 5;
+    M.hdStartPull(st);
+    kits.add(st.bossKit.slice().sort().join(','));
+    st.bossKit.forEach(k => abilities.add(k));
+  }
+  ok('a boss draws a kit of ' + M.HD_BOSS_KIT_SIZE, (() => {
+    const st = M.hdInitState(1); st.pull = 5; M.hdStartPull(st);
+    return st.bossKit.length === M.HD_BOSS_KIT_SIZE && new Set(st.bossKit).size === M.HD_BOSS_KIT_SIZE;
+  })());
+  ok('all four abilities appear across runs', abilities.size === M.HD_BOSS_ABILITIES,
+     abilities.size + '/' + M.HD_BOSS_ABILITIES);
+  ok('and the kit genuinely varies between runs', kits.size >= 5, kits.size + ' distinct kits');
+  ok('a normal pull has no kit at all', (() => {
+    const st = M.hdInitState(1); st.pull = 4; M.hdStartPull(st);
+    return st.bossKit.length === 0;
+  })());
+
+  // every ability must be PREDICTABLE — a telegraph you cannot read is a delay
+  for (let kind = 0; kind < M.HD_BOSS_ABILITIES; kind += 1) {
+    const st = M.hdInitState(4);
+    st.pull = 5; M.hdStartPull(st);
+    st.bossCast = { kind: kind, tgt: kind === M.HD_CB_BUSTER ? 0 : kind === M.HD_CB_FOCUS ? 3 : -1,
+                    left: 30, total: 35 };
+    const p = M.hdBossPending(st);
+    ok('ability ' + kind + ' shows up on the prediction', p && p.amt > 0, p ? p.amt + '' : 'null');
+    const hits = [];
+    for (let i = 0; i < M.HD_PARTY; i++) if (M.hdIncomingDamage(st, i) > 0) hits.push(i);
+    ok('ability ' + kind + ' predicts the right victims',
+       (st.bossCast.tgt >= 0) ? (hits.length === 1 && hits[0] === st.bossCast.tgt) : hits.length === M.HD_PARTY,
+       hits.join(','));
+  }
+
+  // the mana drain must land as well as the damage
+  const st = M.hdInitState(6);
+  st.pull = 5; M.hdStartPull(st);
+  st.bossCast = { kind: M.HD_CB_DRAIN, tgt: -1, left: 1, total: 35 };
+  st.mana = 1200;
+  M.hdAdvanceTick(st, null);
+  ok('Cięcie Budżetu takes mana as well as health', st.mana < 1200, 'mana=' + st.mana);
 }
 
 console.log('— cleave hits two DIFFERENT heroes —');
@@ -355,13 +621,15 @@ console.log('— bosses —');
 {
   ok('every 5th pull', M.hdIsBoss(5) && M.hdIsBoss(10) && !M.hdIsBoss(4) && !M.hdIsBoss(6));
   const packHpAt = (pull) => { const s = M.hdInitState(1); s.pull = pull; M.hdStartPull(s); return s.packMax; };
-  // A boss is a MECHANICS step, not an HP sponge. Once a normal pull runs ~21 s
-  // and every pull starts from full, a 1.5×-HP boss is simply unsurvivable at
-  // any ramp that also makes normal pulls matter — the sweep could not find a
-  // single config with both.
-  ok('the boss pull is a step up, but not an HP sponge',
-     packHpAt(5) > packHpAt(4) * 1.15 && packHpAt(5) < packHpAt(4) * 1.6,
-     packHpAt(4) + ' → ' + packHpAt(5) + ' HP');
+  // A boss is a MECHANICS step, NOT an HP sponge — and since deaths stopped
+  // ending the run it cannot be one at all. A longer fight is more chances for
+  // a dps to fall, and each one stretches the fight further, so even a 10% HP
+  // bonus turned the boss into the wall 88% of the field died on. Its identity
+  // is the telegraphed kit and the enrage, both tested below.
+  ok('the boss carries no HP bonus over the natural ramp',
+     packHpAt(5) < packHpAt(4) * 1.15, packHpAt(4) + ' → ' + packHpAt(5) + ' HP');
+  ok('a boss is still a harder fight than the pull before it',
+     packHpAt(5) > packHpAt(4), packHpAt(4) + ' → ' + packHpAt(5));
 
   const sb = M.hdInitState(4);
   while (sb.pull < 5 && !sb.dead && sb.tick < 8000) M.hdAdvanceTick(sb, drive(sb));
@@ -417,13 +685,12 @@ console.log('— scoring —');
   };
   const s1 = clearOne(drive);
   ok('clearing a pull banks points', s1.score > 0, 'score='+s1.score);
-  ok('the first pull pays its depth value', s1.scPull === M.HD_SCORE_PULL_BASE,
-     s1.scPull+' vs '+M.HD_SCORE_PULL_BASE);
+  ok('the first pull pays one depth point', s1.scPull === 1, String(s1.scPull));
   ok('score is the sum of its three parts', s1.score === s1.scPull + s1.scHeal + s1.scTempo);
 
-  // depth: pull 5 (a boss) must pay far more than pull 1
-  const depth = (pull, boss) => (M.HD_SCORE_PULL_BASE + M.HD_SCORE_PULL_STEP*(pull-1)) * (boss?M.HD_SCORE_BOSS_MULT:1);
-  ok('deeper pulls are worth more', depth(6,false) > depth(1,false), depth(1,false)+' → '+depth(6,false));
+  // depth: deeper pulls pay more, bosses double
+  const depth = (pull, boss) => (1 + Math.floor((pull-1)/M.HD_SCORE_DEPTH_EVERY)) * (boss?M.HD_SCORE_BOSS_MULT:1);
+  ok('deeper pulls are worth more', depth(7,false) > depth(1,false), depth(1,false)+' → '+depth(7,false));
   ok('a boss doubles its pull', depth(5,true) === depth(5,false)*2, depth(5,false)+' → '+depth(5,true));
 
   // tempo: identical play, different dawdle → strictly fewer tempo points
@@ -433,6 +700,10 @@ console.log('— scoring —');
      'fast='+fast.scTempo+' slow='+slow.scTempo);
   ok('tempo decays to zero, never below', slow.scTempo >= 0 &&
      fast.scTempo <= M.HD_SCORE_TEMPO_MAX * (fast.pullsCleared+1));
+  // The OPENING pull always banks full tempo — there was no rest before it —
+  // so a permanently dawdling run bottoms out at exactly that, not at zero.
+  ok('a permanently slow run banks only the opening pull\'s tempo',
+     slow.scTempo === M.HD_SCORE_TEMPO_MAX, String(slow.scTempo));
 
   // Precision. Tested mechanically rather than through a "careless bot": a bot
   // that sprays heals dies immediately, so it banks almost no pulls and the
@@ -465,10 +736,18 @@ console.log('— scoring —');
      g.scHeal <= Math.floor(g.healingDone/M.HD_SCORE_HEAL_PER_PT),
      g.scHeal+' ≤ '+Math.floor(g.healingDone/M.HD_SCORE_HEAL_PER_PT));
 
-  // and the whole thing has to stay inside the arcade cap
-  const best = Math.max(...[1,2,3,4,5,6,7,8].map(s => runBot(s, drive).score));
-  ok('a good run stays well inside the arcade cap', best < M.HD_MAX_SCORE * 0.6,
-     best+' vs cap '+M.HD_MAX_SCORE);
+  // THE HEADLINE PROPERTY: the score is DOZENS, not hundreds. A four-digit
+  // number reads like a pinball machine and makes a one-pull difference
+  // invisible; two digits are a number you can hold in your head and compare.
+  const scores = [];
+  for (const c of CLASSES) for (const seed of [1,2,3,4,5,6,7,8]) scores.push(runBot(seed, drive, c.i).score);
+  const avgScore = scores.reduce((a,b)=>a+b,0)/scores.length;
+  const best = Math.max(...scores);
+  console.log('  scores: avg ' + avgScore.toFixed(0) + ', best ' + best + ', range ' +
+              Math.min(...scores) + '-' + best);
+  ok('a good run scores DOZENS, not hundreds', avgScore >= 15 && avgScore <= 99, 'avg='+avgScore.toFixed(0));
+  ok('even the best run stays double-digit', best < 200, 'best='+best);
+  ok('and well inside the arcade cap', best < M.HD_MAX_SCORE, best+' vs cap '+M.HD_MAX_SCORE);
 }
 
 console.log('— determinism —');
@@ -496,6 +775,7 @@ console.log('— difficulty curve, per class —');
     const avg = pulls.reduce((a,b)=>a+b,0)/pulls.length;
     const savg = scores.reduce((a,b)=>a+b,0)/scores.length;
     perClass[c.id] = {avg, savg, pulls};
+    globalThis.__depths = (globalThis.__depths || []).concat(pulls);
     console.log(`  ${c.name.padEnd(8)} avg ${avg.toFixed(1)} pulls · avg ${Math.round(savg)} pkt · [${pulls.join(', ')}]`);
   }
   globalThis.__perClass = perClass;
@@ -552,7 +832,10 @@ console.log('— the healer must actually matter —');
   const worst = Math.max(...runs);
   globalThis.__avgNoHeal = runs.reduce((a,b)=>a+b,0)/runs.length;
   console.log('  pulls cleared with ZERO healing: ' + runs.join(', '));
-  ok('a no-heal run dies almost immediately (<=3 pulls)', worst <= 3, 'worst='+worst);
+  // The bar moved from 3 to 5 when deaths stopped ending the run: a party that
+  // is never healed now loses its dps one by one instead of wiping on the first
+  // death, so it limps a little further before the healer himself falls.
+  ok('a no-heal run still dies almost immediately (<=5 pulls)', worst <= 5, 'worst='+worst);
 }
 
 console.log('— the target band —');
@@ -568,6 +851,16 @@ console.log('— the target band —');
   // i.e. one or two bosses down. Tight band on purpose.
   ok('a good run lands in the 7-11 band', avg >= 7 && avg <= 11, 'avg='+avg.toFixed(1));
   ok('a good run reaches at least the first boss', avg >= 5, 'avg='+avg.toFixed(1));
+  // THE THREE-BUCKET TEST. If every run ends on a boss the leaderboard holds
+  // three or four numbers and says nothing about skill. Deaths must be spread
+  // across depths, which is what the boss HP bonus was quietly preventing.
+  const depths = globalThis.__depths;
+  const onBoss = depths.filter(d => (d + 1) % M.HD_BOSS_EVERY === 0).length / depths.length;
+  const distinct = new Set(depths).size;
+  console.log('  depths reached: ' + [...new Set(depths)].sort((a,b)=>a-b).join(', ') +
+              '  (' + (onBoss*100).toFixed(0) + '% ended on a boss)');
+  ok('the field is not bucketed on bosses', onBoss <= 0.7, (onBoss*100).toFixed(0)+'%');
+  ok('scores land on at least 6 distinct depths', distinct >= 6, distinct+' distinct');
 }
 
 console.log(fail===0 ? '\nALL CHECKS PASSED' : `\n${fail} CHECK(S) FAILED`);

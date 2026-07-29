@@ -4269,7 +4269,7 @@
     .hd-arena { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 9px; }
     .hd-board { flex: 1 1 auto; min-height: 0; display: flex; gap: 10px; }
     .hd-left { flex: 0 0 252px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-    .hd-stagecol { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+    .hd-stagecol { position: relative; flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
     .hd-stage-wrap {
       position: relative; flex: 1 1 auto; min-height: 0;
       display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -4349,7 +4349,7 @@
       border-radius: var(--r-sm); padding: 6px; cursor: pointer;
       font-family: inherit; color: inherit; text-align: left;
       display: grid; grid-template-columns: auto 1fr; gap: 2px 9px;
-      grid-template-areas: 'icon name' 'icon eff'; align-items: center;
+      grid-template-areas: 'icon name' 'icon hint' 'icon eff'; align-items: center;
     }
     .hd-spell.is-ready { border-color: #2563eb; box-shadow: 0 0 0 1px rgba(37,99,235,.25); }
     .hd-spell.is-poor { opacity: .45; }
@@ -4373,7 +4373,12 @@
       text-shadow: 0 0 3px #fff, 0 0 3px #fff;
     }
     .hd-spell-name { grid-area: name; font-size: 12.5px; font-weight: 800; }
-    .hd-spell-eff { grid-area: eff; font-size: 11px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; }
+    /* What the spell DOES, in one line, right under its name — the question a
+       cost and a HP/mana ratio never answered. The full prose is in the [?]. */
+    .hd-spell-hint {
+      grid-area: hint; font-size: 10.5px; font-weight: 600; color: #475569; line-height: 1.3;
+    }
+    .hd-spell-eff { grid-area: eff; font-size: 10.5px; font-weight: 700; color: var(--hd-dim); font-variant-numeric: tabular-nums; }
     .hd-spell-cd {
       position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
       font-size: 14px; font-weight: 800; color: var(--hd-warn);
@@ -4385,14 +4390,22 @@
        ~150px tall each — far more pixels than a health percentage needs, and
        it pushed the battlefield into a letterbox. They are now a fixed compact
        height and the column's leftover space carries the live score card. */
-    .hd-party { flex: 0 0 400px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-    .hd-frames { flex: none; display: flex; flex-direction: column; gap: 5px; }
+    /* They are an OVERLAY on the board now, pinned to its top-left corner the
+       way WoW's default raid frames are — not a column of their own. The board
+       gets the whole width back, and the frames end up where a healer's eyes
+       already live. `hdDrawEnemyBar` keeps the right-hand half of the top strip
+       clear for the pack's name and health, so the two never collide. */
+    .hd-frames {
+      position: absolute; left: 10px; top: 10px; z-index: 3;
+      width: 208px; display: flex; flex-direction: column; gap: 3px;
+    }
     .hd-frame {
-      position: relative; flex: 0 0 auto; height: 40px; overflow: hidden;
+      position: relative; flex: 0 0 auto; height: 26px; overflow: hidden;
       background: #cbd5e1;                     /* the drained part of the bar */
-      border: 1px solid #94a3b8; border-radius: 4px;
-      padding: 0 8px; display: flex; align-items: center;
+      border: 1px solid #94a3b8; border-radius: 3px;
+      padding: 0 6px; display: flex; align-items: center;
       font-family: inherit; color: #0f172a; text-align: left; cursor: pointer;
+      box-shadow: 0 1px 4px rgba(15,23,42,.18);
     }
     /* the health fill itself, in class colour */
     .hd-frame-fill {
@@ -4413,20 +4426,20 @@
     @keyframes hd-doomed { 50% { border-color: #fff; box-shadow: inset 0 0 0 3px var(--hd-crit); } }
 
     /* One row now, not two: name / health / prediction / buffs / key. */
-    .hd-frame-top { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .hd-frame-top { flex: 1; display: flex; align-items: center; gap: 5px; min-width: 0; }
     .hd-frame-name {
-      flex: 0 1 auto; font-size: 13px; font-weight: 800;
+      flex: 0 1 auto; font-size: 11px; font-weight: 800;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       text-shadow: 0 1px 2px rgba(255,255,255,.75);
     }
     .hd-name-short { display: none; }
     .hd-frame-key {
-      flex: none; margin-left: auto; padding: 0 5px; border-radius: 3px;
+      flex: none; margin-left: auto; padding: 0 4px; border-radius: 2px;
       border: 1px solid rgba(15,23,42,.25); background: rgba(255,255,255,.7);
-      font-size: 10px; font-weight: 800; color: #334155;
+      font-size: 9px; font-weight: 800; color: #334155;
     }
     .hd-frame-hp {
-      flex: none; font-size: 12.5px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
+      flex: none; font-size: 10.5px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
       white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,.75);
     }
 
@@ -4462,7 +4475,7 @@
     }
     .hd-shield.is-on { opacity: 1; }
     .hd-pred-num {
-      flex: none; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+      flex: none; font-size: 9.5px; font-weight: 800; font-variant-numeric: tabular-nums;
       color: transparent; white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,.9);
     }
     .hd-pred-num.is-heal { color: #14532d; }
@@ -4471,7 +4484,7 @@
     /* buff icons, bottom-right corner of the cell like Grid's indicators */
     .hd-hots { display: flex; gap: 3px; align-items: center; }
     .hd-hot {
-      font-size: 10.5px; font-weight: 800; line-height: 16px; padding: 0 4px;
+      font-size: 9px; font-weight: 800; line-height: 13px; padding: 0 3px;
       border-radius: 3px; background: rgba(255,255,255,.88); border: 1px solid rgba(15,23,42,.2);
       font-variant-numeric: tabular-nums;
     }
@@ -4485,37 +4498,10 @@
     }
     .hd-frame-mana i { display: block; height: 100%; width: 0; background: var(--hd-mana); transition: width .1s linear; }
 
-    /* ── live score card, under the raid frames ──
-       A points score that only appears when you die is a score nobody can play
-       towards, so every term is on screen while it is still movable. */
-    .hd-scorecard {
-      flex: none; background: var(--hd-panel); border: 1px solid var(--hd-line);
-      border-radius: var(--r-sm); padding: 9px 11px;
-    }
-    .hd-sc-total {
-      display: flex; justify-content: space-between; align-items: baseline;
-      border-bottom: 1px solid var(--hd-line); padding-bottom: 6px; margin-bottom: 6px;
-    }
-    .hd-sc-total span { font-size: 11.5px; font-weight: 800; color: var(--hd-dim); text-transform: uppercase; letter-spacing: .04em; }
-    .hd-sc-total b { font-size: 22px; font-weight: 800; color: #b45309; font-variant-numeric: tabular-nums; }
-    .hd-sc-row { display: flex; align-items: baseline; gap: 6px; font-size: 11.5px; padding: 1.5px 0; }
-    .hd-sc-icon { flex: none; font-size: 12px; }
-    .hd-sc-name { font-weight: 800; white-space: nowrap; }
-    .hd-sc-note { flex: 1; color: var(--hd-dim); font-weight: 600; font-size: 10.5px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .hd-sc-val { font-weight: 800; font-variant-numeric: tabular-nums; }
-
-    /* ── enemy pack bar, under the battlefield ── */
-    .hd-pack { flex: none; }
-    .hd-pack-head { display: flex; justify-content: space-between; align-items: baseline;
-      gap: 8px; font-size: 12.5px; font-weight: 800; margin-bottom: 4px; }
-    .hd-pack-name { color: var(--hd-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .hd-pack-text { color: var(--hd-dim); font-variant-numeric: tabular-nums; }
-    .hd-bar-pack { height: 14px; }
-    .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #b91c1c, #ef4444); }
-    .hd-pack.is-boss .hd-pack-name { color: #b91c1c; letter-spacing: .02em; }
-    .hd-pack.is-boss .hd-bar-pack { box-shadow: 0 0 0 1px rgba(220,38,38,.55); }
-    .hd-pack.is-boss .hd-bar-pack .hd-bar-fill { background: linear-gradient(90deg, #7f1d1d, #dc2626, #f87171); }
+    /* The live score card is gone (2026-07-29 rev 2): the score is something
+       you read when the run ENDS. Its rows now live only on the result card.
+       So is the red pack bar that used to sit under the board — the enemy's
+       name and health are painted above the enemy itself by hdDrawEnemyBar. */
 
     /* ── overlays over the battlefield ── */
     .hd-rest, .hd-startcard {
@@ -4574,12 +4560,19 @@
     .hd-start-btn:disabled { opacity: .5; cursor: default; }
     .hd-status { font-size: 12px; font-weight: 700; color: var(--hd-dim); line-height: 1.45; }
 
-    /* the score breakdown of the run that just ended */
+    /* The score breakdown of the run that just ended — the ONLY place the
+       score is ever shown, by design. */
     .hd-result { display: none; width: 100%; text-align: left; }
     .hd-result.is-on {
       display: block; background: var(--hd-panel); border: 1px solid var(--hd-line);
       border-radius: var(--r-sm); padding: 8px 11px;
     }
+    .hd-sc-row { display: flex; align-items: baseline; gap: 7px; font-size: 12px; padding: 2px 0; }
+    .hd-sc-icon { flex: none; font-size: 13px; }
+    .hd-sc-name { font-weight: 800; white-space: nowrap; }
+    .hd-sc-note { flex: 1; color: var(--hd-dim); font-weight: 600; font-size: 11px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hd-sc-val { font-weight: 800; font-variant-numeric: tabular-nums; color: #b45309; }
 
     /* ── class selection, on the start card ──
        Three cards; all three are balanced to the same HP-per-mana, so this is
@@ -4639,6 +4632,23 @@
     .hd-help ul { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.65; }
     .hd-help li { margin-bottom: 5px; }
     .hd-help-close { position: absolute; top: 14px; right: 16px; }
+    /* The picked class's three spells, in prose — the "why would I ever press
+       E" answer that a cost and a HP/mana ratio never gave. */
+    .hd-help-spells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-bottom: 4px; }
+    .hd-help-spell {
+      background: var(--hd-panel); border: 1px solid var(--hd-line); border-radius: 7px; padding: 8px 10px;
+      font-size: 11.5px; line-height: 1.45;
+    }
+    .hd-help-spell b { display: block; font-size: 13px; }
+    .hd-help-spell i {
+      display: block; color: #1d4ed8; font-style: normal; font-weight: 700;
+      font-variant-numeric: tabular-nums; margin: 2px 0 4px;
+    }
+    .hd-help-spell span { display: block; color: var(--hd-dim); font-weight: 600; }
+    .hd-help-key {
+      display: inline-block; min-width: 16px; text-align: center; padding: 0 4px; border-radius: 3px;
+      border: 1px solid rgba(15,23,42,.25); background: #fff; font-size: 10px; color: #334155;
+    }
     .hd-help-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
     .hd-help-stat {
       background: var(--hd-panel); border: 1px solid var(--hd-line); border-radius: 7px; padding: 8px 10px;
@@ -4659,15 +4669,25 @@
        fixed height now, so leaving the growth on them opened a dead gap under
        the score card AND squeezed the rest overlay until its header and the
        „Ruszaj" button were clipped off the top of the stage. */
-    .hd-console.is-portrait .hd-board { flex-direction: column; gap: 7px; }
-    .hd-console.is-portrait .hd-stagecol { order: 1; flex: 1 1 auto; min-height: 0; }
-    .hd-console.is-portrait .hd-stage-wrap { flex: 1 1 auto; min-height: 240px; }
-    .hd-console.is-portrait .hd-party { order: 2; flex: 0 0 auto; gap: 6px; }
-    .hd-console.is-portrait .hd-frames { gap: 4px; }
-    .hd-console.is-portrait .hd-frame { height: 34px; }
-    .hd-console.is-portrait .hd-scorecard { padding: 6px 9px; }
-    .hd-console.is-portrait .hd-sc-total b { font-size: 17px; }
-    .hd-console.is-portrait .hd-sc-note { display: none; }   /* the chips carry it */
+    /* Centred, because the board now takes exactly its own aspect: whatever
+       height is left over would otherwise pool into one hole between the board
+       and the spellbook. Split above and below the stack it reads as padding. */
+    .hd-console.is-portrait .hd-board { flex-direction: column; gap: 7px; justify-content: center; }
+    /* 0 0 auto, not 1 1 auto: the wrap inside it is fixed-aspect now, so a
+       growing column just pooled every spare pixel under the board. Shrink it
+       to content and let .hd-board's justify-content: center split the slack. */
+    .hd-console.is-portrait .hd-stagecol { order: 1; flex: 0 0 auto; min-height: 0; }
+    /* The board is 1040x480 — a landscape picture. Stretching its container to
+       fill a phone column just letterboxed ~300px of dead grey above and below
+       it, so in portrait the wrap takes exactly the picture's aspect and lets
+       the rest overlay spill out of it instead (you cannot cast during a rest,
+       so covering the spellbook for those few seconds costs nothing). */
+    .hd-console.is-portrait .hd-stage-wrap { flex: 0 0 auto; aspect-ratio: 1040 / 480; overflow: visible; }
+    .hd-console.is-portrait .hd-rest { top: 6px; bottom: auto; z-index: 6; }
+    /* Back into the flow on a phone, full width above the board. */
+    .hd-console.is-portrait .hd-frames { position: static; width: 100%; gap: 3px; }
+    .hd-console.is-portrait .hd-frame { height: 26px; box-shadow: none; }
+    .hd-console.is-portrait .hd-sc-note { display: none; }
     .hd-console.is-portrait .hd-left { order: 3; flex: 0 0 auto; gap: 6px; }
     .hd-console.is-portrait .hd-char { padding: 7px; }
     .hd-console.is-portrait .hd-char-head { display: none; }   /* the topbar already names you */
@@ -4678,6 +4698,7 @@
       flex: 1 1 0; min-width: 0; padding: 4px;
       grid-template-columns: 1fr; grid-template-areas: 'icon' 'name'; justify-items: center; gap: 1px;
     }
+    .hd-console.is-portrait .hd-spell-hint { display: none; }
     .hd-console.is-portrait .hd-spell-slot { width: 38px; height: 38px; font-size: 19px; }
     .hd-console.is-portrait .hd-spell-name { font-size: 10px; text-align: center; }
     .hd-console.is-portrait .hd-spell-eff { display: none; }
@@ -4696,7 +4717,8 @@
     .hd-console.is-portrait .hd-up-name { font-size: 12px; }
     .hd-console.is-portrait .hd-up-desc { display: none; }
     .hd-console.is-portrait .hd-up.is-perk .hd-up-desc { display: block; }
-    .hd-console.is-portrait .hd-help-stats { grid-template-columns: 1fr; }
+    .hd-console.is-portrait .hd-help-stats,
+    .hd-console.is-portrait .hd-help-spells { grid-template-columns: 1fr; }
     .hd-console.is-portrait .hd-classes { grid-template-columns: 1fr; gap: 5px; }
     .hd-console.is-portrait .hd-class { flex-direction: row; gap: 7px; text-align: left; }
     .hd-console.is-portrait .hd-class-spells { display: none; }
@@ -9178,11 +9200,12 @@
           <div class="hd-console" id="hd-console">
 
             <div class="hd-topbar">
+              <!-- No live numbers up here. The score, the pull count and the
+                   mana were three readouts competing with the five that
+                   actually matter, and the score is deliberately something you
+                   see when the run ENDS. Pull number, pack health and the
+                   pull's affix are painted on the board itself. -->
               <span class="hd-brand"><span class="hd-brand-title">„Uzdrowiciel G6"</span> <b id="hd-brand-class">💚 Druid</b></span>
-              <span class="hd-chip is-score"><b id="hd-score">0</b> pkt</span>
-              <span class="hd-chip hd-chip-hide"><b id="hd-cleared">0</b> grup</span>
-              <span class="hd-chip">Grupa <b id="hd-pull">1</b></span>
-              <span class="hd-chip hd-chip-hide">Mana <b id="hd-mana-stat">0</b></span>
               <span class="hd-chip hd-chip-stats" id="hd-stats">—</span>
               <span class="hd-topbar-sp"></span>
               <button type="button" class="hd-icon-btn" id="hd-help-btn" title="Jak grać / co robią statystyki">?</button>
@@ -9223,17 +9246,19 @@
                   <div class="hd-spells" id="hd-spells"></div>
                 </div>
 
-                <!-- The party, then the live score card in the space the
-                     compact raid frames leave behind. -->
-                <div class="hd-party">
-                  <div class="hd-frames" id="hd-frames"></div>
-                  <div class="hd-scorecard" id="hd-scorecard"></div>
-                </div>
-
-                <!-- the world. The rest window and the start/result card are
-                     overlays on the battlefield rather than rows, so the console
-                     height never changes between phases. -->
+                <!-- the world, now full width. The rest window and the
+                     start/result card are overlays on the battlefield rather
+                     than rows, so the console height never changes between
+                     phases — and the raid frames are an overlay too, pinned to
+                     the top-left corner the way WoW's default ones are. -->
                 <div class="hd-stagecol">
+                  <!-- The raid frames are a child of the COLUMN, not of the
+                       board, so portrait can drop them back into normal flow
+                       above it with one `position: static`. A wide board with
+                       a corner overlay is a landscape idea; on a phone there is
+                       no width to overlay into. -->
+                  <div class="hd-frames" id="hd-frames"></div>
+
                   <div class="hd-stage-wrap">
                     <canvas id="hd-stage"></canvas>
 
@@ -9247,7 +9272,7 @@
 
                     <div class="hd-startcard" id="hd-startcard">
                       <div class="hd-startcard-title" id="hd-startcard-title">„Uzdrowiciel G6" 💚</div>
-                      <div class="hd-startcard-sub">Jesteś <strong>jedynym uzdrowicielem</strong> pięcioosobowej drużyny. Loch nie ma końca, każda grupa bije mocniej, a <strong>co piąta to boss</strong>. Runda kończy się, gdy ktokolwiek padnie.</div>
+                      <div class="hd-startcard-sub">Jesteś <strong>jedynym uzdrowicielem</strong> pięcioosobowej drużyny. Loch nie ma końca, każda grupa bije mocniej, a <strong>co piąta to boss</strong>. Sojusznik, który padnie, leży do końca walki — runda kończy się dopiero, gdy padniesz <strong>Ty</strong>.</div>
                       <!-- The score breakdown of the run that just ended. -->
                       <div class="hd-result" id="hd-result"></div>
                       <!-- Class selection, before the run. All three are
@@ -9261,14 +9286,6 @@
                       <button class="hd-start-btn" id="hd-start">Wejdź do lochu</button>
                       <div class="hd-status" id="hd-status">Jedna pula many musi wystarczyć na całą walkę. Naciśnij <strong>?</strong> po zasady.</div>
                     </div>
-                  </div>
-
-                  <div class="hd-pack" id="hd-pack">
-                    <div class="hd-pack-head">
-                      <span class="hd-pack-name" id="hd-pack-name">—</span>
-                      <span class="hd-pack-text" id="hd-pack-text">—</span>
-                    </div>
-                    <div class="hd-bar hd-bar-pack"><div class="hd-bar-fill" id="hd-pack-fill"></div></div>
                   </div>
                 </div>
 
@@ -9288,14 +9305,19 @@
                 <li><strong>Jedna pula many na jedną walkę.</strong> Między grupami życie i mana wracają do pełna, więc cała trudność siedzi <em>w środku</em> walki. Spamowanie najtańszego czaru zużywa ~80 many na sekundę, a walka trwa ~21 s — pełny pasek starcza mniej więcej na jedną grupę. Dalej wchodzi się tylko lecząc <em>oszczędniej</em>.</li>
                 <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many stoi przez 5 sekund. Przerwa bez czarów w środku walki to darmowa mana — wskaźnik pod paskiem many pokazuje, kiedy znowu zaczniesz odzyskiwać.</li>
                 <li><strong>Obrażenia sypią się z czterech stron:</strong> tank obrywa co 1,8 s, co ~8 s przychodzi fala w całą drużynę (każdy dostaje trochę inaczej), co ~10,5 s ktoś losowy z tyłu dostaje mocny cios, a co ~7 s <em>dwóch</em> losowych bohaterów naraz. Paski nigdy nie spadają równo — patrz, kto jest najniżej.</li>
-                <li><strong>☠️ Boss co 5. grupę.</strong> Ma więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową: <em>Cios Decyzyjny</em> (ogromne obrażenia w tanka) i <em>Reorganizacja</em> (w całą drużynę). Masz 3,5 s, żeby przygotować leczenie. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
+                <li><strong>Runda kończy się dopiero, gdy zginiesz TY.</strong> Sojusznik, który padnie, zostaje na ziemi do końca tej grupy — i zabiera ze sobą swoje obrażenia, więc walka robi się dłuższa, a bije w Ciebie tak samo mocno. To spirala, z której można się jeszcze wyleczyć, ale kosztuje. Po walce cała drużyna wstaje z pełnym życiem. <strong>Gdy padnie tank</strong>, paczka rzuca się na kogokolwiek — i te ciosy bolą o 35% mocniej, bo nikt inny nie jest na nie przygotowany.</li>
+                <li><strong>Każda grupa ma losowy modyfikator</strong> (poza pierwszą) — wypisany obok paska życia przeciwnika: 😤 mocniej bije, 👥 ma więcej życia, 💨 bije częściej, 🩸 wysysa Ci manę, 💥 częstsze fale obszarowe, 🗡️ mocniejsze ciosy w tanka, 🍂 ginie szybko, ale boli, 🎯 częstsze ciosy w tylną linię. Przeczytaj go, zanim ruszysz.</li>
+                <li><strong>☠️ Boss co 5. grupę.</strong> Ma więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową — a <em>losuje dwie z czterech</em> zdolności na każdą walkę, więc ten sam boss nigdy nie gra tak samo: <em>Cios Decyzyjny</em> (ogromny cios w jeden cel), <em>Reorganizacja</em> (w całą drużynę), <em>Ocena Roczna</em> (druzgocący cios w kogoś z tylnej linii), <em>Cięcie Budżetu</em> (zabiera Ci manę i rani wszystkich). Masz 3,5 s, żeby przygotować leczenie — a czerwone pole pod bohaterem pokazuje, w kogo poleci. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
                 <li><strong>Grupa trwa, aż zginie</strong> — nie ma żadnego zegara. Przerwa też trwa dowolnie długo: wybierz bonus i ruszaj, kiedy będziesz gotowy. Siedzenie w przerwie kosztuje tylko punkty tempa, nigdy życie.</li>
               </ul>
+              <h4>Twoje czary</h4>
+              <div class="hd-help-spells" id="hd-help-spells"></div>
               <h4>Skąd się bierze wynik</h4>
               <ul>
-                <li><strong>🏅 Głębokość</strong> — każda oczyszczona grupa jest warta więcej od poprzedniej (100 + 25 za każdy poziom w głąb), a <strong>boss podwaja</strong> tę wartość.</li>
-                <li><strong>💚 Leczenie</strong> — punkty za <em>efektywne</em> leczenie (1 pkt za 120 HP), przemnożone przez <strong>celność</strong>: leczenie w pełny pasek i tarcza, która wygasła nietknięta, to przelanie — i zjada dokładnie tyle procent punktów, ile go było.</li>
-                <li><strong>⏱️ Tempo</strong> — do +60 pkt za grupę, malejące o 4 pkt za każdą sekundę spędzoną w przerwie. Nikt Cię nie goni, ale odwaga się opłaca.</li>
+                <li><strong>Wynik zobaczysz na koniec rundy</strong>, nie w trakcie — w walce masz patrzeć na paski, nie na licznik.</li>
+                <li><strong>🏅 Głębokość</strong> — +1 punkt za co drugą oczyszczoną grupę, a <strong>boss podwaja</strong> wartość swojej grupy.</li>
+                <li><strong>💚 Leczenie</strong> — punkty za <em>efektywne</em> leczenie (1 pkt za 3000 HP), przemnożone przez <strong>celność</strong>: leczenie w pełny pasek i tarcza, która wygasła nietknięta, to przelanie — i zjada dokładnie tyle procent punktów, ile go było.</li>
+                <li><strong>⏱️ Tempo</strong> — +2 pkt, jeśli ruszysz w ciągu 5 s od końca walki, +1 do 10 s, potem 0. Nikt Cię nie goni, ale odwaga się opłaca.</li>
               </ul>
               <h4>Co robią statystyki i talenty</h4>
               <div class="hd-help-stats" id="hd-help-stats"></div>
