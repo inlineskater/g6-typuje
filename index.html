@@ -4396,14 +4396,28 @@
        already live. `hdDrawEnemyBar` keeps the right-hand half of the top strip
        clear for the pack's name and health, so the two never collide. */
     .hd-frames {
-      position: absolute; left: 10px; top: 10px; z-index: 3;
-      width: 208px; display: flex; flex-direction: column; gap: 3px;
+      position: absolute; left: 10px; top: 18px; z-index: 3;
+      width: 216px; display: flex; flex-direction: column; gap: 3px;
     }
+    /* Drag handle. Its own element rather than dragging the frames themselves:
+       a frame is a click-to-target button, and telling a click from a drag on
+       it by a pixel threshold is the kind of ambiguity that eats a heal. */
+    .hd-frames-grip {
+      display: flex; align-items: center; gap: 5px; align-self: flex-start;
+      padding: 1px 7px 1px 5px; margin-bottom: 1px; border-radius: var(--r-pill);
+      background: rgba(255,255,255,.85); border: 1px solid var(--hd-line);
+      font-size: 9.5px; font-weight: 800; color: var(--hd-dim); letter-spacing: .03em;
+      cursor: grab; touch-action: none; user-select: none; opacity: .55;
+      transition: opacity .15s, border-color .15s;
+    }
+    .hd-frames:hover .hd-frames-grip { opacity: 1; }
+    .hd-frames-grip span { font-size: 12px; line-height: 1; }
+    .hd-frames-grip.is-dragging { cursor: grabbing; opacity: 1; border-color: var(--hd-mana); color: var(--hd-mana); }
     .hd-frame {
-      position: relative; flex: 0 0 auto; height: 26px; overflow: hidden;
+      position: relative; flex: 0 0 auto; height: 34px; overflow: hidden;
       background: #cbd5e1;                     /* the drained part of the bar */
       border: 1px solid #94a3b8; border-radius: 3px;
-      padding: 0 6px; display: flex; align-items: center;
+      padding: 0 7px; display: flex; align-items: center;
       font-family: inherit; color: #0f172a; text-align: left; cursor: pointer;
       box-shadow: 0 1px 4px rgba(15,23,42,.18);
     }
@@ -4428,7 +4442,7 @@
     /* One row now, not two: name / health / prediction / buffs / key. */
     .hd-frame-top { flex: 1; display: flex; align-items: center; gap: 5px; min-width: 0; }
     .hd-frame-name {
-      flex: 0 1 auto; font-size: 11px; font-weight: 800;
+      flex: 0 1 auto; font-size: 12px; font-weight: 800;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       text-shadow: 0 1px 2px rgba(255,255,255,.75);
     }
@@ -4439,7 +4453,7 @@
       font-size: 9px; font-weight: 800; color: #334155;
     }
     .hd-frame-hp {
-      flex: none; font-size: 10.5px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
+      flex: none; font-size: 11.5px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
       white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,.75);
     }
 
@@ -4475,7 +4489,7 @@
     }
     .hd-shield.is-on { opacity: 1; }
     .hd-pred-num {
-      flex: none; font-size: 9.5px; font-weight: 800; font-variant-numeric: tabular-nums;
+      flex: none; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;
       color: transparent; white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,.9);
     }
     .hd-pred-num.is-heal { color: #14532d; }
@@ -4684,9 +4698,11 @@
        so covering the spellbook for those few seconds costs nothing). */
     .hd-console.is-portrait .hd-stage-wrap { flex: 0 0 auto; aspect-ratio: 1040 / 480; overflow: visible; }
     .hd-console.is-portrait .hd-rest { top: 6px; bottom: auto; z-index: 6; }
-    /* Back into the flow on a phone, full width above the board. */
+    /* Back into the flow on a phone, full width above the board — there is
+       nowhere to drag them to, so the grip goes away with the positioning. */
     .hd-console.is-portrait .hd-frames { position: static; width: 100%; gap: 3px; }
-    .hd-console.is-portrait .hd-frame { height: 26px; box-shadow: none; }
+    .hd-console.is-portrait .hd-frames-grip { display: none; }
+    .hd-console.is-portrait .hd-frame { height: 30px; box-shadow: none; }
     .hd-console.is-portrait .hd-sc-note { display: none; }
     .hd-console.is-portrait .hd-left { order: 3; flex: 0 0 auto; gap: 6px; }
     .hd-console.is-portrait .hd-char { padding: 7px; }
@@ -9251,7 +9267,7 @@
                      than rows, so the console height never changes between
                      phases — and the raid frames are an overlay too, pinned to
                      the top-left corner the way WoW's default ones are. -->
-                <div class="hd-stagecol">
+                <div class="hd-stagecol" id="hd-stagecol">
                   <!-- The raid frames are a child of the COLUMN, not of the
                        board, so portrait can drop them back into normal flow
                        above it with one `position: static`. A wide board with

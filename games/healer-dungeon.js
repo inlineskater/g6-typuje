@@ -1143,6 +1143,24 @@ function hdMobCounts(st) {
   return out;
 }
 
+// The same split, in HP rather than in bodies — so every enemy stack can carry
+// its OWN health bar over its head instead of the party reading one pooled bar
+// off in the corner. The pack is still a single pool in the sim; this only
+// decides how that pool is presented, and it depletes stack by stack in exactly
+// the order hdMobCounts empties them, so bar and body count never disagree.
+function hdMobHpSplit(st) {
+  if (st.isBoss) return [{ hp: st.packHp, max: st.packMax }];
+  const n = hdMobStacks(st.pull);
+  const per = st.packMax / n;
+  const lost = st.packMax - st.packHp;
+  const out = [];
+  for (let i = 0; i < n; i += 1) {
+    const stackLost = Math.max(0, Math.min(per, lost - i * per));
+    out.push({ hp: Math.max(0, Math.round(per - stackLost)), max: Math.max(1, Math.round(per)) });
+  }
+  return out;
+}
+
 let hdCtx = null;
 
 function hdInitCanvas() {
@@ -1233,6 +1251,9 @@ function hdLayout() {
   // it is simply too small to read, so say so rather than pretend otherwise.
   const fit = hdEl('hd-fit');
   if (fit) fit.classList.toggle('is-cramped', scale < 0.55 && hdIsHandheld());
+  // The column just changed size, so a dragged frame position may now be
+  // outside it — re-clamp rather than stranding the frames off screen.
+  hdApplyFramesPos();
 }
 
 // requestFullscreen() needs a live user gesture, so this only succeeds when
@@ -1449,13 +1470,24 @@ function hdDrawUnit(ctx, o) {
   // "who is about to die" without looking away from the battlefield is the
   // whole reason the plates exist.
   if (o.hpPct !== undefined) {
-    const bw = 66 * s, bh = 7 * s, by = top - 12 * s;
+    // Enemies get one too (2026-07-29 rev 3) — one pooled bar off in the corner
+    // told you the pack was dying but never WHICH stack, so the field read as
+    // scenery. `o.foe` only changes the palette; everything else is shared, so
+    // an enemy plate can never drift from a party plate.
+    const bw = (o.barW || 66) * s, bh = (o.foe ? 9 : 7) * s, by = top - 12 * s;
     ctx.fillStyle = 'rgba(255,255,255,.92)';
     ctx.fillRect(x - bw / 2 - 1, by - 1, bw + 2, bh + 2);
     ctx.fillStyle = '#cbd5e1';
     ctx.fillRect(x - bw / 2, by, bw, bh);
     const hpW = bw * o.hpPct / 100;
-    ctx.fillStyle = o.hpPct < 35 ? '#dc2626' : o.hpPct < 65 ? '#d97706' : '#16a34a';
+    if (o.foe) {
+      const fg = ctx.createLinearGradient(x - bw / 2, 0, x + bw / 2, 0);
+      fg.addColorStop(0, '#991b1b');
+      fg.addColorStop(1, '#ef4444');
+      ctx.fillStyle = fg;
+    } else {
+      ctx.fillStyle = o.hpPct < 35 ? '#dc2626' : o.hpPct < 65 ? '#d97706' : '#16a34a';
+    }
     ctx.fillRect(x - bw / 2, by, hpW, bh);
     if (o.predPct > 0) {
       ctx.fillStyle = 'rgba(74,222,128,.78)';
@@ -1483,10 +1515,19 @@ function hdDrawUnit(ctx, o) {
       ctx.lineTo(x - bw / 2 + hpW - dw, by + bh);
       ctx.stroke();
     }
-    ctx.strokeStyle = o.doomed ? '#dc2626' : 'rgba(51,65,85,.6)';
+    ctx.strokeStyle = o.doomed ? '#dc2626' : o.foe ? 'rgba(127,29,29,.8)' : 'rgba(51,65,85,.6)';
     ctx.lineWidth = o.doomed ? 1.8 : 1;
     ctx.strokeRect(x - bw / 2, by, bw, bh);
     ctx.lineWidth = 1;
+
+    // Enemies print the number inside the bar: with several stacks alive you
+    // want to know which one is nearly down, and a 66 px bar cannot show that
+    // difference on its own.
+    if (o.foe && o.hpText) {
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 ' + Math.round((o.big ? 11 : 8.5) * s) + 'px system-ui, sans-serif';
+      ctx.fillText(o.hpText, x, by + bh / 2);
+    }
 
     if (o.label) {
       ctx.fillStyle = '#1e293b';
@@ -1502,17 +1543,17 @@ function hdDrawUnit(ctx, o) {
   ctx.restore();
 }
 
-// ── The enemy's own health, ABOVE the enemy ─────────────────────────────────
-// It used to be a red bar pinned under the whole board, which is the one place
-// on screen you never look while healing. It lives over the pack now, next to
-// the pull number and the affix that is making this particular fight awkward —
-// the same "target frame at the top" idea every MMO uses.
-function hdDrawEnemyBar(ctx, rt, st) {
+// ── Who you are fighting ────────────────────────────────────────────────────
+// The header line only. Health moved ONTO the enemies themselves (rev 3): one
+// pooled bar told you the pack was dying but never WHICH stack, so the field
+// read as scenery — see the `foe` plates in hdDrawUnit. What is left here is
+// the context you cannot paint on a sprite: what this pack is called, how deep
+// you are, whether it enraged, and the affix making this fight awkward.
+function hdDrawEnemyHeader(ctx, rt, st) {
   if (!st || st.phase === 'rest') return;
   const boss = st.isBoss;
   const cx = HD_CS_W - 250;
-  const w = 400, h = boss ? 18 : 14;
-  const x = cx - w / 2, y = boss ? 86 : 92;
+  const y = 62;
 
   const enrage = hdEnragePct(st) - 100;
   const name = (boss ? '☠️ ' : hdPackGlyph(st.pull) + ' ') + hdPackName(st.pull) +
@@ -1520,39 +1561,16 @@ function hdDrawEnemyBar(ctx, rt, st) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = enrage > 0 ? '#dc2626' : boss ? '#991b1b' : '#334155';
-  ctx.font = '800 ' + (boss ? 18 : 15) + 'px system-ui, sans-serif';
-  ctx.fillText(name, cx, y - 16);
+  ctx.font = '800 ' + (boss ? 19 : 16) + 'px system-ui, sans-serif';
+  ctx.fillText(name, cx, y);
 
-  ctx.fillStyle = '#e2e8f0';
-  ctx.fillRect(x, y, w, h);
-  const frac = st.packMax > 0 ? Math.max(0, st.packHp / st.packMax) : 0;
-  const bg = ctx.createLinearGradient(x, 0, x + w, 0);
-  if (boss) { bg.addColorStop(0, '#7f1d1d'); bg.addColorStop(1, '#dc2626'); }
-  else { bg.addColorStop(0, '#b91c1c'); bg.addColorStop(1, '#ef4444'); }
-  ctx.fillStyle = bg;
-  ctx.fillRect(x, y, w * frac, h);
-  ctx.strokeStyle = boss ? 'rgba(153,27,27,.95)' : 'rgba(100,116,139,.6)';
-  ctx.lineWidth = boss ? 2 : 1;
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-  ctx.lineWidth = 1;
-
-  ctx.fillStyle = '#0f172a';
-  ctx.font = '800 11px system-ui, sans-serif';
-  ctx.fillText(st.packHp + ' / ' + st.packMax, cx, y + h / 2);
-
-  // Pull number on the left of the bar, affix on the right — the two things
-  // that tell you what kind of fight this is before it starts hurting.
-  ctx.font = '800 12px system-ui, sans-serif';
-  ctx.textAlign = 'left';
+  ctx.font = '800 12.5px system-ui, sans-serif';
   ctx.fillStyle = '#64748b';
-  ctx.fillText('GRUPA ' + st.pull, x, y + h + 13);
+  let sub = 'GRUPA ' + st.pull;
   const aff = hdAffix(st);
-  if (aff.id !== 'none') {
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#b45309';
-    ctx.fillText(aff.icon + ' ' + aff.name, x + w, y + h + 13);
-  }
-  ctx.textAlign = 'center';
+  if (aff.id !== 'none') sub += '   ' + aff.icon + ' ' + aff.name.toUpperCase();
+  ctx.fillStyle = aff.id === 'none' ? '#64748b' : '#b45309';
+  ctx.fillText(sub, cx, y + 20);
 }
 
 function hdDrawBossCast(ctx, rt, st) {
@@ -1644,10 +1662,13 @@ function hdDraw() {
 
   if (!resting) {
     const counts = hdMobCounts(st);
+    const hps = hdMobHpSplit(st);
     for (let i = 0; i < counts.length; i += 1) {
       const p = hdMobXY(i, st.isBoss);
       const cell = st.isBoss ? HD_BOSS_CELL : HD_MOB_CELL[i % HD_MOB_CELL.length];
       const enraged = st.isBoss && hdEnragePct(st) > 100;
+      const hp = hps[i] || { hp: 0, max: 1 };
+      const alive = counts[i] > 0;
       units.push({
         row: cell[1],
         x: p[0], y: p[1] + bob * Math.sin((rt.time + i * 330) / 460) * 2,
@@ -1656,13 +1677,19 @@ function hdDraw() {
         lunge: rt.mobLunge[i] > 0 ? -Math.sin((1 - rt.mobLunge[i] / 320) * Math.PI) * 20 : 0,
         flash: Math.max(0, rt.mobFlash[i] / 240),
         glow: 0,
-        dead: counts[i] <= 0,
+        dead: !alive,
         count: counts[i],
         big: st.isBoss,
-        // No plate over the boss's head at all: its name AND its enrage both
-        // live on the enemy bar at the top now. The plate used to sit exactly
-        // where the cast card is drawn, so the two overlapped every time the
-        // boss did the one thing you most need to read.
+        // Its OWN health bar, over its own head. A corpse gets none.
+        foe: true,
+        hpPct: alive ? hdPct(hp.hp, hp.max) : undefined,
+        hpText: alive ? String(hp.hp) : '',
+        barW: st.isBoss ? 130 : 60,
+        predPct: 0, dmgPct: 0, shieldPct: 0, doomed: false,
+        // No name plate over the boss's head: its name and its enrage live on
+        // the header line at the top. The plate used to sit exactly where the
+        // cast card is drawn, so the two overlapped every time the boss did the
+        // one thing you most need to read.
         label: '',
       });
     }
@@ -1671,7 +1698,7 @@ function hdDraw() {
   units.sort((a, b) => a.row - b.row);
   for (let i = 0; i < units.length; i += 1) hdDrawUnit(ctx, units[i]);
 
-  if (!resting) hdDrawEnemyBar(ctx, rt, st);
+  if (!resting) hdDrawEnemyHeader(ctx, rt, st);
   if (!resting && st.isBoss) hdDrawBossCast(ctx, rt, st);
 
   // floating combat text
@@ -1909,6 +1936,16 @@ function healerBuildFrames() {
   const wrap = hdEl('hd-frames');
   if (!wrap) return;
   wrap.replaceChildren();
+  // The drag handle. A dedicated grip rather than dragging the frames
+  // themselves: a frame is a click-to-target button, and distinguishing a click
+  // from a drag on it by a pixel threshold is exactly the kind of ambiguity
+  // that eats a heal at the worst moment.
+  const grip = document.createElement('div');
+  grip.className = 'hd-frames-grip';
+  grip.title = 'Przeciągnij, żeby przesunąć ramki · dwuklik = z powrotem do rogu';
+  grip.innerHTML = '<span>⠿</span> ramki drużyny';
+  hdSetupFramesDrag(grip);
+  wrap.appendChild(grip);
   for (let i = 0; i < HD_PARTY; i += 1) {
     const frame = document.createElement('button');
     frame.type = 'button';
@@ -1934,6 +1971,103 @@ function healerBuildFrames() {
     wrap.appendChild(frame);
   }
   healerRuntime.builtFrames = true;
+  hdApplyFramesPos();
+}
+
+// ── Movable raid frames ─────────────────────────────────────────────────────
+// Every MMO lets you drag your unit frames, because where they sit is a
+// personal thing: some people want them next to the action, some want them out
+// of the way of the boss. Drag the ⠿ grip; the position is remembered per
+// browser, and a double-click on the grip puts them back in the corner.
+//
+// ⚠️ Pointer deltas must be divided by the console's CSS scale. `.hd-console`
+// is a fixed virtual size squeezed into the viewport by one transform, so one
+// screen pixel of mouse movement is `1 / --hd-scale` console pixels — without
+// this the frames slide several times too fast on a small window and lag on a
+// large one.
+const HD_FRAMES_POS_KEY = 'hd_frames_pos_v1';
+const HD_FRAMES_HOME = [10, 18];
+let hdFramesPos = null;
+
+function hdConsoleScale() {
+  const con = hdEl('hd-console');
+  const v = con && parseFloat(con.style.getPropertyValue('--hd-scale'));
+  return v && v > 0.05 ? v : 1;
+}
+
+function hdLoadFramesPos() {
+  if (hdFramesPos) return hdFramesPos;
+  try {
+    const raw = JSON.parse(localStorage.getItem(HD_FRAMES_POS_KEY) || 'null');
+    if (raw && isFinite(raw.x) && isFinite(raw.y)) hdFramesPos = [raw.x, raw.y];
+  } catch (e) { /* private mode */ }
+  if (!hdFramesPos) hdFramesPos = HD_FRAMES_HOME.slice();
+  return hdFramesPos;
+}
+
+function hdSaveFramesPos() {
+  try { localStorage.setItem(HD_FRAMES_POS_KEY, JSON.stringify({ x: hdFramesPos[0], y: hdFramesPos[1] })); }
+  catch (e) { /* private mode */ }
+}
+
+// Clamped so the block can never be dragged off its own column and stranded.
+// ⚠️ The clamp is SKIPPED while the column has no size yet. healerBuildFrames
+// runs before the panel has laid out, and clamping against a 0×0 column pinned
+// the frames to 0,0 and then wrote that back as the desired position — so the
+// home offset was silently eaten on every fresh load.
+function hdApplyFramesPos() {
+  const wrap = hdEl('hd-frames');
+  const col = hdEl('hd-stagecol');
+  if (!wrap || !col) return;
+  const pos = hdLoadFramesPos();
+  if (col.clientWidth > 0 && col.clientHeight > 0 && wrap.offsetWidth > 0) {
+    const maxX = Math.max(0, col.clientWidth - wrap.offsetWidth);
+    const maxY = Math.max(0, col.clientHeight - wrap.offsetHeight);
+    hdFramesPos = [Math.max(0, Math.min(maxX, pos[0])), Math.max(0, Math.min(maxY, pos[1]))];
+  }
+  wrap.style.left = hdFramesPos[0] + 'px';
+  wrap.style.top = hdFramesPos[1] + 'px';
+}
+
+function healerResetFramesPos() {
+  hdFramesPos = HD_FRAMES_HOME.slice();
+  hdSaveFramesPos();
+  hdApplyFramesPos();
+}
+
+function hdSetupFramesDrag(grip) {
+  let start = null;
+  grip.addEventListener('pointerdown', ev => {
+    // Portrait puts the frames back in normal flow, where there is nothing to
+    // drag them to.
+    const con = hdEl('hd-console');
+    if (con && con.classList.contains('is-portrait')) return;
+    ev.preventDefault();
+    const pos = hdLoadFramesPos();
+    start = { px: ev.clientX, py: ev.clientY, x: pos[0], y: pos[1], scale: hdConsoleScale() };
+    // Capture is a nicety — it keeps the drag alive when the cursor outruns the
+    // grip — but it throws on a pointerId the browser does not consider active,
+    // and losing the whole drag to that would be a silly way to fail.
+    try { grip.setPointerCapture(ev.pointerId); } catch (e) { /* drag still works */ }
+    grip.classList.add('is-dragging');
+  });
+  grip.addEventListener('pointermove', ev => {
+    if (!start) return;
+    hdFramesPos = [
+      start.x + (ev.clientX - start.px) / start.scale,
+      start.y + (ev.clientY - start.py) / start.scale,
+    ];
+    hdApplyFramesPos();
+  });
+  const end = () => {
+    if (!start) return;
+    start = null;
+    grip.classList.remove('is-dragging');
+    hdSaveFramesPos();
+  };
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
+  grip.addEventListener('dblclick', healerResetFramesPos);
 }
 
 function healerRenderFrames() {
@@ -2288,8 +2422,9 @@ function healerRenderBars() {
   }
 
   // The pack's name, health, pull number and affix are painted ON the board now
-  // (hdDrawEnemyBar) — a red bar pinned under the field was in the one place on
-  // screen you never look while healing.
+  // (hdDrawEnemyHeader + a health plate over each enemy) — a red bar pinned
+  // under the field was in the one place on screen you never look while
+  // healing, and one pooled bar never said WHICH stack was nearly down.
   // The top bar carries no score, no pull count and no mana either: three
   // readouts competing with the five that actually matter, and the score is
   // deliberately something you see when the run ENDS. The one chip left is the
