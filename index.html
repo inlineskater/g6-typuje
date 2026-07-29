@@ -4432,7 +4432,11 @@
     .hd-frame[data-slot="3"] { --hd-cls: #bef264; }
     .hd-frame[data-slot="4"] { --hd-cls: #7dd3fc; }
     .hd-frame > *:not(.hd-frame-fill):not(.hd-pred-heal):not(.hd-pred-dmg):not(.hd-shield) { position: relative; z-index: 2; }
-    .hd-frame.is-target { border-color: #b45309; box-shadow: inset 0 0 0 2px #f59e0b; }
+    /* The sticky target is a quiet amber; the hovered frame — the one a key
+       press will actually reach — is a loud blue, because with mouseover
+       casting that is the only thing you need to be sure of. */
+    .hd-frame.is-target { border-color: #b45309; box-shadow: inset 0 0 0 2px rgba(245,158,11,.6); }
+    .hd-frame.is-hover { border-color: #1d4ed8; box-shadow: inset 0 0 0 2px #2563eb, 0 2px 8px rgba(37,99,235,.35); }
     .hd-frame.is-low .hd-frame-fill { animation: hd-pulse .7s ease-in-out infinite; }
     .hd-frame.is-doomed { animation: hd-doomed .45s ease-in-out infinite; }
     .hd-frame.is-dead { opacity: .45; filter: grayscale(1); }
@@ -4447,13 +4451,10 @@
       text-shadow: 0 1px 2px rgba(255,255,255,.75);
     }
     .hd-name-short { display: none; }
-    .hd-frame-key {
-      flex: none; margin-left: auto; padding: 0 4px; border-radius: 2px;
-      border: 1px solid rgba(15,23,42,.25); background: rgba(255,255,255,.7);
-      font-size: 9px; font-weight: 800; color: #334155;
-    }
+    /* The digit badge is gone with target keys — this pushes the readouts to the
+       right edge in its place. */
     .hd-frame-hp {
-      flex: none; font-size: 11.5px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
+      flex: none; margin-left: auto; font-size: 11.5px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
       white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,.75);
     }
 
@@ -9339,7 +9340,9 @@
               <button type="button" class="hd-icon-btn hd-help-close" id="hd-help-close" title="Zamknij">✕</button>
               <h3>Jak grać <button type="button" class="hd-tut-open" id="hd-tut-btn">▶ Samouczek</button></h3>
               <ul>
-                <li><strong>1 – 5</strong> wybiera cel — albo po prostu <strong>kliknij bohatera</strong> na polu bitwy lub jego ramkę. Czary zawsze na tych samych klawiszach, niezależnie od klasy: <strong>Q</strong> tani i oszczędny, <strong>W</strong> na całą drużynę (z odnowieniem), <strong>E</strong> duży ratunkowy. <strong>Spacja</strong> = ruszaj na następną grupę.</li>
+                <li><strong>Leczysz tam, gdzie patrzysz — nie wybierasz osobno celu.</strong> Najedź myszką na ramkę (albo na bohatera na polu bitwy) i naciśnij <strong>1</strong>, <strong>2</strong> albo <strong>3</strong>: czar poleci w tego, kto jest pod kursorem. To jedno naciśnięcie na jedno leczenie zamiast dwóch — dokładnie tak gra większość uzdrowicieli w MMO. <em>(Q/W/E działają dalej, jeśli już się przyzwyczaiłeś.)</em></li>
+                <li><strong>Albo samą myszą:</strong> kliknij ramkę — <strong>lewy</strong> przycisk rzuca czar 1, <strong>prawy</strong> czar 2, <strong>środkowy</strong> (lub <strong>Shift+lewy</strong>) czar 3. Ramka pod kursorem świeci na niebiesko: to ona dostanie czar. Jeśli kursor stoi na pustym miejscu, czar leci w ostatnią ramkę, na którą patrzyłeś (bursztynowa obwódka). Klawisze zawsze znaczą to samo, niezależnie od klasy: <strong>1</strong> tani i oszczędny, <strong>2</strong> na całą drużynę (z odnowieniem), <strong>3</strong> duży ratunkowy. <strong>Spacja</strong> = ruszaj na następną grupę.</li>
+                <li><strong>Na telefonie</strong> nie ma najeżdżania kursorem, więc zostaje stary układ: <strong>dotknij bohatera lub ramkę</strong>, żeby go wybrać, a potem naciśnij przycisk czaru na dole.</li>
                 <li><strong>Trzy klasy, ta sama moc.</strong> Każda ma identyczne leczenie na jednostkę many (~2,4 / 2,7 / 1,75 dla trzech slotów) — różni je tylko <em>kiedy</em> leczenie dociera. <strong>🌿 Druid</strong> sączy je w czasie (nic się nie marnuje, ale nic nie dzieje się od razu). <strong>✨ Kapłan</strong> daje tarcze, które <em>pochłaniają</em> cios zamiast go naprawiać — genialne na zapowiedziany czar bossa, zmarnowane, gdy nic nie przyjdzie. <strong>🔨 Paladyn</strong> leczy wprost i natychmiast, a jego ratunkowy czar nie ma czasu rzucania — płaci za to odnowieniem.</li>
                 <li><strong>Globalny cooldown (GCD).</strong> Po każdym czarze wszystkie czary są zablokowane na 1,1 s — dlatego nie da się uleczyć jednego bohatera i <em>od razu</em> następnego. Ikona w księdze czarów zaciemnia się i odkręca jak zegar: to znaczy „jeszcze nie". Planuj kolejność celów z wyprzedzeniem.</li>
                 <li><strong>Pasek rzucania</strong> pod Twoją postacią pokazuje czar z czasem rzucania. W tym czasie nie rzucisz nic innego.</li>

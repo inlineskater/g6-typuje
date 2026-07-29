@@ -90,15 +90,15 @@ const HD_CLASSES = [
       // and the class measured ~20% behind on identical numbers. Ticking every
       // 2 s keeps the power promise byte-for-byte and closes the gap, because
       // what was wrong was LATENCY, never throughput.
-      { key: 'Q', icon: '🌿', name: 'Odnowa', kind: HD_K_HOT, all: false,
+      { key: '1', icon: '🌿', name: 'Odnowa', kind: HD_K_HOT, all: false,
         cost: 90, cast: 0, cd: 0, period: 20, amounts: [55, 55, 55, 55],
         hint: 'HoT · 1 cel · 4 tyknięcia co 2 s',
         does: 'Leczy powoli, ale nic się nie marnuje. Rzuć ZANIM cel oberwie — na pełnym pasku tyknięcia przelewają się w próżnię. Ponowne rzucenie na ten sam cel zaczyna HoT od nowa, nie dokłada drugiego.' },
-      { key: 'W', icon: '🌳', name: 'Dziki Wzrost', kind: HD_K_HOT, all: true,
+      { key: '2', icon: '🌳', name: 'Dziki Wzrost', kind: HD_K_HOT, all: true,
         cost: 330, cast: 0, cd: 80, period: 15, amounts: [60, 50, 40, 30],
         hint: 'HoT · CAŁA piątka · słabnie z każdym tyknięciem',
         does: 'Odpowiedź na falę obszarową: jeden rzut kryje wszystkich pięciu. Tyknięcia maleją (60→30), więc rzucaj go TUŻ PO fali, nie przed nią.' },
-      { key: 'E', icon: '✋', name: 'Uzdrawiający Dotyk', kind: HD_K_DIRECT, all: false,
+      { key: '3', icon: '✋', name: 'Uzdrawiający Dotyk', kind: HD_K_DIRECT, all: false,
         cost: 240, cast: 16, cd: 0, amount: 420,
         hint: 'rzucanie 1,6 s · 1 cel · duże leczenie',
         does: 'Przycisk paniki. Najgorszy stosunek leczenia do many w całej księdze — trzymaj go na moment, w którym ktoś NIE PRZEŻYJE następnego ciosu. W trakcie rzucania nie zrobisz nic innego.' },
@@ -109,15 +109,15 @@ const HD_CLASSES = [
     tag: 'Tarcze · zatrzymaj cios, zanim padnie',
     blurb: 'Tarcza pochłania obrażenia zamiast je naprawiać — idealna na zapowiedziany czar bossa, zmarnowana, gdy nic nie przyjdzie.',
     spells: [
-      { key: 'Q', icon: '🛡️', name: 'Tarcza Słowa', kind: HD_K_SHIELD, all: false,
+      { key: '1', icon: '🛡️', name: 'Tarcza Słowa', kind: HD_K_SHIELD, all: false,
         cost: 95, cast: 0, cd: 0, amount: 230, dur: 120,
         hint: 'pochłania 230 obrażeń · 1 cel · 12 s',
         does: 'Nie leczy — POCHŁANIA. Cios zdejmuje tarczę zamiast życia, więc na pełnym pasku nie jest zmarnowana. Ale tarcza, w którą nikt nie uderzy, znika po 12 s i liczy się jak przelanie. Nowa zastępuje starą.' },
-      { key: 'W', icon: '✨', name: 'Modlitwa Uzdrowienia', kind: HD_K_DIRECT, all: true,
+      { key: '2', icon: '✨', name: 'Modlitwa Uzdrowienia', kind: HD_K_DIRECT, all: true,
         cost: 320, cast: 0, cd: 80, amount: 175,
         hint: 'natychmiast · CAŁA piątka · leczy od ręki',
         does: 'Natychmiastowe leczenie całej piątki — w przeciwieństwie do HoT-ów działa OD RAZU, więc ratuje po fali, która już spadła. Na pełnych paskach przelewa się w całości.' },
-      { key: 'E', icon: '🕊️', name: 'Wielkie Leczenie', kind: HD_K_DIRECT, all: false,
+      { key: '3', icon: '🕊️', name: 'Wielkie Leczenie', kind: HD_K_DIRECT, all: false,
         cost: 265, cast: 20, cd: 0, amount: 470,
         hint: 'rzucanie 2 s · 1 cel · największe leczenie',
         does: 'Największe pojedyncze leczenie w grze i najdroższe za manę. Dwie sekundy rzucania to wieczność — zaczynaj je, PATRZĄC na pasek rzucania bossa, nie po fakcie.' },
@@ -128,15 +128,15 @@ const HD_CLASSES = [
     tag: 'Leczenie wprost · reaguj na to, co widzisz',
     blurb: 'Żadnych opóźnień i żadnych zapowiedzi: leczysz dokładnie tyle, ile trzeba, dokładnie wtedy, kiedy trzeba — jeśli zdążysz.',
     spells: [
-      { key: 'Q', icon: '☀️', name: 'Święte Światło', kind: HD_K_DIRECT, all: false,
+      { key: '1', icon: '☀️', name: 'Święte Światło', kind: HD_K_DIRECT, all: false,
         cost: 125, cast: 14, cd: 0, amount: 300,
         hint: 'rzucanie 1,4 s · 1 cel · leczy od ręki',
         does: 'Zwykłe leczenie, ale z czasem rzucania dłuższym niż globalny cooldown — to ONO, a nie GCD, ogranicza Twoje tempo. Za to trafia dokładnie tam, gdzie brakuje życia, bez czekania na tyknięcia.' },
-      { key: 'W', icon: '🔔', name: 'Błogosławieństwo', kind: HD_K_DIRECT, all: true,
+      { key: '2', icon: '🔔', name: 'Błogosławieństwo', kind: HD_K_DIRECT, all: true,
         cost: 315, cast: 0, cd: 80, amount: 170,
         hint: 'natychmiast · CAŁA piątka · leczy od ręki',
         does: 'Natychmiastowe leczenie całej piątki, bez czasu rzucania — jedyny czar, którym odpowiesz na falę obszarową w tej samej sekundzie, w której spadła.' },
-      { key: 'E', icon: '🤲', name: 'Ręka Opatrzności', kind: HD_K_DIRECT, all: false,
+      { key: '3', icon: '🤲', name: 'Ręka Opatrzności', kind: HD_K_DIRECT, all: false,
         cost: 320, cast: 0, cd: 150, amount: 560,
         hint: 'natychmiast · 1 cel · odnowienie 15 s',
         does: 'Ogromne leczenie BEZ czasu rzucania — jedyny ratunek, który zdąży po zapowiedzianym ciosie bossa. Płacisz za to 15-sekundowym odnowieniem: raz na walkę, więc wybierz moment.' },
@@ -1011,7 +1011,8 @@ const HD_SLOT_NAMES = ['Tank', 'Ty', 'Łotr', 'Łucznik', 'Mag'];
 const HD_SLOT_SHORT = ['Tank', 'Ty', 'Łotr', 'Łucz.', 'Mag'];
 const HD_SLOT_ICONS = ['🛡️', '💚', '🗡️', '🏹', '🔮'];
 const HD_SLOT_COLORS = ['#64748b', '#22c55e', '#eab308', '#84cc16', '#3b82f6'];
-const HD_TARGET_KEYS = ['1', '2', '3', '4', '5'];
+// No target keys any more: 1/2/3 are the SPELLS, and targeting is the mouse's
+// job (hover or click). See healerSetHover for why the target step went away.
 
 function hdSlotName(st, i) {
   if (i !== HD_HEAL) return HD_SLOT_NAMES[i];
@@ -1370,14 +1371,26 @@ function hdDrawField(ctx, rt, st) {
     }
   }
 
-  // the tile the currently targeted party member stands on
+  // The tile the sticky target stands on, and — brighter — the one under the
+  // cursor, because with mouseover casting the hovered hero is the one a key
+  // press will actually reach.
   if (rt && st && st.hp[rt.target] > 0) {
     const p = hdPartyXY(rt.target);
     hdHexPath(ctx, p[0], p[1], 0.94);
-    ctx.fillStyle = 'rgba(217,119,6,.20)';
+    ctx.fillStyle = 'rgba(217,119,6,.16)';
     ctx.fill();
-    ctx.strokeStyle = '#d97706';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(217,119,6,.75)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+  if (rt && st && rt.hover >= 0 && st.hp[rt.hover] > 0) {
+    const p = hdPartyXY(rt.hover);
+    hdHexPath(ctx, p[0], p[1], 0.94);
+    ctx.fillStyle = 'rgba(37,99,235,.20)';
+    ctx.fill();
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 3;
     ctx.stroke();
     ctx.lineWidth = 1;
   }
@@ -1656,7 +1669,7 @@ function hdDraw() {
       dmgPct: hdPct(dmg, st.maxHp[i]),
       shieldPct: dead ? 0 : hdPct(st.shield[i], st.maxHp[i]),
       doomed: dmg > 0 && !hdSurvives(st, i),
-      label: HD_SLOT_SHORT[i] + (rt.target === i ? ' ◄' : ''),
+      label: HD_SLOT_SHORT[i] + (rt.hover === i ? ' ◄' : rt.target === i ? ' ·' : ''),
     });
   }
 
@@ -1754,6 +1767,7 @@ function newHealerRuntime() {
     queued: [],
     queuedTick: 0,
     target: HD_TANK,
+    hover: -1,
     builtFrames: false,
     builtSpells: -1,
     endedReason: '',
@@ -1888,6 +1902,72 @@ function healerSetTarget(slot) {
   healerRenderFrames();
 }
 
+// ── Mouseover casting + click-casting ───────────────────────────────────────
+// The target STEP is what cost this game its feel, not the keybinds. Every heal
+// used to be two inputs — pick a target, press a spell — inside a 1.1 s global
+// cooldown, which is why it played like queuing orders instead of reacting.
+// Almost nobody who heals seriously in an MMO plays that way; they use one of
+// two schemes that collapse it to ONE input, and both are live here at once
+// because they do not conflict:
+//   • MOUSEOVER  — hover a frame (or a hero on the board) and press 1 / 2 / 3.
+//     The spell goes to whoever is under the cursor. No target state at all.
+//   • CLICK-CAST — left / right / middle-click a frame casts spell 1 / 2 / 3 on
+//     it directly, for playing with the mouse alone.
+// This is what makes the prediction overlay pay off: you read a frame and act
+// on that same frame without your hand leaving it, which is the whole point of
+// painting "already covered" and "dies to the next cast" onto the bar.
+function healerSetHover(slot) {
+  const rt = healerRuntime;
+  if (!rt || rt.hover === slot) return;
+  rt.hover = slot;
+  // The last thing you hovered stays STICKY. Without it, pressing a spell with
+  // the cursor in dead space would silently do nothing, which reads as a broken
+  // game rather than as a missing target.
+  if (slot >= 0) rt.target = slot;
+  healerRenderFrames();
+}
+
+// Casting is a FIGHT action. The frames stay on screen (and clickable) during
+// a rest, and with click-casting a stray click while reaching for an upgrade
+// card would silently drain mana you do not get back — the refill happens once,
+// when the rest begins. Guarded here rather than in the sim so the rules the
+// balance harness measures are untouched.
+function healerCanCastNow() {
+  const rt = healerRuntime;
+  return !!(rt && rt.playing && rt.sim && rt.sim.phase === 'fight' && !rt.sim.dead);
+}
+
+function healerCastTarget() {
+  const rt = healerRuntime;
+  if (!rt) return HD_TANK;
+  return rt.hover >= 0 ? rt.hover : rt.target;
+}
+
+// Which spell a mouse button means. Middle-click is awkward on a trackpad, so
+// shift+left is an alias for the panic button.
+function hdSpellForButton(ev) {
+  if (ev.button === 2) return HD_A_RAID;
+  if (ev.button === 1 || ev.shiftKey) return HD_A_BIG;
+  if (ev.button === 0) return HD_A_FILL;
+  return -1;
+}
+
+// Touch has no hover and no second mouse button, so a tap TARGETS and the
+// spell buttons do the casting — the two-step model stays on phones, where it
+// is the only one that can work.
+function hdIsTouch(ev) { return ev.pointerType === 'touch'; }
+
+function healerUnitPointerDown(ev, slot) {
+  const rt = healerRuntime;
+  if (!rt || slot < 0) return;
+  if (hdIsTouch(ev)) { healerSetTarget(slot); return; }
+  const spell = hdSpellForButton(ev);
+  if (spell < 0) return;
+  ev.preventDefault();
+  healerSetHover(slot);
+  if (healerCanCastNow()) healerQueueAction(spell, slot);
+}
+
 // ── Clicking a hero on the battlefield ──────────────────────────────────────
 // Mapping a click back into canvas coordinates has to undo TWO transforms: the
 // console's CSS scale (which getBoundingClientRect already accounts for, since
@@ -1919,13 +1999,26 @@ function hdHeroAt(x, y) {
   return best;
 }
 
-function healerStageClick(ev) {
+// The heroes on the battlefield are click-cast targets too, exactly like their
+// frames — the board is not a separate, read-only picture.
+function hdStageSlotAt(ev) {
   const rt = healerRuntime;
-  if (!rt || !rt.sim) return;
+  if (!rt || !rt.sim) return -1;
   const pt = hdCanvasPoint(ev);
-  if (!pt) return;
+  if (!pt) return -1;
   const slot = hdHeroAt(pt[0], pt[1]);
-  if (slot >= 0 && rt.sim.hp[slot] > 0) healerSetTarget(slot);
+  return slot >= 0 && rt.sim.hp[slot] > 0 ? slot : -1;
+}
+
+function healerStagePointerDown(ev) {
+  healerUnitPointerDown(ev, hdStageSlotAt(ev));
+}
+
+function healerStagePointerMove(ev) {
+  const stage = hdEl('hd-stage');
+  const slot = hdStageSlotAt(ev);
+  if (stage) stage.style.cursor = slot >= 0 ? 'pointer' : 'default';
+  healerSetHover(slot);
 }
 
 // ── Raid frames ─────────────────────────────────────────────────────────────
@@ -1964,10 +2057,12 @@ function healerBuildFrames() {
         '<span class="hd-frame-hp" data-hp></span>' +
         '<span class="hd-pred-num" data-prednum></span>' +
         '<span class="hd-hots" data-hots></span>' +
-        '<span class="hd-frame-key">' + HD_TARGET_KEYS[i] + '</span>' +
       '</div>' +
       '';
-    frame.addEventListener('click', () => healerSetTarget(i));
+    frame.addEventListener('pointerdown', ev => healerUnitPointerDown(ev, i));
+    frame.addEventListener('pointerenter', () => healerSetHover(i));
+    frame.addEventListener('contextmenu', ev => ev.preventDefault());
+    frame.addEventListener('auxclick', ev => ev.preventDefault());   // no middle-click autoscroll
     wrap.appendChild(frame);
   }
   // Your own mana, directly under the five health bars — the resource and the
@@ -2113,6 +2208,7 @@ function healerRenderFrames() {
     const pct = hdPct(st.hp[i], st.maxHp[i]);
     const dead = st.hp[i] <= 0;
     frame.classList.toggle('is-target', rt.target === i);
+    frame.classList.toggle('is-hover', rt.hover === i);
     frame.classList.toggle('is-dead', dead);
     frame.classList.toggle('is-low', !dead && pct < 35);
 
@@ -2666,7 +2762,7 @@ function beginHealerDungeonRound(seed, options) {
   if (status) {
     status.textContent = cl.icon + ' ' + cl.name + ' — ' +
       cl.spells.map(sp => sp.key + ' ' + sp.name).join(' · ') +
-      ' · 1-5 lub klik w bohatera = cel. Co 5. grupa to boss.';
+      ' · najedź myszką na ramkę i naciśnij klawisz, albo kliknij ją (LPM/PPM/środkowy). Co 5. grupa to boss.';
   }
   healerRender();   // healerRenderBars owns the brand/portrait/class labels
   rt.nextTickAt = performance.now() + HD_TICK_MS;
@@ -2807,12 +2903,15 @@ async function finishHealerDungeonRound() {
 }
 
 // ── Input ───────────────────────────────────────────────────────────────────
-// Spells on Q/W/E (left hand, where the action bar lives in every MMO), targets
-// on 1-5 (one digit per party slot, top to bottom in the frames). The keys map
-// to SLOTS, not to named spells, so they mean the same three things whichever
-// class you took.
-const HD_KEY_SPELL = { q: HD_A_FILL, w: HD_A_RAID, e: HD_A_BIG };
-const HD_KEY_TARGET = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
+// Spells on 1 / 2 / 3, where an MMO action bar starts, and they map to SLOTS
+// rather than to named spells so they mean the same three things whichever
+// class you took. Q/W/E stay as aliases for anyone who learned them on the
+// first build. There are NO target keys: the mouse targets, by hovering or by
+// clicking — see healerSetHover.
+const HD_KEY_SPELL = {
+  1: HD_A_FILL, 2: HD_A_RAID, 3: HD_A_BIG,
+  q: HD_A_FILL, w: HD_A_RAID, e: HD_A_BIG,
+};
 
 function healerKeyDown(ev) {
   const rt = healerRuntime;
@@ -2836,11 +2935,12 @@ function healerKeyDown(ev) {
   }
   if (!rt || !rt.playing) return;
   const k = ev.key;
-  if (HD_KEY_TARGET[k] !== undefined) { ev.preventDefault(); healerSetTarget(HD_KEY_TARGET[k]); return; }
   const low = typeof k === 'string' ? k.toLowerCase() : '';
   if (HD_KEY_SPELL[low] !== undefined) {
     ev.preventDefault();
-    healerQueueAction(HD_KEY_SPELL[low], rt.target);
+    // Whoever is under the cursor right now, falling back to the last one you
+    // hovered or clicked. This is the mouseover cast.
+    if (healerCanCastNow()) healerQueueAction(HD_KEY_SPELL[low], healerCastTarget());
     return;
   }
   if (k === ' ') { ev.preventDefault(); healerQueueAction(HD_A_PULL, 0); }
@@ -2859,8 +2959,8 @@ const HD_TUTORIAL = [
     body: 'Pięcioosobowa drużyna sama zabija potwory — Ty tylko utrzymujesz ją przy życiu. Loch nie ma końca: każda kolejna grupa bije mocniej. <b>Runda kończy się dopiero, gdy padniesz Ty.</b>' },
   { icon: '☠️', title: 'Sojusznik może paść — i to nie koniec',
     body: 'Kto padnie, leży do końca tej walki i <b>zabiera ze sobą swoje obrażenia</b>: paczka ginie wolniej, a bije tak samo mocno. To spirala, z której da się jeszcze wyleczyć — ale kosztuje. Po walce cała drużyna wstaje z pełnym życiem. Gdy padnie <b>tank</b>, potwory rzucają się na kogokolwiek i te ciosy bolą mocniej.' },
-  { icon: '🎯', title: 'Wybierz cel, potem czar',
-    body: 'Cel: klawisze <b>1-5</b>, kliknięcie ramki albo kliknięcie bohatera na polu bitwy. Czary: <b>Q</b> tani i oszczędny, <b>W</b> na całą drużynę (z odnowieniem), <b>E</b> duży ratunkowy. Po każdym czarze jest <b>globalny cooldown ~1,1 s</b> — ikona odkręca się jak zegar.' },
+  { icon: '🖱️', title: 'Nie wybierasz celu — leczysz tam, gdzie patrzysz',
+    body: 'Najedź myszką na ramkę (albo na bohatera na polu bitwy) i naciśnij <b>1</b>, <b>2</b> lub <b>3</b> — czar poleci w tego, kto jest pod kursorem. Wolisz samą mysz? <b>Kliknij ramkę</b>: lewy = 1, prawy = 2, środkowy (lub Shift+lewy) = 3. Jedno naciśnięcie na jedno leczenie, bez osobnego „wybierz cel".<br><br><b>1</b> tani i oszczędny · <b>2</b> na całą drużynę (z odnowieniem) · <b>3</b> duży ratunkowy. Po każdym czarze jest <b>globalny cooldown ~1,1 s</b> — ikona odkręca się jak zegar.' },
   { icon: '👁️', title: 'Paski mówią wszystko',
     body: 'Jasny pasiasty kawałek = leczenie, które <b>już leci</b> — nie marnuj na ten cel kolejnego czaru. Czerwony kawałek zjadany z prawej = cios bossa, który zaraz wyląduje. Ramka miga na biało, gdy ten cios zabije cel <b>mimo</b> całego leczenia w drodze.' },
   { icon: '💧', title: 'Mana to cała trudność',
@@ -2936,7 +3036,7 @@ function healerSetupOnce() {
   if (spells) spells.addEventListener('click', ev => {
     const btn = ev.target.closest('.hd-spell');
     if (!btn) return;
-    healerQueueAction(Number(btn.dataset.spell), (healerRuntime && healerRuntime.target) || HD_TANK);
+    if (healerCanCastNow()) healerQueueAction(Number(btn.dataset.spell), healerCastTarget());
   });
   const startBtn = hdEl('hd-start');
   if (startBtn) startBtn.addEventListener('click', startHealerDungeonRound);
@@ -2958,15 +3058,17 @@ function healerSetupOnce() {
   if (exitBtn) exitBtn.addEventListener('click', healerLeaveGame);
   const stage = hdEl('hd-stage');
   if (stage) {
-    stage.addEventListener('click', healerStageClick);
-    // Hover feedback: the cursor tells you a hero is clickable before you click.
-    stage.addEventListener('mousemove', ev => {
-      const rt = healerRuntime;
-      const pt = rt && rt.sim ? hdCanvasPoint(ev) : null;
-      const slot = pt ? hdHeroAt(pt[0], pt[1]) : -1;
-      stage.style.cursor = (slot >= 0 && rt.sim.hp[slot] > 0) ? 'pointer' : 'default';
-    });
+    stage.addEventListener('pointerdown', healerStagePointerDown);
+    stage.addEventListener('pointermove', healerStagePointerMove);
+    stage.addEventListener('contextmenu', ev => ev.preventDefault());
+    stage.addEventListener('auxclick', ev => ev.preventDefault());
   }
+  // Leaving the frames or the board drops the hover but KEEPS the sticky
+  // target, so a spell pressed with the cursor parked in dead space still goes
+  // somewhere sensible.
+  const framesWrap = hdEl('hd-frames');
+  if (framesWrap) framesWrap.addEventListener('pointerleave', () => healerSetHover(-1));
+  if (stage) stage.addEventListener('pointerleave', () => healerSetHover(-1));
 }
 
 healerSetupOnce();
