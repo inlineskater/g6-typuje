@@ -1966,12 +1966,45 @@ function healerBuildFrames() {
         '<span class="hd-hots" data-hots></span>' +
         '<span class="hd-frame-key">' + HD_TARGET_KEYS[i] + '</span>' +
       '</div>' +
-      (i === HD_HEAL ? '<div class="hd-frame-mana"><i data-mana></i></div>' : '');
+      '';
     frame.addEventListener('click', () => healerSetTarget(i));
     wrap.appendChild(frame);
   }
+  // Your own mana, directly under the five health bars — the resource and the
+  // thing it is spent on, in one glance. It used to be a 4 px hairline along
+  // the bottom of the healer's own frame (Grid draws it that way) with the real
+  // number only on the character pane off in the left rail; but in a fight your
+  // eyes never leave the frames, and "can I afford this" is asked as often as
+  // "who is lowest". The 5-second-rule pip rides on the same row because it is
+  // the other half of that question.
+  const mana = document.createElement('div');
+  mana.className = 'hd-frames-mana';
+  mana.innerHTML =
+    '<div class="hd-fm-bar"><i data-manafill></i><span data-manatext>0 / 0</span></div>' +
+    '<b class="hd-fm-fsr" data-fsr>—</b>';
+  wrap.appendChild(mana);
   healerRuntime.builtFrames = true;
   hdApplyFramesPos();
+}
+
+// Kept out of healerRenderFrames' per-frame loop: it is one row, not five.
+function healerRenderFramesMana() {
+  const st = healerRuntime && healerRuntime.sim;
+  const wrap = hdEl('hd-frames');
+  if (!st || !wrap) return;
+  const max = hdMaxMana(st);
+  const fill = wrap.querySelector('[data-manafill]');
+  if (fill) fill.style.width = hdPct(st.mana, max) + '%';
+  const text = wrap.querySelector('[data-manatext]');
+  if (text) text.textContent = st.mana + ' / ' + max;
+  const fsr = wrap.querySelector('[data-fsr]');
+  if (fsr) {
+    const fsrMax = hdFsrTicks(st);
+    const regen = st.fsr >= fsrMax;
+    fsr.classList.toggle('is-on', regen);
+    fsr.textContent = regen ? '+' + (hdRegenPerTick(st) * 10) : '⏳' + ((fsrMax - st.fsr) / 10).toFixed(1);
+    fsr.title = regen ? 'Regenerujesz manę' : 'Zasada 5 sekund — regeneracja stoi';
+  }
 }
 
 // ── Movable raid frames ─────────────────────────────────────────────────────
@@ -2074,6 +2107,7 @@ function healerRenderFrames() {
   const rt = healerRuntime;
   const st = rt && rt.sim;
   if (!st) return;
+  healerRenderFramesMana();
   const frames = document.querySelectorAll('#hd-frames .hd-frame');
   frames.forEach((frame, i) => {
     const pct = hdPct(st.hp[i], st.maxHp[i]);
@@ -2143,9 +2177,6 @@ function healerRenderFrames() {
     // that look equally low, which a percent answers in three characters.
     const hp = frame.querySelector('[data-hp]');
     if (hp) hp.textContent = dead ? '☠️' : Math.ceil(pct) + '%';
-
-    const mana = frame.querySelector('[data-mana]');
-    if (mana) mana.style.width = hdPct(st.mana, hdMaxMana(st)) + '%';
 
     const hots = frame.querySelector('[data-hots]');
     if (hots) {

@@ -4505,12 +4505,34 @@
     .hd-hot-rejuv { color: #15803d; }
     .hd-hot-wg { color: #4d7c0f; }
     .hd-hot-cast { color: #b45309; }
-    /* the healer's own mana, as Grid draws it: a hairline along the bottom edge */
-    .hd-frame-mana {
-      position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
-      background: rgba(15,23,42,.18); z-index: 2;
+    /* Your own mana, directly under the five health bars. It used to be a 4 px
+       hairline along the bottom of the healer's own frame with the real number
+       only on the character pane in the left rail — but in a fight your eyes
+       never leave the frames, and "can I afford this" gets asked as often as
+       "who is lowest". The 5-second-rule pip rides along because it is the
+       other half of that question. */
+    .hd-frames-mana { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+    .hd-fm-bar {
+      position: relative; flex: 1; height: 15px; border-radius: 3px; overflow: hidden;
+      background: #cbd5e1; border: 1px solid #94a3b8;
+      box-shadow: 0 1px 4px rgba(15,23,42,.18);
     }
-    .hd-frame-mana i { display: block; height: 100%; width: 0; background: var(--hd-mana); transition: width .1s linear; }
+    .hd-fm-bar i {
+      position: absolute; inset: 0 auto 0 0; width: 0;
+      background: linear-gradient(90deg, #1d4ed8, var(--hd-mana)); transition: width .1s linear;
+    }
+    .hd-fm-bar span {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums;
+      text-shadow: 0 1px 2px rgba(255,255,255,.8);
+    }
+    .hd-fm-fsr {
+      flex: none; min-width: 40px; text-align: center; padding: 1px 5px; border-radius: 3px;
+      background: rgba(255,255,255,.9); border: 1px solid var(--hd-line);
+      font-size: 9.5px; font-weight: 800; color: var(--hd-dim); font-variant-numeric: tabular-nums;
+      box-shadow: 0 1px 4px rgba(15,23,42,.14);
+    }
+    .hd-fm-fsr.is-on { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
 
     /* The live score card is gone (2026-07-29 rev 2): the score is something
        you read when the run ENDS. Its rows now live only on the result card.
@@ -4703,11 +4725,16 @@
     .hd-console.is-portrait .hd-frames { position: static; width: 100%; gap: 3px; }
     .hd-console.is-portrait .hd-frames-grip { display: none; }
     .hd-console.is-portrait .hd-frame { height: 30px; box-shadow: none; }
+    .hd-console.is-portrait .hd-fm-bar { height: 17px; box-shadow: none; }
+    .hd-console.is-portrait .hd-fm-fsr { box-shadow: none; }
     .hd-console.is-portrait .hd-sc-note { display: none; }
     .hd-console.is-portrait .hd-left { order: 3; flex: 0 0 auto; gap: 6px; }
-    .hd-console.is-portrait .hd-char { padding: 7px; }
-    .hd-console.is-portrait .hd-char-head { display: none; }   /* the topbar already names you */
-    .hd-console.is-portrait .hd-legend { display: none; }      /* topbar chip carries the values */
+    /* The whole character pane goes on a phone. Its four rows are each covered
+       elsewhere — the topbar names you and carries the stats, and the frames
+       row now carries mana AND the 5-second pip — so all it did was cost the
+       scarce axis. Leaving the pane with its contents hidden left an empty box
+       floating between the board and the spellbook. */
+    .hd-console.is-portrait .hd-char { display: none; }
     .hd-console.is-portrait .hd-castbar { height: 19px; }
     .hd-console.is-portrait .hd-spells { flex-direction: row; gap: 5px; }
     .hd-console.is-portrait .hd-spell {
