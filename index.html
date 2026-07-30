@@ -4600,21 +4600,28 @@
     /* Weekly seasonal ranking — collapsed by default (see the HTML comment):
        the startcard is a fixed-position, vertically-centered card inside a
        fixed-size console that never scrolls, so this panel scrolls INTERNALLY
-       instead of ever growing the card past the available height. */
-    .hd-board-row { display: flex; align-items: center; justify-content: center; gap: 10px;
+       instead of ever growing the card past the available height.
+       ⚠️ Namespaced `hd-lb-*` (leaderboard), NOT `hd-board` — `.hd-board` is
+       already the class of the main battlefield layout container (character
+       pane + raid frames + board, see far above). Reusing that name here once
+       silently collapsed the ENTIRE game to blank white: both rules share one
+       selector, equal specificity, so the one declared later in the sheet
+       (this one, with `display: none`) won across the whole page, including
+       on the unrelated container that happens to share the class. */
+    .hd-lb-row { display: flex; align-items: center; justify-content: center; gap: 10px;
       flex-wrap: wrap; width: 100%; }
-    .hd-board-toggle { font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer;
+    .hd-lb-toggle { font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer;
       padding: 5px 11px; border-radius: var(--r-pill); border: 1px solid var(--hd-line);
       background: var(--hd-panel); color: inherit; }
-    .hd-board-toggle span { font-weight: 600; color: var(--hd-dim); }
+    .hd-lb-toggle span { font-weight: 600; color: var(--hd-dim); }
     .hd-prizes { font-size: 11px; font-weight: 700; color: var(--hd-dim); }
-    .hd-board { display: none; width: 100%; max-height: 220px; overflow-y: auto;
+    .hd-lb { display: none; width: 100%; max-height: 220px; overflow-y: auto;
       text-align: left; background: var(--hd-panel); border: 1px solid var(--hd-line);
       border-radius: var(--r-sm); padding: 8px 11px; }
-    .hd-board.is-on { display: block; }
-    .hd-board-section-title { font-size: 11px; font-weight: 800; color: var(--hd-dim);
+    .hd-lb.is-on { display: block; }
+    .hd-lb-title { font-size: 11px; font-weight: 800; color: var(--hd-dim);
       text-transform: uppercase; letter-spacing: .03em; margin: 8px 0 4px; }
-    .hd-board-section-title:first-child { margin-top: 0; }
+    .hd-lb-title:first-child { margin-top: 0; }
 
     /* The score breakdown of the run that just ended — the ONLY place the
        score is ever shown, by design. */
@@ -9361,16 +9368,16 @@
                            pushes the fixed-size console taller than the
                            viewport; the panel itself scrolls internally if the
                            tables run long. -->
-                      <div class="hd-board-row">
-                        <button type="button" class="hd-board-toggle" id="hd-board-toggle">🏆 Ranking tygodnia <span id="hd-week-label"></span></button>
+                      <div class="hd-lb-row">
+                        <button type="button" class="hd-lb-toggle" id="hd-board-toggle">🏆 Ranking tygodnia <span id="hd-week-label"></span></button>
                         <span class="hd-prizes">🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙</span>
                       </div>
-                      <div class="hd-board" id="hd-board">
-                        <div class="hd-board-section-title">Ten tydzień</div>
+                      <div class="hd-lb" id="hd-board">
+                        <div class="hd-lb-title">Ten tydzień</div>
                         <div id="hd-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
-                        <div class="hd-board-section-title">All-time</div>
+                        <div class="hd-lb-title">All-time</div>
                         <div id="hd-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
-                        <div class="hd-board-section-title">Ostatnie nagrody</div>
+                        <div class="hd-lb-title">Ostatnie nagrody</div>
                         <div class="bj-awards" id="hd-awards"></div>
                       </div>
                     </div>
