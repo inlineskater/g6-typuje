@@ -31,8 +31,8 @@ AS $$
     WHEN '2026-07-13' THEN 'super_mariusz'  -- Super Mariusz debut
     WHEN '2026-07-20' THEN 'popup_panic'  -- Zamknij Popupy! debut
     WHEN '2026-07-27' THEN 'tetris'  -- Tetris G6 debut
-    WHEN '2026-08-03' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a week by the Tetris debut)
-    WHEN '2026-08-10' THEN 'healer_dungeon'  -- Uzdrowiciel G6 debut
+    WHEN '2026-08-03' THEN 'healer_dungeon'  -- Uzdrowiciel G6 debut
+    WHEN '2026-08-10' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a second week by the Uzdrowiciel debut)
     -- SEASONAL_ROTATION from its 2026-05-18 Monday anchor.
     ELSE
       (ARRAY[
