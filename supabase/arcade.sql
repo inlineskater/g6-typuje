@@ -41,6 +41,10 @@ GRANT SELECT, INSERT ON public.arcade_scores TO service_role;
 
 -- ── Leaderboard view (best score per user per game) ─────────────────────────
 
+-- ⚠️ CREATE OR REPLACE VIEW can only APPEND columns, never reorder or insert
+-- them — client_meta must stay last, or re-running this against a live view
+-- fails with "cannot change name of view column ... to ..." the moment the
+-- existing column after the insertion point shifts position.
 CREATE OR REPLACE VIEW public.arcade_leaderboard WITH (security_invoker = true) AS
 SELECT DISTINCT ON (game_type, user_id)
   s.id,
@@ -49,8 +53,8 @@ SELECT DISTINCT ON (game_type, user_id)
   s.coins_paid,
   s.created_at,
   s.user_id,
-  s.client_meta,
-  p.nick
+  p.nick,
+  s.client_meta
 FROM public.arcade_scores s
 JOIN public.profiles p ON p.id = s.user_id
 ORDER BY game_type, user_id, score DESC, created_at ASC;

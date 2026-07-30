@@ -4597,6 +4597,25 @@
     .hd-start-btn:disabled { opacity: .5; cursor: default; }
     .hd-status { font-size: 12px; font-weight: 700; color: var(--hd-dim); line-height: 1.45; }
 
+    /* Weekly seasonal ranking — collapsed by default (see the HTML comment):
+       the startcard is a fixed-position, vertically-centered card inside a
+       fixed-size console that never scrolls, so this panel scrolls INTERNALLY
+       instead of ever growing the card past the available height. */
+    .hd-board-row { display: flex; align-items: center; justify-content: center; gap: 10px;
+      flex-wrap: wrap; width: 100%; }
+    .hd-board-toggle { font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer;
+      padding: 5px 11px; border-radius: var(--r-pill); border: 1px solid var(--hd-line);
+      background: var(--hd-panel); color: inherit; }
+    .hd-board-toggle span { font-weight: 600; color: var(--hd-dim); }
+    .hd-prizes { font-size: 11px; font-weight: 700; color: var(--hd-dim); }
+    .hd-board { display: none; width: 100%; max-height: 220px; overflow-y: auto;
+      text-align: left; background: var(--hd-panel); border: 1px solid var(--hd-line);
+      border-radius: var(--r-sm); padding: 8px 11px; }
+    .hd-board.is-on { display: block; }
+    .hd-board-section-title { font-size: 11px; font-weight: 800; color: var(--hd-dim);
+      text-transform: uppercase; letter-spacing: .03em; margin: 8px 0 4px; }
+    .hd-board-section-title:first-child { margin-top: 0; }
+
     /* The score breakdown of the run that just ended — the ONLY place the
        score is ever shown, by design. */
     .hd-result { display: none; width: 100%; text-align: left; }
@@ -9338,6 +9357,22 @@
                       </div>
                       <button class="hd-start-btn" id="hd-start">Wejdź do lochu</button>
                       <div class="hd-status" id="hd-status">Jedna pula many musi wystarczyć na całą walkę. Naciśnij <strong>?</strong> po zasady.</div>
+                      <!-- Seasonal ranking — collapsed by default so it never
+                           pushes the fixed-size console taller than the
+                           viewport; the panel itself scrolls internally if the
+                           tables run long. -->
+                      <div class="hd-board-row">
+                        <button type="button" class="hd-board-toggle" id="hd-board-toggle">🏆 Ranking tygodnia <span id="hd-week-label"></span></button>
+                        <span class="hd-prizes">🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙</span>
+                      </div>
+                      <div class="hd-board" id="hd-board">
+                        <div class="hd-board-section-title">Ten tydzień</div>
+                        <div id="hd-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+                        <div class="hd-board-section-title">All-time</div>
+                        <div id="hd-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+                        <div class="hd-board-section-title">Ostatnie nagrody</div>
+                        <div class="bj-awards" id="hd-awards"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -10525,6 +10560,12 @@ let varPatrolRuntime = null;
 let superMariuszRuntime = null;
 let popupPanicRuntime = null;
 let tetrisRuntime = null;
+// Pre-declared (like every other lazy-loaded game runtime above) so
+// loadSeasonalTab() can reference it before games/healer-dungeon.js has ever
+// loaded — that script only ASSIGNS healerRuntime, it does not `let` it,
+// exactly like tetris.js/etc., since a second top-level `let` for the same
+// name across classic scripts sharing one global scope is a SyntaxError.
+let healerRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 
@@ -11837,7 +11878,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); if (typeof healerExitView === 'function') healerExitView(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -21830,6 +21871,7 @@ const SEASONAL_ROTATION = [
   { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },
   { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },
   { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },
+  { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
@@ -21841,6 +21883,7 @@ const SEASONAL_OVERRIDES = {
   '2026-07-20': { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },  // debut
   '2026-07-27': { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },  // debut
   '2026-08-03': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch, pushed a week by the Tetris debut
+  '2026-08-10': { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },  // debut
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -22336,6 +22379,7 @@ function loadSeasonalTab(showSpinner = true) {
   const smPanel       = document.getElementById('seasonal-game-super-mariusz');
   const ppPanel       = document.getElementById('seasonal-game-popup-panic');
   const ttPanel       = document.getElementById('seasonal-game-tetris');
+  const hdPanel       = document.getElementById('seasonal-game-healer-dungeon');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -22348,6 +22392,7 @@ function loadSeasonalTab(showSpinner = true) {
   const isSM = current.gameType === 'super_mariusz';
   const isPP = current.gameType === 'popup_panic';
   const isTT = current.gameType === 'tetris';
+  const isHD = current.gameType === 'healer_dungeon';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
@@ -22358,6 +22403,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (smPanel) { if (isSM) show(smPanel); else hide(smPanel); }
   if (ppPanel) { if (isPP) show(ppPanel); else hide(ppPanel); }
   if (ttPanel) { if (isTT) show(ttPanel); else hide(ttPanel); }
+  if (hdPanel) { if (isHD) show(hdPanel); else hide(hdPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -22369,6 +22415,8 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isSM && superMariuszRuntime?.playing) stopSuperMariuszRound();
   if (!isPP && popupPanicRuntime?.playing) stopPopupPanicRound();
   if (!isTT && tetrisRuntime?.playing) stopTetrisRound();
+  if (!isHD && healerRuntime?.playing) stopHealerDungeonRound();
+  if (!isHD && typeof healerExitView === 'function') healerExitView();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
@@ -22379,6 +22427,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (superMariuszRuntime) superMariuszRuntime.archiveMode = false;
   if (popupPanicRuntime) popupPanicRuntime.archiveMode = false;
   if (tetrisRuntime) tetrisRuntime.archiveMode = false;
+  if (healerRuntime) healerRuntime.archiveMode = false;
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) ensureGameScript('bug_jumper').then(() => loadBugJumperState(showSpinner));
   if (isFP) ensureGameScript('flappy_pants').then(() => loadFlappyPantsState(showSpinner));
@@ -22389,6 +22438,11 @@ function loadSeasonalTab(showSpinner = true) {
   if (isSM) ensureGameScript('super_mariusz').then(() => loadSuperMariuszState(showSpinner));
   if (isPP) ensureGameScript('popup_panic').then(() => loadPopupPanicState(showSpinner));
   if (isTT) ensureGameScript('tetris').then(() => loadTetrisState(showSpinner));
+  if (isHD) ensureGameScript('healer_dungeon').then(() => {
+    if (!healerRuntime) stopHealerDungeonRound();
+    healerEnterView();
+    loadHealerDungeonState(showSpinner);
+  });
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────

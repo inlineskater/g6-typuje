@@ -1914,12 +1914,16 @@ function hdDraw() {
 }
 
 // ── Runtime ─────────────────────────────────────────────────────────────────
-let healerRuntime = null;
+// healerRuntime itself is declared in index.html (pre-declared alongside every
+// other lazy-loaded game runtime, e.g. tetrisRuntime) so code there can
+// reference it before this script has ever loaded — this file only assigns it.
+healerRuntime = null;
 
 function newHealerRuntime() {
   return {
     playing: false, submitting: false, archiveMode: false,
     seed: 1,
+    roundId: null,
     timer: null,
     nextTickAt: 0,
     sim: null,
@@ -2996,21 +3000,128 @@ function healerRenderClassPicker() {
   if (blurb) blurb.textContent = HD_CLASSES[cur].blurb;
 }
 
+// ── Seasonal round flow ─────────────────────────────────────────────────────
+// Phase 2 (2026-08): a real Edge Function now owns the seed and replays the
+// submitted action log, exactly like every other seasonal game. Played from
+// the „Wszystkie Gry" arcade tab it STILL starts a real server round (so the
+// seed is never guessable and the round row exists for auditing) but finishes
+// through recordArcadeScore instead of a trusted submit — archiveMode is what
+// decides the finish path, matching Tetris's dual-mode pattern exactly.
+async function invokeHealerDungeon(payload) {
+  const { data, error } = await sb.functions.invoke('healer-dungeon-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z Uzdrowicielem.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Uzdrowiciela.');
+  return data;
+}
+
+async function loadHealerDungeonState(showSpinner = true) {
+  const weeklyWrap  = hdEl('hd-weekly-board');
+  const allTimeWrap = hdEl('hd-alltime-board');
+  const awardsWrap  = hdEl('hd-awards');
+  if (showSpinner) {
+    if (weeklyWrap)  weeklyWrap.replaceChildren(makeSpinner());
+    if (allTimeWrap) allTimeWrap.replaceChildren(makeSpinner());
+    if (awardsWrap)  awardsWrap.replaceChildren();
+  }
+  try {
+    const data = await invokeHealerDungeon({ action: 'state' });
+    renderHealerDungeonState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać rankingu.';
+    if (weeklyWrap)  weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, msg));
+    if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Brak danych.'));
+    if (awardsWrap)  awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+  }
+}
+
+function renderHealerDungeonState(data) {
+  if (data.profile) { me.coins = data.profile.coins; setText(headerCoins, me.coins); }
+  const weekLabel = hdEl('hd-week-label');
+  if (weekLabel) {
+    const range = whackBossWeekRange(data.weekStart);
+    weekLabel.textContent = range ? '· ' + range.short : '';
+  }
+  renderHealerDungeonTable(hdEl('hd-weekly-board'), data.weekly || [], 'weekly');
+  renderHealerDungeonTable(hdEl('hd-alltime-board'), data.allTime || [], 'allTime');
+  renderHealerDungeonAwards(hdEl('hd-awards'), data.awards || []);
+  const rt = healerRuntime;
+  const status = hdEl('hd-status');
+  if ((!rt || !rt.playing) && status) {
+    status.textContent = data.myWeekly
+      ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + ' pkt.'
+      : 'Jedna pula many musi wystarczyć na całą walkę. Naciśnij ? po zasady.';
+  }
+}
+
+function renderHealerDungeonTable(wrap, rows, mode) {
+  if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+  const bodyRows = rows.slice(0, 10).map(row => {
+    const cl = HD_CLASSES[row.cls] || HD_CLASSES[0];
+    return el('tr', {},
+      el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+      el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') },
+        cl.icon + ' ' + row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+      lbScoreCell(row)
+    );
+  });
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'),
+        el('th', {}, 'Nick'),
+        el('th', { title: 'Najwyższy wynik' }, 'Wynik')
+      )),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderHealerDungeonAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  wrap.replaceChildren(...awards.slice(0, 6).map(row => {
+    const cl = HD_CLASSES[row.cls] || HD_CLASSES[0];
+    const label = whackBossWeekRange(row.week_start)?.short || '';
+    return el('div', { className: 'bj-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + cl.icon + ' ' + row.nick + (label ? ' · ' + label : '')),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  }));
+}
+
 async function startHealerDungeonRound() {
   const rt = healerRuntime;
   if (rt && (rt.playing || rt.submitting)) return;
   // Synchronously, BEFORE the first await: requestFullscreen() only works while
-  // a user gesture is live, and awaiting payArcadeEntry() first would spend it.
+  // a user gesture is live, and awaiting anything first would spend it.
   hdRequestFullscreen();
-  // Phase 1 is arcade-only: there is no Edge Function to ask for a round, so
-  // the seed is local. pay_arcade_entry still runs — it is the auth/game-type
-  // check every other arcade game makes before a round.
   if (allGamesMode) {
     try { await payArcadeEntry('healer_dungeon'); }
     catch (e) { showToast('❌ Nie udało się wejść do gry.'); return; }
   }
-  beginHealerDungeonRound((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
-    { archiveMode: true });
+  const startBtn = hdEl('hd-start');
+  const status = hdEl('hd-status');
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Ładuję...'; }
+  if (status) status.textContent = 'Przygotowuję rundę...';
+  try {
+    const data = await invokeHealerDungeon({ action: 'start', cls: hdPickedClass() });
+    renderHealerDungeonState(data);
+    beginHealerDungeonRound(data.round.seed, { archiveMode: allGamesMode, cls: data.round.cls });
+    healerRuntime.roundId = data.round.id;
+  } catch (err) {
+    showToast('❌ ' + (err.message || 'Nie udało się wystartować rundy.'));
+    if (status) status.textContent = 'Nie udało się wystartować rundy.';
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Wejdź do lochu'; }
+    hdExitFullscreen(); // no round to play — don't strand the player fullscreen
+  }
 }
 
 async function finishHealerDungeonRound() {
@@ -3031,8 +3142,6 @@ async function finishHealerDungeonRound() {
   const status = hdEl('hd-status');
   const title = hdEl('hd-startcard-title');
   const reason = rt.endedReason ? ' · ' + rt.endedReason : '';
-  rt.submitting = false;
-  if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Jeszcze raz'; }
   if (title) title.textContent = '🏆 ' + hdNum(score) + ' pkt';
 
   // The result card gets the whole breakdown, because a points score you
@@ -3068,21 +3177,51 @@ async function finishHealerDungeonRound() {
     });
   }
 
-  // The class rides along with the score — a client_meta blob the leaderboard
-  // can print without needing to know anything about classes itself; see
-  // recordArcadeScore's third argument.
+  // The class rides along with the score — a client_meta blob the ARCADE
+  // leaderboard can print without needing to know anything about classes
+  // itself; see recordArcadeScore's third argument. The seasonal path stores
+  // cls as its own typed column instead (supabase/healer-dungeon.sql).
   const meta = { cls: st.cls, icon: cl.icon, name: cl.name };
-  if (allGamesMode) {
-    try {
-      await recordArcadeScore('healer_dungeon', score, meta);
-      if (status) status.textContent = cl.name + reason + ' · zapisano w rankingu arcade!';
-      loadArcadeScores('healer_dungeon');
-    } catch (e) {
-      if (status) status.textContent = cl.name + reason + ' (błąd zapisu wyniku).';
+  if (rt.archiveMode) {
+    rt.submitting = false;
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Jeszcze raz'; }
+    if (allGamesMode) {
+      try {
+        await recordArcadeScore('healer_dungeon', score, meta);
+        if (status) status.textContent = cl.name + reason + ' · zapisano w rankingu arcade!';
+        loadArcadeScores('healer_dungeon');
+      } catch (e) {
+        if (status) status.textContent = cl.name + reason + ' (błąd zapisu wyniku).';
+      }
+    } else {
+      if (status) status.textContent = 'Demo — ' + hdNum(score) + ' pkt' + reason + ' (nie zapisano).';
     }
     return;
   }
-  if (status) status.textContent = 'Demo — ' + hdNum(score) + ' pkt' + reason + ' (nie zapisano).';
+
+  // Real seasonal round: the server replays seed+cls+eventLog to derive the
+  // trusted score (hdReplay in the Edge Function), exactly like Tetris.
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = 'Zapisuję...'; }
+  if (status) status.textContent = 'Zapisuję wynik...';
+  try {
+    const data = await invokeHealerDungeon({
+      action: 'submit',
+      roundId: rt.roundId,
+      seed: rt.seed,
+      events: rt.eventLog,
+      elapsedTicks: rt.sim.tick,
+      score: score,
+    });
+    renderHealerDungeonState(data);
+    showToast('✅ Wynik zapisany: ' + data.score.score + ' pkt');
+    if (status) status.textContent = cl.name + reason + ' · wynik: ' + data.score.score + ' pkt.';
+  } catch (err) {
+    showToast('❌ ' + (err.message || 'Nie udało się zapisać wyniku.'));
+    if (status) status.textContent = 'Nie udało się zapisać wyniku.';
+  } finally {
+    rt.submitting = false;
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = 'Jeszcze raz'; }
+  }
 }
 
 // ── Input ───────────────────────────────────────────────────────────────────
@@ -3239,6 +3378,11 @@ function healerSetupOnce() {
   if (tutSkip) tutSkip.addEventListener('click', () => healerToggleTutorial(false));
   const exitBtn = hdEl('hd-exit');
   if (exitBtn) exitBtn.addEventListener('click', healerLeaveGame);
+  const boardToggle = hdEl('hd-board-toggle');
+  if (boardToggle) boardToggle.addEventListener('click', () => {
+    const board = hdEl('hd-board');
+    if (board) board.classList.toggle('is-on');
+  });
   const stage = hdEl('hd-stage');
   if (stage) {
     stage.addEventListener('pointerdown', healerStagePointerDown);
