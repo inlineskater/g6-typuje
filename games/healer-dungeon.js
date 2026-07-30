@@ -52,7 +52,15 @@ const HD_BASE_HP = [1500, 820, 900, 860, 780];
 
 // Your resources. Every stat starts at 0 and only upgrades move it, so the
 // opening pull is always identical whichever class you took.
-const HD_BASE_MANA = 1500;
+// 1500 → 2900 (2026-07-30), alongside the fight-length increase above. Simply
+// stretching fight duration without raising the pool meant even a sensibly
+// paced healer ran dry mid-fight — avg pulls crashed from ~9 to ~3.7 across
+// every class. This is the value where the sweep found ALL FOUR classes
+// simultaneously clear the 7-11 pull band and stay within the 40% spread
+// tolerance; below it the shaman (the one predictive-shield kit) drags the
+// group average under 7, above it mana pressure on the other three thins out
+// further than it needs to.
+const HD_BASE_MANA = 2900;
 const HD_MANA_PER_HEAL_PT = 20;  // Moc leczenia widens the pool as well
 const HD_HEAL_PCT_PER_PT = 4;    // ... and raises every heal
 const HD_HP_PCT_PER_PT = 3;      // Życie: max HP for the WHOLE party, not just the tank
@@ -142,6 +150,43 @@ const HD_CLASSES = [
         does: 'Ogromne leczenie BEZ czasu rzucania — jedyny ratunek, który zdąży po zapowiedzianym ciosie bossa. Płacisz za to 15-sekundowym odnowieniem: raz na walkę, więc wybierz moment.' },
     ],
   },
+  {
+    // The FOURTH class (2026-07-30). Same three roles, same target power, and
+    // a genuinely new delivery on the panic button: a SHIELD in the slot every
+    // other class uses for a direct heal. Priest already proved shields work
+    // as a cheap, spammable filler; putting one on the expensive, cooldown-
+    // gated slot instead makes it a PRE-emptive tool by construction — you
+    // cannot react to a hit with it, only prepare for one, which is a
+    // different decision than any of the other three panic buttons ask for.
+    id: 'shaman', name: 'Szaman', icon: '🌊', portrait: '⚡', color: '#0891b2',
+    tag: 'HoT + fala natychmiastowa + tarcza w odwodzie',
+    blurb: 'Łączy szybki HoT z natychmiastowym leczeniem całej drużyny, a w potrzebie zakłada tarczę, zanim cios spadnie — jeśli zdążysz ją założyć wcześniej.',
+    spells: [
+      // ⚠️ Six ticks at 1.3 s, not the four at 1.5 s this shipped with first.
+      // The first version ticked faster AND finished sooner (6 s total vs
+      // Odnowa's 8 s) — identical value per cast, identical cost, so the
+      // "same power" spread check passed clean. It still measured badly
+      // weaker in the harness bot, because a HoT that a blanket-style policy
+      // keeps refreshed on 5 targets is really paying a MAINTENANCE rate — 5 ×
+      // cost ÷ duration mana per second just to keep everyone covered — and
+      // an 8-second HoT and a 6-second HoT at the same cost do NOT have the
+      // same rate (56 vs 75 mana/s, a 33% gap the per-cast check cannot see).
+      // Keeping the total duration equal to Odnowa's fixes the rate; the
+      // shorter, more-numerous ticks are what still make it feel faster.
+      { key: '1', icon: '🌊', name: 'Przypływ', kind: HD_K_HOT, all: false,
+        cost: 90, cast: 0, cd: 0, period: 13, amounts: [37, 37, 36, 36, 36, 36],
+        hint: 'HoT · 1 cel · 6 tyknięć co 1,3 s',
+        does: 'Ten sam pomysł co Odnowa druida, ale w drobniejszych, częstszych tyknięciach. Rzuć ZANIM cel oberwie, jak każdy HoT.' },
+      { key: '2', icon: '💧', name: 'Łańcuch Uzdrowienia', kind: HD_K_DIRECT, all: true,
+        cost: 325, cast: 0, cd: 80, amount: 176,
+        hint: 'natychmiast · CAŁA piątka · leczy od ręki',
+        does: 'Natychmiastowe leczenie całej piątki, jak Modlitwa czy Błogosławieństwo — ratuje po fali, która już spadła, w tej samej sekundzie.' },
+      { key: '3', icon: '🛡️', name: 'Tarcza Ziemi', kind: HD_K_SHIELD, all: false,
+        cost: 300, cast: 0, cd: 100, amount: 525, dur: 130,
+        hint: 'natychmiast · pochłania 525 obrażeń · 1 cel · odnowienie 10 s',
+        does: 'Zamiast leczyć PO ciosie, TARCZUJE przed nim — natychmiastowa, ale na odnowieniu 10 s zamiast czasu rzucania. Najlepsza założona tuż przed zapowiedzianym ciosem bossa; w pełni zmarnowana, jeśli nikt w nią nie uderzy zanim wygaśnie.' },
+    ],
+  },
 ];
 
 // ── Random talents ──────────────────────────────────────────────────────────
@@ -179,6 +224,12 @@ const HD_DMG_TAKEN_FLOOR = 50;   // no stack of wards can halve the game twice
 //     is the healer's cardinal sin, so a wasted heal costs its own points.
 //     Absorbed damage counts as effective; a shield that expires unused does
 //     not (it lands in overheal, exactly like a heal into a full bar).
+//   • FLAWLESS (2026-07-30) — +1 point for a pull cleared with nobody down.
+//     Deaths already cost dps and stretch the fight (hdPartyDpsPerTick), but
+//     that is an INDIRECT cost — a run that shrugs off a death because it
+//     still cleared the pull paid nothing extra in the one number everyone
+//     compares. This closes that loop: keeping five people up is its own
+//     skill, separate from healing output or timing.
 //   • TEMPO  — the rest is free and unlimited, which is right for the mechanic
 //     and terrible for pace. So time pressure comes back as SCORE: pull within
 //     5 s for both points, 10 s for one, later for none. Nobody is ever forced
@@ -186,13 +237,21 @@ const HD_DMG_TAKEN_FLOOR = 50;   // no stack of wards can halve the game twice
 const HD_SCORE_DEPTH_EVERY = 2;     // +1 point every second pull
 const HD_SCORE_BOSS_MULT = 2;
 const HD_SCORE_HEAL_PER_PT = 3000;  // 1 point per 3000 HP of effective healing
+const HD_SCORE_FLAWLESS_PTS = 1;    // ... for a pull with zero party deaths
 const HD_SCORE_TEMPO_MAX = 2;
 const HD_SCORE_TEMPO_SEC = 5;       // ... losing one per 5 s spent resting
 
 // Encounter script for pull n. Fixed shape; the damage jitter, the spike
 // target, the pull's affix and the boss's kit roll off the RNG.
 const HD_PACK_HP_BASE = 1800, HD_PACK_HP_PER_PULL = 470;
-const HD_DPS_BASE = 90, HD_DPS_PER_PULL = 22;   // per second, at full strength
+// SLOWED (2026-07-30): a fight used to run ~21 s regardless of depth, which
+// meant the whole encounter fit into 5-8 casts — a player never had to
+// consciously leave a gap, because the fight was over before the 5-second
+// rule came up twice. A ~50% longer fight means the naive "cast on every GCD"
+// line runs the mana pool dry partway through, while deliberately banking a
+// few seconds of regen whenever nobody is in danger is what actually finishes
+// it — the rule now has to be USED, not just known about.
+const HD_DPS_BASE = 58, HD_DPS_PER_PULL = 15;   // per second, at full strength
 const HD_MELEE_PERIOD = 18;      // tank auto-attack every 1.8 s
 const HD_MELEE_BASE = 86, HD_MELEE_PER_PULL = 21;
 const HD_AOE_PERIOD = 80;        // raid pulse every 8 s, on all five
@@ -210,7 +269,15 @@ const HD_NO_TANK_MELEE_PCT = 135;
 // the game can be learned). This is where "no two pulls are the same" comes
 // from: the same four damage beats, re-weighted, so you have to re-read the
 // fight instead of replaying a rotation.
+// STACKING (2026-07-30): from pull HD_AFFIX2_MIN_PULL on, a second, DISTINCT,
+// non-'none' affix can pile onto the first — a WoW Mythic+-style combo, so a
+// run's pull 12 does not play like another run's pull 12 even at the same
+// depth. Never on a boss (which already draws its own kit — see the note on
+// HD_BOSS_HP_MULT_PCT for why the two do not ALSO combine) and never on top of
+// 'none' (nothing to stack onto).
 // Fields are PERCENTAGES with 100 = unchanged; `period` fields scale the timer.
+const HD_AFFIX2_MIN_PULL = 8;
+const HD_AFFIX2_CHANCE_PCT = 30;
 const HD_AFFIXES = [
   { id: 'none', name: 'Zwykła grupa', icon: '·', desc: 'Bez modyfikatora.' },
   { id: 'furious', name: 'Wściekła', icon: '😤', dmg: 122, hp: 85,
@@ -255,6 +322,11 @@ const HD_BOSS_CAST_TICKS = 35;     // 3.5 s of warning — three GCDs to react
 const HD_CB_BUSTER = 0, HD_CB_NUKE = 1, HD_CB_FOCUS = 2, HD_CB_DRAIN = 3;
 const HD_BOSS_ABILITIES = 4;
 const HD_BOSS_KIT_SIZE = 2;
+// From pull HD_BOSS_KIT_DEEP_PULL on, a boss draws THREE of its four
+// abilities instead of two — one more source of "which fight is this,
+// actually" for players who have already seen every boss a few times over.
+const HD_BOSS_KIT_DEEP_PULL = 20;
+const HD_BOSS_KIT_SIZE_DEEP = 3;
 const HD_BOSS_BUSTER_BASE = 310, HD_BOSS_BUSTER_PER_PULL = 46;   // tank
 const HD_BOSS_NUKE_BASE = 115, HD_BOSS_NUKE_PER_PULL = 16;       // whole party
 const HD_BOSS_FOCUS_BASE = 245, HD_BOSS_FOCUS_PER_PULL = 40;     // one squishy
@@ -291,36 +363,75 @@ function hdJitter(st, base) {
 
 function hdClass(st) { return HD_CLASSES[st.cls] || HD_CLASSES[0]; }
 function hdSpell(st, slot) { return hdClass(st).spells[slot]; }
-function hdAffix(st) { return HD_AFFIXES[st.affix] || HD_AFFIXES[0]; }
+function hdAffixList(st) {
+  const out = [];
+  for (let i = 0; i < st.affixes.length; i += 1) out.push(HD_AFFIXES[st.affixes[i]]);
+  return out;
+}
 // Affix fields are optional; everything reads through this so a missing field
 // is always "unchanged" and adding an affix can never need a call-site edit.
-function hdAff(st, key) { const v = hdAffix(st)[key]; return v === undefined ? 100 : v; }
+// Multiple ACTIVE affixes COMPOUND multiplicatively — two modifiers on the
+// same knob really do stack into something meaner, the same way a Mythic+
+// combo does, rather than the second one silently overriding the first.
+function hdAff(st, key) {
+  let pct = 100;
+  const list = hdAffixList(st);
+  for (let i = 0; i < list.length; i += 1) {
+    const v = list[i][key];
+    if (v !== undefined) pct = Math.floor(pct * v / 100);
+  }
+  return pct;
+}
+// The draining affix is a flat mana AMOUNT rather than a percentage, so a
+// stacked pair of it SUMS instead of compounding.
+function hdAffixDrain(st) {
+  let sum = 0;
+  const list = hdAffixList(st);
+  for (let i = 0; i < list.length; i += 1) if (list[i].drain) sum += list[i].drain;
+  return sum;
+}
 
 function hdCost(st, slot) {
   const pct = Math.max(HD_PK_CHEAP_FLOOR, 100 - HD_PK_CHEAP_STEP * st.perks[HD_PK_CHEAP]);
   return Math.max(1, Math.floor(hdSpell(st, slot).cost * pct / 100));
-}
-function hdSpellCd(st, slot) {
-  const sp = hdSpell(st, slot);
-  if (!sp.cd) return 0;
-  if (slot !== HD_SP_RAID) return sp.cd;
-  return Math.max(HD_PK_CDR_FLOOR, sp.cd - HD_PK_CDR_STEP * st.perks[HD_PK_CDR]);
 }
 // Szybkie Ręce shortens EVERY cast, not just the panic button's. Scoped to the
 // panic button it was a dead card for the paladin, whose panic button is
 // already instant — and a talent that does nothing for the class you picked is
 // the worst thing a random card can be. Scoped to all casts it lands somewhere
 // for everyone: the druid's and the priest's big heal, the paladin's filler.
+function hdHastePct(st) {
+  return Math.max(HD_PK_HASTE_FLOOR, 100 - HD_PK_HASTE_STEP * st.perks[HD_PK_HASTE]);
+}
 function hdCastTicks(st, slot) {
   const base = hdSpell(st, slot).cast;
   if (!base) return 0;
-  const pct = Math.max(HD_PK_HASTE_FLOOR, 100 - HD_PK_HASTE_STEP * st.perks[HD_PK_HASTE]);
-  return Math.max(1, Math.floor(base * pct / 100));
+  return Math.max(1, Math.floor(base * hdHastePct(st) / 100));
 }
 // The slot this class actually casts, for the talent card's before → after.
 function hdCastSlot(st) {
   for (let i = 0; i < HD_SPELL_SLOTS; i += 1) if (hdSpell(st, i).cast > 0) return i;
   return -1;
+}
+function hdHasAnyCast(st) {
+  return hdCastSlot(st) >= 0;
+}
+// ⚠️ The shaman kit is instant/HoT top to bottom — no slot has a cast time at
+// all, which would make Szybkie Ręce a dead card for it (exactly the paladin
+// bug this talent already exists to avoid). Widened one more time: when a kit
+// has NO cast-time spell, the talent shrinks the panic button's COOLDOWN
+// instead. Scoped to `!hdHasAnyCast(st)` so it changes nothing for the three
+// existing classes — each already has a cast-time spell, so they keep getting
+// the original effect and their panic-button cooldowns (paladin's 15 s
+// included) are untouched by this talent.
+function hdSpellCd(st, slot) {
+  const sp = hdSpell(st, slot);
+  if (!sp.cd) return 0;
+  if (slot === HD_SP_RAID) return Math.max(HD_PK_CDR_FLOOR, sp.cd - HD_PK_CDR_STEP * st.perks[HD_PK_CDR]);
+  if (slot === HD_SP_BIG && !hdHasAnyCast(st)) {
+    return Math.max(1, Math.floor(sp.cd * hdHastePct(st) / 100));
+  }
+  return sp.cd;
 }
 function hdGcdTicks(st) { return Math.max(HD_GCD_MIN, HD_GCD_TICKS - st.perks[HD_PK_GCD]); }
 function hdFsrTicks(st) { return Math.max(HD_FSR_MIN, HD_FSR_TICKS - HD_PK_FSR_STEP * st.perks[HD_PK_FSR]); }
@@ -411,7 +522,13 @@ function hdMeleeTarget(st) {
 
 function hdInitState(seed, cls) {
   const st = {
+    // rngState MUTATES on every draw; seed does not. Presentation-layer flavor
+    // (which office nemesis pull 7 is, which boss name pull 15 is) is derived
+    // from `seed` alone via a separate, non-consuming hash — see hdPackName —
+    // specifically so it can be computed as a PREVIEW of the next pull during
+    // rest without disturbing the real RNG stream the sim plays out of.
     rngState: (Number(seed) >>> 0) || 1,
+    seed: (Number(seed) >>> 0) || 1,
     cls: Math.max(0, Math.min(HD_CLASSES.length - 1, Number(cls) || 0)),
     tick: 0,
     phase: 'fight',          // 'fight' | 'rest' | 'dead'
@@ -419,6 +536,8 @@ function hdInitState(seed, cls) {
     pullsCleared: 0,
     bossesKilled: 0,
     deaths: 0,
+    deathPulls: 0,           // pulls that had >=1 death, for the result card
+    pullDeaths: 0,
     hp: [], maxHp: [],
     shield: [], shieldT: [],
     mana: 0,
@@ -429,7 +548,7 @@ function hdInitState(seed, cls) {
     hots: [],                // { tgt, slot, left, next, idx }
     packHp: 0, packMax: 0,
     isBoss: false,
-    affix: 0,
+    affixes: [],             // 0-2 indices into HD_AFFIXES
     bossKit: [],
     fightTick: 0,
     bossCast: null,          // { kind, tgt, left, total }
@@ -444,7 +563,7 @@ function hdInitState(seed, cls) {
     dead: false, deadWho: -1,
     meleeT: HD_MELEE_PERIOD, aoeT: HD_AOE_PERIOD, spikeT: HD_SPIKE_PERIOD, cleaveT: HD_CLEAVE_PERIOD,
     healingDone: 0, manaSpent: 0, overheal: 0, absorbed: 0,
-    score: 0, scPull: 0, scHeal: 0, scTempo: 0,
+    score: 0, scPull: 0, scHeal: 0, scFlawless: 0, scTempo: 0,
     pullHealed: 0, pullOverheal: 0, pullTempo: HD_SCORE_TEMPO_MAX,
     restTicks: 0,
     // Cosmetic event feed for the battlefield renderer. Cleared every tick and
@@ -469,11 +588,23 @@ function hdStartPull(st) {
   // Pull 1 is never modified: the opening has to be identical every run or the
   // game cannot be learned.
   // ⚠️ NEITHER IS A BOSS. A boss already carries its own randomness (it draws
-  // two abilities out of four), and stacking an affix on top double-dips: the
-  // measured field died on pull 5 in almost every run that rolled „Brutalna"
-  // (+42% melee) onto a boss whose fight is already twice as long, so the whole
-  // leaderboard bucketed at 4 and 9. Affixes are for the pulls in between.
-  st.affix = (st.pull === 1 || st.isBoss) ? 0 : hdRnd(st, HD_AFFIXES.length);
+  // two — or, deep enough, three — abilities out of four), and stacking an
+  // affix on top double-dips: the measured field died on pull 5 in almost
+  // every run that rolled „Brutalna" (+42% melee) onto a boss whose fight is
+  // already twice as long, so the whole leaderboard bucketed at 4 and 9.
+  // Affixes are for the pulls in between.
+  st.affixes = [];
+  if (st.pull !== 1 && !st.isBoss) {
+    const first = hdRnd(st, HD_AFFIXES.length);
+    st.affixes.push(first);
+    // A second, distinct, non-'none' affix can pile on from pull 8 — see the
+    // HD_AFFIXES header for why. Never stacked on top of 'none' itself.
+    if (first !== 0 && st.pull >= HD_AFFIX2_MIN_PULL && hdRnd(st, 100) < HD_AFFIX2_CHANCE_PCT) {
+      const pool = [];
+      for (let i = 1; i < HD_AFFIXES.length; i += 1) if (i !== first) pool.push(i);
+      st.affixes.push(pool[hdRnd(st, pool.length)]);
+    }
+  }
   const base = Math.floor((HD_PACK_HP_BASE + HD_PACK_HP_PER_PULL * st.pull) * hdAff(st, 'hp') / 100);
   st.packMax = st.isBoss ? Math.floor(base * HD_BOSS_HP_MULT_PCT / 100) : base;
   st.packHp = st.packMax;
@@ -485,19 +616,22 @@ function hdStartPull(st) {
   st.fightTick = 0;
   st.bossCast = null;
   st.bossCastT = HD_BOSS_CAST_FIRST;
-  // A boss draws two of its four abilities, so the same named boss is a
-  // different fight every time you meet it.
+  // A boss draws two (three from pull HD_BOSS_KIT_DEEP_PULL) of its four
+  // abilities, so the same named boss is a different fight every time you
+  // meet it — and a harder-to-predict one once you have seen it a few times.
   st.bossKit = [];
   if (st.isBoss) {
+    const kitSize = st.pull >= HD_BOSS_KIT_DEEP_PULL ? HD_BOSS_KIT_SIZE_DEEP : HD_BOSS_KIT_SIZE;
     const pool = [];
     for (let i = 0; i < HD_BOSS_ABILITIES; i += 1) pool.push(i);
-    for (let i = 0; i < HD_BOSS_KIT_SIZE; i += 1) st.bossKit.push(pool.splice(hdRnd(st, pool.length), 1)[0]);
+    for (let i = 0; i < kitSize; i += 1) st.bossKit.push(pool.splice(hdRnd(st, pool.length), 1)[0]);
   }
   st.phoenix = st.perks[HD_PK_PHOENIX];       // cheat-death charges refresh per pull
   st.reviveCharges = st.perks[HD_PK_REVIVE];  // ... and so does the resurrection
   st.revives.length = 0;
   st.pullHealed = 0;
   st.pullOverheal = 0;
+  st.pullDeaths = 0;
   // The tempo bonus for THIS pull is locked in the moment you pull, from how
   // long the rest before it lasted. Nothing decays once the fight starts.
   st.pullTempo = Math.max(0, HD_SCORE_TEMPO_MAX - Math.floor(st.restTicks / (10 * HD_SCORE_TEMPO_SEC)));
@@ -597,6 +731,7 @@ function hdDamage(st, slot, amount, src) {
   }
   st.hp[slot] = 0;
   st.deaths += 1;
+  st.pullDeaths += 1;
   st.fx.push({ k: 'death', slot: slot });
   // A corpse keeps nothing.
   for (let i = st.hots.length - 1; i >= 0; i -= 1) if (st.hots[i].tgt === slot) st.hots.splice(i, 1);
@@ -845,11 +980,14 @@ function hdBankPull(st) {
   const total = st.pullHealed + st.pullOverheal;
   const precision = total > 0 ? Math.floor(st.pullHealed * 100 / total) : 100;
   const healPts = Math.floor(Math.floor(st.pullHealed / HD_SCORE_HEAL_PER_PT) * precision / 100);
+  const flawless = st.pullDeaths === 0 ? HD_SCORE_FLAWLESS_PTS : 0;
+  if (st.pullDeaths > 0) st.deathPulls += 1;
   st.scPull += depth;
   st.scHeal += healPts;
+  st.scFlawless += flawless;
   st.scTempo += st.pullTempo;
-  st.score = st.scPull + st.scHeal + st.scTempo;
-  st.fx.push({ k: 'clear', depth: depth, heal: healPts, tempo: st.pullTempo, precision: precision });
+  st.score = st.scPull + st.scHeal + st.scFlawless + st.scTempo;
+  st.fx.push({ k: 'clear', depth: depth, heal: healPts, flawless: flawless, tempo: st.pullTempo, precision: precision });
 }
 
 function hdAdvanceTick(st, actions) {
@@ -950,12 +1088,13 @@ function hdAdvanceTick(st, actions) {
     }
   }
 
-  // ── the draining affix ──
-  if (hdAffix(st).drain) {
+  // ── the draining affix(es) ──
+  const drainAmt = hdAffixDrain(st);
+  if (drainAmt > 0) {
     st.drainT -= 1;
     if (st.drainT <= 0) {
       st.drainT = HD_AFFIX_DRAIN_PERIOD;
-      hdBurnMana(st, hdAffix(st).drain);
+      hdBurnMana(st, drainAmt);
     }
   }
 
@@ -1066,14 +1205,34 @@ const HD_CAST_META = [
   { name: 'Cięcie Budżetu',  desc: 'zabiera manę + rani wszystkich',  icon: '✂️' },
 ];
 
-function hdBossIndex(pull) { return (Math.floor(pull / HD_BOSS_EVERY) - 1) % HD_BOSS_NAMES.length; }
-function hdPackName(pull) {
-  if (hdIsBoss(pull)) return HD_BOSS_NAMES[hdBossIndex(pull)];
-  return HD_PACK_NAMES[(pull - 1) % HD_PACK_NAMES.length] +
-    (pull > HD_PACK_NAMES.length ? ' +' + Math.floor((pull - 1) / HD_PACK_NAMES.length) : '');
+// Which office nemesis (or which boss) a pull is, derived from the run's
+// SEED and the pull number rather than rolled off the live RNG stream. Pure
+// and side-effect-free on purpose: `hdDraw`'s "next up" preview during a rest
+// calls this for pull+1 before that pull has actually started, and a function
+// that consumed the shared PRNG would make the preview lie the moment the
+// real hdStartPull rolled something different. It used to just cycle through
+// the list in pull order — same office nemesis on pull 1 of every run, same
+// one on pull 11 — which reads as scripted once you have played more than a
+// few sessions; this makes the sequence different (but still fully
+// determined by seed+pull, so a "next up" preview is always honest) run to
+// run instead.
+function hdFlavorHash(seed, pull) {
+  let h = Math.imul(seed ^ pull, 2654435761) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 3266489917) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
 }
-function hdPackGlyph(pull) {
-  return hdIsBoss(pull) ? HD_BOSS_GLYPHS[hdBossIndex(pull)] : HD_PACK_GLYPHS[(pull - 1) % HD_PACK_GLYPHS.length];
+function hdPackFlavorIdx(st, pull) {
+  return hdIsBoss(pull) ? hdFlavorHash(st.seed, pull) % HD_BOSS_NAMES.length
+                         : hdFlavorHash(st.seed, pull) % HD_PACK_NAMES.length;
+}
+function hdPackName(st, pull) {
+  const i = hdPackFlavorIdx(st, pull);
+  return hdIsBoss(pull) ? HD_BOSS_NAMES[i] : HD_PACK_NAMES[i];
+}
+function hdPackGlyph(st, pull) {
+  const i = hdPackFlavorIdx(st, pull);
+  return hdIsBoss(pull) ? HD_BOSS_GLYPHS[i] : HD_PACK_GLYPHS[i];
 }
 
 function hdEl(id) { return document.getElementById(id); }
@@ -1569,7 +1728,7 @@ function hdDrawEnemyHeader(ctx, rt, st) {
   const y = 62;
 
   const enrage = hdEnragePct(st) - 100;
-  const name = (boss ? '☠️ ' : hdPackGlyph(st.pull) + ' ') + hdPackName(st.pull) +
+  const name = (boss ? '☠️ ' : hdPackGlyph(st, st.pull) + ' ') + hdPackName(st, st.pull) +
     (enrage > 0 ? '  🔥 WŚCIEKŁOŚĆ +' + enrage + '%' : '');
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1578,11 +1737,12 @@ function hdDrawEnemyHeader(ctx, rt, st) {
   ctx.fillText(name, cx, y);
 
   ctx.font = '800 12.5px system-ui, sans-serif';
-  ctx.fillStyle = '#64748b';
+  // Zero, one or (from pull 8) two affixes — everyone active shown, so a
+  // stacked pair reads as two icons+names rather than silently only the first.
+  const active = hdAffixList(st).filter(a => a.id !== 'none');
   let sub = 'GRUPA ' + st.pull;
-  const aff = hdAffix(st);
-  if (aff.id !== 'none') sub += '   ' + aff.icon + ' ' + aff.name.toUpperCase();
-  ctx.fillStyle = aff.id === 'none' ? '#64748b' : '#b45309';
+  if (active.length) sub += '   ' + active.map(a => a.icon + ' ' + a.name.toUpperCase()).join('  +  ');
+  ctx.fillStyle = active.length ? '#b45309' : '#64748b';
   ctx.fillText(sub, cx, y + 20);
 }
 
@@ -1685,7 +1845,7 @@ function hdDraw() {
       units.push({
         row: cell[1],
         x: p[0], y: p[1] + bob * Math.sin((rt.time + i * 330) / 460) * 2,
-        glyph: hdPackGlyph(st.pull),
+        glyph: hdPackGlyph(st, st.pull),
         color: st.isBoss ? (enraged ? '#dc2626' : '#991b1b') : '#7f1d3a',
         lunge: rt.mobLunge[i] > 0 ? -Math.sin((1 - rt.mobLunge[i] / 320) * Math.PI) * 20 : 0,
         flash: Math.max(0, rt.mobFlash[i] / 240),
@@ -1738,8 +1898,8 @@ function hdDraw() {
     ctx.fillText('Przerwa — pełne życie i mana', HD_CS_W / 2, HD_CS_H / 2 - 12);
     ctx.fillStyle = '#475569';
     ctx.font = '700 12px system-ui, sans-serif';
-    ctx.fillText(hdIsBoss(st.pull + 1) ? '☠️ Następny: BOSS — ' + hdPackName(st.pull + 1)
-      : 'Następna grupa: ' + hdPackName(st.pull + 1), HD_CS_W / 2, HD_CS_H / 2 + 14);
+    ctx.fillText(hdIsBoss(st.pull + 1) ? '☠️ Następny: BOSS — ' + hdPackName(st, st.pull + 1)
+      : 'Następna grupa: ' + hdPackName(st, st.pull + 1), HD_CS_W / 2, HD_CS_H / 2 + 14);
   }
 
   if (st.dead) {
@@ -2771,17 +2931,27 @@ function beginHealerDungeonRound(seed, options) {
 
 // ── Class selection ─────────────────────────────────────────────────────────
 // Picked on the start card, before the run, and remembered between sessions —
-// a healer main does not want to re-choose every time. The three are balanced
+// a healer main does not want to re-choose every time. All four are balanced
 // to the same HP-per-mana, so this is a question of how you want to play, not
 // of which one is better.
 const HD_CLASS_KEY = 'hd_class_v1';
+// Paladyn is the default for anyone who has never chosen — its panic button
+// is instant with no cast time and no HoT/shield timing to learn, so a new
+// player's first heal behaves exactly like clicking a heal in any other game.
+const HD_CLASS_DEFAULT = Math.max(0, HD_CLASSES.findIndex(c => c.id === 'paladin'));
 let hdClassChoice = null;
 
 function hdPickedClass() {
   if (hdClassChoice != null) return hdClassChoice;
-  let stored = 0;
-  try { stored = Number(localStorage.getItem(HD_CLASS_KEY)) || 0; } catch (e) { stored = 0; }
-  hdClassChoice = Math.max(0, Math.min(HD_CLASSES.length - 1, stored));
+  // Number(null) and Number('') both coerce to 0, which is a REAL class
+  // (Druid) — so "nothing stored yet" has to be read as the raw string first,
+  // or a player who never picked would silently start on Druid instead of the
+  // intended default.
+  let raw = null;
+  try { raw = localStorage.getItem(HD_CLASS_KEY); } catch (e) { raw = null; }
+  if (raw == null) { hdClassChoice = HD_CLASS_DEFAULT; return hdClassChoice; }
+  const n = Number(raw);
+  hdClassChoice = Number.isFinite(n) ? Math.max(0, Math.min(HD_CLASSES.length - 1, n)) : HD_CLASS_DEFAULT;
   return hdClassChoice;
 }
 
@@ -2866,16 +3036,25 @@ async function finishHealerDungeonRound() {
   if (title) title.textContent = '🏆 ' + hdNum(score) + ' pkt';
 
   // The result card gets the whole breakdown, because a points score you
-  // cannot take apart is a points score you cannot improve.
+  // cannot take apart is a points score you cannot improve — and it leads
+  // with the class you played, since a run's score means something different
+  // depending which one it was (see the picker/leaderboard rows below).
+  const cl = hdClass(st);
   const sub = hdEl('hd-result');
   if (sub) {
     const heals = st.healingDone + st.overheal;
     const precision = heals > 0 ? Math.floor(st.healingDone * 100 / heals) : 100;
+    const flawlessPulls = st.pullsCleared - st.deathPulls;
     sub.classList.add('is-on');
     sub.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'hd-result-class';
+    head.innerHTML = '<span>' + cl.icon + '</span>' + cl.name;
+    sub.appendChild(head);
     const rows = [
       ['🏅', 'Głębokość', hdNum(st.scPull), st.pullsCleared + ' grup · ' + st.bossesKilled + ' bossów'],
       ['💚', 'Leczenie', hdNum(st.scHeal), hdNum(st.healingDone) + ' HP · celność ' + precision + '%'],
+      ['🔥', 'Bezbłędność', hdNum(st.scFlawless), flawlessPulls + '/' + st.pullsCleared + ' grup bez straty'],
       ['⏱️', 'Tempo', hdNum(st.scTempo), 'za szybkie ruszanie po przerwie'],
     ];
     rows.forEach(r => {
@@ -2889,13 +3068,17 @@ async function finishHealerDungeonRound() {
     });
   }
 
+  // The class rides along with the score — a client_meta blob the leaderboard
+  // can print without needing to know anything about classes itself; see
+  // recordArcadeScore's third argument.
+  const meta = { cls: st.cls, icon: cl.icon, name: cl.name };
   if (allGamesMode) {
     try {
-      await recordArcadeScore('healer_dungeon', score);
-      if (status) status.textContent = hdClass(st).name + reason + ' · zapisano w rankingu arcade!';
+      await recordArcadeScore('healer_dungeon', score, meta);
+      if (status) status.textContent = cl.name + reason + ' · zapisano w rankingu arcade!';
       loadArcadeScores('healer_dungeon');
     } catch (e) {
-      if (status) status.textContent = hdClass(st).name + reason + ' (błąd zapisu wyniku).';
+      if (status) status.textContent = cl.name + reason + ' (błąd zapisu wyniku).';
     }
     return;
   }
@@ -2964,13 +3147,13 @@ const HD_TUTORIAL = [
   { icon: '👁️', title: 'Paski mówią wszystko',
     body: 'Jasny pasiasty kawałek = leczenie, które <b>już leci</b> — nie marnuj na ten cel kolejnego czaru. Czerwony kawałek zjadany z prawej = cios bossa, który zaraz wyląduje. Ramka miga na biało, gdy ten cios zabije cel <b>mimo</b> całego leczenia w drodze.' },
   { icon: '💧', title: 'Mana to cała trudność',
-    body: 'Między grupami życie i mana wracają do pełna, więc jedna pula many musi wystarczyć na jedną walkę. <b>Zasada 5 sekund:</b> po każdym czarze regeneracja stoi przez 5 s — przerwy, które zostawisz w środku walki, to mana na następną. Leczysz nie <i>więcej</i>, tylko <i>oszczędniej</i>.' },
+    body: 'Między grupami życie i mana wracają do pełna, więc jedna pula many musi wystarczyć na całą (dłuższą, niż się wydaje) walkę. <b>Zasada 5 sekund:</b> po każdym czarze regeneracja stoi przez 5 s — rzucanie na każdym GCD bez przerwy zostawi Cię bez many, zanim grupa padnie. Kilka świadomie zostawionych sekund ciszy, kiedy nikomu nic nie grozi, to mana na resztę walki.' },
   { icon: '🏆', title: 'Wynik to punkty, nie liczba grup',
-    body: '<b>Głębokość</b> — każda kolejna grupa warta więcej, boss ×2. <b>Leczenie</b> — punkty za efektywne leczenie, ale przelanie (leczenie w pełny pasek) je zjada. <b>Tempo</b> — im szybciej ruszysz po przerwie, tym większy bonus. Nikt Cię nie goni; po prostu odwaga się opłaca.' },
+    body: '<b>Głębokość</b> — każda kolejna grupa warta więcej, boss ×2. <b>Leczenie</b> — punkty za efektywne leczenie, ale przelanie (leczenie w pełny pasek) je zjada. <b>Bezbłędność</b> — bonus za grupę, w której nikt nie padł. <b>Tempo</b> — im szybciej ruszysz po przerwie, tym większy bonus. Nikt Cię nie goni; po prostu odwaga się opłaca. Wynik zobaczysz dopiero na koniec rundy.' },
   { icon: '⭐', title: 'Po każdej grupie wybierasz bonus',
     body: 'Dostajesz trzy karty — statystyki (leczenie / życie drużyny / obrażenia) i <b>losowe talenty</b> z puli dwunastu: regeneracja, krótszy cooldown, tańsze czary, krytyki, wskrzeszenie, a nawet jednorazowe uniknięcie śmierci. Nawet <i>proporcja</i> kart się losuje, więc każdy przebieg buduje innego uzdrowiciela.' },
   { icon: '🎲', title: 'Żadne dwie grupy nie są takie same',
-    body: 'Każda grupa (poza pierwszą) ma <b>losowy modyfikator</b> wypisany obok jej paska życia: 😤 bije mocniej, 👥 ma więcej życia, 💨 bije częściej, 🩸 wysysa Ci manę, 💥 częstsze fale… Przeczytaj go, zanim ruszysz. <b>Boss</b> losuje z kolei <b>dwie z czterech</b> zdolności, więc ten sam boss nigdy nie gra tak samo.' },
+    body: 'Każda grupa (poza pierwszą i bossami) ma <b>losowy modyfikator</b> wypisany obok jej paska życia: 😤 bije mocniej, 👥 ma więcej życia, 💨 bije częściej, 🩸 wysysa Ci manę, 💥 częstsze fale… Od 8. grupy dwa modyfikatory mogą się <b>połączyć naraz</b>. Przeczytaj je, zanim ruszysz. <b>Boss</b> losuje z kolei dwie (od 20. grupy — trzy) z czterech zdolności, więc ten sam boss nigdy nie gra tak samo.' },
 ];
 let hdTutStep = 0;
 

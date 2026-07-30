@@ -5,21 +5,23 @@ const block = src.slice(src.indexOf('const HD_TICK_MS'), src.indexOf('// ╚═�
 const EXPORTS = ['hdInitState','hdAdvanceTick','hdStartPull','hdApplyUpgrade','hdPartyDps','hdMaxMana',
   'hdRegenPerTick','hdCanCast','hdHealAmt','hdIncomingHeal','hdIncomingDamage','hdSurvives','hdBossPending',
   'hdIsBoss','hdEnragePct','hdCost','hdSpell','hdSpellCd','hdCastTicks','hdClass','hdGcdTicks','hdFsrTicks',
-  'hdDmgTakenPct','hdBankPull','hdAffix','hdLivingDps','hdPartyDpsPerTick','hdBossAbilityRaw',
+  'hdDmgTakenPct','hdBankPull','hdAff','hdAffixList','hdAffixDrain','hdLivingDps','hdPartyDpsPerTick','hdBossAbilityRaw',
+  'hdHasAnyCast','hdHastePct',
   'HD_SCORE_HEAL_PER_PT','HD_SCORE_DEPTH_EVERY',
   'HD_FSR_TICKS','HD_A_FILL','HD_A_RAID','HD_A_BIG','HD_A_PULL','HD_A_UPGRADE','HD_SP_FILL','HD_SP_RAID',
   'HD_SP_BIG','HD_SPELL_SLOTS','HD_MAX_TICKS','HD_TANK','HD_HEAL','HD_PARTY','HD_BOSS_EVERY',
   'HD_UPGRADE_CHOICES','HD_UPGRADE_COUNT','HD_UP_STEP','HD_CB_BUSTER','HD_CB_NUKE','HD_CB_FOCUS','HD_CB_DRAIN',
-  'HD_BOSS_ABILITIES','HD_BOSS_KIT_SIZE','HD_CLASSES','HD_K_HOT','HD_K_DIRECT','HD_K_SHIELD','HD_AFFIXES',
+  'HD_BOSS_ABILITIES','HD_BOSS_KIT_SIZE','HD_BOSS_KIT_SIZE_DEEP','HD_BOSS_KIT_DEEP_PULL',
+  'HD_CLASSES','HD_K_HOT','HD_K_DIRECT','HD_K_SHIELD','HD_AFFIXES','HD_AFFIX2_MIN_PULL','HD_AFFIX2_CHANCE_PCT',
   'HD_PERK_COUNT','HD_PK_PHOENIX','HD_PK_CRIT','HD_PK_WARD','HD_PK_GCD','HD_PK_CDR','HD_PK_FSR','HD_PK_RAID',
   'HD_PK_HASTE','HD_PK_REVIVE','HD_REVIVE_TICKS','HD_UK_STAT','HD_UK_PERK','HD_SCORE_TEMPO_MAX',
-  'HD_SCORE_TEMPO_SEC','HD_SCORE_BOSS_MULT','HD_MAX_SCORE','HD_GCD_TICKS','HD_TWO_PERK_PCT'];
+  'HD_SCORE_TEMPO_SEC','HD_SCORE_BOSS_MULT','HD_SCORE_FLAWLESS_PTS','HD_MAX_SCORE','HD_GCD_TICKS','HD_TWO_PERK_PCT'];
 const M = new Function(block + '\nreturn {' + EXPORTS.join(',') + '};')();
 const SLOTS = ['Tank','Ty','Łotr','Łucznik','Mag'];
 const CLASSES = M.HD_CLASSES.map((c,i)=>({i, id:c.id, name:c.name}));
 
 // ── A competent-but-not-perfect healer, written entirely against SLOTS ───────
-// It never names a spell, so the same policy plays all three classes: slot 0 is
+// It never names a spell, so the same policy plays every class: slot 0 is
 // the efficient filler, slot 1 the raid answer, slot 2 the panic button. The
 // only class-aware branch is that a HoT/shield filler is worth pre-casting on a
 // healthy target while a direct filler is not — which is the actual difference
@@ -29,26 +31,38 @@ const preemptive = (st) => {
   const k = M.hdSpell(st, M.HD_SP_FILL).kind;
   return k === M.HD_K_HOT || k === M.HD_K_SHIELD;
 };
+// The shaman's panic button is a SHIELD, not a heal — reactively firing it on
+// someone who is already low does nothing for the health they have already
+// lost, only for the next hit. A bot that treated it like the other three
+// classes' direct-heal panic buttons would burn it on already-hurt targets
+// and measure weak for a POLICY reason, not a balance one.
+const panicIsShield = (st) => M.hdSpell(st, M.HD_SP_BIG).kind === M.HD_K_SHIELD;
 const covered = (st, i) => M.hdIncomingHeal(st, i) + st.shield[i];
 
 const policy = (st, low, lp) => {
   const hurt = st.hp.filter((hp,i)=>hp<st.maxHp[i]*0.85).length;
   const tankPct = st.hp[0]/st.maxHp[0];
-  // pre-heal the telegraphed boss hit
+  const shieldPanic = panicIsShield(st);
+  // pre-heal (or pre-SHIELD) the telegraphed boss hit
   const pending = M.hdBossPending(st);
   if (pending && pending.left <= 25) {
     if (pending.kind === M.HD_CB_BUSTER) {
       if (!M.hdSurvives(st, 0) && ready(st, M.HD_SP_BIG)) return [{a:M.HD_A_BIG,t:0}];
       const gap = st.maxHp[0]-st.hp[0];
-      if (gap > 200 && ready(st, M.HD_SP_BIG) && covered(st,0) < gap*0.6) return [{a:M.HD_A_BIG,t:0}];
+      if (!shieldPanic && gap > 200 && ready(st, M.HD_SP_BIG) && covered(st,0) < gap*0.6) return [{a:M.HD_A_BIG,t:0}];
       if (preemptive(st) && ready(st, M.HD_SP_FILL) && st.shield[0] === 0) return [{a:M.HD_A_FILL,t:0}];
     } else if (ready(st, M.HD_SP_RAID) && hurt>=2) {
       return [{a:M.HD_A_RAID,t:0}];
     }
   }
   if (hurt>=3 && ready(st, M.HD_SP_RAID)) return [{a:M.HD_A_RAID,t:0}];
-  if (tankPct<0.65 && ready(st, M.HD_SP_BIG)) return [{a:M.HD_A_BIG,t:0}];
-  if (lp<0.5 && ready(st, M.HD_SP_BIG)) return [{a:M.HD_A_BIG,t:low}];
+  // A shield cast reactively on a critical target does not undo the damage
+  // already taken, but it DOES guarantee they block the next hit — which for
+  // someone already this low is frequently the one that would have killed
+  // them. Worth keeping as a genuine (if imperfect) emergency response rather
+  // than leaving the class with no reactive panic option at all.
+  if (tankPct<0.65 && ready(st, M.HD_SP_BIG) && (!shieldPanic || st.shield[0] === 0)) return [{a:M.HD_A_BIG,t:0}];
+  if (lp<0.5 && ready(st, M.HD_SP_BIG) && (!shieldPanic || st.shield[low] === 0)) return [{a:M.HD_A_BIG,t:low}];
   // A HoT/shield filler is meant to be BLANKETED, not spot-cast: the tank
   // first, then anyone who has taken a scratch and is not already covered.
   // Without this the bot played the druid and the priest like a paladin —
@@ -62,6 +76,18 @@ const policy = (st, low, lp) => {
   }
   if (lp<0.85 && ready(st, M.HD_SP_FILL) && covered(st,low) < (st.maxHp[low]-st.hp[low])) {
     return [{a:M.HD_A_FILL,t:low}];
+  }
+  // A shield-panic button that never gets used outside a telegraph is a mana
+  // pool sitting idle — a real player would maintenance-loop it on the tank
+  // with spare GCDs. But only spare ones: gated on mana > 30% of max, or the
+  // "maintenance" loop fires on EVERY idle GCD and never rests at all, which
+  // starved this class harder than any of the other three (129 of ~145
+  // available GCDs spent before this guard existed) — the exact "never
+  // leaves a gap" failure mode the whole redesign exists to punish, just
+  // committed by the bot instead of a player.
+  if (shieldPanic && ready(st, M.HD_SP_BIG) && st.shield[0] === 0 && st.hp[0] > 0
+      && st.mana > M.hdMaxMana(st) * 0.3) {
+    return [{a:M.HD_A_BIG,t:0}];
   }
   return null;
 };
@@ -118,10 +144,10 @@ console.log('— the three stats each do their one thing —');
 
 // ── CLASSES ─────────────────────────────────────────────────────────────────
 // "Same power" is the design promise, so it is asserted numerically rather than
-// eyeballed. HP-per-mana per slot must agree across all three classes to within
+// eyeballed. HP-per-mana per slot must agree across ALL classes to within
 // a few percent; what may differ freely is delivery (HoT / shield / direct),
 // cast time and cooldown.
-console.log('— three classes, same power —');
+console.log('— ' + CLASSES.length + ' classes, same power —');
 {
   const perMana = (cls, slot) => {
     const st = M.hdInitState(1, cls);
@@ -145,9 +171,23 @@ console.log('— three classes, same power —');
     ok(c.name + ': raid spell is the efficient AoE answer, not a filler', r > f &&
        M.hdSpell(M.hdInitState(1,c.i), M.HD_SP_RAID).cd > 0, r.toFixed(2));
   }
-  // Each class must actually be its own thing, not a reskin.
-  const kinds = CLASSES.map(c => M.hdSpell(M.hdInitState(1,c.i), M.HD_SP_FILL).kind);
-  ok('the three fillers deliver healing three different ways', new Set(kinds).size === 3, kinds.join(','));
+  // Each class must actually be its own thing, not a reskin. Judged by the
+  // FULL kit (filler+raid+panic delivery kinds together), not the filler
+  // alone — the shaman deliberately shares the druid's HoT filler (that is
+  // the point of a HoT-flavoured class), but its kit as a whole (HOT/DIRECT/
+  // SHIELD) is still nobody else's.
+  const kitSignature = (c) => [M.HD_SP_FILL, M.HD_SP_RAID, M.HD_SP_BIG]
+    .map(slot => M.hdSpell(M.hdInitState(1, c.i), slot).kind).join(',');
+  const sigs = CLASSES.map(kitSignature);
+  ok('every class has a distinct full delivery kit', new Set(sigs).size === CLASSES.length,
+     CLASSES.map((c,i)=>c.name+':'+sigs[i]).join(' · '));
+  ok('at least two different filler deliveries exist', (() => {
+    const fillKinds = CLASSES.map(c => M.hdSpell(M.hdInitState(1,c.i), M.HD_SP_FILL).kind);
+    return new Set(fillKinds).size >= 2;
+  })());
+  ok('at least one class panic-shields instead of healing after the hit', (() => {
+    return CLASSES.some(c => M.hdSpell(M.hdInitState(1,c.i), M.HD_SP_BIG).kind === M.HD_K_SHIELD);
+  })());
 }
 
 console.log('— shields absorb, expire, and count honestly —');
@@ -229,7 +269,10 @@ console.log('— random talents —');
   // ⚠️ Szybkie Ręce must land for EVERY class. Scoped to the panic button it was
   // a dead card for the paladin, whose panic button is already instant — and a
   // talent that does nothing for the class you picked is the worst possible
-  // outcome of a random draw.
+  // outcome of a random draw. The shaman kit pushed this further: it has NO
+  // cast-time spell at all, so the talent was widened once more to shrink the
+  // panic button's COOLDOWN when a kit has nothing else for it to speed up —
+  // checked here via hdSpellCd on HD_SP_BIG, not just hdCastTicks.
   for (const c of CLASSES) {
     const b = M.hdInitState(1, c.i);
     const h = M.hdInitState(1, c.i); M.hdApplyUpgrade(h, P(M.HD_PK_HASTE));
@@ -238,12 +281,32 @@ console.log('— random talents —');
       const before = M.hdCastTicks(b, slot), after = M.hdCastTicks(h, slot);
       if (before > 0 && after < before) helped = true;
       if (before === 0 && after !== 0) broke = true;
+      if (slot === M.HD_SP_BIG) {
+        const beforeCd = M.hdSpellCd(b, slot), afterCd = M.hdSpellCd(h, slot);
+        if (beforeCd > 0 && afterCd < beforeCd) helped = true;
+      }
     }
     ok(c.name + ': Szybkie Ręce actually does something', helped && !broke);
   }
   ok('Szybkie Ręce never turns an instant into a cast', (() => {
     const h = M.hdInitState(1, 2); M.hdApplyUpgrade(h, P(M.HD_PK_HASTE));
     return M.hdCastTicks(h, M.HD_SP_RAID) === 0;
+  })());
+  ok('a kit with no cast-time spell falls back to the panic button\'s cooldown', (() => {
+    const shaman = CLASSES.find(c => !M.hdHasAnyCast(M.hdInitState(1, c.i)));
+    if (!shaman) return false;   // one of the four MUST have an all-instant kit
+    const b = M.hdInitState(1, shaman.i);
+    const h = M.hdInitState(1, shaman.i); M.hdApplyUpgrade(h, P(M.HD_PK_HASTE));
+    return M.hdSpellCd(h, M.HD_SP_BIG) < M.hdSpellCd(b, M.HD_SP_BIG);
+  })());
+  ok('...and does NOT touch other classes\' panic-button cooldown', (() => {
+    // Paladin's 15 s panic cooldown must stay exactly 15 s under Szybkie Ręce —
+    // it already benefits via its cast-time filler, so the cooldown fallback
+    // (scoped to `!hdHasAnyCast`) must never additionally apply to it.
+    const paladin = CLASSES.find(c => c.id === 'paladin');
+    const b = M.hdInitState(1, paladin.i);
+    const h = M.hdInitState(1, paladin.i); M.hdApplyUpgrade(h, P(M.HD_PK_HASTE));
+    return M.hdSpellCd(h, M.HD_SP_BIG) === M.hdSpellCd(b, M.HD_SP_BIG);
   })());
   ok('Skupienie really shortens the GCD', M.hdGcdTicks(gcd) < M.hdGcdTicks(base),
      M.hdGcdTicks(base)+' → '+M.hdGcdTicks(gcd));
@@ -418,47 +481,48 @@ console.log('— the run ends only when the HEALER dies —');
 console.log('— every pull is a different pull —');
 {
   ok('pull 1 is never modified, so the game can be learned', (() => {
-    for (let seed = 1; seed <= 60; seed++) if (M.hdInitState(seed).affix !== 0) return false;
+    for (let seed = 1; seed <= 60; seed++) if (M.hdInitState(seed).affixes.length !== 0) return false;
     return true;
   })());
   const seen = new Set();
   for (let seed = 1; seed <= 300; seed++) {
     const st = M.hdInitState(seed);
-    st.pull = 2 + (seed % 8);
+    st.pull = 2 + (seed % 6);   // stay under HD_AFFIX2_MIN_PULL for a single-affix sample
     M.hdStartPull(st);
-    seen.add(st.affix);
+    st.affixes.forEach(a => seen.add(a));
   }
   ok('every affix actually shows up', seen.size === M.HD_AFFIXES.length,
      seen.size + '/' + M.HD_AFFIXES.length);
   // An affix has to CHANGE the fight, not just print a label. hdStartPull rolls
   // the affix itself, so the only honest way to sample one is to keep rolling
-  // until it comes up and read the pull it actually built.
-  const rollUntil = (affix) => {
-    for (let seed = 1; seed <= 4000; seed++) {
+  // until it comes up ALONE (below the stacking depth) and read the pull it
+  // actually built.
+  const rollUntilAlone = (affix) => {
+    for (let seed = 1; seed <= 8000; seed++) {
       const st = M.hdInitState(seed);
       st.pull = 4;
       M.hdStartPull(st);
-      if (st.affix === affix) return st;
+      if (st.affixes.length === 1 && st.affixes[0] === affix) return st;
     }
     return null;
   };
-  const plain = rollUntil(0);
+  const plain = rollUntilAlone(0);
   let hpDiffers = 0, timerDiffers = 0, missing = 0;
   for (let a = 1; a < M.HD_AFFIXES.length; a++) {
-    const st = rollUntil(a);
+    const st = rollUntilAlone(a);
     if (!st) { missing++; continue; }
     if (st.packMax !== plain.packMax) hpDiffers++;
     if (st.meleeT !== plain.meleeT || st.aoeT !== plain.aoeT ||
         st.spikeT !== plain.spikeT || st.cleaveT !== plain.cleaveT) timerDiffers++;
   }
-  ok('every affix is reachable', missing === 0, missing + ' unreachable');
+  ok('every affix is reachable on its own', missing === 0, missing + ' unreachable');
   ok('affixes change pack health', hpDiffers >= 3, hpDiffers + ' affixes move the HP pool');
   ok('affixes change the damage rhythm', timerDiffers >= 3, timerDiffers + ' affixes move the timers');
 
   // the draining affix has to actually cost mana
   const drainIdx = M.HD_AFFIXES.findIndex(a => a.drain);
   const dr = M.hdInitState(2);
-  dr.pull = 3; M.hdStartPull(dr); dr.affix = drainIdx;
+  dr.pull = 3; M.hdStartPull(dr); dr.affixes = [drainIdx];
   dr.mana = 1000;
   let drained = false;
   for (let i = 0; i < 120 && !dr.dead; i++) {
@@ -466,6 +530,51 @@ console.log('— every pull is a different pull —');
     if (dr.fx.some(f => f.k === 'drain')) { drained = true; break; }
   }
   ok('the draining affix really takes mana', drained);
+
+  // ── stacking (2026-07-30) ──
+  console.log('— affixes can stack from pull ' + M.HD_AFFIX2_MIN_PULL + ' —');
+  let sawStack = false, sawBelowMin = false, sawOnBoss = false, sawOnPull1 = false;
+  const stackedPairs = new Set();
+  for (let seed = 1; seed <= 4000; seed++) {
+    for (const pull of [1, 3, 5, 7, M.HD_AFFIX2_MIN_PULL, M.HD_AFFIX2_MIN_PULL + 4, 15]) {
+      const st = M.hdInitState(seed);
+      st.pull = pull;
+      M.hdStartPull(st);
+      if (st.affixes.length > 2) throw new Error('more than 2 affixes rolled');
+      if (st.isBoss && st.affixes.length > 0) sawOnBoss = true;
+      if (pull === 1 && st.affixes.length > 0) sawOnPull1 = true;
+      if (st.affixes.length === 2) {
+        if (pull < M.HD_AFFIX2_MIN_PULL) sawBelowMin = true;
+        else { sawStack = true; stackedPairs.add(st.affixes.slice().sort().join(',')); }
+      }
+    }
+  }
+  ok('stacking actually happens from the min pull on', sawStack);
+  ok('never stacks below the min pull', !sawBelowMin);
+  ok('never on a boss (it already has its own kit)', !sawOnBoss);
+  ok('never on pull 1 (the opening must be learnable)', !sawOnPull1);
+  ok('a stacked pair is always two DISTINCT, non-none affixes', (() => {
+    for (let seed = 1; seed <= 2000; seed++) {
+      const st = M.hdInitState(seed);
+      st.pull = M.HD_AFFIX2_MIN_PULL + 3;
+      M.hdStartPull(st);
+      if (st.affixes.length === 2) {
+        if (st.affixes[0] === st.affixes[1]) return false;
+        if (st.affixes[0] === 0 || st.affixes[1] === 0) return false;
+      }
+    }
+    return true;
+  })());
+  ok('multiple different pairs actually come up', stackedPairs.size >= 5, stackedPairs.size + ' distinct pairs');
+  // Two active affixes must COMPOUND, not just have the second silently win.
+  ok('two active affixes on the same knob compound multiplicatively', (() => {
+    const st = M.hdInitState(1);
+    const furious = M.HD_AFFIXES.findIndex(a => a.id === 'furious');
+    const frail = M.HD_AFFIXES.findIndex(a => a.id === 'frail');
+    st.affixes = [furious, frail];
+    const expect = Math.floor(Math.floor(100 * M.HD_AFFIXES[furious].dmg / 100) * M.HD_AFFIXES[frail].dmg / 100);
+    return M.hdAff(st, 'dmg') === expect && expect > Math.max(M.HD_AFFIXES[furious].dmg, M.HD_AFFIXES[frail].dmg);
+  })());
 }
 
 console.log('— every boss is a different boss —');
@@ -489,6 +598,14 @@ console.log('— every boss is a different boss —');
   ok('a normal pull has no kit at all', (() => {
     const st = M.hdInitState(1); st.pull = 4; M.hdStartPull(st);
     return st.bossKit.length === 0;
+  })());
+  ok('a DEEP boss (pull ' + M.HD_BOSS_KIT_DEEP_PULL + '+) draws ' + M.HD_BOSS_KIT_SIZE_DEEP + ' of ' + M.HD_BOSS_ABILITIES, (() => {
+    const st = M.hdInitState(3); st.pull = M.HD_BOSS_KIT_DEEP_PULL; M.hdStartPull(st);
+    return st.bossKit.length === M.HD_BOSS_KIT_SIZE_DEEP && new Set(st.bossKit).size === M.HD_BOSS_KIT_SIZE_DEEP;
+  })());
+  ok('...but a boss just short of that pull still draws the normal ' + M.HD_BOSS_KIT_SIZE, (() => {
+    const st = M.hdInitState(3); st.pull = M.HD_BOSS_KIT_DEEP_PULL - 5; M.hdStartPull(st);
+    return st.bossKit.length === M.HD_BOSS_KIT_SIZE;
   })());
 
   // every ability must be PREDICTABLE — a telegraph you cannot read is a delay
@@ -686,7 +803,8 @@ console.log('— scoring —');
   const s1 = clearOne(drive);
   ok('clearing a pull banks points', s1.score > 0, 'score='+s1.score);
   ok('the first pull pays one depth point', s1.scPull === 1, String(s1.scPull));
-  ok('score is the sum of its three parts', s1.score === s1.scPull + s1.scHeal + s1.scTempo);
+  ok('score is the sum of its four parts',
+     s1.score === s1.scPull + s1.scHeal + s1.scFlawless + s1.scTempo);
 
   // depth: deeper pulls pay more, bosses double
   const depth = (pull, boss) => (1 + Math.floor((pull-1)/M.HD_SCORE_DEPTH_EVERY)) * (boss?M.HD_SCORE_BOSS_MULT:1);
@@ -704,6 +822,27 @@ console.log('— scoring —');
   // so a permanently dawdling run bottoms out at exactly that, not at zero.
   ok('a permanently slow run banks only the opening pull\'s tempo',
      slow.scTempo === M.HD_SCORE_TEMPO_MAX, String(slow.scTempo));
+
+  // Flawless (2026-07-30): +1 for a pull with zero deaths, 0 for a pull with
+  // any. A death already costs dps/time inside the fight (hdPartyDpsPerTick) —
+  // this is the same cost showing up in the ONE number everyone compares.
+  const bankedFlawless = (deaths) => {
+    const s = M.hdInitState(1);
+    s.pullDeaths = deaths; s.pullHealed = 0; s.pullOverheal = 0; s.pullTempo = 0;
+    M.hdBankPull(s);
+    return s.scFlawless;
+  };
+  ok('a pull with zero deaths banks the flawless point',
+     bankedFlawless(0) === M.HD_SCORE_FLAWLESS_PTS, String(bankedFlawless(0)));
+  ok('a pull with even one death banks none', bankedFlawless(1) === 0, String(bankedFlawless(1)));
+  ok('...and multiple deaths in the same pull do not cost MORE', bankedFlawless(3) === 0, String(bankedFlawless(3)));
+  ok('a death is actually visible in st.pullDeaths', (() => {
+    const s = M.hdInitState(9);
+    s.hp[3] = 1;
+    let g = 0;
+    while (s.hp[3] > 0 && g++ < 400 && !s.dead) M.hdAdvanceTick(s, null);
+    return s.pullDeaths >= 1 && s.deaths >= 1;
+  })());
 
   // Precision. Tested mechanically rather than through a "careless bot": a bot
   // that sprays heals dies immediately, so it banks almost no pulls and the
@@ -781,9 +920,18 @@ console.log('— difficulty curve, per class —');
   globalThis.__perClass = perClass;
   globalThis.__avgGood = CLASSES.reduce((a,c)=>a+perClass[c.id].avg,0)/CLASSES.length;
   const avgs = CLASSES.map(c=>perClass[c.id].avg);
-  // The bot is a compromise policy, not three optimised rotations, so it cannot
+  // The bot is a compromise policy, not four optimised rotations, so it cannot
   // read as tightly as the per-spell HP/mana check above. This is the coarse
   // "nobody is obviously broken" bar; the exact-power promise is the ≤3% spread.
+  // ⚠️ The shaman consistently sits at the bottom of this band. Its panic
+  // button is PREDICTIVE (a shield cast before a hit, not a heal after one) —
+  // a fundamentally different skill than the other three classes' panic
+  // buttons ask for, and this bot's policy (maintenance-loop the tank's
+  // shield, gated on spare mana) is a much cruder approximation of "play it
+  // well" than the reactive heal logic the other three get. A human who reads
+  // the boss's telegraph and pre-shields the actual incoming target — not
+  // just the tank on a timer — should close most of this gap in practice; the
+  // ≤3% per-spell spread above is the real fairness guarantee, this is not.
   ok('no class is more than 40% ahead of the weakest',
      Math.max(...avgs) / Math.max(0.5, Math.min(...avgs)) <= 1.4,
      avgs.map(v=>v.toFixed(1)).join(' / '));

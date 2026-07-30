@@ -9,8 +9,15 @@ CREATE TABLE IF NOT EXISTS public.arcade_scores (
   game_type  text NOT NULL,
   score      integer NOT NULL DEFAULT 0,
   coins_paid integer NOT NULL DEFAULT 1,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  -- Small, game-owned, opt-in JSON tag on a score row — e.g. Uzdrowiciel's
+  -- {cls, icon, name} so its leaderboards can show which class scored what.
+  -- Generic on purpose: any arcade game may attach one via record_arcade_score
+  -- without a schema change, but this path is client-callable, so the RPC
+  -- below caps its byte size rather than trusting the shape.
+  client_meta jsonb
 );
+ALTER TABLE public.arcade_scores ADD COLUMN IF NOT EXISTS client_meta jsonb;
 
 CREATE INDEX IF NOT EXISTS arcade_scores_user_game_idx
   ON public.arcade_scores(user_id, game_type, created_at DESC);
@@ -42,6 +49,7 @@ SELECT DISTINCT ON (game_type, user_id)
   s.coins_paid,
   s.created_at,
   s.user_id,
+  s.client_meta,
   p.nick
 FROM public.arcade_scores s
 JOIN public.profiles p ON p.id = s.user_id
@@ -92,8 +100,17 @@ GRANT EXECUTE ON FUNCTION public.pay_arcade_entry(text) TO authenticated;
 -- under every arcade game's real round length (shortest is ~15s), so it
 -- never affects a genuine player clicking "Zagraj ponownie", but it stops a
 -- script from calling this RPC in a tight loop to flood the table.
+--
+-- 2026-07-30: gained a 3rd argument, p_meta, so a game can tag its own score
+-- row with a small opt-in JSON blob (Uzdrowiciel uses {cls,icon,name} so the
+-- leaderboard can show which class played it). The 2-arg overload is DROPped
+-- rather than left alongside a 3-arg default-NULL version — Postgres resolves
+-- a 2-arg call to an EXACT 2-arg overload over a defaulted 3-arg one, so the
+-- two would silently coexist with the new one dead for every existing caller.
 
-CREATE OR REPLACE FUNCTION public.record_arcade_score(p_game_type text, p_score integer)
+DROP FUNCTION IF EXISTS public.record_arcade_score(text, integer);
+
+CREATE OR REPLACE FUNCTION public.record_arcade_score(p_game_type text, p_score integer, p_meta jsonb DEFAULT NULL)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -105,6 +122,12 @@ DECLARE
   v_last_at timestamptz;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'not authenticated'; END IF;
+  -- p_meta is client-supplied on a client-callable RPC — cap its size rather
+  -- than trust its shape. 2000 bytes is generous for a flavor tag like
+  -- {cls,icon,name} and nowhere near enough to matter as storage abuse.
+  IF p_meta IS NOT NULL AND pg_column_size(p_meta) > 2000 THEN
+    RAISE EXCEPTION 'meta_too_large';
+  END IF;
 
   v_score_cap := CASE p_game_type
     WHEN 'whack_boss'    THEN 60
@@ -118,11 +141,12 @@ BEGIN
     WHEN 'popup_panic'   THEN 2000
     WHEN 'tetris'        THEN 9999
     -- „Uzdrowiciel G6": the score is POINTS, not pulls (2026-07-29) — pull
-    -- depth (bosses ×2) + effective healing scaled by precision + a tempo
-    -- bonus for pulling quickly after a rest. Deliberately DOZENS, not
-    -- thousands: a good run measures 30-60 and the deepest plausible one is
-    -- around 150, so a one-pull difference is visible on the board. Arcade
-    -- scores are client-reported, so this cap is the only guard on this path.
+    -- depth (bosses ×2) + effective healing scaled by precision + a flawless
+    -- bonus per death-free pull (2026-07-30) + a tempo bonus for pulling
+    -- quickly after a rest. Deliberately DOZENS, not thousands: a good run
+    -- measures 30-60 and the deepest plausible one is still well under 200,
+    -- so a one-pull difference is visible on the board. Arcade scores are
+    -- client-reported, so this cap is the only guard on this path.
     -- ⚠️ Rows written before 2026-07-29 hold PULLS CLEARED (1-20) and are not
     -- comparable with anything above; delete them if the board looks odd.
     WHEN 'healer_dungeon' THEN 999
@@ -145,12 +169,12 @@ BEGIN
     RAISE EXCEPTION 'submitting too fast';
   END IF;
 
-  INSERT INTO arcade_scores(user_id, game_type, score, coins_paid)
-  VALUES (v_uid, p_game_type, p_score, 0);
+  INSERT INTO arcade_scores(user_id, game_type, score, coins_paid, client_meta)
+  VALUES (v_uid, p_game_type, p_score, 0, p_meta);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.record_arcade_score(text, integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.record_arcade_score(text, integer) TO authenticated;
+REVOKE ALL ON FUNCTION public.record_arcade_score(text, integer, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_arcade_score(text, integer, jsonb) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';

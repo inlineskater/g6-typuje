@@ -4583,7 +4583,7 @@
 
     .hd-startcard {
       top: 50%; transform: translate(-50%, -50%); text-align: center;
-      width: min(560px, calc(100% - 24px));
+      width: min(640px, calc(100% - 24px));
       display: flex; flex-direction: column; align-items: center; gap: 9px;
     }
     .hd-console.is-playing .hd-startcard { display: none; }
@@ -4611,16 +4611,25 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hd-sc-val { font-weight: 800; font-variant-numeric: tabular-nums; color: #b45309; }
 
+    /* The class row of the post-run result card — leads the breakdown, since a
+       score means something different depending which class it came from. */
+    .hd-result-class {
+      display: flex; align-items: center; gap: 6px; justify-content: center;
+      font-size: 13px; font-weight: 800; margin-bottom: 7px;
+      padding-bottom: 6px; border-bottom: 1px solid var(--hd-line);
+    }
+    .hd-result-class span { font-size: 16px; }
+
     /* ── class selection, on the start card ──
-       Three cards; all three are balanced to the same HP-per-mana, so this is
-       a question of how you want to play, not of which one is better. */
+       Four cards; all four are balanced to the same HP-per-mana, so this is a
+       question of how you want to play, not of which one is better. */
     .hd-class-pick { width: 100%; }
     .hd-class-head { font-size: 12px; font-weight: 800; margin-bottom: 6px; }
     .hd-class-head span { font-weight: 600; color: var(--hd-dim); }
-    .hd-classes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .hd-classes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
     .hd-class {
       background: #fff; border: 2px solid var(--hd-line); border-radius: var(--r-sm);
-      padding: 8px 7px; cursor: pointer; font-family: inherit; color: inherit; text-align: center;
+      padding: 8px 5px; cursor: pointer; font-family: inherit; color: inherit; text-align: center;
       display: flex; flex-direction: column; gap: 2px; align-items: center;
     }
     .hd-class:hover { border-color: var(--hd-clr); }
@@ -9343,17 +9352,17 @@
                 <li><strong>Leczysz tam, gdzie patrzysz — nie wybierasz osobno celu.</strong> Najedź myszką na ramkę (albo na bohatera na polu bitwy) i naciśnij <strong>1</strong>, <strong>2</strong> albo <strong>3</strong>: czar poleci w tego, kto jest pod kursorem. To jedno naciśnięcie na jedno leczenie zamiast dwóch — dokładnie tak gra większość uzdrowicieli w MMO. <em>(Q/W/E działają dalej, jeśli już się przyzwyczaiłeś.)</em></li>
                 <li><strong>Albo samą myszą:</strong> kliknij ramkę — <strong>lewy</strong> przycisk rzuca czar 1, <strong>prawy</strong> czar 2, <strong>środkowy</strong> (lub <strong>Shift+lewy</strong>) czar 3. Ramka pod kursorem świeci na niebiesko: to ona dostanie czar. Jeśli kursor stoi na pustym miejscu, czar leci w ostatnią ramkę, na którą patrzyłeś (bursztynowa obwódka). Klawisze zawsze znaczą to samo, niezależnie od klasy: <strong>1</strong> tani i oszczędny, <strong>2</strong> na całą drużynę (z odnowieniem), <strong>3</strong> duży ratunkowy. <strong>Spacja</strong> = ruszaj na następną grupę.</li>
                 <li><strong>Na telefonie</strong> nie ma najeżdżania kursorem, więc zostaje stary układ: <strong>dotknij bohatera lub ramkę</strong>, żeby go wybrać, a potem naciśnij przycisk czaru na dole.</li>
-                <li><strong>Trzy klasy, ta sama moc.</strong> Każda ma identyczne leczenie na jednostkę many (~2,4 / 2,7 / 1,75 dla trzech slotów) — różni je tylko <em>kiedy</em> leczenie dociera. <strong>🌿 Druid</strong> sączy je w czasie (nic się nie marnuje, ale nic nie dzieje się od razu). <strong>✨ Kapłan</strong> daje tarcze, które <em>pochłaniają</em> cios zamiast go naprawiać — genialne na zapowiedziany czar bossa, zmarnowane, gdy nic nie przyjdzie. <strong>🔨 Paladyn</strong> leczy wprost i natychmiast, a jego ratunkowy czar nie ma czasu rzucania — płaci za to odnowieniem.</li>
+                <li><strong>Cztery klasy, ta sama moc.</strong> Każda ma identyczne leczenie na jednostkę many (~2,4 / 2,7 / 1,75 dla trzech slotów) — różni je tylko <em>kiedy</em> leczenie dociera. <strong>🌿 Druid</strong> sączy je w czasie (nic się nie marnuje, ale nic nie dzieje się od razu). <strong>✨ Kapłan</strong> daje tarcze, które <em>pochłaniają</em> cios zamiast go naprawiać — genialne na zapowiedziany czar bossa, zmarnowane, gdy nic nie przyjdzie. <strong>🔨 Paladyn</strong> leczy wprost i natychmiast, a jego ratunkowy czar nie ma czasu rzucania — płaci za to odnowieniem. <strong>🌊 Szaman</strong> łączy szybki HoT z natychmiastowym leczeniem grupy, a jego tarcza (zamiast leczyć po ciosie) zakłada się PRZED nim — jedyna klasa, w której panic button trzeba przewidzieć, nie zareagować.</li>
                 <li><strong>Globalny cooldown (GCD).</strong> Po każdym czarze wszystkie czary są zablokowane na 1,1 s — dlatego nie da się uleczyć jednego bohatera i <em>od razu</em> następnego. Ikona w księdze czarów zaciemnia się i odkręca jak zegar: to znaczy „jeszcze nie". Planuj kolejność celów z wyprzedzeniem.</li>
                 <li><strong>Pasek rzucania</strong> pod Twoją postacią pokazuje czar z czasem rzucania. W tym czasie nie rzucisz nic innego.</li>
                 <li><strong>Zapowiedź leczenia.</strong> Jasny, pasiasty kawałek na pasku życia to leczenie, które <em>już leci</em> — wszystkie tyknięcia HoT-ów plus czar w locie. Jeśli ramka wygląda nisko, ale jest zakryta na zielono, nie marnuj na nią GCD. <strong>Niebieski kawałek ⛊</strong> to tarcza: dodatkowe życie, które zniknie samo, jeśli nikt w nie nie uderzy.</li>
                 <li><strong>Czerwony kawałek</strong> zjadany z prawej strony paska to cios bossa, który zaraz wyląduje. Ramka miga na biało, gdy cios zabije cel <em>mimo</em> całego leczenia i tarcz — wtedy musisz dołożyć, zanim spadnie.</li>
-                <li><strong>Jedna pula many na jedną walkę.</strong> Między grupami życie i mana wracają do pełna, więc cała trudność siedzi <em>w środku</em> walki. Spamowanie najtańszego czaru zużywa ~80 many na sekundę, a walka trwa ~21 s — pełny pasek starcza mniej więcej na jedną grupę. Dalej wchodzi się tylko lecząc <em>oszczędniej</em>.</li>
-                <li><strong>Zasada 5 sekund.</strong> Po każdym rzuceniu czaru regeneracja many stoi przez 5 sekund. Przerwa bez czarów w środku walki to darmowa mana — wskaźnik pod paskiem many pokazuje, kiedy znowu zaczniesz odzyskiwać.</li>
+                <li><strong>Jedna pula many na jedną walkę.</strong> Między grupami życie i mana wracają do pełna, więc cała trudność siedzi <em>w środku</em> walki. Spamowanie najtańszego czaru zużywa ~80 many na sekundę, a walka trwa ~30 s — pełnego paska NIE starczy, jeśli rzucasz na każdym GCD bez przerwy. Dalej wchodzi się tylko lecząc <em>oszczędniej</em>.</li>
+                <li><strong>Zasada 5 sekund — i naprawdę trzeba z niej korzystać.</strong> Po każdym rzuceniu czaru regeneracja many stoi przez 5 sekund. Walka trwa teraz na tyle długo, że rzucanie na ślepo na każdym GCD zostawi Cię bez many, zanim grupa padnie — kilka świadomie zostawionych sekund ciszy, kiedy nikomu nic nie grozi, to mana, która dowiezie Cię do końca. Wskaźnik pod paskiem many pokazuje, kiedy znowu zaczniesz odzyskiwać.</li>
                 <li><strong>Obrażenia sypią się z czterech stron:</strong> tank obrywa co 1,8 s, co ~8 s przychodzi fala w całą drużynę (każdy dostaje trochę inaczej), co ~10,5 s ktoś losowy z tyłu dostaje mocny cios, a co ~7 s <em>dwóch</em> losowych bohaterów naraz. Paski nigdy nie spadają równo — patrz, kto jest najniżej.</li>
                 <li><strong>Runda kończy się dopiero, gdy zginiesz TY.</strong> Sojusznik, który padnie, zostaje na ziemi do końca tej grupy — i zabiera ze sobą swoje obrażenia, więc walka robi się dłuższa, a bije w Ciebie tak samo mocno. To spirala, z której można się jeszcze wyleczyć, ale kosztuje. Po walce cała drużyna wstaje z pełnym życiem. <strong>Gdy padnie tank</strong>, paczka rzuca się na kogokolwiek — i te ciosy bolą o 35% mocniej, bo nikt inny nie jest na nie przygotowany.</li>
-                <li><strong>Każda grupa ma losowy modyfikator</strong> (poza pierwszą) — wypisany obok paska życia przeciwnika: 😤 mocniej bije, 👥 ma więcej życia, 💨 bije częściej, 🩸 wysysa Ci manę, 💥 częstsze fale obszarowe, 🗡️ mocniejsze ciosy w tanka, 🍂 ginie szybko, ale boli, 🎯 częstsze ciosy w tylną linię. Przeczytaj go, zanim ruszysz.</li>
-                <li><strong>☠️ Boss co 5. grupę.</strong> Ma więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową — a <em>losuje dwie z czterech</em> zdolności na każdą walkę, więc ten sam boss nigdy nie gra tak samo: <em>Cios Decyzyjny</em> (ogromny cios w jeden cel), <em>Reorganizacja</em> (w całą drużynę), <em>Ocena Roczna</em> (druzgocący cios w kogoś z tylnej linii), <em>Cięcie Budżetu</em> (zabiera Ci manę i rani wszystkich). Masz 3,5 s, żeby przygotować leczenie — a czerwone pole pod bohaterem pokazuje, w kogo poleci. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
+                <li><strong>Każda grupa ma losowy modyfikator</strong> (poza pierwszą i bossami) — wypisany obok paska życia przeciwnika: 😤 mocniej bije, 👥 ma więcej życia, 💨 bije częściej, 🩸 wysysa Ci manę, 💥 częstsze fale obszarowe, 🗡️ mocniejsze ciosy w tanka, 🍂 ginie szybko, ale boli, 🎯 częstsze ciosy w tylną linię. Od 8. grupy modyfikatory mogą się <strong>łączyć w parę</strong> — dwie ikony obok paska życia to naprawdę dwa nałożone efekty naraz. Przeczytaj je, zanim ruszysz.</li>
+                <li><strong>☠️ Boss co 5. grupę.</strong> Ma więcej życia i rzuca <strong>zapowiadane czary</strong> z paskiem nad głową — a <em>losuje dwie (od 20. grupy — trzy) z czterech</em> zdolności na każdą walkę, więc ten sam boss nigdy nie gra tak samo: <em>Cios Decyzyjny</em> (ogromny cios w jeden cel), <em>Reorganizacja</em> (w całą drużynę), <em>Ocena Roczna</em> (druzgocący cios w kogoś z tylnej linii), <em>Cięcie Budżetu</em> (zabiera Ci manę i rani wszystkich). Masz 3,5 s, żeby przygotować leczenie — a czerwone pole pod bohaterem pokazuje, w kogo poleci. Jeśli walka się przeciąga, boss <strong>wpada w szał</strong> i zyskuje +5% obrażeń na sekundę.</li>
                 <li><strong>Grupa trwa, aż zginie</strong> — nie ma żadnego zegara. Przerwa też trwa dowolnie długo: wybierz bonus i ruszaj, kiedy będziesz gotowy. Siedzenie w przerwie kosztuje tylko punkty tempa, nigdy życie.</li>
               </ul>
               <h4>Twoje czary</h4>
@@ -9363,6 +9372,7 @@
                 <li><strong>Wynik zobaczysz na koniec rundy</strong>, nie w trakcie — w walce masz patrzeć na paski, nie na licznik.</li>
                 <li><strong>🏅 Głębokość</strong> — +1 punkt za co drugą oczyszczoną grupę, a <strong>boss podwaja</strong> wartość swojej grupy.</li>
                 <li><strong>💚 Leczenie</strong> — punkty za <em>efektywne</em> leczenie (1 pkt za 3000 HP), przemnożone przez <strong>celność</strong>: leczenie w pełny pasek i tarcza, która wygasła nietknięta, to przelanie — i zjada dokładnie tyle procent punktów, ile go było.</li>
+                <li><strong>🔥 Bezbłędność</strong> — +1 punkt za grupę, w której <em>nikt</em> nie padł. Śmierć sojusznika już kosztuje Cię w walce (dłuższa grupa, mocniejsze ciosy w tanka) — to jest jej koszt w WYNIKU: utrzymanie całej piątki to osobna umiejętność, niezależna od tego, jak dobrze leczysz czy jak szybko ruszasz.</li>
                 <li><strong>⏱️ Tempo</strong> — +2 pkt, jeśli ruszysz w ciągu 5 s od końca walki, +1 do 10 s, potem 0. Nikt Cię nie goni, ale odwaga się opłaca.</li>
               </ul>
               <h4>Co robią statystyki i talenty</h4>
@@ -9676,7 +9686,7 @@
               <span class="ag-card-name">„Uzdrowiciel G6”</span>
               <span class="ag-card-tag">NOWOŚĆ · RPG</span>
             </div>
-            <div class="ag-card-desc">Jedyny uzdrowiciel pięcioosobowej drużyny. Wybierz klasę — druid od HoT-ów, kapłan od tarcz, paladyn od leczenia wprost — i utrzymaj piątkę przy życiu. Loch nie ma końca, co piąta grupa to boss, a jedna pula many musi wystarczyć na całą walkę. Padnie ktokolwiek — koniec rundy.</div>
+            <div class="ag-card-desc">Jedyny uzdrowiciel pięcioosobowej drużyny. Wybierz klasę — druid od HoT-ów, kapłan od tarcz, paladyn od leczenia wprost, szaman od odrobiny wszystkiego — i utrzymaj piątkę przy życiu. Loch nie ma końca, co piąta grupa to boss, a jedna pula many musi wystarczyć na całą walkę. Sojusznik może paść i grupa gra dalej — ale jeśli padniesz Ty, koniec rundy.</div>
             <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
           <div class="ag-card-scores" data-scores="healer_dungeon"></div>
@@ -11519,10 +11529,15 @@ async function payArcadeEntry(gameType) {
   setText(headerCoins, me.coins);
 }
 
-async function recordArcadeScore(gameType, score) {
+// `meta` is an optional small JSON blob a game can attach to its own score row
+// (e.g. Uzdrowiciel's {cls, icon, name}) — stored as-is and never interpreted
+// by this generic path, so the leaderboard renderer only prints it when a
+// given row happens to carry one.
+async function recordArcadeScore(gameType, score, meta) {
   const { error } = await sb.rpc('record_arcade_score', {
     p_game_type: gameType,
     p_score: score,
+    p_meta: meta || null,
   });
   if (error) throw error;
   agPickerScoresAt = 0;   // the picker must show this run when we go back
@@ -11565,9 +11580,13 @@ function agScoreColumn(labelText, gameType, rows, expanded) {
     const item = el('li', {
       className: 'ag-sb-item' + (i === 0 ? ' is-first' : '') + (row.isMe ? ' is-me' : ''),
     });
+    // A game may tag its best score with a small client_meta blob (Uzdrowiciel
+    // uses {icon,name} for the class played); this renderer doesn't know or
+    // care what game it's showing, it just prints the icon when one is there.
+    const nickLabel = (row.meta && row.meta.icon ? row.meta.icon + ' ' : '') + row.nick;
     item.append(
       el('span', { className: 'ag-sb-rank' }, (i + 1) + '.'),
-      el('span', { className: 'ag-sb-nick', title: row.nick }, row.nick),
+      el('span', { className: 'ag-sb-nick', title: row.meta && row.meta.name ? row.nick + ' — ' + row.meta.name : row.nick }, nickLabel),
       el('span', { className: 'ag-sb-val' }, formatArcadeScore(gameType, row.score))
     );
     list.append(item);
@@ -11679,10 +11698,13 @@ function renderArcadePickerScores() {
   });
 }
 
-// user_id -> best score per game, biggest first.
+// user_id -> {score, meta} best per game, biggest first.
 function agRankRows(bestByUser, nicks) {
   return Object.keys(bestByUser)
-    .map(userId => ({ score: bestByUser[userId], nick: nicks[userId] || '—', isMe: !!(me && userId === me.id) }))
+    .map(userId => ({
+      score: bestByUser[userId].score, meta: bestByUser[userId].meta,
+      nick: nicks[userId] || '—', isMe: !!(me && userId === me.id),
+    }))
     .sort((a, b) => b.score - a.score);
 }
 
@@ -11698,26 +11720,30 @@ async function loadArcadePickerScores(force = false) {
   }
   const [allRes, weekRes] = await Promise.all([
     sbFetchAll(() => sb.from('arcade_leaderboard')
-      .select('id, game_type, score, user_id, nick')
+      .select('id, game_type, score, user_id, nick, client_meta')
       .order('game_type', { ascending: true }).order('id', { ascending: true })),
     sbFetchAll(() => sb.from('arcade_scores')
-      .select('id, game_type, score, user_id, created_at')
+      .select('id, game_type, score, user_id, created_at, client_meta')
       .gte('created_at', agWeekStartISO())
       .order('created_at', { ascending: true }).order('id', { ascending: true })),
   ]);
   if (allRes.error && weekRes.error) return;
 
   const nicks = {};
-  const raw = {};   // gameType -> { all: {uid: best}, week: {uid: best} }
+  const raw = {};   // gameType -> { all: {uid: {score,meta}}, week: {uid: {score,meta}} }
   const bucket = gameType => (raw[gameType] = raw[gameType] || { all: {}, week: {} });
   (allRes.data || []).forEach(row => {
     nicks[row.user_id] = row.nick;
     const b = bucket(row.game_type).all;
-    if (b[row.user_id] == null || row.score > b[row.user_id]) b[row.user_id] = row.score;
+    if (b[row.user_id] == null || row.score > b[row.user_id].score) {
+      b[row.user_id] = { score: row.score, meta: row.client_meta };
+    }
   });
   (weekRes.data || []).forEach(row => {
     const b = bucket(row.game_type).week;
-    if (b[row.user_id] == null || row.score > b[row.user_id]) b[row.user_id] = row.score;
+    if (b[row.user_id] == null || row.score > b[row.user_id].score) {
+      b[row.user_id] = { score: row.score, meta: row.client_meta };
+    }
   });
 
   agPickerData = {};
@@ -11735,9 +11761,9 @@ async function loadArcadeScores(gameType) {
   const panel = document.getElementById('ag-scores-panel');
   if (!panel) return;
   const [topRes, myRes] = await Promise.all([
-    sb.from('arcade_leaderboard').select('score, nick, created_at')
+    sb.from('arcade_leaderboard').select('score, nick, created_at, client_meta')
       .eq('game_type', gameType).order('score', { ascending: false }).limit(10),
-    sb.from('arcade_scores').select('score, created_at')
+    sb.from('arcade_scores').select('score, created_at, client_meta')
       .eq('game_type', gameType).eq('user_id', me.id)
       .order('created_at', { ascending: false }).limit(5),
   ]);
@@ -11751,9 +11777,11 @@ async function loadArcadeScores(gameType) {
     } else {
       topEl.replaceChildren(...top.map((row, i) => {
         const d = el('div', { className: 'ag-score-row' });
+        const meta = row.client_meta;
+        const nickLabel = (meta && meta.icon ? meta.icon + ' ' : '') + row.nick;
         d.append(
           el('span', { className: 'ag-score-rank' }, (i + 1) + '.'),
-          el('span', { className: 'ag-score-nick' }, row.nick),
+          el('span', { className: 'ag-score-nick', title: meta && meta.name ? row.nick + ' — ' + meta.name : row.nick }, nickLabel),
           el('span', { className: 'ag-score-val'  }, formatArcadeScore(gameType, row.score))
         );
         return d;
@@ -11766,8 +11794,9 @@ async function loadArcadeScores(gameType) {
     } else {
       myEl.replaceChildren(...mine.map(row => {
         const d = el('div', { className: 'ag-score-row' });
+        const meta = row.client_meta;
         d.append(
-          el('span', { className: 'ag-score-val'  }, formatArcadeScore(gameType, row.score)),
+          el('span', { className: 'ag-score-val'  }, (meta && meta.icon ? meta.icon + ' ' : '') + formatArcadeScore(gameType, row.score)),
           el('span', { className: 'ag-score-date' }, new Date(row.created_at).toLocaleDateString('pl-PL'))
         );
         return d;
