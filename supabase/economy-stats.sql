@@ -224,14 +224,16 @@ AS $$
 
       -- ── coin flow: minting ──────────────────────────────────────────────
       -- coins minted via garden harvest, admin grants, top-ups, daily interest,
-      -- farm crop sales, and farm seasonal contract/rank payouts
+      -- farm crop sales, farm seasonal contract/rank payouts, and the Loteria
+      -- po Mundialu draw (prizes + the equal dividend)
       COALESCE((
         SELECT sum(ct.delta)
           FROM public.coin_transactions ct
          WHERE ct.delta > 0
            AND ct.reason IN ('garden_water','admin_grant','zapps_topup','daily_interest',
                              'farm_crop_sale','farm_seasonal_contract_bonus',
-                             'farm_seasonal_rank_award')
+                             'farm_seasonal_rank_award',
+                             'lottery_prize','lottery_dividend')
       ), 0::numeric) AS ledger_minted,
 
       -- weekly game prize payouts (game-defined top-three awards)
