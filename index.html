@@ -583,6 +583,11 @@
       display: block; width: 100%; text-align: left; position: relative;
       border-bottom: none; border-radius: 0; padding: 10px 16px; margin-bottom: 0; min-height: 0;
     }
+    /* A dropdown row is display:block, so a counted one has to opt back into
+       flex to park its badge against the right edge of the menu. */
+    .nav-dropdown .nav-tab.has-nav-hint {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
     .nav-dropdown .nav-tab:first-child { border-radius: 8px 8px 0 0; }
     .nav-dropdown .nav-tab:last-child  { border-radius: 0 0 8px 8px; }
     .nav-dropdown .nav-tab:hover { background: var(--surface); }
@@ -7762,6 +7767,7 @@
       <button class="nav-group-btn">🛒 Targowisko <span class="nav-chevron">▾</span></button>
       <div class="nav-dropdown">
         <button class="nav-tab" data-shop-target="marketplace-section">🤝 Ogłoszenia</button>
+        <button class="nav-tab" data-shop-target="buy-orders-section">📥 Zlecenia zakupu</button>
         <button class="nav-tab" data-shop-target="farm-lootbox-section">📦 Skrzynki</button>
         <button class="nav-tab" data-shop-target="hero-shop-section">🎒 Przedmioty specjalne</button>
         <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
@@ -11270,6 +11276,7 @@ function showApp() {
   updateAdminTestTabs();
   switchTab('farm');   // Ogródek is the home tab
   setupRealtime();
+  refreshShopNavCounts();                      // populate the Targowisko nav counters
   if (DOCUMENTS_ENABLED) loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
   setTimeout(maybeShowWhatsNew, 1200);   // after the entry animation settles
 }
@@ -17467,6 +17474,67 @@ function setupShopCategoryFilters() {
 }
 setupShopCategoryFilters();
 
+// ── Targowisko nav counters ───────────────────────────────────────────────
+// A small count on the Targowisko nav entries, so you can see there is
+// something worth opening without walking into the Sklep first. It counts
+// only OTHER people's open items: your own listing is not an offer you can
+// act on, and having it inflate your own badge reads as a permanent "1".
+let shopNavCounts = { marketplace: 0, buyOrders: 0 };
+
+function renderShopNavCounts() {
+  const total = shopNavCounts.marketplace + shopNavCounts.buyOrders;
+  const paint = (selector, n, label) => {
+    document.querySelectorAll(selector).forEach(btn => {
+      let badge = btn.querySelector('.nav-hint-badge');
+      if (!n) { badge?.remove(); btn.classList.remove('has-nav-hint'); return; }
+      if (!badge) {
+        badge = el('span', { className: 'nav-hint-badge' });
+        // The group button ends with a chevron — the count belongs before it.
+        const chevron = btn.querySelector('.nav-chevron');
+        if (chevron) btn.insertBefore(badge, chevron); else btn.appendChild(badge);
+      }
+      btn.classList.add('has-nav-hint');
+      badge.textContent = String(n);
+      badge.title = n + ' ' + plCount(n, 'oferta', 'oferty', 'ofert') + ' ' + label;
+    });
+  };
+  paint('[data-shop-target="marketplace-section"]', shopNavCounts.marketplace, 'od innych graczy');
+  paint('[data-shop-target="buy-orders-section"]', shopNavCounts.buyOrders, 'od innych graczy');
+  paint('.nav-group[data-group="shop"] > .nav-group-btn', total, 'od innych graczy');
+}
+
+// Cheap HEAD counts — used when the Sklep tab has not been opened (or is not
+// the tab in front), so the badge is live without loading the whole shop.
+async function refreshShopNavCounts() {
+  if (!me) return;
+  const openOthers = (view, ownerCol) => sb.from(view)
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'open').neq(ownerCol, me.id);
+  const [listings, orders, requests] = await Promise.all([
+    openOthers('marketplace_cards', 'seller_id'),
+    openOthers('marketplace_buy_order_cards', 'buyer_id'),
+    openOthers('marketplace_request_cards', 'buyer_id'),
+  ]);
+  if (listings.error || orders.error || requests.error) return;
+  shopNavCounts = {
+    marketplace: listings.count || 0,
+    buyOrders: (orders.count || 0) + (requests.count || 0),
+  };
+  renderShopNavCounts();
+}
+
+// loadShop() already holds every row the counters need — recount locally
+// instead of firing three more requests right after it finishes.
+function syncShopNavCountsFromShop() {
+  const mine = id => id === me?.id;
+  shopNavCounts = {
+    marketplace: marketplaceListings.filter(l => l.status === 'open' && !mine(l.seller_id)).length,
+    buyOrders: buyOrders.filter(o => o.status === 'open' && !mine(o.buyer_id)).length
+             + marketplaceRequests.filter(r => r.status === 'open' && !mine(r.buyer_id)).length,
+  };
+  renderShopNavCounts();
+}
+
 async function loadShop() {
   const grid = document.getElementById('shop-grid');
   grid.replaceChildren(makeSpinner());
@@ -17508,6 +17576,7 @@ async function loadShop() {
   renderMarketplaceGrid();
   renderBuyOrdersGrid();
   renderRequestsGrid();
+  syncShopNavCountsFromShop();
   loadFarmLootbox();
   loadZappsShop();
 
@@ -17965,7 +18034,9 @@ const btnZappsSubmit = document.getElementById('btn-zapps-submit');
 if (btnZappsSubmit) btnZappsSubmit.addEventListener('click', submitZappsRequest);
 
 function setupShopRealtime() {
-  const reload = () => { if (activeTab === 'shop') loadShop(); };
+  // Off the Sklep tab there is no grid to rebuild, but the nav counters still
+  // have to follow a listing someone else just posted or cancelled.
+  const reload = () => { if (activeTab === 'shop') loadShop(); else refreshShopNavCounts(); };
   // Item/equipment changes also refresh the 🎒 Mój Majątek hub section if open.
   const reloadItems = async () => {
     if (activeTab === 'shop') { loadShop(); return; }
