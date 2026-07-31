@@ -764,7 +764,7 @@ console.log('— enrage —');
   const a = M.hdInitState(1); a.isBoss=true; a.fightTick=100;
   const b = M.hdInitState(1); b.isBoss=true; b.fightTick=400;
   ok('no enrage early', M.hdEnragePct(a)===100, String(M.hdEnragePct(a)));
-  ok('enrage ramps late', M.hdEnragePct(b)>150, M.hdEnragePct(b)+'%');
+  ok('enrage ramps late', M.hdEnragePct(b)>130, M.hdEnragePct(b)+'%');
 }
 
 console.log('— the rest belongs to the player, not to a timer —');

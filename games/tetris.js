@@ -49,10 +49,12 @@ const TT_PIECES = [
   [0xC600, 0x2640, 0x0C60, 0x4C80], // Z
 ];
 
-// ~950 ms/row at level 1 down to 100 ms at level 10 — the classic Tetris
-// Guideline curve, which is what makes the early stack feel controllable.
+// EASED (2026-07-31): ~1.1 s/row at level 1 down to 200 ms at level 15 (was
+// ~950 ms down to 100 ms at level 10) — a gentler Guideline-style curve, both
+// slower to start and with a higher floor at high levels, so the late game
+// isn't a near-unreactable 100 ms drop.
 function ttGravityTicks(level) {
-  return Math.max(2, 21 - level * 2);
+  return Math.max(4, 24 - level * 1.5);
 }
 
 function ttRng(st) {

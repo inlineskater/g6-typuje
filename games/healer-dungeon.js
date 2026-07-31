@@ -253,13 +253,13 @@ const HD_PACK_HP_BASE = 1800, HD_PACK_HP_PER_PULL = 470;
 // it — the rule now has to be USED, not just known about.
 const HD_DPS_BASE = 58, HD_DPS_PER_PULL = 15;   // per second, at full strength
 const HD_MELEE_PERIOD = 18;      // tank auto-attack every 1.8 s
-const HD_MELEE_BASE = 86, HD_MELEE_PER_PULL = 21;
+const HD_MELEE_BASE = 77, HD_MELEE_PER_PULL = 19;
 const HD_AOE_PERIOD = 80;        // raid pulse every 8 s, on all five
-const HD_AOE_BASE = 31, HD_AOE_PER_PULL = 19;
+const HD_AOE_BASE = 28, HD_AOE_PER_PULL = 17;
 const HD_SPIKE_PERIOD = 105;     // spike on a random non-tank every 10.5 s
-const HD_SPIKE_BASE = 101, HD_SPIKE_PER_PULL = 40;
+const HD_SPIKE_BASE = 91, HD_SPIKE_PER_PULL = 36;
 const HD_CLEAVE_PERIOD = 70;     // two different heroes every 7 s
-const HD_CLEAVE_BASE = 64, HD_CLEAVE_PER_PULL = 24;
+const HD_CLEAVE_BASE = 58, HD_CLEAVE_PER_PULL = 22;
 // With the tank down the pack turns on whoever is left, and a squishy is not
 // built for it. This is the teeth of the "keep playing after a death" rule.
 const HD_NO_TANK_MELEE_PCT = 135;
@@ -333,7 +333,7 @@ const HD_BOSS_FOCUS_BASE = 245, HD_BOSS_FOCUS_PER_PULL = 40;     // one squishy
 const HD_BOSS_DRAIN_BASE = 70, HD_BOSS_DRAIN_PER_PULL = 12;      // party + mana
 const HD_BOSS_DRAIN_MANA = 420;
 const HD_BOSS_ENRAGE_TICKS = 280;  // 28 s — just past a clean kill
-const HD_BOSS_ENRAGE_PER_SEC = 5;  // +5 percentage points of damage per second
+const HD_BOSS_ENRAGE_PER_SEC = 4;  // +4 percentage points of damage per second
 
 // Upgrades after every pull: THREE cards. The split between stats and random
 // talents is itself rolled (2 + 1 or 1 + 2), so even the shape of the choice
