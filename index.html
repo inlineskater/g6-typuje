@@ -1074,7 +1074,39 @@
     .lot-mach { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
       overflow: hidden; }
     .lot-mach-stage { position: relative; background: linear-gradient(178deg, #fcfbf8, #f1eee6); }
-    .lot-mach-canvas { display: block; width: 100%; height: auto; }
+    /* aspect-ratio pinned so the canvas backing store scales uniformly (lotFitCanvas) */
+    .lot-mach-canvas { display: block; width: 100%; height: auto; aspect-ratio: 900 / 470; }
+    .lot-fs-btn { position: absolute; top: 8px; right: 9px; z-index: 2; font-family: inherit;
+      font-size: 14px; line-height: 1; padding: 6px 9px; cursor: pointer; color: var(--muted);
+      background: rgba(255,255,255,.82); border: 1px solid var(--border-hi); border-radius: 8px; }
+    .lot-fs-btn:hover { color: var(--lot-gold); border-color: var(--lot-gold); }
+
+    /* Pełny ekran. The class is the real mechanism (works without the Fullscreen
+       API); the native request only additionally hides browser chrome. */
+    html.lot-fs-open, html.lot-fs-open body { overflow: hidden; }
+    .lot-mach.is-fs { position: fixed; inset: 0; z-index: 300; border-radius: 0;
+      border: 0; background: var(--card); display: flex; flex-direction: column; }
+    .lot-mach.is-fs .lot-brief,
+    .lot-mach.is-fs .lot-mach-hint { display: none; }
+    .lot-mach.is-fs .lot-legend { padding: 8px 14px; }
+    .lot-mach.is-fs .lot-legend-head { display: none; }
+    .lot-mach.is-fs .lot-mach-stage { flex: 1 1 auto; min-height: 0;
+      display: grid; place-items: center; }
+    /* size comes from lotFitCanvas in fullscreen — see the note there */
+    .lot-mach.is-fs .lot-mach-canvas { max-width: 100%; max-height: 100%; }
+    /* In fullscreen the CANVAS is the scoreboard — it already shows the reveal and
+       all six sockets — so the DOM winners list stands down and the controls
+       collapse to one row. Otherwise they eat the height the board needs and
+       fullscreen ends up no bigger than the inline view. */
+    .lot-mach.is-fs .lot-mach-ctl { flex: 0 0 auto; flex-direction: row; align-items: center;
+      gap: 20px; padding: 10px 18px; }
+    .lot-mach.is-fs .lot-win { display: none; }
+    .lot-mach.is-fs .lot-force-row { flex: 0 1 320px; }
+    .lot-mach.is-fs .lot-mach-btns { margin-left: auto; }
+    .lot-mach.is-fs .lot-release { font-size: 18px; padding: 15px 30px; }
+    .lot-mach.is-fs .lot-release.is-final { font-size: 21px; padding: 17px 34px; }
+    /* :fullscreen only matters when the native API took: keep the same look */
+    .lot-mach:fullscreen, .lot-mach:-webkit-full-screen { background: var(--card); }
     .lot-mach-tag { position: absolute; top: 11px; left: 14px; font-size: 9.5px; font-weight: 800;
       letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
     .lot-mach-ctl { padding: 15px 18px; border-top: 1px solid var(--border);
@@ -22903,6 +22935,7 @@ function lotCatValue(p, key) {
 
 function buildLotteryPanel(d) {
   lotMachineStop(); // a rebuild orphans the old canvas — never leave its RAF running
+  if (lotIsFs()) lotExitFs(); // ...and never leave the page locked behind a dead overlay
   const pool = Math.max(0, +d.prize_pool || 0);
   const bankNet = +d.bank_net || 0;
   const total = +d.total_tickets || 0;
@@ -23118,14 +23151,19 @@ const LOT_BALL_CAP = 300;            // rendered balls; beyond this it's a propo
 const LOT_SOCKET_X0 = 541, LOT_SOCKET_DX = 60, LOT_SOCKET_Y = 398, LOT_SOCKET_R = 21;
 const LOT_BOARD_X = 498, LOT_BOARD_W = 386;
 const LOT_PORT_X = 400, LOT_PORT_Y = 340;   // the drum's exit port (35° on the shell)
-const LOT_EJECT_MS = 1000, LOT_HOLD_MS = 900;
+// Ceremony timings. Long on purpose — this is watched by a room, not skimmed.
+// Per ball: countdown 2.4s + flight 1.5s + hold 1.7s ≈ 5.6s, and the finale
+// holds 2.2× that. The operator sets the pace between balls anyway.
+const LOT_EJECT_MS = 1500, LOT_HOLD_MS = 1700;
+const LOT_FINALE_HOLD_MULT = 2.2;
 const LOT_FORCE_DEFAULT = 62;
 // Spin speeds. Deliberately calm: the first pass ran to 7.8 and the balls were a
 // blur nobody could follow — you are meant to be able to WATCH a ball come out.
 // `force` scales the churn between BASE and BASE+RANGE; the drumroll before each
 // release briefly adds a bit more on top.
 const LOT_SPIN_BASE = 1.0, LOT_SPIN_RANGE = 2.6, LOT_SPIN_IDLE = 1.05;
-const LOT_SURGE_MS = 1150;   // drumroll between the click and the ball dropping
+const LOT_SURGE_MS = 2400;   // drumroll: a 3-2-1 countdown before the ball drops
+const LOT_COUNTDOWN_BEATS = 3;
 // Loading: every ball pours in through a hopper above the drum before anything
 // else happens, so you SEE the machine being filled with the office's tickets.
 // The hopper mouth sits in the headroom above the drum — tight enough that the
@@ -23149,6 +23187,7 @@ let lotteryRtReady = false;
 function lotMachineStop() {
   if (lotMachRaf) cancelAnimationFrame(lotMachRaf);
   lotMachRaf = 0;
+  if (lotMach && lotMach._ro) { try { lotMach._ro.disconnect(); } catch (_e) {} }
   lotMach = null;
 }
 
@@ -23238,6 +23277,38 @@ function lotAllocBalls(list, cap) {
   return out;
 }
 
+// The backing store follows the RENDERED size, not devicePixelRatio alone —
+// otherwise the board goes soft the moment the card is blown up to fullscreen.
+// CSS pins the element to the 900:470 aspect, so the x and y scales stay equal.
+function lotFitCanvas(m) {
+  // ⚠️ In fullscreen the element size is computed HERE, not left to CSS. Letting
+  // the canvas size itself (`width:auto`) makes it fall back to its width/height
+  // ATTRIBUTES — which this very function just set to the previous rendered size,
+  // a feedback loop that pins the board at its inline size forever. `object-fit`
+  // is no good either: it letterboxes, so the element box stops being the drawn
+  // box and the scale below would be wrong.
+  const stage = m.canvas.parentElement;
+  if (lotIsFs() && stage) {
+    const sr = stage.getBoundingClientRect();
+    if (sr.width && sr.height) {
+      const k = Math.min(sr.width / LOT_MACH_W, sr.height / LOT_MACH_H);
+      m.canvas.style.width = Math.floor(LOT_MACH_W * k) + 'px';
+      m.canvas.style.height = Math.floor(LOT_MACH_H * k) + 'px';
+    }
+  } else if (m.canvas.style.width) {
+    m.canvas.style.width = ''; m.canvas.style.height = '';
+  }
+  const r = m.canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * dpr));
+  const h = Math.max(1, Math.round(r.height * dpr));
+  if (m.canvas.width === w && m.canvas.height === h) return;
+  m.canvas.width = w; m.canvas.height = h;
+  m._sx = w / LOT_MACH_W; m._sy = h / LOT_MACH_H;
+  lotMachDraw(m);
+}
+
 function newLotteryMachine(canvas, players, opts) {
   const o = opts || {};
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -23274,12 +23345,13 @@ function newLotteryMachine(canvas, players, opts) {
   order.forEach((bi, k) => { balls[bi].spawnAt = now + k * stagger; });
 
   const m = {
-    canvas, ctx, balls, players: list, hueOf, _dpr: dpr,
+    canvas, ctx, balls, players: list, hueOf, _dpr: dpr, _sx: dpr, _sy: dpr,
     totalTickets: list.reduce((s, p) => s + (+p.tickets || 0), 0),
     sockets: new Array(LOTTERY_TIERS.length).fill(null),
     phase: 'load', spin: 0, targetSpin: 0, spinAngle: 0,
     flying: null, queue: [], reveal: null, revealT: 0, awaiting: false,
     confetti: [], flash: 0, shake: 0,
+    trail: [], shock: [], dust: [], rayAngle: 0,
     spinUntil: 0, surgeUntil: 0, holdUntil: 0, last: 0, force: LOT_FORCE_DEFAULT,
     running: false, drawId: o.drawId || null,
     headline: o.headline || '', subline: o.subline || '',
@@ -23290,6 +23362,14 @@ function newLotteryMachine(canvas, players, opts) {
   };
   lotMachineStop();
   lotMach = m;
+  // A ResizeObserver keeps the backing store right through fullscreen and window
+  // resizes without reading layout on every frame.
+  if (window.ResizeObserver) {
+    // observe the STAGE, never the canvas — lotFitCanvas sets the canvas's own
+    // style size, which would retrigger a canvas observer on every frame
+    m._ro = new ResizeObserver(() => { if (lotMach === m) lotFitCanvas(m); });
+    m._ro.observe(canvas.parentElement || canvas);
+  }
   if (reduced) {
     m.balls.forEach(b => { b.spawnAt = 0; b.loaded = true; });
     m.phase = 'idle'; m.loadDoneAt = 0;
@@ -23357,6 +23437,7 @@ function lotMachSpin(m, force) {
   m.queue = [];
   m.awaiting = false;
   m.confetti = []; m.flash = 0; m.shake = 0;
+  m.trail = []; m.shock = []; m.dust = []; m.rayAngle = 0;
   // Clearing `flying` matters: it points at a ball we are about to mark as back
   // in the drum, and lotMachStep processes a flight regardless of phase — so a
   // leftover one would land and fill a socket during the new spin.
@@ -23443,20 +23524,41 @@ function lotMachStartEject(m, ts) {
     x0: ball.x, y0: ball.y, x1: sock.x, y1: sock.y,
     c1x: LOT_PORT_X, c1y: LOT_PORT_Y, c2x: 506, c2y: 428,
   };
+  m.trail = [];
   m.phase = 'eject';
   m.targetSpin = LOT_SPIN_IDLE + 0.8;
 }
 
-function lotSpawnConfetti(m, x, y, n) {
+function lotSpawnConfetti(m, x, y, n, spread) {
   if (plinkoReducedMotion()) return;
+  const arc = spread || 2.4;
   for (let i = 0; i < n; i++) {
-    const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
-    const sp = 190 + Math.random() * 380;
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * arc;
+    const sp = 220 + Math.random() * 520;
     m.confetti.push({
       x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-      rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 14,
-      w: 4 + Math.random() * 5, h: 7 + Math.random() * 7,
+      rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 16,
+      w: 4 + Math.random() * 6, h: 7 + Math.random() * 9,
       col: lotColorAt(Math.floor(Math.random() * 12)), life: 1,
+    });
+  }
+}
+
+// Expanding ring where a ball lands.
+function lotSpawnShock(m, x, y, big) {
+  if (plinkoReducedMotion()) return;
+  m.shock.push({ x, y, t: 0, dur: big ? 1100 : 700, max: big ? 420 : 190 });
+}
+
+// Golden dust drifting up behind the winner's name — finale only.
+function lotSpawnDust(m, n) {
+  if (plinkoReducedMotion()) return;
+  for (let i = 0; i < n; i++) {
+    m.dust.push({
+      x: LOT_BOARD_X + 10 + Math.random() * (LOT_BOARD_W - 20),
+      y: LOT_MACH_H * 0.55 + Math.random() * 120,
+      vx: (Math.random() - 0.5) * 22, vy: -(14 + Math.random() * 46),
+      r: 1 + Math.random() * 2.6, life: 1, tw: Math.random() * 6.283,
     });
   }
 }
@@ -23495,13 +23597,21 @@ function lotMachStep(m, dt, ts) {
       m.sockets[f.place - 1] = { col: f.ball.col, place: f.place, at: ts };
       m.reveal = f.win; m.revealT = 0;
       m.flying = null;
-      m.flash = first ? 1 : 0.55;
-      m.shake = first ? 1 : 0.4;
+      m.flash = first ? 1 : 0.6;
+      m.shake = first ? 1.25 : 0.45;
+      m.trail = [];
+      lotSpawnShock(m, f.x1, f.y1, first);
       if (first) {
-        lotSpawnConfetti(m, f.x1, f.y1, 70);
-        lotSpawnConfetti(m, LOT_BOARD_X + LOT_BOARD_W / 2, 210, 60);
+        lotSpawnConfetti(m, f.x1, f.y1, 90);
+        lotSpawnConfetti(m, LOT_BOARD_X + LOT_BOARD_W * 0.5, 200, 90, 3.0);
+        lotSpawnConfetti(m, LOT_BOARD_X + 30, 120, 60, 1.6);
+        lotSpawnConfetti(m, LOT_BOARD_X + LOT_BOARD_W - 30, 120, 60, 1.6);
+        lotSpawnDust(m, 90);
+      } else {
+        lotSpawnConfetti(m, f.x1, f.y1, 26, 1.7);
       }
-      m.holdUntil = ts + (plinkoReducedMotion() ? 1 : (first ? LOT_HOLD_MS * 2 : LOT_HOLD_MS));
+      m.holdUntil = ts + (plinkoReducedMotion() ? 1
+        : (first ? Math.round(LOT_HOLD_MS * LOT_FINALE_HOLD_MULT) : LOT_HOLD_MS));
       if (m.onReveal) { try { m.onReveal(f.win); } catch (_e) {} }
     }
   } else if (m.phase === 'eject' && ts >= m.holdUntil) {
@@ -23515,9 +23625,39 @@ function lotMachStep(m, dt, ts) {
   m.now = ts;   // the draw must render the frame that was just simulated
   m.spin += (m.targetSpin - m.spin) * Math.min(1, dt * 2.4);
   m.spinAngle += m.spin * dt;
-  if (m.reveal) m.revealT = Math.min(1, m.revealT + dt * 3.2);
+  m.rayAngle += dt * 0.25;
+  if (m.reveal) m.revealT = Math.min(1, m.revealT + dt * 2.1);
   m.flash = Math.max(0, m.flash - dt * 2.1);
-  m.shake = Math.max(0, m.shake - dt * 2.6);
+  m.shake = Math.max(0, m.shake - dt * 2.2);
+
+  // motion trail behind the ball in flight
+  if (m.flying) {
+    m.trail.push({ x: m.flying.ball.x, y: m.flying.ball.y, life: 1 });
+    if (m.trail.length > 26) m.trail.shift();
+  }
+  for (const t of m.trail) t.life -= dt * 1.9;
+  m.trail = m.trail.filter(t => t.life > 0);
+
+  for (const r of m.shock) r.t += dt * 1000;
+  m.shock = m.shock.filter(r => r.t < r.dur);
+
+  if (m.dust.length) {
+    for (const g of m.dust) {
+      g.x += g.vx * dt; g.y += g.vy * dt; g.vy -= 6 * dt;
+      g.tw += dt * 7; g.life -= dt * 0.3;
+    }
+    m.dust = m.dust.filter(g => g.life > 0 && g.y > -20);
+  }
+
+  // a second confetti wave a beat after the finale lands, so it does not all
+  // fall out of frame at once
+  if (m.reveal && +m.reveal.place === 1 && !m._wave2 && m.revealT > 0.45) {
+    m._wave2 = true;
+    lotSpawnConfetti(m, LOT_BOARD_X + LOT_BOARD_W * 0.35, 150, 70, 2.6);
+    lotSpawnConfetti(m, LOT_BOARD_X + LOT_BOARD_W * 0.65, 150, 70, 2.6);
+    lotSpawnDust(m, 60);
+  }
+  if (!m.reveal) m._wave2 = false;
   if (m.confetti.length) {
     for (const p of m.confetti) {
       p.vy += 900 * dt; p.vx *= 0.995;
@@ -23633,22 +23773,29 @@ function lotFitText(c, str, maxW) {
 function lotMachDraw(m) {
   const c = m.ctx;
   const now = m.now || (m.now = performance.now());
-  c.setTransform(m._dpr, 0, 0, m._dpr, 0, 0);   // reset any shake from the last frame
+  c.setTransform(m._sx, 0, 0, m._sy, 0, 0);   // also resets last frame's shake
   c.clearRect(0, 0, LOT_MACH_W, LOT_MACH_H);
-  // camera shake on a landing — small, and only for a moment
-  if (m.shake > 0.01) {
-    const k = m.shake * m.shake * 7;
-    c.translate((Math.random() - 0.5) * k, (Math.random() - 0.5) * k);
+  // Camera shake: a landing thump, plus a rumble that BUILDS through the
+  // countdown so the room can feel the ball coming.
+  let shake = m.shake * m.shake * 8;
+  if (m.phase === 'surge') {
+    const left = Math.max(0, m.surgeUntil - now);
+    shake += 2.2 * (1 - left / LOT_SURGE_MS);
   }
+  if (shake > 0.05) c.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
   const finale = (m.queue.length === 1 && m.queue[0] && +m.queue[0].place === 1)
     || (m.flying && m.flying.place === 1);
   lotDrawStand(c, m);
   lotDrawHopper(c, m, now);
   lotDrawDrum(c, m, now);
   lotDrawBoard(c, m);   // before the chute, so the tube reads as feeding into it
-  lotDrawChute(c, m, now);
-  lotDrawPanel(c, m, now);
   if (finale) lotDrawVignette(c, m);
+  if (m.reveal && +m.reveal.place === 1) lotDrawRays(c, m);
+  lotDrawChute(c, m, now);
+  lotDrawShock(c, m);
+  lotDrawPanel(c, m, now);
+  lotDrawDust(c, m);
+  lotDrawCountdown(c, m, now);
   lotDrawConfetti(c, m);
   if (m.flash > 0.01) {
     c.fillStyle = 'rgba(255,255,255,' + (m.flash * 0.55).toFixed(3) + ')';
@@ -23663,6 +23810,73 @@ function lotDrawVignette(c, m) {
   g.addColorStop(1, 'rgba(40,30,10,.30)');
   c.fillStyle = g;
   c.fillRect(0, 0, LOT_MACH_W, LOT_MACH_H);
+}
+
+function lotDrawShock(c, m) {
+  for (const r of m.shock) {
+    const k = r.t / r.dur;
+    c.save();
+    c.globalAlpha = (1 - k) * 0.7;
+    c.strokeStyle = '#b7791f';
+    c.lineWidth = 5 * (1 - k) + 1;
+    c.beginPath(); c.arc(r.x, r.y, 10 + k * r.max, 0, Math.PI * 2); c.stroke();
+    c.restore();
+  }
+}
+
+// Slow rotating light rays behind the winner's name — finale only.
+function lotDrawRays(c, m) {
+  const cx = LOT_BOARD_X + LOT_BOARD_W * 0.5, cy = 165;
+  c.save();
+  c.beginPath();
+  lotRoundRect(c, LOT_BOARD_X, 34, LOT_BOARD_W, LOT_MACH_H - 70, 14);
+  c.clip();
+  c.translate(cx, cy);
+  c.rotate(m.rayAngle);
+  c.globalAlpha = 0.16 * Math.min(1, m.revealT * 1.6);
+  c.fillStyle = '#e0a83c';
+  for (let i = 0; i < 12; i++) {
+    c.rotate(Math.PI / 6);
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(560, -34);
+    c.lineTo(560, 34);
+    c.closePath();
+    c.fill();
+  }
+  c.restore();
+}
+
+function lotDrawDust(c, m) {
+  for (const g of m.dust) {
+    c.save();
+    c.globalAlpha = Math.max(0, Math.min(1, g.life)) * (0.45 + 0.55 * Math.abs(Math.sin(g.tw)));
+    c.fillStyle = '#e0a83c';
+    c.beginPath(); c.arc(g.x, g.y, g.r, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+}
+
+// 3 - 2 - 1 across the drumroll. The hero of the surge; the panel keeps only
+// the small "which place is coming" label so the two do not fight.
+function lotDrawCountdown(c, m, now) {
+  if (m.phase !== 'surge') return;
+  const left = Math.max(0, m.surgeUntil - now);
+  const per = LOT_SURGE_MS / LOT_COUNTDOWN_BEATS;
+  const beat = Math.min(LOT_COUNTDOWN_BEATS, Math.max(1, Math.ceil(left / per)));
+  const k = 1 - ((left % per) / per);          // 0 → 1 within this beat
+  const pop = k < 0.25 ? k / 0.25 : 1;
+  c.save();
+  c.translate(LOT_BOARD_X + LOT_BOARD_W * 0.5, 262);
+  c.scale(0.55 + 0.75 * pop, 0.55 + 0.75 * pop);
+  c.globalAlpha = 0.22 + 0.78 * (1 - k) * pop;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = '800 132px system-ui, sans-serif';
+  c.lineWidth = 8; c.strokeStyle = 'rgba(255,255,255,.9)';
+  c.strokeText(String(beat), 0, 0);
+  c.fillStyle = '#b7791f';
+  c.fillText(String(beat), 0, 0);
+  c.restore();
 }
 
 function lotDrawConfetti(c, m) {
@@ -23779,7 +23993,15 @@ function lotDrawDrum(c, m, now) {
     if (b.out || now < b.spawnAt) continue;
     lotDrawBall(c, b.x, b.y, LOT_BALL_R, b.col);
   }
-  if (m.flying) lotDrawBall(c, m.flying.ball.x, m.flying.ball.y, LOT_BALL_R + 1.4, m.flying.ball.col, true);
+  if (m.flying) {
+    for (const t of m.trail) {
+      c.save();
+      c.globalAlpha = Math.max(0, t.life) * 0.5;
+      lotDrawBall(c, t.x, t.y, LOT_BALL_R * (0.35 + 0.6 * t.life), m.flying.ball.col);
+      c.restore();
+    }
+    lotDrawBall(c, m.flying.ball.x, m.flying.ball.y, LOT_BALL_R + 2.2, m.flying.ball.col, true);
+  }
 
   // exit port
   c.fillStyle = '#7d7360';
@@ -23897,11 +24119,11 @@ function lotDrawPanel(c, m, now) {
     c.font = '800 12px system-ui, sans-serif';
     c.fillText((+pending.place === 1 ? '★ ' : '') + 'KULA NA ' + (+pending.place) + '. MIEJSCE', x, 104);
     c.fillStyle = '#2d2a24';
-    c.font = '800 34px system-ui, sans-serif';
-    c.fillText(m.phase === 'surge' ? 'Uwaga…' : 'Kula w drodze…', x, 148);
+    c.font = '800 30px system-ui, sans-serif';
+    c.fillText(m.phase === 'surge' ? 'Uwaga…' : 'Kula w drodze…', x, 144);
     c.fillStyle = '#b7791f';
     c.font = '800 20px system-ui, sans-serif';
-    c.fillText(lotNum(pending.prize) + ' 🪙', x, 178);
+    c.fillText(lotNum(pending.prize) + ' 🪙', x, 174);
     return;
   }
 
@@ -24130,6 +24352,58 @@ function lotWireCeremony(m, btn, rows, onFinish, force) {
   btn.onclick = () => lotMachRelease(m);
 }
 
+// Fullscreen. Two mechanisms on purpose: the `.is-fs` class is a fixed overlay
+// and is what ACTUALLY drives the layout, so this works identically on iOS
+// Safari, which has no element Fullscreen API; the native request is a bonus
+// that also hides the browser chrome. ⚠️ requestFullscreen needs a live user
+// gesture, so it is called straight from the click handler, before any await.
+let lotFsCard = null;
+
+function lotIsFs() { return !!lotFsCard; }
+
+function lotEnterFs(card) {
+  lotFsCard = card;
+  card.classList.add('is-fs');
+  document.documentElement.classList.add('lot-fs-open');
+  const el0 = card;
+  const req = el0.requestFullscreen || el0.webkitRequestFullscreen;
+  if (req) { try { req.call(el0); } catch (_e) {} }
+  if (lotMach) lotFitCanvas(lotMach);
+}
+
+function lotExitFs() {
+  if (lotFsCard) lotFsCard.classList.remove('is-fs');
+  lotFsCard = null;
+  document.documentElement.classList.remove('lot-fs-open');
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    const ex = document.exitFullscreen || document.webkitExitFullscreen;
+    if (ex) { try { ex.call(document); } catch (_e) {} }
+  }
+  if (lotMach) lotFitCanvas(lotMach);
+}
+
+function lotToggleFs(card) { if (lotIsFs()) lotExitFs(); else lotEnterFs(card); }
+
+// Leaving fullscreen by Esc or the browser's own chrome must also drop the
+// class, or the card stays a fixed overlay with no way out.
+(function lotFsHooks() {
+  const onChange = () => {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && lotIsFs()) lotExitFs();
+  };
+  document.addEventListener('fullscreenchange', onChange);
+  document.addEventListener('webkitfullscreenchange', onChange);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && lotIsFs()) lotExitFs(); });
+})();
+
+function lotFsButton(card) {
+  const b = el('button', { className: 'lot-fs-btn', title: 'Pełny ekran (Esc, aby wyjść)' }, '⛶');
+  b.addEventListener('click', () => {
+    lotToggleFs(card);
+    b.textContent = lotIsFs() ? '✕' : '⛶';
+  });
+  return b;
+}
+
 function lotModeToggle() {
   const wrap = el('div', { className: 'lot-view-toggle' });
   const btn = (mode, label) => {
@@ -24229,6 +24503,7 @@ function buildLotteryMachineSection(d) {
     buildLotteryBriefing(d, latest && !open && !testing ? latest : null, source),
     buildLotteryLegend(source, hues, latest && !open && !testing ? latest.winners : null),
     stage);
+  stage.append(lotFsButton(card));
   sec.append(card);
 
   const ctl = el('div', { className: 'lot-mach-ctl' });
