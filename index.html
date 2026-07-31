@@ -1088,6 +1088,15 @@
       font-variant-numeric: tabular-nums; color: var(--lot-gold); }
     .lot-mach-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
+    /* Tryb testowy — musi być niemożliwy do pomylenia z losowaniem na żywo */
+    .lot-mach.is-test { border-color: #c2410c; box-shadow: 0 0 0 3px rgba(194,65,12,.1); }
+    .lot-test-banner { background: #fff7ed; border-bottom: 1px solid #fdba74; color: #9a3412;
+      padding: 10px 18px; font-size: 12.5px; line-height: 1.5; }
+    .lot-test-banner b { font-weight: 900; letter-spacing: .04em; }
+    .lot-mach.is-test .lot-release { background: #c2410c; border-color: #c2410c;
+      box-shadow: 0 6px 18px -8px rgba(194,65,12,.8); }
+    .lot-mach.is-test .lot-btn.is-gold { background: #c2410c; border-color: #c2410c; }
+
     /* Briefing: zasady + nagrody + bilety, na samej górze maszyny */
     .lot-brief { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px 28px;
       padding: 16px 18px; border-bottom: 1px solid var(--border); }
@@ -22880,6 +22889,10 @@ async function renderLottery(force) {
 // Polish thousands grouping (80 290) for the lottery's headline figures only —
 // the rest of the app uses plain fmtNum.
 function lotNum(n) { return Math.round(+n || 0).toLocaleString('pl-PL'); }
+// The pool multiplier comes from the RPC (mundial_lottery_standings → 'multiplier'),
+// never from a literal in the copy — that is how "10×" would survive a change to
+// the SQL and start lying.
+function lotMult(d) { return String(+((d || {}).multiplier) || 100); }
 function lotCoins(n) {
   return el('span', { className: 'lot-num' }, lotNum(n),
     el('span', { className: 'lot-coin' }, ' 🪙'));
@@ -22914,8 +22927,8 @@ function buildLotteryPanel(d) {
     el('div', { className: 'lot-pool-label' }, 'Pula nagród'),
     el('div', { className: 'lot-pool' }, live ? lotCoins(pool) : '—'),
     el('div', { className: 'lot-pool-note' }, live
-      ? '10× wynik Banku w Mundialu (obecnie +' + lotNum(bankNet) + ' 🪙)'
-      : 'Pula to 10× zysk Banku z Mundialu. Rośnie z każdym przegranym zakładem gracza.'),
+      ? lotMult(d) + '× wynik Banku w Mundialu (obecnie +' + lotNum(bankNet) + ' 🪙)'
+      : 'Pula to ' + lotMult(d) + '× zysk Banku z Mundialu. Rośnie z każdym przegranym zakładem gracza.'),
   );
   const stubFact = (label, val) => el('div', { className: 'lot-fact' },
     el('div', { className: 'lot-fact-label' }, label),
@@ -23124,6 +23137,12 @@ const LOT_LOAD_MS = 2600;
 // be able to re-arm itself against a machine that has already been replaced.
 let lotMach = null;
 let lotMachRaf = 0;
+// „NA ŻYWO" vs „TEST": test spins the whole ceremony on the REAL ticket table but
+// draws the winners in the browser and never calls the server — nothing is
+// written and nobody is paid. Admin-only, because a fake winner on a public
+// screen would be indistinguishable from a real one to everyone else.
+let lotMode = 'live';   // 'live' | 'test'
+
 let lotAutoPlay = null;   // draw id whose result should animate as soon as it renders
 let lotteryRtReady = false;
 
@@ -23984,8 +24003,8 @@ function buildLotteryBriefing(d, latest, source) {
     rule('🎟️', 'Każdy bilet to jedna kula w bębnie — więcej biletów, więcej kul, większa szansa.'),
     rule('🎯', 'Losujemy 6 nagród, ważonych liczbą biletów i bez powtórzeń: jedna osoba nie zajmie dwóch miejsc.'),
     rule('🪙', live
-      ? 'Pula to 10× zysk Banku z Mundialu — dziś ' + lotNum(pool) + ' 🪙.'
-      : 'Pula to 10× zysk Banku z Mundialu i rośnie z każdym przegranym zakładem gracza.'),
+      ? 'Pula to ' + lotMult(d) + '× zysk Banku z Mundialu — dziś ' + lotNum(pool) + ' 🪙.'
+      : 'Pula to ' + lotMult(d) + '× zysk Banku z Mundialu i rośnie z każdym przegranym zakładem gracza.'),
     rule('🤝', divEach
       ? 'Dywidenda: ' + divPct + '% puli po równo dla każdego z biletem — ok. '
         + lotNum(divEach) + ' 🪙 na osobę, niezależnie od losowania.'
@@ -24111,6 +24130,64 @@ function lotWireCeremony(m, btn, rows, onFinish, force) {
   btn.onclick = () => lotMachRelease(m);
 }
 
+function lotModeToggle() {
+  const wrap = el('div', { className: 'lot-view-toggle' });
+  const btn = (mode, label) => {
+    const b = el('button', { className: 'lot-view-btn' + (lotMode === mode ? ' is-on' : '') }, label);
+    b.addEventListener('click', () => {
+      if (lotMode === mode) return;
+      lotMode = mode;
+      renderLottery();          // rebuild from cache; lotMachineStop() runs in buildLotteryPanel
+    });
+    return b;
+  };
+  wrap.append(btn('live', 'Na żywo'), btn('test', '🧪 Test'));
+  return wrap;
+}
+
+function lotRandomHex(bytes) {
+  const b = new Uint8Array(bytes);
+  if (crypto.getRandomValues) crypto.getRandomValues(b);
+  else for (let i = 0; i < bytes; i++) b[i] = Math.floor(Math.random() * 256);
+  return Array.from(b).map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+// A throwaway draw computed in the browser with the SAME rule as
+// lottery_draw_run(): random seed, weighted, without replacement, snapshot
+// ordered tickets DESC then id ASC. Faithful on purpose — a rehearsal that used
+// different maths would not be a rehearsal. Returns a row shaped like a real
+// `lottery_draws` row so the ceremony code needs no special case.
+async function lotTestDraw(source, pool, force) {
+  const seed = lotRandomHex(32), pub = lotRandomHex(8);
+  const snap = (source || [])
+    .filter(p => (+p.tickets || 0) > 0)
+    .map(p => ({ id: p.id, nick: p.nick, tickets: +p.tickets || 0 }))
+    .sort((a, b) => (b.tickets - a.tickets) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const remaining = snap.slice();
+  const winners = [];
+  for (let k = 1; k <= LOTTERY_TIERS.length && remaining.length; k++) {
+    const total = remaining.reduce((x, p) => x + p.tickets, 0);
+    if (total <= 0) break;
+    const roll = lotRollFromHex(await lotSha256Hex([seed, pub, force, k].join('|')), total);
+    let cum = 0, idx = -1;
+    for (let i = 0; i < remaining.length; i++) { cum += remaining[i].tickets; if (roll < cum) { idx = i; break; } }
+    if (idx < 0) idx = remaining.length - 1;
+    const w = remaining[idx];
+    winners.push({
+      place: k, id: w.id, nick: w.nick, tickets: w.tickets, pct: LOTTERY_TIERS[k - 1].pct,
+      prize: Math.floor(pool * LOTTERY_TIERS[k - 1].pct), roll, pool_tickets: total,
+    });
+    remaining.splice(idx, 1);
+  }
+  const pc = snap.length;
+  const divTotal = Math.floor(pool * LOTTERY_DIVIDEND_PCT);
+  return {
+    id: 'test', status: 'test', pool, snapshot: snap, winners,
+    total_tickets: snap.reduce((x, p) => x + p.tickets, 0), player_count: pc,
+    dividend_total: divTotal, dividend_each: pc ? Math.floor(divTotal / pc) : 0,
+  };
+}
+
 function buildLotteryMachineSection(d) {
   const sec = el('section', { className: 'lot-section' });
   const drawn = lotteryDraws.filter(r => r.status === 'drawn');
@@ -24120,7 +24197,7 @@ function buildLotteryMachineSection(d) {
 
   sec.append(el('div', { className: 'lot-section-head' },
     el('div', { className: 'lot-section-title' }, 'Maszyna losująca'),
-    el('div', { className: 'lot-section-hint' },
+    admin ? lotModeToggle() : el('div', { className: 'lot-section-hint' },
       latest ? 'wylosowano ' + new Date(latest.drawn_at).toLocaleDateString('pl-PL')
         : open ? 'zapieczętowana, czeka na start' : 'losowanie 1 sierpnia'),
   ));
@@ -24134,7 +24211,9 @@ function buildLotteryMachineSection(d) {
 
   // Balls: a finished draw shows the exact table it drew from, otherwise the
   // machine previews the live standings so you can see your own weight in it.
-  const source = latest && !open
+  // TEST always uses the live standings — the point is a dry run of THIS draw.
+  const testing = admin && lotMode === 'test';
+  const source = latest && !open && !testing
     ? (Array.isArray(latest.snapshot) ? latest.snapshot : [])
     : (Array.isArray(d.players) ? d.players : []);
   const hues = lotHuesFor(source);
@@ -24142,9 +24221,13 @@ function buildLotteryMachineSection(d) {
   const canvas = el('canvas', { className: 'lot-mach-canvas' });
   const stage = el('div', { className: 'lot-mach-stage' }, canvas,
     el('div', { className: 'lot-mach-tag' }, 'Loteria po Mundialu'));
-  const card = el('div', { className: 'lot-mach' },
-    buildLotteryBriefing(d, latest && !open ? latest : null, source),
-    buildLotteryLegend(source, hues, latest && !open ? latest.winners : null),
+  const card = el('div', { className: 'lot-mach' + (testing ? ' is-test' : '') },
+    testing ? el('div', { className: 'lot-test-banner' },
+      el('b', {}, '🧪 TRYB TESTOWY'),
+      ' — próba generalna na prawdziwych biletach. Zwycięzcy są losowani w Twojej ' +
+      'przeglądarce, nic nie zapisuje się na serwerze i nikt nie dostaje ani jednej monety.') : '',
+    buildLotteryBriefing(d, latest && !open && !testing ? latest : null, source),
+    buildLotteryLegend(source, hues, latest && !open && !testing ? latest.winners : null),
     stage);
   sec.append(card);
 
@@ -24170,6 +24253,52 @@ function buildLotteryMachineSection(d) {
     rows.forEach(r => { r.style.visibility = 'hidden'; });
     return rows;
   };
+
+  if (testing) {
+    // ── Dry run: the real ceremony, a browser-drawn result, no server call ──
+    const pool = Math.max(0, +d.prize_pool || 0);
+    const spin = el('button', { className: 'lot-btn is-gold' }, 'Ładowanie kul…');
+    spin.disabled = true;
+    const machine = newLotteryMachine(canvas, source, {
+      headline: 'Próba generalna',
+      subline: 'Ten sam przebieg co na żywo: zakręć, potem wypuszczaj kule po jednej od 6. miejsca. Wynik jest udawany.',
+      onLoaded: () => {
+        spin.disabled = false;
+        spin.textContent = '🧪 Zakręć (test)';
+        lotMachPreviewForce(lotMach, forceIn.value);
+      },
+    });
+    spin.addEventListener('click', async () => {
+      spin.disabled = true; spin.style.display = 'none'; forceIn.disabled = true;
+      lotMachSpin(machine, forceIn.value);
+      try {
+        const row = await lotTestDraw(source, pool, Number(forceIn.value) || LOT_FORCE_DEFAULT);
+        const list = buildLotteryWinnerList(row);
+        const rows = hiddenRows(list);
+        winWrap.replaceChildren(list);
+        lotWireCeremony(machine, release, rows, () => {
+          spin.style.display = ''; spin.disabled = false;
+          spin.textContent = '🧪 Zakręć ponownie (test)';
+        }, forceIn);
+        lotMachDeliver(machine, row.winners);
+      } catch (e) {
+        lotMachFail(machine, 'Test nie doszedł do skutku');
+        spin.style.display = ''; spin.disabled = false; forceIn.disabled = false;
+        showToast(e.message || 'Błąd testu.');
+      }
+    });
+    ctl.append(
+      el('div', { className: 'lot-force-row' },
+        el('span', { className: 'lot-ctl-lbl' }, 'Siła zakręcenia'), forceIn, forceVal),
+      el('div', { className: 'lot-mach-btns' }, spin, release),
+      el('div', { className: 'lot-mach-hint' },
+        'Możesz to powtarzać do woli — za każdym razem wypadną inni zwycięzcy, bo ziarno jest losowane od nowa. ' +
+        'Prawdziwe losowanie odbywa się tylko w trybie „Na żywo”.'),
+      winWrap,
+    );
+    lotAppendDrawHistory(sec, drawn);
+    return sec;
+  }
 
   if (latest && !open) {
     // ── A draw has happened: replay it on demand, same click-per-ball ceremony ──

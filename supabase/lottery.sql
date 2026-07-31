@@ -1,6 +1,9 @@
 -- Loteria po Mundialu — activity-based raffle.
 --
--- The prize pool = 10 × the Bank's net profit from settled Mundial bets (the
+-- The prize pool = 100 × the Bank's net profit from settled Mundial bets (the
+-- multiplier was 10 until 2026-07-31, when prizes were raised ten-fold; it is
+-- ALSO copied into canvas-paint-log.sql and lottery-fixes.sql, which redefine
+-- this function — move all three together or a re-run reverts the pool. (the
 -- same `realizedProfit` shown in the Mundial tab). Tickets are earned across the
 -- WHOLE portal (Mundial, prediction markets, casino, seasonal games, farm,
 -- marketplace, canvas) plus ownership rewards (zen garden, plant decorations,
@@ -123,8 +126,8 @@ bank AS (
   FROM football_bets)
 SELECT jsonb_build_object(
   'bank_net',      (SELECT net FROM bank),
-  'multiplier',    10,
-  'prize_pool',    GREATEST(0, (SELECT net FROM bank)) * 10,
+  'multiplier',    100,
+  'prize_pool',    GREATEST(0, (SELECT net FROM bank)) * 100,
   'cutoff',        '2026-07-31T23:59:59+02:00',
   'draw_at',       '2026-08-01T12:00:00+02:00',
   'total_tickets', (SELECT COALESCE(SUM(tickets),0)::bigint FROM final),
