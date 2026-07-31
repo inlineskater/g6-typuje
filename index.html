@@ -10810,7 +10810,10 @@ function el(tag, attrs, ...children) {
   if (attrs) {
     Object.entries(attrs).forEach(([k, v]) => {
       if (k === 'className') node.className = v;
-      else if (k === 'style') Object.assign(node.style, v);
+      // A style OBJECT is merged; a CSS string goes through cssText. Object.assign
+      // on a string treats it as an array of characters and throws on the indexed
+      // setter, which silently kills the whole card-building loop that calls it.
+      else if (k === 'style') { if (typeof v === 'string') node.style.cssText = v; else Object.assign(node.style, v); }
       else if (k.startsWith('data-')) node.setAttribute(k, v);
       else if (k in node) node[k] = v;
       else node.setAttribute(k, v);
