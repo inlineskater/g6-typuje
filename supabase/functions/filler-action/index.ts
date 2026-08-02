@@ -39,18 +39,19 @@ function corsHeaders(req) {
 const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, idle_timeout: 20 });
 
 // ── Constants ────────────────────────────────────────────────────────────
-// Board: 13x11 = 143 tiles, 6 colors. Odd cell count ⇒ majority = 72 ⇒ ties
+// Board: 31x17 = 527 tiles, 7 colors. Odd cell count ⇒ majority = 264 ⇒ ties
 // are structurally impossible (no draw-handling complexity needed).
-const FILLER_W = 13, FILLER_H = 11, FILLER_COLORS = 6;
-const FILLER_N = FILLER_W * FILLER_H;                   // 143
-const FILLER_MAJORITY = Math.floor(FILLER_N / 2) + 1;   // 72
-const FILLER_CORNER_A = (FILLER_H - 1) * FILLER_W;      // bottom-left, seat 0
-const FILLER_CORNER_B = FILLER_W - 1;                   // top-right, seat 1
+const FILLER_W = 31, FILLER_H = 17, FILLER_COLORS = 7;
+const FILLER_N = FILLER_W * FILLER_H;                   // 527
+const FILLER_MAJORITY = Math.floor(FILLER_N / 2) + 1;   // 264
 
-const FILLER_TURN_MS = 20_000;         // per-turn deadline
+const FILLER_TURN_MS = 15_000;         // per-turn deadline
 const FILLER_TURN_GRACE_MS = 1_500;    // RTT slack before the server steals a turn
 const FILLER_QUEUE_MS = 18_000;        // human wait before the bot fallback
-const FILLER_MAX_MOVES = 200;          // anti-stall safety cap (real games finish ~35 plies)
+// anti-stall safety cap — scripts/filler-balance.mjs (2000 bot-vs-bot sims at
+// 31x17x7) measured median 55 / p90 64 / p99 72 / max 84 total plies, with
+// 0/2000 re-runs hitting this cap; real games finish ~55 plies.
+const FILLER_MAX_MOVES = 100;
 const FILLER_ABANDON_TIMEOUTS = 3;     // consecutive auto-plays vs a BOT ⇒ cancel, no score
 const FILLER_SWEEP_LIMIT = 5;          // distinct stale matches healed per request
 const FILLER_CATCHUP_MAX = 6;          // plies caught up per stale match per request
@@ -60,7 +61,9 @@ const FILLER_BOT_NICKS = ["Bot Zaklepywacz", "Kolorek", "Pan Wypełniacz", "Zale
 
 // Score (PvP only — see the anti-farming note below).
 const FILLER_SCORE_CAP = 350;
-const FILLER_MOVES_PAR = 20;
+// scripts/filler-balance.mjs measured the winner's own moves_made at median
+// 28 / p90 32 / p99 36 on the 31x17x7 board; par = median * 1.15, rounded.
+const FILLER_MOVES_PAR = 32;
 const FILLER_SCORE_MIN_MOVES = 6;      // total match plies below this ⇒ no score, no exploit surface
 const FILLER_SCORE_COOLDOWN_S = 20;    // per-user-per-game, mirrors record_arcade_score's spirit
 
@@ -96,7 +99,7 @@ async function requireUser(req) {
 
 // ── Board representation ────────────────────────────────────────────────
 // Stored as two fixed-length TEXT columns (cells/owners), not jsonb: cheap
-// O(n) flood-fill input, cheap client-side diffing, ~286 bytes/match on the
+// O(n) flood-fill input, cheap client-side diffing, ~1054 bytes/match on the
 // wire. Decoded here into plain number arrays for the BFS.
 
 function decodeBoard(row) {
@@ -244,16 +247,22 @@ function mulberry32(seed) {
 function generateBoard(seed, w, h, colorCount) {
   const rng = mulberry32(seed);
   const n = w * h;
+  // Corners derived from this call's own w/h args, not module-level
+  // constants — this function is otherwise generic over dimensions, and an
+  // earlier version hard-coded FILLER_W/FILLER_H-derived corners here
+  // (harmless only because every caller happened to pass those exact dims).
+  const cornerA = (h - 1) * w; // bottom-left, seat 0
+  const cornerB = w - 1;       // top-right, seat 1
   const cells = new Array(n);
   for (let i = 0; i < n; i++) cells[i] = Math.floor(rng() * colorCount);
   const owners = new Array(n).fill(-1);
   // Corners must start on different colors, or seat 1 would begin able to
   // legally absorb into seat 0's own starting tile's color trivially.
-  while (cells[FILLER_CORNER_B] === cells[FILLER_CORNER_A]) {
-    cells[FILLER_CORNER_B] = Math.floor(rng() * colorCount);
+  while (cells[cornerB] === cells[cornerA]) {
+    cells[cornerB] = Math.floor(rng() * colorCount);
   }
-  owners[FILLER_CORNER_A] = 0;
-  owners[FILLER_CORNER_B] = 1;
+  owners[cornerA] = 0;
+  owners[cornerB] = 1;
   return { w, h, cells, owners };
 }
 

@@ -10,9 +10,13 @@
 //
 // Rendering-only board: keeps the last-rendered `cells`/`owners` strings and
 // repaints only the tile indices that actually changed, rather than
-// rebuilding the whole 143-cell grid on every poll/realtime tick.
+// rebuilding the whole 527-cell grid on every poll/realtime tick.
 
-const FILLER_COLOR_HEX = ['#e5484d', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#06b6d4'];
+// 7 colors ("7 Colors" — the international name of the original 1990 game).
+// Length must stay >= any match's colorCount; fillerRenderPalette rebuilds
+// its buttons from m.colorCount so an older/smaller match never shows a
+// dead extra swatch.
+const FILLER_COLOR_HEX = ['#e5484d', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7'];
 const FILLER_POLL_MS = 2000;
 const FILLER_STATE_MIN_GAP_MS = 900; // dedupe a realtime doorbell landing right after our own fetch
 
@@ -166,7 +170,7 @@ function fillerRenderPlayers(data) {
   const total = m.width * m.height;
   for (const p of m.players) {
     const row = el('div', { className: 'filler-player-row' + (p.isMe ? ' is-me' : '') });
-    const swatch = el('span', { className: 'filler-swatch', style: { background: FILLER_COLOR_HEX[p.color] || '#888' } });
+    const swatch = el('span', { className: 'filler-swatch', style: { backgroundColor: FILLER_COLOR_HEX[p.color] || '#888' } });
     const pct = total ? Math.round((p.tiles / total) * 100) : 0;
     row.append(
       swatch,
@@ -181,25 +185,38 @@ function fillerRenderPalette(data) {
   const wrap = fillerEl('filler-palette');
   if (!wrap) return;
   const m = data.match;
-  if (!wrap.childElementCount) {
-    for (let c = 0; c < FILLER_COLOR_HEX.length; c++) {
+  // Rebuilds from m.colorCount, not FILLER_COLOR_HEX.length — an older or
+  // smaller-than-usual match must never show a permanently-dead extra
+  // swatch (or be short a swatch, if colorCount ever exceeds the palette).
+  const colorCount = m ? m.colorCount : FILLER_COLOR_HEX.length;
+  if (wrap.childElementCount !== colorCount) {
+    wrap.replaceChildren();
+    for (let c = 0; c < colorCount; c++) {
       const btn = el('button', {
         type: 'button', className: 'filler-color-btn', 'data-color': String(c),
-        style: { background: FILLER_COLOR_HEX[c] },
+        style: { backgroundColor: FILLER_COLOR_HEX[c] || '#888' },
         onclick: () => fillerPickColor(c),
       });
       wrap.appendChild(btn);
     }
   }
   const legal = new Set(m && m.status === 'active' && m.isMyTurn ? m.legalColors : []);
+  const me = m && m.players.find((p) => p.isMe);
+  const foe = m && m.players.find((p) => !p.isMe);
   Array.from(wrap.children).forEach((btn, c) => {
     btn.disabled = !legal.has(c);
     btn.classList.toggle('is-disabled', !legal.has(c));
+    // Framed regardless of whose turn it is — these two colors are always
+    // illegal to pick (own color, opponent's color), so showing which is
+    // which is informational, not just a during-your-turn hint.
+    btn.classList.toggle('is-mine', !!me && me.color === c);
+    btn.classList.toggle('is-foe', !!foe && foe.color === c);
   });
 }
 
-// Builds the 143-cell grid once, then only touches the tiles whose color or
-// ownership actually changed since the last render.
+// Builds the board's cell grid once (dimensions come from the match, e.g.
+// 31x17=527), then only touches the tiles whose color or ownership actually
+// changed since the last render.
 function fillerRenderBoard(data) {
   const board = fillerEl('filler-board');
   if (!board) return;
@@ -217,6 +234,8 @@ function fillerRenderBoard(data) {
     board.replaceChildren();
     board.dataset.matchId = m.id;
     board.style.gridTemplateColumns = 'repeat(' + m.width + ', 1fr)';
+    board.style.gridTemplateRows = 'repeat(' + m.height + ', 1fr)';
+    board.style.aspectRatio = m.width + ' / ' + m.height;
     for (let i = 0; i < n; i++) board.appendChild(el('div', { className: 'filler-cell' }));
     rt.lastCells = null;
     rt.lastOwners = null;
@@ -227,7 +246,7 @@ function fillerRenderBoard(data) {
     if (prevCells && prevCells[i] === cells[i] && prevOwners && prevOwners[i] === owners[i]) continue;
     const cell = board.children[i];
     const color = Number(cells[i]);
-    cell.style.background = FILLER_COLOR_HEX[color] || '#888';
+    cell.style.backgroundColor = FILLER_COLOR_HEX[color] || '#888';
     const owner = owners[i];
     cell.classList.toggle('is-seat0', owner === '0');
     cell.classList.toggle('is-seat1', owner === '1');

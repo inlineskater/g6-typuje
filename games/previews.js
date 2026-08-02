@@ -730,10 +730,10 @@ function agpWhackFloat(p, x, y) {
 // no shared code with games/filler.js or supabase/functions/filler-action.
 // Filler is server-authoritative for every real move (see docs/filler.md),
 // so there is no client-side simulation to reuse here even if we wanted to.
-const AGP_FL_COLS = 8, AGP_FL_ROWS = 6, AGP_FL_COLORS = 4;
+const AGP_FL_COLS = 15, AGP_FL_ROWS = 9, AGP_FL_COLORS = 5;
 const AGP_FL_MOVE_MS = 550;
 const AGP_FL_HOLD_MS = 1400; // pause on a finished board before restarting
-const AGP_FL_HEX = ['#e5484d', '#3b82f6', '#22c55e', '#eab308'];
+const AGP_FL_HEX = ['#e5484d', '#f97316', '#eab308', '#22c55e', '#06b6d4'];
 
 function agpFillerNeighbors(i) {
   const x = i % AGP_FL_COLS, y = (i - x) / AGP_FL_COLS;
@@ -795,7 +795,7 @@ function agpFillerNewState() {
 
 function agpFillerPaint(p) {
   const cells = p.st.cells;
-  for (let i = 0; i < cells.length; i++) p.tiles[i].style.background = AGP_FL_HEX[cells[i]];
+  for (let i = 0; i < cells.length; i++) p.tiles[i].style.backgroundColor = AGP_FL_HEX[cells[i]];
 }
 
 function agpFillerStep(p) {
@@ -1120,6 +1120,7 @@ const AGP_DEFS = {
       p.host.className = 'ag-prev-dom fl-prev';
       p.host.style.display = 'grid';
       p.host.style.gridTemplateColumns = 'repeat(' + AGP_FL_COLS + ', 1fr)';
+      p.host.style.gridTemplateRows = 'repeat(' + AGP_FL_ROWS + ', 1fr)';
       p.host.replaceChildren();
       p.tiles = [];
       const n = AGP_FL_COLS * AGP_FL_ROWS;

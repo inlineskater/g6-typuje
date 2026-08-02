@@ -53,9 +53,9 @@ CREATE TABLE IF NOT EXISTS public.filler_matches (
   -- seasonal tab. Decided once at creation from the action context, never
   -- trusted from the request body afterward. Phase 1: always true.
   arcade_mode      boolean NOT NULL DEFAULT true,
-  width            smallint NOT NULL DEFAULT 13 CHECK (width  BETWEEN 6 AND 24),
-  height           smallint NOT NULL DEFAULT 11 CHECK (height BETWEEN 6 AND 24),
-  color_count      smallint NOT NULL DEFAULT 6  CHECK (color_count BETWEEN 3 AND 8),
+  width            smallint NOT NULL DEFAULT 31 CHECK (width  BETWEEN 6 AND 40),
+  height           smallint NOT NULL DEFAULT 17 CHECK (height BETWEEN 6 AND 40),
+  color_count      smallint NOT NULL DEFAULT 7  CHECK (color_count BETWEEN 3 AND 8),
   seed             bigint NOT NULL,                      -- audit/repro only; board is stored verbatim
   cells            text NOT NULL,                        -- one char per tile, '0'..'7' = color
   owners           text NOT NULL,                         -- one char per tile: '.', '0', '1'
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS public.filler_matches (
   turn_deadline    timestamptz,                            -- set only once status='active'
   queue_expires_at timestamptz,                            -- 'waiting' pvp matches: bot-fallback timer
   winner_seat      smallint CHECK (winner_seat IN (0,1)),   -- NULL = abandoned/cancelled (never a draw:
-                                                             -- default 13x11=143 tiles is odd)
+                                                             -- default 31x17=527 tiles is odd)
   end_reason       text CHECK (end_reason IN
                      ('majority','partitioned','move_cap','resigned','abandoned','cancelled')),
   created_at       timestamptz NOT NULL DEFAULT now(),
@@ -231,6 +231,28 @@ BEGIN
       $cron$ select public.filler_cron_abandon_stale(); $cron$
     );
   END IF;
+END;
+$$;
+
+-- Widen the board-size bounds/defaults for the 2026-08-02 resize (13x11x6 →
+-- 31x17x7 — see docs/filler.md). CREATE TABLE IF NOT EXISTS above is a no-op
+-- against an already-created table, so on a live project the OLD
+-- BETWEEN-6-AND-24 CHECK would otherwise reject every new 31-wide match.
+-- Existing 13x11 rows stay valid (13/11 are still inside 6..40) and keep
+-- rendering at their own stored width/height — nothing here touches rows.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'filler_matches_width_check') THEN
+    ALTER TABLE public.filler_matches DROP CONSTRAINT filler_matches_width_check;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'filler_matches_height_check') THEN
+    ALTER TABLE public.filler_matches DROP CONSTRAINT filler_matches_height_check;
+  END IF;
+  ALTER TABLE public.filler_matches ADD CONSTRAINT filler_matches_width_check  CHECK (width  BETWEEN 6 AND 40);
+  ALTER TABLE public.filler_matches ADD CONSTRAINT filler_matches_height_check CHECK (height BETWEEN 6 AND 40);
+  ALTER TABLE public.filler_matches ALTER COLUMN width        SET DEFAULT 31;
+  ALTER TABLE public.filler_matches ALTER COLUMN height       SET DEFAULT 17;
+  ALTER TABLE public.filler_matches ALTER COLUMN color_count  SET DEFAULT 7;
 END;
 $$;
 

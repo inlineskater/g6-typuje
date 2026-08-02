@@ -26,7 +26,7 @@ Poker/Roulette/Wheel:
 1. It's PvP, so a live shared authority is unavoidable anyway — there's no
    client to trust as "the" simulation when two different browsers are playing
    each other.
-2. Moves are infrequent discrete color-picks (a match is ~20-40 total plies
+2. Moves are infrequent discrete color-picks (a match is ~50-85 total plies
    across both players), not a 50ms physics tick — a live round-trip per move
    is cheap and correct, unlike a fast game loop.
 3. It unifies bot-mode and PvP-mode under **one** Edge Function and **one**
@@ -47,23 +47,33 @@ picks. There is deliberately no `scripts/filler-parity.mjs`.
 
 ## Game rules
 
-Board: **13 cols × 11 rows = 143 tiles, 6 colors** (`FILLER_W`/`FILLER_H`/
-`FILLER_COLORS` in `filler-action`). Odd tile count ⇒ majority = 72 ⇒ **ties are
-structurally impossible** — no draw-handling logic needed anywhere. Seat 0
-starts bottom-left, seat 1 top-right; the board is generated with a seeded
-PRNG (`mulberry32`) and stored **verbatim** on the match row (the seed is kept
-only for audit — there's no client replay that needs to reproduce the board).
+Board: **31 cols × 17 rows = 527 tiles, 7 colors** (`FILLER_W`/`FILLER_H`/
+`FILLER_COLORS` in `filler-action`) — resized 2026-08-02 from the original
+13×11×6 launch shape to read as the wide, dense DOS field it's modeled on
+(ratio 1.82, close to the original's on-screen proportions) instead of a
+near-square grid. Odd tile count ⇒ majority = 264 ⇒ **ties are structurally
+impossible** — no draw-handling logic needed anywhere. **Any future resize
+must keep `width × height` odd**, or a real tie becomes reachable and every
+piece of code that treats `winner_seat IS NULL` as "abandoned/cancelled only"
+(the SQL comment, `evaluateEnd`, the frontend result text) needs a genuine
+draw case added. Seat 0 starts bottom-left, seat 1 top-right; the board is
+generated with a seeded PRNG (`mulberry32`) and stored **verbatim** on the
+match row (the seed is kept only for audit — there's no client replay that
+needs to reproduce the board).
 
 ⚠️ **The rule that's easy to get wrong:** a legal color pick is any color
 **except the caller's own current territory color AND the opponent's current
-territory color** (`color_count − 2` = 4 legal picks with 6 colors, always
+territory color** (`color_count − 2` = 5 legal picks with 7 colors, always
 ≥1 available since `color_count >= 3`). Skipping the opponent-color exclusion
 is an **instant-win exploit** — picking the opponent's color would absorb
 their entire territory in one flood, since their whole territory is uniformly
 that one color. A 0-gain pick (recoloring purely to deny a color to the
 opponent, without gaining any neutral tiles) is legal and a real tactic;
-`FILLER_MAX_MOVES` (200) is the only anti-stall safety cap (real games finish
-in ~35 plies).
+`FILLER_MAX_MOVES` (100) is the only anti-stall safety cap — set from
+`scripts/filler-balance.mjs`, a bot-vs-bot balance harness (not a parity
+contract — there's nothing here to keep byte-identical with, see above) that
+measured median/p90/p99/max total plies over 2000 simulated matches at the
+current board size; real games finish in ~55 plies.
 
 Absorption (`absorb()` in `filler-action`) is standard flood-fill semantics:
 recolor the seat's whole territory to the picked color, then transitively
@@ -74,7 +84,7 @@ regardless of color, because it only ever absorbs `owners[j] === -1` (neutral)
 tiles.
 
 Win conditions, checked after every applied ply (`evaluateEnd()`): majority
-(≥72 tiles) → immediate win; board fully partitioned (no neutral tiles left)
+(≥264 tiles) → immediate win; board fully partitioned (no neutral tiles left)
 → higher tile count wins; move cap hit → higher tile count wins (the tie case
 in both is handled defensively via a nullable `winner_seat`, even though the
 odd tile count makes a real tie unreachable today).
@@ -92,7 +102,7 @@ Two tables, no secrets table:
   state as two fixed-length `text` columns, `cells` and `owners` (one char per
   tile — `cells` is the color digit, `owners` is `.`/`0`/`1`), **not jsonb**:
   cheap O(n) flood-fill input, cheap client-side diffing (repaint only changed
-  indices), ~286 bytes/match on the wire, backed by
+  indices), ~1054 bytes/match on the wire, backed by
   `CHECK (char_length(cells) = width*height)` so a malformed board can't
   exist. `move_no` is an **optimistic-concurrency token** the client echoes
   back on `pick_color`; a stale/double-clicked call becomes a silent no-op
@@ -207,7 +217,7 @@ so no cycle is possible.
 Single-ply greedy argmax — matching this repo's house style for every bot
 here (Poker's `applyBotMove`; the preview bots' `agpSnakeChooseDir`/
 `agpTetrisPlan`). Nothing in this codebase does multi-ply search, and Filler
-doesn't either. For each of the (at most 4) legal colors: clone the board,
+doesn't either. For each of the (at most 5) legal colors: clone the board,
 simulate the absorb, score:
 
 ```
@@ -218,8 +228,8 @@ score = tilesGained
       + jitter (±0.3 tiles, uniform) (variety, mirrors poker's per-seat randomness)
 ```
 
-argmax, ties broken by whichever was evaluated first. ~8 flood-fills of 143
-cells per decision — microseconds. This same function serves the real bot
+argmax, ties broken by whichever was evaluated first. ~10 flood-fills of 527
+cells per decision — still microseconds. This same function serves the real bot
 **and** the timeout auto-play (an idle human's turn is substituted with the
 identical heuristic — see below), so "what does a reasonable move look like"
 is defined in exactly one place.
@@ -307,31 +317,43 @@ Extra guards on the PvP scoring path (`scoreOnePlayer`):
 base  = round(120 × territoryShare)                                   // 0..120
 win   = won ? 80 : 0
 dom   = won ? round(60 × clamp01((territoryShare − 0.5) × 2)) : 0      // decisiveness, 0..60
-eff   = won ? round(40 × clamp01((20 − movesMade) / 20)) : 0           // speed bonus, 0..40
+eff   = won ? round(40 × clamp01((32 − movesMade) / 32)) : 0           // speed bonus, 0..40 (32 = FILLER_MOVES_PAR)
 score = clamp(round(base + win + dom + eff), 0, 350)
 ```
 
-A close loss ≈ 48-70 pts, a solid PvP win ≈ 200-270, a fast decisive blowout
-approaches the 350 cap. Every finished PvP match scores *something* (loss
-included), so the leaderboard rewards playing, but only human opponents ever
-reach it at all.
+Calibrated against `scripts/filler-balance.mjs`'s 2000-match bot-vs-bot
+simulation at the current board size: a typical loss scores ≈ 30-58 pts, a
+typical win ≈ 147-153 pts (median-to-p90). The 350 cap is a hard ceiling for a
+maximally lopsided finish (near-total territory, minimal moves), not
+something ordinary play reaches — a match always ends the **instant**
+majority is crossed (~50-55% territory share in practice, per the same
+simulation), so `dom` stays small in nearly every real game; only an
+unusually decisive `partitioned`/`move_cap` finish pushes it higher. Every
+finished PvP match scores *something* (loss included), so the leaderboard
+rewards playing, but only human opponents ever reach it at all.
 
 ## Frontend (`games/filler.js`)
 
 Rendering-only — never runs an authoritative sim, only paints whatever board
 the server returns. Keeps the last-rendered `cells`/`owners` strings and
 repaints only the tile indices that actually changed (`fillerRenderBoard`),
-rather than rebuilding the 143-cell DOM grid on every poll. The board is a
-plain DOM grid (143 `div`s), not canvas — the game updates a handful of
+rather than rebuilding the 527-cell DOM grid on every poll. The board is a
+plain DOM grid (527 `div`s), not canvas — the game updates a handful of
 times a minute (turn-based, not a frame loop), so a full CSS repaint is
-cheap and canvas buys nothing here.
+cheap and canvas buys nothing here. Cells carry a faceted `conic-gradient`
+bevel with no inter-cell gap, so same-color neighbors visually merge into
+the diamond-quilt look of the 1990 original; territory is expressed by
+shading unclaimed tiles rather than ringing claimed ones, since the two
+seats can never share a color (below) — the only real ambiguity is a
+neutral tile that happens to match your own color.
 
 Two entry points: **"▶ Zagraj z botem"** (instant, `play_bot`) and
 **"🔎 Znajdź przeciwnika"** (queue, `find_opponent`, with a **"✕ Anuluj
-szukanie"** escape hatch while waiting). Once active, 6 palette buttons let
-the player pick a color — 2 are visually disabled (own/opponent's current
-color) via the server-returned `legalColors` list, never computed
-client-side. A **"🏳️ Poddaj się"** (resign) button is available mid-match.
+szukanie"** escape hatch while waiting). Once active, 7 palette buttons let
+the player pick a color — 2 are visually disabled and framed (own color in
+green, opponent's in dark) via the server-returned `legalColors` list, never
+computed client-side. A **"🏳️ Poddaj się"** (resign) button is available
+mid-match.
 **Deliberately does NOT call `payArcadeEntry()`/`recordArcadeScore()`** —
 those RPCs are intentionally bypassed (see the scoring section above);
 calling them would just fail (`'filler'` isn't in either's allowlist).
@@ -354,8 +376,8 @@ tab closed cleanly or not.
 
 ## Preview (`games/previews.js` — `AGP_DEFS.filler`)
 
-A small, **fully self-contained** cosmetic demo (`dep: null`, a smaller 8×6
-board, 4 colors, its own tiny flood-fill + a plain greedy-only chooser) —
+A small, **fully self-contained** cosmetic demo (`dep: null`, a smaller 15×9
+board, 5 colors, its own tiny flood-fill + a plain greedy-only chooser) —
 deliberately NOT sharing any code with `games/filler.js` or
 `supabase/functions/filler-action`, matching every other preview's
 "cosmetic-only, never calls the real game logic" convention. Since Filler is
