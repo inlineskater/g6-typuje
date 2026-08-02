@@ -10853,6 +10853,13 @@ let tetrisRuntime = null;
 // exactly like tetris.js/etc., since a second top-level `let` for the same
 // name across classic scripts sharing one global scope is a SyntaxError.
 let healerRuntime = null;
+// Same pre-declaration, same reason: loadSeasonalTab() reads fillerRuntime on
+// EVERY seasonal week (to stop Filler's polling when the season is some other
+// game), long before games/filler.js is ever fetched. Leaving the `let` in that
+// file made the whole seasonal tab throw ReferenceError before it could load
+// any game's state — a blank board and an empty leaderboard for every seasonal
+// game, not just Filler. games/filler.js only ASSIGNS it.
+let fillerRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 

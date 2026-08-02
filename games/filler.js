@@ -20,7 +20,14 @@ const FILLER_COLOR_HEX = ['#e5484d', '#f97316', '#eab308', '#22c55e', '#06b6d4',
 const FILLER_POLL_MS = 2000;
 const FILLER_STATE_MIN_GAP_MS = 900; // dedupe a realtime doorbell landing right after our own fetch
 
-let fillerRuntime = null;
+// fillerRuntime is `let`-declared in index.html, not here: loadSeasonalTab()
+// reads it (`fillerRuntime?.mounted`) before this file has necessarily been
+// fetched, and a top-level `let` only creates its global binding when its own
+// script executes — so declaring it here left a bare reference to an
+// undeclared name, which throws ReferenceError, not undefined. A second
+// top-level `let` for the same name across classic scripts sharing one global
+// scope is a SyntaxError, so this must stay a plain assignment.
+fillerRuntime = null;
 let fillerRealtimeChannel = null;
 
 function newFillerRuntime() {
