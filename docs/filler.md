@@ -1,0 +1,396 @@
+# Filler — 1v1 territory flood-fill (full design doc)
+
+„Filler" is the classic Gamos Ltd 1990 DOS game (international release „7 Colors"),
+designed by Dmitry Pashkov: two players start in opposite corners of a colored-tile
+grid; each turn the active player picks a palette color and every tile of that
+color connected to their territory joins it; whoever ends up controlling the
+majority of the board wins. `CLAUDE.md` keeps a short pointer here; this is the
+full story.
+
+Added 2026-08 as arcade-only (Phase 1, via „Wszystkie Gry"); the seasonal
+promotion (Phase 2) is written but dormant until its debut week, **2026-08-10**
+(see the bottom of this doc).
+
+## Why Filler is architecturally different from every other game here
+
+Every other seasonal/arcade game (Snake, Tetris, Healer Dungeon, etc.) runs a
+**deterministic-tick simulation client-side**: the browser is authoritative for
+gameplay, logs a compact event stream, and an Edge Function replays that log to
+derive a trusted score. Each of those games carries a byte-for-byte parity
+contract between the client copy and the server copy, verified by a
+`scripts/*-parity.mjs` fuzzer.
+
+Filler instead is **server-authoritative for every single move**, like
+Poker/Roulette/Wheel:
+
+1. It's PvP, so a live shared authority is unavoidable anyway — there's no
+   client to trust as "the" simulation when two different browsers are playing
+   each other.
+2. Moves are infrequent discrete color-picks (a match is ~20-40 total plies
+   across both players), not a 50ms physics tick — a live round-trip per move
+   is cheap and correct, unlike a fast game loop.
+3. It unifies bot-mode and PvP-mode under **one** Edge Function and **one**
+   pair of tables: a "vs bot" match is just a 2-seat match where seat 1 is
+   `(user_id NULL, is_bot true)` — exactly Poker's `bots.sql` trick
+   (`supabase/bots.sql`). There's no separate "solo" code path to keep in sync
+   with a "PvP" one.
+4. There is **no hidden information** — the whole board is public to both
+   players at all times. Unlike Poker (hidden deck + per-caller response
+   sanitization) or Mines/Crash (separate `*_round_secrets` tables), Filler
+   needs no secrets table and no per-caller filtering: every caller gets
+   exactly the same board.
+
+**Net effect: zero parity contracts.** `games/filler.js` never runs an
+authoritative sim — it only renders whatever board state
+`supabase/functions/filler-action` returns and sends the player's own color
+picks. There is deliberately no `scripts/filler-parity.mjs`.
+
+## Game rules
+
+Board: **13 cols × 11 rows = 143 tiles, 6 colors** (`FILLER_W`/`FILLER_H`/
+`FILLER_COLORS` in `filler-action`). Odd tile count ⇒ majority = 72 ⇒ **ties are
+structurally impossible** — no draw-handling logic needed anywhere. Seat 0
+starts bottom-left, seat 1 top-right; the board is generated with a seeded
+PRNG (`mulberry32`) and stored **verbatim** on the match row (the seed is kept
+only for audit — there's no client replay that needs to reproduce the board).
+
+⚠️ **The rule that's easy to get wrong:** a legal color pick is any color
+**except the caller's own current territory color AND the opponent's current
+territory color** (`color_count − 2` = 4 legal picks with 6 colors, always
+≥1 available since `color_count >= 3`). Skipping the opponent-color exclusion
+is an **instant-win exploit** — picking the opponent's color would absorb
+their entire territory in one flood, since their whole territory is uniformly
+that one color. A 0-gain pick (recoloring purely to deny a color to the
+opponent, without gaining any neutral tiles) is legal and a real tactic;
+`FILLER_MAX_MOVES` (200) is the only anti-stall safety cap (real games finish
+in ~35 plies).
+
+Absorption (`absorb()` in `filler-action`) is standard flood-fill semantics:
+recolor the seat's whole territory to the picked color, then transitively
+absorb every 4-adjacent same-colored **neutral** tile, cascading through
+newly-absorbed tiles' own same-colored neighbors — one full connected blob
+per move, not a one-tile ring. It can never "steal" the opponent's territory
+regardless of color, because it only ever absorbs `owners[j] === -1` (neutral)
+tiles.
+
+Win conditions, checked after every applied ply (`evaluateEnd()`): majority
+(≥72 tiles) → immediate win; board fully partitioned (no neutral tiles left)
+→ higher tile count wins; move cap hit → higher tile count wins (the tie case
+in both is handled defensively via a nullable `winner_seat`, even though the
+odd tile count makes a real tie unreachable today).
+
+## Schema (`supabase/filler.sql`)
+
+Two tables, no secrets table:
+
+- **`filler_matches`** — one row per match. `status`
+  (`waiting|active|finished|cancelled`); `mode` (`bot|pvp`, what was
+  *requested*) vs **`opponent_kind`** (`bot|human`, who was *actually* got,
+  NULL while waiting) — a `pvp` match that times out to a bot fallback must
+  behave like a bot match from then on (no score, the abandon rule applies),
+  so scoring and the abandon rule key on `opponent_kind`, never `mode`. Board
+  state as two fixed-length `text` columns, `cells` and `owners` (one char per
+  tile — `cells` is the color digit, `owners` is `.`/`0`/`1`), **not jsonb**:
+  cheap O(n) flood-fill input, cheap client-side diffing (repaint only changed
+  indices), ~286 bytes/match on the wire, backed by
+  `CHECK (char_length(cells) = width*height)` so a malformed board can't
+  exist. `move_no` is an **optimistic-concurrency token** the client echoes
+  back on `pick_color`; a stale/double-clicked call becomes a silent no-op
+  (fresh state returned) instead of double-applying. `turn_deadline` is NULL
+  until `status='active'` (so the very first waiting player never has a
+  stolen head start); `queue_expires_at` is the bot-fallback timer.
+- **`filler_match_players`** — one row per seat. `seat` (0/1), `user_id`
+  nullable (NULL for bots — Poker's exact `bots.sql` shape;
+  `UNIQUE(match_id, user_id)` treats NULLs as distinct so two bot seats never
+  collide), `is_bot`, `bot_nick`, `color` (current territory color, cheap
+  lookup for legality checks), `tiles`, `moves_made`, **`timeouts`**
+  (consecutive auto-played turns, resets to 0 on a real move — drives the
+  abandon rule), `score` (NULL for bots and until match end).
+
+**"One open match per user" is a real DB constraint, not just app
+discipline:** a denormalized `active boolean` on `filler_match_players`,
+maintained by a **trigger** (`filler_sync_players_active`) on
+`filler_matches` status changes — not by application code, so a future admin
+tool or rematch feature can't silently violate the invariant — backs a
+partial unique index:
+
+```sql
+CREATE UNIQUE INDEX filler_players_one_open_per_user
+  ON public.filler_match_players(user_id) WHERE active AND user_id IS NOT NULL;
+```
+
+A violation surfaces as a clean, recoverable 23505 instead of silent data
+corruption.
+
+RLS: `SELECT` to `authenticated USING (true)` on both tables — no hidden
+info, so spectating a Filler match costs nothing to allow (same reasoning as
+`poker_seats`). All writes go through `filler-action`'s own privileged
+`SUPABASE_DB_URL` connection; `anon`/`authenticated` have no write grants at
+all.
+
+⚠️ **`supabase/arcade.sql` needs zero changes.** `'filler'` is deliberately
+absent from `pay_arcade_entry`'s allowlist and `record_arcade_score`'s
+score-cap `CASE`, so a forged client call to self-report a Filler score fails
+cleanly with `invalid_game_type`. `filler-action`'s privileged connection
+(same role Poker/Wheel already write `profiles`/their own tables through,
+unaffected by RLS — there is no `FORCE ROW LEVEL SECURITY` anywhere in this
+repo) is *provably* the only writer of `game_type='filler'` rows — a stronger
+anti-cheat guarantee than the client-callable-RPC path every other arcade
+game uses.
+
+## Locking discipline (`supabase/functions/filler-action`)
+
+One fixed order, never violated, matching Poker's "table then seats" shape
+with a user-level lock prepended:
+
+1. the caller's `profiles` row — `SELECT ... FOR NO KEY UPDATE` (serializes a
+   user's own concurrent calls/tabs without blocking unrelated FK-referencing
+   inserts from other users — `FOR NO KEY UPDATE` specifically so it doesn't
+   conflict with the `FOR KEY SHARE` other transactions take via FK checks)
+2. the `filler_matches` row — `FOR UPDATE` for a known match, or
+   `FOR UPDATE SKIP LOCKED` when *scanning* the waiting queue
+3. that match's `filler_match_players` rows — `FOR UPDATE ORDER BY seat`
+4. `arcade_scores` INSERT last (no row lock needed)
+
+Every transaction opens with `set local lock_timeout = '4s'` (Wheel's
+convention). The self-healing sweep only ever locks a *suffix* of this order,
+so no cycle is possible.
+
+**Races this resolves, concretely:**
+- *Two different users racing `find_opponent` for the same waiting match* —
+  `FOR UPDATE SKIP LOCKED` means the loser just skips that row (it's already
+  locked) and either finds the next waiting match or creates its own. This is
+  NOT Wheel's `wheel_rounds_single_betting_idx` pattern (a partial unique
+  index forcing *at most one* globally open row) — Filler needs **many**
+  concurrent matches at once, so that pattern doesn't transfer. The
+  occasional outcome of two people racing into the queue at the same instant
+  is two separate waiting matches instead of one instant pairing — self-
+  healing (the next joiner picks the older one; both eventually get a bot
+  fallback), not a bug.
+- *The same user double-clicking, or two open tabs* — serialized by their own
+  `profiles` row lock; the second call sees the same live match (via
+  `loadLiveMatchOf`) and returns it idempotently rather than creating a
+  duplicate.
+- *A move racing the lazy timeout auto-play* — both need the
+  `filler_matches` row lock; whichever loses re-validates `current_seat`/
+  `move_no`/`turn_deadline` against the post-lock row and either applies
+  cleanly or (for a stale `move_no`) silently no-ops.
+- *Self-join* — a user can never join their own waiting match: `find_opponent`
+  short-circuits to the caller's own live match (if any) *before* it ever
+  scans for a waiting match to join, so a user with zero live matches can
+  never encounter their own row in that scan. `UNIQUE(match_id, seat)` /
+  `UNIQUE(match_id, user_id)` are the backstop.
+
+## Matchmaking (`play_bot` / `find_opponent` / `cancel_queue`)
+
+- **`play_bot`** — instant vs-bot. If the caller already has a live
+  **waiting** match (they queued via `find_opponent` and are still waiting),
+  *converts* it — fills seat 1 with a bot, flips to active — instead of
+  erroring "already have an open match." A live **active** match is just
+  returned as-is. Otherwise creates a fresh 2-seat match (human seat 0, bot
+  seat 1) and activates it immediately.
+- **`find_opponent`** — public queue + bot fallback. Short-circuits to the
+  caller's existing live match if any (idempotent on double-click/second
+  tab); otherwise joins the oldest `status='waiting'` match via
+  `SKIP LOCKED`, or creates a new one with `queue_expires_at = now() + 18s`
+  if none exists. The self-healing sweep (below) fills that seat with a bot
+  once the timer passes, if no human ever joins.
+- **`cancel_queue`** — only while the caller's match is still `waiting`;
+  marks it `cancelled`.
+- `activateMatch()` randomizes who moves first (`current_seat`) rather than
+  mirroring the board — **fairness comes from randomizing the first mover**,
+  not from a symmetric board, which would look artificial and invite
+  degenerate mirror play.
+
+## Bot heuristic (`chooseColor()`)
+
+Single-ply greedy argmax — matching this repo's house style for every bot
+here (Poker's `applyBotMove`; the preview bots' `agpSnakeChooseDir`/
+`agpTetrisPlan`). Nothing in this codebase does multi-ply search, and Filler
+doesn't either. For each of the (at most 4) legal colors: clone the board,
+simulate the absorb, score:
+
+```
+score = tilesGained
+      + 0.25 × frontierGrowth        (skipped once neutral tiles < 15% of board — "endgame")
+      − 0.35 × deniedOpponentGain    (what the OPPONENT would have gained from this same color,
+                                       now forbidden to them since it becomes the bot's color)
+      + jitter (±0.3 tiles, uniform) (variety, mirrors poker's per-seat randomness)
+```
+
+argmax, ties broken by whichever was evaluated first. ~8 flood-fills of 143
+cells per decision — microseconds. This same function serves the real bot
+**and** the timeout auto-play (an idle human's turn is substituted with the
+identical heuristic — see below), so "what does a reasonable move look like"
+is defined in exactly one place.
+
+Poker's **inline bot-turn mechanism** applies directly: after a human's move
+(or match activation), if the new current seat is a bot, `advanceAfterMove()`
+computes and applies its move **in the same request**, bounded
+(`FILLER_INLINE_BOT_MAX = 20`, though in practice this never loops more than
+once since a match never has two bot seats) — a human never waits on a
+cron/poll for a bot's reply.
+
+## Self-healing sweep + cron backstop
+
+`sweepGlobal()` runs at the top of **every** action, scans **globally**
+(any user's any action heals *other* users' stuck matches too, not just
+their own), bounded to `FILLER_SWEEP_LIMIT` (5) distinct matches per call:
+
+1. **Bot fallback** — `waiting AND queue_expires_at <= now()` → fill seat 1
+   with a bot, go active.
+2. **Turn-timeout auto-play** — `active AND turn_deadline + 1.5s grace <=
+   now()` → `chooseColor()` plays the overdue seat's turn (human or bot,
+   doesn't matter which), catching up to `FILLER_CATCHUP_MAX` (6) plies per
+   stale match per call — since the surviving player's client polls every
+   ~2s, an abandoned match resolves within seconds/low tens-of-seconds of
+   wall-clock, not "one move per poll ⇒ minutes."
+3. **Abandon rule** — if the overdue seat is human, `opponent_kind === 'bot'`
+   (a solo practice match — nobody real is waiting on the result), and it has
+   ≥3 consecutive `timeouts` → cancel the match, no score for anyone, rather
+   than grinding a phantom match forever. In a genuine **PvP** match, this
+   never fires — auto-play instead runs the game out to a real conclusion for
+   the present player, since someone real IS waiting on the result. No
+   explicit forfeit/leave action is needed for the common case.
+
+⚠️ **A minimal `pg_cron` backstop exists too** (`filler_sweep_abandoned`,
+every 10 minutes, calling `filler_cron_abandon_stale()`), even though the
+on-read sweep is global and self-triggering — because "one open match per
+user" means a truly-forgotten match (both players closed their tab and
+**nobody** ever calls `filler-action` again, so the on-read sweep never
+fires) costs two *specific* players their ability to play at all, and that
+shouldn't depend on some unrelated player happening to open Filler first.
+This cron is deliberately **dumber** than the on-read sweep — it's a plain
+SQL function that force-cancels anything stale by 30+ minutes (far longer
+than any real turn/queue timeout), rather than an HTTP call out to the Edge
+Function — avoiding the need for project-ref/secret app settings or loosening
+`verify_jwt`. Anything with real traffic is healed by the on-read sweep long
+before this ever runs.
+
+## Anti-farming scoring (PvP only)
+
+**Bot matches never write an `arcade_scores` row, win or lose.** This is the
+actual fix for a real hole, not a stylistic choice: `filler-action` bypasses
+`record_arcade_score` (and therefore its 5-second-per-user-per-game throttle)
+on purpose, because it's already authoritative for the whole match — but
+`arcade_leaderboard` (`arcade.sql`) keeps only the **best score ever** per
+user. If a free, risk-free, unlimited-attempts bot win scored anything at
+all, a script could grind `play_bot` in a loop forever until it rolled high.
+Scaling the bot-mode score down doesn't close this (only the best-ever row
+matters); only excluding bot matches from scoring entirely does.
+
+A resignation (`resign`) also gets no score row **for the resigner** — only
+the opponent scores a normal win — closing a "resign instantly, farm cheap
+low-effort attempts" angle a scored loss-on-resign would otherwise open.
+
+Extra guards on the PvP scoring path (`scoreOnePlayer`):
+- `totalMoveNo < FILLER_SCORE_MIN_MOVES` (6) → no score at all (an
+  implausibly short match is no exploit surface either way, but skipping it
+  keeps the leaderboard meaningful).
+- A per-user 20s cooldown before the next `arcade_scores` insert, mirroring
+  `record_arcade_score`'s own spirit even though that RPC isn't called.
+- The insert is wrapped in a **savepoint**, so a failure there (a bad grant,
+  a deleted profile, anything) can **never roll back the match-finish
+  transaction** — combined with the one-open-match constraint, a fatal
+  scoring failure would otherwise permanently lock both players out on
+  every retry. Losing a leaderboard row is recoverable; a bricked match is
+  not.
+- `client_meta` records the **opponent's `user_id`** (not just nick — nicks
+  aren't a stable audit key), so two-account collusion (queue with a second
+  account, always throw the match) is at least greppable by an admin later.
+  This residual risk is accepted as proportionate to a small office
+  community, not actively prevented.
+
+### Score formula
+
+```
+base  = round(120 × territoryShare)                                   // 0..120
+win   = won ? 80 : 0
+dom   = won ? round(60 × clamp01((territoryShare − 0.5) × 2)) : 0      // decisiveness, 0..60
+eff   = won ? round(40 × clamp01((20 − movesMade) / 20)) : 0           // speed bonus, 0..40
+score = clamp(round(base + win + dom + eff), 0, 350)
+```
+
+A close loss ≈ 48-70 pts, a solid PvP win ≈ 200-270, a fast decisive blowout
+approaches the 350 cap. Every finished PvP match scores *something* (loss
+included), so the leaderboard rewards playing, but only human opponents ever
+reach it at all.
+
+## Frontend (`games/filler.js`)
+
+Rendering-only — never runs an authoritative sim, only paints whatever board
+the server returns. Keeps the last-rendered `cells`/`owners` strings and
+repaints only the tile indices that actually changed (`fillerRenderBoard`),
+rather than rebuilding the 143-cell DOM grid on every poll. The board is a
+plain DOM grid (143 `div`s), not canvas — the game updates a handful of
+times a minute (turn-based, not a frame loop), so a full CSS repaint is
+cheap and canvas buys nothing here.
+
+Two entry points: **"▶ Zagraj z botem"** (instant, `play_bot`) and
+**"🔎 Znajdź przeciwnika"** (queue, `find_opponent`, with a **"✕ Anuluj
+szukanie"** escape hatch while waiting). Once active, 6 palette buttons let
+the player pick a color — 2 are visually disabled (own/opponent's current
+color) via the server-returned `legalColors` list, never computed
+client-side. A **"🏳️ Poddaj się"** (resign) button is available mid-match.
+**Deliberately does NOT call `payArcadeEntry()`/`recordArcadeScore()`** —
+those RPCs are intentionally bypassed (see the scoring section above);
+calling them would just fail (`'filler'` isn't in either's allowlist).
+
+Realtime is a pure **doorbell**, matching every other shared-state game
+here (`sb.channel('filler-match-' + matchId)` on `filler_matches`/
+`filler_match_players`) — the payload is never trusted, every notification
+just triggers a re-fetch via the `state` action. **Filtered by match id**
+(`filter: 'id=eq.' + matchId`), unlike Poker/Wheel's table-wide subscriptions
+— since Filler can have many concurrent matches, an unfiltered subscription
+would push every match's full board to every connected client on every move,
+whereas Poker/Wheel each only ever have one live table/round. A 2s poll runs
+alongside realtime as a fallback (mirrors Wheel's poll-driven
+`resolveDueRound`).
+
+No explicit "leave match" call is needed on tab-exit
+(`stopFillerRound()` just tears down local polling/realtime) — the
+self-healing sweep above handles an abandoned match on its own, whether the
+tab closed cleanly or not.
+
+## Preview (`games/previews.js` — `AGP_DEFS.filler`)
+
+A small, **fully self-contained** cosmetic demo (`dep: null`, a smaller 8×6
+board, 4 colors, its own tiny flood-fill + a plain greedy-only chooser) —
+deliberately NOT sharing any code with `games/filler.js` or
+`supabase/functions/filler-action`, matching every other preview's
+"cosmetic-only, never calls the real game logic" convention. Since Filler is
+server-authoritative with no client-side simulation to reuse, there would be
+nothing to share even if the house style allowed it.
+
+## Phase 2 — seasonal promotion (written, dormant until 2026-08-10)
+
+Debuts **2026-08-10** (the week that conflicted with the Bug Jumper Dynamic
+Course relaunch, which was bumped to 2026-08-17 to make room). Well-
+precedented shape, verbatim template `supabase/healer-dungeon.sql`:
+
+- `supabase/filler-seasonal.sql` — `filler_scores` (one row per scored PvP
+  match — `finishMatch` already produces exactly one score per human per
+  match, so this is directly analogous to every other seasonal game's
+  best-single-run-per-week model) + `filler_weekly_awards`, a
+  `filler_week_start()` helper, the three views (`_current_week`/`_all_time`/
+  `_recent_awards`), `award_filler_week()` (🥇1000/🥈500/🥉200), realtime
+  publication, a Warsaw-midnight-Sunday-gated `pg_cron` job.
+- `filler-action`'s `finishScoring`/`scoreOnePlayer` gain one branch: when the
+  match's `arcade_mode` is false (launched from the seasonal tab, not the
+  arcade picker — mirrors Healer Dungeon's `archiveMode` flag, decided once
+  at match creation from the action context and never trusted from the
+  request body afterward), also insert into `filler_scores` with a computed
+  `week_start`. No other Edge Function change — the whole match-finish
+  machinery is already in place.
+- `index.html`: append `filler` to `SEASONAL_ROTATION`; add
+  `SEASONAL_OVERRIDES['2026-08-10']`; move the Bug Jumper relaunch override
+  to `'2026-08-17'`; the standard `loadSeasonalTab()` 6-line insertion
+  pattern; a weekly-board UI block.
+- `supabase/season-award-gating.sql`: the matching `WHEN` clause moves,
+  `'filler'` appended to the rotation array, modulus 11→12, a
+  `cron.schedule('filler_weekly_awards', ...)` block.
+
+Open question deferred to Phase-2 time: whether the weekly leaderboard ranks
+best-single-match-score (free, consistent with every other game) or
+something more PvP-flavored like a win count — no reason to decide this
+before Filler has any real match history to look at.

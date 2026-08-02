@@ -32,14 +32,15 @@ AS $$
     WHEN '2026-07-20' THEN 'popup_panic'  -- Zamknij Popupy! debut
     WHEN '2026-07-27' THEN 'tetris'  -- Tetris G6 debut
     WHEN '2026-08-03' THEN 'healer_dungeon'  -- Uzdrowiciel G6 debut
-    WHEN '2026-08-10' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a second week by the Uzdrowiciel debut)
+    WHEN '2026-08-10' THEN 'filler'  -- Filler debut (took the slot Bug Jumper's relaunch had)
+    WHEN '2026-08-17' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a THIRD time — Tetris, then Uzdrowiciel, then Filler)
     -- SEASONAL_ROTATION from its 2026-05-18 Monday anchor.
     ELSE
       (ARRAY[
         'whack_boss','bug_jumper','flappy_pants','snake','invoice_horde',
-        'var_patrol','egg_catch','super_mariusz','popup_panic','tetris','healer_dungeon'
+        'var_patrol','egg_catch','super_mariusz','popup_panic','tetris','healer_dungeon','filler'
       ])[
-        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 11) + 1
+        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 12) + 1
       ]
   END;
 $$;
@@ -155,5 +156,16 @@ SELECT cron.schedule(
       THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
       WHEN public.seasonal_game_for_week(public.healer_dungeon_week_start(now() - interval '7 days')) = 'healer_dungeon'
       THEN public.award_healer_dungeon_week(public.healer_dungeon_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+-- Filler — dormant until its 2026-08-10 debut (see supabase/filler-seasonal.sql).
+SELECT cron.schedule(
+  'filler_weekly_awards',
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.filler_week_start(now() - interval '7 days')) = 'filler'
+      THEN public.award_filler_week(public.filler_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );

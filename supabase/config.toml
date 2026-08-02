@@ -49,6 +49,9 @@ verify_jwt = true
 [functions.healer-dungeon-action]
 verify_jwt = true
 
+[functions.filler-action]
+verify_jwt = true
+
 [functions.garden-action]
 verify_jwt = true
 

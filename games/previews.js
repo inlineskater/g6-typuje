@@ -725,6 +725,98 @@ function agpWhackFloat(p, x, y) {
   setTimeout(() => node.remove(), 700);
 }
 
+// ── Filler — self-contained cosmetic demo (own tiny flood-fill + bots) ───────
+// Deliberately NOT the real game: a smaller board, a simpler greedy chooser,
+// no shared code with games/filler.js or supabase/functions/filler-action.
+// Filler is server-authoritative for every real move (see docs/filler.md),
+// so there is no client-side simulation to reuse here even if we wanted to.
+const AGP_FL_COLS = 8, AGP_FL_ROWS = 6, AGP_FL_COLORS = 4;
+const AGP_FL_MOVE_MS = 550;
+const AGP_FL_HOLD_MS = 1400; // pause on a finished board before restarting
+const AGP_FL_HEX = ['#e5484d', '#3b82f6', '#22c55e', '#eab308'];
+
+function agpFillerNeighbors(i) {
+  const x = i % AGP_FL_COLS, y = (i - x) / AGP_FL_COLS;
+  const out = [];
+  if (x > 0) out.push(i - 1);
+  if (x < AGP_FL_COLS - 1) out.push(i + 1);
+  if (y > 0) out.push(i - AGP_FL_COLS);
+  if (y < AGP_FL_ROWS - 1) out.push(i + AGP_FL_COLS);
+  return out;
+}
+
+function agpFillerAbsorb(cells, owners, seat, color) {
+  const n = cells.length;
+  const seen = new Uint8Array(n);
+  const q = [];
+  for (let i = 0; i < n; i++) if (owners[i] === seat) { cells[i] = color; seen[i] = 1; q.push(i); }
+  let head = 0, gained = 0;
+  while (head < q.length) {
+    const i = q[head++];
+    for (const j of agpFillerNeighbors(i)) {
+      if (seen[j]) continue;
+      seen[j] = 1;
+      if (owners[j] === -1 && cells[j] === color) { owners[j] = seat; gained++; q.push(j); }
+    }
+  }
+  return gained;
+}
+
+function agpFillerSeatColor(cells, owners, seat) {
+  for (let i = 0; i < owners.length; i++) if (owners[i] === seat) return cells[i];
+  return -1;
+}
+
+// Greedy-only chooser, deliberately simpler than the real bot in
+// filler-action (no frontier/denial terms) — this is cosmetic, not a
+// difficulty reference.
+function agpFillerChoose(cells, owners, seat) {
+  const me = agpFillerSeatColor(cells, owners, seat);
+  const foe = agpFillerSeatColor(cells, owners, 1 - seat);
+  let best = -1, bestGain = -1;
+  for (let c = 0; c < AGP_FL_COLORS; c++) {
+    if (c === me || c === foe) continue;
+    const gain = agpFillerAbsorb(cells.slice(), owners.slice(), seat, c);
+    if (gain > bestGain) { bestGain = gain; best = c; }
+  }
+  return best;
+}
+
+function agpFillerNewState() {
+  const n = AGP_FL_COLS * AGP_FL_ROWS;
+  const cells = new Array(n);
+  for (let i = 0; i < n; i++) cells[i] = Math.floor(Math.random() * AGP_FL_COLORS);
+  const owners = new Array(n).fill(-1);
+  const a = (AGP_FL_ROWS - 1) * AGP_FL_COLS, b = AGP_FL_COLS - 1;
+  while (cells[b] === cells[a]) cells[b] = Math.floor(Math.random() * AGP_FL_COLORS);
+  owners[a] = 0; owners[b] = 1;
+  return { cells, owners, turn: Math.random() < 0.5 ? 0 : 1, moves: 0, done: false };
+}
+
+function agpFillerPaint(p) {
+  const cells = p.st.cells;
+  for (let i = 0; i < cells.length; i++) p.tiles[i].style.background = AGP_FL_HEX[cells[i]];
+}
+
+function agpFillerStep(p) {
+  const st = p.st;
+  if (st.done) {
+    p.doneFor = (p.doneFor || 0) + AGP_FL_MOVE_MS;
+    if (p.doneFor > AGP_FL_HOLD_MS) { p.st = agpFillerNewState(); p.doneFor = 0; agpFillerPaint(p); }
+    return;
+  }
+  const color = agpFillerChoose(st.cells, st.owners, st.turn);
+  if (color === -1) { st.done = true; return; }
+  agpFillerAbsorb(st.cells, st.owners, st.turn, color);
+  st.moves++;
+  let t0 = 0, t1 = 0, neutral = 0;
+  for (const o of st.owners) { if (o === 0) t0++; else if (o === 1) t1++; else neutral++; }
+  const majority = Math.floor(st.owners.length / 2) + 1;
+  if (t0 >= majority || t1 >= majority || neutral === 0 || st.moves > 80) st.done = true;
+  else st.turn = 1 - st.turn;
+  agpFillerPaint(p);
+}
+
 // ── Definitions ─────────────────────────────────────────────────────────────
 
 const AGP_DEFS = {
@@ -1020,5 +1112,31 @@ const AGP_DEFS = {
       ttCtx = p.ctx; tetrisRuntime = p.rt;
       try { tetrisDraw(); } finally { ttCtx = oc; tetrisRuntime = ort; }
     },
+  },
+
+  filler: {
+    dep: null, dom: true, vw: 480, vh: 270,
+    init(p) {
+      p.host.className = 'ag-prev-dom fl-prev';
+      p.host.style.display = 'grid';
+      p.host.style.gridTemplateColumns = 'repeat(' + AGP_FL_COLS + ', 1fr)';
+      p.host.replaceChildren();
+      p.tiles = [];
+      const n = AGP_FL_COLS * AGP_FL_ROWS;
+      for (let i = 0; i < n; i++) {
+        const d = document.createElement('div');
+        d.className = 'fl-prev-cell';
+        p.host.appendChild(d);
+        p.tiles.push(d);
+      }
+      p.st = agpFillerNewState();
+      p.doneFor = 0;
+      agpFillerPaint(p);
+    },
+    step(p, dt) {
+      p.acc += dt;
+      while (p.acc >= AGP_FL_MOVE_MS) { p.acc -= AGP_FL_MOVE_MS; agpFillerStep(p); }
+    },
+    draw(p) {}, // DOM preview — mutations happen directly in step()/agpFillerPaint()
   },
 };

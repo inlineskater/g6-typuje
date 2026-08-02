@@ -7756,6 +7756,46 @@
     .ml-item-badge.nft { background: linear-gradient(160deg, #fff7e0, #ffe2a6); color: #b45309; border: 1px solid #f0c060; }
     .ml-item-badge.card { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
     .ml-item-badge.tile { background: rgba(132,204,22,.14); color: #3f6212; border: 1px solid rgba(101,163,13,.35); }
+
+    /* „Filler" — 1v1 territory flood-fill (arcade-only, Phase 1). The board
+       is a plain DOM grid (143 divs), not canvas: the game is server-
+       authoritative and updates a handful of times a minute, so a full CSS
+       repaint on each poll/realtime tick is cheap — no need for canvas. */
+    .filler-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .filler-status { font-weight: 700; color: var(--text); }
+    .filler-timer { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 800; min-width: 2.5em; text-align: right; }
+    .filler-players { display: flex; flex-direction: column; gap: 6px; }
+    .filler-player-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
+    .filler-player-row.is-me { border-color: var(--accent); }
+    .filler-swatch { width: 14px; height: 14px; border-radius: 4px; flex: 0 0 auto; border: 1px solid rgba(0,0,0,.15); }
+    .filler-player-nick { font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .filler-player-tiles { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .filler-board {
+      display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; aspect-ratio: 13 / 11; width: 100%; max-width: 520px;
+      margin: 0 auto;
+    }
+    .filler-cell { aspect-ratio: 1; position: relative; }
+    .filler-cell.is-seat0::after, .filler-cell.is-seat1::after {
+      content: ''; position: absolute; inset: 2px; border-radius: 2px; border: 2px solid rgba(255,255,255,.55);
+    }
+    .filler-cell.is-seat1::after { border-color: rgba(0,0,0,.4); }
+    .filler-palette { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .filler-color-btn {
+      width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--border); cursor: pointer;
+      transition: transform .1s ease;
+    }
+    .filler-color-btn:hover:not(:disabled) { transform: scale(1.08); }
+    .filler-color-btn.is-disabled, .filler-color-btn:disabled { opacity: .3; cursor: default; }
+    .filler-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .filler-history-wrap h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .filler-history { display: flex; flex-direction: column; gap: 4px; }
+    .filler-history-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .filler-history-row:last-child { border-bottom: none; }
+    .filler-history-score { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
+    /* Picker preview — self-contained, smaller mini board (see games/previews.js) */
+    .fl-prev { gap: 1px; background: rgba(0,0,0,.15); }
+    .fl-prev-cell { aspect-ratio: 1; }
   </style>
 </head>
 <body>
@@ -9425,6 +9465,41 @@
       </div>
 
 
+      <!-- Filler panel (1v1 territory flood-fill; gameType filler).
+           PHASE 1: arcade-only. SERVER-AUTHORITATIVE FOR EVERY MOVE (Poker/
+           Roulette/Wheel model) — games/filler.js only renders whatever board
+           state supabase/functions/filler-action returns, never runs an
+           authoritative sim itself. Lives here with the other seasonal panels
+           so promoting it later (2026-08-10) is a SEASONAL_ROTATION entry
+           rather than a move. See docs/filler.md for the full design. -->
+      <div id="seasonal-game-filler" class="hidden">
+        <section class="bj-game-panel">
+          <div class="bj-head">
+            <div>
+              <h2 class="page-title">Filler 🎨</h2>
+              <p class="page-sub">Klasyczna gra z 1990 roku (Gamos Ltd, znana też jako „7 Colors"): Ty i przeciwnik zaczynacie w przeciwległych rogach planszy. Każda tura to wybór koloru — Twoje terytorium przejmuje każde sąsiadujące pole tego koloru. Wygrywa, kto zajmie większość planszy. Zagraj z botem od razu, albo poszukaj żywego przeciwnika — jeśli nikt się nie zgłosi, dołączy bot.</p>
+            </div>
+          </div>
+          <div class="filler-top">
+            <div id="filler-status" class="filler-status">Wybierz tryb gry poniżej.</div>
+            <div id="filler-timer" class="filler-timer"></div>
+          </div>
+          <div id="filler-players" class="filler-players"></div>
+          <div id="filler-board" class="filler-board"></div>
+          <div id="filler-palette" class="filler-palette"></div>
+          <div class="filler-actions">
+            <button type="button" id="filler-btn-bot" class="rl-btn is-primary">▶ Zagraj z botem</button>
+            <button type="button" id="filler-btn-find" class="rl-btn is-gold">🔎 Znajdź przeciwnika</button>
+            <button type="button" id="filler-btn-cancel" class="rl-btn is-ghost hidden">✕ Anuluj szukanie</button>
+            <button type="button" id="filler-btn-resign" class="rl-btn is-ghost hidden">🏳️ Poddaj się</button>
+          </div>
+          <div class="filler-history-wrap">
+            <h3>Historia meczów</h3>
+            <div id="filler-history" class="filler-history"></div>
+          </div>
+        </section>
+      </div>
+
       <!-- Uzdrowiciel G6 panel (WoW Classic resto-druid healer; gameType healer_dungeon).
            PHASE 1: arcade-only. Unlike every other seasonal panel this one is a
            FIT-TO-VIEWPORT TAKEOVER (.hd-fit is position:fixed and covers the app
@@ -9895,6 +9970,18 @@
             <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
           <div class="ag-card-scores" data-scores="healer_dungeon"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="filler">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🎨</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">Filler</span>
+              <span class="ag-card-tag">NOWOŚĆ · 1v1</span>
+            </div>
+            <div class="ag-card-desc">Klasyk z 1990 roku: Ty i przeciwnik zaczynacie w przeciwległych rogach kolorowej planszy. Każda tura to wybór koloru — przejmujesz nim sąsiadujące pola. Wygrywa, kto zajmie większość planszy. Graj z botem od razu albo poszukaj żywego przeciwnika w kolejce.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
+          </div>
+          <div class="ag-card-scores" data-scores="filler"></div>
         </div>
         <div class="ag-card" role="button" tabindex="0" data-game="popup_panic">
           <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🖱️</span></div>
@@ -10758,6 +10845,7 @@ const LAZY_GAME_SCRIPTS = {
   popup_panic:   'games/popup-panic.js',
   tetris:        'games/tetris.js',
   healer_dungeon:'games/healer-dungeon.js',
+  filler:        'games/filler.js',
 };
 const _gameScriptPromises = {};
 function ensureGameScript(gameType) {
@@ -10790,6 +10878,7 @@ function stopSuperMariuszRound() {}
 function stopPopupPanicRound() {}
 function stopTetrisRound() {}
 function stopHealerDungeonRound() {}
+function stopFillerRound() {}
 const lwCharts = new Map();
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
@@ -11626,6 +11715,7 @@ const AG_PANEL_IDS = {
   popup_panic:   'seasonal-game-popup-panic',
   tetris:        'seasonal-game-tetris',
   healer_dungeon:'seasonal-game-healer-dungeon',
+  filler:        'seasonal-game-filler',
 };
 let agPanelHome = {};
 
@@ -11677,7 +11767,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound();
   stopAgPreviews();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
@@ -11702,7 +11792,7 @@ function selectAllGame(gameType) {
   if (gameType === 'healer_dungeon') agRequestFullscreen();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound();
   stopAgPreviews();   // the picker's previews borrow the same canvas globals
 
   allGamesSelectedGame = gameType;
@@ -11733,6 +11823,9 @@ function selectAllGame(gameType) {
       stopHealerDungeonRound();
       healerEnterView();
     });
+    // Server-authoritative shared match: (re)load state + start polling now
+    // that the panel is visible, rather than on load like a canvas sim.
+    if (gameType === 'filler') startFillerRound();
   });
   loadArcadeScores(gameType);
 }
@@ -12037,7 +12130,7 @@ document.querySelectorAll('.ag-card').forEach(card => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -12052,7 +12145,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); if (typeof healerExitView === 'function') healerExitView(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound(); if (typeof healerExitView === 'function') healerExitView(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -22110,6 +22203,7 @@ const SEASONAL_ROTATION = [
   { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },
   { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },
   { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },
+  { gameType: 'filler', displayName: 'Filler 🎨' },
 ];
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
@@ -22121,7 +22215,8 @@ const SEASONAL_OVERRIDES = {
   '2026-07-20': { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },  // debut
   '2026-07-27': { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },  // debut
   '2026-08-03': { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },  // debut
-  '2026-08-10': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch, pushed a second week by the Uzdrowiciel debut
+  '2026-08-10': { gameType: 'filler', displayName: 'Filler 🎨' },  // debut — took the slot Bug Jumper's relaunch had, see below
+  '2026-08-17': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch, pushed a THIRD time (first by Tetris, then by Uzdrowiciel, now by the Filler debut)
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -22618,6 +22713,7 @@ function loadSeasonalTab(showSpinner = true) {
   const ppPanel       = document.getElementById('seasonal-game-popup-panic');
   const ttPanel       = document.getElementById('seasonal-game-tetris');
   const hdPanel       = document.getElementById('seasonal-game-healer-dungeon');
+  const flPanel       = document.getElementById('seasonal-game-filler');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -22631,6 +22727,7 @@ function loadSeasonalTab(showSpinner = true) {
   const isPP = current.gameType === 'popup_panic';
   const isTT = current.gameType === 'tetris';
   const isHD = current.gameType === 'healer_dungeon';
+  const isFL = current.gameType === 'filler';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
@@ -22642,6 +22739,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (ppPanel) { if (isPP) show(ppPanel); else hide(ppPanel); }
   if (ttPanel) { if (isTT) show(ttPanel); else hide(ttPanel); }
   if (hdPanel) { if (isHD) show(hdPanel); else hide(hdPanel); }
+  if (flPanel) { if (isFL) show(flPanel); else hide(flPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -22655,6 +22753,10 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isTT && tetrisRuntime?.playing) stopTetrisRound();
   if (!isHD && healerRuntime?.playing) stopHealerDungeonRound();
   if (!isHD && typeof healerExitView === 'function') healerExitView();
+  // Filler has no runtime-level archiveMode flag to reset (see below) — it
+  // just needs to stop polling/realtime when the seasonal tab moves away
+  // from it, same as every other stop*Round() call above.
+  if (!isFL && fillerRuntime?.mounted) stopFillerRound();
   if (whackBossRuntime) whackBossRuntime.archiveMode = false;
   if (bugJumperRuntime) bugJumperRuntime.archiveMode = false;
   if (flappyPantsRuntime) flappyPantsRuntime.archiveMode = false;
@@ -22666,6 +22768,13 @@ function loadSeasonalTab(showSpinner = true) {
   if (popupPanicRuntime) popupPanicRuntime.archiveMode = false;
   if (tetrisRuntime) tetrisRuntime.archiveMode = false;
   if (healerRuntime) healerRuntime.archiveMode = false;
+  // Filler is server-authoritative (see docs/filler.md) — there is no
+  // client-side round/runtime that carries an archiveMode flag across its
+  // lifetime the way every tick-simulation game's does. Its launch context
+  // (arcade picker vs seasonal tab) is instead read fresh off the
+  // `allGamesMode` global at the moment play_bot/find_opponent is called
+  // (fillerPlayBot/fillerFindOpponent in games/filler.js) and persisted
+  // server-side on the match row — nothing to reset here.
   if (isWB) loadWhackBossState(showSpinner);
   if (isBJ) ensureGameScript('bug_jumper').then(() => loadBugJumperState(showSpinner));
   if (isFP) ensureGameScript('flappy_pants').then(() => loadFlappyPantsState(showSpinner));
@@ -22681,6 +22790,7 @@ function loadSeasonalTab(showSpinner = true) {
     healerEnterView();
     loadHealerDungeonState(showSpinner);
   });
+  if (isFL) ensureGameScript('filler').then(() => startFillerRound());
 }
 
 // ── Whack-a-Boss ──────────────────────────────────────────────────────────
