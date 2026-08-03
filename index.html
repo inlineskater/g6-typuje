@@ -9556,7 +9556,10 @@
               <span class="hd-chip hd-chip-stats" id="hd-stats">—</span>
               <span class="hd-topbar-sp"></span>
               <button type="button" class="hd-icon-btn" id="hd-help-btn" title="Jak grać / co robią statystyki">?</button>
-              <button type="button" class="hd-icon-btn" id="hd-exit" title="Wróć do wyboru gier (Esc)">✕</button>
+              <!-- Destination depends on where the console was opened from
+                   (arcade picker vs seasonal tab), so the label stays neutral —
+                   see healerLeaveGame() in games/healer-dungeon.js. -->
+              <button type="button" class="hd-icon-btn" id="hd-exit" title="Wyjdź z gry (Esc)">✕</button>
             </div>
 
             <div class="hd-arena" id="hd-arena">

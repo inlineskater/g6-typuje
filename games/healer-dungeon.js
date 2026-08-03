@@ -1459,11 +1459,29 @@ function healerExitView() {
   healerStopRaf();
 }
 
+// ✕ / Esc has two different „outs" depending on where the console was opened
+// from, and this used to know only one of them: it clicked the arcade picker's
+// back button unconditionally. On the SEASONAL tab there is no picker — that
+// click lands on a button inside the hidden „Wszystkie Gry" tab, where
+// allGamesSelectedGame is null and the panel was never moved into #ag-game-slot,
+// so nothing was hidden. healerExitView() alone does not help either: .hd-fit is
+// a plain `position: fixed; inset: 0; z-index: 500` overlay, NOT gated on the
+// .hd-view-open class, so it kept covering the header and the nav — and since it
+// covers the nav, ✕ was the only way out of a takeover that ✕ could not close.
+// Branch on the launch context instead.
 function healerLeaveGame() {
   healerExitView();
-  // Reuse the picker's own back button so there is exactly one teardown path.
   const back = document.getElementById('ag-back');
-  if (back) back.click();
+  if (back && allGamesMode && allGamesSelectedGame === 'healer_dungeon') {
+    back.click();   // arcade: reuse the picker's own single teardown path
+    return;
+  }
+  // Seasonal tab: the console IS the whole page (no rules card, no leaderboard
+  // outside it), so „leave the game" can only mean leaving the tab. What
+  // actually takes the overlay off screen is switchTab() hiding #tab-whack-boss
+  // — `display: none !important` on the ancestor kills the fixed child too —
+  // and its previousTab teardown already stops the round and the RAF loop.
+  if (typeof switchTab === 'function') switchTab('markets');
 }
 
 function healerToggleHelp(on) {
