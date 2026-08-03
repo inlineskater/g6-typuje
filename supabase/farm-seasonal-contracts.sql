@@ -894,6 +894,13 @@ BEGIN
   END IF;
 END $$;
 
+-- ⚠️ SUPERSEDED by supabase/farm-seasonal-award-reliability.sql — RE-RUN THAT
+-- FILE AFTER THIS ONE. The schedule below calls award_farm_seasonal_week()
+-- directly, which has NO deadlock retry: it collides with the land-tax cron on
+-- public.farm_user_state and the 23:00 UTC attempt is a DST gate, not a retry,
+-- so a deadlock at Warsaw midnight means nobody is paid that week (it happened
+-- for 2026-07-13 and again for 2026-07-27). That file repoints this job at
+-- award_farm_seasonal_week_cron(). Leaving this block as-is reverts the fix.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN

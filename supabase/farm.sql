@@ -1509,6 +1509,15 @@ BEGIN
     -- Supabase pg_cron runs in UTC. These two attempts cover Warsaw summer
     -- (UTC+2) and winter (UTC+1); assess_farm_land_tax() only runs during
     -- Warsaw hour 00 and is idempotent by completed tax_day.
+    --
+    -- ⚠️ THE MINUTE MATTERS — SUPERSEDED by
+    -- supabase/farm-seasonal-award-reliability.sql (re-run it after this file).
+    -- assess_farm_land_tax() writes public.farm_user_state, and so does
+    -- award_farm_seasonal_week() — in a different row order. At minute 0 these
+    -- fire in the same second as farm_seasonal_weekly_awards every Monday and
+    -- deadlock; that cost the whole 2026-07-27 contract payout. That file moves
+    -- these two jobs to minute 10 (still Warsaw hour 00, so the assessed tax
+    -- day is unchanged). Leaving minute 0 here reverts the fix.
     PERFORM cron.schedule('farm_land_tax_daily_summer', '0 22 * * *', $cron$SELECT public.assess_farm_land_tax();$cron$);
     PERFORM cron.schedule('farm_land_tax_daily_winter', '0 23 * * *', $cron$SELECT public.assess_farm_land_tax();$cron$);
   END IF;

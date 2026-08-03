@@ -121,6 +121,13 @@ BEGIN
       );
     END LOOP;
 
+    -- ⚠️ SUPERSEDED by supabase/farm-seasonal-award-reliability.sql — RE-RUN
+    -- THAT FILE AFTER THIS ONE. This raw call has no deadlock retry, and the
+    -- 23:00 UTC attempt is a DST gate rather than a retry, so a collision with
+    -- the land-tax cron over public.farm_user_state loses a whole week's
+    -- contract payout (happened for 2026-07-13 and 2026-07-27). That file
+    -- repoints this job at award_farm_seasonal_week_cron() and moves the
+    -- land-tax jobs off minute 0. Leaving this block as-is reverts the fix.
     PERFORM cron.schedule(
       'farm_seasonal_weekly_awards',
       '0 22,23 * * 0',

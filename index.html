@@ -14021,6 +14021,45 @@ function normalizeSeasonAwardWeekStart(weekStart, gameType) {
   return mondaySeason.gameType === gameType ? mondayWeekStart : weekStart;
 }
 
+// ── Per-game query shapes for loadSeasonHistory() ──────────────────────────
+// Both maps hold ONLY the games that deviate from the default; the game list
+// itself comes from SEASONAL_ROTATION. That is deliberate — these used to be
+// hand-maintained parallel lists, and `healer_dungeon` + `filler` were never
+// added to them, so their payouts ran and then showed up nowhere in the UI.
+
+// Settled awards. Every seasonal game exposes `<gameType>_recent_awards` with
+// the same columns, so only two games need an entry.
+const SEASON_AWARD_DEFAULT_COLS = 'week_start,user_id,nick,rank,score,prize_coins,awarded_at';
+const SEASON_AWARD_SOURCES = {
+  // Reads the raw awards table (not the view) because `course_id` distinguishes
+  // the legacy/hard/dynamic course eras.
+  bug_jumper: {
+    table: 'bug_jumper_weekly_awards',
+    cols: 'week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id',
+  },
+  // Ranks on progress then time, so the finish time has to come along.
+  super_mariusz: {
+    cols: 'week_start,user_id,nick,rank,score,completion_ms,prize_coins,awarded_at',
+  },
+};
+
+// The live „na żywo" pending podium, read straight off `<gameType>_scores`.
+// The default tiebreak is `accuracy`, which every seasonal scores table carries
+// EXCEPT filler_scores — Filler ranks on score then submission time, and its
+// extra stats are tiles/won. ⚠️ Selecting a column that does not exist makes
+// postgrest return an error rather than rows, and loadSeasonHistory() reads a
+// null payload as "nobody has played yet" — so a wrong entry here silently
+// blanks that game's podium for its entire week instead of failing loudly.
+const SEASON_LIVE_DEFAULT = { extra: 'accuracy', tiebreak: 'accuracy', opts: { ascending: false } };
+const SEASON_LIVE_SOURCES = {
+  super_mariusz: {
+    extra: 'completion_ms,completed',
+    tiebreak: 'completion_ms',
+    opts: { ascending: true, nullsFirst: false },
+  },
+  filler: { extra: 'tiles,won', tiebreak: null },
+};
+
 function mapSeasonAwardRows(rows, gameType) {
   return (rows || []).map(r => ({
     ...r,
@@ -14092,38 +14131,40 @@ async function loadSeasonHistory() {
         .order('rank')
         .limit(20);
     } else {
-      const liveScoreColumns = isSuperMariusz
-        ? 'user_id,nick_snapshot,score,submitted_at,client_meta,completion_ms,completed'
-        : 'user_id,nick_snapshot,score,accuracy,submitted_at,client_meta';
+      const live = SEASON_LIVE_SOURCES[current.gameType] || SEASON_LIVE_DEFAULT;
       liveScoresQuery = sb.from(current.gameType + '_scores')
-        .select(liveScoreColumns)
+        .select('user_id,nick_snapshot,score,submitted_at,client_meta,' + live.extra)
         .eq('week_start', currentDbWeekStart)
         .order('score', { ascending: false });
-      if (isSuperMariusz) {
-        liveScoresQuery = liveScoresQuery
-          .order('completion_ms', { ascending: true, nullsFirst: false });
-      } else {
-        liveScoresQuery = liveScoresQuery
-          .order('accuracy', { ascending: false });
+      if (live.tiebreak) {
+        liveScoresQuery = liveScoresQuery.order(live.tiebreak, live.opts);
       }
       liveScoresQuery = liveScoresQuery
         .order('submitted_at', { ascending: true })
         .limit(20);
     }
 
-    const [wbRes, bjRes, fpRes, snRes, ihRes, vpRes, ecRes, smRes, ppRes, ttRes, liveRes] = await Promise.all([
-      sb.from('whack_boss_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('bug_jumper_weekly_awards').select('week_start,user_id,nick_snapshot,rank,score,prize_coins,awarded_at,course_id').order('week_start', { ascending: false }).order('rank'),
-      sb.from('flappy_pants_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('snake_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('invoice_horde_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('var_patrol_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('egg_catch_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('super_mariusz_recent_awards').select('week_start,user_id,nick,rank,score,completion_ms,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('popup_panic_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
-      sb.from('tetris_recent_awards').select('week_start,user_id,nick,rank,score,prize_coins,awarded_at').order('week_start', { ascending: false }).order('rank'),
+    // Award sources are DERIVED FROM SEASONAL_ROTATION, not hand-listed.
+    // This used to be three parallel 10-element lists (queries, destructured
+    // result names, mapSeasonAwardRows calls) that all had to be edited
+    // together, and `healer_dungeon` + `filler` were simply never added — so
+    // their payouts ran and then never appeared anywhere in the UI. Deriving
+    // the list means a new seasonal game shows up here the moment it joins the
+    // rotation. A game whose *_recent_awards view does not exist yet just
+    // yields `data: null` (postgrest resolves rather than rejects), and
+    // mapSeasonAwardRows already treats that as "no rows".
+    const awardGames = SEASONAL_ROTATION.map(e => e.gameType);
+    const awardRes = await Promise.all([
+      ...awardGames.map(g => {
+        const src = SEASON_AWARD_SOURCES[g] || {};
+        return sb.from(src.table || (g + '_recent_awards'))
+          .select(src.cols || SEASON_AWARD_DEFAULT_COLS)
+          .order('week_start', { ascending: false })
+          .order('rank');
+      }),
       liveScoresQuery,
     ]);
+    const liveRes = awardRes[awardRes.length - 1];
 
     // Build pending entries from live scores (dedup by user, keep best score)
     const PENDING_PRIZES = [1000, 500, 200];
@@ -14147,16 +14188,7 @@ async function loadSeasonHistory() {
     }
 
     _seasonHistory = [
-      ...mapSeasonAwardRows(wbRes.data, 'whack_boss'),
-      ...mapSeasonAwardRows(bjRes.data, 'bug_jumper'),
-      ...mapSeasonAwardRows(fpRes.data, 'flappy_pants'),
-      ...mapSeasonAwardRows(snRes.data, 'snake'),
-      ...mapSeasonAwardRows(ihRes.data, 'invoice_horde'),
-      ...mapSeasonAwardRows(vpRes.data, 'var_patrol'),
-      ...mapSeasonAwardRows(ecRes.data, 'egg_catch'),
-      ...mapSeasonAwardRows(smRes.data, 'super_mariusz'),
-      ...mapSeasonAwardRows(ppRes.data, 'popup_panic'),
-      ...mapSeasonAwardRows(ttRes.data, 'tetris'),
+      ...awardGames.flatMap((g, i) => mapSeasonAwardRows(awardRes[i].data, g)),
       ...pendingEntries,
     ];
     if (wrap) {
