@@ -1,13 +1,15 @@
 // Filler balance harness — bot-vs-bot simulation used to PICK new tuning
-// constants for the 2026-08 board resize (13x11x6 → 31x17x7), NOT a parity
-// contract: there is no scripts/filler-parity.mjs for this game (see
-// docs/filler.md — zero client sim, nothing to keep byte-identical with), so
-// this file is not re-run in CI and does not need to track the Edge Function
-// forever. The sim helpers below are transcribed by hand from
-// supabase/functions/filler-action/index.ts as of the 2026-08-02 resize;
-// re-transcribe them here if you want to re-tune again later.
+// constants across the board reshapes (13x11x6 → 31x17x7 → the 2026-08-04
+// diamond lattice at 21x27x7), NOT a parity contract: there is no
+// scripts/filler-parity.mjs for this game (see docs/filler.md — zero client
+// sim, nothing to keep byte-identical with), so this file is not re-run in CI
+// and does not need to track the Edge Function forever. The sim helpers below
+// are transcribed by hand from supabase/functions/filler-action/index.ts as of
+// the 2026-08-04 reshape; re-transcribe them here if you want to re-tune
+// again later.
 //
-// Run: node scripts/filler-balance.mjs
+// Run: node scripts/filler-balance.mjs            (PvP board, 21x27)
+//      node scripts/filler-balance.mjs 15 19      (bot practice board)
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -19,13 +21,22 @@ function mulberry32(seed) {
   };
 }
 
+// DIAMOND (staggered) lattice — see filler-action's copy for the full note.
+// Odd rows sit half a tile to the right and rows overlap by half a tile, so a
+// rhombus shares a full edge only with the two tiles above and the two below;
+// same-row left/right touch at a point and are NOT neighbors.
 function neighbors4(i, w, h) {
   const x = i % w, y = (i - x) / w;
+  const d = (y & 1) ? 0 : -1;
   const out = [];
-  if (x > 0) out.push(i - 1);
-  if (x < w - 1) out.push(i + 1);
-  if (y > 0) out.push(i - w);
-  if (y < h - 1) out.push(i + w);
+  if (y > 0) {
+    if (x + d >= 0) out.push(i - w + d);
+    if (x + d + 1 < w) out.push(i - w + d + 1);
+  }
+  if (y < h - 1) {
+    if (x + d >= 0) out.push(i + w + d);
+    if (x + d + 1 < w) out.push(i + w + d + 1);
+  }
   return out;
 }
 
@@ -132,16 +143,19 @@ function chooseColor(board, seat, colorCount) {
 function generateBoard(seed, w, h, colorCount) {
   const rng = mulberry32(seed);
   const n = w * h;
-  const cornerA = (h - 1) * w; // bottom-left
-  const cornerB = w - 1;       // top-right
+  const bottomLeft = (h - 1) * w;
+  const topRight = w - 1;
   const cells = new Array(n);
   for (let i = 0; i < n; i++) cells[i] = Math.floor(rng() * colorCount);
   const owners = new Array(n).fill(-1);
-  while (cells[cornerB] === cells[cornerA]) {
-    cells[cornerB] = Math.floor(rng() * colorCount);
+  while (cells[topRight] === cells[bottomLeft]) {
+    cells[topRight] = Math.floor(rng() * colorCount);
   }
-  owners[cornerA] = 0;
-  owners[cornerB] = 1;
+  // Corner assignment is RANDOM — the diamond lattice's corners have unequal
+  // degree, so a fixed assignment is measurably unfair. See filler-action.
+  const flip = rng() < 0.5;
+  owners[flip ? topRight : bottomLeft] = 0;
+  owners[flip ? bottomLeft : topRight] = 1;
   return { w, h, cells, owners };
 }
 
@@ -186,8 +200,11 @@ function playMatch(w, h, colorCount, majority, maxMoves) {
   return { totalPlies: moveNo, movesMade, tiles, winnerSeat: end.winnerSeat, reason: end.reason };
 }
 
-// ── Config: the new board ────────────────────────────────────────────────
-const W = 31, H = 17, COLORS = 7;
+// ── Config: the board to measure ─────────────────────────────────────────
+// Defaults to the PvP board; pass dimensions to measure another one, e.g.
+// `node scripts/filler-balance.mjs 15 19` for the smaller bot-practice board
+// (FILLER_BOT_W/H in filler-action).
+const W = Number(process.argv[2]) || 21, H = Number(process.argv[3]) || 27, COLORS = 7;
 const N = W * H;
 const MAJORITY = Math.floor(N / 2) + 1;
 const N_MATCHES = 2000;
@@ -199,15 +216,23 @@ console.log(`Simulating ${N_MATCHES} bot-vs-bot matches (uncapped, max_moves=${U
 // ── Phase 1: observe the natural distribution (effectively uncapped) ────
 const totalPlies = [], winnerMoves = [], winnerShare = [];
 let reasonCounts = {};
+let seat0Wins = 0, decided = 0;
 for (let i = 0; i < N_MATCHES; i++) {
   const m = playMatch(W, H, COLORS, MAJORITY, UNBOUNDED_CAP);
   totalPlies.push(m.totalPlies);
   reasonCounts[m.reason] = (reasonCounts[m.reason] || 0) + 1;
   if (m.winnerSeat !== null) {
+    decided++;
+    if (m.winnerSeat === 0) seat0Wins++;
     winnerMoves.push(m.movesMade[m.winnerSeat]);
     winnerShare.push(m.tiles[m.winnerSeat] / N);
   }
 }
+// Seat fairness: the two starting corners must not differ meaningfully. On the
+// DIAMOND lattice the corner cells do not all have the same degree, so this is
+// a real thing to check rather than a formality — expect ~50%.
+console.log("Seat 0 win rate: %s%% (of %d decided matches; expect ~50)",
+  ((seat0Wins / decided) * 100).toFixed(1), decided);
 
 const plyStats = stats(totalPlies);
 const moveStats = stats(winnerMoves);

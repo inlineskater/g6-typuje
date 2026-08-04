@@ -7760,16 +7760,40 @@
     .ml-item-badge.card { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
     .ml-item-badge.tile { background: rgba(132,204,22,.14); color: #3f6212; border: 1px solid rgba(101,163,13,.35); }
 
-    /* „Filler" — 1v1 territory flood-fill (arcade-only, Phase 1). The board
-       is a plain DOM grid (31x17=527 divs), not canvas: the game is server-
-       authoritative and updates a handful of times a minute, so a full CSS
-       repaint on each poll/realtime tick is cheap — no need for canvas.
-       Cells carry a faceted conic-gradient (bevel-lit top/left, shaded
-       bottom/right) and butt against each other with no gap, so same-color
-       neighbors visually merge into the diamond-quilt look of the 1990
-       original instead of reading as a flat checkerboard. */
+    /* „Filler" — 1v1 territory flood-fill (arcade-only, Phase 1). 567 tiles
+       (21x27; 285 = 15x19 vs a bot) as plain divs, not canvas: the game is
+       server-authoritative and updates a handful of times a minute, so a full
+       CSS repaint on each poll/realtime tick is cheap. Every tile is a
+       RHOMBUS on a DIAMOND LATTICE — see the note over .filler-board and
+       docs/filler.md; the geometry is shared with the Edge Function's
+       neighbors4() and the two must ship together. */
     .filler-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .filler-status { font-weight: 700; color: var(--text); }
+    .filler-status { font-weight: 700; color: var(--text); flex: 1 1 220px; }
+    /* The resign button lives up here, NOT in .filler-actions with the two
+       start buttons: it is a mid-match control (those two are only ever
+       visible when idle), and a "concede" sitting in the same row a player
+       clicks to start a game is exactly where a misclick hurts most. */
+    /* Overrides .rl-btn.is-ghost, whose dark-felt colors are meant for the
+       casino tables and read as an olive slab on this light panel. A concede
+       control should be quiet until wanted, so: quiet by default, red on
+       hover. */
+    .filler-top .filler-resign {
+      flex: 0 0 auto; padding: 5px 12px; font-size: 12px; min-height: 0;
+      background: transparent; border-color: var(--border); color: var(--muted);
+      box-shadow: none; text-shadow: none;
+    }
+    .filler-top .filler-resign:hover:not(:disabled) {
+      background: rgba(229,72,77,.12); border-color: #e5484d; color: #e5484d;
+      transform: none; box-shadow: none;
+    }
+    /* Rules: three chips, scannable in a couple of seconds, instead of the
+       wall-of-text intro paragraph this panel shipped with. */
+    .filler-rules { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+    .filler-rules li {
+      display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+      color: var(--text); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: 5px 12px;
+    }
     .filler-timer { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 800; min-width: 2.5em; text-align: right; }
     .filler-players { display: flex; flex-direction: column; gap: 6px; }
     .filler-player-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
@@ -7780,29 +7804,45 @@
     /* Wrapper centers the board. The board itself is sized by WIDTH (up to
        max-width), with height following from the aspect-ratio JS sets per
        match — sizing by height instead would make max-width's mobile clamp
-       fight the aspect-ratio and stretch cells into tall slivers on a narrow
-       phone; sizing by width keeps every cell's proportions correct at any
-       viewport, matching the wide/short shape of the original at any size. */
+       fight the aspect-ratio and squash the rhombi into slivers on a narrow
+       phone; sizing by width keeps every tile's proportions correct at any
+       viewport. */
     .filler-board-wrap { display: flex; justify-content: center; }
+    /* DIAMOND LATTICE, not a CSS grid — odd rows sit half a tile to the right
+       and rows overlap by half a tile, so tiles are absolutely positioned in
+       percentages by fillerRenderBoard (a grid cannot express that offset,
+       and percentages stay responsive with no resize handler). The lattice's
+       zigzag left/right edges are cropped by overflow:hidden, exactly like
+       the original's frame cutting its edge rhombi in half. */
     .filler-board {
-      display: grid; gap: 0; background: #12161f; border: 3px solid var(--border);
-      border-radius: 8px; overflow: hidden; width: 100%; max-width: 900px; margin: 0 auto;
+      position: relative; background: #05070b; border: 3px solid var(--border);
+      border-radius: 8px; overflow: hidden; width: 100%; max-width: 860px; margin: 0 auto;
     }
+    /* Each tile is a true rhombus: clipped to a diamond and split hard along
+       its long diagonal into a lit upper-left face and a shaded lower-right
+       one — the chunky two-tone gem of the 1990 original, not a soft
+       gradient. The clip inset IS the black seam between neighbors; it
+       shrinks as gems grow so a merged gem's outline stays the same weight on
+       screen instead of scaling up with it. */
     .filler-cell {
-      position: relative;
-      background-image: conic-gradient(from 45deg,
-        rgba(0,0,0,.16)        0deg   90deg,   /* right  */
-        rgba(0,0,0,.34)       90deg  180deg,   /* bottom */
-        rgba(255,255,255,.14) 180deg 270deg,   /* left   */
-        rgba(255,255,255,.34) 270deg 360deg);  /* top    */
+      position: absolute;
+      clip-path: polygon(50% 4%, 96% 50%, 50% 96%, 4% 50%);
+      background-image: linear-gradient(135deg,
+        rgba(255,255,255,.26) 0 49.5%, rgba(0,0,0,.28) 50.5% 100%);
     }
+    /* A merged gem — a diamond-shaped group of four tiles sharing color and
+       owner, drawn as one rhombus of twice the size (and four of those as one
+       of four times). A grown territory is uniformly one color by definition,
+       so this is what keeps a big holding from reading as a wall of specks. */
+    .filler-cell.is-gem2 { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
+    .filler-cell.is-gem4 { clip-path: polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%); }
     /* Territory is expressed by shading UNCLAIMED land, not by ringing
        claimed tiles: the two seats can never share a color (the pick rule
        excludes both), so the only real ambiguity is a neutral tile that
        happens to match your color — claimed tiles read as "lit" against the
        dimmed neutral field, which scales to any board size for free. */
     .filler-cell.is-neutral::after {
-      content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.26);
+      content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.32);
     }
     .filler-palette { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; padding: 6px 0; }
     .filler-color-btn {
@@ -7822,12 +7862,17 @@
     .filler-history-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--border); }
     .filler-history-row:last-child { border-bottom: none; }
     .filler-history-score { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
-    /* Picker preview — self-contained, smaller mini board (see games/previews.js) */
-    .fl-prev { gap: 0; background: #12161f; }
+    /* Picker preview — self-contained, smaller mini board (see games/previews.js).
+       Same rhombus treatment and same diamond lattice as the real board so the
+       storefront card doesn't advertise a look the game no longer has; the
+       preview has no merge pass (it is cosmetic-only and never renders a grown
+       territory for long). */
+    .fl-prev { background: #05070b; }
     .fl-prev-cell {
-      background-image: conic-gradient(from 45deg,
-        rgba(0,0,0,.16) 0deg 90deg, rgba(0,0,0,.34) 90deg 180deg,
-        rgba(255,255,255,.14) 180deg 270deg, rgba(255,255,255,.34) 270deg 360deg);
+      position: absolute;
+      clip-path: polygon(50% 4%, 96% 50%, 50% 96%, 4% 50%);
+      background-image: linear-gradient(135deg,
+        rgba(255,255,255,.26) 0 49.5%, rgba(0,0,0,.28) 50.5% 100%);
     }
   </style>
 </head>
@@ -9510,12 +9555,18 @@
           <div class="bj-head">
             <div>
               <h2 class="page-title">Filler 🎨</h2>
-              <p class="page-sub">Klasyczna gra z 1990 roku (Gamos Ltd, znana też jako „7 Colors"): Ty i przeciwnik zaczynacie w przeciwległych rogach planszy. Każda tura to wybór koloru — Twoje terytorium przejmuje każde sąsiadujące pole tego koloru. Wygrywa, kto zajmie większość planszy. Zagraj z botem od razu, albo poszukaj żywego przeciwnika — jeśli nikt się nie zgłosi, dołączy bot.</p>
+              <p class="page-sub">Zajmij więcej niż połowę planszy. Klasyk z 1990 roku („7 Colors").</p>
+              <ol class="filler-rules">
+                <li>1️⃣ Startujecie w przeciwległych rogach.</li>
+                <li>2️⃣ Wybierasz kolor → wszystkie stykające się z Tobą pola w tym kolorze są Twoje.</li>
+                <li>3️⃣ Nie wolno wziąć swojego ani koloru przeciwnika.</li>
+              </ol>
             </div>
           </div>
           <div class="filler-top">
             <div id="filler-status" class="filler-status">Wybierz tryb gry poniżej.</div>
             <div id="filler-timer" class="filler-timer"></div>
+            <button type="button" id="filler-btn-resign" class="rl-btn is-ghost filler-resign hidden">🏳️ Poddaj się</button>
           </div>
           <div id="filler-players" class="filler-players"></div>
           <div class="filler-board-wrap"><div id="filler-board" class="filler-board"></div></div>
@@ -9524,7 +9575,8 @@
             <button type="button" id="filler-btn-bot" class="rl-btn is-primary">▶ Zagraj z botem</button>
             <button type="button" id="filler-btn-find" class="rl-btn is-gold">🔎 Znajdź przeciwnika</button>
             <button type="button" id="filler-btn-cancel" class="rl-btn is-ghost hidden">✕ Anuluj szukanie</button>
-            <button type="button" id="filler-btn-resign" class="rl-btn is-ghost hidden">🏳️ Poddaj się</button>
+            <!-- #filler-btn-resign is deliberately NOT here — it lives in
+                 .filler-top, away from the two start buttons. See the CSS. -->
           </div>
           <div class="filler-history-wrap">
             <h3>Historia meczów</h3>

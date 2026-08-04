@@ -730,18 +730,31 @@ function agpWhackFloat(p, x, y) {
 // no shared code with games/filler.js or supabase/functions/filler-action.
 // Filler is server-authoritative for every real move (see docs/filler.md),
 // so there is no client-side simulation to reuse here even if we wanted to.
-const AGP_FL_COLS = 15, AGP_FL_ROWS = 9, AGP_FL_COLORS = 5;
+// Rows are half-height because the board is a DIAMOND lattice (odd rows
+// offset half a tile, rows overlapping by half) — so 13x15 draws as
+// 13.5 x 8, a landscape field, not a portrait one. Same shape rule as the
+// real game; see games/filler.js.
+const AGP_FL_COLS = 13, AGP_FL_ROWS = 15, AGP_FL_COLORS = 5;
 const AGP_FL_MOVE_MS = 550;
 const AGP_FL_HOLD_MS = 1400; // pause on a finished board before restarting
 const AGP_FL_HEX = ['#e5484d', '#f97316', '#eab308', '#22c55e', '#06b6d4'];
 
+// Diamond-lattice adjacency: full edges are shared only with the two tiles
+// above and the two below. Mirrors filler-action's neighbors4() in rule (not
+// as a parity contract — this preview is cosmetic), because a demo filling
+// through tiles that visibly don't touch would advertise the wrong game.
 function agpFillerNeighbors(i) {
   const x = i % AGP_FL_COLS, y = (i - x) / AGP_FL_COLS;
+  const d = (y & 1) ? 0 : -1;
   const out = [];
-  if (x > 0) out.push(i - 1);
-  if (x < AGP_FL_COLS - 1) out.push(i + 1);
-  if (y > 0) out.push(i - AGP_FL_COLS);
-  if (y < AGP_FL_ROWS - 1) out.push(i + AGP_FL_COLS);
+  if (y > 0) {
+    if (x + d >= 0) out.push(i - AGP_FL_COLS + d);
+    if (x + d + 1 < AGP_FL_COLS) out.push(i - AGP_FL_COLS + d + 1);
+  }
+  if (y < AGP_FL_ROWS - 1) {
+    if (x + d >= 0) out.push(i + AGP_FL_COLS + d);
+    if (x + d + 1 < AGP_FL_COLS) out.push(i + AGP_FL_COLS + d + 1);
+  }
   return out;
 }
 
@@ -1118,15 +1131,22 @@ const AGP_DEFS = {
     dep: null, dom: true, vw: 480, vh: 270,
     init(p) {
       p.host.className = 'ag-prev-dom fl-prev';
-      p.host.style.display = 'grid';
-      p.host.style.gridTemplateColumns = 'repeat(' + AGP_FL_COLS + ', 1fr)';
-      p.host.style.gridTemplateRows = 'repeat(' + AGP_FL_ROWS + ', 1fr)';
+      p.host.style.display = 'block';
+      p.host.style.position = 'relative';
       p.host.replaceChildren();
       p.tiles = [];
       const n = AGP_FL_COLS * AGP_FL_ROWS;
+      // Absolute placement on the diamond lattice — positions never change,
+      // so they are set once here and only the color is touched per frame.
+      const cw = AGP_FL_COLS + 0.5, ch = (AGP_FL_ROWS + 1) / 2;
       for (let i = 0; i < n; i++) {
+        const x = i % AGP_FL_COLS, y = (i - x) / AGP_FL_COLS;
         const d = document.createElement('div');
         d.className = 'fl-prev-cell';
+        d.style.left = ((x + ((y & 1) ? 0.5 : 0)) / cw * 100) + '%';
+        d.style.top = ((y / 2) / ch * 100) + '%';
+        d.style.width = (1 / cw * 100) + '%';
+        d.style.height = (1 / ch * 100) + '%';
         p.host.appendChild(d);
         p.tiles.push(d);
       }

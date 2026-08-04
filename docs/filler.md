@@ -40,26 +40,89 @@ Poker/Roulette/Wheel:
    needs no secrets table and no per-caller filtering: every caller gets
    exactly the same board.
 
-**Net effect: zero parity contracts.** `games/filler.js` never runs an
-authoritative sim — it only renders whatever board state
+**Net effect: zero parity contracts** for the *rules*. `games/filler.js` never
+runs an authoritative sim — it only renders whatever board state
 `supabase/functions/filler-action` returns and sends the player's own color
 picks. There is deliberately no `scripts/filler-parity.mjs`.
 
+Two narrow exceptions, both added 2026-08-04, both deliberate:
+
+- **The lattice geometry is shared** (see "Board geometry" below). The server
+  decides which tiles a fill flows through; the client decides which tiles
+  visibly touch. Those are the same decision, so `neighbors4()` in
+  `filler-action` and the layout math in `games/filler.js` must agree.
+  ⚠️ **This is the one change here that requires the frontend and the Edge
+  Function to ship together** — GitHub Pages auto-deploys `index.html` on push
+  while the Edge Function needs a separate `supabase functions deploy`, so
+  landing one without the other gives a board whose fills contradict what the
+  player sees.
+- **`fillerPreviewPick`** in `games/filler.js` re-runs the flood-fill locally
+  so your own move paints instantly instead of after a round trip. It is
+  explicitly non-authoritative: the server's snapshot overwrites it wholesale
+  a few hundred ms later, so a wrong preview self-corrects within one turn and
+  can never affect the real board or the score. Without it, the response
+  arrives with both your move *and* the bot's reply already applied and you
+  never see what your own pick did.
+
+## Board geometry — a DIAMOND LATTICE, not a square grid
+
+⚠️ **Read this before touching `neighbors4`, the board dimensions, or the
+rendering.** The playfield is drawn as interlocking rhombi like the original,
+which is a square grid **rotated 45° and re-indexed** so the field stays
+rectangular:
+
+- odd rows sit **half a tile to the right**;
+- rows overlap by **half a tile height**;
+- so a rhombus shares a full **edge** only with the two tiles above and the
+  two below. Same-row left/right neighbors meet at a single **point** and are
+  **not connected**.
+
+```
+neighbors of (x, y), with d = (y & 1) ? 0 : -1:
+  (x+d, y-1)  (x+d+1, y-1)  (x+d, y+1)  (x+d+1, y+1)     [clamped to the board]
+```
+
+Two consequences that are easy to trip over:
+
+1. **h rows are only `(h + 1) / 2` tiles tall**, because rows overlap. That is
+   why the boards look portrait in the constants and render landscape:
+   21×27 draws as 21.5 × 14 (1.54:1). The old square-grid 31×17 would draw
+   3.5:1 here — a letterbox slit.
+2. **The corners are not equivalent.** The left column's ends have one
+   edge-neighbor where the right column's have two, so a *fixed* corner
+   assignment is measurably unfair: `scripts/filler-balance.mjs` measured seat
+   0 at 43-45% over 1500 bot-vs-bot matches, and every alternative pair of
+   near-corners was skewed too, just in one direction or the other. So
+   `generateBoard` **randomizes which seat gets which corner**, which restores
+   49-51%. Same principle as `activateMatch` randomizing the first mover:
+   fairness comes from randomizing an unavoidable asymmetry, not from
+   pretending it isn't there.
+
 ## Game rules
 
-Board: **31 cols × 17 rows = 527 tiles, 7 colors** (`FILLER_W`/`FILLER_H`/
-`FILLER_COLORS` in `filler-action`) — resized 2026-08-02 from the original
-13×11×6 launch shape to read as the wide, dense DOS field it's modeled on
-(ratio 1.82, close to the original's on-screen proportions) instead of a
-near-square grid. Odd tile count ⇒ majority = 264 ⇒ **ties are structurally
-impossible** — no draw-handling logic needed anywhere. **Any future resize
-must keep `width × height` odd**, or a real tie becomes reachable and every
-piece of code that treats `winner_seat IS NULL` as "abandoned/cancelled only"
-(the SQL comment, `evaluateEnd`, the frontend result text) needs a genuine
-draw case added. Seat 0 starts bottom-left, seat 1 top-right; the board is
-generated with a seeded PRNG (`mulberry32`) and stored **verbatim** on the
-match row (the seed is kept only for audit — there's no client replay that
-needs to reproduce the board).
+Board: **21 cols × 27 rows = 567 tiles, 7 colors** (`FILLER_W`/`FILLER_H`/
+`FILLER_COLORS` in `filler-action`), drawn as a 1.54:1 landscape field per the
+geometry above. Practice matches **vs a bot use a smaller 15×19 = 285**
+(`FILLER_BOT_W`/`FILLER_BOT_H`), which is a ~30% shorter game — median 40
+total plies against 58. Sizes may differ per match because a bot match never
+scores, so it can't skew a leaderboard calibrated on the PvP board, and
+because every dimension-dependent value is derived from the match row's own
+`width`/`height` rather than from the module constants (`evaluateEnd`
+computes majority per board; the client reads dimensions off the match).
+
+Odd tile count ⇒ majority = 284 ⇒ **ties are structurally impossible** — no
+draw-handling logic needed anywhere. **Any future resize must keep
+`width × height` odd**, or a real tie becomes reachable and every piece of
+code that treats `winner_seat IS NULL` as "abandoned/cancelled only" (the SQL
+comment, `evaluateEnd`, the frontend result text) needs a genuine draw case
+added. The two seats start in opposite corners — bottom-left and top-right,
+assigned at random per the fairness note above; the board is generated with a
+seeded PRNG (`mulberry32`) and stored **verbatim** on the match row (the seed
+is kept only for audit — there's no client replay that needs to reproduce the
+board).
+
+Board sizes have gone 13×11×6 (launch) → 31×17×7 (2026-08-02, a wider DOS-ish
+field) → 21×27×7 (2026-08-04, the diamond lattice).
 
 ⚠️ **The rule that's easy to get wrong:** a legal color pick is any color
 **except the caller's own current territory color AND the opponent's current
@@ -73,18 +136,23 @@ opponent, without gaining any neutral tiles) is legal and a real tactic;
 `scripts/filler-balance.mjs`, a bot-vs-bot balance harness (not a parity
 contract — there's nothing here to keep byte-identical with, see above) that
 measured median/p90/p99/max total plies over 2000 simulated matches at the
-current board size; real games finish in ~55 plies.
+current board size (pass dimensions to measure another: `node
+scripts/filler-balance.mjs 15 19`); real games finish in ~58 plies on the PvP
+board, ~40 on the bot board.
 
 Absorption (`absorb()` in `filler-action`) is standard flood-fill semantics:
 recolor the seat's whole territory to the picked color, then transitively
-absorb every 4-adjacent same-colored **neutral** tile, cascading through
+absorb every same-colored **neutral** tile sharing an edge (per the diamond
+lattice above — NOT the four orthogonal squares), cascading through
 newly-absorbed tiles' own same-colored neighbors — one full connected blob
 per move, not a one-tile ring. It can never "steal" the opponent's territory
 regardless of color, because it only ever absorbs `owners[j] === -1` (neutral)
 tiles.
 
 Win conditions, checked after every applied ply (`evaluateEnd()`): majority
-(≥264 tiles) → immediate win; board fully partitioned (no neutral tiles left)
+(≥284 tiles on the PvP board — derived from the match's own dimensions, since
+bot matches are a different size) → immediate win; board fully partitioned
+(no neutral tiles left)
 → higher tile count wins; move cap hit → higher tile count wins (the tie case
 in both is handled defensively via a nullable `winner_seat`, even though the
 odd tile count makes a real tie unreachable today).
@@ -102,7 +170,7 @@ Two tables, no secrets table:
   state as two fixed-length `text` columns, `cells` and `owners` (one char per
   tile — `cells` is the color digit, `owners` is `.`/`0`/`1`), **not jsonb**:
   cheap O(n) flood-fill input, cheap client-side diffing (repaint only changed
-  indices), ~1054 bytes/match on the wire, backed by
+  indices), ~1134 bytes/match on the wire, backed by
   `CHECK (char_length(cells) = width*height)` so a malformed board can't
   exist. `move_no` is an **optimistic-concurrency token** the client echoes
   back on `pick_color`; a stale/double-clicked call becomes a silent no-op
@@ -228,7 +296,7 @@ score = tilesGained
       + jitter (±0.3 tiles, uniform) (variety, mirrors poker's per-seat randomness)
 ```
 
-argmax, ties broken by whichever was evaluated first. ~10 flood-fills of 527
+argmax, ties broken by whichever was evaluated first. ~10 flood-fills of 567
 cells per decision — still microseconds. This same function serves the real bot
 **and** the timeout auto-play (an idle human's turn is substituted with the
 identical heuristic — see below), so "what does a reasonable move look like"
@@ -243,9 +311,17 @@ cron/poll for a bot's reply.
 
 ## Self-healing sweep + cron backstop
 
-`sweepGlobal()` runs at the top of **every** action, scans **globally**
-(any user's any action heals *other* users' stuck matches too, not just
-their own), bounded to `FILLER_SWEEP_LIMIT` (5) distinct matches per call:
+`sweepGlobal()` scans **globally** (any user's action heals *other* users'
+stuck matches too, not just their own), bounded to `FILLER_SWEEP_LIMIT` (5)
+distinct matches per call:
+
+It runs on `state` and the two matchmaking actions, but **deliberately not on
+`pick_color`/`resign`** (2026-08-04). Bounded-but-cheap is still up to 5 stale
+matches × `FILLER_CATCHUP_MAX` (6) plies of *somebody else's* game replayed
+inline, and on the move path that latency lands squarely between a player's
+click and their own board updating. Coverage is unaffected: every mounted
+client polls `state` every ~2s, so the sweep still runs constantly whenever
+anyone has Filler open, and the cron below covers the case where nobody does.
 
 1. **Bot fallback** — `waiting AND queue_expires_at <= now()` → fill seat 1
    with a bot, go active.
@@ -317,13 +393,13 @@ Extra guards on the PvP scoring path (`scoreOnePlayer`):
 base  = round(120 × territoryShare)                                   // 0..120
 win   = won ? 80 : 0
 dom   = won ? round(60 × clamp01((territoryShare − 0.5) × 2)) : 0      // decisiveness, 0..60
-eff   = won ? round(40 × clamp01((32 − movesMade) / 32)) : 0           // speed bonus, 0..40 (32 = FILLER_MOVES_PAR)
+eff   = won ? round(40 × clamp01((33 − movesMade) / 33)) : 0           // speed bonus, 0..40 (33 = FILLER_MOVES_PAR)
 score = clamp(round(base + win + dom + eff), 0, 350)
 ```
 
 Calibrated against `scripts/filler-balance.mjs`'s 2000-match bot-vs-bot
-simulation at the current board size: a typical loss scores ≈ 30-58 pts, a
-typical win ≈ 147-153 pts (median-to-p90). The 350 cap is a hard ceiling for a
+simulation at the current board size: a typical loss scores ≈ 29-58 pts, a
+typical win ≈ 146-153 pts (median-to-p90). The 350 cap is a hard ceiling for a
 maximally lopsided finish (near-total territory, minimal moves), not
 something ordinary play reaches — a match always ends the **instant**
 majority is crossed (~50-55% territory share in practice, per the same
@@ -334,26 +410,51 @@ rewards playing, but only human opponents ever reach it at all.
 
 ## Frontend (`games/filler.js`)
 
-Rendering-only — never runs an authoritative sim, only paints whatever board
-the server returns. Keeps the last-rendered `cells`/`owners` strings and
-repaints only the tile indices that actually changed (`fillerRenderBoard`),
-rather than rebuilding the 527-cell DOM grid on every poll. The board is a
-plain DOM grid (527 `div`s), not canvas — the game updates a handful of
-times a minute (turn-based, not a frame loop), so a full CSS repaint is
-cheap and canvas buys nothing here. Cells carry a faceted `conic-gradient`
-bevel with no inter-cell gap, so same-color neighbors visually merge into
-the diamond-quilt look of the 1990 original; territory is expressed by
-shading unclaimed tiles rather than ringing claimed ones, since the two
-seats can never share a color (below) — the only real ambiguity is a
-neutral tile that happens to match your own color.
+Rendering-only for the rules — it paints whatever board the server returns
+and never decides an outcome (the one local flood-fill, `fillerPreviewPick`,
+is the non-authoritative optimistic preview described at the top). Keeps the
+last-rendered `cells`/`owners` strings plus the merge sizes, and repaints only
+the tiles that actually changed (`fillerRenderBoard`) rather than rebuilding
+the 567-tile DOM on every poll. Tiles are `div`s, not canvas — the game
+updates a handful of times a minute (turn-based, not a frame loop), so a full
+CSS repaint is cheap and canvas buys nothing here.
 
-Two entry points: **"▶ Zagraj z botem"** (instant, `play_bot`) and
-**"🔎 Znajdź przeciwnika"** (queue, `find_opponent`, with a **"✕ Anuluj
-szukanie"** escape hatch while waiting). Once active, 7 palette buttons let
-the player pick a color — 2 are visually disabled and framed (own color in
-green, opponent's in dark) via the server-returned `legalColors` list, never
-computed client-side. A **"🏳️ Poddaj się"** (resign) button is available
-mid-match.
+**Tiles are absolutely positioned in percentages, not a CSS grid**: a grid
+cannot express the diamond lattice's half-offset, half-overlapping rows (see
+"Board geometry"), and percentages stay responsive with no resize handler. The
+board's zigzag left/right edges are cropped by `overflow: hidden`, exactly as
+the original's frame cuts its edge rhombi in half. Each tile is clipped to a
+diamond and split hard along its long diagonal into a lit upper-left face and
+a shaded lower-right one — the chunky two-tone gem of the original, not a soft
+gradient. Territory is expressed by shading unclaimed tiles rather than
+ringing claimed ones, since the two seats can never share a color (below) —
+the only real ambiguity is a neutral tile that happens to match your own
+color.
+
+**Merged gems.** A diamond-shaped group of four rhombi sharing both color and
+owner is drawn as ONE rhombus of twice the size, and four of *those* as one of
+four times the size (`FILLER_MERGE_SIZES`, `fillerComputeSpans`). Purely
+cosmetic — the server's board is always `w*h` single tiles — and it is an
+exact retiling rather than an approximation, because four unit rhombi meeting
+at a lattice vertex occupy precisely the area of one double-size rhombus
+centred on that vertex. That is also why **no alignment rule is needed**: any
+such group retiles cleanly, so whatever the greedy largest-first pass leaves
+behind still tiles as unit rhombi. It matters because a grown territory is
+uniformly one color *by definition*, so without merging a large holding reads
+as a wall of identical specks; with it, territory visibly consolidates into
+big gems as you take the board.
+
+Two entry points: **"▶ Zagraj z botem"** (instant, `play_bot`, smaller/faster
+board) and **"🔎 Znajdź przeciwnika"** (queue, `find_opponent`, with a
+**"✕ Anuluj szukanie"** escape hatch while waiting). Once active, 7 palette
+buttons let the player pick a color — 2 are visually disabled and framed (own
+color in green, opponent's in dark) via the server-returned `legalColors`
+list, never computed client-side. The **"🏳️ Poddaj się"** (resign) button
+sits in the status bar at the top of the panel, **not** in `.filler-actions`
+with the two start buttons: it is a mid-match control (those two only show
+when idle), and a concede button in the row a player clicks to start a game is
+where a misclick hurts most. The rules are three chips under the title rather
+than the intro paragraph the panel shipped with.
 **Deliberately does NOT call `payArcadeEntry()`/`recordArcadeScore()`** —
 those RPCs are intentionally bypassed (see the scoring section above);
 calling them would just fail (`'filler'` isn't in either's allowlist).
@@ -376,13 +477,17 @@ tab closed cleanly or not.
 
 ## Preview (`games/previews.js` — `AGP_DEFS.filler`)
 
-A small, **fully self-contained** cosmetic demo (`dep: null`, a smaller 15×9
-board, 5 colors, its own tiny flood-fill + a plain greedy-only chooser) —
-deliberately NOT sharing any code with `games/filler.js` or
-`supabase/functions/filler-action`, matching every other preview's
-"cosmetic-only, never calls the real game logic" convention. Since Filler is
-server-authoritative with no client-side simulation to reuse, there would be
-nothing to share even if the house style allowed it.
+A small, **fully self-contained** cosmetic demo (`dep: null`, a smaller 13×15
+board — 13.5 × 8 rendered, per the lattice's half-height rows — 5 colors, its
+own tiny flood-fill + a plain greedy-only chooser) — deliberately NOT sharing
+any code with `games/filler.js` or `supabase/functions/filler-action`,
+matching every other preview's "cosmetic-only, never calls the real game
+logic" convention. Since Filler is server-authoritative with no client-side
+simulation to reuse, there would be nothing to share even if the house style
+allowed it. It does mirror the lattice's adjacency *rule* and rhombus look
+(not as a parity contract) — a storefront demo filling through tiles that
+visibly don't touch would advertise the wrong game. No merge pass: it is
+cosmetic-only and never renders a grown territory for long.
 
 ## Phase 2 — seasonal promotion (written, dormant until 2026-08-10)
 

@@ -39,18 +39,35 @@ function corsHeaders(req) {
 const db = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 4, idle_timeout: 20 });
 
 // ── Constants ────────────────────────────────────────────────────────────
-// Board: 31x17 = 527 tiles, 7 colors. Odd cell count ⇒ majority = 264 ⇒ ties
-// are structurally impossible (no draw-handling complexity needed).
-const FILLER_W = 31, FILLER_H = 17, FILLER_COLORS = 7;
-const FILLER_N = FILLER_W * FILLER_H;                   // 527
-const FILLER_MAJORITY = Math.floor(FILLER_N / 2) + 1;   // 264
+// Board: 21x27 = 567 tiles, 7 colors. Odd cell count ⇒ majority = 284 ⇒ ties
+// are structurally impossible (no draw-handling complexity needed). ANY board
+// size here must keep width*height ODD or a real draw becomes reachable and
+// every `winner_seat IS NULL` reader needs a genuine draw case.
+//
+// The "portrait-looking" 21x27 renders as a LANDSCAPE field: on the diamond
+// lattice (see neighbors4) rows overlap by half a tile, so h rows are only
+// (h+1)/2 tiles tall — 21x27 draws as 21.5 x 14, a 1.54:1 field matching the
+// original's proportions. The old square-grid 31x17 would draw 3.5:1 here.
+const FILLER_W = 21, FILLER_H = 27, FILLER_COLORS = 7;
+// Practice matches vs a bot use a SMALLER board: scripts/filler-balance.mjs
+// puts 15x19=285 at median 40 total plies (20 of your own moves) against
+// 21x27's 58/29 — a ~30% shorter game, which is what makes a bot match a
+// quick practice round rather than a full sitting. Safe to differ per match
+// because a bot match never scores (see finishScoring), so it can't skew a
+// leaderboard calibrated on the PvP board, and because every dimension-
+// dependent value below is derived from the match row's own width/height
+// rather than from these constants. 285 is odd, and 15x19 draws as
+// 15.5 x 10 = 1.55:1 — see the note above.
+const FILLER_BOT_W = 15, FILLER_BOT_H = 19;
 
 const FILLER_TURN_MS = 15_000;         // per-turn deadline
 const FILLER_TURN_GRACE_MS = 1_500;    // RTT slack before the server steals a turn
 const FILLER_QUEUE_MS = 18_000;        // human wait before the bot fallback
 // anti-stall safety cap — scripts/filler-balance.mjs (2000 bot-vs-bot sims at
-// 31x17x7) measured median 55 / p90 64 / p99 72 / max 84 total plies, with
-// 0/2000 re-runs hitting this cap; real games finish ~55 plies.
+// 21x27x7 on the diamond lattice) measured median 58 / p90 67 / p99 76 / max
+// 86 total plies, with 0/2000 re-runs hitting this cap; real games finish
+// ~58 plies. The smaller bot board finishes sooner still, so one cap covers
+// both.
 const FILLER_MAX_MOVES = 100;
 const FILLER_ABANDON_TIMEOUTS = 3;     // consecutive auto-plays vs a BOT ⇒ cancel, no score
 const FILLER_SWEEP_LIMIT = 5;          // distinct stale matches healed per request
@@ -62,8 +79,8 @@ const FILLER_BOT_NICKS = ["Bot Zaklepywacz", "Kolorek", "Pan Wypełniacz", "Zale
 // Score (PvP only — see the anti-farming note below).
 const FILLER_SCORE_CAP = 350;
 // scripts/filler-balance.mjs measured the winner's own moves_made at median
-// 28 / p90 32 / p99 36 on the 31x17x7 board; par = median * 1.15, rounded.
-const FILLER_MOVES_PAR = 32;
+// 29 / p90 34 / p99 38 on the 21x27x7 board; par = median * 1.15, rounded.
+const FILLER_MOVES_PAR = 33;
 const FILLER_SCORE_MIN_MOVES = 6;      // total match plies below this ⇒ no score, no exploit surface
 const FILLER_SCORE_COOLDOWN_S = 20;    // per-user-per-game, mirrors record_arcade_score's spirit
 
@@ -133,13 +150,31 @@ function seatColor(board, seat) {
   return -1; // unreachable — each seat always owns >=1 tile from creation onward
 }
 
+// ⚠️ DIAMOND (staggered) LATTICE — not a square grid. The board is rendered as
+// interlocking rhombi like the 1990 original, which is a square grid rotated
+// 45° and re-indexed so the playfield stays rectangular: odd rows sit half a
+// tile to the right, and rows overlap by half a tile height. A rhombus
+// therefore shares a full EDGE only with the two tiles above and the two
+// below — same-row left/right neighbors meet at a single point and are NOT
+// connected. Getting this wrong doesn't crash anything, it just makes fills
+// jump between tiles that visibly don't touch.
+//
+// This must stay identical to the layout in games/filler.js. It is the one
+// place where the client's geometry and the server's rules have to agree, so
+// SHIPPING THE FRONTEND WITHOUT REDEPLOYING THIS FUNCTION (or vice versa)
+// produces a board whose fills contradict what the player sees.
 function neighbors4(i, w, h) {
   const x = i % w, y = (i - x) / w;
+  const d = (y & 1) ? 0 : -1; // odd rows are shifted right by half a tile
   const out = [];
-  if (x > 0) out.push(i - 1);
-  if (x < w - 1) out.push(i + 1);
-  if (y > 0) out.push(i - w);
-  if (y < h - 1) out.push(i + w);
+  if (y > 0) {
+    if (x + d >= 0) out.push(i - w + d);
+    if (x + d + 1 < w) out.push(i - w + d + 1);
+  }
+  if (y < h - 1) {
+    if (x + d >= 0) out.push(i + w + d);
+    if (x + d + 1 < w) out.push(i + w + d + 1);
+  }
   return out;
 }
 
@@ -190,10 +225,15 @@ function countNeutralFrontier(board, seat) {
   return count;
 }
 
+// Majority is derived from THIS board's own size, not a module constant —
+// bot matches run a smaller board (FILLER_BOT_W/H) and historical matches may
+// carry yet another size, and every one of them must be judged against its
+// own half-plus-one.
 function evaluateEnd(board, moveNo) {
+  const majority = Math.floor((board.w * board.h) / 2) + 1;
   const [t0, t1, neutral] = tileCounts(board.owners);
-  if (t0 >= FILLER_MAJORITY) return { winnerSeat: 0, reason: "majority" };
-  if (t1 >= FILLER_MAJORITY) return { winnerSeat: 1, reason: "majority" };
+  if (t0 >= majority) return { winnerSeat: 0, reason: "majority" };
+  if (t1 >= majority) return { winnerSeat: 1, reason: "majority" };
   if (neutral === 0) return { winnerSeat: t0 === t1 ? null : (t0 > t1 ? 0 : 1), reason: "partitioned" };
   if (moveNo >= FILLER_MAX_MOVES) return { winnerSeat: t0 === t1 ? null : (t0 > t1 ? 0 : 1), reason: "move_cap" };
   return null;
@@ -251,18 +291,28 @@ function generateBoard(seed, w, h, colorCount) {
   // constants — this function is otherwise generic over dimensions, and an
   // earlier version hard-coded FILLER_W/FILLER_H-derived corners here
   // (harmless only because every caller happened to pass those exact dims).
-  const cornerA = (h - 1) * w; // bottom-left, seat 0
-  const cornerB = w - 1;       // top-right, seat 1
+  const bottomLeft = (h - 1) * w;
+  const topRight = w - 1;
   const cells = new Array(n);
   for (let i = 0; i < n; i++) cells[i] = Math.floor(rng() * colorCount);
   const owners = new Array(n).fill(-1);
   // Corners must start on different colors, or seat 1 would begin able to
   // legally absorb into seat 0's own starting tile's color trivially.
-  while (cells[cornerB] === cells[cornerA]) {
-    cells[cornerB] = Math.floor(rng() * colorCount);
+  while (cells[topRight] === cells[bottomLeft]) {
+    cells[topRight] = Math.floor(rng() * colorCount);
   }
-  owners[cornerA] = 0;
-  owners[cornerB] = 1;
+  // ⚠️ WHICH SEAT GETS WHICH CORNER IS RANDOM, and has to be. On the diamond
+  // lattice the corners are NOT equivalent: the left column's ends have one
+  // edge-neighbor where the right column's have two, so a fixed assignment
+  // hands seat 0 a measurable disadvantage — scripts/filler-balance.mjs put
+  // it at 43-45% over 1500 bot-vs-bot matches (and every alternative pair of
+  // near-corners was skewed too, just in one direction or the other).
+  // Alternating the assignment restores 49-51%. This is the same principle
+  // as activateMatch randomizing the first mover: fairness comes from
+  // randomizing an unavoidable asymmetry, not from pretending it isn't there.
+  const flip = rng() < 0.5;
+  owners[flip ? topRight : bottomLeft] = 0;
+  owners[flip ? bottomLeft : topRight] = 1;
   return { w, h, cells, owners };
 }
 
@@ -305,15 +355,22 @@ async function loadLiveMatchOf(tx, userId) {
   return rows[0] || null;
 }
 
+// `mode` picks the board size: a bot practice match gets the smaller, faster
+// FILLER_BOT_W/H board. Note this is keyed on the REQUESTED mode, so a queued
+// pvp match that later falls back to a bot keeps the full board — it was
+// created before anyone knew a human wouldn't show up, and re-generating a
+// board mid-queue would be a worse trade than a slightly longer bot game.
 async function createMatch(tx, { mode, arcadeMode }) {
+  const w = mode === "bot" ? FILLER_BOT_W : FILLER_W;
+  const h = mode === "bot" ? FILLER_BOT_H : FILLER_H;
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-  const board = generateBoard(seed, FILLER_W, FILLER_H, FILLER_COLORS);
+  const board = generateBoard(seed, w, h, FILLER_COLORS);
   const enc = encodeBoard(board);
   const [match] = await tx`
     insert into public.filler_matches
       (mode, arcade_mode, width, height, color_count, seed, cells, owners)
     values
-      (${mode}, ${arcadeMode}, ${FILLER_W}, ${FILLER_H}, ${FILLER_COLORS}, ${seed}, ${enc.cells}, ${enc.owners})
+      (${mode}, ${arcadeMode}, ${w}, ${h}, ${FILLER_COLORS}, ${seed}, ${enc.cells}, ${enc.owners})
     returning *`;
   return match;
 }
@@ -502,8 +559,17 @@ async function finishScoring(tx, match, players) {
 }
 
 // ── Self-healing sweep ───────────────────────────────────────────────────
-// Runs at the top of EVERY action, scans GLOBALLY (any user's any action
-// heals other users' stuck matches too), bounded so it stays cheap.
+// Scans GLOBALLY (any user's action heals other users' stuck matches too),
+// bounded so it stays cheap.
+//
+// Runs on `state` and the two matchmaking actions, but deliberately NOT on
+// `pick_color`/`resign`: bounded-but-cheap is still up to FILLER_SWEEP_LIMIT
+// stale matches × FILLER_CATCHUP_MAX plies of somebody else's game replayed
+// inline, and on the move path that latency lands squarely between a player's
+// click and their own board updating. Coverage is unaffected — every mounted
+// client polls `state` every ~2s, so the sweep still runs constantly whenever
+// anyone has Filler open, and filler_sweep_abandoned is the cron backstop for
+// when nobody does.
 
 async function fillWithBot(tx, matchId) {
   const [match] = await tx`select * from public.filler_matches where id = ${matchId} and status = 'waiting' for update`;
@@ -745,8 +811,9 @@ async function pickColor(userId, body) {
   return await db.begin(async (tx) => {
     await tx`set local lock_timeout = '4s'`;
     await lockProfile(tx, userId);
-    await sweepGlobal(tx);
-
+    // No sweepGlobal here — this is the latency-critical move path (see the
+    // sweep's own comment). Nothing below depends on it: the match row is
+    // re-read under lock and re-validated on every field that matters.
     const [match] = await tx`select * from public.filler_matches where id = ${matchId} for update`;
     if (!match) throw gameError("Mecz nie istnieje.");
     const players = await tx`select * from public.filler_match_players where match_id = ${matchId} order by seat for update`;
@@ -777,8 +844,7 @@ async function resign(userId, body) {
   return await db.begin(async (tx) => {
     await tx`set local lock_timeout = '4s'`;
     await lockProfile(tx, userId);
-    await sweepGlobal(tx);
-
+    // No sweepGlobal — same reasoning as pick_color.
     const [match] = await tx`select * from public.filler_matches where id = ${matchId} for update`;
     if (!match || match.status !== "active") throw gameError("Ten mecz już się zakończył.");
     const players = await tx`select * from public.filler_match_players where match_id = ${matchId} order by seat for update`;

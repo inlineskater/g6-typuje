@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS public.filler_matches (
   turn_deadline    timestamptz,                            -- set only once status='active'
   queue_expires_at timestamptz,                            -- 'waiting' pvp matches: bot-fallback timer
   winner_seat      smallint CHECK (winner_seat IN (0,1)),   -- NULL = abandoned/cancelled (never a draw:
-                                                             -- default 31x17=527 tiles is odd)
+                                                             -- default 21x27=567 tiles is odd)
   end_reason       text CHECK (end_reason IN
                      ('majority','partitioned','move_cap','resigned','abandoned','cancelled')),
   created_at       timestamptz NOT NULL DEFAULT now(),
@@ -253,6 +253,20 @@ BEGIN
   ALTER TABLE public.filler_matches ALTER COLUMN width        SET DEFAULT 31;
   ALTER TABLE public.filler_matches ALTER COLUMN height       SET DEFAULT 17;
   ALTER TABLE public.filler_matches ALTER COLUMN color_count  SET DEFAULT 7;
+END;
+$$;
+
+-- 2026-08-04 diamond-lattice reshape (31x17 square grid → 21x27 rendered as
+-- interlocking rhombi; bot practice matches 15x19 — see docs/filler.md).
+-- Column DEFAULTS only: every size already sits inside the 6..40 CHECKs above,
+-- and filler-action always inserts width/height explicitly, so this is about
+-- keeping a hand-written INSERT or a psql inspection honest rather than
+-- unblocking anything. Existing rows keep their own stored width/height and
+-- still render correctly — the client reads dimensions off the match row.
+DO $$
+BEGIN
+  ALTER TABLE public.filler_matches ALTER COLUMN width  SET DEFAULT 21;
+  ALTER TABLE public.filler_matches ALTER COLUMN height SET DEFAULT 27;
 END;
 $$;
 

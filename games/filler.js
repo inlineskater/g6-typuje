@@ -9,8 +9,11 @@
 // here does.
 //
 // Rendering-only board: keeps the last-rendered `cells`/`owners` strings and
-// repaints only the tile indices that actually changed, rather than
-// rebuilding the whole 527-cell grid on every poll/realtime tick.
+// merge sizes, and repaints only the tiles that actually changed, rather than
+// rebuilding the whole 567-tile board on every poll/realtime tick.
+//
+// The ONE piece of game logic that lives here (fillerPreviewPick) is an
+// explicitly NON-authoritative optimistic preview — see its comment.
 
 // 7 colors ("7 Colors" — the international name of the original 1990 game).
 // Length must stay >= any match's colorCount; fillerRenderPalette rebuilds
@@ -19,6 +22,16 @@
 const FILLER_COLOR_HEX = ['#e5484d', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7'];
 const FILLER_POLL_MS = 2000;
 const FILLER_STATE_MIN_GAP_MS = 900; // dedupe a realtime doorbell landing right after our own fetch
+// Visual tile merging, largest first: a diamond-shaped group of 4 rhombi that
+// share BOTH color and owner is drawn as ONE rhombus of twice the size (and
+// four of THOSE become one of four times the size). Purely cosmetic — the
+// server's board is always w*h single tiles — and it works out to an exact
+// retiling rather than an approximation, because four unit rhombi meeting at
+// a lattice vertex occupy precisely the area of one double-size rhombus
+// centered on that vertex. A grown territory is uniformly one color by
+// definition, so without this a big holding reads as a wall of identical
+// specks. Must be powers of two in descending order.
+const FILLER_MERGE_SIZES = [4, 2];
 
 // fillerRuntime is `let`-declared in index.html, not here: loadSeasonalTab()
 // reads it (`fillerRuntime?.mounted`) before this file has necessarily been
@@ -37,6 +50,7 @@ function newFillerRuntime() {
     lastStateAt: 0,
     lastCells: null,
     lastOwners: null,
+    lastSpans: null,
     matchId: null,
     pollTimer: null,
     tickTimer: null,
@@ -221,9 +235,85 @@ function fillerRenderPalette(data) {
   });
 }
 
-// Builds the board's cell grid once (dimensions come from the match, e.g.
-// 31x17=527), then only touches the tiles whose color or ownership actually
-// changed since the last render.
+// ── Diamond-lattice geometry ─────────────────────────────────────────────
+// ⚠️ This geometry and filler-action's neighbors4() are ONE decision made in
+// two places, and they must agree: the server decides which tiles a fill
+// flows through, this decides which tiles visibly touch. See the banner over
+// neighbors4() in supabase/functions/filler-action/index.ts.
+//
+// The board is a square grid rotated 45° and re-indexed so it stays
+// rectangular: odd rows sit half a tile right, rows overlap by half a tile
+// height, and every rhombus shares a full edge with the two tiles above and
+// the two below (same-row left/right only meet at a point). Working in "tile
+// units" where a rhombus is 1x1, the whole field is (w + 0.5) wide and
+// (h + 1) / 2 tall — which is why h is roughly double w on these boards and
+// they still draw landscape.
+function fillerRowOffset(y) { return (y & 1) ? 0.5 : 0; }
+function fillerContentW(w) { return w + 0.5; }
+function fillerContentH(h) { return (h + 1) / 2; }
+
+// The four half-size children of a size-s rhombus anchored at (x, y), in the
+// N / W / E / S positions around its center. Derived from the lattice, not
+// guessed: for the s=2 case the two middle children are exactly the anchor's
+// own two lower edge-neighbors, which is what makes a merged gem an exact
+// retiling of the tiles it replaces.
+function fillerGemChildren(x, y, s) {
+  const k = s / 2;
+  // k is odd only when k === 1, where the horizontal step depends on the
+  // anchor row's own half-tile offset.
+  const dx = (k % 2 === 0) ? -k / 2 : ((y & 1) ? 0 : -1);
+  return [[x, y], [x + dx, y + k], [x + dx + k, y + k], [x, y + 2 * k]];
+}
+
+// Collects every unit tile under a size-s rhombus anchored at (x, y).
+// Returns false (leaving `out` unusable) if any part falls off the board.
+function fillerGemCells(x, y, s, w, h, out) {
+  if (s === 1) {
+    if (x < 0 || x >= w || y < 0 || y >= h) return false;
+    out.push(y * w + x);
+    return true;
+  }
+  for (const [cx, cy] of fillerGemChildren(x, y, s)) {
+    if (!fillerGemCells(cx, cy, s / 2, w, h, out)) return false;
+  }
+  return true;
+}
+
+// Cosmetic merge pass: one byte per tile — 0 = swallowed by a bigger
+// neighbor's rhombus (hidden), 1 = its own unit rhombus, N = the anchor of an
+// N-times-size merged rhombus. Greedy, largest size first; no alignment rule
+// is needed because any diamond-shaped group of four retiles exactly, so
+// whatever the greedy pass leaves behind still tiles as unit rhombi.
+function fillerComputeSpans(cells, owners, w, h) {
+  const span = new Uint8Array(w * h).fill(1);
+  const buf = [];
+  for (const size of FILLER_MERGE_SIZES) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const base = y * w + x;
+        if (span[base] !== 1) continue; // already inside a bigger gem
+        buf.length = 0;
+        if (!fillerGemCells(x, y, size, w, h, buf)) continue; // runs off the board
+        const c = cells[base], o = owners[base];
+        let uniform = true;
+        for (const j of buf) {
+          if (span[j] !== 1 || cells[j] !== c || owners[j] !== o) { uniform = false; break; }
+        }
+        if (!uniform) continue;
+        for (const j of buf) span[j] = 0;
+        span[base] = size;
+      }
+    }
+  }
+  return span;
+}
+
+// Builds the board's tiles once (dimensions come from the match, e.g.
+// 21x27=567), then only touches the ones whose color, ownership or merge size
+// actually changed since the last render. Tiles are absolutely positioned in
+// percentages of the board box — CSS grid cannot express a half-offset,
+// half-overlapping lattice, and percentages keep the whole thing responsive
+// with no resize handler.
 function fillerRenderBoard(data) {
   const board = fillerEl('filler-board');
   if (!board) return;
@@ -233,34 +323,49 @@ function fillerRenderBoard(data) {
     board.replaceChildren();
     rt.lastCells = null;
     rt.lastOwners = null;
+    rt.lastSpans = null;
     return;
   }
-  const n = m.width * m.height;
+  const w = m.width, h = m.height, n = w * h;
+  const cw = fillerContentW(w), ch = fillerContentH(h);
   const needsRebuild = board.dataset.matchId !== m.id || board.childElementCount !== n;
   if (needsRebuild) {
     board.replaceChildren();
     board.dataset.matchId = m.id;
-    board.style.gridTemplateColumns = 'repeat(' + m.width + ', 1fr)';
-    board.style.gridTemplateRows = 'repeat(' + m.height + ', 1fr)';
-    board.style.aspectRatio = m.width + ' / ' + m.height;
+    board.style.aspectRatio = cw + ' / ' + ch;
     for (let i = 0; i < n; i++) board.appendChild(el('div', { className: 'filler-cell' }));
     rt.lastCells = null;
     rt.lastOwners = null;
+    rt.lastSpans = null;
   }
   const cells = m.cells, owners = m.owners;
-  const prevCells = rt.lastCells, prevOwners = rt.lastOwners;
+  const spans = fillerComputeSpans(cells, owners, w, h);
+  const prevCells = rt.lastCells, prevOwners = rt.lastOwners, prevSpans = rt.lastSpans;
   for (let i = 0; i < n; i++) {
-    if (prevCells && prevCells[i] === cells[i] && prevOwners && prevOwners[i] === owners[i]) continue;
+    if (prevCells && prevCells[i] === cells[i] && prevOwners && prevOwners[i] === owners[i]
+        && prevSpans && prevSpans[i] === spans[i]) continue;
     const cell = board.children[i];
-    const color = Number(cells[i]);
-    cell.style.backgroundColor = FILLER_COLOR_HEX[color] || '#888';
+    const sp = spans[i];
+    if (sp === 0) { cell.style.display = 'none'; continue; }
+    const x = i % w, y = (i - x) / w;
+    // A size-s gem's top edge is always y/2 regardless of s: it grows
+    // downward from its anchor row and outward around the anchor's column.
+    cell.style.display = '';
+    cell.style.left = ((x + fillerRowOffset(y) + 0.5 - sp / 2) / cw * 100) + '%';
+    cell.style.top = ((y / 2) / ch * 100) + '%';
+    cell.style.width = (sp / cw * 100) + '%';
+    cell.style.height = (sp / ch * 100) + '%';
+    cell.style.backgroundColor = FILLER_COLOR_HEX[Number(cells[i])] || '#888';
     const owner = owners[i];
+    cell.classList.toggle('is-gem2', sp === 2);
+    cell.classList.toggle('is-gem4', sp >= 4);
     cell.classList.toggle('is-seat0', owner === '0');
     cell.classList.toggle('is-seat1', owner === '1');
     cell.classList.toggle('is-neutral', owner === '.');
   }
   rt.lastCells = cells;
   rt.lastOwners = owners;
+  rt.lastSpans = spans;
 }
 
 function fillerRenderHistory(data) {
@@ -334,9 +439,71 @@ async function fillerCancelQueue() {
   }
 }
 
+// OPTIMISTIC PREVIEW — deliberately NOT authoritative, and not a parity
+// contract with the server's absorb(). It exists purely so your own move
+// paints instantly instead of after a round trip: without it, the response
+// arrives with BOTH your move and the bot's reply already applied, so you
+// never actually see what your own pick did. The server's snapshot always
+// lands ~a few hundred ms later and overwrites this wholesale, so a wrong
+// preview self-corrects within one turn and can never affect the real board,
+// the score, or anything persisted. Mirrors the server's flood-fill: recolor
+// my whole territory, then transitively absorb 4-adjacent NEUTRAL tiles of
+// that color.
+function fillerPreviewPick(m, color) {
+  const w = m.width, h = m.height, n = w * h;
+  const cells = m.cells.split(''), owners = m.owners.split('');
+  const seat = String(m.mySeat), col = String(color);
+  const seen = new Uint8Array(n);
+  const queue = [];
+  for (let i = 0; i < n; i++) if (owners[i] === seat) { cells[i] = col; seen[i] = 1; queue.push(i); }
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head], x = i % w, y = (i - x) / w;
+    // Diamond-lattice adjacency — same rule as filler-action's neighbors4()
+    // and as fillerGemChildren above; a preview using square adjacency would
+    // flash fills through tiles that don't touch.
+    const d = (y & 1) ? 0 : -1;
+    const nb = [];
+    if (y > 0) {
+      if (x + d >= 0) nb.push(i - w + d);
+      if (x + d + 1 < w) nb.push(i - w + d + 1);
+    }
+    if (y < h - 1) {
+      if (x + d >= 0) nb.push(i + w + d);
+      if (x + d + 1 < w) nb.push(i + w + d + 1);
+    }
+    for (const j of nb) {
+      if (seen[j]) continue;
+      seen[j] = 1;
+      if (owners[j] === '.' && cells[j] === col) { owners[j] = seat; queue.push(j); }
+    }
+  }
+  let t0 = 0, t1 = 0;
+  for (const o of owners) { if (o === '0') t0++; else if (o === '1') t1++; }
+  return {
+    ...m,
+    cells: cells.join(''),
+    owners: owners.join(''),
+    // isMyTurn false + no legal colors: locks the palette for the round trip,
+    // which doubles as the double-click guard on fillerPickColor's own entry.
+    isMyTurn: false,
+    legalColors: [],
+    players: m.players.map((p) => ({
+      ...p,
+      tiles: p.seat === 0 ? t0 : t1,
+      color: p.seat === m.mySeat ? color : p.color,
+    })),
+  };
+}
+
 async function fillerPickColor(color) {
   const m = fillerRuntime?.data?.match;
   if (!m || m.status !== 'active' || !m.isMyTurn) return;
+  const rt = fillerRuntime;
+  // Suppress the 2s poll for the round trip, so a poll response built from
+  // the pre-move board can't flicker the preview back.
+  rt.lastStateAt = Date.now();
+  rt.data = { ...rt.data, match: fillerPreviewPick(m, color) };
+  renderFillerPanel(rt.data);
   try {
     const data = await invokeFiller({ action: 'pick_color', matchId: m.id, color, moveNo: m.moveNo });
     fillerRuntime.data = data;
@@ -344,6 +511,7 @@ async function fillerPickColor(color) {
     fillerSyncRealtime(data.match);
   } catch (err) {
     showToast('❌ ' + (err?.message || 'Nieprawidłowy ruch.'));
+    loadFillerState(false); // the optimistic preview above is now wrong — resync
   }
 }
 
