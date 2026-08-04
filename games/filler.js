@@ -52,6 +52,7 @@ function newFillerRuntime() {
     lastOwners: null,
     lastSpans: null,
     matchId: null,
+    lastStatus: undefined, // last SERVER match status, drives the league refresh edge
     pollTimer: null,
     tickTimer: null,
     data: null, // last full { coins, nick, match, history } snapshot
@@ -368,6 +369,68 @@ function fillerRenderBoard(data) {
   rt.lastSpans = spans;
 }
 
+// „Ktoś czeka na przeciwnika" — the queue, made visible. In the seasonal week
+// only a human opponent scores, so knowing that someone is sitting in the
+// queue RIGHT NOW is the single most actionable thing on the panel; without
+// it, two people can miss each other by a minute all week.
+function fillerRenderQueue(data) {
+  const wrap = fillerEl('filler-queue');
+  if (!wrap) return;
+  const m = data.match;
+  const waiting = data.waiting || [];
+  // Nothing to advertise while you're already in a match or queued yourself.
+  const idle = !m || m.status === 'finished' || m.status === 'cancelled';
+  if (!waiting.length || !idle) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  wrap.replaceChildren();
+  const who = waiting.length === 1
+    ? waiting[0] + ' czeka na przeciwnika!'
+    : waiting.slice(0, 3).join(', ') + (waiting.length > 3 ? ' i inni' : '') + ' czekają na przeciwnika!';
+  wrap.append(
+    el('span', {}, '🔎 ' + who),
+    el('button', { type: 'button', className: 'rl-btn is-gold', onclick: fillerFindOpponent }, 'Dołącz'),
+  );
+}
+
+// Weekly league table (seasonal week only — the arcade picker has its own
+// best-score-ever card). Ranks accumulated league points, NOT a best single
+// match: see the header of supabase/filler-seasonal.sql for why, and note the
+// client does no ranking math of its own — filler_current_week is the one
+// definition, shared with the Monday payout.
+async function loadFillerWeekBoard() {
+  const wrap = fillerEl('filler-week-wrap');
+  const board = fillerEl('filler-week-board');
+  if (!wrap || !board) return;
+  if (allGamesMode) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  const { data, error } = await sb.from('filler_current_week')
+    .select('rank,user_id,nick,score,matches_played,wins,opponents')
+    .order('rank')
+    .limit(10);
+  board.replaceChildren();
+  if (error) {
+    board.append(el('p', { className: 'filler-league-help' }, 'Nie udało się wczytać ligi.'));
+    return;
+  }
+  if (!data || !data.length) {
+    board.append(el('p', { className: 'filler-league-help' },
+      'Nikt jeszcze nie rozegrał meczu z żywym graczem w tym tygodniu — bądź pierwszy!'));
+    return;
+  }
+  const medals = ['🥇', '🥈', '🥉'];
+  for (const r of data) {
+    const isMe = !!me && r.user_id === me.id;
+    board.append(el('div', { className: 'filler-week-row' + (isMe ? ' is-me' : '') },
+      el('span', { className: 'filler-week-rank' }, medals[r.rank - 1] || String(r.rank)),
+      el('span', { className: 'filler-week-nick' }, r.nick + (isMe ? ' (Ty)' : '')),
+      el('span', { className: 'filler-week-meta' },
+        r.wins + '/' + r.matches_played + ' W · ' + r.opponents + ' '
+          + plCount(r.opponents, 'przeciwnik', 'przeciwnicy', 'przeciwników')),
+      el('span', { className: 'filler-week-pts' }, r.score + ' pkt'),
+    ));
+  }
+}
+
 function fillerRenderHistory(data) {
   const wrap = fillerEl('filler-history');
   if (!wrap) return;
@@ -393,7 +456,17 @@ function renderFillerPanel(data) {
   fillerRenderPlayers(data);
   fillerRenderPalette(data);
   fillerRenderBoard(data);
+  fillerRenderQueue(data);
   fillerRenderHistory(data);
+  // The league only moves when a match finishes, so refresh it on that edge
+  // rather than on every 2s poll. `status` is the server's, so this fires
+  // once per real finish (the optimistic preview never sets 'finished').
+  const rt = fillerRuntime;
+  const st = data.match ? data.match.status : null;
+  if (rt && st !== rt.lastStatus) {
+    rt.lastStatus = st;
+    if (st === 'finished' || st === null) loadFillerWeekBoard();
+  }
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────
@@ -552,6 +625,7 @@ function startFillerRound() {
   fillerRuntime.mounted = true;
   fillerStartPoll();
   loadFillerState(true);
+  loadFillerWeekBoard();
 }
 
 // The no-op-stub convention: every other game's leaveAllGamesTab/selectAllGame/

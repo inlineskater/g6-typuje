@@ -7870,7 +7870,30 @@
     .filler-color-btn.is-mine { border-color: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,.35); }
     .filler-color-btn.is-foe { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15,23,42,.35); }
     .filler-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-    .filler-history-wrap h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    /* Live queue nudge — „X czeka na przeciwnika". Gold, because in the
+       seasonal week this is the single most valuable thing on the panel. */
+    .filler-queue {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+      margin-top: 10px; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      background: rgba(246,196,83,.14); border: 1px solid rgba(217,154,24,.45); color: var(--text);
+    }
+    .filler-week-wrap h3, .filler-history-wrap h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .filler-week-wrap { margin-top: 18px; }
+    .filler-league-help { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+    .filler-league-help b { color: var(--text); }
+    .filler-week-board { display: flex; flex-direction: column; gap: 4px; }
+    .filler-week-row {
+      display: grid; grid-template-columns: 2.2em 1fr auto auto; align-items: center; gap: 10px;
+      font-size: 12.5px; padding: 6px 0; border-bottom: 1px solid var(--border);
+    }
+    .filler-week-row:last-child { border-bottom: none; }
+    .filler-week-row.is-me { font-weight: 800; }
+    .filler-week-rank { font-weight: 800; color: var(--muted); }
+    .filler-week-nick { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Opponents faced is the stat the league is trying to grow, so it gets
+       equal billing with the points rather than hiding in a tooltip. */
+    .filler-week-meta { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11.5px; white-space: nowrap; }
+    .filler-week-pts { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
     .filler-history { display: flex; flex-direction: column; gap: 4px; }
     .filler-history-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--border); }
     .filler-history-row:last-child { border-bottom: none; }
@@ -9585,11 +9608,27 @@
           <div class="filler-board-wrap"><div id="filler-board" class="filler-board"></div></div>
           <div id="filler-palette" class="filler-palette"></div>
           <div class="filler-actions">
-            <button type="button" id="filler-btn-bot" class="rl-btn is-primary">▶ Zagraj z botem</button>
             <button type="button" id="filler-btn-find" class="rl-btn is-gold">🔎 Znajdź przeciwnika</button>
+            <button type="button" id="filler-btn-bot" class="rl-btn is-primary">▶ Zagraj z botem</button>
             <button type="button" id="filler-btn-cancel" class="rl-btn is-ghost hidden">✕ Anuluj szukanie</button>
             <!-- #filler-btn-resign is deliberately NOT here — it lives in
                  .filler-top, away from the two start buttons. See the CSS. -->
+          </div>
+          <!-- Who is in the queue right now. The biggest obstacle to a PvP
+               week is not unwillingness, it's not knowing anyone is there. -->
+          <div id="filler-queue" class="filler-queue hidden"></div>
+          <!-- Weekly league board. Only rendered in the seasonal week (the
+               arcade picker has its own best-score-ever records card). -->
+          <div id="filler-week-wrap" class="filler-week-wrap hidden">
+            <h3>🏆 Liga tygodnia</h3>
+            <p class="filler-league-help">
+              Punkty za <b>każdy</b> mecz z żywym graczem: <b>wygrana 100</b>, <b>przegrana 35</b>
+              (+ do 35 za przewagę na planszy). <b>+60 za każdego nowego przeciwnika.</b>
+              Rewanże z tą samą osobą są warte coraz mniej (100% → 70% → 45% → 25% → 15% → 10%),
+              więc bardziej opłaca się zagrać z pięcioma osobami niż pięć razy z jedną.
+              Mecze z botem nie liczą się do ligi.
+            </p>
+            <div id="filler-week-board" class="filler-week-board"></div>
           </div>
           <div class="filler-history-wrap">
             <h3>Historia meczów</h3>
@@ -14216,7 +14255,19 @@ const SEASON_LIVE_SOURCES = {
     tiebreak: 'completion_ms',
     opts: { ascending: true, nullsFirst: false },
   },
-  filler: { extra: 'tiles,won', tiebreak: null },
+};
+
+// Games whose weekly ranking is NOT "one row per run, take the best" and so
+// cannot be derived by ordering the raw scores table — their `_current_week`
+// view already returns one ranked row per user and is read as-is.
+//   bug_jumper — averages each player's top 5 rounds.
+//   filler     — a PvP LEAGUE: accumulated points with repeat-opponent decay
+//                and a distinct-opponent bonus (supabase/filler-seasonal.sql).
+// This used to be a hardcoded `isBugJumper` branch; filler is the second such
+// game, and a third would otherwise mean a third branch.
+const SEASON_LIVE_VIEW_SOURCES = {
+  bug_jumper: 'user_id,nick,score,rounds_played,completion_ms,submitted_at',
+  filler: 'user_id,nick,score,matches_played,wins,opponents,submitted_at',
 };
 
 function mapSeasonAwardRows(rows, gameType) {
@@ -14280,13 +14331,13 @@ async function loadSeasonHistory() {
     const current = getCurrentSeasonalEntry();
     const currentDbWeekStart = current.weekStart; // DB now also Monday-start
     const isSuperMariusz = current.gameType === 'super_mariusz';
-    const isBugJumper = current.gameType === 'bug_jumper';
+    const viewCols = SEASON_LIVE_VIEW_SOURCES[current.gameType];
     let liveScoresQuery;
-    if (isBugJumper) {
-      // bug_jumper_current_week already averages each player's top 5 rounds
-      // and returns one ranked row per user — no client-side dedup needed.
-      liveScoresQuery = sb.from('bug_jumper_current_week')
-        .select('user_id,nick,score,rounds_played,completion_ms,submitted_at')
+    if (viewCols) {
+      // Pre-aggregated ranking: the view already returns one ranked row per
+      // user, so there is nothing to order or dedup client-side.
+      liveScoresQuery = sb.from(current.gameType + '_current_week')
+        .select(viewCols)
         .order('rank')
         .limit(20);
     } else {
@@ -14334,8 +14385,11 @@ async function loadSeasonHistory() {
       seen.add(r.user_id);
       const rank = pendingEntries.length + 1;
       const cm = r.client_meta || {};
-      const baseScore = !isBugJumper && !isSuperMariusz && cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
-      const itemBonus = !isBugJumper && !isSuperMariusz && cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
+      // View-backed rankings aggregate many runs into one row, so a single
+      // run's base/bonus split is meaningless for them (and client_meta isn't
+      // even selected) — show the aggregate as-is.
+      const baseScore = !viewCols && !isSuperMariusz && cm.base_score != null ? Math.max(0, parseInt(cm.base_score) || 0) : r.score;
+      const itemBonus = !viewCols && !isSuperMariusz && cm.item_effect?.bonus != null ? Math.max(0, parseInt(cm.item_effect.bonus) || 0) : 0;
       pendingEntries.push({
         user_id: r.user_id, nick: r.nick || r.nick_snapshot,
         week_start: current.weekStart, rank,

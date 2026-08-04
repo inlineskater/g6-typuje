@@ -489,7 +489,7 @@ allowed it. It does mirror the lattice's adjacency *rule* and rhombus look
 visibly don't touch would advertise the wrong game. No merge pass: it is
 cosmetic-only and never renders a grown territory for long.
 
-## Phase 2 — seasonal promotion (written, dormant until 2026-08-10)
+## Phase 2 — seasonal promotion (live from 2026-08-10)
 
 Debuts **2026-08-10** (the week that conflicted with the Bug Jumper Dynamic
 Course relaunch, which was bumped to 2026-08-17 to make room). Well-
@@ -517,7 +517,82 @@ precedented shape, verbatim template `supabase/healer-dungeon.sql`:
   `'filler'` appended to the rotation array, modulus 11→12, a
   `cron.schedule('filler_weekly_awards', ...)` block.
 
-Open question deferred to Phase-2 time: whether the weekly leaderboard ranks
-best-single-match-score (free, consistent with every other game) or
-something more PvP-flavored like a win count — no reason to decide this
-before Filler has any real match history to look at.
+### The weekly ranking is a LEAGUE (resolved 2026-08-04)
+
+The open question was whether the week ranks best-single-match-score (free,
+consistent with every other game) or something more PvP-flavoured. It ranks
+**accumulated league points**, because best-single-match is actively wrong
+here: Filler is the only PvP game in the rotation, and "your best match wins
+the week" means one lucky win ends your week — there is no reason to ever
+play a second opponent, which is the entire behaviour this game exists to
+create.
+
+`public.filler_league_week(week_start)` in `supabase/filler-seasonal.sql` is
+the **one** definition — the current-week view, the all-time view and the
+Monday payout all call it, so what players watch during the week cannot
+drift from what actually pays out.
+
+```
+per match : (win ? 100 : 35) + round(match_score / 10)        -- 0..35 bonus
+× decay   : Nth match against the SAME opponent this week
+            1st 100% · 2nd 70% · 3rd 45% · 4th 25% · 5th 15% · 6th+ 10%
++ bonus   : 60 × distinct opponents faced
+```
+
+Why each piece:
+
+- **Losses score.** Load-bearing, not generosity: if losing were worth
+  nothing, the correct play is to duck the strong colleagues, and the people
+  most worth playing get no games. A win is still worth ~3× a loss, so
+  ducking never pays.
+- **Repeat-opponent decay + distinct-opponent bonus** are the same mechanism
+  seen from two sides, and they are what make the ranking mean "played the
+  office" instead of "played one friend a lot". They double as the
+  anti-collusion device: a two-account pair cannot manufacture distinct
+  opponents, and their 5th rematch is worth 10%.
+- It composes with guards already in `filler-action` — a resigner scores
+  nothing, matches under `FILLER_SCORE_MIN_MOVES` plies score nothing, and a
+  20s per-user cooldown sits in front of every insert — so feeding wins by
+  instant-resigning is both rate-limited and decayed into irrelevance.
+
+Modelled against the balance harness's typical match scores (win ≈ 150,
+loss ≈ 45):
+
+| week | points |
+|---|---|
+| 5 matches vs 5 different people, 3W2L | **725** |
+| 8 matches vs 4 people (2 each), 4W4L | **812** |
+| 20 matches vs ONE person, all wins | 526 |
+| 10 matches vs ONE person, 6W4L | 332 |
+| 5 matches vs 5 people, ALL losses | 500 |
+| 1 match, won | 175 |
+
+A new opponent is always worth +175 (win) where a 3rd rematch is worth +29,
+and five varied matches beat twenty against a single partner. Note the last
+two rows: showing up and losing to five people beats a dominant run against
+one, which is the intended signal. Once you have played everyone, breadth is
+capped for all and wins decide the week — breadth gets you into the race,
+skill wins it.
+
+Two supporting changes, since a league nobody can find opponents for is
+still a dead week:
+
+- `filler_scores.opponent_id` is a real indexed column (not
+  `client_meta->>'opp'`), because the decay and the distinct count group on
+  it. `ON DELETE SET NULL`, and `filler_league_week` falls back to the
+  `match_id` as the grouping key so a NULL behaves like a one-off opponent
+  rather than merging every such match into one bucket.
+- **`FILLER_QUEUE_SEASONAL_MS` (150s)** replaces the 18s bot fallback in
+  seasonal mode — there a bot match is worth literally nothing, so dumping a
+  player into one after 18s is a wasted trip rather than a convenience — and
+  `state` now returns a `waiting[]` list of nicks currently queued, which the
+  panel surfaces as a „🔎 X czeka na przeciwnika — Dołącz" nudge. The biggest
+  obstacle to a PvP week is not unwillingness, it is two people missing each
+  other by a minute all week.
+
+The frontend does **no** ranking math: `games/filler.js` reads the ranked
+rows straight off `filler_current_week`, and the seasonal „na żywo" podium
+does the same via `SEASON_LIVE_VIEW_SOURCES` (which replaced a hardcoded
+`isBugJumper` branch — Bug Jumper's top-5 average and Filler's league are
+both pre-aggregated rankings that cannot be derived by ordering the raw
+scores table).

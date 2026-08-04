@@ -17,6 +17,41 @@
 -- filler_scores, gated on the match's `arcade_mode` being false (i.e.
 -- launched from the seasonal tab, not the „Wszystkie Gry" picker) — see
 -- docs/filler.md's Phase 2 section.
+--
+-- ── WEEKLY RANKING IS A LEAGUE, NOT A HIGH SCORE (2026-08-04) ─────────────
+-- Every other seasonal game ranks a player's single best run of the week,
+-- which is right for a solo game and WRONG for this one: Filler is the only
+-- PvP game in the rotation, and "best single match" means one lucky win ends
+-- your week — there is no reason to ever play a second opponent, which is
+-- precisely the behaviour this game exists to create.
+--
+-- So the week ranks accumulated LEAGUE POINTS (public.filler_league_week),
+-- built to reward breadth of opposition above all:
+--
+--   per match : (win ? 100 : 35) + round(match_score / 10)      -- 0..35 bonus
+--   × decay   : Nth match against the SAME opponent this week
+--               1st 100% · 2nd 70% · 3rd 45% · 4th 25% · 5th 15% · 6th+ 10%
+--   + bonus   : 60 × distinct opponents faced
+--
+-- Losses score. That is deliberate and load-bearing: if losing were worth
+-- nothing, the correct play would be to avoid the strong colleagues, and the
+-- people most worth playing would get no games. A win is still worth ~3x a
+-- loss, so ducking is never profitable.
+--
+-- The decay plus the distinct-opponent bonus are what make farming one
+-- partner pointless — 10 matches against a single opponent is worth far less
+-- than 5 against five different ones — and they are also the anti-collusion
+-- mechanism, since a two-account pair cannot manufacture distinct opponents
+-- and their 5th+ rematch is worth 10%. It composes with the guards already in
+-- filler-action (a resigner scores nothing, matches under
+-- FILLER_SCORE_MIN_MOVES plies score nothing, and a 20s per-user cooldown
+-- sits in front of every insert), so feeding wins by instant-resigning is
+-- both rate-limited and decayed into irrelevance.
+--
+-- ⚠️ The formula lives in exactly ONE place — filler_league_week() — which the
+-- current-week view, the all-time view and the Monday payout all call. Do not
+-- re-implement it in a view or in the client; the frontend reads the ranked
+-- rows straight off filler_current_week.
 
 CREATE OR REPLACE FUNCTION public.filler_week_start(p_ts timestamptz DEFAULT now())
 RETURNS date
@@ -45,6 +80,17 @@ CREATE TABLE IF NOT EXISTS public.filler_scores (
   UNIQUE (match_id, user_id)
 );
 
+-- WHO you played is a first-class ranking input (repeat-opponent decay +
+-- distinct-opponent bonus — see the header), so it gets a real indexed,
+-- referential column rather than living in client_meta->>'opp' where it
+-- started. ON DELETE SET NULL, not CASCADE: if an opponent's profile is ever
+-- deleted, your match still happened and must keep its points. Nullable for
+-- exactly that case, and filler_league_week() falls back to the match_id as
+-- the grouping key so a NULL simply behaves like a one-off opponent instead
+-- of silently merging every such match into one bucket.
+ALTER TABLE public.filler_scores
+  ADD COLUMN IF NOT EXISTS opponent_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL;
+
 CREATE TABLE IF NOT EXISTS public.filler_weekly_awards (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   week_start    date NOT NULL,
@@ -62,6 +108,10 @@ CREATE INDEX IF NOT EXISTS filler_scores_week_rank_idx
   ON public.filler_scores(week_start, score DESC, submitted_at ASC);
 CREATE INDEX IF NOT EXISTS filler_scores_user_time_idx
   ON public.filler_scores(user_id, submitted_at DESC);
+-- Feeds filler_league_week()'s per-(player, opponent) ROW_NUMBER window in
+-- exactly the order the window declares, so the ranking is an index scan.
+CREATE INDEX IF NOT EXISTS filler_scores_week_user_opp_idx
+  ON public.filler_scores(week_start, user_id, opponent_id, submitted_at);
 CREATE INDEX IF NOT EXISTS filler_awards_week_idx
   ON public.filler_weekly_awards(week_start DESC, rank ASC);
 
@@ -81,62 +131,115 @@ GRANT SELECT ON public.filler_scores, public.filler_weekly_awards TO authenticat
 -- filler-action's own privileged SUPABASE_DB_URL connection is the only
 -- writer, same as every other table in supabase/filler.sql.
 
-CREATE OR REPLACE VIEW public.filler_current_week WITH (security_invoker = true) AS
-WITH current_week AS (
-  SELECT public.filler_week_start(now()) AS week_start
-),
-match_counts AS (
-  SELECT user_id, week_start, COUNT(*)::integer AS matches_played
-  FROM public.filler_scores
-  GROUP BY user_id, week_start
-),
-user_best AS (
-  SELECT DISTINCT ON (s.user_id)
-    s.user_id,
-    s.nick_snapshot AS nick,
-    s.week_start,
-    s.score,
-    s.tiles,
-    s.moves_made,
-    s.won,
-    s.submitted_at,
-    COALESCE(mc.matches_played, 1) AS matches_played
-  FROM public.filler_scores s
-  JOIN current_week cw ON cw.week_start = s.week_start
-  LEFT JOIN match_counts mc ON mc.user_id = s.user_id AND mc.week_start = s.week_start
-  ORDER BY s.user_id, s.score DESC, s.submitted_at ASC
+-- ── The league table for one week ────────────────────────────────────────
+-- THE single definition of the weekly ranking (see the header for the why).
+-- The current-week view, the all-time view and award_filler_week() all call
+-- this, so the formula can never drift between what players watch during the
+-- week and what actually gets paid on Monday.
+--
+-- The points column is deliberately named `score`: the seasonal podium, the
+-- awards table and the shared frontend row-mapping all key on that name, and
+-- renaming it here would mean special-casing Filler in five unrelated places
+-- to gain nothing.
+CREATE OR REPLACE FUNCTION public.filler_league_week(p_week_start date)
+RETURNS TABLE (
+  rank           integer,
+  user_id        uuid,
+  nick           text,
+  week_start     date,
+  score          integer,   -- league points
+  matches_played integer,
+  wins           integer,
+  opponents      integer,   -- distinct humans faced this week
+  best_match     integer,   -- best single-match score, shown as a stat only
+  submitted_at   timestamptz
 )
-SELECT
-  (ROW_NUMBER() OVER (ORDER BY score DESC, submitted_at ASC))::integer AS rank,
-  user_id, nick, week_start, score, tiles, moves_made, won, matches_played, submitted_at
-FROM user_best
-ORDER BY rank;
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+  WITH scored AS (
+    SELECT
+      s.user_id, s.nick_snapshot, s.won, s.score, s.submitted_at,
+      COALESCE(s.opponent_id, s.match_id) AS opp_key,
+      ROW_NUMBER() OVER (
+        PARTITION BY s.user_id, COALESCE(s.opponent_id, s.match_id)
+        ORDER BY s.submitted_at, s.id
+      ) AS nth_vs_opp
+    FROM public.filler_scores s
+    WHERE s.week_start = p_week_start
+  ),
+  -- Every column reference in this body is alias-qualified ON PURPOSE: the
+  -- RETURNS TABLE columns above (score, user_id, submitted_at, …) are OUT
+  -- parameters and share names with columns of filler_scores, and an
+  -- unqualified reference to one of those is ambiguous.
+  weighted AS (
+    SELECT
+      sc.user_id, sc.nick_snapshot, sc.won, sc.score, sc.submitted_at, sc.opp_key,
+      ((CASE WHEN sc.won THEN 100 ELSE 35 END) + ROUND(sc.score / 10.0))
+      * CASE sc.nth_vs_opp
+          WHEN 1 THEN 1.00 WHEN 2 THEN 0.70 WHEN 3 THEN 0.45
+          WHEN 4 THEN 0.25 WHEN 5 THEN 0.15 ELSE 0.10
+        END AS pts
+    FROM scored sc
+  ),
+  agg AS (
+    SELECT
+      w.user_id,
+      -- The nick as of the player's most recent match, so a rename shows up.
+      (array_agg(w.nick_snapshot ORDER BY w.submitted_at DESC))[1] AS nick,
+      (ROUND(SUM(w.pts)) + 60 * COUNT(DISTINCT w.opp_key))::integer AS points,
+      COUNT(*)::integer                          AS matches_played,
+      COUNT(*) FILTER (WHERE w.won)::integer     AS wins,
+      COUNT(DISTINCT w.opp_key)::integer         AS opponents,
+      MAX(w.score)::integer                      AS best_match,
+      MIN(w.submitted_at)                        AS first_at
+    FROM weighted w
+    GROUP BY w.user_id
+  )
+  -- Ties break on wins, then on who got there first — same "earliest
+  -- submission wins" convention every other seasonal game uses.
+  SELECT
+    (ROW_NUMBER() OVER (ORDER BY a.points DESC, a.wins DESC, a.first_at ASC))::integer,
+    a.user_id, a.nick, p_week_start, a.points,
+    a.matches_played, a.wins, a.opponents, a.best_match, a.first_at
+  FROM agg a
+  ORDER BY 1;
+$$;
 
-CREATE OR REPLACE VIEW public.filler_all_time WITH (security_invoker = true) AS
-WITH match_counts AS (
-  SELECT user_id, COUNT(*)::integer AS matches_played
-  FROM public.filler_scores
-  GROUP BY user_id
+-- DROP, not CREATE OR REPLACE: these views previously exposed a different
+-- column list (tiles/moves_made/won from the old best-single-match ranking),
+-- and CREATE OR REPLACE VIEW cannot drop or rename a column.
+DROP VIEW IF EXISTS public.filler_current_week;
+CREATE VIEW public.filler_current_week WITH (security_invoker = true) AS
+  SELECT * FROM public.filler_league_week(public.filler_week_start(now()));
+
+-- All-time = each player's BEST WEEK, which is the league analogue of every
+-- other game's "best single run ever" (a lifetime sum would just rank by
+-- seniority).
+DROP VIEW IF EXISTS public.filler_all_time;
+CREATE VIEW public.filler_all_time WITH (security_invoker = true) AS
+WITH weeks AS (
+  SELECT DISTINCT week_start FROM public.filler_scores
 ),
-user_best AS (
-  SELECT DISTINCT ON (s.user_id)
-    s.user_id,
-    s.nick_snapshot AS nick,
-    s.week_start AS best_week_start,
-    s.score,
-    s.tiles,
-    s.moves_made,
-    s.won,
-    s.submitted_at,
-    COALESCE(mc.matches_played, 1) AS matches_played
-  FROM public.filler_scores s
-  LEFT JOIN match_counts mc ON mc.user_id = s.user_id
-  ORDER BY s.user_id, s.score DESC, s.submitted_at ASC
+per_week AS (
+  SELECT l.user_id, l.nick, l.week_start, l.score, l.matches_played,
+         l.wins, l.opponents, l.best_match, l.submitted_at
+  FROM weeks w
+  CROSS JOIN LATERAL public.filler_league_week(w.week_start) l
+),
+best AS (
+  SELECT DISTINCT ON (p.user_id)
+    p.user_id, p.nick, p.week_start AS best_week_start, p.score,
+    p.matches_played, p.wins, p.opponents, p.best_match, p.submitted_at
+  FROM per_week p
+  ORDER BY p.user_id, p.score DESC, p.submitted_at ASC
 )
 SELECT
-  (ROW_NUMBER() OVER (ORDER BY score DESC, submitted_at ASC))::integer AS rank,
-  user_id, nick, best_week_start, score, tiles, moves_made, won, matches_played, submitted_at
-FROM user_best
+  (ROW_NUMBER() OVER (ORDER BY b.score DESC, b.submitted_at ASC))::integer AS rank,
+  b.user_id, b.nick, b.best_week_start, b.score,
+  b.matches_played, b.wins, b.opponents, b.best_match, b.submitted_at
+FROM best b
 ORDER BY rank;
 
 CREATE OR REPLACE VIEW public.filler_recent_awards WITH (security_invoker = true) AS
@@ -177,25 +280,15 @@ BEGIN
     );
   END IF;
 
-  WITH user_best AS (
-    SELECT DISTINCT ON (s.user_id)
-      s.user_id, s.nick_snapshot, s.score, s.submitted_at
-    FROM public.filler_scores s
-    WHERE s.week_start = p_week_start
-    ORDER BY s.user_id, s.score DESC, s.submitted_at ASC
-  ),
-  ranked AS (
+  -- Pays the SAME league table players watched all week (see the header) —
+  -- filler_league_week() is the one definition, called here rather than
+  -- re-implemented, so the podium can't disagree with the payout.
+  WITH winners AS (
     SELECT
-      user_id, nick_snapshot, score,
-      (ROW_NUMBER() OVER (ORDER BY score DESC, submitted_at ASC))::integer AS rank
-    FROM user_best
-  ),
-  winners AS (
-    SELECT
-      user_id, nick_snapshot, rank, score,
-      CASE rank WHEN 1 THEN 1000 WHEN 2 THEN 500 WHEN 3 THEN 200 END AS prize_coins
-    FROM ranked
-    WHERE rank <= 3
+      l.user_id, l.nick AS nick_snapshot, l.rank, l.score,
+      CASE l.rank WHEN 1 THEN 1000 WHEN 2 THEN 500 WHEN 3 THEN 200 END AS prize_coins
+    FROM public.filler_league_week(p_week_start) l
+    WHERE l.rank <= 3
   ),
   inserted AS (
     INSERT INTO public.filler_weekly_awards (week_start, user_id, nick_snapshot, rank, score, prize_coins)
@@ -232,9 +325,14 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.filler_week_start(timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.filler_league_week(date) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.award_filler_week(date) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.filler_week_start(timestamptz) TO authenticated;
+-- Needed by authenticated readers because filler_current_week/_all_time are
+-- security_invoker views over this function. It is STABLE and not SECURITY
+-- DEFINER, so RLS on filler_scores still applies to the caller.
+GRANT EXECUTE ON FUNCTION public.filler_league_week(date) TO authenticated;
 GRANT SELECT ON public.filler_current_week, public.filler_all_time, public.filler_recent_awards TO authenticated;
 
 DO $$

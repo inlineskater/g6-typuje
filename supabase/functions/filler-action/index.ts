@@ -62,7 +62,15 @@ const FILLER_BOT_W = 15, FILLER_BOT_H = 19;
 
 const FILLER_TURN_MS = 15_000;         // per-turn deadline
 const FILLER_TURN_GRACE_MS = 1_500;    // RTT slack before the server steals a turn
-const FILLER_QUEUE_MS = 18_000;        // human wait before the bot fallback
+// How long the public queue waits for a human before the bot fallback fills
+// the seat. Much longer in SEASONAL mode, because there a bot match is worth
+// literally nothing (bot matches never score) — dumping a player into one
+// after 18s is not a convenience, it is a wasted trip. 150s is long enough
+// that two colleagues opening the tab a couple of minutes apart actually
+// meet, and „✕ Anuluj szukanie" is always available if they'd rather not
+// wait. In the arcade the old 18s is right: there it IS just practice.
+const FILLER_QUEUE_MS = 18_000;
+const FILLER_QUEUE_SEASONAL_MS = 150_000;
 // anti-stall safety cap — scripts/filler-balance.mjs (2000 bot-vs-bot sims at
 // 21x27x7 on the diamond lattice) measured median 58 / p90 67 / p99 76 / max
 // 86 total plies, with 0/2000 re-runs hitting this cap; real games finish
@@ -536,12 +544,19 @@ async function scoreOnePlayer(tx, match, player, allPlayers, won, totalMoveNo) {
     try {
       await tx.savepoint(async (sp) => {
         const meta = { opp: opponent?.user_id ?? null, moves: player.moves_made };
+        // opponent_id is a REAL COLUMN here, not just client_meta: the weekly
+        // ranking is a league whose two main levers — repeat-opponent decay
+        // and the distinct-opponent bonus — are computed per opponent, so
+        // filler_league_week() has to group and count on it. See the header
+        // of supabase/filler-seasonal.sql.
         await sp`
           insert into public.filler_scores
-            (match_id, user_id, nick_snapshot, week_start, score, tiles, moves_made, won, client_meta)
+            (match_id, user_id, nick_snapshot, week_start, score, tiles, moves_made, won,
+             opponent_id, client_meta)
           values
             (${match.id}, ${player.user_id}, ${player.nick_snapshot}, public.filler_week_start(now()),
-             ${score}, ${player.tiles}, ${player.moves_made}, ${won}, ${JSON.stringify(meta)}::jsonb)
+             ${score}, ${player.tiles}, ${player.moves_made}, ${won},
+             ${opponent?.user_id ?? null}, ${JSON.stringify(meta)}::jsonb)
           on conflict (match_id, user_id) do nothing`;
       });
     } catch (err) {
@@ -697,10 +712,23 @@ async function stateResponse(tx, userId) {
     where m.status = 'finished'
     order by m.finished_at desc
     limit 10`;
+  // Who is sitting in the queue right now, excluding the caller. The single
+  // biggest obstacle to a PvP week is not wanting to play, it is not knowing
+  // anyone is there — a queue you can SEE is what turns "I'll try later" into
+  // a match. Nothing private: filler_matches/filler_match_players are
+  // public-SELECT to authenticated anyway (no hidden info in this game).
+  const waiting = await tx`
+    select p.nick_snapshot as nick
+    from public.filler_matches m
+    join public.filler_match_players p on p.match_id = m.id
+    where m.status = 'waiting' and p.user_id is not null and p.user_id <> ${userId}
+    order by m.created_at asc
+    limit 5`;
   return {
     coins: profile?.coins ?? 0,
     nick: profile?.nick ?? "",
     match: matchOut,
+    waiting: waiting.map((r) => r.nick),
     history: history.map((h) => ({
       id: h.id,
       opponentKind: h.opponent_kind,
@@ -778,9 +806,10 @@ async function findOpponent(userId, arcadeMode) {
     } else {
       const match = await createMatch(tx, { mode: "pvp", arcadeMode });
       await insertHumanSeat(tx, match, 0, userId, me.nick);
+      const queueMs = arcadeMode ? FILLER_QUEUE_MS : FILLER_QUEUE_SEASONAL_MS;
       await tx`
         update public.filler_matches
-        set queue_expires_at = now() + (${FILLER_QUEUE_MS} * interval '1 millisecond')
+        set queue_expires_at = now() + (${queueMs} * interval '1 millisecond')
         where id = ${match.id}`;
     }
     return await stateResponse(tx, userId);
