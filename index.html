@@ -7265,6 +7265,9 @@
     .maj-crop-main { min-width: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
     .maj-crop-name { font-weight: 600; font-size: 13.5px; color: var(--text); }
     .maj-crop-qty { font-weight: 700; font-size: 13.5px; color: #b45309; font-variant-numeric: tabular-nums; }
+    /* „wspólny plon" — this pile is fed by several plants at one shared price. */
+    .maj-crop-pool { font-size: 10.5px; font-weight: 600; color: #9a3412; background: #fff7ed;
+      border: 1px solid #fed7aa; border-radius: var(--r-pill); padding: 1px 7px; cursor: help; white-space: nowrap; }
     .maj-crop-side { grid-row: span 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
     .maj-crop-value { font-size: 15px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .maj-crop-sell { border: none; border-radius: var(--r-sm); padding: 7px 14px; font-weight: 600; font-size: 12.5px; cursor: pointer;
@@ -29513,7 +29516,7 @@ function farmSellQuote(crop, qty) {
 
 // Confirm sale with a full price-impact preview, then sell + re-render the host.
 function farmSellConfirm(crop, maxQty, afterSell) {
-  const def = [...fmDefs.values()].find(d => d.crop_type === crop);
+  const ident = farmCropIdentity(crop);
   const qTest = farmSellQuote(crop, maxQty);
   if (!qTest) { sellCrop(crop, maxQty).then(() => afterSell && afterSell()); return; }
   
@@ -29537,7 +29540,7 @@ function farmSellConfirm(crop, maxQty, afterSell) {
   const updateQuote = () => {
     const q = farmSellQuote(crop, currentQty);
     if (!q) { close(); return; }
-    qtyLabel.replaceChildren(farmIcon(def?.emoji || '🧺'), ' ' + (def?.name || crop) + ' ×' + currentQty);
+    qtyLabel.replaceChildren(farmIcon(ident.emoji), ' ' + ident.name + ' ×' + currentQty);
     priceLabel.replaceChildren(fmt(q.startPrice) + ' → ' + fmt(q.endPrice) + ' 🪙');
     proceedsLabel.replaceChildren('~' + q.proceeds + ' 🪙');
     // 🏅 = „Renoma Kolekcjonera" — the NPC premium is already inside q.proceeds,
@@ -29583,7 +29586,13 @@ function farmSellConfirm(crop, maxQty, afterSell) {
       qline('Dostaniesz', proceedsLabel),
       qline('Kontrakt tygodnia', bonusLabel),
       qline('Cena po sprzedaży', afterPriceLabel),
-      noteLabel),
+      noteLabel,
+      // A pooled pile is the #1 source of „gdzie jest mój drugi zbiór?" tickets —
+      // say it in the sell dialog, where the number the player doubts is shown.
+      ident.shared
+        ? el('div', { className: 'farm-sell-note' },
+            '🧬 ' + ident.note + ' Zebrany plon z różnych kart i hybryd trafia do jednej partii — lepsza karta daje WIĘCEJ sztuk, nie droższą sztukę.')
+        : ''),
     confirmBtn);
     
   updateQuote();
@@ -29610,12 +29619,12 @@ function farmRotChip(crop) {
 function farmCropRow(crop, qty, afterSell) {
   const mkt = fmMarket.get(crop);
   const price = farmMarketEffectivePrice(mkt) || 0;
-  const def = [...fmDefs.values()].find(d => d.crop_type === crop);
+  const ident = farmCropIdentity(crop);
   const eventQty = farmSeasonalEligibleQty(crop, qty);
   const row = el('div', { className: 'farm-market-row' },
-    el('div', { className: 'maj-crop-ico' }, farmIcon(def?.emoji || '🧺')),
+    el('div', { className: 'maj-crop-ico' }, farmIcon(ident.emoji)),
     el('div', { className: 'farm-card-meta' },
-      el('div', { className: 'farm-card-name' }, (def?.name || crop) + ' ×' + qty),
+      el('div', { className: 'farm-card-name', title: ident.note || '' }, ident.name + ' ×' + qty),
       el('div', { className: 'farm-card-sub' },
         el('span', { className: 'maj-num' }, '💰 ' + price.toFixed(1) + ' 🪙/szt · ' + Math.round(price * qty) + ' 🪙'),
         farmTrendChip(crop), farmRotChip(crop),
@@ -30344,6 +30353,25 @@ const FARM_SHARED_CROP_LABELS = {
                     note: 'Wspólny plon kolekcji sezonowych i hybryd — jedna cena skupu dla wszystkich.' },
 };
 
+// Identity of a CROP PILE (inventory lot, market row, sale log entry) — the
+// counterpart of farmCropGroups() for code that starts from a crop_type instead
+// of a def. Naming a pile after the first def that happens to match printed a
+// plant the player may not even own („Kryształowa Peonia" over a pile grown from
+// two hybrids), which reads as "my two harvests were replaced by one wrong
+// card". A pooled crop is named by its SHARED label everywhere, exactly like the
+// 📈 Cennik card.
+function farmCropIdentity(cropType) {
+  const defs = [...fmDefs.values()].filter(d => d.crop_type === cropType);
+  const shared = defs.length > 1 ? FARM_SHARED_CROP_LABELS[cropType] : null;
+  const rep = defs[0] || null;
+  return {
+    defs, rep, shared: !!shared,
+    name: shared ? shared.label : (rep?.name || cropType),
+    emoji: shared ? shared.emoji : (rep?.emoji || '🧺'),
+    note: shared ? shared.note : null,
+  };
+}
+
 // Crops (not plants) sorted by rarity of their best plant. Each entry carries the
 // plants that harvest into it, so the price card can name them.
 function farmCropGroups() {
@@ -30475,7 +30503,7 @@ async function loadFarmSalesFeed(host) {
     const tbody = el('tbody');
     
     rows.forEach((r, i) => {
-      const ct = r.meta?.crop_type, def = ct ? [...fmDefs.values()].find(d => d.crop_type === ct) : null;
+      const ct = r.meta?.crop_type, ident = ct ? farmCropIdentity(ct) : null;
       const qty = r.meta?.qty ?? '?';
       const nick = r.profiles?.nick || '???';
       
@@ -30486,7 +30514,7 @@ async function loadFarmSalesFeed(host) {
       const tr = el('tr', { className: i >= 10 ? 'hidden' : '' },
         el('td', { className: 'farm-sales-time' }, `${dateStr}, ${timeStr}`),
         el('td', { className: 'farm-sales-who' }, nick),
-        el('td', {}, el('div', { className: 'farm-sales-crop' }, farmIcon(def?.emoji || '🧺'), `${qty}× ${def?.name || ct}`)),
+        el('td', {}, el('div', { className: 'farm-sales-crop' }, farmIcon(ident?.emoji || '🧺'), `${qty}× ${ident?.name || ct}`)),
         el('td', { className: 'farm-sales-coins' }, `+${r.delta} 🪙`)
       );
       tbody.append(tr);
@@ -31843,7 +31871,7 @@ function majCountUp(node, target) {
 }
 
 function majCropCard(crop, qty, q, now, idx) {
-  const def = [...fmDefs.values()].find(d => d.crop_type === crop);
+  const ident = farmCropIdentity(crop);
   const mkt = fmMarket.get(crop);
   const price = q ? q.startPrice : Number(farmMarketEffectivePrice(mkt) || 0);
   const base = q ? q.base : Number(mkt?.base_price || 0);
@@ -31856,11 +31884,24 @@ function majCropCard(crop, qty, q, now, idx) {
   const sellBtn = el('button', { className: 'maj-crop-sell', type: 'button' }, '💰 Sprzedaj');
   sellBtn.addEventListener('click', () => farmSellConfirm(crop, qty, refreshFarmHub));
 
+  // A pooled crop says so on the row: two harvests from two different NFTs land
+  // in ONE pile at ONE price, and without this the merge looks like a lost card.
+  // „z N …" is genitive: 1 rośliny, 2+ roślin.
+  const poolNoun = plCount(ident.defs.length, 'rośliny', 'roślin', 'roślin');
+  const poolChip = ident.shared
+    ? el('span', { className: 'maj-crop-pool',
+        title: ident.note + ' Sypie się tu plon z ' + ident.defs.length + ' ' + poolNoun + ': '
+               + ident.defs.map(d => d.name).join(', ')
+               + '. Lepsza karta daje WIĘCEJ sztuk, nie droższą sztukę.' },
+        '🧬 wspólny plon ' + ident.defs.length + ' ' + poolNoun)
+    : '';
+
   return el('div', { className: 'maj-crop-card', style: { animationDelay: (0.05 + idx * 0.07) + 's' } },
-    el('div', { className: 'maj-crop-art' }, farmIcon(def?.emoji || '🧺')),
+    el('div', { className: 'maj-crop-art' }, farmIcon(ident.emoji)),
     el('div', { className: 'maj-crop-main' },
-      el('span', { className: 'maj-crop-name' }, def?.name || crop),
-      el('span', { className: 'maj-crop-qty' }, '×' + qty)),
+      el('span', { className: 'maj-crop-name' }, ident.name),
+      el('span', { className: 'maj-crop-qty' }, '×' + qty),
+      poolChip),
     el('div', { className: 'maj-crop-side' },
       el('span', { className: 'maj-crop-value', title: 'Realna wypłata za sprzedaż całości teraz (z wpływem na cenę)' }, '≈' + now + ' 🪙'),
       sellBtn),
