@@ -82,7 +82,7 @@ BEGIN
   IF p_game_type NOT IN (
     'whack_boss', 'bug_jumper', 'flappy_pants', 'snake',
     'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz', 'popup_panic',
-    'tetris', 'healer_dungeon'
+    'tetris', 'healer_dungeon', 'bubble_breaker'
   ) THEN
     RAISE EXCEPTION 'invalid_game_type';
   END IF;
@@ -154,6 +154,16 @@ BEGIN
     -- ⚠️ Rows written before 2026-07-29 hold PULLS CLEARED (1-20) and are not
     -- comparable with anything above; delete them if the board looks odd.
     WHEN 'healer_dungeon' THEN 999
+    -- „Kulki G6" (Bubble Breaker): a group of n balls scores n×(n−1), so the
+    -- total over a full 15×15 board is exactly 225 × (average group size − 1).
+    -- Even the impossible board where all 225 balls arrive pre-sorted into five
+    -- solid 45-ball blobs tops out at 225×44 = 9900, +1000 for clearing the
+    -- board = 10900. Real play is far below that: a greedy bot averages ~580
+    -- over 200 seeds and peaks at ~900 (scripts-free harness, see
+    -- games/bubble-breaker.js). Arcade scores are client-reported, so this cap
+    -- is the only guard on this path — 12000 leaves head room for a genuinely
+    -- exceptional human run without being meaningless.
+    WHEN 'bubble_breaker' THEN 12000
     ELSE NULL
   END;
   IF v_score_cap IS NULL THEN RAISE EXCEPTION 'invalid_game_type'; END IF;

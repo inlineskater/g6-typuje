@@ -5125,6 +5125,19 @@
       font-size: 15px; line-height: 1;
     }
 
+    /* ── „Kulki G6" (bubble_breaker) — Bubble Breaker board ── */
+    .bb-arena {
+      position: relative; width: 100%; max-width: 420px; margin: 0 auto;
+      aspect-ratio: 360 / 400; overflow: hidden;
+      border-radius: 10px; border: 3px solid #1e293b;
+      background: #0f1729;
+      box-shadow: 0 0 22px rgba(168,85,247,.16), inset 0 0 18px rgba(2,6,23,.8);
+      /* touch-action:none so a tap on a ball is never swallowed by a scroll
+         gesture — the board fits the panel, there is nothing to pan. */
+      user-select: none; touch-action: none; cursor: pointer;
+    }
+    .bb-arena canvas { display: block; width: 100%; height: 100%; }
+
     /* ── Najazd Ticketów (Invoice Horde) ── */
     .ih-arena {
       max-width: 680px;
@@ -9585,6 +9598,65 @@
         </section>
       </div>
 
+      <!-- „Kulki G6" panel (Bubble Breaker / SameGame; gameType bubble_breaker).
+           ARCADE-ONLY: not in SEASONAL_ROTATION, so this panel is only ever
+           shown by selectAllGame() moving it into #ag-game-slot. It lives here
+           with the seasonal panels anyway (same as Filler and Uzdrowiciel did
+           at launch) so promoting it later is a SEASONAL_ROTATION entry plus an
+           Edge Function rather than moving markup around. There is no aside
+           with weekly boards for the same reason — the arcade picker's own
+           #ag-scores-panel carries the records. -->
+      <div id="seasonal-game-bubble-breaker" class="hidden">
+        <section class="bj-game-panel">
+          <div class="bj-head">
+            <div>
+              <h2 class="page-title">„Kulki G6" 🔵</h2>
+              <p class="page-sub">Klasyk z palmtopa — <strong>Bubble Breaker</strong> z Windows Mobile, ten sam, w którego grało się na Dellu Axim X51 pod biurkiem. Zbijaj grupy stykających się kulek tego samego koloru. <strong>Im większa grupa, tym nieproporcjonalnie więcej punktów</strong> — jedna dziesiątka jest warta więcej niż pięć dwójek razem.</p>
+            </div>
+          </div>
+
+          <div class="bj-rules">
+            <div class="bj-rules-title">Jak grać</div>
+            <ul>
+              <li><strong>Myszką:</strong> najedź na grupę — podświetli się i pokaże, ile jest warta. Kliknij, żeby ją zbić.</li>
+              <li><strong>Palcem:</strong> pierwsze dotknięcie zaznacza grupę, drugie ją zbija — tak jak w oryginale, żeby nie zbić czegoś przez pomyłkę.</li>
+              <li><strong>Liczy się rozmiar:</strong> grupa z <strong>n</strong> kulek daje <strong>n × (n−1)</strong> punktów. Dwójka to 2 punkty, piątka 20, dziesiątka aż 90. Opłaca się cierpliwie budować duże skupiska zamiast zbijać każdą parę od ręki.</li>
+              <li>Kulki stykają się <strong>bokami</strong>, nie rogami. Po zbiciu reszta opada w dół, a puste kolumny przesuwają się w lewo — to właśnie zbliża do siebie odległe kolory.</li>
+              <li><strong>Koniec rundy</strong>, gdy na planszy nie ma już ani jednej pary. Za wyczyszczenie całej planszy jest <strong>+1000</strong> bonusu.</li>
+              <li>Gra jest <strong>za darmo</strong>, a Twój najlepszy wynik trafia do rankingu „Wszystkie Gry".</li>
+            </ul>
+          </div>
+
+          <div class="bj-stats">
+            <div class="bj-stat">
+              <div class="bj-stat-label">Wynik</div>
+              <div class="bj-stat-value" id="bb-score">0</div>
+            </div>
+            <div class="bj-stat">
+              <div class="bj-stat-label">Kulek</div>
+              <div class="bj-stat-value" id="bb-balls">225</div>
+            </div>
+            <div class="bj-stat">
+              <div class="bj-stat-label">Zbić</div>
+              <div class="bj-stat-value" id="bb-pops">0</div>
+            </div>
+            <div class="bj-stat">
+              <div class="bj-stat-label">Największa grupa</div>
+              <div class="bj-stat-value" id="bb-best">0</div>
+            </div>
+          </div>
+
+          <div class="bb-arena" id="bb-arena">
+            <canvas id="bb-canvas"></canvas>
+          </div>
+
+          <div class="bj-actions">
+            <button class="btn-primary bj-start-btn" id="bb-start-btn">Start rundy</button>
+            <div class="bj-status" id="bb-status">Zbijaj grupy kulek — im większa grupa, tym więcej punktów.</div>
+          </div>
+        </section>
+      </div>
+
       <!-- Uzdrowiciel G6 panel (WoW Classic resto-druid healer; gameType healer_dungeon).
            PHASE 1: arcade-only. Unlike every other seasonal panel this one is a
            FIT-TO-VIEWPORT TAKEOVER (.hd-fit is position:fixed and covers the app
@@ -10070,6 +10142,18 @@
             <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
           <div class="ag-card-scores" data-scores="filler"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="bubble_breaker">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🔵</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">„Kulki G6”</span>
+              <span class="ag-card-tag">NOWOŚĆ · ŁAMIGŁÓWKA</span>
+            </div>
+            <div class="ag-card-desc">Bubble Breaker z palmtopa — ten sam, w którego grało się na Dellu Axim pod biurkiem. Zbijaj grupy stykających się kulek: grupa z n kulek daje n×(n−1) punktów, więc jedna dziesiątka bije pięć dwójek razem wziętych. Cierpliwość opłaca się bardziej niż tempo.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
+          </div>
+          <div class="ag-card-scores" data-scores="bubble_breaker"></div>
         </div>
         <div class="ag-card" role="button" tabindex="0" data-game="popup_panic">
           <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🖱️</span></div>
@@ -10918,6 +11002,11 @@ let healerRuntime = null;
 // any game's state — a blank board and an empty leaderboard for every seasonal
 // game, not just Filler. games/filler.js only ASSIGNS it.
 let fillerRuntime = null;
+// Same pre-declaration rule as every runtime above: games/bubble-breaker.js
+// only ASSIGNS this (a second top-level `let` for the same name across classic
+// scripts sharing one global scope is a SyntaxError), and the stop*/leave*
+// paths below reference it before that file has ever been fetched.
+let bubbleBreakerRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 
@@ -10941,6 +11030,7 @@ const LAZY_GAME_SCRIPTS = {
   tetris:        'games/tetris.js',
   healer_dungeon:'games/healer-dungeon.js',
   filler:        'games/filler.js',
+  bubble_breaker:'games/bubble-breaker.js',
 };
 const _gameScriptPromises = {};
 function ensureGameScript(gameType) {
@@ -10974,6 +11064,7 @@ function stopPopupPanicRound() {}
 function stopTetrisRound() {}
 function stopHealerDungeonRound() {}
 function stopFillerRound() {}
+function stopBubbleBreakerRound() {}
 const lwCharts = new Map();
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
@@ -11264,6 +11355,13 @@ const ttScoreEl       = document.getElementById('tt-score');
 const ttLinesEl       = document.getElementById('tt-lines');
 const ttLevelEl       = document.getElementById('tt-level');
 const ttTimeEl        = document.getElementById('tt-time');
+const bbArena         = document.getElementById('bb-arena');
+const bbStartBtn      = document.getElementById('bb-start-btn');
+const bbStatus        = document.getElementById('bb-status');
+const bbScoreEl       = document.getElementById('bb-score');
+const bbBallsEl       = document.getElementById('bb-balls');
+const bbPopsEl        = document.getElementById('bb-pops');
+const bbBestEl        = document.getElementById('bb-best');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
@@ -11563,6 +11661,7 @@ async function doLogout() {
   stopInvoiceHordeRound();
   stopTetrisRound(); // also drops handheld fullscreen + the body scroll lock
   stopHealerDungeonRound();
+  stopBubbleBreakerRound();
   resetGardenState();
   resetHeroState();
   hide(screenApp);
@@ -11811,6 +11910,7 @@ const AG_PANEL_IDS = {
   tetris:        'seasonal-game-tetris',
   healer_dungeon:'seasonal-game-healer-dungeon',
   filler:        'seasonal-game-filler',
+  bubble_breaker:'seasonal-game-bubble-breaker',
 };
 let agPanelHome = {};
 
@@ -11862,7 +11962,7 @@ function loadAllGamesTab() {
 
 function leaveAllGamesTab() {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound(); stopBubbleBreakerRound();
   stopAgPreviews();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesMode = false;
@@ -11887,7 +11987,7 @@ function selectAllGame(gameType) {
   if (gameType === 'healer_dungeon') agRequestFullscreen();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound(); stopBubbleBreakerRound();
   stopAgPreviews();   // the picker's previews borrow the same canvas globals
 
   allGamesSelectedGame = gameType;
@@ -11913,6 +12013,7 @@ function selectAllGame(gameType) {
     }
     // The panel just moved into #ag-game-slot, so its canvas needs re-measuring.
     if (gameType === 'tetris') requestAnimationFrame(() => { tetrisInitCanvas(); tetrisDraw(); });
+    if (gameType === 'bubble_breaker') requestAnimationFrame(() => { bubbleBreakerInitCanvas(); bubbleBreakerDraw(); });
     // Takeover game: build the idle party, then size the console to the viewport.
     if (gameType === 'healer_dungeon') requestAnimationFrame(() => {
       stopHealerDungeonRound();
@@ -12225,7 +12326,7 @@ document.querySelectorAll('.ag-card').forEach(card => {
 });
 document.getElementById('ag-back').addEventListener('click', () => {
   stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound();
-  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound();
+  stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound(); stopBubbleBreakerRound();
   if (allGamesSelectedGame) returnAgPanelHome(allGamesSelectedGame);
   allGamesSelectedGame = null;
   allGamesMode = false;
@@ -12240,7 +12341,7 @@ function switchTab(tab) {
   if (tab === 'invoice-horde-test' && !isAdmin()) tab = 'markets';
   if (tab === 'garden') tab = 'farm';
   const previousTab = activeTab;
-  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound(); if (typeof healerExitView === 'function') healerExitView(); }
+  if (previousTab === 'whack-boss' && tab !== 'whack-boss') { stopWhackBossRound(); stopBugJumperRound(); stopFlappyPantsRound(); stopSnakeRound(); stopInvoiceHordeRound(); stopVarPatrolRound(); stopEggCatchRound(); stopSuperMariuszRound(); stopPopupPanicRound(); stopTetrisRound(); stopHealerDungeonRound(); stopFillerRound(); stopBubbleBreakerRound(); if (typeof healerExitView === 'function') healerExitView(); }
   if (previousTab === 'all-games' && tab !== 'all-games') leaveAllGamesTab();
   if (previousTab === 'flappy-test' && tab !== 'flappy-test') { stopFlappyPantsRound(); restoreFlappyPanelHome(); }
   if (previousTab === 'bug-jumper-test' && tab !== 'bug-jumper-test') { stopBugJumperRound(); restoreBugJumperPanelHome(); }
@@ -22841,6 +22942,7 @@ function loadSeasonalTab(showSpinner = true) {
   const ttPanel       = document.getElementById('seasonal-game-tetris');
   const hdPanel       = document.getElementById('seasonal-game-healer-dungeon');
   const flPanel       = document.getElementById('seasonal-game-filler');
+  const bbPanel       = document.getElementById('seasonal-game-bubble-breaker');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -22867,6 +22969,13 @@ function loadSeasonalTab(showSpinner = true) {
   if (ttPanel) { if (isTT) show(ttPanel); else hide(ttPanel); }
   if (hdPanel) { if (isHD) show(hdPanel); else hide(hdPanel); }
   if (flPanel) { if (isFL) show(flPanel); else hide(flPanel); }
+  // „Kulki G6" is arcade-only — it is not in SEASONAL_ROTATION, so there is no
+  // isBB to test against and this panel is unconditionally hidden here. The
+  // line exists so the seasonal tab stays correct if a round was left open in
+  // the arcade picker, and becomes a normal show/hide pair the day it is
+  // promoted.
+  if (bbPanel) hide(bbPanel);
+  if (bubbleBreakerRuntime?.playing) stopBubbleBreakerRound();
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();

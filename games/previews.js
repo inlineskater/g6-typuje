@@ -830,6 +830,67 @@ function agpFillerStep(p) {
   agpFillerPaint(p);
 }
 
+// ── „Kulki G6" — real simulation, greedy-with-a-look-ahead tapping bot ───────
+// bbInitState/bbPopAt are pure (no DOM, no network, no score submission), so
+// the preview runs the actual game rather than a look-alike. The bot is
+// deliberately not optimal — it mostly takes the biggest group, which is what a
+// casual player does and what reads best as an attract mode.
+
+const AGP_BB_MOVE_MS = 620;    // pause between taps, so a viewer can follow
+const AGP_BB_HOLD_MS = 1600;   // linger on a finished board before reshuffling
+
+function agpBubbleReset(p) {
+  p.st = bbInitState(agpRandSeed());
+  p.rt = { playing: true, sim: p.st, sel: null, anim: null, burst: [], floats: [] };
+  p.doneFor = 0;
+}
+
+// All distinct poppable groups on the board, largest first.
+function agpBubbleGroups(cells) {
+  const seen = new Set();
+  const groups = [];
+  for (let i = 0; i < cells.length; i += 1) {
+    if (cells[i] < 0 || seen.has(i)) continue;
+    const g = bbGroupAt(cells, i);
+    g.forEach(x => seen.add(x));
+    if (g.length >= BB_MIN_GROUP) groups.push(g);
+  }
+  return groups.sort((a, b) => b.length - a.length);
+}
+
+function agpBubbleStep(p) {
+  const st = p.st;
+  const now = performance.now();
+  if (st.over) {
+    p.rt.playing = false;
+    p.doneFor += AGP_BB_MOVE_MS;
+    if (p.doneFor > AGP_BB_HOLD_MS) agpBubbleReset(p);
+    return;
+  }
+  const groups = agpBubbleGroups(st.cells);
+  // Letting `playing` go false is what makes bubbleBreakerDraw paint its real
+  // game-over card — a nicer beat to end the attract loop on than a dead board.
+  if (!groups.length) { st.over = true; p.rt.playing = false; return; }
+
+  // Show the selection for one beat before popping it — the highlight ring is
+  // half of what this game looks like, so an attract mode that skipped it
+  // would advertise the wrong thing.
+  if (!p.rt.sel) {
+    const pick = groups[Math.random() < 0.75 ? 0 : Math.min(1, groups.length - 1)];
+    p.rt.sel = { anchor: pick[0], group: pick, gain: bbGroupScore(pick.length) };
+    return;
+  }
+  const idx = p.rt.sel.anchor;
+  const color = st.cells[idx];
+  const res = bbPopAt(st, idx);
+  p.rt.sel = null;
+  if (!res) return;
+  res.group.forEach(i => p.rt.burst.push({ idx: i, color, until: now + BB_BURST_MS }));
+  p.rt.anim = { until: now + BB_FALL_MS, moves: res.moved };
+  const at = { x: (idx % BB_COLS) * BB_CELL + BB_CELL / 2, y: BB_HUD_H + Math.floor(idx / BB_COLS) * BB_CELL + BB_CELL / 2 };
+  p.rt.floats.push({ x: at.x, y: at.y, until: now + BB_FLOAT_MS, text: '+' + res.gained });
+}
+
 // ── Definitions ─────────────────────────────────────────────────────────────
 
 const AGP_DEFS = {
@@ -1036,6 +1097,24 @@ const AGP_DEFS = {
       const oc = smCtx, ort = superMariuszRuntime;
       smCtx = p.ctx; superMariuszRuntime = p.rt;
       try { smDraw(); } finally { smCtx = oc; superMariuszRuntime = ort; }
+    },
+  },
+
+  bubble_breaker: {
+    dep: 'bubble_breaker',
+    size: () => [BB_CS_W, BB_CS_H],
+    init(p) { agpBubbleReset(p); },
+    step(p, dt) {
+      p.acc += dt;
+      while (p.acc >= AGP_BB_MOVE_MS) {
+        p.acc -= AGP_BB_MOVE_MS;
+        agpBubbleStep(p);
+      }
+    },
+    draw(p) {
+      const oc = bbCtx, ort = bubbleBreakerRuntime;
+      bbCtx = p.ctx; bubbleBreakerRuntime = p.rt;
+      try { bubbleBreakerDraw(performance.now()); } finally { bbCtx = oc; bubbleBreakerRuntime = ort; }
     },
   },
 
