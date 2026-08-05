@@ -7493,6 +7493,9 @@
     /* Plant picker: responsive 2-column grid of entries (plant card + details).
        minmax(0, 1fr) keeps long names and income ranges inside the modal. */
     .farm-pick-note { max-width: 760px; font-size: 11px; color: var(--muted); margin: 2px 0 10px; line-height: 1.4; }
+    .fpk-sort { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 0 0 8px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .fpk-sort-select { min-height: 32px; max-width: 100%; padding: 5px 30px 5px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; outline: none; }
+    .fpk-sort-select:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px var(--acc-dim); }
     .fpk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 4px 0 2px; }
     .fpk-entry { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
     .fpk-entry.pickable { cursor: pointer; transition: border-color .12s, background .12s, box-shadow .12s, transform .12s; }
@@ -7521,6 +7524,7 @@
     .fpk-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .fpk-btn:disabled { background: var(--bg-mid, var(--surface)); color: var(--muted); box-shadow: none; cursor: not-allowed; }
     @media (max-width: 680px) { .fpk-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 420px) { .fpk-sort { justify-content: stretch; } .fpk-sort-select { flex: 1 1 auto; min-width: 0; } }
     @media (max-width: 360px) { .fpk-entry { gap: 8px; padding: 7px; } .fpk-card { width: 80px; } .fpk-card .fcc-art .farm-ico { width: 34px; height: 34px; } .fpk-card .fcc-art .farm-ico-emoji { font-size: 29px; } .fpk-line { gap: 5px; font-size: 10px; } }
     .fcc-item-effect { font-size: 9.5px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.25; width: 100%; min-height: 2.5em; display: flex; align-items: center; justify-content: center; word-break: break-word; }
     .fcc-item-slot { width: 100%; margin-top: 1px; padding: 6px 4px; border-radius: 8px; font-size: 11px; font-weight: 800; text-align: center; background: var(--bg-mid); color: var(--muted); box-sizing: border-box; }
@@ -29469,9 +29473,20 @@ function renderFarmSelectionBody() {
     box.append(el('div', { className: 'farm-pick-note' },
       'Ceny NPC wahają się 30–100% maks., dlatego zarobek podano jako widełki „od–do". Zysk zależy od poziomu karty.'
       + (seasonalActive ? ' 🏆 Roślina objęta kontraktem tygodnia jest oznaczona — bonus jest już doliczony do zarobku.' : '')));
+    const sortSelect = el('select', { className: 'fpk-sort-select', 'aria-label': 'Sortowanie roślin do zasadzenia' },
+      el('option', { value: 'default' }, 'Domyślna kolejność'),
+      el('option', { value: 'profit' }, 'Najbardziej opłacalne'));
+    const sortControl = el('label', { className: 'fpk-sort' },
+      el('span', {}, 'Sortuj'), sortSelect);
     const grid = el('div', { className: 'fpk-grid' });
-    entries.forEach(e => grid.append(farmPlantPickEntry(e)));
-    box.append(grid);
+    const renderEntries = () => {
+      grid.replaceChildren();
+      farmPlantPickerSortedEntries(entries, sortSelect.value)
+        .forEach(e => grid.append(farmPlantPickEntry(e)));
+    };
+    sortSelect.addEventListener('change', renderEntries);
+    renderEntries();
+    box.append(sortControl, grid);
     return;
   }
   const def = fmDefs.get(tile.planted_species);
@@ -30166,6 +30181,40 @@ function farmNftIncomeCalc(n, level) {
   return farmPlantIncomeCalc(s.def, L, { yld: s.yld, growMin: s.growMin });
 }
 
+// Shared ordering for every surface that promises "most profitable": use the
+// top of the daily price band, then today's price, then the quicker harvest.
+// Both the Mój Majątek advisor and the empty-tile picker go through this helper
+// so the two rankings cannot drift apart.
+function farmDailyProfitCompare(a, b) {
+  return b.calc.dayHigh - a.calc.dayHigh
+      || b.calc.dayNow - a.calc.dayNow
+      || a.calc.growMin - b.calc.growMin;
+}
+
+function farmPlantPickerEntryCalc(entry) {
+  return entry.inst
+    ? farmNftIncomeCalc(entry.inst, entry.level)
+    : farmPlantIncomeCalc(entry.def, entry.level);
+}
+
+// The picker keeps its current catalog-style order by default. Profit mode is
+// deliberately stable: plantable entries with a price come first, entries that
+// cannot be valued follow, and unavailable cards stay at the bottom in their
+// original order instead of looking like recommendations.
+function farmPlantPickerSortedEntries(entries, mode) {
+  if (mode !== 'profit') return entries;
+  return entries.map((entry, index) => ({ entry, index, calc: farmPlantPickerEntryCalc(entry) }))
+    .sort((a, b) => {
+      const aDisabled = !!a.entry.disabled, bDisabled = !!b.entry.disabled;
+      if (aDisabled !== bDisabled) return aDisabled ? 1 : -1;
+      if (aDisabled) return a.index - b.index;
+      if (!!a.calc !== !!b.calc) return a.calc ? -1 : 1;
+      if (!a.calc) return a.index - b.index;
+      return farmDailyProfitCompare(a, b) || a.index - b.index;
+    })
+    .map(row => row.entry);
+}
+
 // Empty owned tiles a crop could actually go into. fmTiles already drops
 // `acquired_via='migration'` rows on load, but the check is kept so this stays
 // correct if that ever changes — plant_crop rejects zen tiles and listed ones.
@@ -30215,9 +30264,7 @@ function farmPlantableRanking() {
   // „Najwyższy możliwy zarobek" = the top of the price band; ties break on what
   // the crop would actually pay today, then on the shorter grow time.
   return out.filter(r => r.calc)
-    .sort((a, b) => b.calc.dayHigh - a.calc.dayHigh
-                 || b.calc.dayNow - a.calc.dayNow
-                 || a.calc.growMin - b.calc.growMin);
+    .sort(farmDailyProfitCompare);
 }
 
 // One plant-picker entry: identity (icon · name · level) on the left, then grow
