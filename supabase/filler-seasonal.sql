@@ -1,5 +1,11 @@
 -- „Filler" (filler) — Phase 2 seasonal-game promotion for Rynek Proroctw G6.
 -- Run after supabase/filler.sql. Debuts via SEASONAL_OVERRIDES on the week
+-- ⚠️ 2026-08-05: this file is DEPLOYED AND ARMED but Filler is scheduled for
+-- NO WEEK — the 2026-08-10 slot below was reassigned to „Kulki G6" (a PvP game
+-- needs two players online at once, a bad bet for a pre-planned unsupervised
+-- week). The season gate means the cron job simply skips; to schedule a Filler
+-- week later, add the SEASONAL_OVERRIDES entry + the matching WHEN clause in
+-- seasonal_game_for_week(). Nothing here needs to change.
 -- starting 2026-08-10 (see index.html + supabase/season-award-gating.sql,
 -- which must both be updated in the same deploy as this file).
 --

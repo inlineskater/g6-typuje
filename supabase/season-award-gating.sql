@@ -32,15 +32,23 @@ AS $$
     WHEN '2026-07-20' THEN 'popup_panic'  -- Zamknij Popupy! debut
     WHEN '2026-07-27' THEN 'tetris'  -- Tetris G6 debut
     WHEN '2026-08-03' THEN 'healer_dungeon'  -- Uzdrowiciel G6 debut
-    WHEN '2026-08-10' THEN 'filler'  -- Filler debut (took the slot Bug Jumper's relaunch had)
-    WHEN '2026-08-17' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a THIRD time — Tetris, then Uzdrowiciel, then Filler)
+    -- 2026-08-05: the next four weeks were planned in one go. Filler was taken
+    -- OUT of the 2026-08-10 slot (it needs two live players at once, a bad bet
+    -- for an unattended week); it stays in the rotation array below but is not
+    -- scheduled. The other three slots went to the three most-played games by
+    -- measured engagement.
+    WHEN '2026-08-10' THEN 'bubble_breaker'  -- „Kulki G6" debut (took Filler's slot)
+    WHEN '2026-08-17' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a THIRD time — Tetris, then Uzdrowiciel, then the Kulki debut)
+    WHEN '2026-08-24' THEN 'super_mariusz'  -- encore
+    WHEN '2026-08-31' THEN 'flappy_pants'  -- encore
     -- SEASONAL_ROTATION from its 2026-05-18 Monday anchor.
     ELSE
       (ARRAY[
         'whack_boss','bug_jumper','flappy_pants','snake','invoice_horde',
-        'var_patrol','egg_catch','super_mariusz','popup_panic','tetris','healer_dungeon','filler'
+        'var_patrol','egg_catch','super_mariusz','popup_panic','tetris','healer_dungeon','filler',
+        'bubble_breaker'
       ])[
-        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 12) + 1
+        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 13) + 1
       ]
   END;
 $$;
@@ -159,7 +167,9 @@ SELECT cron.schedule(
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );
 
--- Filler — dormant until its 2026-08-10 debut (see supabase/filler-seasonal.sql).
+-- Filler — in the rotation array but NOT scheduled for any week yet (its
+-- 2026-08-10 debut was reassigned to „Kulki G6" on 2026-08-05). The job stays
+-- armed so the day a Filler week is scheduled, the payout just works.
 SELECT cron.schedule(
   'filler_weekly_awards',
   '0 22,23 * * 0',
@@ -167,5 +177,16 @@ SELECT cron.schedule(
       THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
       WHEN public.seasonal_game_for_week(public.filler_week_start(now() - interval '7 days')) = 'filler'
       THEN public.award_filler_week(public.filler_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+-- „Kulki G6" — debuts the week of 2026-08-10 (see supabase/bubble-breaker.sql).
+SELECT cron.schedule(
+  'bubble_breaker_weekly_awards',
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.bubble_breaker_week_start(now() - interval '7 days')) = 'bubble_breaker'
+      THEN public.award_bubble_breaker_week(public.bubble_breaker_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );

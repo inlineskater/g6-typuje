@@ -81,6 +81,9 @@ seasonal AS (
     UNION ALL SELECT user_id, week_start FROM super_mariusz_scores
     UNION ALL SELECT user_id, week_start FROM popup_panic_scores
     UNION ALL SELECT user_id, week_start FROM tetris_scores
+    UNION ALL SELECT user_id, week_start FROM healer_dungeon_scores
+    UNION ALL SELECT user_id, week_start FROM filler_scores
+    UNION ALL SELECT user_id, week_start FROM bubble_breaker_scores
   ) s WHERE wk >= '2026-06-01' GROUP BY user_id),
 farm AS (
   SELECT user_id, LEAST(8, count(DISTINCT d)) t FROM (

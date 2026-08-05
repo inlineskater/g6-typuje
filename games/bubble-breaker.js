@@ -5,17 +5,31 @@
 // one group of 10 (90) beats five groups of 2 (10). Balls fall into the gap and
 // empty columns slide left; the round ends when no group of two remains.
 //
-// ARCADE-ONLY (like Filler and Uzdrowiciel were at launch): there is no
-// bubble-breaker-action Edge Function and no seasonal SQL, so the score is
-// client-reported through record_arcade_score() exactly like every other
-// arcade-archive run, guarded only by the cap in supabase/arcade.sql.
-// The simulation below is nevertheless kept PURE and DETERMINISTIC (seed +
-// a list of tapped indices fully reproduces a round, no DOM/network/Date
-// inside bbInitState/bbPopAt) for two reasons: games/previews.js runs the real
-// thing rather than a look-alike, and promoting this to a seasonal game later
-// is then a transcription of the block below into an Edge Function, not a
-// rewrite. Keep that property when editing.
+// FULL SEASONAL GAME since 2026-08 (debuts via SEASONAL_OVERRIDES on the week
+// starting 2026-08-10), promoted from arcade-only. It runs in two modes:
+//
+//   seasonal  — supabase/functions/bubble-breaker-action issues the seed and
+//               owns the score. The client logs the index of every cell it
+//               taps and the server replays seed + that list, so a score can
+//               only be as high as a legal sequence of pops makes it.
+//   arcade    — „Wszystkie Gry" (allGamesMode). Unchanged from launch: a local
+//               random seed, no round row, score client-reported through
+//               record_arcade_score() and guarded only by the cap in
+//               supabase/arcade.sql.
+//
+// The promotion cost almost nothing because the simulation below was kept PURE
+// and DETERMINISTIC from day one (seed + a list of tapped indices fully
+// reproduces a round; no DOM/network/Date inside bbInitState/bbPopAt) — the
+// Edge Function is a transcription of the fenced PARITY BLOCK, not a rewrite,
+// and games/previews.js runs the real thing rather than a look-alike. Keep
+// that property when editing.
+//
+// ⚠️ PARITY CONTRACT: everything between the PARITY BLOCK fences below must
+// stay byte-for-byte equivalent to the same block in
+// supabase/functions/bubble-breaker-action/index.ts. Verified by
+// `node scripts/bb-parity.mjs`.
 
+// ── PARITY BLOCK START ──────────────────────────────────────────────────────
 const BB_COLS = 15;
 const BB_ROWS = 15;
 const BB_COLORS = 5;
@@ -27,16 +41,6 @@ const BB_CLEAR_BONUS = 1000;   // board emptied completely
 // blobs scores 225×44 = 9900, +1000 for the clear = 10900. 12000 leaves head
 // room without being meaningless.
 const BB_MAX_SCORE = 12000;
-
-const BB_CELL = 24;
-const BB_HUD_H = 40;
-const BB_CS_W = BB_COLS * BB_CELL;                 // 360
-const BB_CS_H = BB_HUD_H + BB_ROWS * BB_CELL;      // 400
-const BB_MAX_DPR = 2;
-
-const BB_FALL_MS = 190;   // ball slide after a pop
-const BB_BURST_MS = 260;  // popped-ball ring
-const BB_FLOAT_MS = 750;  // rising „+42"
 
 function bbIdx(col, row) { return row * BB_COLS + col; }
 
@@ -180,6 +184,20 @@ function bbPopAt(st, start) {
   }
   return { group, gained, moved, remaining: left };
 }
+// ── PARITY BLOCK END ────────────────────────────────────────────────────────
+
+// Rendering-only constants. Deliberately BELOW the parity fence — the Edge
+// Function has no canvas, so keeping them inside would make every layout tweak
+// look like a parity break.
+const BB_CELL = 24;
+const BB_HUD_H = 40;
+const BB_CS_W = BB_COLS * BB_CELL;                 // 360
+const BB_CS_H = BB_HUD_H + BB_ROWS * BB_CELL;      // 400
+const BB_MAX_DPR = 2;
+
+const BB_FALL_MS = 190;   // ball slide after a pop
+const BB_BURST_MS = 260;  // popped-ball ring
+const BB_FLOAT_MS = 750;  // rising „+42"
 
 // ── Runtime ─────────────────────────────────────────────────────────────────
 
@@ -187,6 +205,8 @@ function newBubbleBreakerRuntime() {
   return {
     playing: false, submitting: false, settled: false, archiveMode: false,
     seed: 1,
+    roundId: null,      // seasonal rounds only; null in arcade/demo mode
+    moveLog: [],        // tapped cell index per pop — the whole replay payload
     sim: bbInitState(1),
     sel: null,          // { anchor, group, gain } — hovered (mouse) or tapped (touch)
     anim: null,         // { until, moves: [{to, from}] }
@@ -227,6 +247,8 @@ function bubbleBreakerResetBoard(seed = 1) {
   rt.anim = null;
   rt.burst = [];
   rt.floats = [];
+  rt.moveLog = [];
+  rt.roundId = null;
   rt.endedReason = '';
   rt.settled = false;   // a fresh board may be submitted again
   bubbleBreakerRuntime = rt;
@@ -426,10 +448,12 @@ function stopBubbleBreakerRound() {
   bubbleBreakerDraw();
 }
 
-function beginBubbleBreakerRound(seed) {
+function beginBubbleBreakerRound(seed, options = {}) {
   stopBubbleBreakerRound();
   const rt = bubbleBreakerResetBoard(seed);
   rt.playing = true;
+  rt.archiveMode = !!options.archiveMode;
+  rt.roundId = options.roundId || null;
   rt.startedAt = performance.now();
   if (bbStartBtn) { bbStartBtn.disabled = true; bbStartBtn.textContent = 'Runda trwa'; }
   if (bbStatus) bbStatus.textContent = 'Najedź (albo dotknij) grupę, żeby ją zaznaczyć — kliknij zaznaczoną, żeby zbić.';
@@ -441,19 +465,35 @@ function beginBubbleBreakerRound(seed) {
 async function startBubbleBreakerRound() {
   const rt = bubbleBreakerRuntime;
   if (rt?.playing || rt?.submitting) return;
+
+  // Arcade path (unchanged from launch): a purely local round. No server round
+  // row is burned for a run that can never enter the weekly ranking.
   if (allGamesMode) {
     try { await payArcadeEntry(allGamesSelectedGame); }
     catch (e) { showToast('❌ Nie udało się wejść do gry.'); return; }
+    beginBubbleBreakerRound((Math.floor(Math.random() * 0xfffffff) + 1) >>> 0, { archiveMode: true });
+    return;
   }
-  beginBubbleBreakerRound((Math.floor(Math.random() * 0xfffffff) + 1) >>> 0);
-  if (allGamesMode) bubbleBreakerRuntime.archiveMode = true;
+
+  // Seasonal path: the server owns the seed and, on submit, the score.
+  if (bbStartBtn) { bbStartBtn.disabled = true; bbStartBtn.textContent = 'Ładuję...'; }
+  if (bbStatus) bbStatus.textContent = 'Przygotowuję rundę...';
+  try {
+    const data = await invokeBubbleBreaker({ action: 'start' });
+    renderBubbleBreakerState(data);
+    beginBubbleBreakerRound(Number(data.round.seed) || 1, { roundId: data.round.id });
+  } catch (err) {
+    showToast('❌ ' + err.message);
+    if (bbStatus) bbStatus.textContent = 'Nie udało się wystartować rundy.';
+    if (bbStartBtn) { bbStartBtn.disabled = false; bbStartBtn.textContent = 'Start rundy'; }
+  }
 }
 
 async function finishBubbleBreakerRound() {
   const rt = bubbleBreakerRuntime;
   // `submitting` alone is not enough: it is cleared in the finally below, so a
   // second call after the first completed would submit the same board again and
-  // report a cheerful „zapisano" for a row the RPC's 5 s cooldown rejected.
+  // report a cheerful „zapisano" for a row the server rejected.
   // `settled` is the one-way latch; only a new round clears it.
   if (!rt || rt.submitting || rt.settled) return;
   rt.playing = false;
@@ -466,25 +506,144 @@ async function finishBubbleBreakerRound() {
 
   const score = Math.min(BB_MAX_SCORE, rt.sim.score);
   const tail = rt.sim.cleared ? ' 🧹 Cała plansza wyczyszczona!' : '';
-  if (!allGamesMode) {
-    rt.submitting = false;
-    if (bbStartBtn) { bbStartBtn.disabled = false; bbStartBtn.textContent = 'Zagraj ponownie'; }
-    if (bbStatus) bbStatus.textContent = 'Demo — wynik: ' + score + ' (nie zapisano).' + tail;
+
+  // Arcade / demo: client-reported score, exactly as before the promotion.
+  if (rt.archiveMode || !rt.roundId) {
+    if (!allGamesMode) {
+      rt.submitting = false;
+      if (bbStartBtn) { bbStartBtn.disabled = false; bbStartBtn.textContent = 'Zagraj ponownie'; }
+      if (bbStatus) bbStatus.textContent = 'Demo — wynik: ' + score + ' (nie zapisano).' + tail;
+      return;
+    }
+    if (bbStartBtn) { bbStartBtn.disabled = true; bbStartBtn.textContent = 'Zapisuję...'; }
+    try {
+      await recordArcadeScore('bubble_breaker', score);
+      if (bbStatus) bbStatus.textContent = 'Wynik: ' + score + ' · zapisano w rankingu arcade!' + tail;
+      showToast('✅ Wynik zapisany: ' + score);
+      loadArcadeScores('bubble_breaker');
+    } catch (err) {
+      if (bbStatus) bbStatus.textContent = 'Wynik: ' + score + ' (błąd zapisu).';
+      showToast('❌ Nie udało się zapisać wyniku.');
+    } finally {
+      rt.submitting = false;
+      if (bbStartBtn) { bbStartBtn.disabled = false; bbStartBtn.textContent = 'Zagraj ponownie'; }
+    }
     return;
   }
+
+  // Seasonal: send seed + the tapped-cell list; the server replays and decides.
   if (bbStartBtn) { bbStartBtn.disabled = true; bbStartBtn.textContent = 'Zapisuję...'; }
+  if (bbStatus) bbStatus.textContent = 'Zapisuję wynik...';
   try {
-    await recordArcadeScore('bubble_breaker', score);
-    if (bbStatus) bbStatus.textContent = 'Wynik: ' + score + ' · zapisano w rankingu arcade!' + tail;
-    showToast('✅ Wynik zapisany: ' + score);
-    loadArcadeScores('bubble_breaker');
+    const data = await invokeBubbleBreaker({
+      action: 'submit',
+      roundId: rt.roundId,
+      moves: rt.moveLog,
+      score,
+    });
+    renderBubbleBreakerState(data);
+    showToast('✅ Wynik zapisany: ' + data.score.score);
+    if (bbStatus) {
+      bbStatus.textContent = 'Ostatni wynik: ' + data.score.score
+        + ' (największa grupa: ' + data.score.best_group + ').' + tail;
+    }
   } catch (err) {
-    if (bbStatus) bbStatus.textContent = 'Wynik: ' + score + ' (błąd zapisu).';
-    showToast('❌ Nie udało się zapisać wyniku.');
+    showToast('❌ ' + err.message);
+    if (bbStatus) bbStatus.textContent = 'Nie udało się zapisać wyniku: ' + err.message;
   } finally {
     rt.submitting = false;
     if (bbStartBtn) { bbStartBtn.disabled = false; bbStartBtn.textContent = 'Zagraj ponownie'; }
   }
+}
+
+// ── Seasonal networking + leaderboards ──────────────────────────────────────
+
+async function invokeBubbleBreaker(payload) {
+  const { data, error } = await sb.functions.invoke('bubble-breaker-action', { body: payload });
+  if (error) throw new Error(error.message || 'Nie udało się połączyć z Kulkami.');
+  if (!data || data.ok === false) throw new Error(data?.error || 'Błąd Kulek.');
+  return data;
+}
+
+async function loadBubbleBreakerState(showSpinner = true) {
+  if (!bubbleBreakerRuntime) bubbleBreakerResetBoard(1);
+  bubbleBreakerSetStats();
+  bubbleBreakerInitCanvas();
+  bubbleBreakerDraw();
+  const weeklyWrap  = document.getElementById('bb-weekly-board');
+  const allTimeWrap = document.getElementById('bb-alltime-board');
+  const awardsWrap  = document.getElementById('bb-awards');
+  if (showSpinner) {
+    if (weeklyWrap)  weeklyWrap.replaceChildren(makeSpinner());
+    if (allTimeWrap) allTimeWrap.replaceChildren(makeSpinner());
+    if (awardsWrap)  awardsWrap.replaceChildren();
+  }
+  try {
+    const data = await invokeBubbleBreaker({ action: 'state' });
+    renderBubbleBreakerState(data);
+  } catch (err) {
+    const msg = err.message || 'Nie udało się wczytać gry.';
+    if (weeklyWrap)  weeklyWrap.replaceChildren(el('p', { className: 'bj-empty' }, msg));
+    if (allTimeWrap) allTimeWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Brak danych.'));
+    if (awardsWrap)  awardsWrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Wdróż SQL i funkcję Edge, żeby aktywować grę.'));
+    if (bbStatus) bbStatus.textContent = 'Kulki nie są jeszcze aktywne.';
+  }
+}
+
+function renderBubbleBreakerState(data) {
+  if (data.profile) { me.coins = data.profile.coins; setText(headerCoins, me.coins); }
+  const weekLabel = document.getElementById('bb-week-label');
+  if (weekLabel) {
+    const range = whackBossWeekRange(data.weekStart);
+    weekLabel.textContent = range ? range.short : '';
+  }
+  renderBubbleBreakerTable(document.getElementById('bb-weekly-board'), data.weekly || [], 'weekly');
+  renderBubbleBreakerTable(document.getElementById('bb-alltime-board'), data.allTime || [], 'allTime');
+  renderBubbleBreakerAwards(document.getElementById('bb-awards'), data.awards || []);
+  if (!bubbleBreakerRuntime?.playing && bbStatus) {
+    bbStatus.textContent = data.myWeekly
+      ? 'Twój najlepszy wynik w tym tygodniu: ' + data.myWeekly.score + '.'
+      : 'Zbijaj duże grupy — najlepszy wynik tygodnia trafia do rankingu.';
+  }
+}
+
+function renderBubbleBreakerTable(wrap, rows, mode) {
+  if (!wrap) return;
+  rows = rows.filter(r => r.nick !== 'admin');
+  if (!rows.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, mode === 'weekly' ? 'Jeszcze nikt nie zagrał w tym tygodniu.' : 'Brak rekordów.'));
+    return;
+  }
+  const bodyRows = rows.slice(0, 10).map(row => el('tr', {},
+    el('td', { className: 'lb-rank' + (row.rank === 1 ? ' gold' : '') }, whackBossRankLabel(row.rank)),
+    el('td', { className: 'lb-nick' + (row.user_id === me?.id ? ' me' : '') }, row.nick + (row.user_id === me?.id ? ' (Ty)' : '')),
+    lbScoreCell(row)
+  ));
+  wrap.replaceChildren(
+    el('table', { className: 'lb-table-compact' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, '#'),
+        el('th', {}, 'Nick'),
+        el('th', { title: 'Najwyższy wynik' }, 'Wynik')
+      )),
+      el('tbody', {}, ...bodyRows)
+    )
+  );
+}
+
+function renderBubbleBreakerAwards(wrap, awards) {
+  if (!wrap) return;
+  if (!awards.length) {
+    wrap.replaceChildren(el('p', { className: 'bj-empty' }, 'Pierwsze nagrody pojawią się po zakończeniu tygodnia.'));
+    return;
+  }
+  wrap.replaceChildren(...awards.slice(0, 6).map(row => {
+    const label = whackBossWeekRange(row.week_start)?.short || '';
+    return el('div', { className: 'bj-award-row' },
+      el('span', {}, whackBossRankLabel(row.rank) + ' ' + row.nick + (label ? ' · ' + label : '')),
+      el('strong', {}, '+' + row.prize_coins + ' 🪙')
+    );
+  }));
 }
 
 // ── Input ───────────────────────────────────────────────────────────────────
@@ -526,6 +685,9 @@ function bbCommit(idx) {
   const color = rt.sim.cells[idx];
   const res = bbPopAt(rt.sim, idx);
   if (!res) return;
+  // The whole replay payload: one tapped index per pop, in order. Logged after
+  // bbPopAt so a rejected tap never enters the log.
+  rt.moveLog.push(idx);
   const now = performance.now();
   res.group.forEach(i => rt.burst.push({ idx: i, color, until: now + BB_BURST_MS }));
   rt.anim = { until: now + BB_FALL_MS, moves: res.moved };

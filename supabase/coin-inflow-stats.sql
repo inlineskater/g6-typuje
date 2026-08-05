@@ -188,10 +188,19 @@ AS $$
     SELECT user_id, prize_coins, awarded_at FROM public.popup_panic_weekly_awards
     UNION ALL
     SELECT user_id, prize_coins, awarded_at FROM public.tetris_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.healer_dungeon_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.filler_weekly_awards
+    UNION ALL
+    SELECT user_id, prize_coins, awarded_at FROM public.bubble_breaker_weekly_awards
   ),
   -- NOTE: this UNION must list EVERY seasonal game. It is the one place that
   -- has to be touched when a game joins SEASONAL_ROTATION — tetris shipped
   -- without it, so Tetris prize payouts were invisible to the Wpływy card.
+  -- 2026-08-05: healer_dungeon and filler were missing for the same reason
+  -- (they joined the rotation and nobody came back here); added alongside the
+  -- new bubble_breaker.
   seasonal_inflows AS (
     SELECT
       user_id,

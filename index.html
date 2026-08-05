@@ -9638,62 +9638,93 @@
       </div>
 
       <!-- „Kulki G6" panel (Bubble Breaker / SameGame; gameType bubble_breaker).
-           ARCADE-ONLY: not in SEASONAL_ROTATION, so this panel is only ever
-           shown by selectAllGame() moving it into #ag-game-slot. It lives here
-           with the seasonal panels anyway (same as Filler and Uzdrowiciel did
-           at launch) so promoting it later is a SEASONAL_ROTATION entry plus an
-           Edge Function rather than moving markup around. There is no aside
-           with weekly boards for the same reason — the arcade picker's own
-           #ag-scores-panel carries the records. -->
+           Full seasonal game since 2026-08 (debuts 2026-08-10), promoted from
+           arcade-only. The panel serves BOTH modes: loadSeasonalTab() shows it
+           in place during its season, and selectAllGame() moves the same node
+           into #ag-game-slot for a free arcade run. The aside below is the
+           seasonal leaderboard; in the arcade the picker's own
+           #ag-scores-panel carries the records instead. -->
       <div id="seasonal-game-bubble-breaker" class="hidden">
-        <section class="bj-game-panel">
-          <div class="bj-head">
-            <div>
-              <h2 class="page-title">„Kulki G6" 🔵</h2>
-              <p class="page-sub">Klasyk z palmtopa — <strong>Bubble Breaker</strong> z Windows Mobile, ten sam, w którego grało się na Dellu Axim X51 pod biurkiem. Zbijaj grupy stykających się kulek tego samego koloru. <strong>Im większa grupa, tym nieproporcjonalnie więcej punktów</strong> — jedna dziesiątka jest warta więcej niż pięć dwójek razem.</p>
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">„Kulki G6" 🔵</h2>
+                <p class="page-sub">Klasyk z palmtopa — <strong>Bubble Breaker</strong> z Windows Mobile, ten sam, w którego grało się na Dellu Axim X51 pod biurkiem. Zbijaj grupy stykających się kulek tego samego koloru. <strong>Im większa grupa, tym nieproporcjonalnie więcej punktów</strong> — jedna dziesiątka jest warta więcej niż pięć dwójek razem.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
+              </div>
             </div>
-          </div>
 
-          <div class="bj-rules">
-            <div class="bj-rules-title">Jak grać</div>
-            <ul>
-              <li><strong>Myszką:</strong> najedź na grupę — podświetli się i pokaże, ile jest warta. Kliknij, żeby ją zbić.</li>
-              <li><strong>Palcem:</strong> pierwsze dotknięcie zaznacza grupę, drugie ją zbija — tak jak w oryginale, żeby nie zbić czegoś przez pomyłkę.</li>
-              <li><strong>Liczy się rozmiar:</strong> grupa z <strong>n</strong> kulek daje <strong>n × (n−1)</strong> punktów. Dwójka to 2 punkty, piątka 20, dziesiątka aż 90. Opłaca się cierpliwie budować duże skupiska zamiast zbijać każdą parę od ręki.</li>
-              <li>Kulki stykają się <strong>bokami</strong>, nie rogami. Po zbiciu reszta opada w dół, a puste kolumny przesuwają się w lewo — to właśnie zbliża do siebie odległe kolory.</li>
-              <li><strong>Koniec rundy</strong>, gdy na planszy nie ma już ani jednej pary. Za wyczyszczenie całej planszy jest <strong>+1000</strong> bonusu.</li>
-              <li>Gra jest <strong>za darmo</strong>, a Twój najlepszy wynik trafia do rankingu „Wszystkie Gry".</li>
-            </ul>
-          </div>
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać</div>
+              <ul>
+                <li><strong>Myszką:</strong> najedź na grupę — podświetli się i pokaże, ile jest warta. Kliknij, żeby ją zbić.</li>
+                <li><strong>Palcem:</strong> pierwsze dotknięcie zaznacza grupę, drugie ją zbija — tak jak w oryginale, żeby nie zbić czegoś przez pomyłkę.</li>
+                <li><strong>Liczy się rozmiar:</strong> grupa z <strong>n</strong> kulek daje <strong>n × (n−1)</strong> punktów. Dwójka to 2 punkty, piątka 20, dziesiątka aż 90. Opłaca się cierpliwie budować duże skupiska zamiast zbijać każdą parę od ręki.</li>
+                <li>Kulki stykają się <strong>bokami</strong>, nie rogami. Po zbiciu reszta opada w dół, a puste kolumny przesuwają się w lewo — to właśnie zbliża do siebie odległe kolory.</li>
+                <li><strong>Koniec rundy</strong>, gdy na planszy nie ma już ani jednej pary — dopiero wtedy wynik się zapisuje. Za wyczyszczenie całej planszy jest <strong>+1000</strong> bonusu.</li>
+                <li><strong>Przedmioty specjalne</strong> z bonusem do wyniku dorzucają ×10 swojej wartości (przedmiot +5 to +50 punktów).</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
+              </ul>
+            </div>
 
-          <div class="bj-stats">
-            <div class="bj-stat">
-              <div class="bj-stat-label">Wynik</div>
-              <div class="bj-stat-value" id="bb-score">0</div>
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Wynik</div>
+                <div class="bj-stat-value" id="bb-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Kulek</div>
+                <div class="bj-stat-value" id="bb-balls">225</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Zbić</div>
+                <div class="bj-stat-value" id="bb-pops">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Największa grupa</div>
+                <div class="bj-stat-value" id="bb-best">0</div>
+              </div>
             </div>
-            <div class="bj-stat">
-              <div class="bj-stat-label">Kulek</div>
-              <div class="bj-stat-value" id="bb-balls">225</div>
-            </div>
-            <div class="bj-stat">
-              <div class="bj-stat-label">Zbić</div>
-              <div class="bj-stat-value" id="bb-pops">0</div>
-            </div>
-            <div class="bj-stat">
-              <div class="bj-stat-label">Największa grupa</div>
-              <div class="bj-stat-value" id="bb-best">0</div>
-            </div>
-          </div>
 
-          <div class="bb-arena" id="bb-arena">
-            <canvas id="bb-canvas"></canvas>
-          </div>
+            <div class="bb-arena" id="bb-arena">
+              <canvas id="bb-canvas"></canvas>
+            </div>
 
-          <div class="bj-actions">
-            <button class="btn-primary bj-start-btn" id="bb-start-btn">Start rundy</button>
-            <div class="bj-status" id="bb-status">Zbijaj grupy kulek — im większa grupa, tym więcej punktów.</div>
-          </div>
-        </section>
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="bb-start-btn">Start rundy</button>
+              <div class="bj-status" id="bb-status">Zbijaj grupy kulek — im większa grupa, tym więcej punktów.</div>
+            </div>
+          </section>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="bb-week-label"></span>
+              </div>
+              <div id="bb-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="bb-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
+              </div>
+              <div class="bj-awards" id="bb-awards"></div>
+            </section>
+          </aside>
+        </div>
       </div>
 
       <!-- Uzdrowiciel G6 panel (WoW Classic resto-druid healer; gameType healer_dungeon).
@@ -11121,7 +11152,7 @@ const HERO_ITEM_SLOTS = [
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
 // Masculine forms (przedmiot), unlike FARM_RARITY_PL's feminine forms (karta).
 const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki', legendary: 'legendarny' };
-const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic', 'tetris']);
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic', 'tetris', 'bubble_breaker']);
 let heroItemDefs = [];
 let casinoLuckGlobalUntil = null; // shared „Amulet Bezwstydnego Fartu" buff end (casino_luck_status view)
 let casinoLuckStatusLoadedAt = 0;
@@ -13287,6 +13318,7 @@ const ACT_GAME_LABELS = {
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
   egg_catch: '🥚 Łap Jajka', super_mariusz: '🧢 Super Mariusz',
   popup_panic: '🖱️ Zamknij Popupy', tetris: '🧱 Tetris G6',
+  bubble_breaker: '🔵 Kulki G6',
   arcade: '🕹️ Arkada',
 };
 // Casino games whose rapid plays are collapsed into one session row; an idle gap
@@ -13359,7 +13391,7 @@ async function buildActivityFeed() {
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
     whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, eggCatchRes,
-    superMariuszRes, popupPanicRes, tetrisRes, arcadeRes, nftRes,
+    superMariuszRes, popupPanicRes, tetrisRes, bubbleBreakerRes, arcadeRes, nftRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -13376,6 +13408,7 @@ async function buildActivityFeed() {
     ranged(sb.from('super_mariusz_scores').select('user_id,nick_snapshot,score,completion_ms,completed,submitted_at'), 'submitted_at'),
     ranged(sb.from('popup_panic_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('tetris_scores').select(scoreSel), 'submitted_at'),
+    ranged(sb.from('bubble_breaker_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
     ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
@@ -13464,6 +13497,7 @@ async function buildActivityFeed() {
   pushScores(eggCatchRes.data, 'egg_catch');
   pushScores(popupPanicRes.data, 'popup_panic');
   pushScores(tetrisRes.data, 'tetris');
+  pushScores(bubbleBreakerRes.data, 'bubble_breaker');
   (superMariuszRes.data || []).forEach(s => {
     const tail = s.completed ? 'ukończył trasę w ' + smFormatTime(s.completion_ms) : 'DNF — ' + smProgressPct(s.score) + '% trasy';
     entries.push({ nick: nickOf(s), ts: s.submitted_at, cat: 'game',
@@ -13786,6 +13820,13 @@ function setupRealtime() {
       if (activeTab === 'whack-boss') ensureGameScript('tetris').then(() => loadTetrisState(false));
       await refreshMeCoins();
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bubble_breaker_scores' }, () => {
+      if (activeTab === 'whack-boss') ensureGameScript('bubble_breaker').then(() => loadBubbleBreakerState(false));
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bubble_breaker_weekly_awards' }, async () => {
+      if (activeTab === 'whack-boss') ensureGameScript('bubble_breaker').then(() => loadBubbleBreakerState(false));
+      await refreshMeCoins();
+    })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, () => {
       if (activeTab === 'whack-boss') ensureGameScript('invoice_horde').then(() => loadInvoiceHordeState(false));
     })
@@ -14023,6 +14064,7 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'popup_panic_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tetris_scores' }, scheduleActivityRebuild)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bubble_breaker_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'farm_nft_transfers' }, scheduleActivityRebuild)
@@ -22486,7 +22528,23 @@ const SEASONAL_ROTATION = [
   { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },
   { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },
   { gameType: 'filler', displayName: 'Filler 🎨' },
+  { gameType: 'bubble_breaker', displayName: '„Kulki G6" 🔵' },
 ];
+// ⚠️ Every entry here is mirrored in seasonal_game_for_week()
+// (supabase/season-award-gating.sql) — that SQL function gates the Monday
+// payout crons, so an override that exists only here means the week is played
+// and then nobody is paid. Re-run that file after editing this block.
+//
+// 2026-08-05: the next four weeks were planned in one go, and Filler was
+// deliberately taken OUT of the 08-10 slot it had been given. It stays in
+// SEASONAL_ROTATION (so its awards/history keep rendering) but is not
+// scheduled — as the only PvP game it needs two willing players online at the
+// same time, which is a bad fit for a week where nobody is watching. The other
+// three slots went to the three most-played games by actual measured
+// engagement: Bug Jumper (261 in-season rounds, and its Dynamic Course
+// relaunch was already owed this slot), Super Mariusz (417 rounds — the
+// highest of any game's week), and „3 Pary Spodni" (the single most replayed
+// game in the free arcade long after its season ended: 45 rounds / 7 players).
 const SEASONAL_OVERRIDES = {
   '2026-06-08': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Hard Course 🐛' },
   '2026-06-15': { gameType: 'snake', displayName: 'Snake 🐍' },
@@ -22497,8 +22555,10 @@ const SEASONAL_OVERRIDES = {
   '2026-07-20': { gameType: 'popup_panic', displayName: '„Zamknij Popupy!" 🖱️' },  // debut
   '2026-07-27': { gameType: 'tetris', displayName: '„Tetris G6" 🧱' },  // debut
   '2026-08-03': { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },  // debut
-  '2026-08-10': { gameType: 'filler', displayName: 'Filler 🎨' },  // debut — took the slot Bug Jumper's relaunch had, see below
-  '2026-08-17': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch, pushed a THIRD time (first by Tetris, then by Uzdrowiciel, now by the Filler debut)
+  '2026-08-10': { gameType: 'bubble_breaker', displayName: '„Kulki G6" 🔵' },  // debut (took Filler's slot)
+  '2026-08-17': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch, pushed a THIRD time (Tetris, then Uzdrowiciel, then the Kulki debut)
+  '2026-08-24': { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },  // encore — most rounds played of any seasonal week
+  '2026-08-31': { gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },  // encore — most replayed game in the free arcade
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -23011,6 +23071,7 @@ function loadSeasonalTab(showSpinner = true) {
   const isTT = current.gameType === 'tetris';
   const isHD = current.gameType === 'healer_dungeon';
   const isFL = current.gameType === 'filler';
+  const isBB = current.gameType === 'bubble_breaker';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
@@ -23023,13 +23084,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (ttPanel) { if (isTT) show(ttPanel); else hide(ttPanel); }
   if (hdPanel) { if (isHD) show(hdPanel); else hide(hdPanel); }
   if (flPanel) { if (isFL) show(flPanel); else hide(flPanel); }
-  // „Kulki G6" is arcade-only — it is not in SEASONAL_ROTATION, so there is no
-  // isBB to test against and this panel is unconditionally hidden here. The
-  // line exists so the seasonal tab stays correct if a round was left open in
-  // the arcade picker, and becomes a normal show/hide pair the day it is
-  // promoted.
-  if (bbPanel) hide(bbPanel);
-  if (bubbleBreakerRuntime?.playing) stopBubbleBreakerRound();
+  if (bbPanel) { if (isBB) show(bbPanel); else hide(bbPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -23041,6 +23096,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isSM && superMariuszRuntime?.playing) stopSuperMariuszRound();
   if (!isPP && popupPanicRuntime?.playing) stopPopupPanicRound();
   if (!isTT && tetrisRuntime?.playing) stopTetrisRound();
+  if (!isBB && bubbleBreakerRuntime?.playing) stopBubbleBreakerRound();
   if (!isHD && healerRuntime?.playing) stopHealerDungeonRound();
   if (!isHD && typeof healerExitView === 'function') healerExitView();
   // Filler has no runtime-level archiveMode flag to reset (see below) — it
@@ -23057,6 +23113,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (superMariuszRuntime) superMariuszRuntime.archiveMode = false;
   if (popupPanicRuntime) popupPanicRuntime.archiveMode = false;
   if (tetrisRuntime) tetrisRuntime.archiveMode = false;
+  if (bubbleBreakerRuntime) bubbleBreakerRuntime.archiveMode = false;
   if (healerRuntime) healerRuntime.archiveMode = false;
   // Filler is server-authoritative (see docs/filler.md) — there is no
   // client-side round/runtime that carries an archiveMode flag across its
@@ -23075,6 +23132,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (isSM) ensureGameScript('super_mariusz').then(() => loadSuperMariuszState(showSpinner));
   if (isPP) ensureGameScript('popup_panic').then(() => loadPopupPanicState(showSpinner));
   if (isTT) ensureGameScript('tetris').then(() => loadTetrisState(showSpinner));
+  if (isBB) ensureGameScript('bubble_breaker').then(() => loadBubbleBreakerState(showSpinner));
   if (isHD) ensureGameScript('healer_dungeon').then(() => {
     if (!healerRuntime) stopHealerDungeonRound();
     healerEnterView();

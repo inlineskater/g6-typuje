@@ -258,8 +258,16 @@ AS $$
           SELECT prize_coins FROM public.popup_panic_weekly_awards
           UNION ALL
           -- Every seasonal game must be listed here or its prizes never count
-          -- as minted supply. Tetris shipped missing from this UNION.
+          -- as minted supply. Tetris shipped missing from this UNION, and so
+          -- did healer_dungeon and filler (added 2026-08-05 with the new
+          -- bubble_breaker).
           SELECT prize_coins FROM public.tetris_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.healer_dungeon_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.filler_weekly_awards
+          UNION ALL
+          SELECT prize_coins FROM public.bubble_breaker_weekly_awards
         ) _awards
       ), 0::bigint)::numeric AS prizes_minted,
 

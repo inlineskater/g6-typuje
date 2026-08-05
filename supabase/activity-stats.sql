@@ -61,6 +61,9 @@ AS $$
     UNION ALL SELECT user_id, 'games', submitted_at FROM public.super_mariusz_scores
     UNION ALL SELECT user_id, 'games', submitted_at FROM public.popup_panic_scores
     UNION ALL SELECT user_id, 'games', submitted_at FROM public.tetris_scores
+    UNION ALL SELECT user_id, 'games', submitted_at FROM public.healer_dungeon_scores
+    UNION ALL SELECT user_id, 'games', submitted_at FROM public.filler_scores
+    UNION ALL SELECT user_id, 'games', submitted_at FROM public.bubble_breaker_scores
     UNION ALL SELECT user_id, 'games', created_at   FROM public.arcade_scores
 
     -- ── 📊 Rynki predykcyjne / ⚽ Mundial ────────────────────────────────

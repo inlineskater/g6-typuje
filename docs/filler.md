@@ -7,9 +7,10 @@ color connected to their territory joins it; whoever ends up controlling the
 majority of the board wins. `CLAUDE.md` keeps a short pointer here; this is the
 full story.
 
-Added 2026-08 as arcade-only (Phase 1, via „Wszystkie Gry"); the seasonal
-promotion (Phase 2) is written but dormant until its debut week, **2026-08-10**
-(see the bottom of this doc).
+Added 2026-08 as arcade-only (Phase 1, via „Wszystkie Gry"). The seasonal
+promotion (Phase 2) is **fully deployed but scheduled for no week** — the
+2026-08-10 debut it had been given was reassigned to „Kulki G6" on 2026-08-05
+(see the bottom of this doc for why, and for how to schedule a Filler week).
 
 ## Why Filler is architecturally different from every other game here
 
@@ -489,11 +490,21 @@ allowed it. It does mirror the lattice's adjacency *rule* and rhombus look
 visibly don't touch would advertise the wrong game. No merge pass: it is
 cosmetic-only and never renders a grown territory for long.
 
-## Phase 2 — seasonal promotion (live from 2026-08-10)
+## Phase 2 — seasonal promotion (deployed and armed, scheduled for no week)
 
-Debuts **2026-08-10** (the week that conflicted with the Bug Jumper Dynamic
-Course relaunch, which was bumped to 2026-08-17 to make room). Well-
-precedented shape, verbatim template `supabase/healer-dungeon.sql`:
+⚠️ **Filler is NOT currently on the calendar.** Everything below shipped and is
+live in the database — tables, views, `award_filler_week()`, the season-gated
+`filler_weekly_awards` cron job, the rotation entry, the league ranking — but
+on **2026-08-05** the 2026-08-10 slot it had been given was reassigned to
+„Kulki G6". The reason is not a defect in any of this: Filler is the only PvP
+game in the rotation, so a Filler week only works if two willing players are
+online at the same time, and the four weeks from 2026-08-10 were planned in
+advance precisely because nobody would be steering them day to day. The cron
+job stays armed, so scheduling a Filler week later is a one-line
+`SEASONAL_OVERRIDES` entry in `index.html` plus the matching `WHEN` clause in
+`seasonal_game_for_week()` — nothing here needs rebuilding.
+
+Well-precedented shape, verbatim template `supabase/healer-dungeon.sql`:
 
 - `supabase/filler-seasonal.sql` — `filler_scores` (one row per scored PvP
   match — `finishMatch` already produces exactly one score per human per
