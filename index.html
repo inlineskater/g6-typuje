@@ -31016,7 +31016,7 @@ async function buildFarmSeasonalBody(bodyEl) {
   if (nx) {
     card.append(el('div', { className: 'farm-seasonal-next' },
       'Od ' + nx.from.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' }) + ' kontrakt na: ',
-      farmIcon(nx.emoji), el('b', {}, ' ' + nx.name), ' — warto już teraz zasadzić.'));
+      farmIcon(nx.emoji), el('b', {}, ' ' + nx.name), ' — warto zasadzić wcześniej, żeby nowy tydzień zacząć od zbiorów.'));
   }
 
   bodyEl.append(card);
