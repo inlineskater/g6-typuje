@@ -30018,6 +30018,12 @@ async function ensureFarmData(opts = {}) {
 
 const FARM_RARITY_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 };
 
+// Bred hybrids do not have one honest species-wide stat line. Each instance
+// stores yield/grow/value inherited from the exact parents that created it, so
+// the catalog must not present its species defaults or a single level as if
+// they described every copy.
+function farmHasIndividualStats(d) { return !!d?.is_hybrid; }
+
 // Format a grow time given in minutes as a human label (days / hours / minutes).
 function farmGrowLabel(min) {
   if (min % 1440 === 0) { const d = min / 1440; return d + (d === 1 ? ' dzień' : ' dni'); }
@@ -30079,7 +30085,8 @@ function farmCardFacts(d, mdl) {
   const chance = mdl.inPool(d) ? farmChanceLabel(farmCardBoxChancePct(d.species, FARM_BOX_DRAWS, false)) : (soldOut ? 'wyprzedane' : '—');
   const myInsts = mdl.myInstances.get(d.species) || [];
   const serials = isNft
-    ? myInsts.slice().sort((a, b) => b.level - a.level || a.serial_no - b.serial_no).map(i => 'Lvl' + i.level + ' #' + i.serial_no).join(', ')
+    ? myInsts.slice().sort((a, b) => b.level - a.level || a.serial_no - b.serial_no)
+        .map(i => farmHasIndividualStats(d) ? ('#' + i.serial_no) : ('Lvl' + i.level + ' #' + i.serial_no)).join(', ')
     : (mineOwned ? mine.slice().sort((a, b) => a - b).map(s => '#' + s).join(', ') : '');
   return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, price: fmMarket.get(d.crop_type)?.base_price, effWeight };
 }
@@ -30325,6 +30332,18 @@ function farmMyPlantedLevels(species) {
   return levels;
 }
 
+// A hybrid's planted level alone is not enough to price it: its stored yield
+// and grow time belong to the exact NFT instance created from its parents.
+function farmMyPlantedNftInstances(species) {
+  const planted = [];
+  fmTiles.forEach(t => {
+    if (t.owner_id !== me?.id || t.planted_species !== species || !t.planted_instance_id) return;
+    const inst = fmNft.find(n => n.id === t.planted_instance_id);
+    if (inst) planted.push({ inst, level: t.planted_level || inst.level || 1 });
+  });
+  return planted;
+}
+
 // Single aligned table (grouped by rarity) so every card's stats line up in
 // columns and are directly comparable. Includes a profit-per-day column.
 // Per-plant level progression: yield, grow time, ≈/day, and the cost to reach
@@ -30417,18 +30436,35 @@ function farmCatalogTable(mdl) {
       const f = farmCardFacts(d, mdl);
       const ownedNow = f.have || f.mineOwned;
       const myInsts = mdl.myInstances.get(d.species) || [];
-      const ownedLvl = f.isNft
+      const individual = farmHasIndividualStats(d);
+      const ownedLvl = individual ? undefined : (f.isNft
         ? (myInsts.length ? Math.max(...myInsts.map(i => i.level)) : undefined)
-        : (f.have ? f.have.level : undefined);
+        : (f.have ? f.have.level : undefined));
       // ≈ Zysk/doba: NPC price swings 30–100% of the max, so a single number
-      // is misleading — show the real low–high range instead. Levels come
-      // from what's ACTUALLY planted (farmMyPlantedLevels): a player with
-      // three level-2 tiles of this crop sees their real combined income,
-      // not a generic level-1 single-plant guess.
-      const myPlanted = farmMyPlantedLevels(d.species);
+      // is misleading — show the real low–high range instead. Normal cards use
+      // ACTUALLY planted levels. Hybrids additionally require the planted NFT's
+      // instance stats; without a planted instance there is no honest generic
+      // estimate, so the row is labelled as individual.
+      const myPlanted = individual ? [] : farmMyPlantedLevels(d.species);
+      const myPlantedNfts = individual ? farmMyPlantedNftInstances(d.species) : [];
       const floorPrice = f.price != null ? f.price * 0.30 : null;
       let perDayLow = null, perDayHigh = null, perDayNote = '';
-      if (f.price != null) {
+      if (individual) {
+        // No generic hybrid estimate: when the viewer has planted instances we
+        // sum their real stored stats; otherwise say plainly that the result is
+        // instance-specific instead of printing the species seed defaults.
+        if (f.price != null && myPlantedNfts.length) {
+          const incomeAt = price => myPlantedNfts.reduce((sum, planted) => {
+            const st = farmNftStatsAtLevel(planted.inst, planted.level);
+            return sum + Math.round(st.yld * price / Math.max(1, st.growMin / 1440));
+          }, 0);
+          perDayLow = incomeAt(floorPrice);
+          perDayHigh = incomeAt(f.price);
+          perDayNote = ' (' + myPlantedNfts.length + ' szt. zasadz.)';
+        } else {
+          perDayNote = 'zależy od rodziców';
+        }
+      } else if (f.price != null) {
         if (myPlanted.length) {
           perDayLow = myPlanted.reduce((s, L) => s + farmPerDayIncome(d, floorPrice, L), 0);
           perDayHigh = myPlanted.reduce((s, L) => s + farmPerDayIncome(d, f.price, L), 0);
@@ -30439,15 +30475,17 @@ function farmCatalogTable(mdl) {
           perDayHigh = farmPerDayIncome(d, f.price, L);
         }
       }
-      const perDayTxt = perDayHigh == null ? '—'
+      const perDayTxt = individual && perDayHigh == null ? 'indywidualny'
+        : perDayHigh == null ? '—'
         : (perDayLow === perDayHigh ? ('≈ ' + perDayHigh + ' 🪙') : ('≈ ' + perDayLow + '–' + perDayHigh + ' 🪙'));
       let stanCell = f.isNft
         ? (f.mineOwned
             ? el('span', { className: 'farm-cat-stan owned' }, '✅ ' + f.serials)
-            : (f.soldOut ? el('span', { className: 'farm-cat-stan sold' }, 'wyprzedane')
-                         : el('span', { className: 'farm-cat-stan locked' }, '🔒')))
+            : (individual ? ''
+              : (f.soldOut ? el('span', { className: 'farm-cat-stan sold' }, 'wyprzedane')
+                           : el('span', { className: 'farm-cat-stan locked' }, '🔒'))))
         : (f.have ? el('span', { className: 'farm-cat-stan owned' }, '✅ poz. ' + f.have.level + ' · 🃏 ' + f.have.count + '/' + (2 * f.have.level))
-                  : el('span', { className: 'farm-cat-stan locked' }, '🔒'));
+                   : el('span', { className: 'farm-cat-stan locked' }, '🔒'));
       // NFT rows used to carry a separate „Pokaż wszystkie" button next to the
       // ownership cell — one click for the stats, another for the edition. The
       // row now opens ONE modal with both (openFarmNftExplorer), so the button
@@ -30455,11 +30493,12 @@ function farmCatalogTable(mdl) {
       // Ile egzemplarzy żyje vs zostało „spalonych" w fuzjach/krzyżowaniu.
       const nftLive = f.isNft ? fmNft.filter(n => n.species === d.species).length : 0;
       const nftFused = f.isNft ? Math.max(0, f.minted - nftLive) : 0;
-      // Overview row = identity + the CURRENT level's ≈ Zysk/doba + Stan only;
-      // grow time, yield, price, and the full level ladder open in a modal on
-      // click (openFarmLevelModal), not an inline accordion.
+      // Overview row = identity + relevant income + Stan only. Normal cards
+      // open their level ladder; hybrid rows open the edition/history view but
+      // deliberately have no generic level ladder.
       const mainTr = el('tr', { className: (ownedNow ? 'owned' : 'locked') + ' farm-cat-row-' + d.rarity + ' farm-cat-clickable',
-        title: f.isNft ? 'Kliknij, aby zobaczyć pełne szczegóły edycji: statystyki, poziomy, wszystkie egzemplarze i historię'
+        title: individual ? 'Kliknij, aby zobaczyć egzemplarze i historię hybrydy'
+                       : f.isNft ? 'Kliknij, aby zobaczyć pełne szczegóły edycji: statystyki, poziomy, wszystkie egzemplarze i historię'
                        : 'Kliknij, aby zobaczyć wszystkie poziomy' },
         el('td', { className: 'farm-cat-td-name' },
           el('div', { className: 'farm-cat-name-wrap' },
@@ -32092,7 +32131,7 @@ async function openFarmNftExplorer(species) {
     const mine = insts.filter(i => i.owner_id === me?.id);
     const myLevel = mine.length ? Math.max(...mine.map(i => i.level || 1)) : undefined;
     const price = fmMarket.get(def.crop_type)?.base_price;
-    const isHybrid = !!def.is_hybrid;
+    const isHybrid = farmHasIndividualStats(def);
 
     body.replaceChildren();
     body.append(el('div', { className: 'farm-nftx-head' },
@@ -32102,32 +32141,41 @@ async function openFarmNftExplorer(species) {
         el('div', { className: 'farm-nftx-sub' },
           mintedEver + ' / ' + editionSize + ' wybitych' +
           (mintedEver > insts.length ? ' · 🔥 ' + (mintedEver - insts.length) + ' spalonych (fuzje)' : '') +
-          ' · wartość ' + (editionSize ? Math.round(20000 / editionSize) : '?') + ' 🪙/szt'))));
+          (isHybrid ? ' · wartość zależna od egzemplarza'
+                    : ' · wartość ' + (editionSize ? Math.round(20000 / editionSize) : '?') + ' 🪙/szt')))));
 
     // ── Details, in the SAME window as the edition (previously a second modal
     //    behind a „Pokaż wszystkie" button, which split one card's info in two).
     const facts = el('div', { className: 'farm-nftx-facts' });
     const fact = (label, value, hint) => facts.append(el('div', { className: 'nftx-fact' },
       el('span', {}, label), el('b', {}, value), hint ? el('small', {}, hint) : ''));
-    fact('Plon', farmYieldAtLevel(def, 1) + ' szt.', 'na poziomie 1');
-    fact('Czas wzrostu', farmGrowDaysLabel(farmGrowMinAtLevel(def, 1)), 'min. 24 h');
-    fact('Cena skupu', price != null ? ('do ' + price + ' 🪙') : '—', 'za sztukę plonu');
-    fact('≈ Zysk/doba', price != null
-      ? ('≈ ' + farmPerDayIncome(def, price * 0.30, 1) + '–' + farmPerDayIncome(def, price, 1) + ' 🪙') : '—',
-      'przy cenie 30–100%');
+    if (isHybrid) {
+      fact('Statystyki', 'Indywidualne', 'dziedziczone po konkretnych rodzicach');
+      fact('Cena skupu', price != null ? ('do ' + price + ' 🪙') : '—', 'za sztukę wspólnego plonu');
+    } else {
+      fact('Plon', farmYieldAtLevel(def, 1) + ' szt.', 'na poziomie 1');
+      fact('Czas wzrostu', farmGrowDaysLabel(farmGrowMinAtLevel(def, 1)), 'min. 24 h');
+      fact('Cena skupu', price != null ? ('do ' + price + ' 🪙') : '—', 'za sztukę plonu');
+      fact('≈ Zysk/doba', price != null
+        ? ('≈ ' + farmPerDayIncome(def, price * 0.30, 1) + '–' + farmPerDayIncome(def, price, 1) + ' 🪙') : '—',
+        'przy cenie 30–100%');
+    }
     fact('Nakład', String(editionSize), 'egzemplarzy na zawsze');
     fact('Masz', mine.length ? (mine.length + ' szt.') : '—',
-      mine.length ? ('poziom maks. ' + myLevel) : (isHybrid ? 'z krzyżowania' : 'ze skrzynek'));
+      mine.length ? (isHybrid ? 'szczegóły w Moim Majątku' : 'poziom maks. ' + myLevel)
+                  : (isHybrid ? 'z krzyżowania' : 'ze skrzynek'));
     body.append(facts);
 
     body.append(el('div', { className: 'farm-nftx-source' }, isHybrid
-      ? '🧬 Hybryda — nie wypada ze skrzynek. Powstaje wyłącznie z krzyżowania dwóch kart NFT różnych gatunków (🎒 Mój Majątek → Krzyżowanie).'
+      ? '🧬 Hybryda — nie wypada ze skrzynek. Każdy egzemplarz dziedziczy własne parametry po użytych rodzicach, dlatego katalog nie pokazuje wspólnego poziomu ani drabinki zysku. Dokładne dane konkretnego egzemplarza są w 🎒 Moim Majątku.'
       : (def.series_week
           ? '🗓️ Kolekcja sezonowa — wypada ze skrzynek do wyczerpania nakładu.'
           : '📦 Wypada ze skrzynek, dopóki nakład się nie wyczerpie.')));
 
-    body.append(el('div', { className: 'farm-inv-section-title' }, '⬆️ Poziomy egzemplarza'));
-    body.append(farmCardLevelTable(def, price, myLevel, { nft: true }));
+    if (!isHybrid) {
+      body.append(el('div', { className: 'farm-inv-section-title' }, '⬆️ Poziomy egzemplarza'));
+      body.append(farmCardLevelTable(def, price, myLevel, { nft: true }));
+    }
 
     // Edition grid: every slot 1..N — minted shows owner+name; a minted serial
     // with no live instance was burned as merge fuel; locked = not yet drawn.
@@ -32136,9 +32184,9 @@ async function openFarmNftExplorer(species) {
       const inst = bySerial.get(s);
       const burned = !inst && s <= mintedEver;
       const slot = el('div', { className: 'farm-nftx-slot' + (inst ? (inst.owner_id === me?.id ? ' mine' : ' minted') : ' locked') },
-        el('div', { className: 'farm-nftx-serial' }, '#' + s + (inst && inst.level > 1 ? ' ⭐'.repeat(inst.level) : '')),
+        el('div', { className: 'farm-nftx-serial' }, '#' + s + (!isHybrid && inst && inst.level > 1 ? ' ⭐'.repeat(inst.level) : '')),
         inst
-          ? el('div', { className: 'farm-nftx-owner' }, el('b', {}, (inst.nft_name || '—') + (inst.level > 1 ? ' Poz.' + inst.level : '')), el('span', {}, '👤 ' + nm(inst.owner_id)))
+          ? el('div', { className: 'farm-nftx-owner' }, el('b', {}, (inst.nft_name || '—') + (!isHybrid && inst.level > 1 ? ' Poz.' + inst.level : '')), el('span', {}, '👤 ' + nm(inst.owner_id)))
           : el('div', { className: 'farm-nftx-owner' }, el('span', {}, burned ? '🔥 spalona (fuzja)' : '🔒 niewybita')));
       grid.append(slot);
     }
