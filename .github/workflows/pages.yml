@@ -43,16 +43,15 @@ jobs:
           path: _site
           include-hidden-files: true
 
+      # ⚠️ If Pages deploys start failing with "Timeout reached, aborting!", do NOT
+      # reach for the action's `timeout` input -- it is hard-capped at 10 min
+      # (MAX_TIMEOUT in actions/deploy-pages src/internal/deployment.js), so any
+      # larger value is silently clamped. On timeout the action CANCELS the
+      # deployment, which poisons that commit SHA (redeploying it returns
+      # "Deployment cancelled" instantly, forever) and leaves a stale record that
+      # blocks other SHAs with "please cancel <sha> first". Recovery is: cancel the
+      # stuck deployment via `gh api -X POST
+      # repos/{owner}/{repo}/pages/deployments/{sha}/cancel`, then push a fresh SHA.
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-        with:
-          # 30 min instead of the 10 min default. On 2026-08-06 GitHub's Pages
-          # queue stalled: deployments sat in `deployment_queued` past the default
-          # timeout, and the action then CANCELS the deployment it was waiting on.
-          # That is not a harmless retry -- a cancelled deployment's commit SHA is
-          # poisoned, so redeploying it returns "Deployment cancelled" instantly
-          # forever, and the stale record blocks every other SHA with "please
-          # cancel <sha> first". Five deploys failed that way. A longer window lets
-          # a slow-but-alive queue finish rather than manufacturing that mess.
-          timeout: 1800000
