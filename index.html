@@ -6809,11 +6809,20 @@
     .farm-pm-price { display: grid; gap: 8px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); }
     .farm-pm-price-row { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
     .farm-pm-price-row b { font-size: 15px; font-weight: 900; color: var(--text); }
+    /* Track spans 0–100% OF THE CATALOG MAX, the same scale farmTrendChip prints, so
+       the marker sits exactly where the chip's "% maks." says it does. The hatched
+       left third is the hard 30% floor — a region the price can never enter — which
+       is why the fill starts at 30% rather than at the left edge. */
     .farm-pm-pricebar { position: relative; height: 6px; border-radius: 999px; background: rgba(0,0,0,.08); }
-    .farm-pm-pricebar-fill { height: 100%; border-radius: inherit; }
+    .farm-pm-pricebar-floor { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px 0 0 999px; background: repeating-linear-gradient(45deg, rgba(0,0,0,.16) 0 2px, transparent 2px 5px); }
+    .farm-pm-pricebar-fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
     .farm-pm-pricebar-fill.up { background: #16a34a; } .farm-pm-pricebar-fill.down { background: #dc2626; } .farm-pm-pricebar-fill.flat { background: #d97706; }
     .farm-pm-pricebar-marker { position: absolute; top: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--text); border: 2px solid var(--card); transform: translateY(-50%); }
-    .farm-pm-pricebar-labels { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--muted); }
+    /* Absolute, not space-between: "min" labels the 30% floor tick, not the left edge. */
+    .farm-pm-pricebar-labels { position: relative; height: 13px; font-size: 10px; font-weight: 700; color: var(--muted); }
+    .farm-pm-pricebar-labels span { position: absolute; top: 0; white-space: nowrap; }
+    .farm-pm-pricebar-labels .pb-min { transform: translateX(-50%); }
+    .farm-pm-pricebar-labels .pb-max { right: 0; }
     .farm-pm-earn { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 12px; font-weight: 700; color: var(--muted); }
     .farm-pm-earn b { font-size: 14px; font-weight: 900; color: var(--accent); }
     .farm-pm-earn-range { margin-top: -4px; font-size: 11px; color: var(--muted); text-align: right; }
@@ -7288,7 +7297,10 @@
     .maj-crop-sell:hover { background: #f59e0b; }
     .maj-crop-meta { min-width: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
     .maj-crop-bar { position: relative; height: 5px; border-radius: var(--r-pill); background: var(--bg-mid); flex: 1 1 90px; min-width: 70px; max-width: 160px; overflow: hidden; }
-    .maj-crop-bar i { position: absolute; top: 0; bottom: 0; left: 0; display: block; border-radius: 4px; animation: majBarGrow .9s cubic-bezier(.2,.8,.3,1) .2s backwards; }
+    /* Same 0–100%-of-max scale as .farm-pm-pricebar, so this bar agrees with the
+       farmTrendChip printed right beside it. .mcb-floor is the hard 30% floor. */
+    .maj-crop-bar .mcb-floor { position: absolute; left: 0; top: 0; bottom: 0; display: block; background: repeating-linear-gradient(45deg, rgba(0,0,0,.16) 0 2px, transparent 2px 5px); }
+    .maj-crop-bar i { position: absolute; top: 0; bottom: 0; display: block; border-radius: 4px; animation: majBarGrow .9s cubic-bezier(.2,.8,.3,1) .2s backwards; }
     @keyframes majBarGrow { from { width: 0; } }
     .maj-crop-bar i.up { background: #16a34a; }
     .maj-crop-bar i.flat { background: #f59e0b; }
@@ -27358,6 +27370,12 @@ let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA
 let fmSel = null, fmLoadSeq = 0;
 let fmRealtimeReady = false, fmTimer = null;
 let fmMarketUiRefreshTimer = null;
+let fmMarketPollAt = 0, fmMarketPolling = false;
+// Callbacks registered by open popups that quote an NPC price, so a price change can
+// reach them too. renderFarmMarket()/refreshFarmHub() only repaint the board and the
+// hub — a detail modal built its numbers once at open and had no way to hear about a
+// roll, which is how a plant popup left open across 12:00 kept quoting a dead price.
+const fmPriceRefreshHooks = new Set();
 
 function resetFarmState() {
   stopFarmTimer();
@@ -27383,6 +27401,40 @@ function farmMarketEffectivePrice(mkt) {
   const last = mkt.last_decay_at ? new Date(mkt.last_decay_at).getTime() : NaN;
   const hours = Number.isFinite(last) ? Math.max(0, (Date.now() - last) / 3600000) : 0;
   return Math.max(floor, cur + (anchor - cur) * Math.min(1, hours * 0.12));
+}
+
+// Re-read farm_market and repaint if anything moved.
+//
+// The NPC price rolls twice a day (00:00/12:00 Europe/Warsaw) from a pg_cron job, and
+// loadFarm() only refetches when you ENTER the Ogródek tab. For a tab you just sit on
+// — which is exactly what you do while watching a harvest countdown — the sole update
+// path was the farm_market realtime subscription, and realtime never replays events
+// missed while the socket was down (laptop sleep, throttled background tab). Miss the
+// one roll UPDATE and fmMarket stays on the previous window's numbers indefinitely,
+// while farmMarketEffectivePrice() keeps simulating recovery toward that dead anchor —
+// so the stale price even animates upward and looks perfectly live.
+const FARM_MARKET_POLL_MS = 60000;
+async function pollFarmMarketPrices(force) {
+  if (fmMarketPolling) return;
+  if (!force && Date.now() - fmMarketPollAt < FARM_MARKET_POLL_MS) return;
+  fmMarketPolling = true;
+  fmMarketPollAt = Date.now();
+  try {
+    const { data, error } = await sb.from('farm_market')
+      .select('crop_type,base_price,anchor_price,cur_price,last_decay_at');
+    if (error || !data) return;
+    let changed = false;
+    data.forEach(m => {
+      const prev = fmMarket.get(m.crop_type);
+      const next = normalizeFarmMarket(m);
+      if (!prev || prev.cur_price !== next.cur_price || prev.anchor_price !== next.anchor_price
+          || prev.base_price !== next.base_price || prev.last_decay_at !== next.last_decay_at) changed = true;
+      fmMarket.set(m.crop_type, next);
+    });
+    if (changed) scheduleFarmMarketUiRefresh();
+  } catch (e) {
+    // Transient network blip — the next tick retries; never break the growth timer.
+  } finally { fmMarketPolling = false; }
 }
 
 // Crops are stored as per-harvest lots (rot 5d). Sum non-expired qty per crop into
@@ -29693,6 +29745,11 @@ function farmSeasonalEligibleQty(crop, qty) {
   return eligible;
 }
 
+// The NPC price never falls below 30% of the catalog max (the floor in
+// sell_crop_to_npc / farmSellQuote), so every price bar draws that band as a dead
+// zone instead of pretending 0 is reachable.
+const FARM_PRICE_FLOOR_PCT = 30;
+
 function farmPriceLabel(n) {
   const v = Math.round(Number(n || 0) * 10) / 10;
   return Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1).replace('.', ',');
@@ -29780,13 +29837,17 @@ function farmSeasonalAchBonus() {
 // Both achievement bonuses are applied here too — the server scales proceeds by
 // (1 + collector) and the contract premium by (1 + seasonal), so leaving them out
 // made the confirm dialog quote up to 30% / 20% LESS than the sale actually pays.
-function farmSellQuote(crop, qty) {
+// `spotOverride` prices a HYPOTHETICAL spot instead of the live one — used only to
+// draw the min–max earnings envelope on the plant/card popups, so the ends of that
+// range come out of this same formula rather than a naive qty × price. The live path
+// (no override) is untouched and stays the exact mirror of sell_crop_to_npc.
+function farmSellQuote(crop, qty, spotOverride) {
   const mkt = fmMarket.get(crop);
   if (!mkt) return null;
   const base = +mkt.base_price;
   const anchor = mkt.anchor_price != null ? +mkt.anchor_price : base;
   const floor = base * 0.30;
-  const curEff = farmMarketEffectivePrice(mkt);
+  const curEff = spotOverride != null ? Math.max(floor, spotOverride) : farmMarketEffectivePrice(mkt);
   const dropFrac = Math.min(0.40, 0.005 * qty);
   const startPrice = curEff;
   const endPrice = Math.max(floor, curEff * (1 - dropFrac));
@@ -31137,6 +31198,8 @@ function scheduleFarmMarketUiRefresh() {
       renderFarmSelection();
     }
     if (farmModalEl) refreshFarmHub();
+    // Detail popups quote their own prices and live outside the board/hub trees.
+    fmPriceRefreshHooks.forEach(fn => { try { fn(); } catch (e) { console.error('price refresh', e); } });
   }, 250);
 }
 
@@ -31896,28 +31959,53 @@ function farmPricePanel(def, mkt, opts) {
     return wrap;
   }
   const floor = base * 0.30;
-  const pct = Math.max(0, Math.min(100, (cur - floor) / (base - floor) * 100));
+  // ONE scale for the chip and the bar: percent of the catalog max (cur/base) — the
+  // number farmTrendChip prints and the 30–100% band the rest of Farma quotes. The
+  // bar used to normalize floor→base instead, so a price could read "▼41% maks."
+  // beside a bar filled to 16%; worse, the SAME 80/50 thresholds applied to two
+  // different numbers could disagree outright (60% of max = amber chip, red bar).
+  const pct = Math.max(0, Math.min(100, cur / base * 100));
   const trendCls = pct >= 80 ? 'up' : pct <= 50 ? 'down' : 'flat';
   wrap.append(
     el('div', { className: 'farm-pm-price-row' },
       el('span', {}, 'Cena teraz (NPC)'),
       el('b', {}, farmPriceLabel(cur) + ' 🪙/szt'),
       farmTrendChip(def.crop_type)),
-    el('div', { className: 'farm-pm-pricebar' },
-      el('div', { className: 'farm-pm-pricebar-fill ' + trendCls, style: { width: pct + '%' } }),
+    el('div', { className: 'farm-pm-pricebar',
+                title: 'Cena NPC chodzi między 30% a 100% ceny maks. Zakreskowany odcinek to twarda podłoga — niżej nie zejdzie.' },
+      el('div', { className: 'farm-pm-pricebar-floor', style: { width: FARM_PRICE_FLOOR_PCT + '%' } }),
+      el('div', { className: 'farm-pm-pricebar-fill ' + trendCls,
+                  style: { left: FARM_PRICE_FLOOR_PCT + '%', width: Math.max(0, pct - FARM_PRICE_FLOOR_PCT) + '%' } }),
       el('div', { className: 'farm-pm-pricebar-marker', style: { left: pct + '%' } })),
     el('div', { className: 'farm-pm-pricebar-labels' },
-      el('span', {}, 'min ' + farmPriceLabel(floor) + ' 🪙'),
-      el('span', {}, 'maks. ' + farmPriceLabel(base) + ' 🪙')));
+      el('span', { className: 'pb-min', style: { left: FARM_PRICE_FLOOR_PCT + '%' } }, 'min ' + farmPriceLabel(floor) + ' 🪙'),
+      el('span', { className: 'pb-max' }, 'maks. ' + farmPriceLabel(base) + ' 🪙')));
   if (yieldQty > 0) {
-    const now = Math.round(yieldQty * cur);
-    const min = Math.round(yieldQty * floor);
-    const max = Math.round(yieldQty * base);
+    // Quote what the NPC actually PAYS for the batch, not yieldQty × spot. Selling
+    // the whole harvest at once drops the price by min(40%, 0.5%/unit) and the batch
+    // is charged the average of pre/post (then the collector premium) — see
+    // farmSellQuote / sell_crop_to_npc. The naive product over-promised by ~20% on a
+    // big harvest, and its top-of-range was flatly unreachable: 210 units can never
+    // fetch 210 × max, because selling 210 units is itself what caps the price.
+    const q = farmSellQuote(def.crop_type, yieldQty);
+    const qMin = farmSellQuote(def.crop_type, yieldQty, floor);
+    const qMax = farmSellQuote(def.crop_type, yieldQty, base);
+    const now = q ? q.proceeds : Math.round(yieldQty * cur);
+    const min = qMin ? qMin.proceeds : Math.round(yieldQty * floor);
+    const max = qMax ? qMax.proceeds : Math.round(yieldQty * base);
+    const earnHint = 'Realna wypłata za sprzedaż całego zbioru naraz u NPC'
+      + (q && q.dropPct > 0 ? ' — taka partia zbija cenę o ~' + q.dropPct + '%, a płaci się średnią z ceny przed i po' : '')
+      + (q && q.collectorPct > 0 ? '. Renoma Kolekcjonera dodaje +' + q.collectorPct + '%' : '') + '.';
+    const rangeTxt = el('div', { className: 'farm-pm-earn-range' }, 'zakres ' + min + '–' + max + ' 🪙');
+    if (q && q.collectorPct > 0) rangeTxt.append(
+      el('span', { className: 'farm-seasonal-bonus', style: { marginLeft: '6px' },
+                   title: 'Renoma Kolekcjonera: +2% za każdy posiadany gatunek NFT (maks. +30%)' },
+        '🏅 +' + q.collectorPct + '%'));
     wrap.append(
       el('div', { className: 'farm-pm-earn' },
         el('span', {}, 'Zarobek ze zbioru (' + yieldQty + ' szt.)'),
-        el('b', {}, '~' + now + ' 🪙')),
-      el('div', { className: 'farm-pm-earn-range' }, 'zakres ' + min + '–' + max + ' 🪙'));
+        el('b', { title: earnHint }, '~' + now + ' 🪙')),
+      rangeTxt);
   }
   return wrap;
 }
@@ -31942,9 +32030,6 @@ function openFarmPlantedModal(tile, x, y) {
   if (!def) return;
   const rar = def.rarity || 'common';
   const level = tile.planted_level || 1;
-  const mkt = fmMarket.get(def.crop_type);
-  const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
-  const base = mkt ? +mkt.base_price : null;
   const yieldNow = Math.round(def.base_yield * (1 + (level - 1) * 0.5));
   const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level - 1));
   const isMine = tile.owner_id === me?.id;
@@ -31954,6 +32039,7 @@ function openFarmPlantedModal(tile, x, y) {
   const overlay = el('div', { className: 'modal-overlay farm-plant-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => {
     if (timer) { clearInterval(timer); timer = null; }
+    fmPriceRefreshHooks.delete(renderPrice);
     overlay.remove();
     window.removeEventListener('keydown', esc);
   };
@@ -31990,6 +32076,31 @@ function openFarmPlantedModal(tile, x, y) {
     removeSlot = el('div', {}, rmBtn);
   }
 
+  // Price + earnings and the level table are rebuilt from live fmMarket whenever the
+  // NPC price moves, instead of being frozen at open. This popup shows a ticking
+  // countdown, which made a stale price read as live: a plant left open across the
+  // 12:00 roll quoted the previous window's number for hours.
+  const priceSlot = el('div', {});
+  const levelsSlot = el('div', {});
+  let priceKey = null;
+  const renderPrice = () => {
+    const mkt = fmMarket.get(def.crop_type);
+    const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
+    const base = mkt ? +mkt.base_price : null;
+    // Key on the DISPLAYED precision (0.1 🪙) so the per-second tick only touches the
+    // DOM when a visible digit actually changes — the effective price creeps every ms.
+    const key = mkt ? (Math.round((cur || 0) * 10) + '/' + base) : 'none';
+    if (key === priceKey) return;
+    priceKey = key;
+    // Preserve the user's disclosure state across the rebuild.
+    const wasOpen = !!levelsSlot.querySelector('details')?.open;
+    priceSlot.replaceChildren(farmPricePanel(def, mkt, { yieldQty: yieldNow }));
+    const levels = farmCollapsibleLevels(def, cur != null ? cur : base, level);
+    if (wasOpen) levels.open = true;
+    levelsSlot.replaceChildren(levels);
+  };
+  fmPriceRefreshHooks.add(renderPrice);
+
   const body = el('div', { className: 'farm-plant-modal-body' },
     el('div', { className: 'farm-plant-modal-hero' },
       el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(def.emoji || '🌱')),
@@ -32005,8 +32116,8 @@ function openFarmPlantedModal(tile, x, y) {
     harvestBox,
     chips,
     el('div', { className: 'farm-pm-caption' }, 'Zasadzono: ' + (tile.planted_at ? fmtDateTime(tile.planted_at) : '—')),
-    farmPricePanel(def, mkt, { yieldQty: yieldNow }),
-    farmCollapsibleLevels(def, cur != null ? cur : base, level),
+    priceSlot,
+    levelsSlot,
     harvestSlot,
     removeSlot,
   );
@@ -32020,6 +32131,7 @@ function openFarmPlantedModal(tile, x, y) {
   // Render the maturity-dependent bits (harvest timeline, harvest button) and keep
   // them fresh each second; swap in the harvest button the moment it matures.
   const refresh = () => {
+    renderPrice();
     const ready = isReady();
     harvestBox.className = 'farm-pm-harvest' + (ready ? ' ready' : '');
     etaVal.textContent = tile.ready_at ? farmHarvestWhen(tile.ready_at) : '—';
@@ -32046,14 +32158,11 @@ function openFarmPlantedModal(tile, x, y) {
 function openFarmCardModal(card) {
   const def = fmDefs.get(card.species); if (!def) return;
   const rar = def.rarity || 'common';
-  const mkt = fmMarket.get(def.crop_type);
-  const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
-  const base = mkt ? +mkt.base_price : null;
   const dupesNeeded = 2 * card.level;
   const yieldNow = Math.round(def.base_yield * (1 + (card.level - 1) * 0.5));
   const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, card.level - 1));
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
-  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
+  const close = () => { fmPriceRefreshHooks.delete(renderPrice); overlay.remove(); window.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
   const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
   closeX.addEventListener('click', close);
@@ -32063,6 +32172,22 @@ function openFarmCardModal(card) {
     el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Plon'), el('b', {}, yieldNow + ' szt.')),
     el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Wzrost'), el('b', {}, farmGrowLabel(growNow))),
   );
+  // Same live-price treatment as the planted-plant popup: rebuild on a price roll
+  // rather than freezing whatever fmMarket held when the card was opened.
+  const priceSlot = el('div', {});
+  const levelsSlot = el('div', {});
+  const renderPrice = () => {
+    const mkt = fmMarket.get(def.crop_type);
+    const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
+    const base = mkt ? +mkt.base_price : null;
+    const wasOpen = !!levelsSlot.querySelector('details')?.open;
+    priceSlot.replaceChildren(farmPricePanel(def, mkt, { yieldQty: yieldNow }));
+    const levels = farmCollapsibleLevels(def, cur != null ? cur : base, card.level);
+    if (wasOpen) levels.open = true;
+    levelsSlot.replaceChildren(levels);
+  };
+  renderPrice();
+  fmPriceRefreshHooks.add(renderPrice);
   const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Szczegóły karty'), closeX),
     el('div', { className: 'farm-plant-modal-body' },
@@ -32075,8 +32200,8 @@ function openFarmCardModal(card) {
             def.edition_size != null ? el('span', { className: 'farm-pm-dot' }, '·') : '',
             def.edition_size != null ? el('span', {}, 'NFT') : ''))),
       chips,
-      farmPricePanel(def, mkt, { yieldQty: yieldNow }),
-      farmCollapsibleLevels(def, cur != null ? cur : base, card.level)));
+      priceSlot,
+      levelsSlot));
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
@@ -32244,8 +32369,12 @@ function majCropCard(crop, qty, q, now, idx) {
   const price = q ? q.startPrice : Number(farmMarketEffectivePrice(mkt) || 0);
   const base = q ? q.base : Number(mkt?.base_price || 0);
   const pct = base > 0 ? Math.round(price / base * 100) : 0;
-  // Price-position bar: the NPC price lives between the 30%-of-max floor and MAX.
-  const fillPct = Math.max(4, Math.min(100, Math.round((pct - 30) / 70 * 100)));
+  // Price-position bar on the SAME 0–100%-of-max scale as `pct` and the trend chip
+  // beside it (it used to renormalize floor→base, disagreeing with both). The 30%
+  // floor is drawn as a dead zone, so the fill runs from there to the live price.
+  // No minimum-width sliver: at the floor the fill is genuinely empty, and the
+  // hatched floor zone already carries that message without desyncing from `pct`.
+  const fillPct = Math.max(0, Math.min(100, pct) - FARM_PRICE_FLOOR_PCT);
   const cls = pct >= 80 ? 'up' : (pct <= 50 ? 'down' : 'flat');
   const eventQty = farmSeasonalEligibleQty(crop, qty);
 
@@ -32276,7 +32405,8 @@ function majCropCard(crop, qty, q, now, idx) {
     el('div', { className: 'maj-crop-meta' },
       el('span', { className: 'maj-num' }, price.toFixed(1) + ' 🪙/szt'),
       el('span', { className: 'maj-crop-bar', title: 'NPC płaci teraz ' + pct + '% ceny maks. (' + base + ' 🪙) — zakres 30–100%' },
-        el('i', { className: cls, style: { width: fillPct + '%' } })),
+        el('span', { className: 'mcb-floor', style: { width: FARM_PRICE_FLOOR_PCT + '%' } }),
+        el('i', { className: cls, style: { left: FARM_PRICE_FLOOR_PCT + '%', width: fillPct + '%' } })),
       farmTrendChip(crop), farmRotChip(crop),
       eventQty > 0 ? el('span', { className: 'farm-seasonal-bonus', title: 'Tyle sztuk liczy się do kontraktu tygodnia' }, '🏆 +' + (eventQty * Number(fmSeasonalEvent?.bonus_per_unit || 0)) + ' 🪙') : ''));
 }
@@ -33688,6 +33818,7 @@ function startFarmTimer() {
   stopFarmTimer();
   fmTimer = setInterval(() => {
     if (activeTab !== 'farm') return;
+    pollFarmMarketPrices();   // self-heal a stale price if realtime missed the roll
     updateFarmGrowth();
     updateFarmPlantNextLines();
     if (fmSel) {
@@ -33705,6 +33836,14 @@ function startFarmTimer() {
 }
 
 function stopFarmTimer() { if (fmTimer) { clearInterval(fmTimer); fmTimer = null; } }
+
+// Coming back to a slept/backgrounded tab is exactly when realtime has silently
+// missed a roll, so force the refetch instead of waiting out the poll interval.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (activeTab !== 'farm' && !farmModalEl && !fmPriceRefreshHooks.size) return;
+  pollFarmMarketPrices(true);
+});
 
 function getPlantEmoji(type, stage) {
   const arr = PLANT_STAGES[canonicalPlantType(type)] || PLANT_STAGES.sunflower;

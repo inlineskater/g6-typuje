@@ -94,6 +94,12 @@ Zbiór (`harvest_crop`) mintuje plon do `farm_inventory` jako **partię, która 
 
 Klient ma wierną replikę tej matematyki w `farmSellQuote` (podgląd przed potwierdzeniem) — **musi zostać w synchronizacji z `sell_crop_to_npc`**. Historię 7 dni na roślinę rysuje zakładka **📈 Cennik** (`farm_price_history`), a publiczny feed 🧾 pokazuje wszystkie sprzedaże.
 
+**Każda kwota „ile dostanę" musi iść przez `farmSellQuote`, nigdy przez `ilość × cena`** — ta partia sama zbija cenę, więc naiwny iloczyn zawyża wypłatę (przy 210 szt. o ~20%) i podaje nieosiągalny górny zakres. `farmSellQuote(crop, qty, spotOverride)` przyjmuje opcjonalną cenę hipotetyczną wyłącznie po to, by widełki min–max na popupach liczyły się tym samym wzorem; ścieżka bez `spotOverride` pozostaje dokładnym lustrem `sell_crop_to_npc`.
+
+**Jedna skala dla wszystkich wskaźników ceny: `cur / base_price` („% ceny maks.", pasmo 30–100%)** — tę liczbę drukuje `farmTrendChip`, jej dotyczą progi kolorów (≥80 ▲ / ≤50 ▼) i na niej opierają się paski (`FARM_PRICE_FLOOR_PCT` rysuje podłogę 30% jako zakreskowaną martwą strefę, a wypełnienie biegnie od niej do ceny). Paski normalizowane osobno na `floor→base` pokazywały przy chipie „▼41% maks." wypełnienie 16%, a przy 60% maks. potrafiły dać bursztynowy chip obok czerwonego paska.
+
+**Cena w otwartym popupie musi być odświeżana, nie zamrożona przy otwarciu.** Kotwica przeskakuje 2× dziennie z `pg_cron`, a `loadFarm()` pobiera `farm_market` tylko przy WEJŚCIU w zakładkę; realtime nigdy nie odtwarza zdarzeń przegapionych przy uśpionym gnieździe. Dlatego: `pollFarmMarketPrices()` (co 60 s z `startFarmTimer`, wymuszony na `visibilitychange`) sam się leczy, a popupy rejestrują callback w `fmPriceRefreshHooks`, który odpala `scheduleFarmMarketUiRefresh()`. Bez tego roślina zostawiona otwarta przez 12:00 pokazywała cenę z poprzedniego okna godzinami — i to z tykającym odliczaniem obok, więc wyglądała na żywą (zgłoszone 2026-08-06).
+
 ## Kontrakt tygodnia
 
 `farm-seasonal-contracts.sql` dodaje cotygodniowe kontrakty na jedną istniejącą roślinę. Pierwszy start: **poniedziałek 06.07.2026 00:00 Europe/Warsaw**, **🥕 Marchewka**. Klient pokazuje to w hubie farmy jako **🏆 Wyzwanie**.
