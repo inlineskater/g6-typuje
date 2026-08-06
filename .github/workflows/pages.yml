@@ -46,3 +46,13 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          # 30 min instead of the 10 min default. On 2026-08-06 GitHub's Pages
+          # queue stalled: deployments sat in `deployment_queued` past the default
+          # timeout, and the action then CANCELS the deployment it was waiting on.
+          # That is not a harmless retry -- a cancelled deployment's commit SHA is
+          # poisoned, so redeploying it returns "Deployment cancelled" instantly
+          # forever, and the stale record blocks every other SHA with "please
+          # cancel <sha> first". Five deploys failed that way. A longer window lets
+          # a slow-but-alive queue finish rather than manufacturing that mess.
+          timeout: 1800000
