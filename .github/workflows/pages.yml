@@ -36,6 +36,13 @@ jobs:
           cp login_hero.jpg _site/login_hero.jpg
           cp -r games _site/games
           touch _site/.nojekyll
+          # Stamp this build's commit SHA into the DEPLOYED page (the committed source
+          # keeps the __BUILD_SHA__ placeholder) and drop a matching version.json the
+          # running app polls. When a tab is left open across a later deploy, the SHA
+          # baked into its page stops matching version.json and the app nudges a reload
+          # instead of silently running old code. See startUpdateChecker() in index.html.
+          sed -i "s|const BUILD_ID = '__BUILD_SHA__'|const BUILD_ID = '${GITHUB_SHA}'|" _site/index.html
+          printf '{"sha":"%s"}\n' "${GITHUB_SHA}" > _site/version.json
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5

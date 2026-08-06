@@ -2213,6 +2213,35 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+    /* ── UPDATE BANNER (a newer build was deployed while this tab stayed open) ── */
+    .update-banner {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      display: flex; align-items: center; gap: 12px;
+      background: var(--card); border: 1px solid var(--border-hi);
+      border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18);
+      padding: 10px 12px 10px 16px; z-index: 400;
+      max-width: calc(100vw - 32px); opacity: 0;
+      transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
+    }
+    .update-banner.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .update-banner-txt { font-size: 13px; font-weight: 600; color: var(--text); }
+    .update-banner-btn {
+      border: none; background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 700; padding: 7px 14px;
+      border-radius: 8px; cursor: pointer; white-space: nowrap;
+    }
+    .update-banner-btn:hover { filter: brightness(1.06); }
+    .update-banner-x {
+      border: none; background: transparent; color: var(--muted);
+      font-size: 14px; line-height: 1; cursor: pointer; padding: 4px 6px;
+    }
+    .update-banner-x:hover { color: var(--text); }
+    @media (max-width: 480px) {
+      .update-banner { left: 16px; right: 16px; transform: translateY(90px); }
+      .update-banner.show { transform: translateY(0); }
+    }
+
     /* ── LOADING ── */
     .spinner {
       display: inline-block; width: 18px; height: 18px;
@@ -10827,6 +10856,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const DB_ERROR_MESSAGE = 'Nie można połączyć z bazą danych. Odśwież stronę albo spróbuj później.';
 const CASINO_BET_MAX = 10000000; // safety rail; the server enforces the same ceiling + your balance
+
+// Build identity. CI (.github/workflows/pages.yml) stamps the commit SHA into the
+// DEPLOYED copy of this file and writes a matching version.json; the committed source
+// keeps the literal placeholder. The running page compares this against version.json
+// to notice when a newer build shipped while this tab stayed open — see
+// startUpdateChecker(). Placeholder == local/dev build, so the checker no-ops there.
+const BUILD_ID = '__BUILD_SHA__';
+// A stamped build is a 40-hex commit SHA; anything else (the placeholder) is local/dev.
+// Detect that by SHAPE rather than by comparing to the placeholder string — the CI sed
+// that fills BUILD_ID would rewrite that string too, wedging the guard permanently on.
+const IS_DEPLOYED_BUILD = /^[0-9a-f]{40}$/.test(BUILD_ID);
 
 // ── Cloudflare Turnstile (anti-brute-force) ─────────────────────────────────
 // Paste your Turnstile *site* key here (public). The matching *secret* key goes
@@ -35098,7 +35138,63 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ── Auto-update nudge ───────────────────────────────────────────────────────
+// GitHub Pages serves index.html with a fixed 10-minute cache, and — more to the
+// point — a tab left open never reloads on its own. That is exactly how a farm
+// watcher (or anyone sitting on a countdown) keeps running yesterday's JavaScript
+// long after a fix has shipped: the reason a stale NPC price outlived its own fix.
+// We poll a tiny version.json (written by the same deploy that stamped BUILD_ID);
+// when the deployed SHA no longer matches the one baked into THIS page, we surface a
+// passive "reload" banner. We never auto-reload — the user may be mid poker hand,
+// roulette spin, or crop sale.
+const UPDATE_POLL_MS = 5 * 60 * 1000;   // background poll while the tab is visible
+const UPDATE_MIN_GAP_MS = 30 * 1000;    // floor between checks so refocus can't spam
+let updateBannerShown = false, updateCheckAt = 0, updateChecking = false, updateTimer = null;
+
+async function checkForUpdate() {
+  // Only meaningful for a real deployed build. Local/dev keeps the raw placeholder
+  // (and has no version.json to fetch), and once the banner is up there's nothing
+  // more to learn.
+  if (!IS_DEPLOYED_BUILD || location.protocol === 'file:') return;
+  if (updateBannerShown || updateChecking) return;
+  if (Date.now() - updateCheckAt < UPDATE_MIN_GAP_MS) return;
+  updateChecking = true; updateCheckAt = Date.now();
+  try {
+    const res = await fetch('version.json?cb=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const v = await res.json();
+    if (v && typeof v.sha === 'string' && v.sha && v.sha !== BUILD_ID) showUpdateBanner();
+  } catch (e) {
+    // Offline / transient / version.json not deployed yet — next tick retries.
+  } finally { updateChecking = false; }
+}
+
+function showUpdateBanner() {
+  if (updateBannerShown) return;
+  updateBannerShown = true;
+  if (updateTimer) { clearInterval(updateTimer); updateTimer = null; }
+  const reload = el('button', { className: 'update-banner-btn', type: 'button' }, '🔄 Odśwież');
+  reload.addEventListener('click', () => location.reload());
+  const dismiss = el('button', { className: 'update-banner-x', type: 'button', 'aria-label': 'Ukryj' }, '✕');
+  const banner = el('div', { className: 'update-banner', role: 'status', 'aria-live': 'polite' },
+    el('span', { className: 'update-banner-txt' }, 'Dostępna jest nowa wersja aplikacji.'),
+    reload, dismiss);
+  dismiss.addEventListener('click', () => banner.remove());
+  document.body.append(banner);
+  requestAnimationFrame(() => banner.classList.add('show'));
+}
+
+function startUpdateChecker() {
+  if (!IS_DEPLOYED_BUILD || location.protocol === 'file:') return;
+  if (updateTimer) return;
+  updateTimer = setInterval(() => { if (document.visibilityState === 'visible') checkForUpdate(); }, UPDATE_POLL_MS);
+  // Returning to a backgrounded tab is the prime moment to catch a missed deploy.
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
+  setTimeout(checkForUpdate, 15000);   // first check once the tab has settled
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────
+startUpdateChecker();
 (async () => {
   let session = null;
   try {
