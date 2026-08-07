@@ -7316,20 +7316,6 @@
     @keyframes fccHolo { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
     .farm-nft-card.is-hybrid { background: linear-gradient(165deg, #fdf2ff, #f0e0ff); border-color: #a855f7; box-shadow: 0 8px 28px rgba(168,85,247,.35), inset 0 1px 0 rgba(255,255,255,.6); }
     /* 🧬 Kolekcje tab */
-    /* „Co nowego" — one-time release note, corner card (never blocks the app) */
-    .whatsnew { position: fixed; right: 16px; bottom: 16px; z-index: 200; width: min(330px, calc(100vw - 32px));
-      background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--sh-lg);
-      padding: 13px 14px; opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .2s; }
-    .whatsnew.show { opacity: 1; transform: none; }
-    .whatsnew-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .whatsnew-title { font-weight: 700; font-size: 13px; }
-    .whatsnew-x { border: none; background: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 2px 4px; line-height: 1; }
-    .whatsnew-x:hover { color: var(--text); }
-    .whatsnew-list { list-style: none; margin: 9px 0 11px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
-    .whatsnew-list li { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--muted); line-height: 1.45; }
-    .wn-ic { flex: 0 0 auto; }
-    .whatsnew-ok { width: 100%; padding: 8px; border: none; border-radius: var(--r-sm); background: var(--accent); color: #fff; font-weight: 600; font-size: 12px; cursor: pointer; }
-    .whatsnew-ok:hover { background: #4f46e5; }
     /* 🏡 Działki — compact ownership chips (replaced poster-sized .fcc deeds) */
     /* Plots: a flat tinted chip with a status DOT, not a bordered card with a
        coloured rail — the outline carried no information the dot doesn't. */
@@ -7889,6 +7875,184 @@
       background-image: linear-gradient(135deg,
         rgba(255,255,255,.26) 0 49.5%, rgba(0,0,0,.28) 50.5% 100%);
     }
+
+    /* ── Office chat rail („Czat G6") ─────────────────────────────────────────
+       A quiet glass overlay pinned bottom-left, present on EVERY tab (it lives
+       outside all #tab-* divs, so switchTab never unmounts it). Deliberately
+       app-native: Inter, slate ink, one indigo accent (my bubbles / send /
+       unread) and one green semantic dot (online). The 🌼 flower is the single
+       retro signature, kept only in the header + launcher. z-index above nav
+       (40/41), below modals (100+). */
+    #chat-rail, #chat-toasts {
+      --c-surface:     rgba(255,255,255,.82);
+      --c-solid:       #ffffff;
+      --c-bubble:      #eef1f5;
+      --c-line:        #e6eaef;
+      --c-line-soft:   #eef1f4;
+      --c-hover:       #f3f5f8;
+      --c-ink:         #1a2231;
+      --c-muted:       #8a94a6;
+      --c-faint:       #aab2c0;
+      --c-dim:         #c7cdd7;
+      --c-accent:      #6366f1;
+      --c-accent-2:    #5457e6;
+      --c-accent-soft: rgba(99,102,241,.14);
+      --c-online:      #22c55e;
+    }
+    #chat-rail {
+      position: fixed; left: 0; bottom: 0; z-index: 60;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      color: var(--c-ink);
+    }
+    /* Collapsed: only the launcher pill shows. */
+    #chat-rail.chat-collapsed .chat-panel { display: none; }
+    #chat-rail:not(.chat-collapsed) .chat-launcher { display: none; }
+
+    .chat-launcher {
+      position: fixed; left: 16px; bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 15px; border: 1px solid var(--c-line);
+      border-radius: 999px; background: var(--c-surface);
+      -webkit-backdrop-filter: blur(20px) saturate(1.7); backdrop-filter: blur(20px) saturate(1.7);
+      color: var(--c-ink); font-weight: 600; font-size: 13px; letter-spacing: -.01em; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(15,23,42,.13), 0 1px 4px rgba(15,23,42,.05);
+      transition: transform .14s ease, box-shadow .14s ease;
+    }
+    .chat-launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(15,23,42,.17); }
+    .chat-launcher-flower { font-size: 15px; line-height: 1; }
+
+    .chat-unread-total {
+      min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px;
+      background: var(--c-accent); color: #fff; font-size: 10.5px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+    }
+
+    .chat-panel {
+      position: fixed; left: 16px; bottom: 16px;
+      width: 322px; height: min(500px, calc(100vh - 96px));
+      display: flex; flex-direction: column;
+      background: var(--c-surface);
+      -webkit-backdrop-filter: blur(22px) saturate(1.7); backdrop-filter: blur(22px) saturate(1.7);
+      border: 1px solid var(--c-line); border-radius: 16px;
+      box-shadow: 0 16px 48px rgba(15,23,42,.16), 0 2px 8px rgba(15,23,42,.05);
+      overflow: hidden;
+    }
+    .chat-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 13px 14px 11px; border-bottom: 1px solid var(--c-line-soft);
+    }
+    .chat-header-flower { font-size: 15px; line-height: 1; }
+    .chat-title { font-weight: 700; font-size: 14.5px; letter-spacing: -.02em; }
+    .chat-online-count { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--c-muted); white-space: nowrap; }
+    .chat-hbtn {
+      border: none; background: none; color: var(--c-muted); cursor: pointer;
+      width: 24px; height: 24px; border-radius: 7px; font-size: 13px; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background .12s ease, color .12s ease;
+    }
+    .chat-hbtn:hover { background: var(--c-hover); color: var(--c-ink); }
+
+    .chat-tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--c-line-soft); }
+    .chat-tab {
+      flex: 1; border: none; background: none; cursor: pointer;
+      padding: 8px 4px 9px; font-size: 12px; font-weight: 600; color: var(--c-muted);
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .12s ease;
+    }
+    .chat-tab:hover { color: var(--c-ink); }
+    .chat-tab.active { color: var(--c-ink); border-bottom-color: var(--c-accent); }
+
+    .chat-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 7px; }
+
+    .chat-msg { max-width: 82%; display: flex; flex-direction: column; }
+    .chat-msg-nick { font-size: 10.5px; font-weight: 600; color: var(--c-muted); margin: 0 0 2px 3px; }
+    .chat-msg-bubble {
+      background: var(--c-bubble); border-radius: 14px 14px 14px 5px;
+      padding: 7px 11px; font-size: 13px; line-height: 1.4; color: var(--c-ink);
+      word-break: break-word; white-space: pre-wrap;
+    }
+    .chat-msg-time { font-size: 9.5px; color: var(--c-faint); margin: 3px 0 0 3px; }
+    .chat-msg.mine { align-self: flex-end; align-items: flex-end; }
+    .chat-msg.mine .chat-msg-nick { display: none; }
+    .chat-msg.mine .chat-msg-bubble { background: var(--c-accent); color: #fff; border-radius: 14px 14px 5px 14px; }
+    .chat-msg.mine .chat-msg-time { margin: 3px 3px 0 0; }
+    .chat-sys { align-self: center; font-size: 10.5px; color: var(--c-muted); text-align: center; padding: 2px 10px; }
+
+    .chat-empty { margin: auto; color: var(--c-muted); font-size: 12.5px; text-align: center; padding: 22px 24px; line-height: 1.5; }
+
+    .chat-roster { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
+    .chat-contact {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 9px 10px; border: none; background: none; cursor: pointer; text-align: left;
+      border-radius: 10px; font-size: 13px; color: var(--c-ink);
+      transition: background .12s ease;
+    }
+    .chat-contact:hover { background: var(--c-hover); }
+    .chat-dot {
+      width: 8px; height: 8px; flex: none; border-radius: 50%; box-sizing: border-box;
+      border: 1.5px solid var(--c-dim); background: transparent;
+    }
+    .chat-dot.on { background: var(--c-online); border-color: var(--c-online); box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
+    .chat-contact-nick { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-contact-status { font-size: 10.5px; color: var(--c-muted); font-weight: 500; }
+
+    .chat-thread-head {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 12px; border-bottom: 1px solid var(--c-line-soft);
+    }
+    .chat-back { border: none; background: none; cursor: pointer; font-size: 19px; line-height: 1; color: var(--c-muted); padding: 0 2px; transition: color .12s ease; }
+    .chat-back:hover { color: var(--c-ink); }
+    .chat-thread-nick { font-weight: 700; font-size: 13px; letter-spacing: -.01em; }
+
+    .chat-inputbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--c-line-soft); }
+    #chat-rail.chat-on-contacts .chat-inputbar { display: none; }
+    .chat-inputbar input {
+      flex: 1; border: 1px solid var(--c-line); border-radius: 11px; padding: 9px 12px;
+      font-size: 13px; font-family: inherit; background: var(--c-solid); color: var(--c-ink); min-width: 0;
+      min-height: 0; height: 38px; margin: 0; box-shadow: none;   /* override global input[type=text] login styling */
+      box-sizing: border-box; transition: border-color .12s ease, box-shadow .12s ease;
+    }
+    .chat-inputbar input::placeholder { color: var(--c-faint); }
+    .chat-inputbar input:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-soft); }
+    .chat-send {
+      flex: none; border: none; background: var(--c-accent); color: #fff; cursor: pointer;
+      width: 38px; height: 38px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background .12s ease, transform .12s ease;
+    }
+    .chat-send > svg { transform: translateX(-1px); }   /* optically centre the paper plane */
+    .chat-send:hover { background: var(--c-accent-2); }
+    .chat-send:active { transform: scale(.92); }
+    .chat-send:disabled { opacity: .4; cursor: default; }
+
+    /* Login/logout + whisper toasts, stacked above the panel. */
+    #chat-toasts {
+      position: fixed; left: 16px; bottom: 84px; z-index: 61;
+      display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none;
+    }
+    .chat-toast {
+      display: flex; align-items: center; gap: 9px;
+      background: var(--c-surface); border: 1px solid var(--c-line); border-left: 2px solid var(--c-online);
+      -webkit-backdrop-filter: blur(20px) saturate(1.7); backdrop-filter: blur(20px) saturate(1.7);
+      border-radius: 12px; padding: 9px 13px; font-size: 12.5px; font-weight: 500; color: var(--c-ink);
+      box-shadow: 0 8px 24px rgba(15,23,42,.14); max-width: 260px;
+      animation: chatToastIn .22s cubic-bezier(.2,.8,.2,1);
+    }
+    .chat-toast.leave { border-left-color: var(--c-dim); color: var(--c-muted); }
+    @keyframes chatToastIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .chat-launcher { transition: none; }
+      .chat-toast { animation: none; }
+    }
+
+    /* Mobile: panel fills more of the screen; launcher clears any bottom UI. */
+    @media (max-width: 640px) {
+      .chat-panel { width: calc(100vw - 20px); height: min(72vh, calc(100vh - 96px)); left: 10px; bottom: 10px; }
+      .chat-launcher { left: 10px; bottom: 10px; }
+      #chat-toasts { left: 10px; right: 10px; bottom: 80px; }
+    }
   </style>
 </head>
 <body>
@@ -8067,6 +8231,54 @@
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
   </nav>
+
+  <!-- ── ICQ-style office chat rail (present on every tab; outside all #tab-*) ── -->
+  <div id="chat-rail" class="chat-collapsed hidden">
+    <button id="chat-launcher" class="chat-launcher" title="Czat biurowy">
+      <span class="chat-launcher-flower">🌼</span>
+      <span class="chat-launcher-label">Czat</span>
+      <span class="nav-new-badge">Nowość</span>
+      <span class="chat-unread-total hidden" id="chat-launcher-unread">0</span>
+    </button>
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span class="chat-header-flower">🌼</span>
+        <span class="chat-title">Czat G6</span>
+        <span class="nav-new-badge">Nowość</span>
+        <span class="chat-online-count" id="chat-online-count">0 w sieci</span>
+        <button class="chat-hbtn" id="chat-sound-btn" title="Włącz dźwięk">🔕</button>
+        <button class="btn-close" id="chat-collapse-btn" title="Zwiń czat">✕</button>
+      </div>
+      <div class="chat-tabs">
+        <button class="chat-tab active" data-chat-view="room">💬 Pokój</button>
+        <button class="chat-tab" data-chat-view="contacts">👥 Kontakty <span class="chat-unread-total hidden" id="chat-contacts-unread">0</span></button>
+      </div>
+      <!-- Public room -->
+      <div class="chat-body" id="chat-view-room">
+        <div class="chat-messages" id="chat-room-messages"></div>
+      </div>
+      <!-- Contacts roster -->
+      <div class="chat-body hidden" id="chat-view-contacts">
+        <div class="chat-roster" id="chat-roster"></div>
+      </div>
+      <!-- Whisper thread -->
+      <div class="chat-body hidden" id="chat-view-thread">
+        <div class="chat-thread-head">
+          <button class="chat-back" id="chat-thread-back" title="Wróć">‹</button>
+          <span class="chat-dot" id="chat-thread-flower"></span>
+          <span class="chat-thread-nick" id="chat-thread-nick"></span>
+        </div>
+        <div class="chat-messages" id="chat-thread-messages"></div>
+      </div>
+      <div class="chat-inputbar">
+        <input type="text" id="chat-input" maxlength="1000" placeholder="Napisz wiadomość…" autocomplete="off">
+        <button class="chat-send" id="chat-send-btn" title="Wyślij" aria-label="Wyślij">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="chat-toasts"></div>
 
   <div id="tab-markets">
     <main>
@@ -10852,6 +11064,23 @@ const ROULETTE_HEARTBEAT_MS = 25_000;
 let gardenHeartbeatTimer = null;
 const GARDEN_HEARTBEAT_MS = 30_000;
 
+// ── Office chat (ICQ rail) state ──
+// Heartbeat mirrors roulette: keep CHAT_HEARTBEAT_MS ≤ ⅓ of CHAT_STALE (90s) in
+// supabase/chat.sql. CHAT_MAX_LEN mirrors the length cap in chat_send().
+const CHAT_HEARTBEAT_MS = 25_000;
+const CHAT_MAX_LEN = 1000;
+let chatHeartbeatTimer = null;
+let chatReady = false;             // roster + history loaded, listeners wired
+let chatView = 'room';             // 'room' | 'contacts' | 'thread'
+let chatPeerId = null;             // active whisper peer (thread view)
+let chatRoster = [];               // [{ id, nick }] — all players except system admin
+let chatOnline = new Set();        // user_ids currently online
+let chatRoomMsgs = [];             // public room messages (chronological)
+let chatThreads = {};              // peerId → [messages] cache
+let chatUnread = {};               // peerId → unread whisper count
+let chatSoundOn = false;           // ICQ beep on presence/whisper, off by default
+let chatLastSend = 0;              // client-side send throttle guard
+
 // ── Plinko G6 state ──
 let plinkoState = null;
 let plinkoBet = 10;
@@ -11673,6 +11902,8 @@ async function refreshMeCoins() {
 }
 
 async function doLogout() {
+  try { await sb.rpc('chat_set_offline'); } catch (e) {}   // prompt "wyszedł z sieci" for peers
+  resetChatState();
   teardownRealtime();
   await sb.auth.signOut();
   me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
@@ -11742,54 +11973,9 @@ function showApp() {
   updateAdminTestTabs();
   switchTab('farm');   // Ogródek is the home tab
   setupRealtime();
+  initChat();                                  // ICQ-style office chat rail (all tabs)
   refreshShopNavCounts();                      // populate the Targowisko nav counters
   if (DOCUMENTS_ENABLED) loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
-  setTimeout(maybeShowWhatsNew, 1200);   // after the entry animation settles
-}
-
-// ── „Co nowego" — one-time release note ───────────────────────────────────
-// A small dismissible card in the corner, shown ONCE per browser and only for
-// the current WHATS_NEW_ID. Deliberately not a blocking modal: it announces
-// features, it does not gate anything. Bump the id (and the list) for the next
-// release; everyone sees the new one exactly once.
-const WHATS_NEW_ID = 'nft-2026-07-24';
-const WHATS_NEW = {
-  title: 'Co nowego w Ogródku',
-  items: [
-    ['🗓️', 'Co poniedziałek NOWA limitowana kolekcja NFT — nakład jest mały, kto pierwszy ten lepszy.'],
-    ['🧬', 'Krzyżowanie kart: dwie różne karty NFT → jedna hybryda o 15% wyższym zysku/dobę i krótszym wzroście niż lepszy z rodziców, dziedzicząca jego poziom.'],
-    ['🏅', 'Osiągnięcia: 5 torów z pasywnymi bonusami (lepsze ceny, szybszy wzrost, większe zbiory).'],
-    ['✨', 'Odświeżony wygląd Ogródka i nowe „Laboratorium krzyżowania".'],
-  ],
-};
-
-function maybeShowWhatsNew() {
-  let seen = null;
-  try { seen = localStorage.getItem('rp_whats_new'); } catch (e) { return; }   // private mode → skip
-  if (seen === WHATS_NEW_ID) return;
-  if (document.querySelector('.whatsnew')) return;   // already on screen
-
-  const card = el('div', { className: 'whatsnew' });
-  const close = () => {
-    try { localStorage.setItem('rp_whats_new', WHATS_NEW_ID); } catch (e) {}
-    card.classList.remove('show');
-    setTimeout(() => card.remove(), 200);
-  };
-  const x = el('button', { className: 'whatsnew-x', type: 'button', 'aria-label': 'Zamknij' }, '✕');
-  x.addEventListener('click', close);
-  card.append(el('div', { className: 'whatsnew-head' },
-    el('span', { className: 'whatsnew-title' }, '✨ ' + WHATS_NEW.title), x));
-  const list = el('ul', { className: 'whatsnew-list' });
-  WHATS_NEW.items.forEach(([ic, tx]) =>
-    list.append(el('li', {}, el('span', { className: 'wn-ic' }, ic), tx)));
-  card.append(list);
-  const ok = el('button', { className: 'whatsnew-ok', type: 'button' }, 'Jasne, zamknij');
-  ok.addEventListener('click', close);
-  card.append(ok);
-  document.body.append(card);
-  // setTimeout, not rAF alone: rAF never fires while the tab is in the
-  // background, which would leave the card mounted at opacity 0.
-  setTimeout(() => card.classList.add('show'), 20);
 }
 
 function updateAdminTestTabs() {
@@ -13807,6 +13993,12 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'canvas_pixels' }, (payload) => {
       applyCanvasPixelChange(payload.new);
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+      if (chatReady) chatIngest(payload.new);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_presence' }, (payload) => {
+      chatOnPresence(payload.new);
+    })
     .subscribe();
 
   realtimeChannels.push(ch);
@@ -13829,6 +14021,414 @@ function updateCardProb(m) {
 function teardownRealtime() {
   realtimeChannels.forEach(ch => sb.removeChannel(ch));
   realtimeChannels = [];
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Office chat (ICQ-style rail) — public room, presence, offline whispers.
+// Lives outside every #tab-* div so switchTab never unmounts it. Writes go
+// through the SECURITY DEFINER RPCs in supabase/chat.sql; realtime delivery is
+// wired into the shared `db-changes` channel (see setupRealtime).
+// ════════════════════════════════════════════════════════════════════════════
+
+const chatRailEl = () => document.getElementById('chat-rail');
+
+async function initChat() {
+  const rail = chatRailEl();
+  if (!rail) return;
+  show(rail);
+  chatWireListenersOnce();
+  try { chatSoundOn = localStorage.getItem('rp_chat_sound') === '1'; } catch (e) {}
+  chatSyncSoundBtn();
+
+  // Roster: every player except the hidden system/admin account, and not me.
+  const { data: profs } = await sb.from('profiles')
+    .select('id,nick,is_admin').neq('is_admin', true).order('nick');
+  chatRoster = (profs || []).filter(p => p.id !== me.id).map(p => ({ id: p.id, nick: p.nick }));
+
+  // Current online set (silent — no login toasts for who was already here).
+  const { data: pres } = await sb.from('chat_presence').select('user_id,online');
+  chatOnline = new Set((pres || []).filter(r => r.online).map(r => r.user_id));
+
+  await Promise.all([chatLoadRoom(), chatLoadUnread()]);
+
+  chatReady = true;
+  setChatView('room');
+  chatRenderRoster();
+  chatRenderOnlineCount();
+  chatRenderUnreadBadges();
+
+  chatHeartbeatPing();               // mark myself online immediately
+  startChatHeartbeat();
+}
+
+function chatWireListenersOnce() {
+  const rail = chatRailEl();
+  if (!rail || rail.dataset.wired) return;
+  rail.dataset.wired = '1';
+
+  document.getElementById('chat-launcher').addEventListener('click', () => chatSetOpen(true));
+  document.getElementById('chat-collapse-btn').addEventListener('click', () => chatSetOpen(false));
+  document.getElementById('chat-sound-btn').addEventListener('click', chatToggleSound);
+  document.getElementById('chat-thread-back').addEventListener('click', () => setChatView('contacts'));
+
+  rail.querySelectorAll('.chat-tab').forEach(btn =>
+    btn.addEventListener('click', () => setChatView(btn.dataset.chatView)));
+
+  const input = document.getElementById('chat-input');
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+  });
+  document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
+}
+
+function chatSetOpen(open) {
+  const rail = chatRailEl();
+  if (!rail) return;
+  rail.classList.toggle('chat-collapsed', !open);
+  if (open) {
+    // Opening clears the "unread while collapsed" cue and focuses input.
+    if (chatView === 'thread' && chatPeerId) chatMarkRead(chatPeerId);
+    setTimeout(() => { const i = document.getElementById('chat-input'); if (i && chatView !== 'contacts') i.focus(); }, 30);
+    chatScrollActive();
+  }
+}
+
+function setChatView(view) {
+  chatView = view;
+  const rail = chatRailEl();
+  document.getElementById('chat-view-room').classList.toggle('hidden', view !== 'room');
+  document.getElementById('chat-view-contacts').classList.toggle('hidden', view !== 'contacts');
+  document.getElementById('chat-view-thread').classList.toggle('hidden', view !== 'thread');
+  rail.classList.toggle('chat-on-contacts', view === 'contacts');   // hides the input bar
+  rail.querySelectorAll('.chat-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.chatView === (view === 'thread' ? 'contacts' : view)));
+  if (view === 'room') chatRenderRoom();
+  if (view === 'contacts') { chatPeerId = null; chatRenderRoster(); }
+  if (view === 'thread') chatRenderThread();
+  chatScrollActive();
+}
+
+// ── Data loads ──────────────────────────────────────────────────────────────
+
+async function chatLoadRoom() {
+  const { data } = await sb.from('chat_messages')
+    .select('id,sender_id,sender_nick,body,created_at')
+    .is('recipient_id', null)
+    .order('created_at', { ascending: false }).limit(50);
+  chatRoomMsgs = (data || []).reverse();
+}
+
+async function chatLoadUnread() {
+  const { data } = await sb.from('chat_messages')
+    .select('sender_id')
+    .eq('recipient_id', me.id).is('read_at', null);
+  chatUnread = {};
+  (data || []).forEach(r => { chatUnread[r.sender_id] = (chatUnread[r.sender_id] || 0) + 1; });
+}
+
+async function chatLoadThread(peerId) {
+  const { data } = await sb.from('chat_messages')
+    .select('id,sender_id,recipient_id,sender_nick,body,created_at')
+    .or(`and(sender_id.eq.${me.id},recipient_id.eq.${peerId}),and(sender_id.eq.${peerId},recipient_id.eq.${me.id})`)
+    .order('created_at', { ascending: false }).limit(50);
+  chatThreads[peerId] = (data || []).reverse();
+}
+
+// ── Rendering ───────────────────────────────────────────────────────────────
+
+function chatMsgNode(m) {
+  if (m.system) return el('div', { className: 'chat-sys' }, m.body);
+  const mine = m.sender_id === me.id;
+  const node = el('div', { className: 'chat-msg' + (mine ? ' mine' : '') });
+  if (!mine) node.appendChild(el('div', { className: 'chat-msg-nick' }, m.sender_nick || '?'));
+  node.appendChild(el('div', { className: 'chat-msg-bubble' }, m.body));
+  node.appendChild(el('div', { className: 'chat-msg-time' }, chatFmtTime(m.created_at)));
+  return node;
+}
+
+function chatRenderList(containerId, msgs, emptyText) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+  box.replaceChildren();
+  if (!msgs.length) { box.appendChild(el('div', { className: 'chat-empty' }, emptyText)); return; }
+  msgs.forEach(m => box.appendChild(chatMsgNode(m)));
+}
+
+function chatRenderRoom() {
+  chatRenderList('chat-room-messages', chatRoomMsgs, 'Cisza w biurze… napisz pierwszy! 🌼');
+  if (chatView === 'room') chatScrollActive();
+}
+
+function chatRenderThread() {
+  const msgs = chatThreads[chatPeerId] || [];
+  document.getElementById('chat-thread-nick').textContent = chatPeerNick(chatPeerId);
+  const fl = document.getElementById('chat-thread-flower');
+  fl.classList.toggle('on', chatOnline.has(chatPeerId));
+  chatRenderList('chat-thread-messages', msgs, 'Brak wiadomości. Szepnij coś — dotrze nawet gdy jest offline.');
+  if (chatView === 'thread') chatScrollActive();
+}
+
+function chatRenderRoster() {
+  const box = document.getElementById('chat-roster');
+  if (!box) return;
+  box.replaceChildren();
+  if (!chatRoster.length) { box.appendChild(el('div', { className: 'chat-empty' }, 'Brak innych graczy.')); return; }
+  const sorted = [...chatRoster].sort((a, b) => {
+    const oa = chatOnline.has(a.id), ob = chatOnline.has(b.id);
+    if (oa !== ob) return oa ? -1 : 1;
+    return a.nick.localeCompare(b.nick, 'pl');
+  });
+  sorted.forEach(c => {
+    const online = chatOnline.has(c.id);
+    const unread = chatUnread[c.id] || 0;
+    const row = el('button', { className: 'chat-contact', 'data-peer': c.id },
+      el('span', { className: 'chat-dot' + (online ? ' on' : '') }),
+      el('span', { className: 'chat-contact-nick' }, c.nick),
+      el('span', { className: 'chat-contact-status' }, online ? 'w sieci' : 'offline'));
+    if (unread) row.appendChild(el('span', { className: 'chat-unread-total' }, String(unread)));
+    row.addEventListener('click', () => openChatThread(c.id));
+    box.appendChild(row);
+  });
+}
+
+function chatRenderOnlineCount() {
+  const n = chatOnline.size;
+  const label = document.getElementById('chat-online-count');
+  if (label) label.textContent = n + ' w sieci';
+}
+
+function chatTotalUnread() {
+  return Object.values(chatUnread).reduce((a, b) => a + b, 0);
+}
+
+function chatRenderUnreadBadges() {
+  const total = chatTotalUnread();
+  const setBadge = (id, n) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.textContent = String(n);
+    b.classList.toggle('hidden', n <= 0);
+  };
+  setBadge('chat-launcher-unread', total);
+  setBadge('chat-contacts-unread', total);
+}
+
+function chatScrollActive() {
+  const id = chatView === 'thread' ? 'chat-thread-messages'
+           : chatView === 'room' ? 'chat-room-messages' : null;
+  if (!id) return;
+  requestAnimationFrame(() => { const box = document.getElementById(id); if (box) box.scrollTop = box.scrollHeight; });
+}
+
+// ── Threads / read state ────────────────────────────────────────────────────
+
+async function openChatThread(peerId) {
+  chatPeerId = peerId;
+  if (!chatThreads[peerId]) await chatLoadThread(peerId);
+  setChatView('thread');
+  chatMarkRead(peerId);
+  const input = document.getElementById('chat-input');
+  if (input) input.focus();
+}
+
+async function chatMarkRead(peerId) {
+  if (!chatUnread[peerId]) return;
+  chatUnread[peerId] = 0;
+  chatRenderUnreadBadges();
+  chatRenderRoster();
+  try { await sb.rpc('chat_mark_read', { p_peer: peerId }); } catch (e) {}
+}
+
+// ── Sending ─────────────────────────────────────────────────────────────────
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  if (!input) return;
+  const body = input.value.trim();
+  if (!body) return;
+  if (body.length > CHAT_MAX_LEN) { showToast('❌ Wiadomość zbyt długa.'); return; }
+  if (Date.now() - chatLastSend < 1000) return;   // mirror server ≥1s throttle
+  chatLastSend = Date.now();
+
+  const recipient = chatView === 'thread' ? chatPeerId : null;
+  const btn = document.getElementById('chat-send-btn');
+  input.value = ''; if (btn) btn.disabled = true;
+  try {
+    const { data, error } = await sb.rpc('chat_send', { p_recipient: recipient, p_body: body });
+    if (error) throw error;
+    // Optimistic local append (realtime echo is de-duped by id).
+    chatIngest({
+      id: data.id, sender_id: me.id, recipient_id: recipient,
+      sender_nick: me.nick, body: data.body, created_at: data.created_at,
+    });
+  } catch (e) {
+    input.value = body;   // restore so nothing is lost
+    const msg = String(e?.message || e);
+    showToast(msg.includes('too_fast') ? '⏳ Zwolnij trochę.' : '❌ Nie udało się wysłać.');
+  } finally {
+    if (btn) btn.disabled = false;
+    input.focus();
+  }
+}
+
+// ── Realtime handlers (called from the db-changes channel) ──────────────────
+
+function chatIngest(m) {
+  const isPublic = m.recipient_id == null;
+  if (isPublic) {
+    if (chatRoomMsgs.some(x => x.id === m.id)) return;
+    chatRoomMsgs.push(m);
+    if (chatRoomMsgs.length > 200) chatRoomMsgs.shift();
+    if (chatView === 'room') chatRenderRoom();
+    return;
+  }
+  // Whisper: peer is the other party.
+  const peer = m.sender_id === me.id ? m.recipient_id : m.sender_id;
+  const arr = chatThreads[peer] || (chatThreads[peer] = []);
+  if (arr.some(x => x.id === m.id)) return;
+  arr.push(m);
+  if (arr.length > 200) arr.shift();
+
+  const incoming = m.sender_id !== me.id;
+  const viewingThisThread = chatView === 'thread' && chatPeerId === peer;
+  const railOpen = !chatRailEl().classList.contains('chat-collapsed');
+
+  if (incoming && !(viewingThisThread && railOpen)) {
+    chatUnread[peer] = (chatUnread[peer] || 0) + 1;
+    chatRenderUnreadBadges();
+    chatRenderRoster();
+    chatToast('💬 ' + (m.sender_nick || chatPeerNick(peer)) + ': ' + m.body.slice(0, 40), 'msg');
+    chatBeep();
+  }
+  if (viewingThisThread) {
+    chatRenderThread();
+    if (incoming && railOpen) chatMarkRead(peer);
+  }
+}
+
+function chatOnPresence(row) {
+  if (!chatReady || !row || row.user_id === me.id) return;
+  const wasOnline = chatOnline.has(row.user_id);
+  if (row.online === wasOnline) return;   // last_seen-only heartbeat tick — ignore
+
+  if (row.online) chatOnline.add(row.user_id); else chatOnline.delete(row.user_id);
+  chatRenderOnlineCount();
+  chatRenderRoster();
+  if (chatView === 'thread' && chatPeerId === row.user_id) chatRenderThread();
+
+  const nick = chatPeerNick(row.user_id);
+  if (row.online) {
+    chatSysLine('🌼 ' + nick + ' wszedł do sieci');
+    chatToast('🌼 ' + nick + ' wszedł do sieci', 'join');
+  } else {
+    chatSysLine('⚪ ' + nick + ' wyszedł z sieci');
+    chatToast('⚪ ' + nick + ' wyszedł z sieci', 'leave');
+  }
+  chatBeep();
+}
+
+// A local, non-persisted system line in the public room.
+function chatSysLine(text) {
+  chatRoomMsgs.push({ system: true, body: text, created_at: new Date().toISOString() });
+  if (chatRoomMsgs.length > 200) chatRoomMsgs.shift();
+  if (chatView === 'room') chatRenderRoom();
+}
+
+// ── Presence heartbeat ──────────────────────────────────────────────────────
+
+async function chatHeartbeatPing() {
+  if (!me?.id) return;
+  try {
+    const { data } = await sb.rpc('chat_heartbeat');
+    if (data?.online) chatReconcileOnline(data.online);
+  } catch (e) {}
+}
+
+// Silent reconcile against the server's authoritative online list — catches any
+// transition realtime dropped, without firing (possibly stale) toasts.
+function chatReconcileOnline(list) {
+  const next = new Set(list.filter(id => id !== me.id));
+  let changed = next.size !== chatOnline.size;
+  if (!changed) for (const id of next) if (!chatOnline.has(id)) { changed = true; break; }
+  if (!changed) return;
+  chatOnline = next;
+  chatRenderOnlineCount();
+  chatRenderRoster();
+  if (chatView === 'thread') chatRenderThread();
+}
+
+function startChatHeartbeat() {
+  stopChatHeartbeat();
+  chatHeartbeatTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') chatHeartbeatPing();
+  }, CHAT_HEARTBEAT_MS);
+}
+function stopChatHeartbeat() {
+  if (chatHeartbeatTimer) { clearInterval(chatHeartbeatTimer); chatHeartbeatTimer = null; }
+}
+// Refresh presence the moment a backgrounded tab returns (mirrors roulette).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && chatReady) chatHeartbeatPing();
+});
+
+// ── Small helpers ───────────────────────────────────────────────────────────
+
+function chatPeerNick(id) {
+  if (id === me?.id) return me.nick;
+  const c = chatRoster.find(p => p.id === id);
+  return c ? c.nick : '?';
+}
+
+function chatFmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+}
+
+function chatToast(text, kind) {
+  const wrap = document.getElementById('chat-toasts');
+  if (!wrap) return;
+  const t = el('div', { className: 'chat-toast' + (kind === 'leave' ? ' leave' : '') }, text);
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 3500);
+  // Keep at most 4 stacked.
+  while (wrap.children.length > 4) wrap.firstChild.remove();
+}
+
+function chatToggleSound() {
+  chatSoundOn = !chatSoundOn;
+  try { localStorage.setItem('rp_chat_sound', chatSoundOn ? '1' : '0'); } catch (e) {}
+  chatSyncSoundBtn();
+  if (chatSoundOn) chatBeep();
+}
+function chatSyncSoundBtn() {
+  const b = document.getElementById('chat-sound-btn');
+  if (b) { b.textContent = chatSoundOn ? '🔔' : '🔕'; b.title = chatSoundOn ? 'Wyłącz dźwięk' : 'Włącz dźwięk'; }
+}
+// A short ICQ-ish two-tone chirp via WebAudio (no asset needed).
+let chatAudioCtx = null;
+function chatBeep() {
+  if (!chatSoundOn) return;
+  try {
+    chatAudioCtx = chatAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = chatAudioCtx; const now = ctx.currentTime;
+    [ [880, 0], [1320, 0.09] ].forEach(([f, t]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, now + t);
+      g.gain.exponentialRampToValueAtTime(0.06, now + t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.08);
+      o.connect(g).connect(ctx.destination); o.start(now + t); o.stop(now + t + 0.09);
+    });
+  } catch (e) {}
+}
+
+function resetChatState() {
+  stopChatHeartbeat();
+  chatReady = false; chatView = 'room'; chatPeerId = null;
+  chatRoster = []; chatOnline = new Set(); chatRoomMsgs = []; chatThreads = {}; chatUnread = {};
+  const rail = chatRailEl();
+  if (rail) { rail.classList.add('chat-collapsed'); hide(rail); }
+  const toasts = document.getElementById('chat-toasts'); if (toasts) toasts.replaceChildren();
 }
 
 // ── Bet modal ─────────────────────────────────────────────────────────────
