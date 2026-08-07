@@ -156,6 +156,14 @@ $$;
 -- then sweeps everyone whose last_seen is stale to offline (each flip emits a
 -- "wyszedł z sieci" signal) — the presence analog of roulette's evictStaleSeats.
 -- Returns the current online user-id list.
+--
+-- ⚠️ SUPERSEDED by supabase/chat-presence-quiet.sql. The version below writes
+-- last_seen on EVERY beat, and chat_presence is realtime-published — so each
+-- beat is fanned out to every connected client (N users -> N²/25 msg/s of noise
+-- the frontend discards). chat-presence-quiet.sql moves last_seen to an
+-- unpublished chat_presence_beats table and makes this table's writes flip-only.
+-- Re-running chat.sql reverts that fix; re-run chat-presence-quiet.sql after.
+-- The same applies to chat_set_offline() and the chat_presence_sweep cron below.
 
 CREATE OR REPLACE FUNCTION public.chat_heartbeat()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$

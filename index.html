@@ -8067,7 +8067,8 @@
     <!-- Left Column: Hero Visual Showcase with customized company lore graphic -->
     <div class="login-hero-showcase">
       <div class="login-hero-overlay"></div>
-      <img src="./login_hero.jpg" alt="Rynek Proroctw G6 Custom Lore" class="login-hero-img">
+      <!-- src is promoted from data-src by showLoginScreen() — see the comment there. -->
+      <img data-src="./login_hero.jpg" alt="Rynek Proroctw G6 Custom Lore" class="login-hero-img">
       <div class="login-hero-content">
         <span class="hero-badge">🔮 Platforma Predykcyjna G6</span>
         <h2 class="hero-title">Witaj na firmowym parkiecie proroctw.</h2>
@@ -11023,6 +11024,13 @@ let markets = [];
 let tradesByMarket = {};
 let myPositionsByMarket = {};
 let marketRenderSeq = 0;
+// Set when a realtime market/trade change arrives while the Rynki tab is NOT
+// showing. renderMarkets() costs a `positions` round-trip plus a full rebuild of
+// every card (each with its own lightweight-charts instance), and every trade by
+// anyone used to trigger one on every client regardless of tab. The in-memory
+// state (markets[] / tradesByMarket) is still updated eagerly — only the render
+// is deferred, and switchTab('markets') flushes it. See flushMarketsIfDirty().
+let marketsDirty = false;
 let activeSide = 'YES';
 let activeMarket = null;
 let realtimeChannels = [];
@@ -11546,6 +11554,23 @@ function makeSpinner() {
   return el('div', { className: 'loading-center' }, el('div', { className: 'spinner' }));
 }
 
+// Reveal the login screen, fetching its hero image on first use.
+//
+// The hero is a purely decorative background (opacity .65 behind an overlay), but
+// it lives in the initial HTML — so the preload scanner used to fetch it during
+// parse, long before `sb.auth.getSession()` resolves. Every already-logged-in
+// visit therefore paid for an image it never displays. Holding the URL in
+// `data-src` and promoting it to `src` only here means returning players never
+// download it at all; the showcase's own `background: #090d16` is the intended
+// backdrop while it loads, so there is nothing to flash.
+function showLoginScreen() {
+  const heroImg = screenLogin.querySelector('.login-hero-img');
+  if (heroImg && !heroImg.getAttribute('src') && heroImg.dataset.src) {
+    heroImg.src = heroImg.dataset.src;
+  }
+  show(screenLogin);
+}
+
 // ── DOM refs ──────────────────────────────────────────────────────────────
 const screenLogin     = document.getElementById('screen-login');
 const screenApp       = document.getElementById('screen-app');
@@ -11854,7 +11879,7 @@ let forcePinUser = null;
 function startForcePin(user) {
   forcePinUser = user;
   hide(screenApp);
-  show(screenLogin);
+  showLoginScreen();
   switchLoginMode('forcepin');
   const nf = document.getElementById('force-new-pin');
   if (nf) nf.focus();
@@ -11886,7 +11911,7 @@ async function initSession(user) {
     await sb.auth.signOut();
     me = null;
     hide(screenApp);
-    show(screenLogin);
+    showLoginScreen();
     loginError.textContent = 'Nie udało się wczytać profilu. Spróbuj zalogować się ponownie.';
     await loadNickList();
     return;
@@ -11909,7 +11934,7 @@ async function doLogout() {
   resetChatState();
   teardownRealtime();
   await sb.auth.signOut();
-  me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {};
+  me = null; markets = []; tradesByMarket = {}; myPositionsByMarket = {}; marketsDirty = false;
   pokerState = null; pokerRealtimeReady = false; stopPokerClock();
   rouletteState = null; rouletteRealtimeReady = false; rouletteLastResultId = null; stopRouletteHeartbeat();
   rouletteLocalBets = null; if (rouletteFlushTimer) { clearTimeout(rouletteFlushTimer); rouletteFlushTimer = null; }
@@ -11931,7 +11956,7 @@ async function doLogout() {
   loginError.textContent = '';
   switchLoginMode('login');
   await loadNickList();
-  show(screenLogin);
+  showLoginScreen();
 }
 
 // ── Login event listeners ─────────────────────────────────────────────────
@@ -12609,6 +12634,7 @@ function switchTab(tab) {
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     if (markets.length === 0) loadMarkets();
+    else flushMarketsIfDirty();   // catch up on trades that landed while away
   } else if (tab === 'leaderboard') {
     hide(tM); show(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     loadLeaderboard();
@@ -13287,7 +13313,17 @@ async function loadMarkets() {
   await renderMarkets();
 }
 
+// Render the Rynki grid only if a realtime change landed while it was hidden.
+// Called on entry to the tab, which is the moment the deferred work becomes
+// worth paying for.
+function flushMarketsIfDirty() {
+  if (!marketsDirty) return;
+  marketsDirty = false;
+  renderMarkets();
+}
+
 async function renderMarkets() {
+  marketsDirty = false;
   const renderSeq = ++marketRenderSeq;
   const marketsSnapshot = markets.slice();
 
@@ -13879,17 +13915,19 @@ function setupRealtime() {
       if (payload.eventType === 'INSERT') {
         if (!markets.find(m => m.id === payload.new.id)) {
           markets.push(payload.new);
-          await renderMarkets();
+          if (activeTab === 'markets') await renderMarkets(); else marketsDirty = true;
         }
       } else if (payload.eventType === 'UPDATE') {
         const idx = markets.findIndex(m => m.id === payload.new.id);
         if (idx !== -1) markets[idx] = { ...markets[idx], ...payload.new };
         if (payload.new.resolved) {
+          // A resolution pays out, so the coin balance in the header really can
+          // change for anyone — that refresh stays unconditional.
           await refreshMeCoins();
-          await renderMarkets();
+          if (activeTab === 'markets') await renderMarkets(); else marketsDirty = true;
           return;
         }
-        updateCardProb(payload.new);
+        if (activeTab === 'markets') updateCardProb(payload.new); else marketsDirty = true;
       }
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades' }, async payload => {
@@ -13906,6 +13944,9 @@ function setupRealtime() {
         amount: t.amount,
         shares: t.shares,
       });
+      // State above is kept current on every tab so the grid is correct the
+      // moment it is shown; the expensive render below is not.
+      if (activeTab !== 'markets') { marketsDirty = true; return; }
       updateCardChart(t.market_id);
       await renderMarkets();
     })
@@ -13989,9 +14030,14 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'football_matches' }, () => {
       if (activeTab === 'football') loadFootball(false);
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'football_bets' }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'football_bets' }, async payload => {
       if (activeTab === 'football') loadFootball(false);
-      await refreshMeCoins();
+      // football_bets is SELECT-able by everyone (`USING (true)`), so realtime
+      // hands every client every player's bets. Only MY row can move MY balance
+      // — placing a bet debits, settling credits — so refreshing the header on
+      // someone else's bet was a round-trip that could never change anything.
+      const row = payload.new || payload.old;
+      if (row && row.user_id === me?.id) await refreshMeCoins();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'canvas_pixels' }, (payload) => {
       applyCanvasPixelChange(payload.new);
@@ -35620,7 +35666,7 @@ startUpdateChecker();
     }
   } else {
     await loadNickList();
-    show(screenLogin);
+    showLoginScreen();
   }
 })();
 </script>
