@@ -1336,6 +1336,10 @@ $$;
 --      (eats ~half its own impact after floor clamp); cur_price lands at the post-drop price.
 --   Floor = 30% of base throughout.
 -- Crops are consumed FIFO from the soonest-to-ROT non-expired lots.
+-- ⚠️ THIS BASE COPY IS SUPERSEDED TWICE: by farm-seasonal-contracts.sql (weekly
+-- contract premium) and then by farm-collector-perks.sql (the „Renoma Kolekcjonera"
+-- premium, up to +30%). Re-running farm.sql reverts BOTH silently — sales just start
+-- paying less, with no error. Re-run both of those files afterwards, in that order.
 CREATE OR REPLACE FUNCTION public.sell_crop_to_npc(p_crop_type text, p_qty integer)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE

@@ -68,8 +68,11 @@ AS $$
              JOIN public.farm_card_defs d ON d.species = fc.species
             WHERE fc.user_id = p_uid AND d.edition_size IS NULL
          ), 0)
+       -- ⚠️ COALESCE on stat_value: bred hybrids carry a per-level value floor
+       -- (farm-hybrid-income-parity.sql patches this in place; keep it inline here
+       -- so re-running this file can't revert it — that is how economy_stats broke).
        + COALESCE((
-           SELECT sum(round(20000.0 / ni.edition_size * ni.level))
+           SELECT sum(COALESCE(round(ni.stat_value * ni.level), round(20000.0 / ni.edition_size * ni.level)))
              FROM public.farm_nft_instances ni
             WHERE ni.owner_id = p_uid
          ), 0)
@@ -169,7 +172,8 @@ AS $$
                     FROM public.farm_collection fc
                     JOIN public.farm_card_defs d ON d.species = fc.species
                    WHERE fc.user_id = p_uid AND d.edition_size IS NULL), 0) AS farm_cards,
-      COALESCE((SELECT sum(round(20000.0 / ni.edition_size * ni.level))
+      -- ⚠️ stat_value floor for bred hybrids — see the note above.
+      COALESCE((SELECT sum(COALESCE(round(ni.stat_value * ni.level), round(20000.0 / ni.edition_size * ni.level)))
                   FROM public.farm_nft_instances ni
                  WHERE ni.owner_id = p_uid), 0) AS farm_nft,
       COALESCE((SELECT sum(fi.qty * fm.cur_price)

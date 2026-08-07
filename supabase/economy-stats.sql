@@ -184,8 +184,13 @@ AS $$
          WHERE d.edition_size IS NULL
            AND fc.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric)
+      -- ⚠️ Bred hybrids carry a per-level stat_value floor (farm-hybrid-income-parity.sql)
+      -- so a hybrid is never valued below the parent it consumed. That file patches this
+      -- expression in place via a guarded DO block, which means a plain re-run of THIS
+      -- file silently reverted it (it did, on 2026-08-05: Skarbiec valued 7 wild_hybrids
+      -- at 560 instead of 28171). Keep the COALESCE here so the two can't drift again.
       + COALESCE((
-        SELECT sum(round(20000.0 / ni.edition_size * ni.level))
+        SELECT sum(COALESCE(round(ni.stat_value * ni.level), round(20000.0 / ni.edition_size * ni.level)))
           FROM public.farm_nft_instances ni
          WHERE ni.owner_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::numeric)

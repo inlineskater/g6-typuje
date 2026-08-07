@@ -31670,9 +31670,17 @@ async function breedNft(aId, bId, btn) {
   // Carry the server's synergy stats into local state — without them the fresh
   // hybrid would render with its SPECIES defaults (weaker than the parents it
   // just burned) until the next full reload.
+  // ⚠️ level and stat_value are part of that payload: since
+  // farm-hybrid-income-parity.sql a hybrid INHERITS max(parentLevels) and may carry
+  // a stat_value floor, so hardcoding level 1 / dropping stat_value made the fresh
+  // card render at half yield and 1/50th value — and, far worse, made the NEXT
+  // breeding preview measure „+15% over the better parent" against those wrong
+  // numbers and offer a hybrid strictly worse than the parent, while quoting a
+  // cost computed from level 1 instead of the real level.
   fmNft.push({ id: h.id, species: h.species, serial_no: h.serial_no, edition_size: h.edition_size,
-               owner_id: me.id, nft_name: h.nft_name, level: 1, listed: false,
-               stat_yield: h.stat_yield ?? null, stat_grow_minutes: h.stat_grow_minutes ?? null });
+               owner_id: me.id, nft_name: h.nft_name, level: h.level ?? 1, listed: false,
+               stat_yield: h.stat_yield ?? null, stat_grow_minutes: h.stat_grow_minutes ?? null,
+               stat_value: h.stat_value ?? null });
   // minted_count is the monotonic "minted ever" counter the catalog/edition grid
   // reads; bump it locally so the hybrid's supply isn't one short until a reload.
   const hDef = fmDefs.get(h.species);

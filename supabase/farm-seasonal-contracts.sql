@@ -509,6 +509,12 @@ END;
 $$;
 
 -- ── sell_crop_to_npc override: normal sale + seasonal premium ───────────────
+-- ⚠️ THIS COPY IS SUPERSEDED by supabase/farm-collector-perks.sql, which re-declares
+-- sell_crop_to_npc with the „Renoma Kolekcjonera" premium (proceeds × (1 + collector),
+-- up to +30%). The version below has NO collector premium, so re-running THIS file
+-- silently reverts that perk — every crop sale quietly starts paying up to 30% less,
+-- with no error anywhere and the client preview (farmSellQuote) still promising the
+-- bonus. ALWAYS re-run supabase/farm-collector-perks.sql after re-running this file.
 
 CREATE OR REPLACE FUNCTION public.sell_crop_to_npc(p_crop_type text, p_qty integer)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
