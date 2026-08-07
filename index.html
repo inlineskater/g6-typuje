@@ -32679,8 +32679,9 @@ function farmGrowthPct(plantedAt, readyAt) {
 
 
 // Wraps the L1+ level-up ladder in a disclosure so the popup opens clean.
-// Fungible cards ONLY — an NFT instance gets fdsNftUpgrade() instead, because
-// the ladder's „N kart + coins" cost is a mechanic NFTs cannot use at all.
+// Fungible cards ONLY. NFT level information uses fdsNftUpgrade() in the
+// collection/card view; planted NFT details intentionally omit it because the
+// ladder's „N kart + coins" cost is a mechanic NFTs cannot use at all.
 function farmCollapsibleLevels(def, price, level) {
   return el('details', { className: 'farm-pm-details' },
     el('summary', {}, 'Wszystkie poziomy karty'),
@@ -32704,6 +32705,7 @@ function openFarmPlantedModal(tile, x, y) {
   // were simply the wrong number for every hybrid and low for anyone with land.
   // Mirrors harvest_crop() in supabase/farm-achievements.sql.
   const inst = tile.planted_instance_id ? (fmNft || []).find(n => n.id === tile.planted_instance_id) : null;
+  const isNft = def.edition_size != null || !!tile.planted_instance_id;
   const baseYield = (inst && inst.stat_yield != null) ? inst.stat_yield : def.base_yield;
   const yieldBonus = isMine ? farmYieldBonus() : 0;
   const yieldNow = Math.round(baseYield * (1 + (level - 1) * 0.5) * (1 + yieldBonus));
@@ -32758,9 +32760,10 @@ function openFarmPlantedModal(tile, x, y) {
     fdsRow('Czas wzrostu', growMin ? farmGrowDaysLabel(growMin) : '—'),
     fdsRow('Zasadzono', tile.planted_at ? fmtDateTime(tile.planted_at) : '—'));
 
-  // Price and the upgrade path are rebuilt from live fmMarket whenever the NPC
-  // price moves, instead of being frozen at open: this popup shows a ticking
-  // countdown, which made a stale price read as live.
+  // Price and, for fungible cards, the reference level ladder are rebuilt from
+  // live fmMarket whenever the NPC price moves. A planted NFT deliberately gets
+  // no upgrade information here: fusion belongs to its collection/card view
+  // after harvest, not to the planted-crop details.
   const priceSlot = el('div', {});
   const levelsSlot = el('div', {});
   let priceKey = null;
@@ -32774,9 +32777,7 @@ function openFarmPlantedModal(tile, x, y) {
     if (key === priceKey) return;
     priceKey = key;
     priceSlot.replaceChildren(farmPayoutPanel(def, mkt, { yieldQty: yieldNow }));
-    if (inst) {
-      levelsSlot.replaceChildren(fdsNftUpgrade(inst, level, { planted: true }));
-    } else {
+    if (!isNft) {
       const wasOpen = !!levelsSlot.querySelector('details')?.open;
       const levels = farmCollapsibleLevels(def, cur != null ? cur : base, level);
       if (wasOpen) levels.open = true;
@@ -32792,7 +32793,8 @@ function openFarmPlantedModal(tile, x, y) {
     actions.append(rmBtn);
   }
 
-  const body = el('div', { className: 'fds rar-' + rar }, hero, focus, priceSlot, facts, levelsSlot, actions);
+  const body = el('div', { className: 'fds rar-' + rar },
+    hero, focus, priceSlot, facts, isNft ? null : levelsSlot, actions);
   const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Szczegóły rośliny'), closeBtn),
     body);
