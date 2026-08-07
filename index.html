@@ -6796,6 +6796,114 @@
     .farm-pm-details summary::after { content: ' \25be'; color: var(--muted); font-weight: 700; }
     .farm-pm-details[open] summary { border-bottom: 1px solid var(--border); }
     .farm-pm-details[open] summary::after { content: ' \25b4'; }
+
+    /* ── Arkusz odmiany (.fds-*) ───────────────────────────────────────────
+       ONE tag layout shared by the three „co to za roślina i co mi daje"
+       popups: a planted tile, a plant card, and a serialized NFT. Every one of
+       them is the same nursery variety-tag, in the same order:
+
+         hero   art + name + stamp line (what kind of card this is)
+         focus  the single thing you opened it for, in the ONE filled panel
+                the tag allows; its bar always means „progress toward X"
+         money  what a harvest pays today, written as an equation
+         rows   the remaining facts as hairlines, then the upgrade path
+
+       Three colour roles, one each — mixing them is what made the old .farm-pm-*
+       popups read as a pile of panels:
+         rarity → identity (hero plaque + focus panel tint), via .rar-* below
+         gold   → money (--fds-coin)
+         green  → state („gotowe do zbioru", „stać cię na awans")
+       The stamp line (monospace, letter-spaced, uppercase) is the thread that
+       ties a tag to its trading-card identity — the tag's serial, not decoration. */
+    .fds { --fds-tint: rgba(100,116,139,.07); --fds-line: rgba(100,116,139,.20); --fds-coin: #b45309; }
+    .fds.rar-rare      { --fds-tint: rgba(37,99,235,.07);  --fds-line: rgba(37,99,235,.20); }
+    .fds.rar-epic      { --fds-tint: rgba(147,51,234,.07); --fds-line: rgba(147,51,234,.20); }
+    .fds.rar-legendary { --fds-tint: rgba(217,119,6,.10);  --fds-line: rgba(217,119,6,.26); }
+
+    .fds-stamp { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+    .fds-hero { display: flex; align-items: center; gap: 13px; padding: 2px 0 16px; }
+    .fds-hero-art { flex: none; width: 62px; height: 62px; display: grid; place-items: center;
+      border-radius: var(--r-md); font-size: 34px; line-height: 1;
+      background: var(--fds-tint); border: 1px solid var(--fds-line); }
+    .fds-hero-art .farm-ico { width: 38px; height: 38px; }
+    .fds-hero-txt { min-width: 0; }
+    .fds-hero-name { font-size: 20px; font-weight: 800; letter-spacing: -.015em; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fds-hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 5px; }
+    .fds-hero-meta .fds-dot { opacity: .45; }
+    .fds-flavor { margin-top: 6px; font-size: 12px; font-style: italic; line-height: 1.4; color: var(--muted); }
+    .fds-hero-nft .fds-hero-art { font-size: 30px; box-shadow: 0 2px 10px var(--fds-line); }
+
+    /* The one filled panel. Its bar always means progress toward something —
+       time to harvest, duplicates to the next level. Never a price. */
+    .fds-focus { padding: 13px 15px 14px; border-radius: var(--r-md);
+      background: var(--fds-tint); border: 1px solid var(--fds-line); }
+    .fds-focus-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .fds-focus-aside { font-size: 12.5px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .fds-big { margin-top: 4px; font-size: 29px; font-weight: 800; line-height: 1.06; letter-spacing: -.025em;
+      color: var(--text); font-variant-numeric: tabular-nums; }
+    .fds-bar { margin-top: 11px; height: 5px; border-radius: var(--r-pill); background: rgba(15,23,42,.10); overflow: hidden; }
+    .fds-bar-fill { height: 100%; border-radius: inherit; background: currentColor; color: var(--text); opacity: .55; transition: width .4s ease; }
+    .fds-focus-sub { margin-top: 8px; font-size: 11.5px; font-weight: 600; line-height: 1.45; color: var(--muted); }
+    .fds-focus .btn-primary { margin: 13px 0 0; min-height: 42px; font-size: 14px; }
+    .fds-focus.ready { --fds-tint: rgba(22,163,74,.09); --fds-line: rgba(22,163,74,.24); }
+    .fds-focus.ready .fds-big, .fds-focus.ready .fds-focus-sub { color: #15803d; }
+    .fds-focus.ready .fds-bar-fill { color: #16a34a; opacity: 1; }
+    .fds-focus.ready .btn-primary { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 4px 12px rgba(22,163,74,.20); }
+
+    /* Money — always the same shape in all three tags: the payout, the equation
+       behind it, and one gauge saying whether today is a good day to sell. The
+       gauge is the 0–100%-of-max scale the rest of Farma quotes, but labelled in
+       COINS at both ends, so it answers „sprzedawać czy czekać?" on its own. */
+    .fds-money { margin-top: 18px; padding: 15px 2px 14px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .fds-money-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .fds-money-val { margin-top: 4px; font-size: 27px; font-weight: 800; letter-spacing: -.025em;
+      color: var(--fds-coin); font-variant-numeric: tabular-nums; }
+    .fds-money-eq { margin-top: 5px; font-size: 12px; font-weight: 600; color: var(--muted); }
+    .fds-money-eq b { font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+    .fds-gauge { position: relative; height: 6px; margin-top: 14px; border-radius: var(--r-pill); background: rgba(15,23,42,.08); }
+    .fds-gauge-floor { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pill) 0 0 var(--r-pill);
+      background: repeating-linear-gradient(45deg, rgba(15,23,42,.15) 0 2px, transparent 2px 5px); }
+    .fds-gauge-fill { position: absolute; top: 0; bottom: 0; border-radius: var(--r-pill); }
+    .fds-gauge-fill.up { background: #16a34a; } .fds-gauge-fill.flat { background: #d97706; } .fds-gauge-fill.down { background: #dc2626; }
+    .fds-gauge-pin { position: absolute; top: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%;
+      background: var(--text); border: 2px solid var(--card); transform: translateY(-50%); }
+    .fds-gauge-scale { display: flex; justify-content: space-between; gap: 10px; margin-top: 9px; }
+    .fds-gauge-scale b { margin-left: 4px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: 0; }
+
+    /* Small uppercase labels — section headers and panel eyebrows. */
+    .fds-eyebrow, .fds-sec { font-size: 10px; font-weight: 800; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--muted); }
+
+    /* Facts: hairline rows, never boxes. */
+    .fds-sec { display: block; margin: 19px 0 2px; }
+    .fds-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      padding: 9px 2px; border-top: 1px solid var(--border); font-size: 13px; }
+    .fds-row > span { color: var(--muted); }
+    .fds-row > b { font-weight: 800; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+    .fds-row.good > b { color: #15803d; }
+    .fds-row.money > b { color: var(--fds-coin); }
+    .fds-badge { margin-left: 6px; font-size: 10.5px; font-weight: 800; color: #15803d; white-space: nowrap; }
+    .fds-note { margin-top: 11px; font-size: 11.5px; line-height: 1.55; color: var(--muted); }
+    .fds-note b { color: var(--text); font-weight: 800; }
+    .fds .farm-pm-details { margin-top: 8px; }
+
+    .fds-actions { display: grid; gap: 6px; margin-top: 20px; }
+    .fds-actions .btn-primary { margin-bottom: 0; }
+    .fds-danger { justify-self: center; background: none; border: none; padding: 7px 12px; font-family: inherit;
+      font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; border-radius: var(--r-sm); transition: all .15s; }
+    .fds-danger:hover { color: var(--no); background: var(--no-dim); }
+
+    @media (max-width: 520px) {
+      .fds-hero-art { width: 54px; height: 54px; font-size: 30px; }
+      .fds-hero-art .farm-ico { width: 33px; height: 33px; }
+      .fds-hero-name { font-size: 18px; }
+      .fds-big { font-size: 26px; }
+      .fds-money-val { font-size: 24px; }
+    }
     .farm-card-row, .farm-market-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); }
     .farm-card-row:first-of-type, .farm-market-row:first-of-type { border-top: none; }
     .farm-card-emoji { font-size: 22px; width: 28px; text-align: center; flex: 0 0 auto; }
@@ -31717,47 +31825,227 @@ function farmNftValue(n) {
   return n.edition_size ? Math.round(20000 / n.edition_size * lvl) : null;
 }
 
-// Headline „Zysk / doba" for one NFT instance. It is deliberately a RANGE: the
-// NPC price is re-anchored to 30-100% of the catalog max twice a day, so a single
-// number would be a lie in one direction or the other. The meter marks where
-// today's price actually sits inside that band.
-function farmNftIncomeBlock(n, calc) {
-  const box = el('div', { className: 'nftm-income' });
-  box.append(el('div', { className: 'nftm-income-head' }, 'Zysk / doba'));
-  if (!calc) {
-    box.append(el('div', { className: 'nftm-income-val' }, '—'),
-      el('div', { className: 'nftm-income-sub' }, 'Brak notowań skupu dla tego plonu.'));
+
+
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Arkusz odmiany (.fds-*) — the shared body of the three „co to za roślina i
+//  co mi daje" popups: a planted tile, a fungible plant card, and a serialized
+//  NFT. One anatomy: hero → focus → money → hairline rows → upgrade path. See
+//  the .fds-* CSS block for why there is only ever one filled panel.
+// ════════════════════════════════════════════════════════════════════════════
+// 4-5 digit coin amounts are the norm on a levelled plant; group them.
+function fdsCoins(n) { return Math.round(Number(n) || 0).toLocaleString('pl-PL') + ' 🪙'; }
+
+// The variety-tag header shared by all three sheets: an art plaque tinted by
+// rarity, the name, and a monospace „stamp" line that reads like a nursery tag's
+// serial — rarity, level, and (for an NFT) which edition serial this is. That
+// stamp is the visual thread tying a sheet to its trading-card identity.
+function fdsHero(emoji, name, rarity, stampParts) {
+  const stamp = el('div', { className: 'fds-hero-meta fds-stamp' });
+  (stampParts || []).filter(p => p != null && p !== '').forEach((p, i) => {
+    if (i) stamp.append(el('span', { className: 'fds-dot' }, '·'));
+    stamp.append(p instanceof Node ? p : el('span', {}, String(p)));
+  });
+  return el('div', { className: 'fds-hero' },
+    el('div', { className: 'fds-hero-art' }, farmIcon(emoji || '🌱')),
+    el('div', { className: 'fds-hero-txt' },
+      el('div', { className: 'fds-hero-name', title: name }, name),
+      stamp));
+}
+
+function fdsRow(label, value, opts) {
+  opts = opts || {};
+  const row = el('div', { className: 'fds-row' + (opts.cls ? ' ' + opts.cls : '') },
+    el('span', {}, label),
+    el('b', {}, value instanceof Node ? value : String(value)));
+  if (opts.title) row.title = opts.title;
+  return row;
+}
+
+function fdsSection(title) { return el('div', { className: 'fds-sec' }, title); }
+
+// „Potentat Ziemski": +2% harvest per owned tile, capped +15%. Mirror of
+// farm_yield_bonus() in supabase/farm-achievements.sql, which harvest_crop
+// multiplies into every harvest — fmTiles already drops migration/zen tiles,
+// exactly the set the SQL counts.
+function farmYieldBonus(userId) {
+  const uid = userId || me?.id;
+  if (!uid) return 0;
+  let n = 0;
+  fmTiles.forEach(t => { if (t.owner_id === uid) n++; });
+  return Math.min(0.15, 0.02 * n);
+}
+
+// The money block: yieldQty units valued at what the NPC actually PAYS for the
+// whole batch (farmSellQuote mirrors sell_crop_to_npc, including the per-batch
+// price dip and the collector premium), plus a gauge showing where today's price
+// sits between the 30% floor and the catalog max — labelled in coins at both
+// ends, so the bar answers „sell now or wait?" on its own.
+function farmPayoutPanel(def, mkt, opts) {
+  const yieldQty = Math.max(0, opts?.yieldQty || 0);
+  const box = el('div', { className: 'fds-money' });
+  const base = mkt ? +mkt.base_price : null;
+  const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
+  if (!base || cur == null) {
+    box.append(el('div', { className: 'fds-money-head' }, el('span', { className: 'fds-eyebrow' }, opts?.label || 'Wypłata za zbiór')),
+      el('div', { className: 'fds-money-val' }, '—'),
+      el('div', { className: 'fds-money-eq' }, 'Brak notowań skupu dla tego plonu.'));
     return box;
   }
-  const money = (lo, hi) => lo === hi ? (lo + ' 🪙') : (lo + ' – ' + hi + ' 🪙');
-  box.append(el('div', { className: 'nftm-income-val' }, '≈ ' + money(calc.dayLow, calc.dayHigh)),
-    el('div', { className: 'nftm-income-sub' }, 'przy cenie skupu 30–100% pułapu (' + calc.base + ' 🪙/szt.)'));
-  // Where today's price sits in the 30-100% band → 0-100% of the meter.
-  const pos = Math.max(0, Math.min(100, (calc.curPct - 30) / 70 * 100));
-  box.append(el('div', { className: 'nftm-meter', title: 'NPC płaci dziś ' + calc.cur.toFixed(1) + ' 🪙/szt. = ' + calc.curPct + '% pułapu' },
-    el('div', { className: 'nftm-meter-pin', style: { left: pos + '%' } })));
-  box.append(el('div', { className: 'nftm-now' },
-    'Dziś: ≈ ' + calc.dayNow + ' 🪙/dobę · skup ' + calc.curPct + '% pułapu'));
-  if (calc.seasonal) box.append(el('div', { className: 'nftm-note' },
-    '🏆 Kontrakt tygodnia: +' + calc.bonusPerUnit + ' 🪙/szt. jest już wliczony (łącznie +' + calc.seasonalTotal + ' 🪙 za zbiór).'));
-  const coll = farmCollectorBonus();
-  if (coll > 0) box.append(el('div', { className: 'nftm-note' },
-    '🏅 Renoma Kolekcjonera dorzuca +' + Math.round(coll * 100) + '% do wypłaty ze skupu: ≈ '
-    + money(Math.round(calc.dayLow * (1 + coll)), Math.round(calc.dayHigh * (1 + coll))) + ' / dobę.'));
-  box.append(el('div', { className: 'nftm-note' },
-    'Cena losuje się na nowo o 00:00 i 12:00, a każda sprzedaż chwilowo ją zbija — dolna granica to realny scenariusz, nie najgorszy możliwy.'));
+  const floor = base * FARM_PRICE_FLOOR_PCT / 100;
+  // ONE scale for the chip, the bar and the coin labels: percent of the catalog
+  // max (cur/base) — the number farmTrendChip prints and the 30–100% band the
+  // rest of Farma quotes.
+  const pct = Math.max(0, Math.min(100, cur / base * 100));
+  const trendCls = pct >= 80 ? 'up' : pct <= 50 ? 'down' : 'flat';
+  box.append(el('div', { className: 'fds-money-head' },
+    el('span', { className: 'fds-eyebrow' }, opts?.label || 'Wypłata za zbiór'),
+    farmTrendChip(def.crop_type)));
+
+  if (yieldQty > 0) {
+    // Quote what the NPC actually pays for the batch, not yieldQty × spot:
+    // selling the whole harvest at once drops the price by min(40%, 0.5%/unit)
+    // and the batch is charged the average of pre/post, then the collector
+    // premium — see farmSellQuote / sell_crop_to_npc.
+    const q = farmSellQuote(def.crop_type, yieldQty);
+    const qMin = farmSellQuote(def.crop_type, yieldQty, floor);
+    const qMax = farmSellQuote(def.crop_type, yieldQty, base);
+    const now = q ? q.proceeds : Math.round(yieldQty * cur);
+    const min = qMin ? qMin.proceeds : Math.round(yieldQty * floor);
+    const max = qMax ? qMax.proceeds : Math.round(yieldQty * base);
+    const eq = el('div', { className: 'fds-money-eq' },
+      yieldQty + ' szt. × ' + farmPriceLabel(cur) + ' 🪙 (cena dziś)');
+    if (q && q.dropPct > 0) eq.append(el('span', { title: 'Taka partia zbija cenę o ~' + q.dropPct + '%, a płaci się średnią z ceny przed i po sprzedaży.' },
+      ' · partia zbija cenę o ' + q.dropPct + '%'));
+    if (q && q.collectorPct > 0) eq.append(el('span', { className: 'fds-badge',
+      title: 'Renoma Kolekcjonera: +2% za każdy posiadany gatunek NFT (maks. +30%)' }, '🏅 +' + q.collectorPct + '%'));
+    box.append(el('div', { className: 'fds-money-val' }, '≈ ' + fdsCoins(now)), eq);
+    box.append(
+      el('div', { className: 'fds-gauge', title: 'Cena skupu chodzi między 30% a 100% pułapu. Zakreskowany odcinek to twarda podłoga — niżej nie zejdzie.' },
+        el('div', { className: 'fds-gauge-floor', style: { width: FARM_PRICE_FLOOR_PCT + '%' } }),
+        el('div', { className: 'fds-gauge-fill ' + trendCls,
+                    style: { left: FARM_PRICE_FLOOR_PCT + '%', width: Math.max(0, pct - FARM_PRICE_FLOOR_PCT) + '%' } }),
+        el('div', { className: 'fds-gauge-pin', style: { left: pct + '%' } })),
+      el('div', { className: 'fds-gauge-scale' },
+        el('span', {}, 'przy dnie ', el('b', {}, fdsCoins(min))),
+        el('span', {}, 'przy pułapie ', el('b', {}, fdsCoins(max)))));
+  } else {
+    box.append(el('div', { className: 'fds-money-val' }, farmPriceLabel(cur) + ' 🪙'),
+      el('div', { className: 'fds-money-eq' }, 'za sztukę plonu · pułap ' + farmPriceLabel(base) + ' 🪙'),
+      el('div', { className: 'fds-gauge' },
+        el('div', { className: 'fds-gauge-floor', style: { width: FARM_PRICE_FLOOR_PCT + '%' } }),
+        el('div', { className: 'fds-gauge-fill ' + trendCls,
+                    style: { left: FARM_PRICE_FLOOR_PCT + '%', width: Math.max(0, pct - FARM_PRICE_FLOOR_PCT) + '%' } }),
+        el('div', { className: 'fds-gauge-pin', style: { left: pct + '%' } })));
+  }
   return box;
 }
 
-// Full stat sheet under the trading card: what the card yields, what it earns,
-// where it is right now, and what the next merge level would change.
-function farmNftStatSheet(n, st, calc) {
-  const def = st.def;
-  const wrap = el('div', { className: 'nftm-sheet' });
-  const row = (label, value, cls) => el('div', { className: 'nftm-row' + (cls ? ' ' + cls : '') },
-    el('span', {}, label), el('b', {}, value));
-  const sec = t => el('div', { className: 'nftm-sec' }, t);
-  const money = (lo, hi) => lo === hi ? (lo + ' 🪙') : (lo + ' – ' + hi + ' 🪙');
+// The honest upgrade path for one NFT instance. NFTs do not level by collecting
+// duplicates or paying coins (level_up_card raises `nft_use_level_up_nft`) —
+// the ONLY way up is fusing a second instance of the same species AND level,
+// destroying it forever. For a bred hybrid that is the whole story: its stats
+// live on the instance, inherited from the exact parents, so no species-wide
+// ladder was ever meaningful for it.
+function fdsNftUpgrade(n, level, opts) {
+  opts = opts || {};
+  const def = fmDefs.get(n.species) || {};
+  const lvl = level || n.level || 1;
+  const cost = 50 * lvl * lvl;
+  const cur = farmNftStatsAtLevel(n, lvl);
+  const next = farmNftStatsAtLevel(n, lvl + 1);
+  const isHybrid = farmHasIndividualStats(def) || NFT_HYBRID_SPECIES.has(n.species);
+  const mine = n.owner_id === me?.id;
+  const wrap = el('div', {});
+  wrap.append(fdsSection('Awans na poz. ' + (lvl + 1)),
+    fdsRow('Plon ze zbioru', cur.yld + ' → ' + next.yld + ' szt.', { cls: 'good' }),
+    fdsRow('Czas wzrostu', farmGrowDaysLabel(cur.growMin) + ' → ' + farmGrowDaysLabel(next.growMin), { cls: 'good' }),
+    fdsRow('Koszt', 'drugi egzemplarz poz. ' + lvl + ' + ' + fdsCoins(cost)));
+  const note = el('div', { className: 'fds-note' });
+  if (!mine) {
+    note.append('Karty NFT awansują tylko przez ', el('b', {}, 'fuzję'),
+      ' dwóch egzemplarzy tej samej edycji na tym samym poziomie.');
+  } else {
+    const cands = farmNftMergeCandidates({ ...n, level: lvl });
+    if (opts.planted) {
+      note.append('Zasadzona karta nie może wejść w fuzję — najpierw zbierz plon.');
+    } else if (cands.length) {
+      note.append('Masz ', el('b', {}, cands.length + ' ' + plCount(cands.length, 'inny egzemplarz', 'inne egzemplarze', 'innych egzemplarzy') + ' poz. ' + lvl),
+        ' — fuzja zniszczy jeden z nich na zawsze.');
+    } else {
+      note.append('Nie ulepszysz jej duplikatami ani samymi coinami. Potrzebny jest ',
+        el('b', {}, 'drugi egzemplarz „' + (def.name || n.species) + '" na poz. ' + lvl),
+        ' — teraz go nie masz.');
+    }
+  }
+  if (isHybrid) note.append(' Statystyki hybrydy są indywidualne: dziedziczy je po konkretnych rodzicach, dlatego katalog nie pokazuje dla niej wspólnej drabinki poziomów.');
+  wrap.append(note);
+  // Actionable in the NFT sheet: open the fuel-picker if a fusion is possible.
+  if (mine && !opts.planted && !n.listed && farmNftMergeCandidates({ ...n, level: lvl }).length) {
+    const merge = el('button', { className: 'btn-primary', style: { marginTop: '12px' } },
+      '🔀 Połącz i ulepsz do poz. ' + (lvl + 1) + ' · ' + fdsCoins(cost));
+    merge.addEventListener('click', () => { if (opts.onMerge) opts.onMerge(); openFarmNftMergeModal(n); });
+    wrap.append(merge);
+  }
+  return wrap;
+}
+
+// ── Karta NFT ───────────────────────────────────────────────────────────────
+// The serialized-NFT sheet. It is the SAME variety-tag as the plant/card
+// popups — hero → focus → money → rows → upgrade — so a player learns one
+// layout and reads all three. What makes it an NFT is carried by the tag, not
+// by a different shape: the gold-legendary hero tint, the monospace serial in
+// the stamp line, and a one-line flavour under the name. The old glossy trading
+// card (pastel stat pills repeating poziom/plon/wzrost/wartość that the rows
+// already list) is gone — that repetition was most of its length and most of
+// what read as „templated".
+function farmNftFocus(calc) {
+  // The one thing you check on an NFT you already own: what it earns per day.
+  // It is a RANGE on purpose — the NPC price re-anchors to 30–100% of the max
+  // twice a day, so a single number would be a lie in one direction. The bar
+  // marks where TODAY's price sits inside that band.
+  const box = el('div', { className: 'fds-focus' });
+  if (!calc) {
+    box.append(el('div', { className: 'fds-focus-head' }, el('span', { className: 'fds-eyebrow' }, 'Zysk na dobę')),
+      el('div', { className: 'fds-big' }, '—'),
+      el('div', { className: 'fds-focus-sub' }, 'Brak notowań skupu dla tego plonu.'));
+    return box;
+  }
+  const pos = Math.max(0, Math.min(100, (calc.curPct - 30) / 70 * 100));
+  box.append(
+    el('div', { className: 'fds-focus-head' },
+      el('span', { className: 'fds-eyebrow' }, 'Zysk na dobę'),
+      el('span', { className: 'fds-focus-aside' }, 'dziś ≈ ' + fdsCoins(calc.dayNow))),
+    el('div', { className: 'fds-big' }, '≈ ' + calc.dayLow.toLocaleString('pl-PL') + ' – ' + fdsCoins(calc.dayHigh)),
+    el('div', { className: 'fds-bar' }, el('div', { className: 'fds-bar-fill', style: { width: pos + '%' } })),
+    el('div', { className: 'fds-focus-sub' }, 'przy cenie skupu 30–100% pułapu (' + calc.base + ' 🪙/szt.) — dziś skup płaci ' + calc.curPct + '% pułapu.'));
+  return box;
+}
+
+function openFarmNftModal(n) {
+  const def = fmDefs.get(n.species) || {};
+  const rar = def.rarity || 'legendary';
+  const lvl = n.level || 1;
+  const st = farmNftStats(n);            // effective, instance-aware (hybrids carry their own stats)
+  const calc = farmNftIncomeCalc(n);     // 30–100% band → zysk/doba od-do
+  const isHybrid = NFT_HYBRID_SPECIES.has(n.species) || farmHasIndividualStats(def);
+  const value = farmNftValue(n);
+
+  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeX.addEventListener('click', close);
+
+  const hero = fdsHero(farmNftEmoji(n), n.nft_name || def.name || n.species, rar, [
+    isHybrid ? 'Hybryda NFT' : ((FARM_RARITY_PL[rar] || rar) + ' NFT'),
+    'poz. ' + lvl,
+    '#' + n.serial_no + ' / ' + n.edition_size]);
+  hero.classList.add('fds-hero-nft');
+  hero.querySelector('.fds-hero-txt').append(
+    el('div', { className: 'fds-flavor' }, '„' + farmNftFlavor(n) + '"'));
 
   // Which crop this plant harvests into — several plants share `seasonal_bloom`.
   const cropDefs = [...fmDefs.values()].filter(d => d.crop_type === def.crop_type);
@@ -31766,77 +32054,36 @@ function farmNftStatSheet(n, st, calc) {
                            : ((def.emoji || '🌱') + ' ' + (def.name || def.crop_type || '—'));
   const perWeek = st.grow ? (7 / Math.max(1, st.grow / 1440)) : null;
 
-  wrap.append(sec('Uprawa'),
-    row('Plon z jednego zbioru', st.yield + ' szt.'),
-    row('Czas wzrostu', farmGrowDaysLabel(st.grow)),
-    row('Zbiorów w tygodniu', perWeek ? ('≈ ' + perWeek.toFixed(1).replace('.', ',')) : '—'),
-    row('Zbierany plon', cropLabel));
-  if (calc) wrap.append(
-    row('Cena skupu teraz', calc.cur.toFixed(1).replace('.', ',') + ' 🪙/szt. (' + calc.curPct + '% pułapu)'),
-    row('Pułap ceny', calc.base + ' 🪙/szt.'),
-    sec('Zarobek'),
-    row('Za jeden zbiór', money(calc.totalLow, calc.totalHigh), 'money'),
-    row('Na dobę', money(calc.dayLow, calc.dayHigh), 'money'),
-    row('Na dobę — dziś', '≈ ' + calc.dayNow + ' 🪙', 'money'));
-
   // Where the card is right now — a planted or listed card can't be merged/planted.
   let tileKey = null, tile = null;
   fmTiles.forEach((t, key) => { if (t.planted_instance_id === n.id) { tileKey = key; tile = t; } });
   let status;
-  if (n.listed) status = '🏷️ Wystawiona na Targowisku';
+  if (n.listed) status = '🏷️ Na Targowisku';
   else if (tile) {
     const ready = tile.ready_at && Date.now() >= new Date(tile.ready_at).getTime();
-    status = '🌱 Działka [' + tileKey + ']'
-           + (ready ? ' — gotowa do zbioru' : ' — zbiór ' + farmHarvestWhen(tile.ready_at));
-  } else status = '🎒 W kolekcji — gotowa do zasadzenia';
+    status = '🌱 Działka [' + tileKey + ']' + (ready ? ' — gotowa' : ' — ' + farmHarvestWhen(tile.ready_at));
+  } else status = '🎒 W kolekcji';
 
-  const next = farmNftStatsAtLevel(n, st.lvl + 1);
-  const nextCalc = farmNftIncomeCalc(n, st.lvl + 1);
-  wrap.append(sec('Karta'),
-    row('Egzemplarz', '#' + n.serial_no + ' / ' + n.edition_size),
-    row('Poziom', String(st.lvl)),
-    row('Wartość w Net Worth', st.value != null ? (st.value + ' 🪙') : '—'),
-    row('Status', status),
-    sec('Po awansie na poz. ' + (st.lvl + 1)),
-    row('Plon', next.yld + ' szt.'),
-    row('Czas wzrostu', farmGrowDaysLabel(next.growMin)),
-    row('Zysk / doba', nextCalc ? money(nextCalc.dayLow, nextCalc.dayHigh) : '—', 'money'),
-    row('Koszt fuzji', '2. egzemplarz poz. ' + st.lvl + ' + ' + (50 * st.lvl * st.lvl) + ' 🪙'));
-  return wrap;
-}
+  const facts = el('div', {});
+  facts.append(fdsSection('Uprawa'),
+    fdsRow('Plon ze zbioru', st.yield + ' szt.'),
+    fdsRow('Czas wzrostu', farmGrowDaysLabel(st.grow)),
+    fdsRow('Zbierany plon', cropLabel),
+    fdsRow('Zbiorów w tygodniu', perWeek ? ('≈ ' + perWeek.toFixed(1).replace('.', ',')) : '—'),
+    fdsSection('Egzemplarz'),
+    fdsRow('Wartość w Net Worth', value != null ? fdsCoins(value) : '—', { cls: 'money' }),
+    fdsRow('Gdzie jest', status));
 
-// Trading-card detail for a serialized NFT plant (click an NFT in Mój Majątek).
-function openFarmNftModal(n) {
-  const def = fmDefs.get(n.species) || {};
-  const rar = def.rarity || 'legendary';
-  const lvl = n.level || 1;
-  const stars = lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '';
-  const value = farmNftValue(n);
-  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
-  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
-  const esc = e => { if (e.key === 'Escape') close(); };
-  const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
-  closeX.addEventListener('click', close);
-  const stat = (label, val) => el('div', { className: 'farm-nft-stat' }, el('span', {}, label), el('b', {}, val));
-  const st = farmNftStats(n);                      // effective, instance-aware (hybrids carry their own stats)
-  const calc = farmNftIncomeCalc(n);               // 30-100% price band → zysk/doba od-do
-  const isHybrid = NFT_HYBRID_SPECIES.has(n.species);
-  const card = el('div', { className: 'farm-nft-card rar-' + rar + (isHybrid ? ' is-hybrid' : '') },
-    el('div', { className: 'farm-nft-card-serial' }, '#' + n.serial_no + ' / ' + n.edition_size + (lvl > 1 ? ' · Poz. ' + lvl : '')),
-    el('div', { className: 'farm-nft-card-art' }, farmIcon(farmNftEmoji(n))),
-    el('div', { className: 'farm-nft-card-name' }, (n.nft_name || def.name || n.species) + stars),
-    el('div', { className: 'farm-nft-card-species farm-rar-' + rar }, (def.name || n.species) + ' · ' + (isHybrid ? '🧬 Hybryda' : (FARM_RARITY_PL[rar] || rar)) + ' NFT'),
-    el('div', { className: 'farm-nft-card-stats' },
-      stat('Poziom', lvl + (lvl > 1 ? ' ' + '⭐'.repeat(lvl) : '')),
-      stat('Plon', st.yield + ' szt.'),
-      stat('Wzrost', farmGrowDaysLabel(st.grow)),
-      stat('Wartość', value != null ? (value + ' 🪙') : '?')),
-    el('div', { className: 'farm-nft-card-flavor' }, '„' + farmNftFlavor(n) + '"'));
-  const modal = el('div', { className: 'modal farm-nft-modal' },
+  const body = el('div', { className: 'fds rar-' + rar },
+    hero,
+    farmNftFocus(calc),
+    farmPayoutPanel(def, fmMarket.get(def.crop_type), { yieldQty: st.yield, label: 'Wypłata za jeden zbiór' }),
+    facts,
+    fdsNftUpgrade(n, lvl, { planted: !!tile, onMerge: close }));
+
+  const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, '💎 Karta NFT'), closeX),
-    card,
-    farmNftIncomeBlock(n, calc),
-    farmNftStatSheet(n, st, calc));
+    body);
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
@@ -32429,96 +32676,42 @@ function farmGrowthPct(plantedAt, readyAt) {
   return Math.max(0, Math.min(100, (Date.now() - p) / (r - p) * 100));
 }
 
-// Shared price + earnings block for the planted-crop and inventory-card popups:
-// current NPC price with its trend chip, a min(floor)–max(base) price bar with a
-// marker at the live price, and the coin value of `yieldQty` units at that price
-// (plus the min/max range across the whole 30–100% swing). Reuses the same
-// farmMarketEffectivePrice/farmPriceLabel/farmTrendChip helpers as the rest of Farma.
-function farmPricePanel(def, mkt, opts) {
-  const yieldQty = Math.max(0, opts?.yieldQty || 0);
-  const wrap = el('div', { className: 'farm-pm-price' });
-  const base = mkt ? +mkt.base_price : null;
-  const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
-  if (!base || cur == null) {
-    wrap.append(el('div', { className: 'farm-pm-price-row' }, el('span', {}, 'Cena (NPC)'), el('b', {}, '—')));
-    return wrap;
-  }
-  const floor = base * 0.30;
-  // ONE scale for the chip and the bar: percent of the catalog max (cur/base) — the
-  // number farmTrendChip prints and the 30–100% band the rest of Farma quotes. The
-  // bar used to normalize floor→base instead, so a price could read "▼41% maks."
-  // beside a bar filled to 16%; worse, the SAME 80/50 thresholds applied to two
-  // different numbers could disagree outright (60% of max = amber chip, red bar).
-  const pct = Math.max(0, Math.min(100, cur / base * 100));
-  const trendCls = pct >= 80 ? 'up' : pct <= 50 ? 'down' : 'flat';
-  wrap.append(
-    el('div', { className: 'farm-pm-price-row' },
-      el('span', {}, 'Cena teraz (NPC)'),
-      el('b', {}, farmPriceLabel(cur) + ' 🪙/szt'),
-      farmTrendChip(def.crop_type)),
-    el('div', { className: 'farm-pm-pricebar',
-                title: 'Cena NPC chodzi między 30% a 100% ceny maks. Zakreskowany odcinek to twarda podłoga — niżej nie zejdzie.' },
-      el('div', { className: 'farm-pm-pricebar-floor', style: { width: FARM_PRICE_FLOOR_PCT + '%' } }),
-      el('div', { className: 'farm-pm-pricebar-fill ' + trendCls,
-                  style: { left: FARM_PRICE_FLOOR_PCT + '%', width: Math.max(0, pct - FARM_PRICE_FLOOR_PCT) + '%' } }),
-      el('div', { className: 'farm-pm-pricebar-marker', style: { left: pct + '%' } })),
-    el('div', { className: 'farm-pm-pricebar-labels' },
-      el('span', { className: 'pb-min', style: { left: FARM_PRICE_FLOOR_PCT + '%' } }, 'min ' + farmPriceLabel(floor) + ' 🪙'),
-      el('span', { className: 'pb-max' }, 'maks. ' + farmPriceLabel(base) + ' 🪙')));
-  if (yieldQty > 0) {
-    // Quote what the NPC actually PAYS for the batch, not yieldQty × spot. Selling
-    // the whole harvest at once drops the price by min(40%, 0.5%/unit) and the batch
-    // is charged the average of pre/post (then the collector premium) — see
-    // farmSellQuote / sell_crop_to_npc. The naive product over-promised by ~20% on a
-    // big harvest, and its top-of-range was flatly unreachable: 210 units can never
-    // fetch 210 × max, because selling 210 units is itself what caps the price.
-    const q = farmSellQuote(def.crop_type, yieldQty);
-    const qMin = farmSellQuote(def.crop_type, yieldQty, floor);
-    const qMax = farmSellQuote(def.crop_type, yieldQty, base);
-    const now = q ? q.proceeds : Math.round(yieldQty * cur);
-    const min = qMin ? qMin.proceeds : Math.round(yieldQty * floor);
-    const max = qMax ? qMax.proceeds : Math.round(yieldQty * base);
-    const earnHint = 'Realna wypłata za sprzedaż całego zbioru naraz u NPC'
-      + (q && q.dropPct > 0 ? ' — taka partia zbija cenę o ~' + q.dropPct + '%, a płaci się średnią z ceny przed i po' : '')
-      + (q && q.collectorPct > 0 ? '. Renoma Kolekcjonera dodaje +' + q.collectorPct + '%' : '') + '.';
-    const rangeTxt = el('div', { className: 'farm-pm-earn-range' }, 'zakres ' + min + '–' + max + ' 🪙');
-    if (q && q.collectorPct > 0) rangeTxt.append(
-      el('span', { className: 'farm-seasonal-bonus', style: { marginLeft: '6px' },
-                   title: 'Renoma Kolekcjonera: +2% za każdy posiadany gatunek NFT (maks. +30%)' },
-        '🏅 +' + q.collectorPct + '%'));
-    wrap.append(
-      el('div', { className: 'farm-pm-earn' },
-        el('span', {}, 'Zarobek ze zbioru (' + yieldQty + ' szt.)'),
-        el('b', { title: earnHint }, '~' + now + ' 🪙')),
-      rangeTxt);
-  }
-  return wrap;
-}
 
-// Wraps the existing L1–5 level-up table (farmCardLevelTable) in a native <details>
-// disclosure so the popup opens clean by default; power users expand it to see the
-// leveling math. No change to the table logic itself.
+
+// Wraps the L1+ level-up ladder in a disclosure so the popup opens clean.
+// Fungible cards ONLY — an NFT instance gets fdsNftUpgrade() instead, because
+// the ladder's „N kart + coins" cost is a mechanic NFTs cannot use at all.
 function farmCollapsibleLevels(def, price, level) {
   return el('details', { className: 'farm-pm-details' },
-    el('summary', {}, 'Poziomy karty'),
+    el('summary', {}, 'Wszystkie poziomy karty'),
     farmCardLevelTable(def, price, level));
 }
 
-// Detail overview for a planted crop tile on the farm board: owner, level, a
-// harvest timeline (date/time + live countdown + maturity bar), current NPC price
-// with a min–max range and estimated harvest value, and the full L1–5 level table
-// tucked behind a collapsible disclosure. Reuses the farm-plant-modal* look so it
-// matches the migrated-plant modal.
+// ── Zasadzona roślina ───────────────────────────────────────────────────────
+// „Kiedy zbiorę → ile dostanę → co dalej z tą kartą", in that order.
 function openFarmPlantedModal(tile, x, y) {
   if (!tile || !tile.planted_species) return;
   const def = fmDefs.get(tile.planted_species);
   if (!def) return;
   const rar = def.rarity || 'common';
   const level = tile.planted_level || 1;
-  const yieldNow = Math.round(def.base_yield * (1 + (level - 1) * 0.5));
-  const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, level - 1));
   const isMine = tile.owner_id === me?.id;
   const isReady = () => tile.ready_at && Date.now() >= new Date(tile.ready_at).getTime();
+
+  // A planted NFT carries its OWN stats (a bred hybrid inherits them from the
+  // exact parents it was made from), and harvest_crop scales the result by the
+  // „Potentat Ziemski" bonus — so the species defaults this popup used to print
+  // were simply the wrong number for every hybrid and low for anyone with land.
+  // Mirrors harvest_crop() in supabase/farm-achievements.sql.
+  const inst = tile.planted_instance_id ? (fmNft || []).find(n => n.id === tile.planted_instance_id) : null;
+  const baseYield = (inst && inst.stat_yield != null) ? inst.stat_yield : def.base_yield;
+  const yieldBonus = isMine ? farmYieldBonus() : 0;
+  const yieldNow = Math.round(baseYield * (1 + (level - 1) * 0.5) * (1 + yieldBonus));
+  // Grow time comes from the tile's own timestamps rather than the catalog: the
+  // server already applied the „Zielony Kciuk" growth bonus when it stamped
+  // ready_at, so a recomputed number would contradict the countdown above it.
+  const growMin = (tile.planted_at && tile.ready_at)
+    ? (new Date(tile.ready_at).getTime() - new Date(tile.planted_at).getTime()) / 60000 : null;
 
   let timer = null;
   const overlay = el('div', { className: 'modal-overlay farm-plant-overlay', role: 'dialog', 'aria-modal': 'true' });
@@ -32534,37 +32727,40 @@ function openFarmPlantedModal(tile, x, y) {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
 
-  const ownerTxt = isMine ? 'Ty' : (tile.nick || 'inny gracz');
+  // Hero: rarity, planted level, and (for an NFT) which serial is in the ground.
+  const hero = fdsHero(farmTileCropEmoji(tile) || def.emoji, def.name, rar, [
+    FARM_RARITY_PL[rar] || rar,
+    'poz. ' + level,
+    inst ? ('#' + inst.serial_no + ' / ' + inst.edition_size) : null,
+    isMine ? null : ('u: ' + (tile.nick || 'inny gracz'))]);
 
-  // Signature harvest-timeline block: date/time + live countdown + a maturity bar
-  // that fills as the crop grows. Refreshed every second below.
-  const etaVal = el('span', { className: 'farm-pm-eta' });
-  const relVal = el('div', { className: 'farm-pm-rel' });
-  const progressFill = el('div', { className: 'farm-pm-progress-fill' });
-  const harvestBox = el('div', { className: 'farm-pm-harvest' },
-    el('div', { className: 'farm-pm-harvest-head' }, el('span', { className: 'farm-pm-eta-label' }, 'Zbiór'), etaVal),
-    el('div', { className: 'farm-pm-progress' }, progressFill),
-    relVal,
-  );
+  // Focus: the countdown — and, the moment it matures, the harvest button itself.
+  const focusWhen = el('span', { className: 'fds-focus-aside' });
+  const focusVal = el('div', { className: 'fds-big' });
+  const focusBar = el('div', { className: 'fds-bar-fill' });
+  const focusSub = el('div', { className: 'fds-focus-sub' });
+  const focusAct = el('div', {});
+  const focus = el('div', { className: 'fds-focus' },
+    el('div', { className: 'fds-focus-head' }, el('span', { className: 'fds-eyebrow' }, 'Do zbioru'), focusWhen),
+    focusVal,
+    el('div', { className: 'fds-bar' }, focusBar),
+    focusSub, focusAct);
 
-  const chips = el('div', { className: 'farm-pm-chips' },
-    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Poziom'), el('b', {}, String(level))),
-    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Plon'), el('b', {}, yieldNow + ' szt.')),
-    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Wzrost'), el('b', {}, farmGrowLabel(growNow))),
-  );
+  const yieldVal = el('span', {}, yieldNow + ' szt.');
+  if (yieldBonus > 0) yieldVal.append(el('span', { className: 'fds-badge',
+    title: '„Potentat Ziemski": +2% plonu za każdą posiadaną działkę (maks. +15%)' },
+    '🏞️ +' + Math.round(yieldBonus * 100) + '%'));
 
-  const harvestSlot = el('div', {});
-  let removeSlot = '';
-  if (isMine) {
-    const rmBtn = el('button', { className: 'farm-mini-btn', style: { marginTop: '6px' } }, '🗑️ Wykop roślinę');
-    rmBtn.addEventListener('click', async () => { if (await removeCrop(x, y, rmBtn)) close(); });
-    removeSlot = el('div', {}, rmBtn);
-  }
+  const facts = el('div', {});
+  facts.append(
+    fdsSection('Uprawa'),
+    fdsRow('Plon ze zbioru', yieldVal),
+    fdsRow('Czas wzrostu', growMin ? farmGrowDaysLabel(growMin) : '—'),
+    fdsRow('Zasadzono', tile.planted_at ? fmtDateTime(tile.planted_at) : '—'));
 
-  // Price + earnings and the level table are rebuilt from live fmMarket whenever the
-  // NPC price moves, instead of being frozen at open. This popup shows a ticking
-  // countdown, which made a stale price read as live: a plant left open across the
-  // 12:00 roll quoted the previous window's number for hours.
+  // Price and the upgrade path are rebuilt from live fmMarket whenever the NPC
+  // price moves, instead of being frozen at open: this popup shows a ticking
+  // countdown, which made a stale price read as live.
   const priceSlot = el('div', {});
   const levelsSlot = el('div', {});
   let priceKey = null;
@@ -32572,121 +32768,138 @@ function openFarmPlantedModal(tile, x, y) {
     const mkt = fmMarket.get(def.crop_type);
     const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
     const base = mkt ? +mkt.base_price : null;
-    // Key on the DISPLAYED precision (0.1 🪙) so the per-second tick only touches the
-    // DOM when a visible digit actually changes — the effective price creeps every ms.
+    // Key on the DISPLAYED precision (0.1 🪙) so the per-second tick only touches
+    // the DOM when a visible digit actually changes.
     const key = mkt ? (Math.round((cur || 0) * 10) + '/' + base) : 'none';
     if (key === priceKey) return;
     priceKey = key;
-    // Preserve the user's disclosure state across the rebuild.
-    const wasOpen = !!levelsSlot.querySelector('details')?.open;
-    priceSlot.replaceChildren(farmPricePanel(def, mkt, { yieldQty: yieldNow }));
-    const levels = farmCollapsibleLevels(def, cur != null ? cur : base, level);
-    if (wasOpen) levels.open = true;
-    levelsSlot.replaceChildren(levels);
+    priceSlot.replaceChildren(farmPayoutPanel(def, mkt, { yieldQty: yieldNow }));
+    if (inst) {
+      levelsSlot.replaceChildren(fdsNftUpgrade(inst, level, { planted: true }));
+    } else {
+      const wasOpen = !!levelsSlot.querySelector('details')?.open;
+      const levels = farmCollapsibleLevels(def, cur != null ? cur : base, level);
+      if (wasOpen) levels.open = true;
+      levelsSlot.replaceChildren(fdsSection('Poziomy karty'), levels);
+    }
   };
   fmPriceRefreshHooks.add(renderPrice);
 
-  const body = el('div', { className: 'farm-plant-modal-body' },
-    el('div', { className: 'farm-plant-modal-hero' },
-      el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(farmTileCropEmoji(tile) || '🌱')),
-      el('div', {},
-        el('div', { className: 'farm-plant-modal-name', title: def.name }, def.name),
-        el('div', { className: 'farm-pm-meta' },
-          el('span', { className: 'farm-pm-rarity farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar),
-          el('span', { className: 'farm-pm-dot' }, '·'),
-          el('span', {}, ownerTxt),
-        ),
-      ),
-    ),
-    harvestBox,
-    chips,
-    el('div', { className: 'farm-pm-caption' }, 'Zasadzono: ' + (tile.planted_at ? fmtDateTime(tile.planted_at) : '—')),
-    priceSlot,
-    levelsSlot,
-    harvestSlot,
-    removeSlot,
-  );
+  const actions = el('div', { className: 'fds-actions' });
+  if (isMine) {
+    const rmBtn = el('button', { className: 'fds-danger', type: 'button' }, '🗑️ Wykop roślinę');
+    rmBtn.addEventListener('click', async () => { if (await removeCrop(x, y, rmBtn)) close(); });
+    actions.append(rmBtn);
+  }
+
+  const body = el('div', { className: 'fds rar-' + rar }, hero, focus, priceSlot, facts, levelsSlot, actions);
   const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Szczegóły rośliny'), closeBtn),
-    body,
-  );
+    body);
   overlay.append(modal);
   document.body.append(overlay);
 
-  // Render the maturity-dependent bits (harvest timeline, harvest button) and keep
-  // them fresh each second; swap in the harvest button the moment it matures.
+  // Keep the countdown fresh each second and swap in the harvest button the
+  // moment the crop matures.
   const refresh = () => {
     renderPrice();
     const ready = isReady();
-    harvestBox.className = 'farm-pm-harvest' + (ready ? ' ready' : '');
-    etaVal.textContent = tile.ready_at ? farmHarvestWhen(tile.ready_at) : '—';
+    focus.className = 'fds-focus' + (ready ? ' ready' : '');
     if (ready) {
-      relVal.textContent = '✅ Gotowe do zbioru!';
-      progressFill.style.width = '100%';
+      focusWhen.textContent = tile.ready_at ? farmHarvestWhen(tile.ready_at) : '';
+      focusVal.textContent = 'Gotowe do zbioru';
+      focusBar.style.width = '100%';
+      focusSub.textContent = isMine ? 'Plon trafi do 🧺 Plonów i zepsuje się po 5 dniach.' : 'Czeka na właściciela.';
+      if (isMine && !focusAct.firstChild) {
+        const btn = el('button', { className: 'btn-primary' }, '🧺 Zbierz plon');
+        btn.addEventListener('click', () => { harvestCrop(x, y, btn); close(); });
+        focusAct.append(btn);
+      }
     } else {
       const left = tile.ready_at ? new Date(tile.ready_at).getTime() - Date.now() : 0;
-      relVal.textContent = '⏳ za ' + cvFmtDur(left);
-      progressFill.style.width = farmGrowthPct(tile.planted_at, tile.ready_at) + '%';
-    }
-    if (isMine && ready && !harvestSlot.firstChild) {
-      const btn = el('button', { className: 'farm-mini-btn primary', style: { marginTop: '10px' } }, '🧺 Zbierz plon');
-      btn.addEventListener('click', () => { harvestCrop(x, y, btn); close(); });
-      harvestSlot.append(btn);
+      focusWhen.textContent = tile.ready_at ? farmHarvestWhen(tile.ready_at) : '—';
+      focusVal.textContent = cvFmtDur(left);
+      const pct = farmGrowthPct(tile.planted_at, tile.ready_at);
+      focusBar.style.width = pct + '%';
+      focusSub.textContent = 'Dojrzałość ' + Math.floor(pct) + '%';
+      focusAct.replaceChildren();
     }
   };
   refresh();
   timer = setInterval(refresh, 1000);
 }
 
-// Detail modal for a fungible plant card: art, centered name, rarity, a current-
-// state stat grid, and the L1–5 level table (reused from the catalog).
+// ── Karta rośliny (fungible) ────────────────────────────────────────────────
+// „Ile mi brakuje do awansu → ile płaci jeden zbiór → jak rośnie".
+// The upgrade button lives here now: reading about the level and doing something
+// about it used to be two different screens.
 function openFarmCardModal(card) {
   const def = fmDefs.get(card.species); if (!def) return;
   const rar = def.rarity || 'common';
-  const dupesNeeded = 2 * card.level;
-  const yieldNow = Math.round(def.base_yield * (1 + (card.level - 1) * 0.5));
-  const growNow = Math.max(1440, def.base_grow_minutes * Math.pow(0.92, card.level - 1));
+  const isNft = def.edition_size != null;
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { fmPriceRefreshHooks.delete(renderPrice); overlay.remove(); window.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') close(); };
   const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
   closeX.addEventListener('click', close);
-  const chips = el('div', { className: 'farm-pm-chips' },
-    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Poziom'), el('b', {}, String(card.level))),
-    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Duplikaty'), el('b', {}, card.count + ' / ' + dupesNeeded)),
-    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Plon'), el('b', {}, yieldNow + ' szt.')),
-    el('div', { className: 'farm-pm-chip' }, el('span', {}, 'Wzrost'), el('b', {}, farmGrowLabel(growNow))),
-  );
-  // Same live-price treatment as the planted-plant popup: rebuild on a price roll
-  // rather than freezing whatever fmMarket held when the card was opened.
-  const priceSlot = el('div', {});
-  const levelsSlot = el('div', {});
-  const renderPrice = () => {
+
+  const body = el('div', { className: 'fds rar-' + rar });
+  const renderPrice = () => render();
+
+  const render = () => {
+    const level = card.level || 1;
+    const dupesNeeded = 2 * level, coinCost = 50 * level * level;
+    const haveEnough = card.count >= dupesNeeded;
+    const canLevel = haveEnough && (me?.coins || 0) >= coinCost;
+    const yieldNow = farmYieldAtLevel(def, level);
+    const growNow = farmGrowMinAtLevel(def, level);
     const mkt = fmMarket.get(def.crop_type);
     const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
     const base = mkt ? +mkt.base_price : null;
-    const wasOpen = !!levelsSlot.querySelector('details')?.open;
-    priceSlot.replaceChildren(farmPricePanel(def, mkt, { yieldQty: yieldNow }));
-    const levels = farmCollapsibleLevels(def, cur != null ? cur : base, card.level);
-    if (wasOpen) levels.open = true;
-    levelsSlot.replaceChildren(levels);
+    const perDayLow = base != null ? farmPerDayIncome(def, base * FARM_PRICE_FLOOR_PCT / 100, level) : null;
+    const perDayHigh = base != null ? farmPerDayIncome(def, base, level) : null;
+
+    const hero = fdsHero(def.emoji, def.name, rar, [
+      FARM_RARITY_PL[rar] || rar,
+      'poz. ' + level,
+      isNft ? 'NFT' : (card.count + ' w kolekcji')]);
+
+    // Focus: the grind toward the next level, with the action attached.
+    const focus = el('div', { className: 'fds-focus' + (canLevel ? ' ready' : '') },
+      el('div', { className: 'fds-focus-head' },
+        el('span', { className: 'fds-eyebrow' }, 'Do poziomu ' + (level + 1)),
+        el('span', { className: 'fds-focus-aside' }, fdsCoins(coinCost))),
+      el('div', { className: 'fds-big' }, card.count + ' / ' + dupesNeeded + ' duplikatów'),
+      el('div', { className: 'fds-bar' },
+        el('div', { className: 'fds-bar-fill', style: { width: Math.max(0, Math.min(100, card.count / dupesNeeded * 100)) + '%' } })),
+      el('div', { className: 'fds-focus-sub' }, canLevel
+        ? 'Awans podniesie plon o połowę bazy i skróci wzrost o 8%.'
+        : (haveEnough ? 'Masz duplikaty — brakuje coinów.'
+                      : 'Brakuje ' + (dupesNeeded - card.count) + ' ' + plCount(dupesNeeded - card.count, 'duplikatu', 'duplikatów', 'duplikatów') + '. Znajdziesz je w skrzynkach 📦.')));
+    if (canLevel) {
+      const up = el('button', { className: 'btn-primary' }, '⬆ Ulepsz do poz. ' + (level + 1) + ' · ' + fdsCoins(coinCost));
+      up.addEventListener('click', async () => { if (await levelUpCard(card.species, up)) render(); });
+      focus.append(up);
+    }
+
+    const facts = el('div', {});
+    facts.append(fdsSection('Uprawa'),
+      fdsRow('Plon ze zbioru', yieldNow + ' szt.'),
+      fdsRow('Czas wzrostu', farmGrowDaysLabel(growNow)),
+      fdsRow('Zysk na dobę', perDayHigh == null ? '—'
+        : (perDayLow === perDayHigh ? '≈ ' + fdsCoins(perDayHigh) : '≈ ' + perDayLow + ' – ' + fdsCoins(perDayHigh)), { cls: 'money' }));
+
+    const levels = farmCollapsibleLevels(def, cur != null ? cur : base, level);
+    body.replaceChildren(hero, focus,
+      farmPayoutPanel(def, mkt, { yieldQty: yieldNow, label: 'Wypłata za jeden zbiór' }),
+      facts, fdsSection('Poziomy karty'), levels);
   };
-  renderPrice();
+  render();
   fmPriceRefreshHooks.add(renderPrice);
+
   const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, 'Szczegóły karty'), closeX),
-    el('div', { className: 'farm-plant-modal-body' },
-      el('div', { className: 'farm-plant-modal-hero' },
-        el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(def.emoji)),
-        el('div', {},
-          el('div', { className: 'farm-plant-modal-name' }, def.name),
-          el('div', { className: 'farm-pm-meta' },
-            el('span', { className: 'farm-pm-rarity farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar),
-            def.edition_size != null ? el('span', { className: 'farm-pm-dot' }, '·') : '',
-            def.edition_size != null ? el('span', {}, 'NFT') : ''))),
-      chips,
-      priceSlot,
-      levelsSlot));
+    body);
   overlay.append(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   window.addEventListener('keydown', esc);
