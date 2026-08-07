@@ -7723,7 +7723,10 @@
     .farm-nftx-slot.minted { border-color: #f0c060; background: linear-gradient(160deg, #fffaf0, #fff2d6); }
     .farm-nftx-slot.mine { border-color: var(--accent); background: var(--acc-dim); }
     .farm-nftx-slot.locked { opacity: .6; }
-    .farm-nftx-serial { font-size: 12px; font-weight: 900; color: #b45309; }
+    .farm-nftx-serial { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 900; color: #b45309; }
+    .farm-nftx-slot-ico { display: inline-flex; flex: 0 0 auto; }
+    .farm-nftx-slot-ico .farm-ico { width: 17px; height: 17px; }
+    .farm-nftx-slot-ico .farm-ico-emoji { font-size: 15px; }
     .farm-nftx-owner { display: flex; flex-direction: column; gap: 1px; min-width: 0; margin-top: 2px; }
     .farm-nftx-owner b { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .farm-nftx-owner span { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -13652,7 +13655,7 @@ async function buildActivityFeed() {
 
   (nftRes.data || []).forEach(t => {
     const def = (typeof fmDefs !== 'undefined' && fmDefs.get) ? fmDefs.get(t.species) : null;
-    const card = (def?.emoji || '💎') + ' ' + (def?.name || t.species) + ' #' + t.serial_no;
+    const card = farmNftIconFor(t.species, t.serial_no, def?.emoji) + ' ' + (def?.name || t.species) + ' #' + t.serial_no;
     if (t.kind === 'sale') {
       entries.push({ nick: profilesById[t.to_owner] || 'Gracz', ts: t.created_at, cat: 'farm',
         desc: 'kupił NFT ' + card + (t.price ? ' za ' + t.price + ' 🪙' : '') });
@@ -18104,7 +18107,7 @@ function buildMarketplaceCard(listing) {
   card.appendChild(el('div', { className: 'mlc-hero ' + glowClass },
     el('div', { className: 'mlc-glow' }),
     el('div', { className: 'mlc-type' }, isFixed ? '💰 Cena stała' : '🔨 Aukcja'),
-    el('div', { className: 'mlc-icon' }, listing.item_kind ? farmIcon(listing.emoji || '🃏') : (listing.emoji || '🛍️'))));
+    el('div', { className: 'mlc-icon' }, listing.item_kind ? farmIcon(farmListingEmoji(listing)) : (listing.emoji || '🛍️'))));
 
   const body = el('div', { className: 'mlc-body' });
   const priceVal = isFixed ? Number(listing.price || 0) : (currentBid > 0 ? currentBid : Number(listing.price || 0));
@@ -18304,7 +18307,7 @@ function buildBuyOrderFillControls(order, remaining) {
     if (!mine.length) { wrap.appendChild(el('div', { className: 'mlc-note' }, 'Nie masz wolnej karty NFT tego gatunku.')); return wrap; }
     const sel = el('select', { className: 'nick-select' });
     mine.sort((a, b) => a.serial_no - b.serial_no).forEach(n => {
-      sel.append(el('option', { value: n.id }, (n.nft_name || n.species) + ' #' + n.serial_no + '/' + n.edition_size + (n.level > 1 ? ' ' + '⭐'.repeat(n.level) : '')));
+      sel.append(el('option', { value: n.id }, farmNftEmoji(n) + ' ' + (n.nft_name || n.species) + ' #' + n.serial_no + '/' + n.edition_size + (n.level > 1 ? ' ' + '⭐'.repeat(n.level) : '')));
     });
     const btn = el('button', { className: 'mlc-buy' }, el('span', {}, 'Sprzedaj'));
     btn.addEventListener('click', () => fillBuyOrder(order, 1, sel.value, btn));
@@ -19297,7 +19300,7 @@ async function mlPopulateItemPicker(kind, preselect = '') {
     if (!mine.length) { sel.append(el('option', { value: '' }, 'Brak kart NFT')); hint.textContent = 'Zdobądź kartę NFT ze skrzynki, aby ją wystawić.'; return; }
     mine.sort((a, b) => a.species.localeCompare(b.species) || a.serial_no - b.serial_no).forEach(n => {
       const def = fmDefs.get(n.species);
-      sel.append(el('option', { value: n.id }, (def?.emoji || '💎') + ' ' + (n.nft_name || def?.name || n.species) + ' #' + n.serial_no + '/' + n.edition_size + (n.level > 1 ? ' ' + '⭐'.repeat(n.level) : '')));
+      sel.append(el('option', { value: n.id }, farmNftEmoji(n) + ' ' + (n.nft_name || def?.name || n.species) + ' #' + n.serial_no + '/' + n.edition_size + (n.level > 1 ? ' ' + '⭐'.repeat(n.level) : '')));
     });
     hint.textContent = 'Sprzedajesz konkretny, numerowany egzemplarz NFT.';
   } else if (kind === 'farm_tile') {
@@ -23176,6 +23179,50 @@ function farmBreedResult(spA, spB) {
   const key = [spA, spB].sort().join('+');
   const species = NFT_HYBRID_RECIPES[key] || 'wild_hybrid';
   return Object.assign({ species, curated: species !== 'wild_hybrid' }, NFT_HYBRIDS[species]);
+}
+
+// ── „Dziki Mieszaniec" — one icon per egzemplarz ────────────────────────────
+// Every uncatalogued parent pair collapses onto ONE species row (nakład 500), so
+// a single farm_card_defs.emoji — 🌈 — had to stand in for every wild hybrid ever
+// bred: a collection, an edition grid and a Targowisko listing all rendered as a
+// wall of identical rainbows, even though no two of these cards share stats. Each
+// serial therefore gets its own icon, derived from the serial number exactly like
+// farmNftFlavor() derives its flavour text — no per-instance emoji column on the
+// server, and every player sees the same icon for #7. The curated recipes keep
+// their own emoji: those ARE a species (🌹 Słoneczna Róża), the wild one is not.
+// ⚠️ The array is APPEND-ONLY — reordering or removing an entry re-skins cards
+// people already own.
+const WILD_HYBRID_ICONS = [
+  '🌵', '🍀', '🌴', '🌳', '🫘', '🪴', '🍆', '🥦', '🥬', '🥒', '🧄', '🧅', '🍈', '🍉',
+  '🍋', '🍊', '🍎', '🍐', '🍑', '🍒', '🥝', '🥑', '🫐', '🥥', '🫑', '🥭', '🫒', '🥜',
+];
+// Icon for one serialized NFT egzemplarz: the species emoji for everything except
+// the wild-hybrid catch-all, which varies per serial. `species`/`serial` (not the
+// whole row) because the marketplace view, the transfer log and the hybrid feed
+// each carry only those two.
+function farmNftIconFor(species, serial, speciesEmoji) {
+  if (species === 'wild_hybrid' && serial > 0) {
+    return WILD_HYBRID_ICONS[(serial - 1) % WILD_HYBRID_ICONS.length];
+  }
+  return speciesEmoji || '💎';
+}
+// Same, for a farm_nft_instances row (species emoji looked up in the catalog).
+function farmNftEmoji(n) {
+  if (!n) return '💎';
+  return farmNftIconFor(n.species, n.serial_no, (fmDefs.get(n.species) || {}).emoji);
+}
+// Icon for a Targowisko listing carrying a farm item. The listing row froze the
+// SPECIES emoji at creation (create_farm_nft_listing copies farm_card_defs.emoji)
+// and marketplace_cards exposes no species column, so a serialized NFT is resolved
+// through the loaded instance table instead — that's where the per-serial wild
+// hybrid icon comes from. Falls back to the stored emoji if the instance is gone
+// (burned as merge fuel after the sale) or the farm catalog isn't loaded yet.
+function farmListingEmoji(listing) {
+  if (listing && listing.item_kind === 'farm_nft' && listing.nft_instance_id) {
+    const inst = (fmNft || []).find(n => n.id === listing.nft_instance_id);
+    if (inst) return farmNftEmoji(inst);
+  }
+  return (listing && listing.emoji) || '🃏';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -28301,7 +28348,7 @@ function farmTableBuildRow(x, y, now) {
     const readyAtTs = tile.ready_at ? new Date(tile.ready_at).getTime() : null;
     base.rowKind = 'crop';
     base.tileType = 'Plon';
-    base.contentIcon = def?.emoji || '🌾';
+    base.contentIcon = farmTileCropEmoji(tile) || '🌾';
     base.contentText = def ? def.name : tile.planted_species;
     base.rarityText = def ? (FARM_RARITY_PL[def.rarity] || def.rarity) : '—';
     base.level = level;
@@ -29177,7 +29224,7 @@ function renderFarmBoard() {
           bar.appendChild(el('div', { className: 'farm-cell-bar-fill', style: { width: (pct * 100) + '%' } }));
           cell.appendChild(bar);
         }
-        applyFarmCropVisual(cell, def, pct, ready);
+        applyFarmCropVisual(cell, farmTileCropEmoji(tile), pct, ready);
         if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
       } else {
         cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.owner_id === me?.id ? 'Ty' : (tile.nick || '?')));
@@ -29283,18 +29330,30 @@ function markFarmSel() {
   }
 }
 
-// Crop growth visual: sprout 🌱 → leafy 🌿 → the real crop, scaling up with progress.
-function farmCropStageIcon(def, pct, ready) {
-  const stage = ready ? 2 : (pct < 0.34 ? 0 : (pct < 0.7 ? 1 : 2));
-  return stage === 0 ? '🌱' : (stage === 1 ? '🌿' : ((def && def.emoji) || '🌱'));
+// Ripe-stage icon for whatever is growing on a tile. A planted NFT egzemplarz is
+// drawn with ITS OWN icon rather than the species emoji, because „Dziki Mieszaniec"
+// gives every serial a different one (farmNftIconFor) — otherwise a field of wild
+// hybrids is a row of identical rainbows that the collection then shows as
+// different plants.
+function farmTileCropEmoji(tile) {
+  if (tile && tile.planted_instance_id) {
+    const inst = (fmNft || []).find(n => n.id === tile.planted_instance_id);
+    if (inst) return farmNftEmoji(inst);
+  }
+  return (fmDefs.get(tile && tile.planted_species) || {}).emoji;
 }
-function applyFarmCropVisual(cell, def, pct, ready) {
+// Crop growth visual: sprout 🌱 → leafy 🌿 → the real crop, scaling up with progress.
+function farmCropStageIcon(ripeEmoji, pct, ready) {
+  const stage = ready ? 2 : (pct < 0.34 ? 0 : (pct < 0.7 ? 1 : 2));
+  return stage === 0 ? '🌱' : (stage === 1 ? '🌿' : (ripeEmoji || '🌱'));
+}
+function applyFarmCropVisual(cell, ripeEmoji, pct, ready) {
   const g = Math.max(0, Math.min(1, pct));
   cell.style.setProperty('--grow', g.toFixed(3));
   cell.classList.toggle('ready', !!ready);
   const span = cell.querySelector('.farm-cell-emoji');
   if (span) {
-    const icon = farmCropStageIcon(def, g, ready);
+    const icon = farmCropStageIcon(ripeEmoji, g, ready);
     if (span.dataset.icon !== icon) { span.dataset.icon = icon; span.replaceChildren(farmIcon(icon)); }
   }
 }
@@ -29316,7 +29375,7 @@ function updateFarmGrowth() {
     if (fill) fill.style.width = (pct * 100) + '%';
     const bar = cell.querySelector('.farm-cell-bar');
     if (bar) bar.classList.toggle('ready', ready);
-    applyFarmCropVisual(cell, fmDefs.get(tile.planted_species), pct, ready);
+    applyFarmCropVisual(cell, farmTileCropEmoji(tile), pct, ready);
     if (ready && !cell.querySelector('.farm-cell-ready')) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
   });
   if (farmViewMode === 'table') updateFarmTableGrowth(now);
@@ -29783,7 +29842,7 @@ function renderFarmSelectionBody() {
     }
     if (tile.planted_species) {
       const def = fmDefs.get(tile.planted_species);
-      box.append(el('div', { className: 'farm-card-sub' }, 'Rośnie: ' + (def ? def.emoji + ' ' + def.name : tile.planted_species)));
+      box.append(el('div', { className: 'farm-card-sub' }, 'Rośnie: ' + (def ? farmTileCropEmoji(tile) + ' ' + def.name : tile.planted_species)));
     }
     return;
   }
@@ -29904,7 +29963,7 @@ function renderFarmSelectionBody() {
     return;
   }
   const def = fmDefs.get(tile.planted_species);
-  box.append(el('div', { className: 'farm-card-sub' }, 'Rośnie: ' + (def ? def.emoji + ' ' + def.name : tile.planted_species) + ' (poz. ' + (tile.planted_level || 1) + ')'));
+  box.append(el('div', { className: 'farm-card-sub' }, 'Rośnie: ' + (def ? farmTileCropEmoji(tile) + ' ' + def.name : tile.planted_species) + ' (poz. ' + (tile.planted_level || 1) + ')'));
   const ready = tile.ready_at && Date.now() >= new Date(tile.ready_at).getTime();
   if (ready) {
     const btn = el('button', { className: 'farm-mini-btn primary' }, '🧺 Zbierz plon');
@@ -30023,7 +30082,7 @@ function farmNftTile(n) {
     el('div', { className: 'fcc-gem' }, '#' + n.serial_no + (lvl > 1 ? ' Lvl' + lvl : '')),
     el('div', { className: 'fcc-pin' }, hybrid ? '🧬' : '💎'),
     el('div', { className: 'fcc-inner' },
-      el('div', { className: 'fcc-art' }, farmIcon(def.emoji || '💎')),
+      el('div', { className: 'fcc-art' }, farmIcon(farmNftEmoji(n))),
       el('div', { className: 'fcc-name', title: n.nft_name || def.name }, (n.nft_name || def.name || n.species) + stars),
       el('div', { className: 'fcc-rar farm-rar-' + rar }, (def.name || n.species)),
       el('div', { className: 'fcc-prog' },
@@ -30507,9 +30566,14 @@ function farmCardFacts(d, mdl) {
   // weight share — the former is what players actually experience.
   const chance = mdl.inPool(d) ? farmChanceLabel(farmCardBoxChancePct(d.species, FARM_BOX_DRAWS, false)) : (soldOut ? 'wyprzedane' : '—');
   const myInsts = mdl.myInstances.get(d.species) || [];
+  // „Dziki Mieszaniec" is the one species whose icon varies per serial, so its
+  // owned-egzemplarz chips carry it — that row is otherwise „✅ #3, #7" with no
+  // hint that those two cards look (and earn) nothing alike.
+  const serialIcon = d.species === 'wild_hybrid';
   const serials = isNft
     ? myInsts.slice().sort((a, b) => b.level - a.level || a.serial_no - b.serial_no)
-        .map(i => farmHasIndividualStats(d) ? ('#' + i.serial_no) : ('Lvl' + i.level + ' #' + i.serial_no)).join(', ')
+        .map(i => (serialIcon ? farmNftIconFor(d.species, i.serial_no, d.emoji) + ' ' : '')
+          + (farmHasIndividualStats(d) ? ('#' + i.serial_no) : ('Lvl' + i.level + ' #' + i.serial_no))).join(', ')
     : (mineOwned ? mine.slice().sort((a, b) => a - b).map(s => '#' + s).join(', ') : '');
   return { isNft, minted: m, soldOut, have, mineOwned, chance, serials, price: fmMarket.get(d.crop_type)?.base_price, effWeight };
 }
@@ -30718,7 +30782,7 @@ function farmPlantPickEntry(entry) {
     el('div', { className: 'fcc-gem' }, 'Lvl ' + level),
     isNft ? el('div', { className: 'fcc-pin' }, '💎') : '',
     el('div', { className: 'fcc-inner' },
-      el('div', { className: 'fcc-art' }, farmIcon(def.emoji)),
+      el('div', { className: 'fcc-art' }, farmIcon(inst ? farmNftEmoji(inst) : def.emoji)),
       el('div', { className: 'fcc-name', title: name }, name),
       el('div', { className: 'fcc-rar farm-rar-' + rar }, FARM_RARITY_PL[rar] || rar)));
   const cardStack = el('div', { className: 'fpk-cardstack' }, card);
@@ -31713,7 +31777,7 @@ function openFarmNftModal(n) {
   const isHybrid = NFT_HYBRID_SPECIES.has(n.species);
   const card = el('div', { className: 'farm-nft-card rar-' + rar + (isHybrid ? ' is-hybrid' : '') },
     el('div', { className: 'farm-nft-card-serial' }, '#' + n.serial_no + ' / ' + n.edition_size + (lvl > 1 ? ' · Poz. ' + lvl : '')),
-    el('div', { className: 'farm-nft-card-art' }, farmIcon(def.emoji || '💎')),
+    el('div', { className: 'farm-nft-card-art' }, farmIcon(farmNftEmoji(n))),
     el('div', { className: 'farm-nft-card-name' }, (n.nft_name || def.name || n.species) + stars),
     el('div', { className: 'farm-nft-card-species farm-rar-' + rar }, (def.name || n.species) + ' · ' + (isHybrid ? '🧬 Hybryda' : (FARM_RARITY_PL[rar] || rar)) + ' NFT'),
     el('div', { className: 'farm-nft-card-stats' },
@@ -31747,7 +31811,7 @@ function openFarmNftMergeModal(hero) {
   closeX.addEventListener('click', close);
 
   const heroLine = el('div', { className: 'farm-card-sub' },
-    (def.emoji || '💎') + ' ' + (hero.nft_name || def.name || hero.species) + ' #' + hero.serial_no + ' · poz. ' + lvl);
+    farmNftEmoji(hero) + ' ' + (hero.nft_name || def.name || hero.species) + ' #' + hero.serial_no + ' · poz. ' + lvl);
 
   const candidates = farmNftMergeCandidates(hero);
   let selectedId = candidates.length === 1 ? candidates[0].id : null;
@@ -31777,7 +31841,7 @@ function openFarmNftMergeModal(hero) {
       radio.checked = selectedId === c.id;
       const row = el('div', { className: 'farm-merge-fuel-row',
           style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '6px', cursor: 'pointer' } },
-        radio, el('span', {}, '#' + c.serial_no + ' · ' + (c.nft_name || def.name || hero.species)));
+        radio, el('span', {}, farmNftEmoji(c) + ' #' + c.serial_no + ' · ' + (c.nft_name || def.name || hero.species)));
       row.addEventListener('click', () => {
         selectedId = c.id;
         list.querySelectorAll('input[type=radio]').forEach(r => { r.checked = false; });
@@ -31889,7 +31953,7 @@ function farmBreedableNfts() {
 }
 function farmNftLabel(n) {
   const def = fmDefs.get(n.species) || {};
-  return (def.emoji || '💎') + ' ' + (def.name || n.species) + ' #' + n.serial_no +
+  return farmNftEmoji(n) + ' ' + (def.name || n.species) + ' #' + n.serial_no +
          (n.level > 1 ? ' · poz. ' + n.level : '');
 }
 
@@ -32028,7 +32092,7 @@ function farmBreedingSection() {
    ['⚡', 'Hybryda zarabia o 15% więcej na dobę i rośnie o 5% krócej niż lepszy z rodziców — liczone od ich AKTUALNYCH poziomów i cen skupu ich plonów.'],
    ['🎚️', 'Hybryda dziedziczy poziom lepszego rodzica, więc awanse nie przepadają przy krzyżowaniu.'],
    ['💼', 'Wartość w majątku hybrydy nigdy nie spada poniżej wartości lepszego rodzica.'],
-   ['✨', 'Wybrane pary dają kultowy przepis (np. 🌹+🌻 → „Słoneczna Róża"), reszta „Dzikiego Mieszańca 🌈".'],
+   ['✨', 'Wybrane pary dają kultowy przepis (np. 🌹+🌻 → „Słoneczna Róża"), reszta „Dzikiego Mieszańca 🌈" — a każdy jego numer ma własną ikonę.'],
    ['🪙', 'Koszt rośnie z poziomem rodziców; odznaka „Mistrz Hybryd" go obniża.']
   ].forEach(([ic, tx]) => ul.append(el('li', {}, el('span', { className: 'bfx' }, ic), tx)));
   sec.append(ul);
@@ -32044,8 +32108,10 @@ function farmBreedingSection() {
     feed.append(el('div', { className: 'farm-card-sub', style: { marginTop: '10px', fontWeight: '600' } }, 'Ostatnie hybrydy w biurze:'));
     fmHybridFeed.slice(0, 8).forEach(h => {
       feed.append(el('div', { className: 'farm-hybrid-row' },
-        el('span', {}, (h.hybrid_emoji || '🌈') + ' ' + h.hybrid_name + ' #' + h.hybrid_serial),
-        el('span', { className: 'fhr-parents' }, '← ' + (fmDefs.get(h.parent_a_species)?.emoji || '') + '+' + (fmDefs.get(h.parent_b_species)?.emoji || '') +
+        el('span', {}, farmNftIconFor(h.hybrid_species, h.hybrid_serial, h.hybrid_emoji || '🌈') + ' ' + h.hybrid_name + ' #' + h.hybrid_serial),
+        el('span', { className: 'fhr-parents' }, '← '
+          + farmNftIconFor(h.parent_a_species, h.parent_a_serial, fmDefs.get(h.parent_a_species)?.emoji)
+          + '+' + farmNftIconFor(h.parent_b_species, h.parent_b_serial, fmDefs.get(h.parent_b_species)?.emoji) +
           (h.bred_by_nick ? ' · ' + h.bred_by_nick : ''))));
     });
     sec.append(feed);
@@ -32148,7 +32214,7 @@ function breedSlot(side, chosen, onPick) {
   } else {
     const st = farmNftStats(chosen);
     box.append(
-      el('div', { className: 'bl-art' }, st.def.emoji || '💎'),
+      el('div', { className: 'bl-art' }, farmNftEmoji(chosen)),
       el('div', { className: 'bl-name' }, chosen.nft_name || st.def.name || chosen.species),
       el('div', { className: 'bl-sub' }, (st.def.name || '') + ' · #' + chosen.serial_no + '/' + chosen.edition_size),
       breedStatRow('Poziom', String(st.lvl)),
@@ -32185,7 +32251,7 @@ function openFarmBreedModal() {
     opts.forEach(n => {
       const st = farmNftStats(n);
       const row = el('button', { className: 'bl-choose-row' },
-        el('span', { className: 'bcr-emoji' }, st.def.emoji || '💎'),
+        el('span', { className: 'bcr-emoji' }, farmNftEmoji(n)),
         el('span', { className: 'bcr-name' }, (n.nft_name || st.def.name) + ' #' + n.serial_no),
         el('span', { className: 'bcr-stat' }, 'poz. ' + st.lvl + ' · ' + st.yield + ' szt. · ≈' + (st.perDay ?? '—') + '🪙/d'));
       row.addEventListener('click', () => { if (slot === 'A') A = n; else B = n; render(); });
@@ -32215,7 +32281,10 @@ function openFarmBreedModal() {
       mid.append(
         el('div', { className: 'bl-art bl-art-holo' }, r.emoji || '🌈'),
         el('div', { className: 'bl-name' }, r.name),
-        el('div', { className: 'bl-sub' }, r.curated ? '✨ Kultowy przepis' : 'Brak przepisu — Dziki Mieszaniec'),
+        // The wild hybrid's icon depends on the serial the server hands out, which
+        // isn't known until breed_nft commits — so the preview keeps the edition's
+        // 🌈 and says what will happen instead of guessing a variety.
+        el('div', { className: 'bl-sub' }, r.curated ? '✨ Kultowy przepis' : 'Brak przepisu — Dziki Mieszaniec, własna ikona dla numeru'),
         breedStatRow('Poziom', String(prev.level), { good: prev.level > 1 }),
         breedStatRow('Plon', prev.yield + ' szt.', { good: prev.yield > prev.bestParentYield }),
         breedStatRow('Wzrost', farmGrowLabel(prev.grow), { good: true }),
@@ -32286,7 +32355,7 @@ async function breedNft(aId, bId, btn) {
   const hDef = fmDefs.get(h.species);
   if (hDef && hDef.minted_count != null) hDef.minted_count = Math.max(hDef.minted_count + 1, h.serial_no || 0);
   fmHybridFeed = null; fmAchMine = null; fmAchAll = null;  // refetch meta (feed + achievements)
-  showToast('🧬 Wyhodowano „' + (h.name || 'hybrydę') + '" #' + h.serial_no + (h.curated ? ' ✨ (kultowy przepis!)' : '') + '!');
+  showToast('🧬 Wyhodowano ' + farmNftIconFor(h.species, h.serial_no, h.emoji) + ' „' + (h.name || 'hybrydę') + '" #' + h.serial_no + (h.curated ? ' ✨ (kultowy przepis!)' : '') + '!');
   refreshFarmHub(); renderFarmSelection();
   return true;
 }
@@ -32473,7 +32542,7 @@ function openFarmPlantedModal(tile, x, y) {
 
   const body = el('div', { className: 'farm-plant-modal-body' },
     el('div', { className: 'farm-plant-modal-hero' },
-      el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(def.emoji || '🌱')),
+      el('div', { className: 'farm-plant-modal-emoji' }, farmIcon(farmTileCropEmoji(tile) || '🌱')),
       el('div', {},
         el('div', { className: 'farm-plant-modal-name', title: def.name }, def.name),
         el('div', { className: 'farm-pm-meta' },
@@ -32663,6 +32732,8 @@ async function openFarmNftExplorer(species) {
 
     body.append(el('div', { className: 'farm-nftx-source' }, isHybrid
       ? '🧬 Hybryda — nie wypada ze skrzynek. Każdy egzemplarz dziedziczy własne parametry po użytych rodzicach, dlatego katalog nie pokazuje wspólnego poziomu ani drabinki zysku. Dokładne dane konkretnego egzemplarza są w 🎒 Moim Majątku.'
+        + (species === 'wild_hybrid'
+            ? ' To zbiorcza edycja dla par bez kultowego przepisu, więc każdy numer ma też własną ikonę — dwa Dzikie Mieszańce nigdy nie wyglądają tak samo.' : '')
       : (def.series_week
           ? '🗓️ Kolekcja sezonowa — wypada ze skrzynek do wyczerpania nakładu.'
           : '📦 Wypada ze skrzynek, dopóki nakład się nie wyczerpie.')));
@@ -32674,12 +32745,17 @@ async function openFarmNftExplorer(species) {
 
     // Edition grid: every slot 1..N — minted shows owner+name; a minted serial
     // with no live instance was burned as merge fuel; locked = not yet drawn.
+    // „Dziki Mieszaniec" is the one edition whose icon differs per serial, so its
+    // slots carry it — everywhere else it would just repeat the header 500 times.
+    const perSerialIcon = species === 'wild_hybrid';
     const grid = el('div', { className: 'farm-nftx-grid' });
     for (let s = 1; s <= editionSize; s++) {
       const inst = bySerial.get(s);
       const burned = !inst && s <= mintedEver;
       const slot = el('div', { className: 'farm-nftx-slot' + (inst ? (inst.owner_id === me?.id ? ' mine' : ' minted') : ' locked') },
-        el('div', { className: 'farm-nftx-serial' }, '#' + s + (!isHybrid && inst && inst.level > 1 ? ' ⭐'.repeat(inst.level) : '')),
+        el('div', { className: 'farm-nftx-serial' },
+          perSerialIcon ? el('span', { className: 'farm-nftx-slot-ico' }, farmIcon(farmNftIconFor(species, s, def.emoji))) : '',
+          el('span', {}, '#' + s + (!isHybrid && inst && inst.level > 1 ? ' ⭐'.repeat(inst.level) : ''))),
         inst
           ? el('div', { className: 'farm-nftx-owner' }, el('b', {}, (inst.nft_name || '—') + (!isHybrid && inst.level > 1 ? ' Poz.' + inst.level : '')), el('span', {}, '👤 ' + nm(inst.owner_id)))
           : el('div', { className: 'farm-nftx-owner' }, el('span', {}, burned ? '🔥 spalona (fuzja)' : '🔒 niewybita')));
@@ -32852,7 +32928,7 @@ function majPlantAdvisor() {
     const copies = r.nft ? null : (r.free === Infinity ? '∞ sadzeń' : ('×' + r.free + ' ' + plCount(r.free, 'wolna', 'wolne', 'wolnych')));
     row.append(
       el('span', { className: 'maj-adv-rank' }, String(i + 1)),
-      el('span', { className: 'maj-adv-ico' }, farmIcon(r.def.emoji || (r.nft ? '💎' : '🌱'))),
+      el('span', { className: 'maj-adv-ico' }, farmIcon(r.inst ? farmNftEmoji(r.inst) : (r.def.emoji || (r.nft ? '💎' : '🌱')))),
       el('span', { className: 'maj-adv-id' },
         el('b', {}, r.name + (r.level > 1 ? ' · poz. ' + r.level : '')),
         el('span', { className: 'maj-adv-sub' },
@@ -34057,7 +34133,7 @@ async function harvestCrop(x, y, btn) {
 async function removeCrop(x, y, btn) {
   const tile = fmTiles.get(x + ',' + y);
   const def = tile ? fmDefs.get(tile.planted_species) : null;
-  if (!confirm('Roślina' + (def ? ' (' + def.emoji + ' ' + def.name + ')' : '') + ' zostanie usunięta bez zbiorów. Na pewno?')) return false;
+  if (!confirm('Roślina' + (def ? ' (' + farmTileCropEmoji(tile) + ' ' + def.name + ')' : '') + ' zostanie usunięta bez zbiorów. Na pewno?')) return false;
   if (btn) btn.disabled = true;
   const { error } = await sb.rpc('remove_crop', { p_x: x, p_y: y });
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return false; }
