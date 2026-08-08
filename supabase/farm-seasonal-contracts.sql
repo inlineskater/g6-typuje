@@ -12,6 +12,12 @@
 --   • rank 2: 1500 coins + 5 boxes
 --   • rank 3: 1000 coins + 2 boxes
 --   • completed bar: 5 boxes for every contributor with >= 1 eligible unit sold
+--
+-- ⚠️ The shared community bar ("Wspólny pasek") target is SELF-CALIBRATING off
+-- recent actual output — see ensure_farm_seasonal_event(). It used to be a fixed
+-- fraction of a level-1 fair-share farm, which drifted to trivial (filled to
+-- 300-1256%/week) as players leveled cards and bought land. Don't re-introduce a
+-- static coefficient here.
 
 -- ── Tables ─────────────────────────────────────────────────────────────────
 
@@ -194,6 +200,9 @@ DECLARE
   v_target_daily integer;
   v_bonus        integer;
   v_bar_target   integer;
+  v_hist_avg     numeric;
+  v_hist_top     numeric;
+  v_cap_floor    integer;
 BEGIN
   IF p_week_start IS NULL OR p_week_start < DATE '2026-07-06' THEN
     RAISE EXCEPTION 'seasonal_event_not_started';
@@ -228,7 +237,56 @@ BEGIN
     v_target_daily * v_grow_days / v_def.base_yield
     - (SELECT m.base_price FROM public.farm_market m WHERE m.crop_type = v_def.crop_type) * 0.57
   )::integer);
-  v_bar_target := greatest(25, (ceil((v_participants * v_fair_cap * v_units * 0.35) / 25.0) * 25)::integer);
+  -- ── Self-calibrating community-bar target ──────────────────────────────────
+  -- The bar used to be participants × fair_cap × base_yield-at-LEVEL-1 × 0.35,
+  -- i.e. anchored to a level-1, fair-share farm. But a planted card yields +50%
+  -- per level and grows faster (see harvest_crop), and players own far more than
+  -- fair_cap tiles — so as the office leveled its cards and bought land, real
+  -- output ran 3-13× the model and the "whole office" bar filled to 300-1256%
+  -- every week (one player alone cleared it up to 4×). A bigger fixed coefficient
+  -- would just drift back to trivial the next time cards level up.
+  --
+  -- Instead calibrate off what the office ACTUALLY sold in the last 4 CLOSED
+  -- weeks — a direct measurement that already bakes in plant levels, tile counts,
+  -- replant intensity and engagement, so the goal auto-scales and self-corrects.
+  -- Take whichever of two signals is higher:
+  --   • 0.85 × average weekly eligible units  → a genuine stretch, not a formality
+  --   • 1.35 × the strongest SINGLE player's week → so no one can solo the bar
+  --     (output is whale-concentrated: the top player is ~35-77% of a week alone)
+  -- Floored by the old level-1 capacity model (min 750) for cold starts / dead
+  -- weeks with no usable history.
+  SELECT avg(w.units) INTO v_hist_avg FROM (
+    SELECT sum(s.qty)::numeric AS units
+      FROM public.farm_seasonal_events e2
+      JOIN public.farm_seasonal_event_sales s ON s.event_id = e2.id
+      JOIN public.profiles p ON p.id = s.user_id AND NOT p.is_admin
+     WHERE e2.week_start < p_week_start
+       AND e2.week_start >= (p_week_start - interval '4 weeks')::date
+     GROUP BY e2.week_start
+  ) w;
+
+  SELECT max(u.units) INTO v_hist_top FROM (
+    SELECT sum(s.qty)::numeric AS units
+      FROM public.farm_seasonal_events e2
+      JOIN public.farm_seasonal_event_sales s ON s.event_id = e2.id
+      JOIN public.profiles p ON p.id = s.user_id AND NOT p.is_admin
+     WHERE e2.week_start < p_week_start
+       AND e2.week_start >= (p_week_start - interval '4 weeks')::date
+     GROUP BY e2.week_start, s.user_id
+  ) u;
+
+  v_cap_floor := greatest(750,
+    (ceil((v_participants * v_fair_cap * v_units * 0.35) / 25.0) * 25)::integer);
+
+  IF v_hist_avg IS NOT NULL AND v_hist_avg > 0 THEN
+    v_bar_target := (round(greatest(
+        0.85 * v_hist_avg,
+        1.35 * COALESCE(v_hist_top, 0),
+        v_cap_floor::numeric
+      ) / 25.0) * 25)::integer;
+  ELSE
+    v_bar_target := v_cap_floor;  -- no history yet (first event): old model
+  END IF;
 
   INSERT INTO public.farm_seasonal_events (
     week_start, species, crop_type, target_daily_coins, bonus_per_unit,

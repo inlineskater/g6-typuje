@@ -115,8 +115,18 @@ dni_wzrostu           = max(1, base_grow_minutes / 1440)
 cykle_tygodnia        = floor(7 / dni_wzrostu)
 sztuk/działkę/tydzień = cykle_tygodnia × base_yield
 fair_cap/gracz        = fair_cap × sztuk/działkę/tydzień
-pasek                 = ceil_do_25(uczestnicy × fair_cap × sztuk/działkę/tydzień × 0,35)
 ```
+
+**Wspólny pasek (cel biura) sam się kalibruje.** Do 08.08.2026 był ułamkiem farmy na poziomie 1 (`uczestnicy × fair_cap × sztuk/tydzień × 0,35`) — ale zebrana karta daje **+50% plonu na poziom** i rośnie szybciej, a gracze mają dużo więcej działek niż `fair_cap`. W miarę jak biuro lewelowało karty i dokupowało ziemię, realna produkcja szła 3–13× ponad ten model, więc pasek zapełniał się do **300–1256% co tydzień** (jedna osoba sama nabijała go do 4×). Każdy większy stały współczynnik znów by zdryfował. Dlatego `ensure_farm_seasonal_event()` liczy target z **faktycznej sprzedaży z ostatnich 4 zamkniętych tygodni** — pomiar, który już zawiera poziomy roślin, liczbę działek i zaangażowanie. Bierze większy z dwóch sygnałów:
+
+```text
+pasek = round_do_25( max(
+  0,85 × średni tygodniowy wolumen (4 tyg.),      -- realne wyzwanie, nie formalność
+  1,35 × najsilniejszy pojedynczy gracz (4 tyg.)  -- nikt nie zamknie paska sam
+) )   -- podłoga: stary model poziomu 1, min 750, gdy brak historii
+```
+
+Przykład na tydzień 10.08.2026: średnia 4021, top-gracz 2572 → pasek **3475** (~6,6× więcej niż stare ~525). Zmiana działa od następnego eventu; trwający tydzień ma zamrożone warunki.
 
 Premia za sztukę celuje w ok. **125% najlepszego zwykłego plonu**, zaokrąglone do 10 🪙/działkę/dzień. Przy obecnym balansie daje target **150 🪙/działkę/dzień**, więc Marchewka dostaje **+31 🪙/szt.**.
 
