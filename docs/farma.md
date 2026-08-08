@@ -5,7 +5,7 @@ Opis logiki z `supabase/farm.sql` (+ `farm-price-history.sql`, `farm-marketplace
 ## Pętla gry
 
 1. Kup działkę (albo postaw ją darmowym voucherem ze skrzynki).
-2. Kup skrzynkę w **Sklep → 🎁 Skrzynki** (100 🪙), otwórz ją w **🎒 Mój Majątek** → 3 różne karty roślin.
+2. Kup skrzynkę w **Sklep → 🎁 Skrzynki** (100 🪙), otwórz ją w osobnej zakładce hubu **📦 Skrzynki** → 3 różne karty roślin.
 3. Ulepszaj karty duplikatami + coinami (NFT: łączeniem dwóch egzemplarzy).
 4. Zasadź kartę na własnym pustym polu, poczekaj (pełne dni), zbierz plon.
 5. Sprzedaj plon NPC, gdy cena jest wysoko — cena faluje jak na „stalk markecie".
@@ -38,7 +38,7 @@ Naliczanie: codziennie o **00:00 Europe/Warsaw** za poprzedni dzień (pierwsza p
 
 ## Skrzynka z nasionami
 
-Jedna skrzynka: **100 🪙** (`buy_farm_lootbox`, BURN `farm_box_buy`), kupowana w Sklepie, otwierana w Moim Majątku (`open_farm_lootbox`). Otwarcie losuje **3 różne** aktywne karty (ważone `draw_weight`; NFT tylko dopóki edycja niewyprzedana — o podaży decyduje licznik `farm_card_defs.minted_count`, więc spalone w fuzjach egzemplarze nie wracają do puli).
+Jedna skrzynka: **100 🪙** (`buy_farm_lootbox`, BURN `farm_box_buy`), kupowana w Sklepie, otwierana w zakładce hubu **📦 Skrzynki** (`open_farm_lootbox`). Otwarcie losuje **3 różne** aktywne karty (ważone `draw_weight`; NFT tylko dopóki edycja niewyprzedana — o podaży decyduje licznik `farm_card_defs.minted_count`, więc spalone w fuzjach egzemplarze nie wracają do puli).
 
 Nowy gracz dostaje jednorazowo **3 darmowe skrzynki** (`claim_farm_starter`); dopóki nie ma żadnej ziemi ani vouchera, w tych 3 otwarciach ma **gwarantowany voucher na darmową działkę**. Naturalna szansa vouchera to 7%, dzielona przez 3 za każde posiadane pole/voucher.
 
@@ -59,7 +59,7 @@ Czasy wzrostu/plony bazowe: zwykłe 1 dzień, rzadkie 2 dni, epickie 3–4 dni; 
 
 ### Złota Skrzynia ⭐ (premium) — WYCOFANA ZE SPRZEDAŻY (27.07.2026)
 
-Druga, droższa skrzynka (`supabase/farm-goldbox.sql`), całkowicie niezależna od zwykłej — osobny licznik `boxes_gold`, osobne RPC (`buy_farm_goldbox`, `open_farm_goldbox`/`open_farm_goldboxes`). Otwierana w **🎒 Mój Majątek → 📦 Skrzynki**, tak samo jak zwykła skrzynka.
+Druga, droższa skrzynka (`supabase/farm-goldbox.sql`), całkowicie niezależna od zwykłej — osobny licznik `boxes_gold`, osobne RPC (`buy_farm_goldbox`, `open_farm_goldbox`/`open_farm_goldboxes`). Otwierana w osobnej zakładce hubu **📦 Skrzynki**, tak samo jak zwykła skrzynka.
 
 **Nie da się jej już kupić** (`supabase/farm-goldbox-no-sale.sql`): `buy_farm_goldbox` rzuca `goldbox_not_for_sale` i nie ma grantu dla `authenticated`, a w aplikacji nie ma żadnego przycisku zakupu. Nieotwarte sztuki nadal działają — otwieranie i wycena majątku zostały nietknięte. Poniższe parametry opisują więc już tylko to, co robi otwarcie posiadanej skrzyni:
 

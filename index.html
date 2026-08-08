@@ -7327,13 +7327,10 @@
     .maj-section-head-left { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .maj-section-count { color: var(--dim); font-weight: 600; margin-left: 2px; }
     .maj-section-right { color: #b45309; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; text-transform: none; letter-spacing: 0; }
-    /* ── Minimalist pass (2026-07-25) ─────────────────────────────────────────
-       Mój Majątek was a stack of boxes inside a box: the hub body is already a
-       bordered card, and every section then drew its own border, so a plain list
-       of crops read as five nested frames. The rule now: ONE frame (the hub
-       body). Inside it, structure comes from spacing, a hairline, or a flat tint
-       — never an outline. Weights top out at 700; 800/900 everywhere made the
-       whole panel shout at the same volume. */
+    /* ── Minimalist row primitives (2026-07-25) ───────────────────────────────
+       Individual crop/item rows stay flat: spacing, a hairline or a tint carries
+       their structure. The dashboard below supplies the few deliberate outer
+       surfaces, so these primitives must not add another decorative frame. */
     .maj-ledger-box { padding: 0; }
     .maj-ledger-box .farm-market-row:first-of-type { border-top: none; }
     .maj-crop-ico { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--surface); flex: 0 0 auto; }
@@ -7403,6 +7400,135 @@
     /* The left meta line carries plon/wzrost — the numbers the ranking is about —
        so let it wrap rather than ellipsise them away on a phone. */
     .maj-adv-id .maj-adv-sub { white-space: normal; overflow: visible; line-height: 1.35; }
+
+    /* ── Mój Majątek dashboard ──────────────────────────────────────────────
+       A clear summary first, time-sensitive actions second, and one quiet
+       accordion for each asset family. All rules stay under .maj-* so the
+       collectible-card system can keep its own visual language. */
+    .maj-dashboard { display: flex; flex-direction: column; gap: 16px; }
+
+    .maj-overview { display: grid; grid-template-columns: minmax(190px, .9fr) minmax(0, 1.6fr); gap: 12px;
+      padding: 14px; border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border)); border-radius: var(--r-lg);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, var(--card)), color-mix(in srgb, #f59e0b 7%, var(--card)));
+      box-shadow: var(--sh-sm); }
+    .maj-overview-main { display: flex; min-width: 0; flex-direction: column; justify-content: center; padding: 4px 6px; }
+    .maj-overview-label { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .055em; line-height: 1.35; text-transform: uppercase; }
+    .maj-overview-value { margin-top: 3px; color: var(--text); font-size: clamp(25px, 5vw, 34px); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.035em; line-height: 1.05; }
+    .maj-overview-sub { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .maj-overview-loading { display: inline-block; width: 78px; height: .85em; margin-top: 7px; overflow: hidden; border-radius: var(--r-pill);
+      background: color-mix(in srgb, var(--accent) 13%, var(--surface)); color: transparent; animation: majOverviewPulse 1.35s ease-in-out infinite; }
+    @keyframes majOverviewPulse { 50% { opacity: .48; } }
+
+    .maj-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .maj-summary-tile { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto; column-gap: 8px; align-content: center; min-width: 0;
+      padding: 10px; border-radius: var(--r-md); background: color-mix(in srgb, var(--card) 78%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent); }
+    .maj-summary-tile-icon, .maj-summary-icon { grid-row: 1 / -1; align-self: center; display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px;
+      background: color-mix(in srgb, var(--accent) 8%, var(--surface)); font-size: 17px; line-height: 1; }
+    .maj-summary-tile-label, .maj-summary-label { min-width: 0; overflow: hidden; color: var(--muted); font-size: 9.5px; font-weight: 700; letter-spacing: .035em; line-height: 1.25; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .maj-summary-tile-value, .maj-summary-value { min-width: 0; margin-top: 1px; overflow: hidden; color: var(--text); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+    .maj-summary-tile-sub, .maj-summary-sub { min-width: 0; margin-top: 1px; overflow: hidden; color: var(--muted); font-size: 9.5px; font-variant-numeric: tabular-nums; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+
+    .maj-alerts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: -5px; }
+    .maj-alert { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid transparent; border-radius: var(--r-sm);
+      background: var(--surface-2); color: var(--text); font: inherit; font-size: 11px; font-weight: 600; line-height: 1.35; text-align: left; text-decoration: none; cursor: pointer;
+      transition: border-color .14s ease, background .14s ease, box-shadow .14s ease, transform .14s ease; }
+    .maj-alert:hover { border-color: var(--border-hi); background: var(--surface); transform: translateY(-1px); }
+    .maj-alert:active { transform: translateY(0); }
+    .maj-alert.is-static { cursor: default; }
+    .maj-alert.is-static:hover { border-color: transparent; background: var(--yes-dim); transform: none; }
+    .maj-alert:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); outline-offset: 2px; }
+    .maj-alert:disabled { opacity: .58; cursor: default; transform: none; }
+    .maj-alert.is-danger, .maj-alert.is-urgent, .maj-alert-danger { border-color: color-mix(in srgb, var(--no) 22%, transparent); background: var(--no-dim); color: #991b1b; }
+    .maj-alert.is-warning, .maj-alert-warning { border-color: color-mix(in srgb, #f59e0b 26%, transparent); background: color-mix(in srgb, #f59e0b 9%, var(--card)); color: #92400e; }
+    .maj-alert.is-info, .maj-alert-info { border-color: color-mix(in srgb, var(--accent) 20%, transparent); background: var(--acc-dim); color: #4338ca; }
+    .maj-alert.is-success, .maj-alert-success { border-color: var(--yes-line); background: var(--yes-dim); color: #166534; }
+
+    .maj-actions-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+    .maj-action-panel { min-width: 0; padding: 13px; border-radius: var(--r-md); background: var(--surface-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 82%, transparent); }
+    .maj-action-panel > :first-child { margin-top: 0; }
+    .maj-action-panel > :last-child { margin-bottom: 0; }
+
+    .maj-advisor-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 3px; }
+    .maj-advisor-head > :first-child { min-width: 0; }
+    .maj-mode { display: inline-flex; flex: 0 0 auto; gap: 2px; padding: 2px; border-radius: var(--r-sm); background: var(--surface); }
+    .maj-mode-btn { min-height: 27px; padding: 4px 8px; border: none; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 10.5px; font-weight: 600; line-height: 1; cursor: pointer;
+      transition: color .12s ease, background .12s ease, box-shadow .12s ease; }
+    .maj-mode-btn:hover { color: var(--text); }
+    .maj-mode-btn.active, .maj-mode-btn.is-active, .maj-mode-btn[aria-pressed="true"] { background: var(--card); color: var(--accent); box-shadow: var(--sh-sm); }
+    .maj-mode-btn:focus-visible, .maj-advisor-expand:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); outline-offset: 2px; }
+    .maj-advisor-expand { display: flex; width: 100%; min-height: 32px; align-items: center; justify-content: center; margin-top: 7px; padding: 6px 10px; border: none; border-radius: var(--r-sm);
+      background: color-mix(in srgb, var(--accent) 6%, transparent); color: var(--accent); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; transition: background .12s ease; }
+    .maj-advisor-expand:hover { background: color-mix(in srgb, var(--accent) 11%, transparent); }
+    .maj-adv-status { display: inline-flex; max-width: 100%; align-items: center; gap: 4px; width: fit-content; margin-top: 2px; padding: 1px 6px; border-radius: var(--r-pill);
+      background: var(--surface); color: var(--muted); font-size: 9.5px; font-weight: 600; line-height: 1.45; }
+    .maj-adv-row[role="button"] { cursor: pointer; border-radius: var(--r-sm); transition: background .12s ease; }
+    .maj-adv-row[role="button"]:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+    .maj-adv-row[role="button"]:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); outline-offset: -1px; }
+
+    .maj-assets-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 1px 1px -7px; }
+    .maj-assets-title > b { color: var(--text); font-size: 13px; font-weight: 700; }
+    .maj-assets-title > span { color: var(--muted); font-size: 10.5px; line-height: 1.35; text-align: right; }
+
+    .maj-group { overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); box-shadow: var(--sh-sm); }
+    .maj-group + .maj-group { margin-top: -9px; }
+    .maj-group-head { display: flex; min-height: 48px; align-items: stretch; background: color-mix(in srgb, var(--surface-2) 72%, var(--card)); }
+    .maj-group-toggle { display: flex; min-width: 0; flex: 1 1 auto; align-items: center; gap: 9px; padding: 10px 12px; border: none; background: transparent; color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; line-height: 1.25; text-align: left; cursor: pointer;
+      transition: background .12s ease; }
+    .maj-group-toggle:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+    .maj-group-toggle:focus-visible, .maj-group-action:focus-visible { position: relative; z-index: 1; outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); outline-offset: -3px; }
+    .maj-group-meta { min-width: 0; margin-left: auto; overflow: hidden; color: var(--muted); font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+    .maj-group-chevron { flex: 0 0 auto; width: 18px; color: var(--dim); font-size: 15px; line-height: 1; text-align: center; transition: transform .18s ease, color .18s ease; }
+    .maj-group.open .maj-group-chevron, .maj-group.is-open .maj-group-chevron, .maj-group[data-open="true"] .maj-group-chevron, .maj-group-toggle[aria-expanded="true"] .maj-group-chevron { color: var(--accent); transform: rotate(180deg); }
+    .maj-group-action { align-self: center; flex: 0 0 auto; min-height: 30px; margin-right: 10px; padding: 5px 10px; border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border)); border-radius: var(--r-sm);
+      background: var(--card); color: var(--accent); font: inherit; font-size: 10.5px; font-weight: 700; cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+    .maj-group-action:hover { border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); background: var(--acc-dim); }
+    .maj-group-action:disabled { border-color: var(--border); color: var(--dim); background: var(--surface-2); cursor: default; }
+    .maj-group-body { padding: 2px 12px 12px; border-top: 1px solid var(--border); }
+    .maj-group-body[hidden] { display: none; }
+    .maj-group-body > :first-child { margin-top: 10px; }
+    .maj-group-body > :last-child { margin-bottom: 0; }
+
+    .maj-tax-compact { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 9px; padding: 8px 10px; border-radius: var(--r-sm);
+      background: var(--yes-dim); color: #166534; font-size: 10.5px; line-height: 1.4; }
+    .maj-tax-compact > b { flex: 0 0 auto; color: inherit; font-size: 11px; font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 720px) {
+      .maj-overview { grid-template-columns: 1fr; }
+      .maj-overview-main { padding: 2px 3px 5px; }
+      .maj-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .maj-actions-grid { grid-template-columns: 1fr; }
+      .maj-action-panel { padding: 12px; }
+      .maj-assets-title { margin-top: 2px; }
+    }
+    @media (max-width: 520px) {
+      .maj-dashboard { gap: 13px; }
+      .maj-overview { gap: 10px; padding: 12px; }
+      .maj-overview-value { font-size: 27px; }
+      .maj-summary-grid { grid-template-columns: 1fr; gap: 5px; }
+      .maj-summary-tile { grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-rows: auto auto; padding: 8px 9px; }
+      .maj-summary-tile-icon, .maj-summary-icon { grid-row: 1 / -1; width: 27px; height: 27px; font-size: 15px; }
+      .maj-summary-tile-label, .maj-summary-label { align-self: end; }
+      .maj-summary-tile-value, .maj-summary-value { grid-column: 3; grid-row: 1 / -1; align-self: center; padding-left: 6px; font-size: 13px; text-align: right; }
+      .maj-summary-tile-sub, .maj-summary-sub { grid-column: 2; }
+      .maj-alerts { display: grid; grid-template-columns: 1fr; }
+      .maj-alert { width: 100%; }
+      .maj-advisor-head { align-items: flex-start; }
+      .maj-mode-btn { padding-inline: 7px; }
+      .maj-assets-title { align-items: flex-start; flex-direction: column; gap: 2px; }
+      .maj-assets-title > span { text-align: left; }
+      .maj-group-head { min-height: 46px; }
+      .maj-group-toggle { gap: 7px; padding: 9px 10px; }
+      .maj-group-meta { font-size: 10px; }
+      .maj-group-action { margin-right: 8px; padding-inline: 8px; }
+      .maj-group-body { padding-inline: 10px; }
+      .maj-tax-compact { align-items: flex-start; flex-direction: column; gap: 3px; }
+      .maj-crop-card { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 3px 7px; }
+      .maj-crop-art { width: 34px; height: 36px; }
+      .maj-crop-sell { padding-inline: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .maj-overview-loading, .maj-group-chevron { animation: none !important; transition: none !important; }
+    }
     @media (max-width: 420px) {
       .maj-adv-row { grid-template-columns: 16px 26px minmax(0, 1fr) auto; gap: 8px; }
       .maj-adv-id > b { font-size: 12.5px; }
@@ -17951,6 +18077,7 @@ function heroItemOwnedCount(slug) {
 async function refreshHeroItemSurface() {
   if (activeTab === 'shop') await loadShop();
   else await loadMyHeroInventory();
+  await invalidateFarmAssetBreakdown({ reload: true });
   if (farmModalEl && farmHubTab === 'inventory') refreshFarmHub();
 }
 
@@ -18026,6 +18153,7 @@ async function createHeroAuction(slug, startPrice, durationHours, minIncrement, 
   if (error) { showToast('❌ ' + heroItemError(error)); return; }
   showToast('✅ Aukcja utworzona!');
   await loadShop();
+  await invalidateFarmAssetBreakdown({ reload: true });
 }
 
 async function placeHeroAuctionBid(auctionId, amount, btn) {
@@ -18061,6 +18189,7 @@ async function settleHeroAuction(auctionId, btn) {
   }
   showToast(data?.winner_id === me?.id ? '🏆 Wygrałeś przedmiot!' : '✅ Aukcja rozstrzygnięta.');
   await loadShop();
+  await invalidateFarmAssetBreakdown({ reload: true });
 }
 
 // ── Marketplace (Targowisko) ───────────────────────────────────────────────
@@ -18133,6 +18262,7 @@ async function createFarmListing(kind, ref, listingType, price, hours, incr, btn
   showToast(kind === 'farm_tile' ? '✅ Działka wystawiona na Targowisku!' : '✅ Karta wystawiona na Targowisku!');
   hide(document.getElementById('ml-overlay'));
   await ensureFarmData({ force: true });   // refresh owned items (count/instance reserved)
+  await invalidateFarmAssetBreakdown({ reload: true });
   if (kind === 'farm_tile') {
     const tile = fmTiles.get(ref.x + ',' + ref.y);
     if (tile) tile.listed = true;
@@ -18167,7 +18297,10 @@ async function buyMarketplaceListing(listingId, price, btn) {
   }
   showToast(listing?.item_kind === 'farm_tile' ? '✅ Kupiono działkę w Ogródku!' : '✅ Kupiono! Skontaktuj się ze sprzedającym.');
   await loadShop();
-  if (listing?.item_kind?.startsWith('farm_')) await refreshFarmTaxQuote();
+  if (listing?.item_kind?.startsWith('farm_')) {
+    await refreshFarmTaxQuote();
+    await invalidateFarmAssetBreakdown({ reload: true });
+  }
   if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
@@ -18222,7 +18355,10 @@ async function settleMarketplaceListing(listingId, btn) {
     showToast('✅ Aukcja zakończona bez ofert.');
   }
   await loadShop();
-  if (listing?.item_kind?.startsWith('farm_')) await refreshFarmTaxQuote();
+  if (listing?.item_kind?.startsWith('farm_')) {
+    await refreshFarmTaxQuote();
+    await invalidateFarmAssetBreakdown({ reload: true });
+  }
   if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
@@ -18239,6 +18375,7 @@ async function cancelMarketplaceListing(listingId, btn) {
   }
   showToast('✅ Ogłoszenie anulowane.');
   await loadShop();
+  if (listing?.item_kind?.startsWith('farm_')) await invalidateFarmAssetBreakdown({ reload: true });
   if (listing?.item_kind === 'farm_tile') await loadFarm();
 }
 
@@ -18433,6 +18570,7 @@ async function fillBuyOrder(order, qty, ref, btn) {
   await refreshMeCoins();
   showToast('✅ Sprzedano! Otrzymałeś ' + Number(data?.seller_net ?? data?.total ?? 0).toLocaleString('pl-PL') + ' 🪙');
   await ensureFarmData({ force: true });
+  if (order.item_kind?.startsWith('farm_')) await invalidateFarmAssetBreakdown({ reload: true });
   loadShop();
   if (order.item_kind === 'farm_tile') await loadFarm();
 }
@@ -19326,9 +19464,32 @@ function setupShopRealtime() {
   const reload = () => { if (activeTab === 'shop') loadShop(); else refreshShopNavCounts(); };
   // Item/equipment changes also refresh the 🎒 Mój Majątek hub section if open.
   const reloadItems = async () => {
-    if (activeTab === 'shop') { loadShop(); return; }
+    if (activeTab === 'shop') { invalidateFarmAssetBreakdown(); loadShop(); return; }
     await loadMyHeroInventory();
+    await invalidateFarmAssetBreakdown({ reload: true });
     if (farmModalEl && farmHubTab === 'inventory') refreshFarmHub();
+  };
+  const reloadFarmMarketplace = payload => {
+    reload();
+    const r = payload.new || payload.old;
+    if (!r?.item_kind?.startsWith('farm_')) return;
+    if (r.seller_id === me?.id || r.buyer_id === me?.id) scheduleExternalFarmAssetRefresh();
+  };
+  const reloadFarmBuyOrder = payload => {
+    reload();
+    const r = payload.new || payload.old;
+    // An order UPDATE covers the buyer side of a fill. Filter by owner so one
+    // office-wide order does not make every connected client issue nine reads.
+    if (payload.eventType === 'UPDATE' && r?.item_kind?.startsWith('farm_') && r.buyer_id === me?.id) {
+      scheduleExternalFarmAssetRefresh();
+    }
+  };
+  const reloadFarmBuyOrderFill = payload => {
+    reload();
+    // The fill row carries the seller id, completing the other side without
+    // forcing unrelated clients to reload their complete farm portfolio.
+    const r = payload.new || payload.old;
+    if (r?.seller_id === me?.id) scheduleExternalFarmAssetRefresh();
   };
   const ch = sb.channel('shop-db-changes')
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'store_items'     }, reload)
@@ -19336,10 +19497,10 @@ function setupShopRealtime() {
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_instances' }, reloadItems)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auctions' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'hero_item_auction_bids' }, reload)
-    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_listings' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_listings' }, reloadFarmMarketplace)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_bids' }, reload)
-    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_buy_orders' }, reload)
-    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_buy_order_fills' }, reload)
+    .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_buy_orders' }, reloadFarmBuyOrder)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'marketplace_buy_order_fills' }, reloadFarmBuyOrderFill)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_requests' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'marketplace_request_offers' }, reload)
     .on('postgres_changes', { event: '*',    schema: 'public', table: 'zapps_purchase_requests' }, reload)
@@ -28098,12 +28259,17 @@ let fmInventoryExp = new Map(); // crop_type -> soonest expires_at (ISO) of its 
 let fmInventoryLots = [];       // non-expired lots with harvested_at, for event eligibility previews
 let fmMarket = new Map();       // crop_type -> { base_price, anchor_price, cur_price, last_decay_at }
 let fmNft = [];                 // all farm_nft_instances: [{species,serial_no,edition_size,owner_id}]
+let fmListedCards = new Map();  // species -> qty reserved in this user's open marketplace listings
 let fmBoxes = 0;                // owned sealed (unopened) seed boxes
 let fmGoldBoxes = 0;            // owned sealed (unopened) ⭐ gold boxes
 let fmVouchers = 0;             // owned free-tile vouchers
 let fmOwnedTileCountHint = 0;    // used when Sklep loads before the full farm board
 let fmNormalTileCountHint = 0;   // same, but excludes migration Ogródek plant tiles
 let fmTax = null;                // server quote: fair_cap / owned normal tiles / debt / daily tax
+let fmAssetBreakdown = null;     // user_net_worth_breakdown() — official Ogródek valuation
+let fmAssetBreakdownDirty = true;
+let fmAssetBreakdownLoading = null;
+let fmAssetBreakdownSeq = 0;
 let fmSeasonalEvent = null;      // current/upcoming weekly crop contract
 let fmSeasonalLeaderboard = [];  // current event aggregate leaderboard
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
@@ -28112,17 +28278,36 @@ let fmSel = null, fmLoadSeq = 0;
 let fmRealtimeReady = false, fmTimer = null;
 let fmMarketUiRefreshTimer = null;
 let fmMarketPollAt = 0, fmMarketPolling = false;
+let fmInventoryExpiryReloading = false;
+let fmExternalFarmRefreshTimer = null;
 // Callbacks registered by open popups that quote an NPC price, so a price change can
 // reach them too. renderFarmMarket()/refreshFarmHub() only repaint the board and the
 // hub — a detail modal built its numbers once at open and had no way to hear about a
 // roll, which is how a plant popup left open across 12:00 kept quoting a dead price.
 const fmPriceRefreshHooks = new Set();
 
+// Ephemeral UI choices for 🎒 Mój Majątek. They survive DOM rebuilds caused by
+// selling/leveling/live prices, but a newly opened hub starts from contextual
+// defaults again.
+let majInventoryUi = null;
+
+function newMajInventoryUi() {
+  return {
+    seeded: false,
+    advisorMode: 'today',
+    advisorExpanded: false,
+    openGroups: new Set(),
+    touchedGroups: new Set(),
+  };
+}
+
 function resetFarmState() {
   stopFarmTimer();
+  if (fmExternalFarmRefreshTimer) { clearTimeout(fmExternalFarmRefreshTimer); fmExternalFarmRefreshTimer = null; }
   fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmInventoryLots = []; fmMarket = new Map();
-  fmNft = [];
-  fmBoxes = 0; fmGoldBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmStarterClaimed = false;
+  fmNft = []; fmListedCards = new Map();
+  fmBoxes = 0; fmGoldBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmAssetBreakdown = null; fmAssetBreakdownDirty = true; fmAssetBreakdownLoading = null; fmAssetBreakdownSeq++; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmStarterClaimed = false; fmInventoryExpiryReloading = false;
+  majInventoryUi = null;
   fmSel = null;
 }
 
@@ -28172,7 +28357,10 @@ async function pollFarmMarketPrices(force) {
           || prev.base_price !== next.base_price || prev.last_decay_at !== next.last_decay_at) changed = true;
       fmMarket.set(m.crop_type, next);
     });
-    if (changed) scheduleFarmMarketUiRefresh();
+    if (changed) {
+      invalidateFarmAssetBreakdown();
+      scheduleFarmMarketUiRefresh();
+    }
   } catch (e) {
     // Transient network blip — the next tick retries; never break the growth timer.
   } finally { fmMarketPolling = false; }
@@ -28305,7 +28493,10 @@ async function claimFarmStarter() {
   try {
     const { data } = await sb.rpc('claim_farm_starter');
     if (data && typeof data.boxes === 'number') fmBoxes = data.boxes;
-    if (data && data.granted) showToast('🎁 Witaj w Ogródku! Dostajesz 3 skrzynki — otwórz je w 🎒 Moim Majątku.');
+    if (data && data.granted) {
+      invalidateFarmAssetBreakdown();
+      showToast('🎁 Witaj w Ogródku! Dostajesz 3 skrzynki — otwórz je w zakładce 📦 Skrzynki.');
+    }
   } catch (e) { console.error('claimFarmStarter', e); }
 }
 
@@ -28833,7 +29024,7 @@ async function loadFarm() {
   await claimFarmStarter();   // grant the welcome boxes before we read box state
   const seq = ++fmLoadSeq;
   try {
-    const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes, taxRes, profRes] = await Promise.all([
+    const [tilesRes, defsRes, colRes, invRes, mktRes, zenRes, nftRes, stateRes, taxRes, profRes, listedCardsRes] = await Promise.all([
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
@@ -28844,6 +29035,7 @@ async function loadFarm() {
       sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
       sb.rpc('farm_land_tax_quote'),
       sb.from('profiles').select('id,nick,is_admin,second_garden_unlocked'),
+      sb.from('marketplace_listings').select('card_species,qty').eq('seller_id', me.id).eq('status', 'open').eq('item_kind', 'farm_card'),
     ]);
     if (seq !== fmLoadSeq) return;
     applyFarmUserState(stateRes.data);
@@ -28851,6 +29043,10 @@ async function loadFarm() {
     setFarmStarterBannerVisible(stateRes.data);
     maybeGateFarmDocument();
     fmNft = nftRes.data || [];
+    fmListedCards = new Map();
+    (listedCardsRes.data || []).forEach(r => {
+      if (r.card_species) fmListedCards.set(r.card_species, (fmListedCards.get(r.card_species) || 0) + Number(r.qty || 1));
+    });
     fmZen = new Map();
     (zenRes.data || []).forEach(g => fmZen.set(g.id, g));   // keyed by gardens.id (one row per zen plant)
     // Drive the 🧘 Ogród Zen panel from the gardens table (see renderZenZone).
@@ -29732,6 +29928,7 @@ async function payFarmLandTax(btn) {
   if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
   fmTax = Object.assign({}, fmTax || {}, { debt: Number(data.debt || 0) });
   await refreshFarmTaxQuote();
+  await invalidateFarmAssetBreakdown({ reload: true });
   showToast('🏛️ Spłacono podatek: ' + (data.paid || 0) + ' 🪙.');
   renderFarmSelection();
   if (farmModalEl) refreshFarmHub();
@@ -29925,7 +30122,7 @@ function renderFarmSelectionBody() {
       box.append(el('div', { className: 'farm-empty farm-onboard' },
         el('div', { className: 'farm-onboard-title' }, '🌱 Zacznij tutaj'),
         el('ol', { className: 'farm-onboard-steps' },
-          el('li', {}, 'Masz ', el('strong', {}, '3 startowe skrzynki'), ' — otwórz je w 🎒 Moim Majątku.'),
+          el('li', {}, 'Masz ', el('strong', {}, '3 startowe skrzynki'), ' — otwórz je w zakładce 📦 Skrzynki.'),
           el('li', {}, 'Jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', el('strong', {}, '🎁 darmową działkę'), '.'),
           el('li', {}, 'Zasadź kartę, poczekaj aż urośnie i ', el('strong', {}, 'zbierz plon'), '.'),
           el('li', {}, 'Sprzedaj plon NPC za 🪙 — kupuj kolejne działki i skrzynki.'))));
@@ -30096,7 +30293,7 @@ function renderFarmSelectionBody() {
 
     // Mention the contract only if at least one available crop can finish before
     // it closes; later harvests are not eligible for its per-unit premium.
-    const seasonalActive = entries.some(e => !e.disabled && farmPlantIncomeCalc(e.def, e.level)?.seasonal);
+    const seasonalActive = entries.some(e => !e.disabled && farmPlantPickerEntryCalc(e)?.seasonal);
     box.append(el('div', { className: 'farm-pick-note' },
       'Ceny NPC wahają się 30–100% maks., dlatego zarobek podano jako widełki „od–do". Zysk zależy od poziomu karty.'
       + (seasonalActive ? ' 🏆 Roślina objęta kontraktem tygodnia jest oznaczona — bonus jest już doliczony do zarobku.' : '')));
@@ -30396,6 +30593,17 @@ function farmCollectorBonus() {
   return Math.min(0.30, 0.02 * farmMyNftSpecies().size);
 }
 
+// „Zielony Kciuk": −1% grow time per level across every owned NFT instance,
+// capped −20%. Listed and planted cards still belong to the player and count on
+// the server, so this deliberately does not filter by either status.
+function farmGrowthBonus(userId, levelDelta = 0) {
+  const uid = userId || me?.id;
+  if (!uid) return 0;
+  let levels = 0;
+  fmNft.forEach(n => { if (n.owner_id === uid) levels += Number(n.level || 1); });
+  return Math.min(0.20, Math.max(0, 0.01 * (levels + Number(levelDelta || 0))));
+}
+
 // „Sezonowy Łowca": +2% on the weekly contract premium per distinct WEEKLY-SERIES
 // species owned, capped +20%. Mirror of farm_seasonal_bonus() in
 // farm-achievements.sql (which joins farm_card_defs on series_week IS NOT NULL).
@@ -30480,7 +30688,7 @@ function farmSellConfirm(crop, maxQty, afterSell) {
     noteLabel.replaceChildren(q.eventBonus > 0
       ? '🏆 Kontrakt liczy tylko plony zebrane w aktywnym tygodniu. Normalna sprzedaż nadal obniży cenę o ~' + q.dropPct + '%.'
       : '📉 Ta sprzedaż obniży cenę o ~' + q.dropPct + '% (im więcej naraz, tym mocniej). Cena wraca do dziennego poziomu z czasem i resetuje się o 00:00 i 12:00.');
-    confirmBtn.replaceChildren('💰 Sprzedaj za ~' + q.totalProceeds + ' 🪙');
+    confirmBtn.replaceChildren('💰 Sprzedaj · brutto ~' + q.totalProceeds + ' 🪙');
   };
   
   confirmBtn.addEventListener('click', async () => { confirmBtn.disabled = true; await sellCrop(crop, currentQty); close(); if (afterSell) afterSell(); });
@@ -30507,7 +30715,7 @@ function farmSellConfirm(crop, maxQty, afterSell) {
     el('div', { className: 'farm-sell-quote' },
       qline('Sprzedajesz', qtyLabel),
       qline('Cena/szt', priceLabel),
-      qline('Dostaniesz', proceedsLabel),
+      qline('Sprzedaż brutto', proceedsLabel),
       qline('Kontrakt tygodnia', bonusLabel),
       qline('Cena po sprzedaży', afterPriceLabel),
       noteLabel,
@@ -30620,7 +30828,7 @@ function openFarmModalShell(title, opts = {}) {
 async function ensureFarmData(opts = {}) {
   if (!opts.force && fmDefs.size && fmMarket.size && fmTiles.size) return;
   try {
-    const [defsRes, colRes, invRes, mktRes, nftRes, tilesRes, stateRes, taxRes] = await Promise.all([
+    const [defsRes, colRes, invRes, mktRes, nftRes, tilesRes, stateRes, taxRes, listedCardsRes] = await Promise.all([
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
@@ -30629,12 +30837,17 @@ async function ensureFarmData(opts = {}) {
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
       me ? sb.rpc('farm_land_tax_quote') : Promise.resolve({ data: null }),
+      me ? sb.from('marketplace_listings').select('card_species,qty').eq('seller_id', me.id).eq('status', 'open').eq('item_kind', 'farm_card') : Promise.resolve({ data: [] }),
     ]);
     fmDefs = new Map(); (defsRes.data || []).forEach(d => fmDefs.set(d.species, d));
     fmCollection = colRes.data || [];
     buildFarmInventory(invRes.data || []);
     fmMarket = new Map(); (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, normalizeFarmMarket(m)));
     fmNft = nftRes.data || [];
+    fmListedCards = new Map();
+    (listedCardsRes.data || []).forEach(r => {
+      if (r.card_species) fmListedCards.set(r.card_species, (fmListedCards.get(r.card_species) || 0) + Number(r.qty || 1));
+    });
     fmTiles = new Map();
     // Zen plants render in the 🧘 Ogród Zen panel, not on the crop board — drop legacy migration tiles.
     (tilesRes.data || []).forEach(t => { if (t.acquired_via === 'migration') return; fmTiles.set(t.x + ',' + t.y, normalizeFarmTile(t)); });
@@ -30650,6 +30863,69 @@ async function ensureFarmData(opts = {}) {
     if (!taxRes.error) applyFarmTaxQuote(taxRes.data);
     await refreshFarmSeasonalState();
   } catch (e) { console.error('ensureFarmData', e); }
+}
+
+// Official portfolio value for the Mój Majątek overview. Keep one response for
+// the lifetime of the open hub, but discard in-flight results after a mutation:
+// an older RPC response must never overwrite the post-sale/post-upgrade value.
+async function loadFarmAssetBreakdown(opts = {}) {
+  if (!me?.id) {
+    fmAssetBreakdown = null;
+    fmAssetBreakdownDirty = false;
+    return null;
+  }
+  if (!opts.force && !fmAssetBreakdownDirty && fmAssetBreakdown) return fmAssetBreakdown;
+  if (fmAssetBreakdownLoading) return fmAssetBreakdownLoading;
+  const seq = ++fmAssetBreakdownSeq;
+  fmAssetBreakdownLoading = (async () => {
+    try {
+      const { data, error } = await sb.rpc('user_net_worth_breakdown', { p_uid: me.id });
+      if (seq !== fmAssetBreakdownSeq) return fmAssetBreakdown;
+      fmAssetBreakdownDirty = false;
+      if (error) {
+        console.error('loadFarmAssetBreakdown', error);
+        fmAssetBreakdown = null;
+        return null;
+      }
+      fmAssetBreakdown = data || null;
+      return fmAssetBreakdown;
+    } catch (error) {
+      if (seq === fmAssetBreakdownSeq) {
+        fmAssetBreakdownDirty = false;
+        fmAssetBreakdown = null;
+      }
+      console.error('loadFarmAssetBreakdown', error);
+      return null;
+    }
+  })().finally(() => {
+    if (seq === fmAssetBreakdownSeq) fmAssetBreakdownLoading = null;
+  });
+  return fmAssetBreakdownLoading;
+}
+
+// Mark the cached RPC response stale. `reload` is used after successful asset
+// mutations so an open inventory dashboard immediately follows the server.
+async function invalidateFarmAssetBreakdown(opts = {}) {
+  fmAssetBreakdownDirty = true;
+  fmAssetBreakdown = null;
+  fmAssetBreakdownLoading = null;
+  fmAssetBreakdownSeq++;
+  const inventoryOpen = farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory';
+  if (opts.reload && inventoryOpen) return loadFarmAssetBreakdown({ force: true });
+  return null;
+}
+
+// Marketplace settlement can happen in another browser. Coalesce its realtime
+// echoes, reload ownership maps, then repaint an open dashboard and its value.
+function scheduleExternalFarmAssetRefresh() {
+  if (fmExternalFarmRefreshTimer) clearTimeout(fmExternalFarmRefreshTimer);
+  fmExternalFarmRefreshTimer = setTimeout(async () => {
+    fmExternalFarmRefreshTimer = null;
+    await ensureFarmData({ force: true });
+    await invalidateFarmAssetBreakdown({ reload: true });
+    if (activeTab === 'farm') { renderFarmBoard(); renderFarmSelection(); }
+    if (farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory') refreshFarmHub();
+  }, 300);
 }
 
 const FARM_RARITY_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 };
@@ -30772,41 +31048,57 @@ function farmPerDayIncome(d, price, level = 1) {
   return Math.round(yld * price / Math.max(1, growMin / 1440));
 }
 
-// Money projection for one harvest of a card at the level being planted. The NPC
-// price swings 30–100% of the catalog max, so — like the catalog — every figure
-// is a low–high range: `total*` = the whole yield sold at once, `day*` = that
-// spread over the grow time (≥1 day by the 24h floor). When the crop is on the
-// weekly contract the per-unit premium (`bonusPerUnit`) is folded straight into
-// the price, so `seasonal` rows report their real boosted income. Returns null
-// when the crop has no market row (can't estimate). Used by the picker entries.
-// `over` lets a caller substitute the effective stats of ONE instance — a bred
-// hybrid carries its own stat_yield/stat_grow_minutes, which differ from the
-// species def the fungible path derives everything from.
+// Gross projection for one FULL grow/harvest/sale cycle. This intentionally
+// mirrors the server's actual economics: level scaling, territory yield bonus,
+// NFT-level growth bonus, the 24 h floor, batch price impact, collector premium,
+// and an eligible weekly-contract premium. Land-tax repayment is not deducted:
+// this is plant profitability, not a prediction of the player's debt schedule.
+// `over` substitutes ONE NFT instance's stored base stats (bred hybrids differ
+// per serial); fungible cards continue to derive them from the species def.
 function farmPlantIncomeCalc(def, level, over) {
   const mkt = def && fmMarket.get(def.crop_type);
   if (!mkt || mkt.base_price == null) return null;
   const base = +mkt.base_price;
-  const yld = over?.yld != null ? over.yld : farmYieldAtLevel(def, level);
-  const growMin = over?.growMin != null ? over.growMin : farmGrowMinAtLevel(def, level);
+  const L = level || 1;
+  const coreYield = over?.yieldExact != null
+    ? Number(over.yieldExact)
+    : Number(def.base_yield || 0) * (1 + (L - 1) * 0.5);
+  const coreGrow = over?.growCore != null
+    ? Number(over.growCore)
+    : Number(def.base_grow_minutes || 0) * Math.pow(0.92, L - 1);
+  const yieldBonus = farmYieldBonus();
+  const growthBonus = over?.growthBonus != null ? Number(over.growthBonus) : farmGrowthBonus();
+  const yld = Math.round(coreYield * (1 + yieldBonus));
+  const growMin = Math.max(1440, coreGrow * (1 - growthBonus));
   const growDays = Math.max(1, growMin / 1440);
   const activeBonus = farmActiveSeasonalBonus(def.crop_type);
   const eventBounds = activeBonus > 0 ? farmSeasonalEventBounds() : null;
   // Contract inventory must be harvested before ends_at. Do not advertise a
   // premium for a crop that would mature after the current contract closes.
-  const readyBeforeContractEnds = !!(eventBounds && Date.now() + growMin * 60000 < eventBounds.to);
+  const projectedReadyAt = over?.readyAt ? new Date(over.readyAt).getTime() : Date.now() + growMin * 60000;
+  const readyBeforeContractEnds = !!(eventBounds && Number.isFinite(projectedReadyAt)
+    && projectedReadyAt >= eventBounds.from && projectedReadyAt < eventBounds.to);
   const bonusPerUnit = readyBeforeContractEnds ? activeBonus : 0;
-  const unitLow = base * 0.30 + bonusPerUnit, unitHigh = base + bonusPerUnit;
-  // What the NPC pays RIGHT NOW (recovered toward today's anchor), so the range
-  // can be shown with a "you are here" marker instead of two abstract bounds.
+  const seasonalTotal = bonusPerUnit > 0
+    ? Math.round(yld * bonusPerUnit * (1 + farmSeasonalAchBonus())) : 0;
+  // Each endpoint runs through farmSellQuote(), so selling a large harvest is
+  // priced at the average pre/post-impact price just like the live RPC.
   const cur = farmMarketEffectivePrice(mkt);
-  const unitNow = cur + bonusPerUnit;
+  const qLow = farmSellQuote(def.crop_type, yld, base * 0.30);
+  const qHigh = farmSellQuote(def.crop_type, yld, base);
+  const qNow = farmSellQuote(def.crop_type, yld, cur);
+  const totalLow = (qLow?.proceeds || 0) + seasonalTotal;
+  const totalHigh = (qHigh?.proceeds || 0) + seasonalTotal;
+  const totalNow = (qNow?.proceeds || 0) + seasonalTotal;
   return {
     base, yld, growMin, growDays, bonusPerUnit, seasonal: bonusPerUnit > 0,
-    totalLow: Math.round(yld * unitLow), totalHigh: Math.round(yld * unitHigh),
-    dayLow: Math.round(yld * unitLow / growDays), dayHigh: Math.round(yld * unitHigh / growDays),
-    seasonalTotal: Math.round(yld * bonusPerUnit),               // premium portion (for the badge)
+    yieldBonusPct: Math.round(yieldBonus * 100), growthBonusPct: Math.round(growthBonus * 100),
+    collectorPct: qNow?.collectorPct || 0, dropPct: qNow?.dropPct || 0,
+    totalLow, totalHigh,
+    dayLow: Math.round(totalLow / growDays), dayHigh: Math.round(totalHigh / growDays),
+    seasonalTotal,
     cur, curPct: base > 0 ? Math.round(cur / base * 100) : 0,
-    totalNow: Math.round(yld * unitNow), dayNow: Math.round(yld * unitNow / growDays),
+    totalNow, dayNow: Math.round(totalNow / growDays),
   };
 }
 
@@ -30817,25 +31109,33 @@ function farmNftStatsAtLevel(n, L) {
   const def = fmDefs.get(n.species) || {};
   const baseY = n.stat_yield != null ? n.stat_yield : (def.base_yield || 0);
   const baseG = n.stat_grow_minutes != null ? n.stat_grow_minutes : (def.base_grow_minutes || 0);
-  return { def, yld: Math.round(baseY * (1 + (L - 1) * 0.5)),
-           growMin: Math.max(1440, baseG * Math.pow(0.92, L - 1)) };
+  const yieldExact = baseY * (1 + (L - 1) * 0.5);
+  const growCore = baseG * Math.pow(0.92, L - 1);
+  return { def, yieldExact, growCore,
+           yld: Math.round(yieldExact), growMin: Math.max(1440, growCore) };
 }
 
 // Income projection for one NFT INSTANCE — the same 30-100% price band as
 // farmPlantIncomeCalc, driven by that instance's own effective stats.
-function farmNftIncomeCalc(n, level) {
+function farmNftIncomeCalc(n, level, over) {
   const L = level || n.level || 1;
   const s = farmNftStatsAtLevel(n, L);
-  return farmPlantIncomeCalc(s.def, L, { yld: s.yld, growMin: s.growMin });
+  return farmPlantIncomeCalc(s.def, L, {
+    yieldExact: s.yieldExact,
+    growCore: s.growCore,
+    ...(over || {}),
+  });
 }
 
 // Shared ordering for every surface that promises "most profitable": use the
 // top of the daily price band, then today's price, then the quicker harvest.
 // Both the Mój Majątek advisor and the empty-tile picker go through this helper
 // so the two rankings cannot drift apart.
-function farmDailyProfitCompare(a, b) {
-  return b.calc.dayHigh - a.calc.dayHigh
-      || b.calc.dayNow - a.calc.dayNow
+function farmDailyProfitCompare(a, b, mode = 'max') {
+  const key = mode === 'today' ? 'dayNow' : 'dayHigh';
+  const tie = mode === 'today' ? 'dayHigh' : 'dayNow';
+  return b.calc[key] - a.calc[key]
+      || b.calc[tie] - a.calc[tie]
       || a.calc.growMin - b.calc.growMin;
 }
 
@@ -30874,13 +31174,11 @@ function farmFreeTileCount() {
   return n;
 }
 
-// Every card / egzemplarz the player could put in the ground RIGHT NOW, ranked by
-// the best daily income it could produce. Eligibility mirrors the plant picker
-// (and plant_crop): a fungible card at level 2+ is an unlimited seed, a level-1
-// card is capped by how many copies aren't already planted, and an NFT is one
-// planting per unlisted, unplanted egzemplarz. NFTs are priced off their own
-// instance stats, since a bred hybrid's differ from the species def.
-function farmPlantableRanking() {
+// Every owned plant option for the portfolio advisor: one row per fungible
+// species and one row per serialized NFT instance. Planted/listed holdings stay
+// visible with an explicit status — this is an ownership ranking, not the empty-
+// tile picker. Profit always uses a fresh full cycle, never remaining grow time.
+function farmOwnedPlantRanking(mode = 'today') {
   const out = [];
   const plantedIds = farmPlantedNftIds();
   const plantedCounts = new Map();
@@ -30889,30 +31187,46 @@ function farmPlantableRanking() {
       plantedCounts.set(t.planted_species, (plantedCounts.get(t.planted_species) || 0) + 1);
     }
   });
-
+  let order = 0;
   fmNft.forEach(n => {
-    if (n.owner_id !== me?.id || n.listed || plantedIds.has(n.id)) return;
+    if (n.owner_id !== me?.id) return;
     const def = fmDefs.get(n.species);
     if (!def) return;
     const lvl = n.level || 1;
-    out.push({ def, inst: n, nft: true, level: lvl, free: 1, calc: farmNftIncomeCalc(n, lvl),
-      name: (n.nft_name ? n.nft_name + ' ' : '') + '#' + n.serial_no, sub: def.name });
+    let status = 'Gotowa do sadzenia', statusKind = 'free';
+    if (n.listed) { status = 'Na Targowisku'; statusKind = 'listed'; }
+    else if (plantedIds.has(n.id)) { status = 'Posadzona'; statusKind = 'planted'; }
+    out.push({ def, inst: n, nft: true, level: lvl, calc: farmNftIncomeCalc(n, lvl),
+      name: (n.nft_name || def.name || n.species) + ' #' + n.serial_no,
+      sub: def.name, status, statusKind,
+      sortKey: 'nft:' + n.species + ':' + String(n.serial_no || 0).padStart(12, '0'), order: order++ });
   });
 
   fmCollection.forEach(c => {
     const def = fmDefs.get(c.species);
     if (!def || def.edition_size != null) return;        // NFT species are handled above
     const lvl = c.level || 1;
-    const free = lvl >= 2 ? Infinity : Math.max(0, (c.count || 0) - (plantedCounts.get(c.species) || 0));
-    if (free <= 0) return;
-    out.push({ def, nft: false, level: lvl, free, calc: farmPlantIncomeCalc(def, lvl),
-      name: def.name, sub: FARM_RARITY_PL[def.rarity] || def.rarity || '' });
+    const planted = plantedCounts.get(c.species) || 0;
+    const listed = fmListedCards.get(c.species) || 0;
+    const free = lvl >= 2 ? Infinity : Math.max(0, Number(c.count || 0) - planted);
+    if (Number(c.count || 0) <= 0 && listed <= 0 && lvl < 2) return;
+    const states = [];
+    if (planted) states.push(planted + '× posadzona');
+    if (listed) states.push(listed + '× na Targowisku');
+    if (free === Infinity) states.push('gotowa · ∞ sadzeń');
+    else if (free > 0) states.push(free + '× gotowa');
+    out.push({ def, card: c, nft: false, level: lvl, free, planted, listed,
+      calc: farmPlantIncomeCalc(def, lvl), name: def.name,
+      sub: FARM_RARITY_PL[def.rarity] || def.rarity || '',
+      status: states.join(' · ') || 'W użyciu',
+      statusKind: free > 0 ? 'free' : (listed ? 'listed' : 'planted'),
+      sortKey: 'card:' + c.species, order: order++ });
   });
 
-  // „Najwyższy możliwy zarobek" = the top of the price band; ties break on what
-  // the crop would actually pay today, then on the shorter grow time.
   return out.filter(r => r.calc)
-    .sort(farmDailyProfitCompare);
+    .sort((a, b) => farmDailyProfitCompare(a, b, mode)
+      || a.sortKey.localeCompare(b.sortKey, 'pl', { numeric: true })
+      || a.order - b.order);
 }
 
 // One plant-picker entry: identity (icon · name · level) on the left, then grow
@@ -31330,9 +31644,13 @@ function majSectionHead(icon, label, count, rightText, opts = {}) {
   return head;
 }
 
-function buildFarmLandSection(container) {
+function buildFarmLandSection(container, opts = {}) {
   const tiles = farmOwnedTilesSorted();
-  container.append(majSectionHead('🏡', 'Twoje działki', tiles.length, null, { divider: false }));
+  if (opts.heading !== false) container.append(majSectionHead('🏡', 'Twoje działki', tiles.length, null, { divider: false }));
+  if (fmVouchers > 0) {
+    container.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left', marginBottom: '8px' } },
+      '🎁 Darmowe działki: ', el('b', {}, String(fmVouchers)), ' — kliknij puste pole na farmie, aby postawić za 0 🪙.'));
+  }
   if (!tiles.length) {
     container.append(el('div', { className: 'farm-empty maj-empty' },
       'Nie masz jeszcze żadnej działki. Kliknij puste pole na farmie, aby kupić (lub użyj 🎁 darmowej działki).'));
@@ -31342,7 +31660,14 @@ function buildFarmLandSection(container) {
     container.append(grid);
   }
   // Land-tax status (the future-tile price table lives only in ❓ Jak to działa now).
-  container.append(farmTaxStatusCard());
+  const q = farmTaxQuoteLocal();
+  if (opts.compactHealthy && q.excess_tiles <= 0 && q.debt <= 0) {
+    container.append(el('div', { className: 'maj-tax-compact' },
+      el('span', {}, '🏛️ Podatek gruntowy · mieścisz się w bezpłatnym limicie'),
+      el('b', {}, q.owned_tiles + ' / ' + q.fair_cap + ' · 0 🪙/dzień')));
+  } else {
+    container.append(farmTaxStatusCard());
+  }
 }
 
 // Human label + emoji for a crop_type harvested by MORE THAN ONE plant. Every
@@ -31784,6 +32109,13 @@ function scheduleFarmMarketUiRefresh() {
 }
 
 async function openFarmHub(initialTab) {
+  const startingNewHub = !farmModalEl;
+  if (startingNewHub) {
+    majInventoryUi = newMajInventoryUi();
+    invalidateFarmAssetBreakdown();
+  } else if (!majInventoryUi) {
+    majInventoryUi = newMajInventoryUi();
+  }
   if (initialTab && FARM_HUB_TABS.some(t => t.id === initialTab)) farmHubTab = initialTab;
   const shellBody = openFarmModalShell('🌱 Ogródek');
   const bar = el('div', { className: 'farm-hub-tabs' });
@@ -31798,7 +32130,18 @@ async function openFarmHub(initialTab) {
   // brief spinner while ensureFarmData() loads (e.g. opened from Portfel).
   if (fmDefs.size) renderFarmHubBody();
   else body.append(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
-  await Promise.all([ensureFarmData({ force: true }), loadMyHeroInventory(), loadFarmMeta()]);
+  try {
+    await Promise.all([
+      ensureFarmData({ force: true }),
+      loadMyHeroInventory(),
+      loadFarmMeta(),
+      loadFarmAssetBreakdown({ force: fmAssetBreakdownDirty }),
+    ]);
+  } catch (err) {
+    // A secondary summary/feed request must not make the holdings themselves
+    // disappear. Individual loaders already expose their own empty/error state.
+    console.error('farm hub load', err);
+  }
   if (!farmModalEl) return;   // user closed it while loading
   renderFarmHubBody();
 }
@@ -31889,7 +32232,7 @@ function farmPayoutPanel(def, mkt, opts) {
   const base = mkt ? +mkt.base_price : null;
   const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
   if (!base || cur == null) {
-    box.append(el('div', { className: 'fds-money-head' }, el('span', { className: 'fds-eyebrow' }, opts?.label || 'Wypłata za zbiór')),
+    box.append(el('div', { className: 'fds-money-head' }, el('span', { className: 'fds-eyebrow' }, opts?.label || 'Wypłata brutto za zbiór')),
       el('div', { className: 'fds-money-val' }, '—'),
       el('div', { className: 'fds-money-eq' }, 'Brak notowań skupu dla tego plonu.'));
     return box;
@@ -31901,7 +32244,7 @@ function farmPayoutPanel(def, mkt, opts) {
   const pct = Math.max(0, Math.min(100, cur / base * 100));
   const trendCls = pct >= 80 ? 'up' : pct <= 50 ? 'down' : 'flat';
   box.append(el('div', { className: 'fds-money-head' },
-    el('span', { className: 'fds-eyebrow' }, opts?.label || 'Wypłata za zbiór'),
+    el('span', { className: 'fds-eyebrow' }, opts?.label || 'Wypłata brutto za zbiór'),
     farmTrendChip(def.crop_type)));
 
   if (yieldQty > 0) {
@@ -31912,15 +32255,19 @@ function farmPayoutPanel(def, mkt, opts) {
     const q = farmSellQuote(def.crop_type, yieldQty);
     const qMin = farmSellQuote(def.crop_type, yieldQty, floor);
     const qMax = farmSellQuote(def.crop_type, yieldQty, base);
-    const now = q ? q.proceeds : Math.round(yieldQty * cur);
-    const min = qMin ? qMin.proceeds : Math.round(yieldQty * floor);
-    const max = qMax ? qMax.proceeds : Math.round(yieldQty * base);
+    const projected = opts?.calc || null;
+    const now = projected ? projected.totalNow : (q ? q.proceeds : Math.round(yieldQty * cur));
+    const min = projected ? projected.totalLow : (qMin ? qMin.proceeds : Math.round(yieldQty * floor));
+    const max = projected ? projected.totalHigh : (qMax ? qMax.proceeds : Math.round(yieldQty * base));
     const eq = el('div', { className: 'fds-money-eq' },
       yieldQty + ' szt. × ' + farmPriceLabel(cur) + ' 🪙 (cena dziś)');
     if (q && q.dropPct > 0) eq.append(el('span', { title: 'Taka partia zbija cenę o ~' + q.dropPct + '%, a płaci się średnią z ceny przed i po sprzedaży.' },
       ' · partia zbija cenę o ' + q.dropPct + '%'));
     if (q && q.collectorPct > 0) eq.append(el('span', { className: 'fds-badge',
       title: 'Renoma Kolekcjonera: +2% za każdy posiadany gatunek NFT (maks. +30%)' }, '🏅 +' + q.collectorPct + '%'));
+    if (projected?.seasonal) eq.append(el('span', { className: 'fds-badge',
+      title: 'Aktywny kontrakt tygodnia jest doliczony, bo ten pełny cykl kończy się przed końcem wydarzenia.' },
+      '🏆 +' + projected.seasonalTotal + ' 🪙'));
     box.append(el('div', { className: 'fds-money-val' }, '≈ ' + fdsCoins(now)), eq);
     box.append(
       el('div', { className: 'fds-gauge', title: 'Cena skupu chodzi między 30% a 100% pułapu. Zakreskowany odcinek to twarda podłoga — niżej nie zejdzie.' },
@@ -31954,21 +32301,33 @@ function fdsNftUpgrade(n, level, opts) {
   const def = fmDefs.get(n.species) || {};
   const lvl = level || n.level || 1;
   const cost = 50 * lvl * lvl;
+  const mine = n.owner_id === me?.id;
+  const cands = mine ? farmNftMergeCandidates({ ...n, level: lvl }) : [];
   const cur = farmNftStatsAtLevel(n, lvl);
   const next = farmNftStatsAtLevel(n, lvl + 1);
+  const curCalc = farmNftIncomeCalc(n, lvl);
+  // If the merge fuel is already owned, its whole level disappears while the
+  // hero gains one. If it still has to be acquired, the eventual merge leaves
+  // the player's present aggregate +1. Preview the resulting global perk too.
+  const growthLevelDelta = mine ? (cands.length ? 1 - lvl : 1) : 0;
+  const nextCalc = farmNftIncomeCalc(n, lvl + 1, {
+    growthBonus: farmGrowthBonus(undefined, growthLevelDelta),
+  });
+  const curYield = curCalc?.yld ?? cur.yld;
+  const nextYield = nextCalc?.yld ?? next.yld;
+  const curGrow = curCalc?.growMin ?? cur.growMin;
+  const nextGrow = nextCalc?.growMin ?? next.growMin;
   const isHybrid = farmHasIndividualStats(def) || NFT_HYBRID_SPECIES.has(n.species);
-  const mine = n.owner_id === me?.id;
   const wrap = el('div', {});
   wrap.append(fdsSection('Awans na poz. ' + (lvl + 1)),
-    fdsRow('Plon ze zbioru', cur.yld + ' → ' + next.yld + ' szt.', { cls: 'good' }),
-    fdsRow('Czas wzrostu', farmGrowDaysLabel(cur.growMin) + ' → ' + farmGrowDaysLabel(next.growMin), { cls: 'good' }),
+    fdsRow('Plon ze zbioru', curYield + ' → ' + nextYield + ' szt.', { cls: 'good' }),
+    fdsRow('Czas wzrostu', farmGrowDaysLabel(curGrow) + ' → ' + farmGrowDaysLabel(nextGrow), { cls: 'good' }),
     fdsRow('Koszt', 'drugi egzemplarz poz. ' + lvl + ' + ' + fdsCoins(cost)));
   const note = el('div', { className: 'fds-note' });
   if (!mine) {
     note.append('Karty NFT awansują tylko przez ', el('b', {}, 'fuzję'),
       ' dwóch egzemplarzy tej samej edycji na tym samym poziomie.');
   } else {
-    const cands = farmNftMergeCandidates({ ...n, level: lvl });
     if (opts.planted) {
       note.append('Zasadzona karta nie może wejść w fuzję — najpierw zbierz plon.');
     } else if (cands.length) {
@@ -32052,7 +32411,9 @@ function openFarmNftModal(n) {
   const shared = cropDefs.length > 1 ? FARM_SHARED_CROP_LABELS[def.crop_type] : null;
   const cropLabel = shared ? (shared.emoji + ' ' + shared.label)
                            : ((def.emoji || '🌱') + ' ' + (def.name || def.crop_type || '—'));
-  const perWeek = st.grow ? (7 / Math.max(1, st.grow / 1440)) : null;
+  const displayYield = calc?.yld ?? st.yield;
+  const displayGrow = calc?.growMin ?? st.grow;
+  const perWeek = displayGrow ? (7 / Math.max(1, displayGrow / 1440)) : null;
 
   // Where the card is right now — a planted or listed card can't be merged/planted.
   let tileKey = null, tile = null;
@@ -32066,8 +32427,8 @@ function openFarmNftModal(n) {
 
   const facts = el('div', {});
   facts.append(fdsSection('Uprawa'),
-    fdsRow('Plon ze zbioru', st.yield + ' szt.'),
-    fdsRow('Czas wzrostu', farmGrowDaysLabel(st.grow)),
+    fdsRow('Plon ze zbioru', displayYield + ' szt.'),
+    fdsRow('Czas wzrostu', farmGrowDaysLabel(displayGrow)),
     fdsRow('Zbierany plon', cropLabel),
     fdsRow('Zbiorów w tygodniu', perWeek ? ('≈ ' + perWeek.toFixed(1).replace('.', ',')) : '—'),
     fdsSection('Egzemplarz'),
@@ -32077,9 +32438,11 @@ function openFarmNftModal(n) {
   const body = el('div', { className: 'fds rar-' + rar },
     hero,
     farmNftFocus(calc),
-    farmPayoutPanel(def, fmMarket.get(def.crop_type), { yieldQty: st.yield, label: 'Wypłata za jeden zbiór' }),
-    facts,
-    fdsNftUpgrade(n, lvl, { planted: !!tile, onMerge: close }));
+    farmPayoutPanel(def, fmMarket.get(def.crop_type), { yieldQty: displayYield, calc, label: 'Wypłata brutto za jeden zbiór' }),
+    facts);
+  // A planted-card view is about the running crop. Level-up information is not
+  // actionable there and used to bury the harvest facts under a dead-end block.
+  if (!tile) body.append(fdsNftUpgrade(n, lvl, { onMerge: close }));
 
   const modal = el('div', { className: 'modal farm-plant-modal' },
     el('div', { className: 'modal-header' }, el('span', { className: 'modal-title' }, '💎 Karta NFT'), closeX),
@@ -32173,6 +32536,7 @@ async function mergeFarmNft(heroId, fuelId, btn) {
   fmNft = fmNft.filter(n => n.id !== fuelId);
   const hero = fmNft.find(n => n.id === heroId);
   if (hero) hero.level = data.new_level;
+  await invalidateFarmAssetBreakdown({ reload: true });
   showToast('🔀 ' + (data.hero_name || '') + ' #' + data.hero_serial + ' — poziom ' + data.new_level + '! („' + (data.fuel_name || '') + '" #' + data.fuel_serial + ' poświęcona)');
   refreshFarmHub(); renderFarmSelection();
   return true;
@@ -32237,12 +32601,12 @@ function farmSeriesWeekLabel(w) {
   return p.length === 3 ? (p[2] + '.' + p[1]) : String(w);
 }
 
-// Eligible breeding parents: OWN NFT instances that aren't listed for sale.
+// Eligible breeding parents: OWN NFT instances that aren't listed or planted.
 // fmNft is the whole public instance table (the catalog/explorer needs every
 // serial), so the owner filter is what keeps other players' cards out.
-// (Planted ones are rejected server-side; we surface that as a toast.)
 function farmBreedableNfts() {
-  return (fmNft || []).filter(n => n.owner_id === me?.id && !n.listed);
+  const planted = farmPlantedNftIds();
+  return (fmNft || []).filter(n => n.owner_id === me?.id && !n.listed && !planted.has(n.id));
 }
 function farmNftLabel(n) {
   const def = fmDefs.get(n.species) || {};
@@ -32367,19 +32731,11 @@ function farmSeriesGrid() {
   return wrap;
 }
 
-// Reusable breeding section (button + explanation + office hybrid feed).
-// Lives in 🎒 Mój Majątek.
-function farmBreedingSection() {
-  const sec = el('div', { className: 'farm-section-block' });
-  sec.append(el('div', { className: 'farm-block-title' }, '🧬 Krzyżowanie (hybrydy)'));
-  // Scannable formula instead of a paragraph: two parents in, one hybrid out.
-  sec.append(el('div', { className: 'breed-formula' },
-    el('span', { className: 'bf-card' }, '🌹'),
-    el('span', { className: 'bf-op' }, '+'),
-    el('span', { className: 'bf-card' }, '🌻'),
-    el('span', { className: 'bf-op' }, '→'),
-    el('span', { className: 'bf-card bf-out' }, '🌹'),
-    el('span', { className: 'bf-caption' }, 'dwie różne karty NFT → jedna nowa, numerowana hybryda')));
+// Rules and the office feed belong to the breeding decision, not to the main
+// portfolio stream. Keep them collapsed inside the laboratory modal.
+function farmHybridFeedDisclosure() {
+  const sec = el('details', { className: 'farm-pm-details' });
+  sec.append(el('summary', {}, 'Jak działa krzyżowanie i ostatnie hybrydy'));
   const ul = el('ul', { className: 'breed-facts' });
   [['🔥', 'Obie karty-rodzice znikają NA ZAWSZE.'],
    ['⚡', 'Hybryda zarabia o 15% więcej na dobę i rośnie o 5% krócej niż lepszy z rodziców — liczone od ich AKTUALNYCH poziomów i cen skupu ich plonów.'],
@@ -32389,13 +32745,6 @@ function farmBreedingSection() {
    ['🪙', 'Koszt rośnie z poziomem rodziców; odznaka „Mistrz Hybryd" go obniża.']
   ].forEach(([ic, tx]) => ul.append(el('li', {}, el('span', { className: 'bfx' }, ic), tx)));
   sec.append(ul);
-  const btn = el('button', { className: 'btn-primary breed-cta' }, '🧬 Skrzyżuj karty');
-  btn.addEventListener('click', () => openFarmBreedModal());
-  if (farmBreedableNfts().length < 2) {
-    btn.disabled = true;
-    btn.title = 'Potrzebujesz co najmniej dwóch kart NFT różnych gatunków.';
-  }
-  sec.append(btn);
   if (fmHybridFeed && fmHybridFeed.length) {
     const feed = el('div', { className: 'farm-hybrid-feed' });
     feed.append(el('div', { className: 'farm-card-sub', style: { marginTop: '10px', fontWeight: '600' } }, 'Ostatnie hybrydy w biurze:'));
@@ -32408,6 +32757,8 @@ function farmBreedingSection() {
           (h.bred_by_nick ? ' · ' + h.bred_by_nick : ''))));
     });
     sec.append(feed);
+  } else {
+    sec.append(el('div', { className: 'farm-card-sub', style: { marginTop: '10px' } }, 'W biurze nie wyhodowano jeszcze żadnej hybrydy.'));
   }
   return sec;
 }
@@ -32605,7 +32956,7 @@ function openFarmBreedModal() {
       });
       foot.append(go);
     }
-    body.append(foot);
+    body.append(foot, farmHybridFeedDisclosure());
   }
   render();
 
@@ -32648,6 +32999,7 @@ async function breedNft(aId, bId, btn) {
   const hDef = fmDefs.get(h.species);
   if (hDef && hDef.minted_count != null) hDef.minted_count = Math.max(hDef.minted_count + 1, h.serial_no || 0);
   fmHybridFeed = null; fmAchMine = null; fmAchAll = null;  // refetch meta (feed + achievements)
+  await invalidateFarmAssetBreakdown({ reload: true });
   showToast('🧬 Wyhodowano ' + farmNftIconFor(h.species, h.serial_no, h.emoji) + ' „' + (h.name || 'hybrydę') + '" #' + h.serial_no + (h.curated ? ' ✨ (kultowy przepis!)' : '') + '!');
   refreshFarmHub(); renderFarmSelection();
   return true;
@@ -32714,6 +33066,17 @@ function openFarmPlantedModal(tile, x, y) {
   // ready_at, so a recomputed number would contradict the countdown above it.
   const growMin = (tile.planted_at && tile.ready_at)
     ? (new Date(tile.ready_at).getTime() - new Date(tile.planted_at).getTime()) / 60000 : null;
+  const plantedIncomeCalc = () => {
+    if (!isMine) return null;
+    const projectedHarvestAt = tile.ready_at
+      ? new Date(Math.max(Date.now(), new Date(tile.ready_at).getTime())).toISOString() : null;
+    return farmPlantIncomeCalc(def, level, {
+      yieldExact: baseYield * (1 + (level - 1) * 0.5),
+      growCore: ((inst && inst.stat_grow_minutes != null) ? inst.stat_grow_minutes : def.base_grow_minutes)
+        * Math.pow(0.92, level - 1),
+      readyAt: projectedHarvestAt,
+    });
+  };
 
   let timer = null;
   const overlay = el('div', { className: 'modal-overlay farm-plant-overlay', role: 'dialog', 'aria-modal': 'true' });
@@ -32776,7 +33139,7 @@ function openFarmPlantedModal(tile, x, y) {
     const key = mkt ? (Math.round((cur || 0) * 10) + '/' + base) : 'none';
     if (key === priceKey) return;
     priceKey = key;
-    priceSlot.replaceChildren(farmPayoutPanel(def, mkt, { yieldQty: yieldNow }));
+    priceSlot.replaceChildren(farmPayoutPanel(def, mkt, { yieldQty: yieldNow, calc: plantedIncomeCalc() }));
     if (!isNft) {
       const wasOpen = !!levelsSlot.querySelector('details')?.open;
       const levels = farmCollapsibleLevels(def, cur != null ? cur : base, level);
@@ -32853,13 +33216,14 @@ function openFarmCardModal(card) {
     const dupesNeeded = 2 * level, coinCost = 50 * level * level;
     const haveEnough = card.count >= dupesNeeded;
     const canLevel = haveEnough && (me?.coins || 0) >= coinCost;
-    const yieldNow = farmYieldAtLevel(def, level);
-    const growNow = farmGrowMinAtLevel(def, level);
+    const calc = farmPlantIncomeCalc(def, level);
+    const yieldNow = calc?.yld ?? farmYieldAtLevel(def, level);
+    const growNow = calc?.growMin ?? farmGrowMinAtLevel(def, level);
     const mkt = fmMarket.get(def.crop_type);
     const cur = mkt ? farmMarketEffectivePrice(mkt) : null;
     const base = mkt ? +mkt.base_price : null;
-    const perDayLow = base != null ? farmPerDayIncome(def, base * FARM_PRICE_FLOOR_PCT / 100, level) : null;
-    const perDayHigh = base != null ? farmPerDayIncome(def, base, level) : null;
+    const perDayLow = calc?.dayLow ?? null;
+    const perDayHigh = calc?.dayHigh ?? null;
 
     const hero = fdsHero(def.emoji, def.name, rar, [
       FARM_RARITY_PL[rar] || rar,
@@ -32893,7 +33257,7 @@ function openFarmCardModal(card) {
 
     const levels = farmCollapsibleLevels(def, cur != null ? cur : base, level);
     body.replaceChildren(hero, focus,
-      farmPayoutPanel(def, mkt, { yieldQty: yieldNow, label: 'Wypłata za jeden zbiór' }),
+      farmPayoutPanel(def, mkt, { yieldQty: yieldNow, calc, label: 'Wypłata brutto za jeden zbiór' }),
       facts, fdsSection('Poziomy karty'), levels);
   };
   render();
@@ -33107,7 +33471,7 @@ function majCropCard(crop, qty, q, now, idx) {
       el('span', { className: 'maj-crop-qty' }, '×' + qty),
       poolChip),
     el('div', { className: 'maj-crop-side' },
-      el('span', { className: 'maj-crop-value', title: 'Realna wypłata za sprzedaż całości teraz (z wpływem na cenę)' }, '≈' + now + ' 🪙'),
+      el('span', { className: 'maj-crop-value', title: 'Wypłata brutto za sprzedaż całości teraz (z wpływem na cenę, przed ewentualną spłatą podatku)' }, '≈' + now + ' 🪙'),
       sellBtn),
     el('div', { className: 'maj-crop-meta' },
       el('span', { className: 'maj-num' }, price.toFixed(1) + ' 🪙/szt'),
@@ -33120,7 +33484,7 @@ function majCropCard(crop, qty, q, now, idx) {
 
 function majCropsHero() {
   const crops = [...fmInventory.entries()].filter(([, q]) => q > 0);
-  const hero = el('div', { className: 'maj-crops-hero' });
+  const hero = el('div', { className: 'maj-crops-hero maj-action-panel', id: 'maj-crops' });
 
   if (!crops.length) {
     hero.append(el('div', { className: 'maj-crops-empty' },
@@ -33134,7 +33498,8 @@ function majCropsHero() {
   const rows = crops.map(([crop, qty]) => {
     const q = farmSellQuote(crop, qty);
     const now = q ? q.totalProceeds : Math.round(Number(farmMarketEffectivePrice(fmMarket.get(crop)) || 0) * qty);
-    totalNow += now; totalMax += q ? Math.round(q.base * qty) : now; totalQty += qty;
+    const qMax = q ? farmSellQuote(crop, qty, q.base) : null;
+    totalNow += now; totalMax += qMax ? qMax.totalProceeds : now; totalQty += qty;
     return { crop, qty, q, now };
   }).sort((a, b) => b.now - a.now);
 
@@ -33145,125 +33510,318 @@ function majCropsHero() {
         el('span', { className: 'maj-section-count' }, '· ' + totalQty + ' szt.')),
       totalEl),
     el('div', { className: 'maj-crops-sub' },
-      'Realna wypłata za sprzedaż wszystkiego teraz (uwzględnia spadek ceny przy dużej sprzedaży) · przy cenach maks. to ≈' + totalMax + ' 🪙'));
+      'Wypłata brutto za sprzedaż wszystkiego teraz (przed ewentualną spłatą podatku; uwzględnia wpływ partii na cenę) · przy cenach maks. ≈' + totalMax + ' 🪙'));
 
   rows.forEach((r, i) => hero.append(majCropCard(r.crop, r.qty, r.q, r.now, i)));
   majCountUp(totalEl, totalNow);
   return hero;
 }
 
-// 🌟 Co zasadzić — the short answer to "which of my cards is worth the tile?".
-// Ranks plant cards AND NFT egzemplarze together (a level-3 Marchewka can beat a
-// level-1 NFT), showing only what is free to plant right now. TOP_N is small on
-// purpose: this is a nudge above the collection, not a second catalog.
-const MAJ_ADVISOR_TOP_N = 6;
+// 🌟 Co zasadzić — three answers first, with the full owned collection one tap
+// away. Includes planted/listed holdings so a valuable card never disappears
+// from the portfolio just because it is currently busy.
+const MAJ_ADVISOR_TOP_N = 3;
 function majPlantAdvisor() {
-  const box = el('div', { className: 'maj-advisor' });
-  const ranked = farmPlantableRanking();
+  if (!majInventoryUi) majInventoryUi = newMajInventoryUi();
+  const mode = majInventoryUi.advisorMode === 'max' ? 'max' : 'today';
+  const ranked = farmOwnedPlantRanking(mode);
   const freeTiles = farmFreeTileCount();
-  const shown = Math.min(ranked.length, MAJ_ADVISOR_TOP_N);
-  // The count is what's ON SCREEN — a header reading "· 7" above six rows just
-  // makes the reader recount. The leftovers are named in the footnote instead.
-  box.append(majSectionHead('🌟', 'Co zasadzić', shown || null, null, { divider: false }));
+  const shown = majInventoryUi.advisorExpanded ? ranked.length : Math.min(ranked.length, MAJ_ADVISOR_TOP_N);
+  const box = el('div', { className: 'maj-advisor maj-action-panel' });
+  const modeBox = el('div', { className: 'maj-mode', role: 'group', 'aria-label': 'Sposób sortowania rentowności' });
+  [['today', 'Dzisiaj'], ['max', 'Przy pułapie']].forEach(([id, label]) => {
+    const focusId = 'maj-advisor-mode-' + id;
+    const btn = el('button', { className: 'maj-mode-btn' + (mode === id ? ' active' : ''), type: 'button',
+      id: focusId, 'aria-pressed': mode === id ? 'true' : 'false' }, label);
+    btn.addEventListener('click', () => {
+      majInventoryUi.advisorMode = id;
+      majRefreshWithFocus(focusId);
+    });
+    modeBox.append(btn);
+  });
+  box.append(el('div', { className: 'maj-advisor-head' },
+    el('div', {}, el('div', { className: 'maj-crops-title' }, '🌟 Co najbardziej opłaca się sadzić'),
+      el('div', { className: 'maj-advisor-sub' }, 'Ranking wszystkich Twoich kart według zysku brutto z pełnego cyklu.')),
+    modeBox));
 
   if (!ranked.length) {
     box.append(el('div', { className: 'farm-empty maj-empty' },
-      'Nie masz wolnej karty do zasadzenia — wszystkie siedzą już na działkach albo są wystawione na Targowisku. Otwórz skrzynkę 📦, żeby dobrać nowe.'));
+      'Nie masz jeszcze kart do porównania. Otwórz zakładkę 📦 Skrzynki, aby zdobyć pierwsze nasiona.'));
     return box;
   }
 
   box.append(el('div', { className: 'maj-advisor-sub' },
-    'Twoje karty i NFT gotowe do gleby, od najwyższego możliwego zarobku na dobę. '
+    (mode === 'today' ? 'Najpierw najlepsza wypłata przy dzisiejszej cenie skupu. ' : 'Najpierw najlepsza wypłata przy cenie równej pułapowi. ')
     + (freeTiles > 0
         ? ('Masz ' + freeTiles + ' ' + plCount(freeTiles, 'wolną działkę', 'wolne działki', 'wolnych działek') + '.')
         : 'Nie masz wolnej działki — kup nową lub zbierz plon z zajętej.')));
 
-  ranked.slice(0, MAJ_ADVISOR_TOP_N).forEach((r, i) => {
+  ranked.slice(0, shown).forEach((r, i) => {
     const c = r.calc;
     const row = el('div', { className: 'maj-adv-row' + (i === 0 ? ' is-top' : '') + (c.seasonal ? ' is-bonus' : ''),
+      role: 'button', tabIndex: 0,
       title: c.seasonal
-        ? 'Kontrakt tygodnia dolicza +' + c.bonusPerUnit + ' 🪙/szt., co podnosi CAŁY zakres — bez kontraktu ta karta zarabia mniej.'
-        : '' });
-    // A fungible level-1 card is limited by free copies; level 2+ is an unlimited
-    // seed, so say so rather than printing "×Infinity".
-    const copies = r.nft ? null : (r.free === Infinity ? '∞ sadzeń' : ('×' + r.free + ' ' + plCount(r.free, 'wolna', 'wolne', 'wolnych')));
+        ? 'Kontrakt tygodnia dolicza +' + c.bonusPerUnit + ' 🪙/szt. do zbioru, który zdąży dojrzeć przed końcem wydarzenia.'
+        : 'Otwórz szczegóły tej karty.' });
+    const open = () => r.inst ? openFarmNftModal(r.inst) : openFarmCardModal(r.card);
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+    const primary = mode === 'today' ? c.dayNow : c.dayHigh;
+    const other = mode === 'today' ? ('pułap ' + c.dayHigh) : ('dziś ' + c.dayNow);
     row.append(
       el('span', { className: 'maj-adv-rank' }, String(i + 1)),
       el('span', { className: 'maj-adv-ico' }, farmIcon(r.inst ? farmNftEmoji(r.inst) : (r.def.emoji || (r.nft ? '💎' : '🌱')))),
       el('span', { className: 'maj-adv-id' },
         el('b', {}, r.name + (r.level > 1 ? ' · poz. ' + r.level : '')),
         el('span', { className: 'maj-adv-sub' },
-          [r.nft ? '💎 ' + r.sub : r.sub, farmGrowDaysLabel(c.growMin), c.yld + ' szt.', copies,
-           // A weekly contract lifts BOTH ends of the range, so a row that owes its
-           // ranking to the premium has to say so — otherwise it looks like a
-           // permanently better card and stops being one the moment the week ends.
+          [r.nft ? '💎 ' + r.sub : r.sub, farmGrowDaysLabel(c.growMin), c.yld + ' szt.',
            c.seasonal ? '🏆 kontrakt +' + c.bonusPerUnit + '/szt' : null]
-            .filter(Boolean).join(' · '))),
+            .filter(Boolean).join(' · ')),
+        el('span', { className: 'maj-adv-status' }, r.status)),
       el('span', { className: 'maj-adv-num' },
-        el('b', {}, '≈ ' + c.dayHigh + ' 🪙/d'),
-        el('span', { className: 'maj-adv-sub' }, 'min ' + c.dayLow + ' · dziś ' + c.dayNow)));
+        el('b', {}, '≈ ' + primary + ' 🪙/d'),
+        el('span', { className: 'maj-adv-sub' }, other + ' · dno ' + c.dayLow)));
     box.append(row);
   });
 
   const rest = ranked.length - shown;
+  if (ranked.length > MAJ_ADVISOR_TOP_N) {
+    const expand = el('button', { className: 'maj-advisor-expand', id: 'maj-advisor-expand', type: 'button',
+      'aria-expanded': majInventoryUi.advisorExpanded ? 'true' : 'false' },
+      majInventoryUi.advisorExpanded ? 'Pokaż tylko Top 3' : ('Pokaż wszystkie · +' + rest));
+    expand.addEventListener('click', () => {
+      majInventoryUi.advisorExpanded = !majInventoryUi.advisorExpanded;
+      majRefreshWithFocus('maj-advisor-expand');
+    });
+    box.append(expand);
+  }
   box.append(el('div', { className: 'maj-advisor-foot' },
-    'Sortowane po górnej granicy (cena skupu 100% pułapu). „min" to ta sama karta przy 30% pułapu, „dziś" — przy dzisiejszej cenie. Kliknij pustą działkę na polu, żeby zasadzić.'
-    + (rest > 0 ? ' Poza czołówką czeka jeszcze ' + rest + ' ' + plCount(rest, 'karta', 'karty', 'kart') + '.' : '')));
+    'Brutto: uwzględnia bonusy, wpływ całego zbioru na cenę i aktywny kontrakt; nie odejmuje spłaty podatku gruntowego. Zawsze liczy pełny cykl, także dla kart posadzonych i wystawionych.'));
   return box;
 }
 
-function buildFarmInventoryBody(bodyEl) {
-  bodyEl.replaceChildren();
+function majPortfolioSnapshot() {
+  let cropQty = 0, cropSellNow = 0;
+  fmInventory.forEach((qty, crop) => {
+    if (qty <= 0) return;
+    cropQty += Number(qty);
+    const q = farmSellQuote(crop, qty);
+    cropSellNow += q ? q.totalProceeds : Math.round(Number(farmMarketEffectivePrice(fmMarket.get(crop)) || 0) * qty);
+  });
+  let ready = 0;
+  fmTiles.forEach(t => {
+    if (t.owner_id === me?.id && t.planted_species && t.ready_at && Date.now() >= new Date(t.ready_at).getTime()) ready++;
+  });
+  const urgentRot = fmInventoryLots.reduce((sum, lot) => {
+    const left = new Date(lot.expires_at).getTime() - Date.now();
+    return left < 86400000 ? sum + Number(lot.qty || 0) : sum;
+  }, 0);
+  const fungible = fmCollection.filter(c => fmDefs.get(c.species)?.edition_size == null
+    && (Number(c.count || 0) > 0 || Number(c.level || 1) >= 2 || (fmListedCards.get(c.species) || 0) > 0));
+  const cardCopies = fungible.reduce((sum, c) => sum + Number(c.count || 0) + (fmListedCards.get(c.species) || 0), 0);
+  const myNft = fmNft.filter(n => n.owner_id === me?.id);
+  const breakdown = fmAssetBreakdown;
+  const farmGross = breakdown ? Number(breakdown.farm || 0) : null;
+  const debt = breakdown ? Number(breakdown.farm_tax_debt || 0) : Number(fmTax?.debt || 0);
+  return {
+    cropQty, cropSellNow, ready, urgentRot, fungible, cardCopies, myNft,
+    tiles: farmOwnedTilesSorted(), freeTiles: farmFreeTileCount(),
+    boxes: Number(fmBoxes || 0) + Number(fmGoldBoxes || 0), debt,
+    farmGross, farmNet: farmGross == null ? null : farmGross - debt,
+    farmParts: breakdown?.farm_parts || {}, itemValue: breakdown ? Number(breakdown.hero_items || 0) : null,
+  };
+}
 
-  // 🧺 Plony first — selling is the page's most common action.
-  bodyEl.append(majCropsHero());
+function majSummaryTile(icon, label, value, sub) {
+  return el('div', { className: 'maj-summary-tile' },
+    el('span', { className: 'maj-summary-tile-icon' }, icon),
+    el('span', { className: 'maj-summary-tile-label' }, label),
+    el('span', { className: 'maj-summary-tile-value' }, value),
+    el('span', { className: 'maj-summary-tile-sub' }, sub));
+}
 
-  // 🌟 Co zasadzić — right under the crops, so "sell" and "plant next" sit together.
-  bodyEl.append(majPlantAdvisor());
+function majOpenFarmBoard() {
+  closeFarmModal();
+  if (activeTab !== 'farm') switchTab('farm');
+}
 
-  if (fmVouchers > 0) {
-    bodyEl.append(el('div', { className: 'farm-box-owned', style: { textAlign: 'left', marginBottom: '8px' } },
-      '🎁 Darmowe działki: ', el('b', {}, String(fmVouchers)), ' — kliknij puste pole na farmie, aby postawić za 0 🪙.'));
+function majScrollTo(id) {
+  requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+}
+
+function majOpenAssetGroup(id) {
+  if (!majInventoryUi) majInventoryUi = newMajInventoryUi();
+  majInventoryUi.openGroups.add(id);
+  majInventoryUi.touchedGroups.add(id);
+  refreshFarmHub();
+  majScrollTo('maj-group-' + id);
+}
+
+function majRefreshWithFocus(id) {
+  refreshFarmHub();
+  requestAnimationFrame(() => document.getElementById(id)?.focus());
+}
+
+function majAlert(label, cls, onClick) {
+  const btn = el('button', { className: 'maj-alert ' + cls, type: 'button' }, label);
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function majPortfolioOverview(s) {
+  const overview = el('div', { className: 'maj-overview' });
+  const value = s.farmNet == null ? '—' : fmtNum(s.farmNet) + ' 🪙';
+  const valueEl = el('div', { className: 'maj-overview-value' + (fmAssetBreakdownLoading && s.farmNet == null ? ' maj-overview-loading' : '') }, value);
+  const sub = s.farmGross == null
+    ? 'Wycena chwilowo niedostępna. Pozostałe dane majątku nadal są aktualne.'
+    : ('Aktywa Ogródka ' + fmtNum(s.farmGross) + ' 🪙'
+      + (s.debt > 0 ? ' · minus ' + fmtNum(s.debt) + ' 🪙 długu podatkowego' : ' · brak długu podatkowego'));
+  overview.append(
+    el('div', { className: 'maj-overview-main' },
+      el('div', { className: 'maj-overview-label' }, 'Wartość Ogródka w Net Worth'),
+      valueEl,
+      el('div', { className: 'maj-overview-sub' }, sub)),
+    el('div', { className: 'maj-summary-grid' },
+      majSummaryTile('🧺', 'Plony', s.cropQty + ' szt.', 'brutto teraz ≈' + fmtNum(s.cropSellNow) + ' 🪙'),
+      majSummaryTile('🏡', 'Działki', String(s.tiles.length), s.freeTiles + ' ' + plCount(s.freeTiles, 'wolna', 'wolne', 'wolnych')),
+      majSummaryTile('🃏', 'Kolekcja', s.fungible.length + ' gat. · ' + s.myNft.length + ' NFT', s.cardCopies + ' kart zwykłych')));
+  return overview;
+}
+
+function majPortfolioAlerts(s) {
+  const alerts = el('div', { className: 'maj-alerts', 'aria-label': 'Ważne statusy Ogródka' });
+  if (s.ready > 0) alerts.append(majAlert('🧺 ' + s.ready + ' ' + plCount(s.ready, 'plon gotowy', 'plony gotowe', 'plonów gotowych'), 'is-success', majOpenFarmBoard));
+  if (s.urgentRot > 0) alerts.append(majAlert('🥀 ' + s.urgentRot + ' szt. plonu zgnije w <24 h', 'is-urgent', () => majScrollTo('maj-crops')));
+  if (s.debt > 0) alerts.append(majAlert('🏛️ Dług podatkowy ' + fmtNum(s.debt) + ' 🪙', 'is-danger', () => majOpenAssetGroup('land')));
+  if (fmVouchers > 0) alerts.append(majAlert('🎁 ' + fmVouchers + ' ' + plCount(fmVouchers, 'darmowa działka', 'darmowe działki', 'darmowych działek'), 'is-info', () => majOpenAssetGroup('land')));
+  if (s.boxes > 0) alerts.append(majAlert('📦 ' + s.boxes + ' ' + plCount(s.boxes, 'nieotwarta skrzynka', 'nieotwarte skrzynki', 'nieotwartych skrzynek'), 'is-warning', () => {
+    farmHubTab = 'boxes'; renderFarmHubBody();
+  }));
+  if (!alerts.childNodes.length) alerts.append(el('span', { className: 'maj-alert is-success is-static' }, '✓ Wszystko pod kontrolą'));
+  return alerts;
+}
+
+function majCanBreedNfts() {
+  return new Set(farmBreedableNfts().map(n => n.species)).size >= 2;
+}
+
+function majCanMergeNfts(myNft) {
+  const planted = farmPlantedNftIds();
+  const seen = new Set();
+  return myNft.some(n => {
+    if (n.listed || planted.has(n.id)) return false;
+    const key = n.species + ':' + (n.level || 1);
+    if (seen.has(key)) return true;
+    seen.add(key);
+    return false;
+  });
+}
+
+function majSeedAssetGroups(s) {
+  if (!majInventoryUi) majInventoryUi = newMajInventoryUi();
+  const defaults = new Map([
+    ['cards', true],
+    ['land', s.debt > 0 || fmVouchers > 0],
+    ['nft', majCanBreedNfts() || majCanMergeNfts(s.myNft)],
+    ['items', false],
+  ]);
+  defaults.forEach((shouldOpen, id) => {
+    if (majInventoryUi.touchedGroups.has(id)) return;
+    if (shouldOpen) majInventoryUi.openGroups.add(id);
+    else majInventoryUi.openGroups.delete(id);
+  });
+  majInventoryUi.seeded = true;
+}
+
+function majAssetGroup(id, icon, title, meta, content, action) {
+  const open = majInventoryUi?.openGroups.has(id);
+  const bodyId = 'maj-group-body-' + id;
+  const group = el('section', { className: 'maj-group' + (open ? ' is-open' : ''), id: 'maj-group-' + id, 'data-open': open ? 'true' : 'false' });
+  const toggleId = 'maj-group-toggle-' + id;
+  const toggle = el('button', { className: 'maj-group-toggle', id: toggleId, type: 'button', 'aria-expanded': open ? 'true' : 'false', 'aria-controls': bodyId },
+    el('span', {}, icon + ' ' + title),
+    el('span', { className: 'maj-group-meta' }, meta),
+    el('span', { className: 'maj-group-chevron', 'aria-hidden': 'true' }, '⌄'));
+  toggle.addEventListener('click', () => {
+    majInventoryUi.touchedGroups.add(id);
+    if (majInventoryUi.openGroups.has(id)) majInventoryUi.openGroups.delete(id);
+    else majInventoryUi.openGroups.add(id);
+    majRefreshWithFocus(toggleId);
+  });
+  const head = el('div', { className: 'maj-group-head' }, toggle);
+  if (action) {
+    const btn = el('button', { className: 'maj-group-action', type: 'button', disabled: action.enabled === false,
+      title: action.title || '' }, action.label);
+    if (action.onClick) btn.addEventListener('click', action.onClick);
+    head.append(btn);
   }
+  const body = el('div', { className: 'maj-group-body', id: bodyId, hidden: !open }, content);
+  group.append(head, body);
+  return group;
+}
 
-  // 🏡 Twoje działki — prawa własności + podatek + ceny kolejnych działek
-  buildFarmLandSection(bodyEl);
+function buildFarmInventoryBody(bodyEl) {
+  if (!majInventoryUi) majInventoryUi = newMajInventoryUi();
+  if (fmAssetBreakdownDirty && !fmAssetBreakdownLoading) {
+    loadFarmAssetBreakdown().then(() => {
+      if (farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory') refreshFarmHub();
+    });
+  }
+  const s = majPortfolioSnapshot();
+  majSeedAssetGroups(s);
+  const dashboard = el('div', { className: 'maj-dashboard' }, majPortfolioOverview(s), majPortfolioAlerts(s));
+  dashboard.append(el('div', { className: 'maj-assets-title' },
+    el('b', {}, 'Do zrobienia teraz'), el('span', {}, 'Sprzedaj plony albo wybierz najlepszą kartę na kolejny cykl.')),
+    el('div', { className: 'maj-actions-grid' }, majCropsHero(), majPlantAdvisor()),
+    el('div', { className: 'maj-assets-title' },
+      el('b', {}, 'Twój majątek'), el('span', {}, 'Rozwiń tylko tę część kolekcji, której teraz potrzebujesz.')));
 
-  // 💎 NFT collection — this player's serialized cards (newest serial first).
-  // Always shown (with a hint when empty) so players learn NFTs exist.
+  const part = (key) => fmAssetBreakdown ? fmtNum(Number(s.farmParts[key] || 0)) + ' 🪙' : 'wycena —';
+
+  const cardsBody = el('div', {});
+  if (!s.fungible.length) {
+    cardsBody.append(el('div', { className: 'farm-empty maj-empty' }, 'Brak kart. Zdobędziesz je w zakładce 📦 Skrzynki.'));
+  } else {
+    const grid = el('div', { className: 'fcc-grid' });
+    s.fungible.slice()
+      .sort((a, b) => (fmDefs.get(b.species)?.draw_weight || 0) - (fmDefs.get(a.species)?.draw_weight || 0))
+      .forEach(card => grid.append(farmCardTile(card, { afterLevel: refreshFarmHub })));
+    cardsBody.append(grid);
+  }
+  dashboard.append(majAssetGroup('cards', '🃏', 'Karty roślin',
+    s.fungible.length + ' gat. · ' + s.cardCopies + ' szt. · ' + part('cards'), cardsBody));
+
   const myNft = fmNft.filter(n => n.owner_id === me?.id)
     .sort((a, b) => a.species.localeCompare(b.species) || a.serial_no - b.serial_no);
-  bodyEl.append(majSectionHead('💎', 'Karty NFT', myNft.length));
+  const nftBody = el('div', {});
   if (!myNft.length) {
-    bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Nie masz jeszcze kart NFT — to limitowane, numerowane okazy, które wypadają (rzadko) ze skrzynki za ' + FARM_BOX_PRICE + ' 🪙.'));
+    nftBody.append(el('div', { className: 'farm-empty maj-empty' }, 'Nie masz jeszcze kart NFT — limitowane, numerowane okazy można znaleźć w zakładce 📦 Skrzynki lub kupić na Targowisku.'));
   } else {
     const grid = el('div', { className: 'fcc-grid' });
     myNft.forEach(n => grid.append(farmNftTile(n)));
-    bodyEl.append(grid);
+    nftBody.append(grid);
   }
+  const canBreed = majCanBreedNfts();
+  const breedingReady = fmAchMine !== null;
+  dashboard.append(majAssetGroup('nft', '💎', 'Karty NFT',
+    myNft.length + ' egz. · ' + part('nft'), nftBody,
+    { label: breedingReady ? '🧬 Skrzyżuj' : 'Ładowanie…', enabled: canBreed && breedingReady, onClick: openFarmBreedModal,
+      title: !breedingReady ? 'Wczytujemy bonusy krzyżowania'
+        : (canBreed ? 'Połącz dwie karty NFT różnych gatunków' : 'Potrzebujesz dwóch wolnych kart NFT różnych gatunków') }));
 
-  // 🧬 Krzyżowanie (hybrydy) — breed two NFTs into a hybrid, right under the cards.
-  bodyEl.append(farmBreedingSection());
+  const landBody = el('div', {});
+  buildFarmLandSection(landBody, { heading: false, compactHealthy: true });
+  dashboard.append(majAssetGroup('land', '🏡', 'Działki',
+    s.tiles.length + ' szt. · ' + s.freeTiles + ' wolne · ' + part('land'), landBody));
 
-  // Fungible (non-NFT) species only — NFT species render above in 💎 Karty NFT.
-  // farm_collection rows for already-merged/migrated NFT species can linger at
-  // count=0 (the migration zeroes them rather than deleting them), and without
-  // this guard they'd render a stray card whose ⬆ Ulepsz button calls the
-  // fungible level_up_card RPC on a dead field.
-  const fungibleCards = fmCollection.filter(card => fmDefs.get(card.species)?.edition_size == null);
-  bodyEl.append(majSectionHead('🃏', 'Karty roślin', fungibleCards.length));
-  if (!fungibleCards.length) {
-    bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Brak kart. Otwórz skrzynkę 📦 (sekcja powyżej / Sklep).'));
-  } else {
-    const grid = el('div', { className: 'fcc-grid' });
-    fungibleCards.slice()
-      .sort((a, b) => (fmDefs.get(b.species)?.draw_weight || 0) - (fmDefs.get(a.species)?.draw_weight || 0))
-      .forEach(card => { if (fmDefs.get(card.species)) grid.append(farmCardTile(card, { afterLevel: refreshFarmHub })); });
-    bodyEl.append(grid);
-  }
+  const itemsBody = el('div', {});
+  buildSpecialItemsSection(itemsBody, { heading: false });
+  dashboard.append(majAssetGroup('items', '⚔️', 'Przedmioty specjalne',
+    myHeroInventory.length + ' szt. · ' + (s.itemValue == null ? 'wycena —' : fmtNum(s.itemValue) + ' 🪙'), itemsBody));
 
-  buildSpecialItemsSection(bodyEl);
-
+  bodyEl.replaceChildren(dashboard);
 }
 
 // A special item rendered with the SAME .fcc frame/size as a plant or NFT
@@ -33293,9 +33851,9 @@ function farmSpecialItemTile(item) {
 // trzeba nic zakładać. Efekty stosuje serwer (Edge Functions czytają
 // hero_item_instances po owner_id); liczy się najsilniejszy posiadany
 // przedmiot na daną grę.
-function buildSpecialItemsSection(bodyEl) {
+function buildSpecialItemsSection(bodyEl, opts = {}) {
   const count = myHeroInventory.length;
-  bodyEl.append(majSectionHead('⚔️', 'Przedmioty specjalne', count));
+  if (opts.heading !== false) bodyEl.append(majSectionHead('⚔️', 'Przedmioty specjalne', count));
   if (!count) {
     bodyEl.append(el('div', { className: 'farm-empty maj-empty' }, 'Nie masz jeszcze przedmiotów specjalnych. Kupisz je w Sklepie (sekcja 🎒 Przedmioty specjalne) albo wygrasz na aukcjach 🔨.'));
     return;
@@ -33731,7 +34289,7 @@ function renderFarmHelpInto(bodyEl) {
 
     farmHelpSection('🚀 Pierwsze kroki',
       el('ol', { className: 'farm-help-steps' },
-        step(b('Otwórz startowe skrzynki'), ' — na powitanie masz ', b('3 skrzynki'), '. Otwórz je w ', b('🎒 Moim Majątku'), ' — jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', b('🎁 darmową działkę'), '.'),
+        step(b('Otwórz startowe skrzynki'), ' — na powitanie masz ', b('3 skrzynki'), '. Otwórz je w zakładce ', b('📦 Skrzynki'), ' — jeśli nie masz jeszcze ziemi ani vouchera, jedna da ', b('🎁 darmową działkę'), '.'),
         step(b('Postaw działkę'), ' — kliknij puste pole na farmie; z voucherem stawiasz ją ', b('za darmo'), ' (kolejne od ', b(tile1 + ' 🪙'), ').'),
         step(b('Posadź kartę'), ' — kliknij swoje pole i wybierz roślinę z kolekcji.'),
         step(b('Poczekaj i zbierz'), ' — gdy roślina dojrzeje, kliknij „Zbierz"; plon trafia do ', b('🎒 Mojego Majątku'), '.'),
@@ -33747,11 +34305,11 @@ function renderFarmHelpInto(bodyEl) {
       farmTerritoryPriceTable()),
 
     farmHelpSection('📦 2. Skrzynka z nasionami',
-      P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w ', b('🎒 Moim Majątku'), ' (z animowanym odkrywaniem kart).'),
+      P('Skrzynka kosztuje ', b(FARM_BOX_PRICE + ' 🪙'), ' i daje ', b(FARM_BOX_DRAWS + ' różne karty roślin'), ' naraz. Działa to ', b('dwuetapowo'), ': ', b('kupujesz'), ' skrzynkę w ', b('Sklep → 🎁 Skrzynki'), ', a potem ', b('otwierasz'), ' ją w zakładce ', b('📦 Skrzynki'), ' Ogródka (z animowanym odkrywaniem kart).'),
       P('Karty mają rzadkość: ', b('zwykłe'), ' są częste i szybkie, ', b('epickie'), ' są rzadkie, ale dają dużo więcej plonu. Szanse teraz: ', b(oddsTxt), '.'),
       P('💎 ', b('Karty NFT: '), 'to ', b('najrzadsze'), ' karty w grze. Szansa jest ', b('stała dla wszystkich'), ' i ', b('nie maleje'), ', gdy masz już jakieś NFT. Na jedną skrzynkę: ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_BOX_DRAWS, false)) + ' na dowolne NFT'), ' (zwykła, czyli ', farmBoxesPerNftLabel(FARM_BOX_DRAWS, false) || '—', ') i ', b('≈ ' + farmChanceLabel(farmAnyNftChancePct(FARM_GOLDBOX_DRAWS, true))), ' (⭐ Złota). Edycje są limitowane — gdy się wyprzedadzą, znikają z puli.'),
       P('Dodatkowo skrzynka może dać ', b('🎁 darmową działkę'), ' (postawisz nowe pole za 0 🪙). Naturalna szansa teraz: ', b(voucherChanceTxt), ' — każde posiadane pole albo niewykorzystany voucher dzieli ją przez ', b(String(FARM_VOUCHER_ODDS_DIVISOR)), '. Pełną listę kart i szans znajdziesz w ', b('📖 Katalog roślin'), '.'),
-      P('⭐ ', b('Złota Skrzynia'), ' ', b('nie jest już w sprzedaży'), '. Dawała ', b(FARM_GOLDBOX_DRAWS + ' kart'), ' z ', b('gwarancją min. 1 rzadkiej'), '. Jeśli masz jeszcze nieotwarte sztuki, otworzysz je w ', b('🎒 Moim Majątku'), ' — kupić nowych już nie można.')),
+      P('⭐ ', b('Złota Skrzynia'), ' ', b('nie jest już w sprzedaży'), '. Dawała ', b(FARM_GOLDBOX_DRAWS + ' kart'), ' z ', b('gwarancją min. 1 rzadkiej'), '. Jeśli masz jeszcze nieotwarte sztuki, otworzysz je w zakładce ', b('📦 Skrzynki'), ' — kupić nowych już nie można.')),
 
     farmHelpSection('🃏 3. Karty i łączenie (poziomy)',
       P('Karta to ', b('przepis na roślinę'), ' — sadzisz ją ile chcesz, ', b('nie znika'), ' po posadzeniu. Powtórki tej samej karty (np. drugą Marchewkę) nazywamy ', b('duplikatami'), '.'),
@@ -33829,6 +34387,7 @@ async function buyFarmTile(x, y, btn) {
   fmOwnedTileCountHint = farmOwnedTileCount();
   fmNormalTileCountHint = farmNormalTileCount();
   await refreshFarmTaxQuote();
+  await invalidateFarmAssetBreakdown({ reload: true });
   showToast(viaVoucher ? '🎁 Postawiłeś działkę za darmo!' : ('🌱 Kupiłeś działkę za ' + data.price + ' 🪙!'));
   renderFarmBoard(); renderFarmSelection();
 }
@@ -33941,16 +34500,16 @@ function renderFarmLootboxStore() {
   const feat = (icon, text) => el('li', { className: 'lootbox-feat' },
     el('span', { className: 'lootbox-feat-ic' }, icon), el('span', {}, text));
 
-  // Owned-boxes strip (two-step flow: buy here, open in Mój Majątek).
+  // Owned-boxes strip (two-step flow: buy here, open in the Ogródek boxes tab).
   const owned = el('div', { className: 'lootbox-owned' + (fmBoxes > 0 ? ' has' : '') });
   if (fmBoxes > 0) {
-    const openBtn = el('button', { className: 'lootbox-open-btn' }, '🎒 Otwórz w Majątku');
-    openBtn.addEventListener('click', () => openFarmHub('inventory'));
+    const openBtn = el('button', { className: 'lootbox-open-btn' }, '📦 Otwórz skrzynki');
+    openBtn.addEventListener('click', () => openFarmHub('boxes'));
     owned.append(
       el('div', { className: 'lootbox-owned-txt' }, el('b', {}, plBoxes(fmBoxes)), ' do otwarcia'),
       openBtn);
   } else {
-    owned.append(el('div', { className: 'lootbox-owned-txt muted' }, 'Po zakupie otworzysz skrzynkę w 🎒 Moim Majątku (Ogródek).'));
+    owned.append(el('div', { className: 'lootbox-owned-txt muted' }, 'Po zakupie otworzysz skrzynkę w zakładce 📦 Skrzynki Ogródka.'));
   }
 
   // Collapsible odds.
@@ -33997,8 +34556,8 @@ function farmGoldBoxCardEl() {
   const feat = (icon, text) => el('li', { className: 'lootbox-feat' },
     el('span', { className: 'lootbox-feat-ic' }, icon), el('span', {}, text));
 
-  const openBtn = el('button', { className: 'lootbox-open-btn' }, '🎒 Otwórz w Majątku');
-  openBtn.addEventListener('click', () => openFarmHub('inventory'));
+  const openBtn = el('button', { className: 'lootbox-open-btn' }, '📦 Otwórz skrzynki');
+  openBtn.addEventListener('click', () => openFarmHub('boxes'));
   const owned = el('div', { className: 'lootbox-owned has' },
     el('div', { className: 'lootbox-owned-txt' }, el('b', {}, '⭐ ×' + fmGoldBoxes), ' do otwarcia'),
     openBtn);
@@ -34065,7 +34624,8 @@ async function buyFarmLootbox(btn, qty) {
   if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
   if (typeof data.coins === 'number') { me.coins = data.coins; setText(headerCoins, me.coins); }
   if (typeof data.boxes === 'number') fmBoxes = data.boxes;
-  showToast('📦 Kupiono ' + plBoxes(qty) + '! Otwórz w 🎒 Moim Majątku.');
+  await invalidateFarmAssetBreakdown({ reload: true });
+  showToast('📦 Kupiono ' + plBoxes(qty) + '! Otwórz w zakładce 📦 Skrzynki.');
   renderFarmLootboxStore();
   if (farmModalEl) refreshFarmHub();
 }
@@ -34109,6 +34669,7 @@ async function openFarmLootbox(btn, qty) {
     ? data.packs.map(p => Array.isArray(p.cards) ? p.cards : [])
     : [Array.isArray(data.cards) ? data.cards : (data.species ? [data] : [])];
   packs.forEach(farmApplyPackCards);
+  await invalidateFarmAssetBreakdown({ reload: true });
   renderFarmLootboxStore();
   if (packs.length > 1) playFarmMultiPackOpening(packs);
   else playFarmPackOpening(packs[0]);
@@ -34135,6 +34696,7 @@ async function openFarmGoldbox(btn, qty) {
     ? data.packs.map(p => Array.isArray(p.cards) ? p.cards : [])
     : [Array.isArray(data.cards) ? data.cards : (data.species ? [data] : [])];
   packs.forEach(farmApplyPackCards);
+  await invalidateFarmAssetBreakdown({ reload: true });
   renderFarmLootboxStore();
   if (packs.length > 1) playFarmMultiPackOpening(packs);
   else playFarmPackOpening(packs[0]);
@@ -34360,6 +34922,7 @@ async function levelUpCard(species, btn, opts) {
   if (card) { card.level = data.level; card.count = data.count; }
   showToast('⬆ ' + (fmDefs.get(species)?.name || species) + ' — poziom ' + data.level + '!');
   if (opts.cardEl) await playCardUpgradeAnim(opts.cardEl, data.level);
+  await invalidateFarmAssetBreakdown({ reload: true });
   renderFarmCollection(); renderFarmSelection();
   return true;
 }
@@ -34385,6 +34948,7 @@ async function harvestCrop(x, y, btn) {
   const tile = fmTiles.get(x + ',' + y);
   if (tile) { tile.planted_species = null; tile.planted_level = null; tile.planted_at = null; tile.ready_at = null; tile.planted_instance_id = null; }
   await reloadFarmInventory();   // rebuild qty + rot expiries from lots
+  await invalidateFarmAssetBreakdown({ reload: true });
   showToast('🧺 Zebrano ' + data.harvested + '× ' + (fmDefs.get(data.crop_type)?.name || data.crop_type) + '!');
   renderFarmBoard(); renderFarmSelection(); renderFarmMarket();
 }
@@ -34414,6 +34978,25 @@ async function reloadFarmInventory() {
   } catch (e) { console.error('reloadFarmInventory', e); }
 }
 
+// Lots expire without a database change event. Detect the first crossed expiry
+// while the farm is open, rebuild the local pile, and refresh the official value
+// once so Mój Majątek never keeps a rotten harvest in its headline.
+async function refreshExpiredFarmInventory() {
+  if (fmInventoryExpiryReloading) return;
+  const now = Date.now();
+  const crossed = [...fmInventoryExp.values()].some(iso => new Date(iso).getTime() <= now);
+  if (!crossed) return;
+  fmInventoryExpiryReloading = true;
+  try {
+    await reloadFarmInventory();
+    await invalidateFarmAssetBreakdown({ reload: true });
+    renderFarmMarket();
+    if (farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory') refreshFarmHub();
+  } finally {
+    fmInventoryExpiryReloading = false;
+  }
+}
+
 async function sellCrop(crop, qty, btn) {
   if (btn) btn.disabled = true;
   const { data, error } = await sb.rpc('sell_crop_to_npc', { p_crop_type: crop, p_qty: qty });
@@ -34428,9 +35011,15 @@ async function sellCrop(crop, qty, btn) {
   await refreshFarmTaxQuote();
   await reloadFarmInventory();   // FIFO lot consumption may have emptied the soonest lot
   await refreshFarmSeasonalState();
-  const taxTxt = Number(data.tax_paid || 0) > 0 ? (' · podatek ' + data.tax_paid + ' 🪙, netto ' + data.net + ' 🪙') : '';
-  const eventTxt = Number(data.event_bonus || 0) > 0 ? (' · kontrakt +' + data.event_bonus + ' 🪙') : '';
-  showToast('💰 Sprzedano ' + data.sold + '× za ' + data.proceeds + ' 🪙' + eventTxt + taxTxt + '!');
+  await invalidateFarmAssetBreakdown({ reload: true });
+  const normalGross = Number(data.proceeds || 0);
+  const eventGross = Number(data.event_bonus || 0);
+  const totalGross = normalGross + eventGross;
+  const totalTax = Number(data.tax_paid || 0) + Number(data.event_tax_paid || 0);
+  const totalNet = Number(data.net ?? normalGross) + Number(data.event_net ?? eventGross);
+  const eventTxt = eventGross > 0 ? (' · w tym kontrakt +' + eventGross + ' 🪙') : '';
+  const taxTxt = totalTax > 0 ? (' · podatek ' + totalTax + ' 🪙 · do portfela ' + totalNet + ' 🪙') : '';
+  showToast('💰 Sprzedano ' + data.sold + '× · brutto ' + totalGross + ' 🪙' + eventTxt + taxTxt + '!');
   renderFarmMarket();
   if (farmModalEl) refreshFarmHub();
 }
@@ -34446,8 +35035,15 @@ function setupFarmRealtime() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_market' }, payload => {
       const r = payload.new; if (!r) return;
-      fmMarket.set(r.crop_type, normalizeFarmMarket(r));
-      scheduleFarmMarketUiRefresh();
+      const prev = fmMarket.get(r.crop_type);
+      const next = normalizeFarmMarket(r);
+      fmMarket.set(r.crop_type, next);
+      const changed = !prev || prev.cur_price !== next.cur_price || prev.anchor_price !== next.anchor_price
+        || prev.base_price !== next.base_price || prev.last_decay_at !== next.last_decay_at;
+      if (changed) {
+        invalidateFarmAssetBreakdown();
+        scheduleFarmMarketUiRefresh();
+      }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_seasonal_event_sales' }, () => {
       refreshFarmSeasonalState().then(() => {
@@ -34459,13 +35055,13 @@ function setupFarmRealtime() {
         if (activeTab === 'farm' && farmModalEl && farmHubTab === 'seasonal') refreshFarmHub();
       });
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_user_state' }, payload => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'farm_user_state' }, async payload => {
       const r = payload.new; if (!r || r.user_id !== me?.id) return;
       applyFarmUserState(r);
-      refreshFarmTaxQuote().then(() => {
-        if (activeTab === 'farm') renderFarmSelection();
-        if (farmModalEl) refreshFarmHub();
-      });
+      await refreshFarmTaxQuote();
+      await invalidateFarmAssetBreakdown({ reload: true });
+      if (activeTab === 'farm') renderFarmSelection();
+      if (farmModalEl) refreshFarmHub();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, () => {
       // Someone planted/watered a zen plant — refresh the 🧘 Ogród Zen panel (debounced).
@@ -34512,7 +35108,12 @@ function applyFarmTileChange(payload) {
       if (t.acquired_via !== 'migration') fmNormalTileCountHint++;
     }
   });
-  if (r.owner_id === me?.id || payload.old?.owner_id === me?.id) refreshFarmTaxQuote();
+  if (r.owner_id === me?.id || payload.old?.owner_id === me?.id) {
+    refreshFarmTaxQuote();
+    invalidateFarmAssetBreakdown({ reload: true }).then(() => {
+      if (farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory') refreshFarmHub();
+    });
+  }
   if (activeTab === 'farm') renderFarmBoard();
   if (fmSel && fmSel.x === r.x && fmSel.y === r.y) renderFarmSelection();
 }
@@ -34522,6 +35123,7 @@ function startFarmTimer() {
   fmTimer = setInterval(() => {
     if (activeTab !== 'farm') return;
     pollFarmMarketPrices();   // self-heal a stale price if realtime missed the roll
+    refreshExpiredFarmInventory();
     updateFarmGrowth();
     updateFarmPlantNextLines();
     if (fmSel) {
