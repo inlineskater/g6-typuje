@@ -6684,6 +6684,10 @@
     .farm-cell.other { background: rgba(108,150,92,.3); border-color: rgba(255,255,255,.28); cursor: default; }
     .farm-cell.crop { background: rgba(96,140,60,.34); border-color: rgba(255,255,255,.16); }
     .farm-cell.listed { background: rgba(190,140,65,.34); border-color: rgba(251,191,36,.45); }
+    .farm-cell.pending { cursor: wait; }
+    .farm-cell-pending { position: absolute; inset: 3px; z-index: 14; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 5px; background: rgba(42,68,31,.82); color: #fff7d6; font-size: 9px; font-weight: 900; line-height: 1.1; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; }
+    .farm-cell-pending-spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fbbf24; border-radius: 50%; animation: farmPendingSpin .7s linear infinite; }
+    @keyframes farmPendingSpin { to { transform: rotate(360deg); } }
     .farm-cell.other.listed { cursor: pointer; }
     .farm-cell.unowned:hover { outline: 2px dashed var(--accent); outline-offset: -2px; }
     .farm-cell.sel, .farm-plant-cell.sel { outline: 3px solid #d97706; outline-offset: -3px; border-radius: 6px; z-index: 2; }
@@ -6691,7 +6695,7 @@
     .farm-cell.crop .farm-cell-emoji { transform: scale(calc(.56 + .44 * var(--grow, 0))); opacity: calc(.7 + .3 * var(--grow, 0)); }
     .farm-cell.crop.ready .farm-cell-emoji { transform: scale(1); opacity: 1; filter: drop-shadow(0 1px 4px rgba(34,197,94,.7)); animation: farmCropBob 1.9s ease-in-out infinite; }
     @keyframes farmCropBob { 0%, 100% { transform: scale(1) translateY(0); } 50% { transform: scale(1.06) translateY(-2px); } }
-    @media (prefers-reduced-motion: reduce) { .farm-cell.crop.ready .farm-cell-emoji { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .farm-cell.crop.ready .farm-cell-emoji, .farm-cell-pending-spinner { animation: none; } }
     .farm-cell-name { position: absolute; bottom: 1px; left: 2px; right: 2px; z-index: 8; display: flex; align-items: baseline; justify-content: center; gap: 2px; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 2px rgba(0,0,0,.5); line-height: 1.35; pointer-events: none; }
     @media (max-width: 520px) { .farm-cell-name { font-size: 7px; } }
     .farm-cell-name-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -7109,6 +7113,8 @@
     table.farm-table tbody tr.is-mine { background: rgba(245,158,11,.08); }
     table.farm-table tbody tr.is-mine:hover { background: rgba(245,158,11,.16); }
     table.farm-table tbody tr.is-ready { box-shadow: inset 3px 0 0 #16a34a; }
+    table.farm-table tbody tr.is-pending { cursor: wait; opacity: .72; }
+    table.farm-table tbody tr.is-pending .ftbl-status { color: #b45309; font-weight: 900; }
     table.farm-table .ftbl-pos { font-variant-numeric: tabular-nums; color: var(--text-dim, #6b7280); }
     table.farm-table .ftbl-num { text-align: right; font-variant-numeric: tabular-nums; }
     table.farm-table .ftbl-date { color: var(--text-dim, #6b7280); font-variant-numeric: tabular-nums; }
@@ -28280,6 +28286,10 @@ let fmMarketUiRefreshTimer = null;
 let fmMarketPollAt = 0, fmMarketPolling = false;
 let fmInventoryExpiryReloading = false;
 let fmExternalFarmRefreshTimer = null;
+let fmTileActionSeq = 0;
+let fmPendingTileActions = new Map(); // "x,y" -> { token, kind, species }; immediate mobile feedback + double-tap guard
+let fmRecentTileActions = new Map();  // matching realtime echoes briefly retained after an RPC resolves
+let fmInventoryReconcilePromise = null, fmInventoryReconcileQueued = false, fmInventoryReconcileSeq = 0;
 // Callbacks registered by open popups that quote an NPC price, so a price change can
 // reach them too. renderFarmMarket()/refreshFarmHub() only repaint the board and the
 // hub — a detail modal built its numbers once at open and had no way to hear about a
@@ -28307,6 +28317,7 @@ function resetFarmState() {
   fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmInventoryLots = []; fmMarket = new Map();
   fmNft = []; fmListedCards = new Map();
   fmBoxes = 0; fmGoldBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmAssetBreakdown = null; fmAssetBreakdownDirty = true; fmAssetBreakdownLoading = null; fmAssetBreakdownSeq++; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmStarterClaimed = false; fmInventoryExpiryReloading = false;
+  fmPendingTileActions = new Map(); fmRecentTileActions = new Map(); fmInventoryReconcileQueued = false; fmInventoryReconcilePromise = null; fmInventoryReconcileSeq++;
   majInventoryUi = null;
   fmSel = null;
 }
@@ -28613,6 +28624,16 @@ function farmTableDuration(ms) {
   return d + ' dni';
 }
 
+function farmTableApplyPending(row) {
+  const pending = fmPendingTileActions.get(row.key);
+  row.pending = pending || null;
+  if (pending) {
+    row.statusText = pending.kind === 'harvest' ? '⏳ Zbieram…' : '⏳ Sadzę…';
+    row.isReady = false;
+  }
+  return row;
+}
+
 function farmTableBuildRow(x, y, now) {
   const key = x + ',' + y;
   const tile = fmTiles.get(key);
@@ -28645,7 +28666,7 @@ function farmTableBuildRow(x, y, now) {
     isMine: false,
     isReady: false,
   };
-  if (!tile) return base;
+  if (!tile) return farmTableApplyPending(base);
 
   const isMine = tile.owner_id === me?.id;
   base.isMine = isMine;
@@ -28678,7 +28699,7 @@ function farmTableBuildRow(x, y, now) {
     base.readyAtText = nextAt ? fmtDateTime(new Date(nextAt).toISOString()) : (snap.canWater ? 'Teraz' : '—');
     base.readyAtTs = nextAt;
     base.timeLeftMs = snap.canWater ? 0 : (snap.cooldownLeft > 0 ? snap.cooldownLeft : null);
-    return base;
+    return farmTableApplyPending(base);
   }
 
   if (tile.planted_species) {
@@ -28710,14 +28731,14 @@ function farmTableBuildRow(x, y, now) {
     base.priceMax = priceMax;
     base.estimatedValue = yieldQty != null && priceNow != null ? Math.round(yieldQty * priceNow) : null;
     base.perDay = yieldQty != null && priceNow != null && growMin != null ? Math.round(yieldQty * priceNow / Math.max(1, growMin / 1440)) : null;
-    return base;
+    return farmTableApplyPending(base);
   }
 
   base.rowKind = tile.listed ? 'listed' : 'empty';
   base.tileType = tile.listed ? 'Wystawiona' : 'Pusta';
   base.contentText = 'Pusta działka';
   base.statusText = tile.listed ? '🏷️ Wystawiona na sprzedaż' : (isMine ? 'Gotowa do obsadzenia' : 'Zajęta');
-  return base;
+  return farmTableApplyPending(base);
 }
 
 function farmTableRows(now) {
@@ -28963,6 +28984,45 @@ function farmTableSummary(rows, totalRows) {
   return el('div', { className: 'farm-table-summary' }, ...chips);
 }
 
+function farmTableRowElement(row) {
+  const tr = el('tr', { 'data-xy': row.key });
+  if (row.isMine) tr.classList.add('is-mine');
+  if (row.isReady) tr.classList.add('is-ready');
+  if (row.pending) tr.classList.add('is-pending');
+  FARM_TABLE_COLS.forEach(col => {
+    const td = el('td', { className: col.className || '', 'data-col': col.key });
+    td.appendChild(farmTableCellContent(col, row));
+    tr.appendChild(td);
+  });
+  tr.addEventListener('click', () => {
+    if (fmPendingTileActions.has(row.key)) return;
+    fmSel = { x: row.x, y: row.y }; markFarmSel();
+    if (row.tile && row.tile.zenAnchor) openFarmPlantModal(row.tile.zenAnchor);
+    else openFarmTileModal(row.x, row.y);
+  });
+  return tr;
+}
+
+// Keep table filters/sorting exact. Replace one row when its position remains
+// stable; fall back to a full table render only when the mutation changes which
+// rows are visible or where the selected sort places them.
+function patchFarmTableTile(x, y) {
+  const wrap = document.getElementById('farm-table-wrap');
+  if (!wrap) return;
+  if (farmTableOpenMenu) { renderFarmTable(); return; }
+  const allRows = farmTableRows(Date.now());
+  const rows = farmTableSortRows(allRows.filter(farmTableRowPasses));
+  const currentRows = [...wrap.querySelectorAll('tbody tr[data-xy]')];
+  const sameOrder = currentRows.length === rows.length
+    && currentRows.every((tr, i) => tr.getAttribute('data-xy') === rows[i].key);
+  if (!sameOrder) { renderFarmTable(); return; }
+  const key = x + ',' + y;
+  const index = rows.findIndex(row => row.key === key);
+  if (index >= 0) currentRows[index].replaceWith(farmTableRowElement(rows[index]));
+  const summary = wrap.querySelector('.farm-table-summary');
+  if (summary) summary.replaceWith(farmTableSummary(rows, allRows));
+}
+
 // Build the table mirror of the farm board. Zen (migration) plants collapse to a
 // single row at their anchor cell; cover cells are skipped so each entity = 1 row.
 function renderFarmTable(opts = {}) {
@@ -28974,22 +29034,7 @@ function renderFarmTable(opts = {}) {
   const filtered = allRows.filter(farmTableRowPasses);
   const rows = farmTableSortRows(filtered);
   const tbody = el('tbody');
-  rows.forEach(row => {
-    const tr = el('tr', { 'data-xy': row.key });
-    if (row.isMine) tr.classList.add('is-mine');
-    if (row.isReady) tr.classList.add('is-ready');
-    FARM_TABLE_COLS.forEach(col => {
-      const td = el('td', { className: col.className || '', 'data-col': col.key });
-      td.appendChild(farmTableCellContent(col, row));
-      tr.appendChild(td);
-    });
-    tr.addEventListener('click', () => {
-      fmSel = { x: row.x, y: row.y }; markFarmSel();
-      if (row.tile && row.tile.zenAnchor) openFarmPlantModal(row.tile.zenAnchor);
-      else openFarmTileModal(row.x, row.y);
-    });
-    tbody.appendChild(tr);
-  });
+  rows.forEach(row => tbody.appendChild(farmTableRowElement(row)));
   const table = el('table', { className: 'farm-table' },
     el('thead', {},
       el('tr', {}, ...FARM_TABLE_COLS.map(col => farmTableHeaderCell(col, allRows)))),
@@ -29528,6 +29573,62 @@ async function waterFarmPlantFromCell(g, cell) {
 // row-0 tile REFLOW in reading order into a display rectangle (8×5 desktop,
 // 7 cols mobile) — a tile's data (x,y) no longer dictates its screen position,
 // which is fine: plot adjacency has no gameplay meaning.
+function buildFarmDisplayCell(cx, cy, now = Date.now()) {
+  const key = cx + ',' + cy;
+  const tile = fmTiles.get(key);
+  const pending = fmPendingTileActions.get(key);
+  const cell = el('div', { className: 'farm-cell', 'data-xy': key });
+  if (!tile) {
+    cell.classList.add('unowned');
+    cell.title = 'Wolna działka — kliknij, by kupić';
+  } else {
+    cell.classList.add(tile.owner_id === me?.id ? 'mine' : 'other');
+    if (tile.listed) {
+      cell.classList.add('listed');
+      cell.title = 'Działka wystawiona na sprzedaż';
+    }
+    if (tile.planted_species) {
+      cell.classList.add('crop');
+      const def = fmDefs.get(tile.planted_species);
+      cell.appendChild(el('span', { className: 'farm-cell-name' },
+        el('span', { className: 'farm-cell-name-text' }, def ? def.name : tile.planted_species),
+        el('span', { className: 'farm-cell-level' }, 'lvl ' + (tile.planted_level || 1))
+      ));
+      cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.nick || '?'));
+      cell.appendChild(el('span', { className: 'farm-cell-emoji' }));
+      const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
+      let pct = 1;
+      if (tile.planted_at && tile.ready_at) {
+        const t0 = new Date(tile.planted_at).getTime(), t1 = new Date(tile.ready_at).getTime();
+        pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
+        const bar = el('div', { className: 'farm-cell-bar' + (ready ? ' ready' : '') });
+        bar.appendChild(el('div', { className: 'farm-cell-bar-fill', style: { width: (pct * 100) + '%' } }));
+        cell.appendChild(bar);
+      }
+      applyFarmCropVisual(cell, farmTileCropEmoji(tile), pct, ready);
+      if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
+    } else {
+      cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.owner_id === me?.id ? 'Ty' : (tile.nick || '?')));
+    }
+    if (tile.listed) {
+      cell.appendChild(el('span', { className: 'farm-sale-sign', 'aria-label': 'For sale' }, el('span', {}, 'FOR SALE')));
+    }
+  }
+  if (pending) {
+    const label = pending.kind === 'harvest' ? 'Zbieram…' : 'Sadzę…';
+    cell.classList.add('pending', 'pending-' + pending.kind);
+    cell.setAttribute('aria-busy', 'true');
+    cell.appendChild(el('span', { className: 'farm-cell-pending', role: 'status', 'aria-live': 'polite' },
+      el('span', { className: 'farm-cell-pending-spinner', 'aria-hidden': 'true' }), label));
+  }
+  cell.addEventListener('click', () => {
+    if (fmPendingTileActions.has(key)) return;
+    fmSel = { x: cx, y: cy }; markFarmSel();
+    openFarmTileModal(cx, cy);
+  });
+  return cell;
+}
+
 function renderFarmBoard() {
   const board = document.getElementById('farm-board');
   if (!board) return;
@@ -29541,54 +29642,6 @@ function renderFarmBoard() {
   seg.dataset.cols = String(farmDisplayCols());
   board.appendChild(seg);
   const now = Date.now();
-  // Builds one interactive farm cell for data coords (cx, cy) — used both for the
-  // main 13×3 grid and the FARM_EXTRA_TILES completing the display rectangle.
-  const buildFarmDisplayCell = (cx, cy) => {
-    const key = cx + ',' + cy;
-    const tile = fmTiles.get(key);
-    const cell = el('div', { className: 'farm-cell', 'data-xy': key });
-    if (!tile) {
-      cell.classList.add('unowned');
-      cell.title = 'Wolna działka — kliknij, by kupić';
-    } else {
-      cell.classList.add(tile.owner_id === me?.id ? 'mine' : 'other');
-      if (tile.listed) {
-        cell.classList.add('listed');
-        cell.title = 'Działka wystawiona na sprzedaż';
-      }
-      if (tile.planted_species) {
-        cell.classList.add('crop');
-        const def = fmDefs.get(tile.planted_species);
-        cell.appendChild(el('span', { className: 'farm-cell-name' },
-          el('span', { className: 'farm-cell-name-text' }, def ? def.name : tile.planted_species),
-          el('span', { className: 'farm-cell-level' }, 'lvl ' + (tile.planted_level || 1))
-        ));
-        cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.nick || '?'));
-        cell.appendChild(el('span', { className: 'farm-cell-emoji' }));
-        const ready = tile.ready_at && now >= new Date(tile.ready_at).getTime();
-        let pct = 1;
-        if (tile.planted_at && tile.ready_at) {
-          const t0 = new Date(tile.planted_at).getTime(), t1 = new Date(tile.ready_at).getTime();
-          pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
-          const bar = el('div', { className: 'farm-cell-bar' + (ready ? ' ready' : '') });
-          bar.appendChild(el('div', { className: 'farm-cell-bar-fill', style: { width: (pct * 100) + '%' } }));
-          cell.appendChild(bar);
-        }
-        applyFarmCropVisual(cell, farmTileCropEmoji(tile), pct, ready);
-        if (ready) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
-      } else {
-        cell.appendChild(el('span', { className: 'farm-cell-owner' }, tile.owner_id === me?.id ? 'Ty' : (tile.nick || '?')));
-      }
-      if (tile.listed) {
-        cell.appendChild(el('span', { className: 'farm-sale-sign', 'aria-label': 'For sale' }, el('span', {}, 'FOR SALE')));
-      }
-    }
-    cell.addEventListener('click', () => {
-      fmSel = { x: cx, y: cy }; markFarmSel();
-      openFarmTileModal(cx, cy);
-    });
-    return cell;
-  };
   // Row 0 stays hidden (legacy zen row, see FARM_DISPLAY_Y_START) except for the
   // FARM_EXTRA_TILES. Keep the coordinate order permanent: ownership, planting,
   // harvesting and listing changes must update a cell in place, never move the
@@ -29598,10 +29651,25 @@ function renderFarmBoard() {
     for (let x = 0; x < FARM_W; x++) coords.push({ x, y });
   }
   FARM_EXTRA_TILES.forEach(ex => coords.push({ x: ex.x, y: ex.y }));
-  coords.forEach(c => seg.appendChild(buildFarmDisplayCell(c.x, c.y)));
+  coords.forEach(c => seg.appendChild(buildFarmDisplayCell(c.x, c.y, now)));
   markFarmSel();
   scaleFarmPots();
   if (farmViewMode === 'table') renderFarmTable();   // keep the table mirror in sync
+}
+
+// Plant/harvest/realtime crop changes preserve the grid and replace one plot.
+// This avoids re-decoding every icon and re-running responsive layout on mobile.
+function patchFarmTileViews(x, y) {
+  const board = document.getElementById('farm-board');
+  const key = x + ',' + y;
+  const current = board?.querySelector('.farm-cell[data-xy="' + key + '"]');
+  if (current) {
+    current.replaceWith(buildFarmDisplayCell(x, y));
+    markFarmSel();
+  } else if (board && activeTab === 'farm') {
+    renderFarmBoard();
+  }
+  if (farmViewMode === 'table') patchFarmTableTile(x, y);
 }
 
 // Size the board to a square fitting the grass field, then scale the mini pots
@@ -34927,55 +34995,175 @@ async function levelUpCard(species, btn, opts) {
   return true;
 }
 
+function farmTileActionMatches(action, tile) {
+  if (!action) return false;
+  if (action.kind === 'plant') return !!tile && tile.planted_species === action.species;
+  return !tile || !tile.planted_species;
+}
+
+function beginFarmTileAction(x, y, kind, species, btn) {
+  const key = x + ',' + y;
+  if (fmPendingTileActions.has(key)) return null;
+  const action = { token: ++fmTileActionSeq, kind, species: species || null };
+  fmPendingTileActions.set(key, action);
+  if (btn) {
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.textContent = kind === 'harvest' ? 'Zbieram…' : 'Sadzę…';
+  }
+  // The board itself becomes the progress surface. Closing the heavy picker
+  // immediately makes the tap visible even on a high-latency mobile connection.
+  closeFarmModal();
+  patchFarmTileViews(x, y);
+  return action;
+}
+
+function finishFarmTileAction(x, y, action) {
+  const key = x + ',' + y;
+  if (fmPendingTileActions.get(key)?.token !== action?.token) return false;
+  fmPendingTileActions.delete(key);
+  patchFarmTileViews(x, y);
+  return true;
+}
+
+function rememberFarmTileAction(x, y, action) {
+  const key = x + ',' + y;
+  const marker = { token: action.token, kind: action.kind, species: action.species, expiresAt: Date.now() + 15000 };
+  fmRecentTileActions.set(key, marker);
+  setTimeout(() => {
+    if (fmRecentTileActions.get(key)?.token === marker.token) fmRecentTileActions.delete(key);
+  }, 15000);
+}
+
+function reopenFarmTileAfterActionError(x, y) {
+  if (activeTab !== 'farm') return;
+  requestAnimationFrame(() => {
+    if (activeTab !== 'farm' || fmPendingTileActions.has(x + ',' + y)) return;
+    fmSel = { x, y };
+    markFarmSel();
+    openFarmTileModal(x, y);
+  });
+}
+
 async function plantCrop(x, y, species, instanceId, btn) {
-  if (btn) btn.disabled = true;
-  const { data, error } = await sb.rpc('plant_crop', { p_x: x, p_y: y, p_species: species, p_instance_id: instanceId || null });
-  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
+  const action = beginFarmTileAction(x, y, 'plant', species, btn);
+  if (!action) return false;
+  let data, error;
+  try {
+    ({ data, error } = await sb.rpc('plant_crop', { p_x: x, p_y: y, p_species: species, p_instance_id: instanceId || null }));
+  } catch (e) { error = e; }
+  if (!error && !data) error = new Error('Brak odpowiedzi serwera.');
+  if (error) {
+    finishFarmTileAction(x, y, action);
+    showToast('❌ ' + fmErr(error));
+    reopenFarmTileAfterActionError(x, y);
+    return false;
+  }
   const tile = fmTiles.get(x + ',' + y) || { owner_id: me.id, nick: me.nick };
+  const realtimeConfirmed = farmTileActionMatches(action, tile);
   tile.listed = false;
   tile.planted_species = species; tile.planted_level = data.level;
-  tile.planted_at = new Date().toISOString(); tile.ready_at = data.ready_at;
+  tile.planted_at = realtimeConfirmed && tile.planted_at ? tile.planted_at : new Date().toISOString();
+  tile.ready_at = data.ready_at || tile.ready_at;
   tile.planted_instance_id = instanceId || null;
   fmTiles.set(x + ',' + y, tile);
+  rememberFarmTileAction(x, y, action);
+  finishFarmTileAction(x, y, action);
   showToast('🌱 Zasadzono ' + (fmDefs.get(species)?.name || species) + '!');
-  renderFarmBoard(); renderFarmSelection();
+  return true;
 }
 
 async function harvestCrop(x, y, btn) {
-  if (btn) btn.disabled = true;
-  const { data, error } = await sb.rpc('harvest_crop', { p_x: x, p_y: y });
-  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
+  const action = beginFarmTileAction(x, y, 'harvest', null, btn);
+  if (!action) return false;
+  let data, error;
+  try {
+    ({ data, error } = await sb.rpc('harvest_crop', { p_x: x, p_y: y }));
+  } catch (e) { error = e; }
+  if (!error && !data) error = new Error('Brak odpowiedzi serwera.');
+  if (error) {
+    finishFarmTileAction(x, y, action);
+    showToast('❌ ' + fmErr(error));
+    reopenFarmTileAfterActionError(x, y);
+    return false;
+  }
   const tile = fmTiles.get(x + ',' + y);
   if (tile) { tile.planted_species = null; tile.planted_level = null; tile.planted_at = null; tile.ready_at = null; tile.planted_instance_id = null; }
-  await reloadFarmInventory();   // rebuild qty + rot expiries from lots
-  await invalidateFarmAssetBreakdown({ reload: true });
+  rememberFarmTileAction(x, y, action);
+  finishFarmTileAction(x, y, action);
   showToast('🧺 Zebrano ' + data.harvested + '× ' + (fmDefs.get(data.crop_type)?.name || data.crop_type) + '!');
-  renderFarmBoard(); renderFarmSelection(); renderFarmMarket();
+  // The tile is already confirmed and visible. Inventory lots, rot timers and
+  // Mój Majątek reconcile in the background instead of adding a second RTT to
+  // the perceived harvest latency.
+  scheduleFarmInventoryReconcile();
+  return true;
 }
 
 // Uproot: the owner discards a plant at any growth stage — no yield, nothing
 // refunded. Clears the same tile columns as harvest, so a planted NFT is freed.
 async function removeCrop(x, y, btn) {
+  const key = x + ',' + y;
   const tile = fmTiles.get(x + ',' + y);
   const def = tile ? fmDefs.get(tile.planted_species) : null;
   if (!confirm('Roślina' + (def ? ' (' + farmTileCropEmoji(tile) + ' ' + def.name + ')' : '') + ' zostanie usunięta bez zbiorów. Na pewno?')) return false;
   if (btn) btn.disabled = true;
-  const { error } = await sb.rpc('remove_crop', { p_x: x, p_y: y });
-  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return false; }
+  const action = { token: ++fmTileActionSeq, kind: 'remove', species: null };
+  rememberFarmTileAction(x, y, action);
+  let error;
+  try { ({ error } = await sb.rpc('remove_crop', { p_x: x, p_y: y })); }
+  catch (e) { error = e; }
+  if (error) {
+    if (fmRecentTileActions.get(key)?.token === action.token) fmRecentTileActions.delete(key);
+    showToast('❌ ' + fmErr(error));
+    if (btn) btn.disabled = false;
+    return false;
+  }
   if (tile) { tile.planted_species = null; tile.planted_level = null; tile.planted_at = null; tile.ready_at = null; tile.planted_instance_id = null; }
   showToast('🗑️ Usunięto roślinę z działki.');
-  renderFarmBoard(); renderFarmSelection();
+  patchFarmTileViews(x, y); renderFarmSelection();
   return true;
 }
 
 // Re-read the player's crop lots and rebuild fmInventory/fmInventoryExp (lots are
 // created on harvest and consumed FIFO on sale, so qty + soonest-expiry can shift).
 async function reloadFarmInventory() {
-  if (!me) return;
+  if (!me) return false;
+  const userId = me.id;
   try {
-    const { data } = await sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id);
+    const { data, error } = await sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', userId);
+    if (error) throw error;
+    if (me?.id !== userId) return false;
     buildFarmInventory(data || []);
-  } catch (e) { console.error('reloadFarmInventory', e); }
+    return true;
+  } catch (e) { console.error('reloadFarmInventory', e); return false; }
+}
+
+function scheduleFarmInventoryReconcile() {
+  // Dirty the snapshot immediately even if the follow-up read hits a transient
+  // error; the next inventory open will then fetch authoritative values.
+  invalidateFarmAssetBreakdown();
+  fmInventoryReconcileQueued = true;
+  if (fmInventoryReconcilePromise) return fmInventoryReconcilePromise;
+  const seq = fmInventoryReconcileSeq;
+  const userId = me?.id;
+  const run = (async () => {
+    let loaded = false;
+    do {
+      fmInventoryReconcileQueued = false;
+      loaded = await reloadFarmInventory() || loaded;
+    } while (fmInventoryReconcileQueued && seq === fmInventoryReconcileSeq && me?.id === userId);
+    if (!loaded || seq !== fmInventoryReconcileSeq || me?.id !== userId) return;
+    await invalidateFarmAssetBreakdown({ reload: true });
+    if (activeTab === 'farm') renderFarmMarket();
+    if (farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory') refreshFarmHub();
+  })().catch(error => { console.error('scheduleFarmInventoryReconcile', error); });
+  fmInventoryReconcilePromise = run;
+  run.finally(() => {
+    if (seq !== fmInventoryReconcileSeq || fmInventoryReconcilePromise !== run) return;
+    fmInventoryReconcilePromise = null;
+    if (fmInventoryReconcileQueued) scheduleFarmInventoryReconcile();
+  });
+  return run;
 }
 
 // Lots expire without a database change event. Detect the first crossed expiry
@@ -35073,20 +35261,22 @@ function setupFarmRealtime() {
   realtimeChannels.push(ch);
 }
 
+function farmTileFieldsChanged(prev, next, fields) {
+  if (!prev || !next) return prev !== next;
+  return fields.some(field => prev[field] !== next[field]);
+}
+
 function applyFarmTileChange(payload) {
   const r = payload.new || payload.old;
   if (!r || r.x == null || r.y == null) return;
-  const key = r.x + ',' + r.y;
-  if (payload.eventType === 'DELETE') {
-    fmTiles.delete(key);
-  } else if (r.acquired_via === 'migration') {
-    // Legacy zen tile — never shown on the crop board (renders in 🧘 Ogród Zen).
-    fmTiles.delete(key);
-  } else {
-    const prev = fmTiles.get(key) || {};
-    fmTiles.set(key, {
+  const x = Number(r.x), y = Number(r.y);
+  const key = x + ',' + y;
+  const prev = fmTiles.get(key) || null;
+  let next = null;
+  if (payload.eventType !== 'DELETE' && r.acquired_via !== 'migration') {
+    next = {
       owner_id: r.owner_id,
-      acquired_via: r.acquired_via || prev.acquired_via || null,
+      acquired_via: r.acquired_via || prev?.acquired_via || null,
       listed: !!r.listed,
       asset_value: Number(r.asset_value || 0),
       planted_species: r.planted_species || null,
@@ -35094,28 +35284,65 @@ function applyFarmTileChange(payload) {
       planted_at: r.planted_at || null,
       ready_at: r.ready_at || null,
       planted_instance_id: r.planted_instance_id || null,
-      nick: prev.owner_id === r.owner_id ? prev.nick : (r.owner_id === me?.id ? me?.nick : null),
-      zen_garden_id: r.zen_garden_id || prev.zen_garden_id || null,
+      nick: prev?.owner_id === r.owner_id ? prev.nick : (r.owner_id === me?.id ? me?.nick : null),
+      zen_garden_id: r.zen_garden_id || prev?.zen_garden_id || null,
       zenAnchor: null, zenCover: false, zenAnchorKey: null,
+    };
+  }
+
+  const cropChanged = farmTileFieldsChanged(prev, next,
+    ['planted_species', 'planted_level', 'planted_at', 'ready_at', 'planted_instance_id']);
+  const landChanged = farmTileFieldsChanged(prev, next,
+    ['owner_id', 'acquired_via', 'listed', 'asset_value', 'zen_garden_id']);
+  const renderChanged = cropChanged || landChanged || farmTileFieldsChanged(prev, next, ['nick']);
+
+  if (next) fmTiles.set(key, next); else fmTiles.delete(key);
+
+  const pending = fmPendingTileActions.get(key);
+  const recent = fmRecentTileActions.get(key);
+  if (recent && recent.expiresAt <= Date.now()) fmRecentTileActions.delete(key);
+  const pendingEcho = farmTileActionMatches(pending, next);
+  const recentEcho = farmTileActionMatches(recent, next) && recent?.expiresAt > Date.now();
+  const localEcho = pendingEcho || recentEcho;
+  const visibleChanged = renderChanged && !(cropChanged && !landChanged && localEcho);
+  if (pendingEcho) pending.echoSeen = true;
+  if (recentEcho) fmRecentTileActions.delete(key);
+
+  if (landChanged) {
+    // Ownership/topology changes can affect zen anchors and the responsive board;
+    // crop updates cannot, so they skip these whole-map passes.
+    tagZenBlocks();
+    fmOwnedTileCountHint = 0;
+    fmNormalTileCountHint = 0;
+    fmTiles.forEach(t => {
+      if (t.owner_id === me?.id) {
+        fmOwnedTileCountHint++;
+        if (t.acquired_via !== 'migration') fmNormalTileCountHint++;
+      }
     });
   }
-  tagZenBlocks();
-  fmOwnedTileCountHint = 0;
-  fmNormalTileCountHint = 0;
-  fmTiles.forEach(t => {
-    if (t.owner_id === me?.id) {
-      fmOwnedTileCountHint++;
-      if (t.acquired_via !== 'migration') fmNormalTileCountHint++;
-    }
-  });
-  if (r.owner_id === me?.id || payload.old?.owner_id === me?.id) {
+
+  const ownInvolved = prev?.owner_id === me?.id || next?.owner_id === me?.id;
+  if (landChanged && ownInvolved) {
     refreshFarmTaxQuote();
     invalidateFarmAssetBreakdown({ reload: true }).then(() => {
       if (farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory') refreshFarmHub();
     });
+  } else if (cropChanged && ownInvolved && !localEcho) {
+    // Another tab/device changed this crop. A cleared plant may have minted a
+    // harvest lot; reconcile in the background. Planting only dirties the asset
+    // view and never needs a land-tax quote.
+    if (prev?.planted_species && !next?.planted_species) scheduleFarmInventoryReconcile();
+    else invalidateFarmAssetBreakdown({ reload: true }).then(() => {
+      if (farmModalEl?.querySelector('.farm-hub-body') && farmHubTab === 'inventory') refreshFarmHub();
+    });
   }
-  if (activeTab === 'farm') renderFarmBoard();
-  if (fmSel && fmSel.x === r.x && fmSel.y === r.y) renderFarmSelection();
+
+  if (activeTab === 'farm' && visibleChanged) {
+    if (landChanged) renderFarmBoard();
+    else patchFarmTileViews(x, y);
+  }
+  if (visibleChanged && fmSel && fmSel.x === x && fmSel.y === y) renderFarmSelection();
 }
 
 function startFarmTimer() {
