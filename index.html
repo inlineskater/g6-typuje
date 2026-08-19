@@ -13929,16 +13929,24 @@ async function buildActivityFeed() {
       desc: (ACT_GAME_LABELS[s.game_type] || '🕹️ ' + s.game_type) + ' — wynik ' + s.score });
   });
 
+  // farm_nft_transfers carries five kinds, and only two of them are an acquisition.
+  // merge_fuel / breed_parent are BURN rows (to_owner IS NULL) — attributing them to
+  // to_owner is what used to render a phantom player called „Gracz" (and claim they
+  // had just *won* the NFT they actually destroyed). Each kind names its own actor.
   (nftRes.data || []).forEach(t => {
     const def = (typeof fmDefs !== 'undefined' && fmDefs.get) ? fmDefs.get(t.species) : null;
     const card = farmNftIconFor(t.species, t.serial_no, def?.emoji) + ' ' + (def?.name || t.species) + ' #' + t.serial_no;
-    if (t.kind === 'sale') {
-      entries.push({ nick: profilesById[t.to_owner] || 'Gracz', ts: t.created_at, cat: 'farm',
-        desc: 'kupił NFT ' + card + (t.price ? ' za ' + t.price + ' 🪙' : '') });
-    } else { // mint
-      entries.push({ nick: profilesById[t.to_owner] || 'Gracz', ts: t.created_at, cat: 'farm',
-        desc: 'wylosował NFT ' + card });
-    }
+    const who = t.kind === 'sale' || t.kind === 'mint' ? t.to_owner : t.from_owner;
+    const nick = profilesById[who];
+    if (!nick) return; // no resolvable owner: skip rather than invent one
+    const desc = t.kind === 'sale'       ? 'kupił NFT ' + card + (t.price ? ' za ' + t.price + ' 🪙' : '')
+               : t.kind === 'mint'       ? 'wylosował NFT ' + card
+               : t.kind === 'merge_fuel' ? 'zużył NFT ' + card + ' jako paliwo ulepszenia'
+               : t.kind === 'merge_hero' ? 'ulepszył NFT ' + card
+               : t.kind === 'breed_parent' ? 'poświęcił NFT ' + card + ' przy krzyżowaniu'
+               : null;
+    if (!desc) return;
+    entries.push({ nick, ts: t.created_at, cat: 'farm', desc });
   });
 
   entries.sort((a, b) => new Date(b.ts) - new Date(a.ts));
