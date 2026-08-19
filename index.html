@@ -7258,13 +7258,17 @@
     .farm-qty-input::-webkit-outer-spin-button, .farm-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     /* Batch slider: one drag picks the whole batch; --fill paints the used track. */
     .farm-qty-slide { display: flex; align-items: center; gap: 8px; flex: 1 1 150px; min-width: 140px; }
-    .farm-qty-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 22px; background: transparent; cursor: pointer; margin: 0; }
-    .farm-qty-slider::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--accent) 0 var(--fill, 0%), rgba(127,127,127,.22) var(--fill, 0%) 100%); }
-    .farm-qty-slider::-moz-range-track { height: 8px; border-radius: 999px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--accent) 0 var(--fill, 0%), rgba(127,127,127,.22) var(--fill, 0%) 100%); }
-    .farm-qty-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: linear-gradient(180deg, #fff, #e2e8f0); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.3); transition: transform .12s ease; }
-    .farm-qty-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(180deg, #fff, #e2e8f0); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
-    .farm-qty-slider:active::-webkit-slider-thumb { transform: scale(1.18); }
-    .farm-qty-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 999px; }
+    /* Every rule here is qualified with input[type="range"] on purpose: the
+       global range styling near the top of this sheet is (0,1,1) and would
+       otherwise win over a bare class, squashing this slider back down to the
+       4px hairline it is everywhere else in the app. */
+    input[type="range"].farm-qty-slider { -webkit-appearance: none; appearance: none; flex: 1; width: auto; height: 22px; background: transparent; border-radius: 0; cursor: pointer; margin: 0; }
+    input[type="range"].farm-qty-slider::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--accent) 0 var(--fill, 0%), rgba(127,127,127,.22) var(--fill, 0%) 100%); }
+    input[type="range"].farm-qty-slider::-moz-range-track { height: 8px; border-radius: 999px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--accent) 0 var(--fill, 0%), rgba(127,127,127,.22) var(--fill, 0%) 100%); }
+    input[type="range"].farm-qty-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: linear-gradient(180deg, #fff, #e2e8f0); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.3); transition: transform .12s ease; }
+    input[type="range"].farm-qty-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(180deg, #fff, #e2e8f0); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+    input[type="range"].farm-qty-slider:active::-webkit-slider-thumb { transform: scale(1.18); }
+    input[type="range"].farm-qty-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 999px; }
     .farm-qty-max { flex: none; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: .04em; cursor: pointer; }
     .farm-qty-max:hover { border-color: var(--accent); color: var(--text); }
     /* "Open everything I own" shortcut under the qty controls. */
