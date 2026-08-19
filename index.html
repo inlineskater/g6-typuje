@@ -7269,6 +7269,25 @@
     input[type="range"].farm-qty-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(180deg, #fff, #e2e8f0); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
     input[type="range"].farm-qty-slider:active::-webkit-slider-thumb { transform: scale(1.18); }
     input[type="range"].farm-qty-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 999px; }
+    /* Only one possible quantity: the slider stays for layout stability but is
+       visibly inert instead of pretending to be draggable. The thumb is hidden
+       so it reads as a full "all of what you have is selected" bar rather than
+       a draggable handle stuck at the left end of a full track. */
+    .farm-qty-slide.is-single { opacity: .5; }
+    input[type="range"].farm-qty-slider:disabled { cursor: default; }
+    .farm-qty-slide.is-single input[type="range"].farm-qty-slider::-webkit-slider-thumb { opacity: 0; }
+    .farm-qty-slide.is-single input[type="range"].farm-qty-slider::-moz-range-thumb { opacity: 0; }
+    /* Touch: a 20px thumb is fiddly with a fingertip, so grow the whole control
+       on coarse pointers — dragging this is the primary way to pick a batch. */
+    @media (pointer: coarse) {
+      .farm-qty-slide { min-width: 100%; }
+      input[type="range"].farm-qty-slider { height: 34px; }
+      input[type="range"].farm-qty-slider::-webkit-slider-runnable-track { height: 12px; }
+      input[type="range"].farm-qty-slider::-moz-range-track { height: 12px; }
+      input[type="range"].farm-qty-slider::-webkit-slider-thumb { width: 28px; height: 28px; margin-top: -9px; }
+      input[type="range"].farm-qty-slider::-moz-range-thumb { width: 28px; height: 28px; }
+      .farm-qty-max { height: 36px; padding: 0 14px; }
+    }
     .farm-qty-max { flex: none; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: .04em; cursor: pointer; }
     .farm-qty-max:hover { border-color: var(--accent); color: var(--text); }
     /* "Open everything I own" shortcut under the qty controls. */
@@ -26462,10 +26481,17 @@ function farmQtyStepper(opts) {
   const node = el('div', { className: 'farm-qty-pick' },
     el('div', { className: 'farm-qty-stepper' }, mkBtn('−', -1), input, mkBtn('+', 1)),
     slideRow);
+  // The slider is always on screen — on a phone dragging it is the whole point,
+  // and a control that appears only once you own a second box is a control
+  // nobody discovers. When there is genuinely one possible value it stays
+  // visible but inert (full track, no MAX) rather than inviting a dead drag.
   const syncRange = () => {
     input.max = String(max);
     slider.max = String(max);
-    slideRow.classList.toggle('hidden', max <= min);
+    const single = max <= min;
+    slider.disabled = single;
+    slideRow.classList.toggle('is-single', single);
+    maxBtn.classList.toggle('hidden', single);
   };
   syncRange();
   clamp();

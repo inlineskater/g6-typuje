@@ -61,6 +61,8 @@ Czasy wzrostu/plony bazowe: zwykłe 1 dzień, rzadkie 2 dni, epickie 3–4 dni; 
 
 Karta zakupu (Sklep) i karta otwierania (hub → **📦 Skrzynki**) dzielą jeden picker `farmQtyStepper`: **−/+ stepper + suwak + MAX**. Zakres suwaka to maksimum danej akcji — przy zakupie `min(50, portfel / 100)`, przy otwieraniu po prostu tyle skrzynek, ile masz (do `FARM_BOX_OPEN_ALL_MAX` = 100). Od 2 posiadanych skrzynek dochodzi jeszcze przycisk **„🎇 Otwórz wszystkie"**.
 
+Suwak jest **zawsze widoczny** — na telefonie przeciągnięcie go jest głównym sposobem wyboru partii, a kontrolka, która pojawia się dopiero przy drugiej skrzynce, to kontrolka, której nikt nie odkryje. Gdy możliwa jest tylko jedna wartość, suwak zostaje, ale jest wyraźnie nieaktywny (`.is-single`: pełny tor, ukryty kciuk i MAX, `disabled`) zamiast udawać, że da się nim ruszyć. Na `pointer: coarse` cały suwak rośnie (tor 12 px, kciuk 28 px) i dostaje własny wiersz na pełną szerokość.
+
 Serwer przyjmuje **maks. 20 skrzynek na jedno wywołanie** (`open_farm_lootboxes` / `open_farm_goldboxes`), więc większą partię `farmOpenBoxes()` tnie na kolejne wywołania i dopiero zebrane paczki pokazuje jako **jedną** animację. Semantyka się przez to nie zmienia — każde wywołanie i tak pętli kanoniczne `open_farm_lootbox()`, więc reguły startera i vouchera przesuwają się skrzynka po skrzynce niezależnie od granic partii. Gdy któreś wywołanie w środku partii padnie, już otwarte skrzynki są otwarte naprawdę — aplikacja pokazuje ich zawartość i dokłada komunikat o przerwaniu, zamiast wyrzucać wynik.
 
 Otwieranie 📦 i ⭐ to jedna funkcja (`farmOpenBoxes(btn, qty, gold)`); `openFarmLootbox`/`openFarmGoldbox` są już tylko cienkimi aliasami.
