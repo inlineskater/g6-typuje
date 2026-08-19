@@ -11704,14 +11704,18 @@ const LAZY_GAME_SCRIPTS = {
 //   • Globals declared in index.html stay readable from the module (classic
 //     scripts share one global lexical environment) — order is the only rule,
 //     and a module always loads after index.html has run.
+// Only tabs whose module actually exists may be listed here — an entry with no
+// file behind it fails at the moment someone opens that tab, not at build time.
+// Wspólne Płótno, Ruletka, Miny, Rakieta and Mundial are still inline; they are
+// the next candidates, but each needs shared helpers hoisted out first (the
+// Ruletka region leaks a dozen consts to the Crash/Mines code below it, and the
+// Płótno region owns cvFmtDur(), which the farm timer calls every second).
 const TAB_MODULES = {
-  lottery:   'tabs/lottery.js',
-  canvas:    'tabs/canvas.js',
-  plinko:    'tabs/plinko.js',
-  roulette:  'tabs/roulette.js',
-  poker:     'tabs/poker.js',
-  shop:      'tabs/shop.js',
-  leaderboard: 'tabs/stats.js',
+  leaderboard: 'tabs/stats.js',   // Statystyki: Skarbiec, Trafność, Medale, Aktywność, coin race
+  lottery:     'tabs/lottery.js', // Loteria + the maszyna losująca ceremony
+  plinko:      'tabs/plinko.js',  // Plinko G6 AND Koło Żubra — one module, two tabs
+  shop:        'tabs/shop.js',    // Sklep, Targowisko, Zlecenia zakupu
+  poker:       'tabs/poker.js',
 };
 const _tabModulePromises = {};
 function ensureTabModule(tab) {
