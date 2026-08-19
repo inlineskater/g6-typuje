@@ -7206,7 +7206,10 @@
     .farm-pack-stage { text-align: center; padding: 24px 16px; max-width: 760px; width: 100%; }
     .farm-pack-title { font-size: 21px; font-weight: 900; color: #fff; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
     .farm-pack-row { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; perspective: 1300px; }
-    .farm-pack-card { position: relative; width: 150px; height: 212px; cursor: pointer; animation: farmPackDeal .5s ease backwards; animation-delay: calc(var(--i, 0) * .12s); }
+    /* preserve-3d is required here, not just on .farm-pack-inner: the card itself
+       is animated (deal / land), and an animated ancestor without it flattens the
+       3D context so backface-culling breaks and a flipped card flashes its back. */
+    .farm-pack-card { position: relative; width: 150px; height: 212px; cursor: pointer; transform-style: preserve-3d; animation: farmPackDeal .5s ease backwards; animation-delay: calc(var(--i, 0) * .12s); }
     @keyframes farmPackDeal { 0% { transform: translateY(48px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
     .farm-pack-glow { position: absolute; inset: -12px; border-radius: 20px; z-index: 0; opacity: 0; transition: opacity .45s; filter: blur(16px); }
     .farm-pack-card.flipped .farm-pack-glow { opacity: .85; }
@@ -7230,22 +7233,42 @@
     .farm-pack-rar { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
     .farm-pack-count { font-size: 11px; color: #6b5a3a; }
     .farm-pack-hint { margin-top: 20px; color: #e5e7eb; font-size: 13px; }
-    .farm-pack-close { margin-top: 18px; width: auto; padding: 10px 22px; }
+    .farm-pack-close { margin: 18px auto 0; width: fit-content; padding: 10px 22px; }
     @media (max-width: 520px) { .farm-pack-row { gap: 10px; } .farm-pack-card { width: 116px; height: 166px; } .farm-pack-emoji { font-size: 48px; } .farm-pack-back { font-size: 46px; } }
     .farm-pack-serial { font-size: 12px; font-weight: 900; color: #b45309; }
     .farm-pack-card.nft .farm-pack-front { background: linear-gradient(160deg, #fffaf0, #ffe8b0); box-shadow: 0 0 20px rgba(245,158,11,.55), 0 12px 28px rgba(0,0,0,.45); }
 
     /* ── Bulk box buy/open + multi-pack (Hearthstone-style) reveal ── */
-    .farm-qty-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-    .farm-qty-row .lootbox-buy { flex: 1; width: auto; margin-top: 0; }
+    .farm-qty-row { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 12px; }
+    .farm-qty-row .lootbox-buy { flex: none; width: 100%; margin-top: 0; }
+    .farm-qty-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .farm-qty-stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); flex: none; }
     .farm-qty-btn { width: 34px; height: 36px; border: none; background: transparent; font-size: 18px; font-weight: 900; cursor: pointer; color: var(--text); line-height: 1; }
     .farm-qty-btn:hover { background: rgba(0,0,0,.07); }
     .farm-qty-input { width: 46px; height: 36px; border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); text-align: center; font-weight: 800; font-size: 14px; background: transparent; color: var(--text); -moz-appearance: textfield; appearance: textfield; }
     .farm-qty-input::-webkit-outer-spin-button, .farm-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    /* Batch slider: one drag picks the whole batch; --fill paints the used track. */
+    .farm-qty-slide { display: flex; align-items: center; gap: 8px; flex: 1 1 150px; min-width: 140px; }
+    .farm-qty-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 22px; background: transparent; cursor: pointer; margin: 0; }
+    .farm-qty-slider::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--accent) 0 var(--fill, 0%), rgba(127,127,127,.22) var(--fill, 0%) 100%); }
+    .farm-qty-slider::-moz-range-track { height: 8px; border-radius: 999px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--accent) 0 var(--fill, 0%), rgba(127,127,127,.22) var(--fill, 0%) 100%); }
+    .farm-qty-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: linear-gradient(180deg, #fff, #e2e8f0); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.3); transition: transform .12s ease; }
+    .farm-qty-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(180deg, #fff, #e2e8f0); border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+    .farm-qty-slider:active::-webkit-slider-thumb { transform: scale(1.18); }
+    .farm-qty-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 999px; }
+    .farm-qty-max { flex: none; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: .04em; cursor: pointer; }
+    .farm-qty-max:hover { border-color: var(--accent); color: var(--text); }
+    /* "Open everything I own" shortcut under the qty controls. */
+    .farm-open-all { width: 100%; margin-top: 0; padding: 9px 12px; border-radius: 10px; cursor: pointer; font-weight: 900; font-size: 13px; color: #fff; border: 1px solid rgba(255,255,255,.28); background: linear-gradient(135deg, #6366f1, #a855f7 55%, #ec4899); box-shadow: 0 6px 16px rgba(139,92,246,.35); position: relative; overflow: hidden; }
+    .farm-open-all::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%); transform: translateX(-120%); animation: farmOpenAllShine 3.2s ease-in-out infinite; }
+    .farm-open-all:hover { filter: brightness(1.08); }
+    .farm-open-all:disabled { opacity: .55; cursor: default; }
+    .farm-open-all.is-gold { background: linear-gradient(135deg, #f59e0b, #fbbf24 55%, #f97316); box-shadow: 0 6px 16px rgba(245,158,11,.4); }
+    @keyframes farmOpenAllShine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+    @media (prefers-reduced-motion: reduce) { .farm-open-all::after { animation: none; opacity: 0; } }
 
-    .farm-pack-sub { color: #cbd5e1; font-size: 13px; font-weight: 700; margin: -14px 0 14px; }
-    .farm-pack-arena { min-height: 250px; display: flex; align-items: center; justify-content: center; }
+    .farm-pack-sub { color: #cbd5e1; font-size: 13px; font-weight: 700; margin: -14px 0 10px; }
+    .farm-pack-arena { position: relative; min-height: 250px; display: flex; align-items: center; justify-content: center; }
     .farm-pack-sealed { position: relative; width: 170px; height: 200px; display: flex; align-items: center; justify-content: center; }
     .farm-pack-sealed-box { position: relative; z-index: 1; font-size: 96px; line-height: 1; animation: farmSealedShake .9s ease-in-out infinite; filter: drop-shadow(0 10px 22px rgba(0,0,0,.5)); }
     .farm-pack-rays { position: absolute; inset: -70px; background: repeating-conic-gradient(rgba(253,224,71,.4) 0 11deg, transparent 11deg 24deg); border-radius: 50%; animation: farmRaysSpin 7s linear infinite; -webkit-mask-image: radial-gradient(circle, #000 15%, transparent 68%); mask-image: radial-gradient(circle, #000 15%, transparent 68%); }
@@ -7276,7 +7299,57 @@
     .farm-pack-sum-emoji { font-size: 36px; line-height: 1.1; }
     .farm-pack-sum-name { font-size: 11px; font-weight: 900; color: #2c1d0c; text-align: center; }
     .farm-pack-sum-sub { font-size: 11px; font-weight: 800; color: #6b5a3a; }
-    @media (prefers-reduced-motion: reduce) { .farm-pack-sealed-box, .farm-pack-rays { animation: none !important; } }
+    /* Batch progress bar (multi-pack reveal). */
+    .farm-pack-prog { height: 5px; border-radius: 999px; background: rgba(255,255,255,.16); overflow: hidden; max-width: 420px; margin: 0 auto 14px; }
+    .farm-pack-prog-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #4ade80, #facc15); transition: width .45s cubic-bezier(.3,1.2,.5,1); box-shadow: 0 0 10px rgba(250,204,21,.65); }
+
+    /* Confetti burst: one self-removing layer of CSS-animated shards. */
+    .farm-pack-parts { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 4; }
+    .farm-pack-part { position: absolute; left: 0; top: 0; border-radius: 2px; opacity: 0; animation: farmPartFly .95s cubic-bezier(.15,.7,.35,1) var(--d, 0s) forwards; }
+    @keyframes farmPartFly {
+      0% { transform: translate(-50%, -50%) scale(.4) rotate(0); opacity: 1; }
+      70% { opacity: 1; }
+      100% { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50% + 46px)) scale(.85) rotate(var(--rot, 180deg)); opacity: 0; }
+    }
+    /* Shockwave ring behind a burst or a big pull. */
+    .farm-pack-ring { position: absolute; left: 50%; top: 50%; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 3px solid rgba(253,224,71,.9); pointer-events: none; z-index: 3; animation: farmRingOut .85s cubic-bezier(.2,.8,.3,1) forwards; }
+    .farm-pack-ring.on-card { border-color: rgba(255,255,255,.85); width: 70px; height: 70px; margin: -35px 0 0 -35px; }
+    @keyframes farmRingOut { 0% { transform: scale(.25); opacity: .95; } 100% { transform: scale(3.4); opacity: 0; } }
+
+    /* Holographic sweep across a card the moment it lands face-up. */
+    .farm-pack-front { position: absolute; overflow: hidden; }
+    .farm-pack-card.flipped .farm-pack-front::after { content: ''; position: absolute; inset: -40%; background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.75) 50%, transparent 62%); transform: translateX(-120%); animation: farmCardShine .9s ease-out .35s 1; pointer-events: none; }
+    @keyframes farmCardShine { to { transform: translateX(120%); } }
+    /* The "landed" punch lives on the GLOW, never on .farm-pack-card itself: an
+       animated transform on the flip container flattens the 3D context in
+       Chrome, and a face-up card flashes its own back for the whole animation. */
+    .farm-pack-card.flipped .farm-pack-glow { animation: farmGlowPop .7s cubic-bezier(.2,.9,.35,1) .35s; }
+    @keyframes farmGlowPop { 0% { transform: scale(.6); opacity: 0; } 45% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); opacity: .85; } }
+
+    /* Rapid mode: one popping box, a running counter, big pulls flying out. */
+    .farm-pack-rapid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .farm-pack-sealed.rapid { height: 170px; }
+    .farm-pack-sealed.rapid.pop .farm-pack-sealed-box { animation: farmSealedShake .9s ease-in-out infinite, farmRapidPop .22s ease-out; }
+    @keyframes farmRapidPop { 0% { transform: scale(1); } 45% { transform: scale(1.22); filter: brightness(1.6) drop-shadow(0 0 18px rgba(253,224,71,.9)); } 100% { transform: scale(1); } }
+    .farm-pack-counter { font-size: 15px; font-weight: 900; color: #fde68a; letter-spacing: .05em; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+    .farm-pack-pop-host { position: absolute; left: 50%; top: 22%; width: 0; height: 0; z-index: 5; pointer-events: none; }
+    .farm-pack-pop { position: absolute; left: 50%; top: 0; transform: translate(-50%, 0); display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 900; color: #2c1d0c; background: linear-gradient(160deg, #fff7ed, #ffe6c4); border: 2px solid #d8b46a; box-shadow: 0 10px 26px rgba(0,0,0,.45); animation: farmPopUp 1.4s cubic-bezier(.2,.9,.3,1) forwards; }
+    .farm-pack-pop.nft { border-color: #f59e0b; background: linear-gradient(160deg, #fffaf0, #ffe8b0); box-shadow: 0 0 22px rgba(245,158,11,.7), 0 10px 26px rgba(0,0,0,.45); }
+    .farm-pack-pop.voucher { border-color: #16a34a; background: linear-gradient(160deg, #dcfce7, #bbf7d0); }
+    .farm-pack-pop.epic { border-color: #a855f7; background: linear-gradient(160deg, #f5f3ff, #e9d5ff); }
+    .farm-pack-pop-ic { font-size: 20px; line-height: 1; }
+    @keyframes farmPopUp {
+      0% { transform: translate(-50%, 10px) scale(.5); opacity: 0; }
+      18% { transform: translate(-50%, -14px) scale(1.08); opacity: 1; }
+      30% { transform: translate(-50%, -18px) scale(1); opacity: 1; }
+      75% { transform: translate(-50%, -46px) scale(1); opacity: 1; }
+      100% { transform: translate(-50%, -78px) scale(.9); opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .farm-pack-sealed-box, .farm-pack-rays, .farm-pack-pop { animation: none !important; }
+      .farm-pack-card.flipped, .farm-pack-card.flipped .farm-pack-front::after { animation: none !important; }
+    }
     /* NFT badges + collection grid */
     .farm-cat-nft-badge { color: #b45309; font-weight: 800; }
     .farm-nft-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 2px 0 8px; }
@@ -34095,6 +34168,43 @@ function renderGardenAdvisorBody(container) {
   container.append(tableUpgrade);
 }
 
+// One "you own sealed boxes" card (📦 standard or ⭐ Złota), rendered only when
+// the viewer actually holds that box type. Carries the qty picker (stepper +
+// slider) and, from 2 boxes up, an „otwórz wszystkie" shortcut. The picker's
+// max is simply how many boxes you hold: a single RPC call is capped at 20
+// server-side, but farmOpenBoxes() slices a bigger batch into consecutive
+// calls and reveals the whole thing as one animation.
+function farmOpenBoxCard(gold) {
+  const have = (gold ? fmGoldBoxes : fmBoxes) || 0;
+  if (have <= 0) return null;
+  const oneLabel = gold ? '⭐ Otwórz 1 skrzynię' : '📦 Otwórz 1 skrzynkę';
+  const btn = el('button', { className: 'lootbox-buy', style: gold
+    ? { background: 'linear-gradient(180deg, #facc15, #d97706)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }
+    : { background: 'linear-gradient(180deg, #4ade80, #16a34a)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' } }, oneLabel);
+  const stepper = farmQtyStepper({ max: Math.max(1, Math.min(FARM_BOX_OPEN_ALL_MAX, have)), onChange: q => {
+    btn.textContent = q > 1 ? ('🎆 Otwórz ' + plBoxes(q) + ' naraz!') : oneLabel;
+  } });
+  btn.addEventListener('click', () => farmOpenBoxes(btn, stepper.get(), gold));
+  const controls = el('div', { className: 'farm-qty-row', style: { marginTop: '0' } }, stepper.node, btn);
+  if (have > 1) {
+    const capped = Math.min(have, FARM_BOX_OPEN_ALL_MAX);
+    const allBtn = el('button', { className: 'farm-open-all' + (gold ? ' is-gold' : '') },
+      '🎇 Otwórz wszystkie — ' + plBoxes(capped));
+    allBtn.addEventListener('click', () => farmOpenBoxes(allBtn, capped, gold));
+    controls.append(allBtn);
+  }
+  return el('div', { className: 'lootbox-card' + (gold ? ' is-gold' : ''), style: gold ? undefined : { background: 'var(--surface)', border: '1px solid var(--accent)' } },
+    el('div', { className: 'lootbox-hero' },
+      el('div', { className: 'lootbox-glow' }),
+      el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, gold ? '⭐' : '📦')),
+    el('div', { className: 'lootbox-body' },
+      el('div', { className: 'lootbox-name', style: { fontSize: '16px', fontWeight: 'bold' } },
+        gold ? 'Masz Złote Skrzynie do otwarcia!' : 'Masz skrzynki do otwarcia!'),
+      el('div', { className: 'lootbox-tag', style: { margin: '4px 0 12px' } },
+        gold ? ('Posiadasz: ⭐ ×' + have) : ('Posiadasz: ' + plBoxes(have))),
+      controls));
+}
+
 function buildFarmBoxesBody(bodyEl) {
   bodyEl.replaceChildren();
 
@@ -34102,48 +34212,7 @@ function buildFarmBoxesBody(bodyEl) {
 
   // "Open owned boxes" row — one card per box type you currently hold, side by side.
   const openRow = el('div', { className: 'lootbox-row', style: { padding: '10px 4px 0' } });
-
-  if ((fmBoxes || 0) > 0) {
-    const maxOpen = Math.max(1, Math.min(FARM_BOX_BULK_OPEN_MAX, fmBoxes || 0));
-    const openBtn = el('button', { className: 'lootbox-buy', style: { background: 'linear-gradient(180deg, #4ade80, #16a34a)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' } }, '📦 Otwórz 1 skrzynkę');
-    const openStepper = farmQtyStepper({ max: maxOpen, onChange: q => {
-      openBtn.textContent = q > 1 ? ('🎆 Otwórz ' + plBoxes(q) + ' naraz!') : '📦 Otwórz 1 skrzynkę';
-    } });
-    openBtn.addEventListener('click', () => openFarmLootbox(openBtn, openStepper.get()));
-    const openCard = el('div', { className: 'lootbox-card', style: { background: 'var(--surface)', border: '1px solid var(--accent)' } },
-      el('div', { className: 'lootbox-hero' },
-        el('div', { className: 'lootbox-glow' }),
-        el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, '📦')
-      ),
-      el('div', { className: 'lootbox-body' },
-        el('div', { className: 'lootbox-name', style: { fontSize: '16px', fontWeight: 'bold' } }, 'Masz skrzynki do otwarcia!'),
-        el('div', { className: 'lootbox-tag', style: { margin: '4px 0 12px' } }, `Posiadasz: ${plBoxes(fmBoxes)}`),
-        el('div', { className: 'farm-qty-row', style: { marginTop: '0' } }, openStepper.node, openBtn)
-      )
-    );
-    openRow.append(openCard);
-  }
-
-  if ((fmGoldBoxes || 0) > 0) {
-    const maxOpenGold = Math.max(1, Math.min(FARM_GOLDBOX_BULK_OPEN_MAX, fmGoldBoxes || 0));
-    const openBtnGold = el('button', { className: 'lootbox-buy', style: { background: 'linear-gradient(180deg, #facc15, #d97706)', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' } }, '⭐ Otwórz 1 skrzynię');
-    const openStepperGold = farmQtyStepper({ max: maxOpenGold, onChange: q => {
-      openBtnGold.textContent = q > 1 ? ('🎆 Otwórz ' + plBoxes(q) + ' naraz!') : '⭐ Otwórz 1 skrzynię';
-    } });
-    openBtnGold.addEventListener('click', () => openFarmGoldbox(openBtnGold, openStepperGold.get()));
-    const openCardGold = el('div', { className: 'lootbox-card is-gold' },
-      el('div', { className: 'lootbox-hero' },
-        el('div', { className: 'lootbox-glow' }),
-        el('div', { className: 'lootbox-box', style: { fontSize: '64px' } }, '⭐')
-      ),
-      el('div', { className: 'lootbox-body' },
-        el('div', { className: 'lootbox-name', style: { fontSize: '16px', fontWeight: 'bold' } }, 'Masz Złote Skrzynie do otwarcia!'),
-        el('div', { className: 'lootbox-tag', style: { margin: '4px 0 12px' } }, `Posiadasz: ⭐ ×${fmGoldBoxes}`),
-        el('div', { className: 'farm-qty-row', style: { marginTop: '0' } }, openStepperGold.node, openBtnGold)
-      )
-    );
-    openRow.append(openCardGold);
-  }
+  [false, true].forEach(gold => { const c = farmOpenBoxCard(gold); if (c) openRow.append(c); });
 
   if (openRow.children.length) bodyEl.append(openRow);
 
@@ -34657,29 +34726,51 @@ function farmGoldBoxCardEl() {
       owned));
 }
 
-// Shared −/+ quantity stepper for box buy/open controls. `onChange(qty)` fires
-// on every change so callers can update button labels; `get()` reads the value.
+// Shared quantity picker for box buy/open controls: a −/+ stepper, a drag
+// slider (the fast way to pick a big batch) and a MAX shortcut, all bound to
+// one value. `onChange(qty)` fires on every change so callers can update button
+// labels; `get()` reads the value. The slider row hides itself when max === min
+// (nothing to choose), so a 1-box wallet still renders the plain stepper.
 function farmQtyStepper(opts) {
   const min = opts.min || 1;
   let max = Math.max(min, opts.max || 1);
-  const input = el('input', { className: 'farm-qty-input', type: 'number', inputmode: 'numeric', min: String(min), max: String(max), value: String(opts.value || min) });
+  const start = String(opts.value || min);
+  const input = el('input', { className: 'farm-qty-input', type: 'number', inputmode: 'numeric', min: String(min), max: String(max), value: start });
+  const slider = el('input', { className: 'farm-qty-slider', type: 'range', min: String(min), max: String(max), step: '1', value: start, 'aria-label': 'Ilość' });
+  const maxBtn = el('button', { className: 'farm-qty-max', type: 'button', title: 'Ustaw maksimum' }, 'MAX');
   const clamp = () => {
     let v = Math.floor(Number(input.value));
     if (!Number.isFinite(v)) v = min;
     v = Math.min(max, Math.max(min, v));
     input.value = String(v);
+    slider.value = String(v);
+    // --fill paints the "already selected" part of the track (see .farm-qty-slider).
+    slider.style.setProperty('--fill', (max > min ? ((v - min) / (max - min)) * 100 : 100) + '%');
     return v;
   };
   const fire = () => { if (opts.onChange) opts.onChange(clamp()); };
+  const setVal = v => { input.value = String(v); fire(); };
   const mkBtn = (txt, d) => {
     const b = el('button', { className: 'farm-qty-btn', type: 'button' }, txt);
-    b.addEventListener('click', () => { input.value = String(clamp() + d); fire(); });
+    b.addEventListener('click', () => setVal(clamp() + d));
     return b;
   };
   input.addEventListener('input', fire);
   input.addEventListener('blur', fire);
-  const node = el('div', { className: 'farm-qty-stepper' }, mkBtn('−', -1), input, mkBtn('+', 1));
-  return { node, get: clamp, setMax: m => { max = Math.max(min, m); input.max = String(max); fire(); } };
+  slider.addEventListener('input', () => setVal(Number(slider.value)));
+  maxBtn.addEventListener('click', () => setVal(max));
+  const slideRow = el('div', { className: 'farm-qty-slide' }, slider, maxBtn);
+  const node = el('div', { className: 'farm-qty-pick' },
+    el('div', { className: 'farm-qty-stepper' }, mkBtn('−', -1), input, mkBtn('+', 1)),
+    slideRow);
+  const syncRange = () => {
+    input.max = String(max);
+    slider.max = String(max);
+    slideRow.classList.toggle('hidden', max <= min);
+  };
+  syncRange();
+  clamp();
+  return { node, get: clamp, setMax: m => { max = Math.max(min, m); syncRange(); fire(); } };
 }
 
 // Polish plural for "kartę/karty/kart" used in bulk-open labels.
@@ -34728,65 +34819,116 @@ function farmApplyPackCards(cards) {
   });
 }
 
-// Step 2: open owned boxes (no coin cost — paid at buy time). qty > 1 opens the
-// whole batch server-side in one call and plays the multi-pack reveal.
-async function openFarmLootbox(btn, qty) {
-  qty = Math.min(FARM_BOX_BULK_OPEN_MAX, Math.max(1, Math.floor(qty || 1)));
-  if ((fmBoxes || 0) < qty) { showToast(qty > 1 ? ('Masz tylko ' + plBoxes(fmBoxes || 0) + '.') : ('Nie masz skrzynek — kup w Sklepie (' + FARM_BOX_PRICE + ' 🪙).')); return; }
+// Step 2: open owned boxes (no coin cost — paid at buy time). One shared core
+// for 📦 and ⭐: the server caps a single call at 20 boxes, so a bigger batch
+// (the „otwórz wszystkie" shortcut) is sliced into consecutive RPC calls and
+// the collected packs are revealed as ONE animation at the end.
+const FARM_BOX_OPEN_ALL_MAX = 100;   // client-side sanity cap for „otwórz wszystkie"
+
+async function farmOpenBoxes(btn, qty, gold) {
+  const cfg = gold
+    ? { have: fmGoldBoxes || 0, chunk: FARM_GOLDBOX_BULK_OPEN_MAX, bulk: 'open_farm_goldboxes', one: 'open_farm_goldbox',
+        countKey: 'boxes_gold', empty: 'Nie masz Złotych Skrzyń — są wycofane ze sprzedaży.' }
+    : { have: fmBoxes || 0, chunk: FARM_BOX_BULK_OPEN_MAX, bulk: 'open_farm_lootboxes', one: 'open_farm_lootbox',
+        countKey: 'boxes', empty: 'Nie masz skrzynek — kup w Sklepie (' + FARM_BOX_PRICE + ' 🪙).' };
+  qty = Math.max(1, Math.floor(qty || 1));
+  if (cfg.have < 1) { showToast(cfg.empty); return; }
+  if (cfg.have < qty) { showToast('Masz tylko ' + plBoxes(cfg.have) + '.'); return; }
+  qty = Math.min(qty, FARM_BOX_OPEN_ALL_MAX);
+
   if (btn) btn.disabled = true;
-  const { data, error } = qty > 1
-    ? await sb.rpc('open_farm_lootboxes', { p_qty: qty })
-    : await sb.rpc('open_farm_lootbox');
-  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
-  if (typeof data.boxes === 'number') fmBoxes = data.boxes;
-  if (typeof data.tile_vouchers === 'number') fmVouchers = data.tile_vouchers;
-  // Single open returns cards[] directly; bulk returns packs:[{cards,got_voucher}].
-  const packs = Array.isArray(data.packs)
-    ? data.packs.map(p => Array.isArray(p.cards) ? p.cards : [])
-    : [Array.isArray(data.cards) ? data.cards : (data.species ? [data] : [])];
-  packs.forEach(farmApplyPackCards);
+  const packs = [];
+  let gotVoucher = false, failure = null, left = qty;
+  while (left > 0) {
+    const n = Math.min(cfg.chunk, left);
+    const { data, error } = n > 1
+      ? await sb.rpc(cfg.bulk, { p_qty: n })
+      : await sb.rpc(cfg.one);
+    if (error) { failure = error; break; }
+    if (typeof data[cfg.countKey] === 'number') { if (gold) fmGoldBoxes = data[cfg.countKey]; else fmBoxes = data[cfg.countKey]; }
+    if (typeof data.tile_vouchers === 'number') fmVouchers = data.tile_vouchers;
+    // Single open returns cards[] directly; bulk returns packs:[{cards,got_voucher}].
+    const chunk = Array.isArray(data.packs)
+      ? data.packs.map(pk => Array.isArray(pk.cards) ? pk.cards : [])
+      : [Array.isArray(data.cards) ? data.cards : (data.species ? [data] : [])];
+    chunk.forEach(cards => { farmApplyPackCards(cards); packs.push(cards); });
+    if (data.got_voucher) gotVoucher = true;
+    left -= n;
+  }
+  // A mid-batch failure still leaves every already-opened box legitimately
+  // opened, so show what came out instead of throwing the reveal away.
+  if (failure && !packs.length) { showToast('❌ ' + fmErr(failure)); if (btn) btn.disabled = false; return; }
+  if (failure) showToast('❌ Przerwano po ' + plBoxes(packs.length) + ': ' + fmErr(failure));
+
   await invalidateFarmAssetBreakdown({ reload: true });
   renderFarmLootboxStore();
-  if (packs.length > 1) playFarmMultiPackOpening(packs);
-  else playFarmPackOpening(packs[0]);
+  if (packs.length > 1) playFarmMultiPackOpening(packs, gold);
+  else playFarmPackOpening(packs[0], gold);
   renderFarmCollection(); renderFarmSelection();
   if (farmModalEl) refreshFarmHub();
   refreshFarmStarterBanner();
-  if (data.got_voucher) showToast('🎁 Trafiła Ci się darmowa działka! Postaw ją na pustym polu farmy.');
+  if (gotVoucher) showToast('🎁 Trafiła Ci się darmowa działka! Postaw ją na pustym polu farmy.');
 }
 
-// Step 2 (gold): open owned ⭐ gold boxes. Clone of openFarmLootbox routed at
-// the gold RPCs/state; reuses the same pack-opening animation unchanged.
-async function openFarmGoldbox(btn, qty) {
-  qty = Math.min(FARM_GOLDBOX_BULK_OPEN_MAX, Math.max(1, Math.floor(qty || 1)));
-  if ((fmGoldBoxes || 0) < qty) { showToast(qty > 1 ? ('Masz tylko ' + plBoxes(fmGoldBoxes || 0) + '.') : 'Nie masz Złotych Skrzyń — są wycofane ze sprzedaży.'); return; }
-  if (btn) btn.disabled = true;
-  const { data, error } = qty > 1
-    ? await sb.rpc('open_farm_goldboxes', { p_qty: qty })
-    : await sb.rpc('open_farm_goldbox');
-  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return; }
-  if (typeof data.boxes_gold === 'number') fmGoldBoxes = data.boxes_gold;
-  if (typeof data.tile_vouchers === 'number') fmVouchers = data.tile_vouchers;
-  // Single open returns cards[] directly; bulk returns packs:[{cards,got_voucher}].
-  const packs = Array.isArray(data.packs)
-    ? data.packs.map(p => Array.isArray(p.cards) ? p.cards : [])
-    : [Array.isArray(data.cards) ? data.cards : (data.species ? [data] : [])];
-  packs.forEach(farmApplyPackCards);
-  await invalidateFarmAssetBreakdown({ reload: true });
-  renderFarmLootboxStore();
-  if (packs.length > 1) playFarmMultiPackOpening(packs);
-  else playFarmPackOpening(packs[0]);
-  renderFarmCollection(); renderFarmSelection();
-  if (farmModalEl) refreshFarmHub();
-  refreshFarmStarterBanner();
-  if (data.got_voucher) showToast('🎁 Trafiła Ci się darmowa działka! Postaw ją na pustym polu farmy.');
-}
+const openFarmLootbox = (btn, qty) => farmOpenBoxes(btn, qty, false);
+const openFarmGoldbox = (btn, qty) => farmOpenBoxes(btn, qty, true);
 
 // ── Pack opening (theatrical card reveal) ───────────────────────────────────
-let farmPackEl = null, farmPackEsc = null;
+let farmPackEl = null, farmPackEsc = null, farmPackTimers = [];
 function closeFarmPack() {
+  farmPackTimers.forEach(clearTimeout);
+  farmPackTimers = [];
   if (farmPackEsc) { window.removeEventListener('keydown', farmPackEsc); farmPackEsc = null; }
   if (farmPackEl) { farmPackEl.remove(); farmPackEl = null; }
+}
+
+// ── Reveal micro-effects ────────────────────────────────────────────────────
+// Confetti bursts and shockwave rings shared by every reveal path. Each one is
+// a self-removing node driven by a pure CSS animation, so nothing keeps
+// running once the overlay closes — and everything here no-ops when the viewer
+// asked for reduced motion.
+const farmPackReduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const FARM_PACK_CONFETTI = ['#fde68a', '#facc15', '#fb923c', '#f472b6', '#a5b4fc', '#86efac', '#ffffff'];
+
+// Pulls worth stopping for: they get the ring + confetti + screen flash.
+const farmPackIsBigPull = c => !!(c && (c.nft || c.voucher || c.rarity === 'epic' || c.rarity === 'legendary'));
+
+function farmPackBurst(host, opts) {
+  if (!host || farmPackReduceMotion()) return;
+  const o = opts || {};
+  const n = o.count || 24, spread = o.spread || 140, life = o.life || 1200;
+  const colors = o.colors || FARM_PACK_CONFETTI;
+  const layer = el('div', { className: 'farm-pack-parts' });
+  for (let i = 0; i < n; i++) {
+    const ang = (Math.PI * 2 * i) / n + Math.random() * 0.6;
+    const dist = spread * (0.5 + Math.random() * 0.8);
+    const w = 4 + Math.random() * 5;
+    const part = el('i', { className: 'farm-pack-part' });
+    part.style.setProperty('--dx', Math.round(Math.cos(ang) * dist) + 'px');
+    part.style.setProperty('--dy', Math.round(Math.sin(ang) * dist) + 'px');
+    part.style.setProperty('--rot', Math.round(Math.random() * 720 - 360) + 'deg');
+    part.style.setProperty('--d', (Math.random() * 0.14).toFixed(2) + 's');
+    part.style.background = colors[i % colors.length];
+    part.style.width = w.toFixed(1) + 'px';
+    part.style.height = (w * (Math.random() < 0.4 ? 2.2 : 1)).toFixed(1) + 'px';
+    layer.append(part);
+  }
+  host.append(layer);
+  setTimeout(() => layer.remove(), life);
+}
+
+function farmPackRing(host, cls) {
+  if (!host || farmPackReduceMotion()) return;
+  const ring = el('div', { className: 'farm-pack-ring' + (cls ? ' ' + cls : '') });
+  host.append(ring);
+  setTimeout(() => ring.remove(), 950);
+}
+
+// The shaking sealed box (with spinning rays behind it) every opening starts on.
+function farmPackSealedEl(gold) {
+  return el('div', { className: 'farm-pack-sealed' },
+    el('div', { className: 'farm-pack-rays' }),
+    el('div', { className: 'farm-pack-sealed-box' }, gold ? '⭐' : '📦'));
 }
 // One face-down reveal card (used by the single- and multi-pack openings).
 function farmPackCardEl(c, i) {
@@ -34808,85 +34950,129 @@ function farmPackCardEl(c, i) {
         : el('div', { className: 'farm-pack-count' }, 'masz ' + c.new_count + '×'));
     cls = 'farm-pack-card rar-' + rar + (c.nft ? ' nft' : '');
   }
-  return el('div', { className: cls, style: { '--i': String(i) } },
+  const card = el('div', { className: cls },
     el('div', { className: 'farm-pack-glow' }),
     el('div', { className: 'farm-pack-inner' },
       el('div', { className: 'farm-pack-face farm-pack-back' }, '🌱'),
       front));
+  // Custom properties need setProperty — assigning them through el()'s style
+  // object is a no-op, which would flatten the per-card deal stagger.
+  card.style.setProperty('--i', String(i));
+  return card;
 }
 
-function playFarmPackOpening(cards) {
+function playFarmPackOpening(cards, gold) {
   closeFarmPack();
   if (!cards || !cards.length) return;
   const overlay = el('div', { className: 'modal-overlay farm-pack-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const flash = el('div', { className: 'farm-pack-flash' });
   const stage = el('div', { className: 'farm-pack-stage' });
-  const title = el('div', { className: 'farm-pack-title' }, '📦 Otwierasz skrzynkę…');
-  const row = el('div', { className: 'farm-pack-row' });
-
-  const flipped = new Array(cards.length).fill(false);
-  const cardEls = cards.map((c, i) => {
-    const cardEl = farmPackCardEl(c, i);
-    cardEl.addEventListener('click', () => flip(i));
-    return cardEl;
-  });
-  row.append(...cardEls);
-
+  const title = el('div', { className: 'farm-pack-title' }, (gold ? '⭐' : '📦') + ' Otwierasz skrzynkę…');
+  const arena = el('div', { className: 'farm-pack-arena' });
   const hint = el('div', { className: 'farm-pack-hint' }, 'Kliknij kartę, aby ją odkryć ✨');
   const closeBtn = el('button', { className: 'btn-primary farm-pack-close hidden' }, 'Super! ✓');
   closeBtn.addEventListener('click', closeFarmPack);
-  stage.append(title, row, hint, closeBtn);
-  overlay.append(stage);
-  overlay.addEventListener('click', e => { if (e.target === overlay && flipped.every(Boolean)) closeFarmPack(); });
+  stage.append(title, arena, hint, closeBtn);
+  overlay.append(flash, stage);
   farmPackEsc = e => { if (e.key === 'Escape') closeFarmPack(); };
   window.addEventListener('keydown', farmPackEsc);
   document.body.append(overlay);
   farmPackEl = overlay;
 
-  function flip(i) {
-    if (flipped[i]) return;
-    flipped[i] = true;
-    cardEls[i].classList.add('flipped');
-    if (flipped.every(Boolean)) {
-      title.textContent = '🎉 Zdobyte karty!';
-      hint.classList.add('hidden');
-      closeBtn.classList.remove('hidden');
+  const later = (fn, ms) => farmPackTimers.push(setTimeout(() => { if (farmPackEl === overlay) fn(); }, ms));
+  const bigFlash = () => { overlay.classList.remove('flash'); void overlay.offsetWidth; overlay.classList.add('flash'); };
+
+  // 1) the sealed box rattles, then bursts in a ring of confetti…
+  const sealed = farmPackSealedEl(gold);
+  arena.replaceChildren(sealed);
+  hint.textContent = 'Skrzynka się otwiera…';
+  later(() => {
+    sealed.classList.add('burst');
+    bigFlash();
+    farmPackRing(arena);
+    farmPackBurst(arena, { count: 28, spread: 180 });
+  }, 720);
+  // …2) and the cards deal in and flip themselves (a click flips one sooner).
+  later(dealCards, 1080);
+
+  function dealCards() {
+    const row = el('div', { className: 'farm-pack-row' });
+    const flipped = new Array(cards.length).fill(false);
+    const cardEls = cards.map((c, i) => {
+      const cardEl = farmPackCardEl(c, i);
+      cardEl.addEventListener('click', () => flip(i));
+      return cardEl;
+    });
+    row.append(...cardEls);
+    arena.replaceChildren(row);
+    hint.textContent = 'Kliknij kartę, aby ją odkryć ✨';
+
+    function flip(i) {
+      if (flipped[i]) return;
+      flipped[i] = true;
+      const cardEl = cardEls[i];
+      cardEl.classList.add('flipped');
+      if (farmPackIsBigPull(cards[i])) {
+        bigFlash();
+        farmPackRing(cardEl, 'on-card');
+        farmPackBurst(cardEl, { count: 16, spread: 100, life: 1000 });
+      }
+      // The flip itself takes .65s — wait it out before switching to the
+      // "done" state, or the close button appears over a still-spinning card.
+      if (flipped.every(Boolean)) later(() => {
+        title.textContent = '🎉 Zdobyte karty!';
+        hint.classList.add('hidden');
+        closeBtn.classList.remove('hidden');
+      }, 700);
     }
+    cards.forEach((c, i) => later(() => flip(i), 440 + i * 520));
   }
-  // auto-flip sequentially for a hands-off reveal; clicking a card flips it sooner
-  cards.forEach((c, i) => setTimeout(() => { if (farmPackEl === overlay) flip(i); }, 750 + i * 700));
+
+  overlay.addEventListener('click', e => { if (e.target === overlay && !closeBtn.classList.contains('hidden')) closeFarmPack(); });
 }
 
 // Hearthstone-style multi-pack reveal: each box shakes, bursts open in a flash
-// of rays, deals its cards, auto-flips them, drops mini-chips into a running
-// loot tray, then the next box slides in. Ends on an aggregated loot summary.
-// Skippable at any moment (⏩ jumps straight to the summary).
-function playFarmMultiPackOpening(packs) {
+// of rays and confetti, deals its cards, auto-flips them, drops mini-chips into
+// a running loot tray, then the next box slides in. Ends on an aggregated loot
+// summary. Skippable at any moment (⏩ jumps straight to the summary).
+//
+// Above FARM_PACK_FAST_PACKS boxes the per-box ceremony would take minutes, so
+// the batch switches to a rapid streaming mode instead: one box that keeps
+// popping, a running counter, chips flying into the tray, and every big pull
+// (NFT / voucher / epic) popping out on top. Same summary either way.
+const FARM_PACK_FAST_PACKS = 10;
+
+function playFarmMultiPackOpening(packs, gold) {
   closeFarmPack();
   packs = (packs || []).filter(p => Array.isArray(p) && p.length);
   if (!packs.length) return;
-  if (packs.length === 1) { playFarmPackOpening(packs[0]); return; }
+  if (packs.length === 1) { playFarmPackOpening(packs[0], gold); return; }
 
   const overlay = el('div', { className: 'modal-overlay farm-pack-overlay', role: 'dialog', 'aria-modal': 'true' });
   const flash = el('div', { className: 'farm-pack-flash' });
   const stage = el('div', { className: 'farm-pack-stage farm-pack-multi' });
-  const title = el('div', { className: 'farm-pack-title' }, '📦 Otwierasz skrzynki…');
+  const title = el('div', { className: 'farm-pack-title' }, (gold ? '⭐' : '📦') + ' Otwierasz skrzynki…');
   const sub = el('div', { className: 'farm-pack-sub' });
+  const progFill = el('i', { className: 'farm-pack-prog-fill' });
+  const prog = el('div', { className: 'farm-pack-prog' }, progFill);
   const arena = el('div', { className: 'farm-pack-arena' });
   const tray = el('div', { className: 'farm-pack-tray' });
   const skipBtn = el('button', { className: 'farm-pack-skip' }, '⏩ Pokaż od razu wszystko');
   const closeBtn = el('button', { className: 'btn-primary farm-pack-close hidden' }, 'Super! ✓');
   closeBtn.addEventListener('click', closeFarmPack);
-  stage.append(title, sub, arena, tray, skipBtn, closeBtn);
+  stage.append(title, sub, prog, arena, tray, skipBtn, closeBtn);
   overlay.append(flash, stage);
   document.body.append(overlay);
   farmPackEl = overlay;
   farmPackEsc = e => { if (e.key === 'Escape') closeFarmPack(); };
   window.addEventListener('keydown', farmPackEsc);
 
-  const timers = [];
   let done = false;
-  const later = (fn, ms) => timers.push(setTimeout(() => { if (farmPackEl === overlay && !done) fn(); }, ms));
+  const later = (fn, ms) => farmPackTimers.push(setTimeout(() => { if (farmPackEl === overlay && !done) fn(); }, ms));
   const chippedFrom = { packIdx: 0 };   // packs whose chips already landed in the tray
+  // A long batch can hit a big pull every few frames; throttle the screen flash
+  // so a lucky streak reads as punchy instead of as a strobe.
+  let lastFlashAt = 0;
 
   const chipFor = c => {
     let cls = 'farm-pack-chip', label;
@@ -34899,14 +35085,29 @@ function playFarmMultiPackOpening(packs) {
   };
 
   const bigFlash = () => {
+    const now = Date.now();
+    if (now - lastFlashAt < 380) return;
+    lastFlashAt = now;
     overlay.classList.remove('flash');
     void overlay.offsetWidth;   // restart the flash animation
     overlay.classList.add('flash');
   };
 
+  const setProgress = n => {
+    progFill.style.width = Math.round((n / packs.length) * 100) + '%';
+    sub.textContent = 'Skrzynka ' + Math.min(n + 1, packs.length) + ' / ' + packs.length;
+  };
+
+  const dropChips = (cards, idx) => {
+    cards.forEach(c => tray.append(chipFor(c)));
+    chippedFrom.packIdx = idx + 1;
+    tray.scrollTop = tray.scrollHeight;
+  };
+
   function showSummary() {
     done = true;
-    timers.forEach(clearTimeout);
+    farmPackTimers.forEach(clearTimeout);
+    farmPackTimers = [];
     // flush any chips the skip jumped over
     for (let p = chippedFrom.packIdx; p < packs.length; p++) packs[p].forEach(c => tray.append(chipFor(c)));
     chippedFrom.packIdx = packs.length;
@@ -34925,39 +35126,79 @@ function playFarmMultiPackOpening(packs) {
     const grid = el('div', { className: 'farm-pack-summary' });
     entries.forEach(({ c, n }, i) => {
       const cls = 'farm-pack-sum-card ' + (c.voucher ? 'voucher' : 'rar-' + (c.rarity || 'common') + (c.nft ? ' nft' : ''));
-      grid.append(el('div', { className: cls, style: { '--i': String(i) } },
+      const sum = el('div', { className: cls },
         el('div', { className: 'farm-pack-sum-emoji' }, farmIcon(c.voucher ? '🎁' : c.emoji)),
         el('div', { className: 'farm-pack-sum-name' }, c.voucher ? 'Darmowa działka' : (c.nft && c.nft_name ? c.nft_name : c.name)),
         c.nft
           ? el('div', { className: 'farm-pack-sum-sub' }, '💎 #' + c.serial_no + '/' + c.edition_size)
-          : el('div', { className: 'farm-pack-sum-sub' }, n > 1 ? ('×' + n) : (c.voucher ? '0 🪙 za pole' : '×1'))));
+          : el('div', { className: 'farm-pack-sum-sub' }, n > 1 ? ('×' + n) : (c.voucher ? '0 🪙 za pole' : '×1')));
+      sum.style.setProperty('--i', String(i));
+      grid.append(sum);
     });
+    const nfts = all.filter(c => c.nft).length, vouchers = all.filter(c => c.voucher).length;
     title.textContent = '🎉 Twoje łupy!';
-    sub.textContent = plCards(all.filter(c => !c.voucher).length) + ' z ' + packs.length + ' skrzynek';
+    sub.textContent = plCards(all.filter(c => !c.voucher).length) + ' z ' + packs.length + ' skrzynek'
+      + (nfts ? ' · 💎 ' + nfts + ' NFT' : '') + (vouchers ? ' · 🎁 ' + vouchers + '× działka' : '');
+    prog.classList.add('hidden');
     tray.replaceChildren();
     tray.classList.add('hidden');
     skipBtn.classList.add('hidden');
     arena.replaceChildren(grid);
+    lastFlashAt = 0;
     bigFlash();
+    if (nfts || vouchers) farmPackBurst(arena, { count: 34, spread: 220, life: 1400 });
     closeBtn.classList.remove('hidden');
   }
   skipBtn.addEventListener('click', showSummary);
   overlay.addEventListener('click', e => { if (e.target === overlay && !closeBtn.classList.contains('hidden')) closeFarmPack(); });
 
+  // ── Rapid mode: too many boxes to hand-reveal one at a time ──
+  function showPop(host, c) {
+    const cls = c.nft ? 'nft' : (c.voucher ? 'voucher' : 'epic');
+    const pop = el('div', { className: 'farm-pack-pop ' + cls },
+      el('span', { className: 'farm-pack-pop-ic' }, farmIcon(c.voucher ? '🎁' : c.emoji)),
+      el('span', { className: 'farm-pack-pop-txt' }, c.voucher ? 'Darmowa działka!' : (c.nft && c.nft_name ? c.nft_name : (c.name || c.species))));
+    host.replaceChildren(pop);
+    setTimeout(() => pop.remove(), 1500);
+  }
+
+  function runRapid() {
+    title.textContent = (gold ? '⭐' : '📦') + ' Otwierasz ' + plBoxes(packs.length) + '…';
+    skipBtn.textContent = '⏩ Pokaż od razu podsumowanie';
+    const sealed = farmPackSealedEl(gold);
+    sealed.classList.add('rapid');
+    const counter = el('div', { className: 'farm-pack-counter' }, '0 / ' + packs.length);
+    const popHost = el('div', { className: 'farm-pack-pop-host' });
+    arena.replaceChildren(el('div', { className: 'farm-pack-rapid' }, sealed, popHost, counter));
+    // Whole batch lands in ~3.5s no matter how many boxes, floored so a 12-box
+    // run still reads box-by-box instead of blurring past.
+    const step = Math.max(70, Math.min(240, Math.round(3500 / packs.length)));
+    packs.forEach((cards, idx) => later(() => {
+      dropChips(cards, idx);
+      setProgress(idx);
+      counter.textContent = (idx + 1) + ' / ' + packs.length;
+      sealed.classList.remove('pop'); void sealed.offsetWidth; sealed.classList.add('pop');
+      const big = cards.find(farmPackIsBigPull);
+      if (big) { bigFlash(); farmPackBurst(popHost, { count: 16, spread: 120, life: 1000 }); showPop(popHost, big); }
+    }, 620 + idx * step));
+    later(showSummary, 620 + packs.length * step + 900);
+  }
+
+  // ── Ceremony mode: one box at a time, cards dealt and flipped ──
   function openPack(idx) {
     if (idx >= packs.length) { showSummary(); return; }
     const cards = packs[idx];
-    sub.textContent = 'Skrzynka ' + (idx + 1) + ' / ' + packs.length;
+    setProgress(idx);
     // 1) sealed box shakes with spinning rays behind it…
-    const sealed = el('div', { className: 'farm-pack-sealed' },
-      el('div', { className: 'farm-pack-rays' }),
-      el('div', { className: 'farm-pack-sealed-box' }, '📦'));
+    const sealed = farmPackSealedEl(gold);
     arena.replaceChildren(sealed);
     // …2) bursts…
     later(() => {
       sealed.classList.add('burst');
       bigFlash();
-    }, 850);
+      farmPackRing(arena);
+      farmPackBurst(arena, { count: 24, spread: 165 });
+    }, 800);
     // …3) cards deal in and auto-flip fast (click still flips sooner)
     later(() => {
       const row = el('div', { className: 'farm-pack-row' });
@@ -34972,20 +35213,27 @@ function playFarmMultiPackOpening(packs) {
       function flip(i) {
         if (done || flipped[i]) return;
         flipped[i] = true;
-        cardEls[i].classList.add('flipped');
-        if (cards[i].nft || cards[i].voucher || cards[i].rarity === 'epic') bigFlash();
+        const cardEl = cardEls[i];
+        cardEl.classList.add('flipped');
+        if (farmPackIsBigPull(cards[i])) {
+          bigFlash();
+          farmPackRing(cardEl, 'on-card');
+          farmPackBurst(cardEl, { count: 14, spread: 95, life: 1000 });
+        }
         if (flipped.every(Boolean)) {
           later(() => {
-            cards.forEach(c => tray.append(chipFor(c)));
-            chippedFrom.packIdx = idx + 1;
-            later(() => openPack(idx + 1), 650);
-          }, 550);
+            dropChips(cards, idx);
+            setProgress(idx + 1);
+            later(() => openPack(idx + 1), 620);
+          }, 520);
         }
       }
-      cards.forEach((c, i) => later(() => flip(i), 380 + i * 420));
-    }, 1150);
+      cards.forEach((c, i) => later(() => flip(i), 360 + i * 400));
+    }, 1120);
   }
-  openPack(0);
+
+  setProgress(0);
+  if (packs.length > FARM_PACK_FAST_PACKS) runRapid(); else openPack(0);
 }
 
 async function levelUpCard(species, btn, opts) {

@@ -57,6 +57,27 @@ Wiersz NFT jest **zmienny** — to suma wag edycji aktualnie w puli (patrz niże
 
 Czasy wzrostu/plony bazowe: zwykłe 1 dzień, rzadkie 2 dni, epickie 3–4 dni; dokładne statystyki i aktualne ceny pokazuje w aplikacji **📖 Katalog** (liczone na żywo z `farm_card_defs`/`farm_market`).
 
+### Kupowanie i otwieranie hurtem
+
+Karta zakupu (Sklep) i karta otwierania (hub → **📦 Skrzynki**) dzielą jeden picker `farmQtyStepper`: **−/+ stepper + suwak + MAX**. Zakres suwaka to maksimum danej akcji — przy zakupie `min(50, portfel / 100)`, przy otwieraniu po prostu tyle skrzynek, ile masz (do `FARM_BOX_OPEN_ALL_MAX` = 100). Od 2 posiadanych skrzynek dochodzi jeszcze przycisk **„🎇 Otwórz wszystkie"**.
+
+Serwer przyjmuje **maks. 20 skrzynek na jedno wywołanie** (`open_farm_lootboxes` / `open_farm_goldboxes`), więc większą partię `farmOpenBoxes()` tnie na kolejne wywołania i dopiero zebrane paczki pokazuje jako **jedną** animację. Semantyka się przez to nie zmienia — każde wywołanie i tak pętli kanoniczne `open_farm_lootbox()`, więc reguły startera i vouchera przesuwają się skrzynka po skrzynce niezależnie od granic partii. Gdy któreś wywołanie w środku partii padnie, już otwarte skrzynki są otwarte naprawdę — aplikacja pokazuje ich zawartość i dokłada komunikat o przerwaniu, zamiast wyrzucać wynik.
+
+Otwieranie 📦 i ⭐ to jedna funkcja (`farmOpenBoxes(btn, qty, gold)`); `openFarmLootbox`/`openFarmGoldbox` są już tylko cienkimi aliasami.
+
+### Animacja otwierania
+
+Trzy tryby, wszystkie w `index.html`:
+
+- **1 skrzynka** (`playFarmPackOpening`) — zapieczętowane pudełko trzęsie się na wirujących promieniach, wybucha (błysk + pierścień uderzeniowy + konfetti), po czym karty rozdają się i same się odwracają; kliknięcie odkrywa szybciej.
+- **2–10 skrzynek** (`playFarmMultiPackOpening`) — ta sama ceremonia pudełko po pudełku, z paskiem postępu, tacą łupów i podsumowaniem.
+- **> 10 skrzynek** (`FARM_PACK_FAST_PACKS`) — tryb szybki: jedno pulsujące pudełko, licznik `n / N`, żetony lecące do tacy i **wyskakujące „big pulle"** (NFT / voucher / epik). Cała partia mieści się w ~3.5 s niezależnie od liczby skrzynek, potem to samo podsumowanie.
+
+Trafienia warte zatrzymania (`farmPackIsBigPull`: NFT, voucher, epik) dostają wszędzie dodatkowy pierścień + konfetti + błysk ekranu (throttlowany do 1 na 380 ms, żeby seria szczęścia nie stroboskopowała). Wszystkie efekty (`farmPackBurst`/`farmPackRing`) są no-opem przy `prefers-reduced-motion`.
+
+⚠️ **Nie animuj `transform` na `.farm-pack-card`** — to kontener flipa; animowany transform na nim spłaszcza kontekst 3D w Chrome i odkryta karta przez cały czas animacji pokazuje swój rewers. Efekt „wylądowania" siedzi dlatego na `.farm-pack-glow`.
+
+
 ### Złota Skrzynia ⭐ (premium) — WYCOFANA ZE SPRZEDAŻY (27.07.2026)
 
 Druga, droższa skrzynka (`supabase/farm-goldbox.sql`), całkowicie niezależna od zwykłej — osobny licznik `boxes_gold`, osobne RPC (`buy_farm_goldbox`, `open_farm_goldbox`/`open_farm_goldboxes`). Otwierana w osobnej zakładce hubu **📦 Skrzynki**, tak samo jak zwykła skrzynka.
