@@ -121,6 +121,7 @@ function newBugJumperRuntime() {
     moveLog: [],
     durationMs: BJ_DURATION_MS,
     startPerf: 0, rafId: null,
+    expiresAt: null,
     hitFlash: 0, prodFlash: 0,
     inputCooldown: 0,
     inputQueue: [],
@@ -731,6 +732,7 @@ function beginBugJumperRound(round, options = {}) {
   rt.courseId   = round.courseId || BUG_JUMPER_DYNAMIC_COURSE_ID;
   rt.course     = bjGenerateCourse(round.seed);
   rt.durationMs = round.durationMs || BJ_DURATION_MS;
+  rt.expiresAt  = round.expiresAt || null;
   const serverElapsed = round.startedAt && round.serverNow
     ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
     : 0;
@@ -796,6 +798,16 @@ async function startBugJumperRound() {
   }
 }
 
+// True once the server's submission window for this round (round.expiresAt,
+// ROUND_EXPIRES_SECONDS = 120s server-side) has passed — e.g. the tab sat
+// backgrounded long enough that requestAnimationFrame never fired to notice
+// the 25s round had ended. Submitting past this point is guaranteed to fail
+// with "Runda wygasła." from bug-jumper-action, so callers should treat the
+// round as locally abandoned instead of round-tripping to the server for it.
+function bjRoundExpired(rt = bugJumperRuntime) {
+  return !!rt?.expiresAt && Date.now() >= new Date(rt.expiresAt).getTime();
+}
+
 async function finishBugJumperRound() {
   const rt = bugJumperRuntime;
   if (!rt || rt.submitting) return;
@@ -803,6 +815,16 @@ async function finishBugJumperRound() {
   rt.playing    = false;
   rt.submitting = true;
   if (rt.rafId) cancelAnimationFrame(rt.rafId);
+
+  if (!rt.archiveMode && bjRoundExpired(rt)) {
+    rt.submitting = false;
+    showToast('⏱️ Zbyt długo nie było Cię na karcie — runda wygasła (masz 120 s na jej dokończenie).');
+    if (bjStatus) bjStatus.textContent = 'Runda wygasła — kliknij Start, aby zagrać ponownie.';
+    if (bjStartBtn) { bjStartBtn.disabled = false; bjStartBtn.textContent = 'Start rundy'; }
+    bjDraw(performance.now());
+    return;
+  }
+
   if (bjStartBtn) { bjStartBtn.disabled = true; bjStartBtn.textContent = 'Zapisuję...'; }
   if (bjStatus) bjStatus.textContent = 'Zapisuję wynik...';
   bjSetStats(0, true);
@@ -850,6 +872,26 @@ async function finishBugJumperRound() {
 }
 
 if (bjStartBtn) bjStartBtn.addEventListener('click', startBugJumperRound);
+
+// ── Pause the round while the tab is hidden ─────────────────────────────
+// requestAnimationFrame is throttled/paused by the browser in a backgrounded
+// tab, so an abandoned tab can silently blow past the server's 120s
+// submission window (ROUND_EXPIRES_SECONDS in bug-jumper-action) before
+// bjTick ever gets a frame to notice the round ended. Freeze the RAF loop on
+// hide and restart it on return, instead of letting a throttled background
+// frame fire the finish/submit path at some unpredictable later point;
+// bjRoundExpired() inside finishBugJumperRound() then decides whether the
+// round is still submittable or has to be abandoned locally.
+document.addEventListener('visibilitychange', () => {
+  const rt = bugJumperRuntime;
+  if (!rt?.playing || rt.archiveMode) return;
+  if (document.hidden) {
+    if (rt.rafId) cancelAnimationFrame(rt.rafId);
+    rt.rafId = null;
+  } else if (!rt.rafId) {
+    rt.rafId = requestAnimationFrame(bjTick);
+  }
+});
 
 // ── Bug Jumper fullscreen ────────────────────────────────────────────────
 const bjGamePanel = document.getElementById('bj-game-panel');
