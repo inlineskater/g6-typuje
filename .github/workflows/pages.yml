@@ -35,6 +35,7 @@ jobs:
           cp index.html _site/index.html
           cp login_hero.jpg _site/login_hero.jpg
           cp -r games _site/games
+          cp -r tabs _site/tabs
           touch _site/.nojekyll
           # Stamp this build's commit SHA into the DEPLOYED page (the committed source
           # keeps the __BUILD_SHA__ placeholder) and drop a matching version.json the

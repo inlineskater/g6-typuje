@@ -1,0 +1,202 @@
+<!doctype html><html><head><meta charset=utf8><style>
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+:root{--border:#334155;--surface:#1e293b;--text:#e2e8f0;--muted:#94a3b8;--accent:#6366f1}
+body{background:#0b1220;color:#e2e8f0;font:14px system-ui;padding:20px}
+.hidden{display:none}
+/* „Filler" — 1v1 territory flood-fill (arcade-only, Phase 1). The board
+       is a plain DOM layer (23x23=529 divs), not canvas: the game is server-
+       authoritative and updates a handful of times a minute, so a full CSS
+       repaint on each poll/realtime tick is cheap — no need for canvas.
+
+       TILES ARE UPRIGHT DIAMONDS IN OFFSET ROWS — the 1990 original's quilt of
+       „rectangular diamonds" (measured off a DOS screenshot: 16x16 diamonds,
+       rows half a diamond apart, odd rows leaning half a diamond right).
+       Each cell is a clip-path diamond, absolutely positioned; there is no
+       CSS grid, because grid cannot express half-row offsets or the vertical
+       half-overlap that makes diamonds interlock.
+
+       ⚠️ THIS LAYOUT IS LOAD-BEARING ON THE SERVER'S ADJACENCY RULE. A
+       rectangular (x,y) grid can have upright diamonds OR up/down/left/right
+       adjacency, never both: in this quilt a tile's four edge-neighbours are
+       the two diamonds above and the two below, and its own row's tiles touch
+       only at a vertex. filler-action's neighborsDiamond() implements exactly
+       that (brick adjacency), so what the eye reads as adjacent is what the
+       flood fill absorbs. Change one and you MUST change the other — see
+       docs/filler.md. (A previous revision sheared the board instead, which
+       kept four-neighbour adjacency but leaned the whole field; the geometry
+       notes for that approach are in the docs' history section.)
+
+       Because rows are only half a diamond tall, the field's on-screen aspect
+       is 2w/h, which is why the board is 23x23 (= 2.0, a wide DOS field) and
+       not the old 31x17 (= 3.5, an unusable letterbox). */
+    .filler-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .filler-status { font-weight: 700; color: var(--text); }
+    .filler-timer { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 800; min-width: 2.5em; text-align: right; }
+    .filler-players { display: flex; flex-direction: column; gap: 6px; }
+    .filler-player-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
+    .filler-player-row.is-me { border-color: var(--accent); }
+    .filler-swatch { width: 15px; height: 15px; flex: 0 0 auto; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+    .filler-player-nick { font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .filler-player-tiles { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+    /* The board is sized by WIDTH (up to max-width) with height following from
+       the aspect-ratio JS sets per match — sizing by height instead would make
+       max-width's mobile clamp fight the aspect-ratio and squash the diamonds
+       on a narrow phone; sizing by width keeps every diamond square at any
+       viewport.
+       `overflow: hidden` is what gives the field the original's clean
+       rectangular frame: the raw quilt's edges are a zigzag of diamond points
+       and half-diamonds, and JS insets the layer by a quarter diamond on each
+       side so the clip is symmetric (see fillerRenderBoard). */
+    .filler-board-wrap { display: flex; justify-content: center; }
+    .filler-board {
+      position: relative; background: #12161f; border: 3px solid var(--border);
+      border-radius: 4px; overflow: hidden; width: 100%; max-width: 900px; margin: 0 auto;
+    }
+    /* Facets split at the diamond's four VERTICES (0/90/180/270deg = up/right/
+       down/left), so the two diagonals divide it into the same four triangles
+       the DOS original shades: lit from the top-left, darkest at the bottom. */
+    .filler-cell {
+      position: absolute;
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      background-image: conic-gradient(from 0deg,
+        rgba(255,255,255,.22)   0deg    90deg,  /* upper-right */
+        rgba(0,0,0,.30)        90deg   180deg,  /* lower-right */
+        rgba(0,0,0,.14)       180deg   270deg,  /* lower-left  */
+        rgba(255,255,255,.38) 270deg   360deg); /* upper-left  */
+    }
+    /* Territory is expressed by shading UNCLAIMED land, not by ringing
+       claimed tiles: the two seats can never share a color (the pick rule
+       excludes both), so the only real ambiguity is a neutral tile that
+       happens to match your color — claimed tiles read as "lit" against the
+       dimmed neutral field, which scales to any board size for free.
+       A ::after overlay would be clipped to the diamond too, but costs a
+       second box per tile on a 529-tile board; a box-shadow inset is cheaper
+       and clips identically. */
+    .filler-cell.is-neutral { box-shadow: inset 0 0 0 999px rgba(0,0,0,.26); }
+    .filler-palette { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; padding: 6px 0; }
+    /* Swatches are the same upright diamond as a board tile, so the palette
+       reads as a row of loose quilt pieces. clip-path replaces the border, so
+       selection state is shown with an outline (drawn outside the clip) plus
+       a drop-shadow that follows the diamond silhouette rather than a box. */
+    .filler-color-btn {
+      width: 38px; height: 38px; padding: 0; border: none; background-color: transparent; cursor: pointer;
+      transition: transform .1s ease;
+    }
+    .filler-color-btn i {
+      display: block; width: 100%; height: 100%;
+      background-color: inherit;
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      background-image: conic-gradient(from 0deg,
+        rgba(255,255,255,.22) 0deg 90deg, rgba(0,0,0,.30) 90deg 180deg,
+        rgba(0,0,0,.14) 180deg 270deg, rgba(255,255,255,.38) 270deg 360deg);
+    }
+    .filler-color-btn:hover:not(:disabled) { transform: scale(1.14); }
+    /* The only illegal picks are your own and the opponent's colors, so every
+       disabled swatch is also an is-mine/is-foe one. Dim it just enough to
+       read as unavailable while leaving the ownership ring legible — at the
+       old .3 both markers vanished into the dark board. */
+    .filler-color-btn.is-disabled, .filler-color-btn:disabled { opacity: .5; cursor: default; }
+    /* INSET rings, not outlines/drop-shadows: clip-path clips an inset shadow
+       to the diamond too, so the ring follows the silhouette. An outline would
+       draw the button's square box instead. */
+    .filler-color-btn.is-mine i { box-shadow: inset 0 0 0 3px #22c55e; }
+    .filler-color-btn.is-foe  i { box-shadow: inset 0 0 0 3px #94a3b8; }
+    .filler-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .filler-history-wrap h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .filler-history { display: flex; flex-direction: column; gap: 4px; }
+    .filler-history-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .filler-history-row:last-child { border-bottom: none; }
+    .filler-history-score { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
+    /* Picker preview — self-contained, smaller mini board (see games/previews.js).
+       Same diamond quilt as the real board, on an inner absolutely-positioned
+       layer: agpScaleDom() owns the host's own `transform` (translate +
+       fit-scale), so nothing else may be put there.
+       Do NOT set `position` on .fl-prev — .ag-prev-dom's absolute positioning
+       must win, and it already establishes the containing block. */
+    .fl-prev { background: #12161f; overflow: hidden; }
+    .fl-prev-cell {
+      position: absolute;
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      background-image: conic-gradient(from 0deg,
+        rgba(255,255,255,.22) 0deg 90deg, rgba(0,0,0,.30) 90deg 180deg,
+        rgba(0,0,0,.14) 180deg 270deg, rgba(255,255,255,.38) 270deg 360deg);
+    }
+  
+</style></head><body>
+<div class="filler-top"><div id="filler-status" class="filler-status"></div><div id="filler-timer" class="filler-timer"></div></div>
+<div id="filler-players" class="filler-players"></div>
+<div class="filler-board-wrap"><div id="filler-board" class="filler-board"></div></div>
+<div id="filler-palette" class="filler-palette"></div>
+<div class="filler-actions">
+ <button id="filler-btn-bot"></button><button id="filler-btn-find"></button>
+ <button id="filler-btn-cancel"></button><button id="filler-btn-resign"></button></div>
+<div class="filler-history-wrap"><div id="filler-history" class="filler-history"></div></div>
+<script>
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (k === 'className') node.className = v;
+      // A style OBJECT is merged; a CSS string goes through cssText. Object.assign
+      // on a string treats it as an array of characters and throws on the indexed
+      // setter, which silently kills the whole card-building loop that calls it.
+      else if (k === 'style') { if (typeof v === 'string') node.style.cssText = v; else Object.assign(node.style, v); }
+      else if (k.startsWith('data-')) node.setAttribute(k, v);
+      else if (k in node) node[k] = v;
+      else node.setAttribute(k, v);
+    });
+  }
+  children.forEach(c => {
+    if (c == null) return;
+    // Nodes are appended as-is; everything else (strings, numbers) becomes text.
+    node.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
+  });
+  return node;
+}
+let fillerRuntime = null;
+const allGamesMode = true;
+const sb = { functions:{invoke:async()=>({data:{}})}, channel:()=>({on(){return this},subscribe(){return this}}), removeChannel(){} };
+function showToast(){}
+</script>
+<script src="games/filler.js"></script>
+<script>
+// Build a real-shaped `state` payload and run the SHIPPING render path.
+const W=23,H=23,N=W*H,C=7;
+function neighborsDiamond(i,w,h){const x=i%w,y=(i-x)/w,dx=(y%2===0)?-1:1,out=[];
+ for(const ny of [y-1,y+1]){if(ny<0||ny>=h)continue;for(const nx of [x,x+dx]){if(nx<0||nx>=w)continue;out.push(ny*w+nx);}}return out;}
+function absorb(cells,owners,seat,color){const seen=new Uint8Array(N),q=[];
+ for(let i=0;i<N;i++)if(owners[i]===seat){cells[i]=color;seen[i]=1;q.push(i);}
+ let hd=0,g=0;while(hd<q.length){const i=q[hd++];for(const j of neighborsDiamond(i,W,H)){
+  if(seen[j])continue;seen[j]=1;if(owners[j]===-1&&cells[j]===color){owners[j]=seat;g++;q.push(j);}}}return g;}
+const cells=[],owners=new Array(N).fill(-1);
+for(let i=0;i<N;i++)cells[i]=Math.floor(Math.random()*C);
+owners[(H-1)*W]=0; owners[W-1]=1;
+// play ~24 plies so territories are big and their SHAPE is visible
+let seat=0;
+for(let m=0;m<24;m++){
+  const me=cells[owners.indexOf(seat)], foe=cells[owners.indexOf(1-seat)];
+  let best=-1,bg=-1;
+  for(let c=0;c<C;c++){if(c===me||c===foe)continue;
+    const cc=cells.slice(),oo=owners.slice();const g=absorb(cc,oo,seat,c);if(g>bg){bg=g;best=c;}}
+  absorb(cells,owners,seat,best); seat=1-seat;
+}
+const t=[0,0]; owners.forEach(o=>{if(o===0)t[0]++;else if(o===1)t[1]++;});
+const match={id:'demo',status:'active',isMyTurn:true,width:W,height:H,colorCount:C,moveNo:24,
+  legalColors:[0,1,2,3,4,5,6].filter(c=>c!==cells[owners.indexOf(0)]&&c!==cells[owners.indexOf(1)]),
+  turnDeadline:new Date(Date.now()+15000).toISOString(),
+  cells:cells.join(''), owners:owners.map(o=>o<0?'.':String(o)).join(''),
+  players:[{seat:0,isMe:true,isBot:false,nick:'Ty',color:cells[owners.indexOf(0)],tiles:t[0]},
+           {seat:1,isMe:false,isBot:true,nick:'Bot',color:cells[owners.indexOf(1)],tiles:t[1]}]};
+fillerRuntime = newFillerRuntime();
+renderFillerPanel({match, history:[]});
+window.__check=()=>{
+  const b=document.getElementById('filler-board');
+  const br=b.getBoundingClientRect(), c0=b.children[0].getBoundingClientRect();
+  return {tiles:b.childElementCount, expected:N,
+    aspect:+(br.width/br.height).toFixed(3),
+    swatches:document.getElementById('filler-palette').childElementCount,
+    swatchHasI:!!document.querySelector('.filler-color-btn i'),
+    clip:getComputedStyle(b.children[0]).clipPath.slice(0,20),
+    status:document.getElementById('filler-status').textContent};
+};
+</script></body></html>
