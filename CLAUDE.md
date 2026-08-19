@@ -10,7 +10,7 @@ Live URL: `https://inlineskater.github.io/rynek-proroctw-g6/`
 
 ## Deployment
 
-There is no build step. Push to `main` → GitHub Actions copies `index.html` to GitHub Pages. That's the entire pipeline.
+There is no build step. Push to `main` → GitHub Actions copies `index.html`, `login_hero.jpg`, `games/` and `tabs/` to GitHub Pages, stamps the commit SHA into `BUILD_ID`, and writes `version.json`. The one gate is the **payload budget check**, which fails the deploy if `index.html` is over 1600 KB (see Architecture). That's the entire pipeline.
 
 To apply database changes: paste the relevant SQL into the Supabase SQL Editor (Dashboard → SQL Editor → Run). There is no migration runner.
 
@@ -79,7 +79,21 @@ Deep-dive design docs that don't need to load on every task live in `docs/` — 
 
 ## Architecture
 
-Everything lives in `index.html`: HTML structure, all CSS (CSS variables for theming), and all JavaScript in one `<script>` block. No bundler, no framework, no TypeScript.
+The app shell — HTML structure, all CSS, and the shared JavaScript — lives in `index.html`. No bundler, no framework, no TypeScript. **Feature code does not live there**: seasonal games are in `games/*.js` and whole tabs are in `tabs/*.js`, each fetched the first time it is needed.
+
+**Payload budget (enforced).** `index.html` grew 241 KB → 1.88 MB between May and August 2026 with no single commit looking unreasonable, until a mid-range phone needed seconds of parsing before first paint. CI now fails the deploy if `index.html` exceeds **1600 KB** (`.github/workflows/pages.yml`). Adding a feature means adding a `tabs/*.js` module, not another 40 KB inline. If something genuinely belongs inline, raise the budget in the same commit so it is a reviewed decision.
+
+**Lazy tab modules.** `TAB_MODULES` maps a tab to its `tabs/*.js`; `ensureTabModule(tab)` fetches it once (promise-cached) and `withTabModule(tab, fn)` runs the entry point once it is there. Currently split out: `stats.js` (Statystyki/Skarbiec/coin race), `lottery.js`, `plinko.js` (Plinko **and** Koło Żubra), `shop.js` (Sklep/Targowisko/Zlecenia), `poker.js`. The scope rules are the same ones `games/*.js` follows:
+- a module owns its top-level `const`/`let` — index.html must **not** also declare them (redeclaration across classic scripts is a hard error)
+- its `function` declarations overwrite the no-op stubs index.html keeps for teardown calls `doLogout()`/`switchTab()` make unconditionally
+- it reads shared globals from index.html, which always runs first
+- anything called **synchronously** from outside the tab (the farm hub, `showApp()`, `setupRealtime()`) must be hoisted into index.html instead — see the „Shared with tabs outside Sklep" block. Anything called from a **click handler** can just be wrapped in `withTabModule()`.
+
+`scripts/extract-tab.py` performs the move and enforces those rules: it refuses a region that redeclares a name, leaks a `const` outside, or has top-level side effects (`--allow-side-effects` opts in when they are only listener wiring).
+
+**On-demand libraries.** `ensureLib(name)` loads `lightweight-charts` (charts, Rynki only) and Turnstile (only if `CAPTCHA_ON` is ever switched back on). Only `supabase-js` is required to boot — the inline script builds `sb` at top level, so it cannot be deferred; it is preloaded in `<head>` and executed at the end of `<body>`.
+
+**Mobile chrome.** Below 900px the header, nav bar and chat rail drop `backdrop-filter` and go opaque (last rule in the stylesheet, so it beats the later `.chat-*` definitions). They are sticky and on screen on every tab, so the blur was being recomposited on every scroll frame. `isolation: isolate` preserves the stacking context the chrome z-order depends on (popovers 30 < nav 40 < header 41).
 
 **Supabase client** is loaded from CDN. The anon key is intentionally public — Supabase RLS and function grants are the security boundary.
 

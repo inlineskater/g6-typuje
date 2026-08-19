@@ -29,6 +29,24 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
+      # index.html grew 241 KB -> 1.88 MB between May and August 2026 without any
+      # single commit looking unreasonable, until a mid-range phone needed seconds
+      # of parsing before first paint. This is the ratchet that stops that happening
+      # again: it fails the deploy rather than letting the page quietly get heavy.
+      # When a feature genuinely belongs inline, raise the budget in the SAME commit
+      # so the increase is a deliberate, reviewable decision. Otherwise the fix is to
+      # move the code into tabs/*.js (see ensureTabModule) or games/*.js.
+      - name: Check payload budget
+        run: |
+          BUDGET_KB=1600
+          SIZE_KB=$(( $(wc -c < index.html) / 1024 ))
+          echo "index.html: ${SIZE_KB} KB (budget ${BUDGET_KB} KB)"
+          if [ "$SIZE_KB" -gt "$BUDGET_KB" ]; then
+            echo "::error::index.html is ${SIZE_KB} KB, over the ${BUDGET_KB} KB budget."
+            echo "Move feature code into tabs/*.js or games/*.js, or raise BUDGET_KB here deliberately."
+            exit 1
+          fi
+
       - name: Prepare static site
         run: |
           mkdir -p _site
