@@ -94,8 +94,12 @@ def main():
             sys.exit('REFUSING: duplicate declarations ' + str(r['duplicate_decls']))
         if r['decls_used_outside']:
             sys.exit('REFUSING: const/let used outside ' + str(r['decls_used_outside']))
-        if r['side_effects']:
-            sys.exit('REFUSING: top-level side effects (%d)' % len(r['side_effects']))
+        # Top-level side effects are usually a bug in the chosen boundary, but a
+        # region that only wires listeners onto static markup is fine to run at
+        # module load. Requires an explicit opt-in so it can't happen by accident.
+        if r['side_effects'] and '--allow-side-effects' not in sys.argv:
+            sys.exit('REFUSING: top-level side effects (%d) — inspect them, then '
+                     'pass --allow-side-effects' % len(r['side_effects']))
 
         body = '\n'.join(lines[s:e]).rstrip() + '\n'
         os.makedirs(os.path.join(ROOT, 'tabs'), exist_ok=True)
