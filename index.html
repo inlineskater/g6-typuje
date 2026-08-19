@@ -10,9 +10,15 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%236366f1'/%3E%3Ccircle cx='22' cy='22' r='5' fill='white'/%3E%3Ccircle cx='32' cy='32' r='5' fill='white'/%3E%3Ccircle cx='42' cy='42' r='5' fill='white'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <!-- supabase-js is the ONE library the page cannot boot without: the inline
+       script creates `sb` at top level, so it can't be deferred. Preload here so
+       the download starts with the HTML, but execute it at the END of body — a
+       blocking <script> in <head> made first paint wait on 207 KB of library.
+       lightweight-charts and Turnstile used to sit here too; both are now loaded
+       on demand (see ensureLib / ensureCaptcha). -->
+  <!-- No crossorigin here on purpose: the <script> at the end of body has none
+       either, and a mismatch makes the browser fetch the file twice. -->
+  <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1362,6 +1368,9 @@
     /* ── INLINE CHART ── */
     .card-chart { width: 100%; height: 130px; overflow: hidden; cursor: crosshair; }
     .card-chart a[href*="tradingview"] { display: none !important; }
+    /* Holds the chart's height while lightweight-charts is fetched on demand, so
+       the card doesn't reflow when the real chart mounts. */
+    .chart-loading { width: 100%; height: 100%; border-radius: 8px; background: rgba(148,163,184,.10); }
 
     /* ── BET BUTTONS ── */
     .bet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -11275,6 +11284,11 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<!-- Executed here rather than in <head> so the markup above can parse and paint
+     first; the <link rel="preload"> in <head> already started the download, and a
+     classic script still runs before the inline block below it. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 'use strict';
 
@@ -11297,6 +11311,31 @@ const BUILD_ID = '__BUILD_SHA__';
 // that fills BUILD_ID would rewrite that string too, wedging the guard permanently on.
 const IS_DEPLOYED_BUILD = /^[0-9a-f]{40}$/.test(BUILD_ID);
 
+// ── On-demand third-party libraries ─────────────────────────────────────────
+// Anything that isn't needed to boot is fetched the first time it's actually
+// used, instead of blocking first paint from <head>. Promise-cached and
+// idempotent, exactly like ensureGameScript() below — a failed load drops the
+// cache entry so the next attempt retries rather than resolving forever.
+const LAZY_LIBS = {
+  charts:    'https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js',
+  turnstile: 'https://challenges.cloudflare.com/turnstile/v0/api.js',
+};
+const _libPromises = {};
+function ensureLib(name) {
+  const src = LAZY_LIBS[name];
+  if (!src) return Promise.reject(new Error('Nieznana biblioteka: ' + name));
+  if (_libPromises[name]) return _libPromises[name];
+  _libPromises[name] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => { delete _libPromises[name]; reject(new Error('Nie udało się wczytać ' + src)); };
+    document.head.appendChild(s);
+  });
+  return _libPromises[name];
+}
+
 // ── Cloudflare Turnstile (anti-brute-force) ─────────────────────────────────
 // Paste your Turnstile *site* key here (public). The matching *secret* key goes
 // into Supabase → Authentication → Bot and Abuse Protection. Until a real key is
@@ -11315,7 +11354,15 @@ const CF_ELEMENT_IDS = { login: 'cf-login', register: 'cf-register', migrate: 'c
 
 function ensureCaptcha(which) {
   if (!CAPTCHA_ON) return;
-  if (!window.turnstile) { setTimeout(() => ensureCaptcha(which), 300); return; }
+  // The Turnstile <script> is no longer in <head> — it was still being fetched on
+  // every visit months after CAPTCHA_ON was switched off. Pull it only once a
+  // captcha is genuinely wanted, then fall through to the original retry loop.
+  if (!window.turnstile) {
+    ensureLib('turnstile')
+      .then(() => ensureCaptcha(which))
+      .catch(() => setTimeout(() => ensureCaptcha(which), 1000));
+    return;
+  }
   if (cfWidgets[which] != null) return;
   const elId = CF_ELEMENT_IDS[which];
   if (!document.getElementById(elId)) return;
@@ -14069,7 +14116,22 @@ function syncActivityCatButtons() {
 }
 
 // ── Inline probability chart ──────────────────────────────────────────────
+// lightweight-charts is ~159 KB and is used by this function alone, on the Rynki
+// tab only — it used to be a blocking <script> in <head>, so every visitor paid
+// for it before first paint whether or not they ever opened a market. Both call
+// sites ignore the return value, so loading on demand and re-entering once the
+// library lands is transparent to them.
 function renderChart(container, points, marketId) {
+  if (typeof LightweightCharts === 'undefined') {
+    // Placeholder keeps the card's layout from jumping when the chart lands.
+    if (!container.querySelector('.chart-loading')) {
+      container.replaceChildren(el('div', { className: 'chart-loading' }));
+    }
+    ensureLib('charts')
+      .then(() => renderChart(container, points, marketId))
+      .catch(() => { container.replaceChildren(); });
+    return;
+  }
   if (marketId && lwCharts.has(marketId)) {
     const prev = lwCharts.get(marketId);
     prev.ro?.disconnect();
@@ -14271,83 +14333,14 @@ function setupRealtime() {
       updateCardChart(t.market_id);
       await renderMarkets();
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whack_boss_scores' }, () => {
-      if (activeTab === 'whack-boss') loadWhackBossState(false);
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whack_boss_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') loadWhackBossState(false);
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bug_jumper_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('bug_jumper').then(() => loadBugJumperState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bug_jumper_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('bug_jumper').then(() => loadBugJumperState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'flappy_pants_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('flappy_pants').then(() => loadFlappyPantsState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'flappy_pants_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('flappy_pants').then(() => loadFlappyPantsState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'snake_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('snake').then(() => loadSnakeState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'snake_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('snake').then(() => loadSnakeState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('egg_catch').then(() => loadEggCatchState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'egg_catch_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('egg_catch').then(() => loadEggCatchState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('super_mariusz').then(() => loadSuperMariuszState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_mariusz_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('super_mariusz').then(() => loadSuperMariuszState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'popup_panic_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('popup_panic').then(() => loadPopupPanicState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'popup_panic_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('popup_panic').then(() => loadPopupPanicState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tetris_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('tetris').then(() => loadTetrisState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tetris_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('tetris').then(() => loadTetrisState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bubble_breaker_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('bubble_breaker').then(() => loadBubbleBreakerState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bubble_breaker_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('bubble_breaker').then(() => loadBubbleBreakerState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('invoice_horde').then(() => loadInvoiceHordeState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoice_horde_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('invoice_horde').then(() => loadInvoiceHordeState(false));
-      await refreshMeCoins();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_scores' }, () => {
-      if (activeTab === 'whack-boss') ensureGameScript('var_patrol').then(() => loadVarPatrolState(false));
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'var_patrol_weekly_awards' }, async () => {
-      if (activeTab === 'whack-boss') ensureGameScript('var_patrol').then(() => loadVarPatrolState(false));
-      await refreshMeCoins();
-    })
+    // Seasonal score/award events are subscribed DYNAMICALLY, for the in-season
+    // game only — see subscribeSeasonalRealtime() just below. This used to be 22
+    // hard-coded .on() handlers covering 11 games at once, 10 of which could
+    // never fire usefully: only one game is ever in season, yet every client
+    // still paid a server-side RLS evaluation per WAL change plus a socket
+    // message for all of them. (The old list also silently omitted
+    // healer_dungeon and filler; the dynamic lookup covers every entry in
+    // SEASONAL_ROTATION, so adding a game needs no edit here.)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'football_matches' }, () => {
       if (activeTab === 'football') loadFootball(false);
     })
@@ -14368,11 +14361,56 @@ function setupRealtime() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_presence' }, (payload) => {
       chatOnPresence(payload.new);
-    })
-    .subscribe();
+    });
+
+  subscribeSeasonalRealtime(ch);
+  ch.subscribe();
 
   realtimeChannels.push(ch);
   setupShopRealtime();
+}
+
+// Every seasonal game exposes the same pair of tables and the same
+// load<Game>State(false) refresh entry point, so the only thing that varies is
+// the name. Subscribe to the ONE game that is actually in season this week
+// rather than to all thirteen.
+const SEASONAL_STATE_LOADERS = {
+  whack_boss:     () => loadWhackBossState(false),
+  bug_jumper:     () => loadBugJumperState(false),
+  flappy_pants:   () => loadFlappyPantsState(false),
+  snake:          () => loadSnakeState(false),
+  invoice_horde:  () => loadInvoiceHordeState(false),
+  var_patrol:     () => loadVarPatrolState(false),
+  egg_catch:      () => loadEggCatchState(false),
+  super_mariusz:  () => loadSuperMariuszState(false),
+  popup_panic:    () => loadPopupPanicState(false),
+  tetris:         () => loadTetrisState(false),
+  healer_dungeon: () => loadHealerDungeonState(false),
+  filler:         () => loadFillerState(false),
+  bubble_breaker: () => loadBubbleBreakerState(false),
+};
+
+function subscribeSeasonalRealtime(ch) {
+  let gameType;
+  try { gameType = getCurrentSeasonalEntry()?.gameType; } catch (e) { return; }
+  if (!gameType || !SEASONAL_STATE_LOADERS[gameType]) return;
+
+  // whack_boss is the one game still living inline; everything else needs its
+  // games/*.js fetched before the loader exists.
+  const refresh = () => {
+    if (activeTab !== 'whack-boss') return;
+    ensureGameScript(gameType)
+      .then(() => SEASONAL_STATE_LOADERS[gameType]())
+      .catch(() => {});
+  };
+
+  ch.on('postgres_changes',
+    { event: 'INSERT', schema: 'public', table: gameType + '_scores' },
+    refresh);
+
+  ch.on('postgres_changes',
+    { event: 'INSERT', schema: 'public', table: gameType + '_weekly_awards' },
+    async () => { refresh(); await refreshMeCoins(); });
 }
 
 function updateCardProb(m) {
@@ -29846,11 +29884,29 @@ function farmCropStageIcon(ripeEmoji, pct, ready) {
   const stage = ready ? 2 : (pct < 0.34 ? 0 : (pct < 0.7 ? 1 : 2));
   return stage === 0 ? '🌱' : (stage === 1 ? '🌿' : (ripeEmoji || '🌱'));
 }
+// Child-node lookups for one farm cell, memoised on the cell element itself.
+// Every path that changes a plot replaces the whole cell node
+// (patchFarmTileViews / renderFarmBoard), so a stale cache is impossible: the
+// cache dies with the node it was attached to.
+function farmCellRefs(cell) {
+  let refs = cell._fmRefs;
+  if (!refs) {
+    refs = cell._fmRefs = {
+      fill:  cell.querySelector('.farm-cell-bar-fill'),
+      bar:   cell.querySelector('.farm-cell-bar'),
+      emoji: cell.querySelector('.farm-cell-emoji'),
+      ready: cell.querySelector('.farm-cell-ready'),
+      lastW: null,
+    };
+  }
+  return refs;
+}
+
 function applyFarmCropVisual(cell, ripeEmoji, pct, ready) {
   const g = Math.max(0, Math.min(1, pct));
   cell.style.setProperty('--grow', g.toFixed(3));
   cell.classList.toggle('ready', !!ready);
-  const span = cell.querySelector('.farm-cell-emoji');
+  const span = farmCellRefs(cell).emoji;
   if (span) {
     const icon = farmCropStageIcon(ripeEmoji, g, ready);
     if (span.dataset.icon !== icon) { span.dataset.icon = icon; span.replaceChildren(farmIcon(icon)); }
@@ -29858,24 +29914,40 @@ function applyFarmCropVisual(cell, ripeEmoji, pct, ready) {
 }
 
 // 1s growth update — patches crop bars/ready state without rebuilding pots.
+// Hot path: this runs every second for as long as anyone sits on Ogródek, which
+// is the tab the app opens on. It used to do four uncached querySelector calls
+// per planted tile (~200/s on a full grid) and rewrite inline styles whether or
+// not the displayed value had changed, forcing a style recalc against the whole
+// stylesheet each tick. Now: one query for the board, per-cell lookups memoised
+// on the node, and writes only when the rounded value actually moves.
 function updateFarmGrowth() {
   const board = document.getElementById('farm-board');
   if (!board) return;
   const now = Date.now();
+  let cells = null;   // built lazily — most ticks have at least one planted tile
   fmTiles.forEach((tile, key) => {
     if (!tile.planted_species) return;
-    const cell = board.querySelector('.farm-cell[data-xy="' + key + '"]');
+    if (!cells) {
+      cells = new Map();
+      board.querySelectorAll('.farm-cell[data-xy]').forEach(c => cells.set(c.dataset.xy, c));
+    }
+    const cell = cells.get(key);
     if (!cell) return;
+    const refs = farmCellRefs(cell);
     const t0 = tile.planted_at ? new Date(tile.planted_at).getTime() : now;
     const t1 = tile.ready_at ? new Date(tile.ready_at).getTime() : now;
     const ready = now >= t1;
     const pct = t1 > t0 ? Math.max(0, Math.min(1, (now - t0) / (t1 - t0))) : 1;
-    const fill = cell.querySelector('.farm-cell-bar-fill');
-    if (fill) fill.style.width = (pct * 100) + '%';
-    const bar = cell.querySelector('.farm-cell-bar');
-    if (bar) bar.classList.toggle('ready', ready);
+    // 0.1% resolution is finer than a 1px bar can show; skipping equal writes
+    // keeps most ticks from touching the style system at all.
+    const w = (pct * 100).toFixed(1);
+    if (refs.fill && refs.lastW !== w) { refs.fill.style.width = w + '%'; refs.lastW = w; }
+    if (refs.bar) refs.bar.classList.toggle('ready', ready);
     applyFarmCropVisual(cell, farmTileCropEmoji(tile), pct, ready);
-    if (ready && !cell.querySelector('.farm-cell-ready')) cell.appendChild(el('span', { className: 'farm-cell-ready' }, '✓'));
+    if (ready && !refs.ready) {
+      refs.ready = el('span', { className: 'farm-cell-ready' }, '✓');
+      cell.appendChild(refs.ready);
+    }
   });
   if (farmViewMode === 'table') updateFarmTableGrowth(now);
 }
