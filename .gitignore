@@ -19,3 +19,6 @@ document_signatures_export/
 # Database backups (contain user data — never commit; repo is public)
 backups/
 ui-demo.html
+
+# Local geometry scratch page for the Filler diamond lattice — dev-only, never deployed
+filler-geom-check.html
