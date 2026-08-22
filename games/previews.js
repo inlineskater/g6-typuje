@@ -839,6 +839,97 @@ function agpFillerStep(p) {
 const AGP_BB_MOVE_MS = 620;    // pause between taps, so a viewer can follow
 const AGP_BB_HOLD_MS = 1600;   // linger on a finished board before reshuffling
 
+// ── „Saper Maraton" ─────────────────────────────────────────────────────────
+// Runs the REAL simulation (spInitState/spTick/spApplyMove are pure), driven by
+// a small Minesweeper player: the two trivial deductions, then pairwise subset
+// rules, then the lowest-probability guess. It therefore clears most boards and
+// occasionally blows up — which is exactly what the card should advertise.
+const AGP_SP_MOVE_MS = 360;    // pause between clicks, so a viewer can follow
+const AGP_SP_HOLD_MS = 2600;   // how long the finished round is held on screen
+
+function agpSaperReset(p) {
+  p.st = spInitState(agpRandSeed());
+  p.rt = { playing: true, sim: p.st, freeze: null, floats: [], flagMode: false };
+  p.doneFor = 0;
+}
+
+function agpSaperMove(b) {
+  const n = b.w * b.h;
+  const cons = [];
+  for (let c = 0; c < n; c += 1) {
+    if (!b.open[c] || b.adj[c] <= 0) continue;
+    let flags = 0;
+    const hidden = [];
+    for (const nb of spNeighbors(b, c)) {
+      if (b.flag[nb]) flags += 1;
+      else if (!b.open[nb]) hidden.push(nb);
+    }
+    if (hidden.length) cons.push({ cell: c, need: b.adj[c] - flags, hidden });
+  }
+  for (const k of cons) {
+    if (k.need === 0) return [SP_CHORD, k.cell];
+    if (k.need === k.hidden.length) return [SP_FLAG, k.hidden[0]];
+  }
+  for (const A of cons) for (const B of cons) {
+    if (A === B || !A.hidden.every(h => B.hidden.includes(h))) continue;
+    const diff = B.hidden.filter(h => !A.hidden.includes(h));
+    if (!diff.length) continue;
+    if (B.need - A.need === 0) return [SP_OPEN, diff[0]];
+    if (B.need - A.need === diff.length) return [SP_FLAG, diff[0]];
+  }
+  const hidden = [];
+  for (let c = 0; c < n; c += 1) if (!b.open[c] && !b.flag[c]) hidden.push(c);
+  if (!hidden.length) return null;
+  const bg = (b.m - b.flags) / hidden.length;
+  const prob = new Map();
+  for (const k of cons) for (const h of k.hidden) {
+    const v = k.need / k.hidden.length;
+    if (!prob.has(h) || v > prob.get(h)) prob.set(h, v);
+  }
+  let best = hidden[0], bestP = Infinity;
+  for (const h of hidden) {
+    const v = prob.has(h) ? prob.get(h) : bg;
+    if (v < bestP) { bestP = v; best = h; }
+  }
+  return [SP_OPEN, best];
+}
+
+function agpSaperStep(p) {
+  const st = p.st;
+  const now = performance.now();
+  if (st.over) {
+    // Letting `playing` go false is what makes saperDraw paint its real
+    // end-of-round card — a better beat to end the attract loop on.
+    p.rt.playing = false;
+    p.doneFor += AGP_SP_MOVE_MS;
+    if (p.doneFor > AGP_SP_HOLD_MS) agpSaperReset(p);
+    return;
+  }
+  // Burn the clock at the rate the real game does, so the HUD counts down.
+  const ticks = Math.round(AGP_SP_MOVE_MS / SP_TICK_MS);
+  for (let i = 0; i < ticks && !st.over; i += 1) spTick(st);
+  if (st.over) return;
+  // A finished board held on screen hides the live one underneath; the real
+  // game refuses input during that window and so does the bot.
+  if (p.rt.freeze && p.rt.freeze.until > now) return;
+
+  const b = st.board;
+  const act = !b.placed
+    ? [SP_OPEN, Math.floor(b.h / 2) * b.w + Math.floor(b.w / 2)]
+    : agpSaperMove(b);
+  if (!act) return;
+  const clearedBefore = st.cleared;
+  const scoreBefore = st.score;
+  if (!spApplyMove(st, act[0], act[1])) return;
+  if (b.boom) {
+    p.rt.freeze = { board: b, until: now + SP_FREEZE_BOOM_MS, kind: 'boom' };
+    p.rt.floats.push({ x: SP_CS_W / 2, y: SP_HUD_H + 40, until: now + SP_FLOAT_MS, text: '💥 −5 s', color: '#dc2626' });
+  } else if (st.cleared > clearedBefore) {
+    p.rt.freeze = { board: b, until: now + SP_FREEZE_CLEAR_MS, kind: 'clear' };
+    p.rt.floats.push({ x: SP_CS_W / 2, y: SP_HUD_H + 40, until: now + SP_FLOAT_MS, text: '+' + (st.score - scoreBefore), color: '#0a7d2c' });
+  }
+}
+
 function agpBubbleReset(p) {
   p.st = bbInitState(agpRandSeed());
   p.rt = { playing: true, sim: p.st, sel: null, anim: null, burst: [], floats: [] };
@@ -1115,6 +1206,24 @@ const AGP_DEFS = {
       const oc = bbCtx, ort = bubbleBreakerRuntime;
       bbCtx = p.ctx; bubbleBreakerRuntime = p.rt;
       try { bubbleBreakerDraw(performance.now()); } finally { bbCtx = oc; bubbleBreakerRuntime = ort; }
+    },
+  },
+
+  saper: {
+    dep: 'saper',
+    size: () => [SP_CS_W, SP_CS_H],
+    init(p) { agpSaperReset(p); },
+    step(p, dt) {
+      p.acc += dt;
+      while (p.acc >= AGP_SP_MOVE_MS) {
+        p.acc -= AGP_SP_MOVE_MS;
+        agpSaperStep(p);
+      }
+    },
+    draw(p) {
+      const oc = spCtx, ort = saperRuntime;
+      spCtx = p.ctx; saperRuntime = p.rt;
+      try { saperDraw(performance.now()); } finally { spCtx = oc; saperRuntime = ort; }
     },
   },
 

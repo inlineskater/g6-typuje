@@ -39,16 +39,19 @@ AS $$
     -- measured engagement.
     WHEN '2026-08-10' THEN 'bubble_breaker'  -- „Kulki G6" debut (took Filler's slot)
     WHEN '2026-08-17' THEN 'bug_jumper'  -- Bug Jumper: Dynamic Course relaunch (pushed a THIRD time — Tetris, then Uzdrowiciel, then the Kulki debut)
-    WHEN '2026-08-24' THEN 'super_mariusz'  -- encore
+    -- 2026-08-22: the Super Mariusz encore that held this slot was replaced by
+    -- the „Saper Maraton" DEBUT (supabase/saper.sql). Minesweeper as a 90 s
+    -- score chase — the office classic the rotation never had.
+    WHEN '2026-08-24' THEN 'saper'  -- „Saper Maraton" debut
     WHEN '2026-08-31' THEN 'flappy_pants'  -- encore
     -- SEASONAL_ROTATION from its 2026-05-18 Monday anchor.
     ELSE
       (ARRAY[
         'whack_boss','bug_jumper','flappy_pants','snake','invoice_horde',
         'var_patrol','egg_catch','super_mariusz','popup_panic','tetris','healer_dungeon','filler',
-        'bubble_breaker'
+        'bubble_breaker','saper'
       ])[
-        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 13) + 1
+        (GREATEST(0, (p_week_start - DATE '2026-05-18') / 7) % 14) + 1
       ]
   END;
 $$;
@@ -188,5 +191,16 @@ SELECT cron.schedule(
       THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
       WHEN public.seasonal_game_for_week(public.bubble_breaker_week_start(now() - interval '7 days')) = 'bubble_breaker'
       THEN public.award_bubble_breaker_week(public.bubble_breaker_week_start(now() - interval '7 days'))
+      ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
+);
+
+-- „Saper Maraton" — debuts the week of 2026-08-24 (see supabase/saper.sql).
+SELECT cron.schedule(
+  'saper_weekly_awards',
+  '0 22,23 * * 0',
+  $$SELECT CASE WHEN EXTRACT(hour FROM (now() AT TIME ZONE 'Europe/Warsaw'))::integer <> 0
+      THEN json_build_object('ok', true, 'skipped', 'not_midnight_warsaw')
+      WHEN public.seasonal_game_for_week(public.saper_week_start(now() - interval '7 days')) = 'saper'
+      THEN public.award_saper_week(public.saper_week_start(now() - interval '7 days'))
       ELSE json_build_object('ok', true, 'skipped', 'not_in_season') END;$$
 );

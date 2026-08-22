@@ -55,6 +55,9 @@ verify_jwt = true
 [functions.bubble-breaker-action]
 verify_jwt = true
 
+[functions.saper-action]
+verify_jwt = true
+
 [functions.garden-action]
 verify_jwt = true
 

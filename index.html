@@ -5176,6 +5176,30 @@
     }
     .bb-arena canvas { display: block; width: 100%; height: 100%; }
 
+    /* ── „Saper Maraton" (saper) — Windows 3.1 Minesweeper board ── */
+    .sp-arena {
+      position: relative; width: 100%; max-width: 430px; margin: 0 auto;
+      aspect-ratio: 400 / 462; overflow: hidden;
+      border-radius: 6px; border: 3px solid #7b7b7b;
+      background: #bdbdbd;
+      box-shadow: 0 0 20px rgba(15,23,42,.28), inset 0 0 0 2px #ffffff;
+      /* touch-action:none so a tap on a cell is never swallowed by a scroll
+         gesture, and so the long-press-to-flag gesture is not stolen by the
+         browser's own text selection / callout handling. */
+      user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+      touch-action: none; cursor: pointer;
+    }
+    .sp-arena canvas { display: block; width: 100%; height: 100%; }
+    .sp-flag-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      font-size: 13px; font-weight: 700; line-height: 1;
+    }
+    .sp-flag-btn.is-on {
+      background: #dc2626; border-color: #b91c1c; color: #fff;
+    }
+
     /* ── Najazd Ticketów (Invoice Horde) ── */
     .ih-arena {
       max-width: 680px;
@@ -10300,6 +10324,95 @@
         </div>
       </div>
 
+      <!-- „Saper Maraton" panel (Minesweeper as a 90 s score chase; gameType saper).
+           Debuts as a full seasonal game the week of 2026-08-24. Like „Kulki G6"
+           ONE panel node serves both modes: loadSeasonalTab() shows it in place
+           during its season, and selectAllGame() moves this same node into
+           #ag-game-slot for a free arcade run. -->
+      <div id="seasonal-game-saper" class="hidden">
+        <div class="bj-layout">
+          <section class="bj-game-panel">
+            <div class="bj-head">
+              <div>
+                <h2 class="page-title">„Saper Maraton" 💣</h2>
+                <p class="page-sub">Ten Saper, w którego cała firma grała zamiast pracować — tylko że <strong>na czas</strong>. Masz <strong>90 sekund</strong> i nieskończony stos plansz: rozbrajasz jedną, natychmiast dostajesz następną, o jedno oczko trudniejszą. Wejdziesz na minę? Tracisz tę planszę i <strong>5 sekund</strong> — ale nie rundę.</p>
+              </div>
+              <div class="bj-prizes" aria-label="Nagrody tygodniowe">
+                <span class="bj-prize">🥇 1000 🪙</span>
+                <span class="bj-prize">🥈 500 🪙</span>
+                <span class="bj-prize">🥉 200 🪙</span>
+              </div>
+            </div>
+
+            <div class="bj-rules">
+              <div class="bj-rules-title">Jak grać</div>
+              <ul>
+                <li><strong>Myszką:</strong> lewy przycisk odkrywa pole, prawy stawia flagę. <strong>Palcem:</strong> dotknięcie odkrywa, przytrzymanie stawia flagę — albo włącz przycisk 🚩 i dotknięcie samo stawia flagi.</li>
+                <li><strong>Pierwsze kliknięcie na każdej planszy jest zawsze bezpieczne</strong> — miny rozstawiają się dopiero po nim i nigdy w polu, które kliknąłeś, ani wokół niego. Żadna plansza nie kończy się rzutem monetą na starcie.</li>
+                <li><strong>Kliknij cyfrę, przy której stoi komplet flag</strong>, żeby odsłonić wszystkie pozostałe sąsiednie pola naraz. To jest ten jeden trik, który odróżnia szybką rundę od powolnej — ale jeśli flaga stoi źle, wylatujesz w powietrze.</li>
+                <li><strong>Punkty za rozbrojoną planszę:</strong> 100 + 40 za każde oczko trudności, plus bonus za tempo (im szybciej, tym więcej — po 18 sekundach zero) i plus 25 za każdą planszę z rzędu bez wpadki (maks. 5 z rzędu).</li>
+                <li><strong>Mina nie kończy rundy.</strong> Kosztuje planszę, serię i 5 sekund z zegara. Gra się do końca 90 sekund — liczy się, ile zdążysz.</li>
+                <li><strong>Przedmioty specjalne</strong> z bonusem do wyniku dorzucają ×20 swojej wartości (przedmiot +5 to +100 punktów).</li>
+                <li>Nagrody po zamknięciu tygodnia: 🥇 1000 🪙 · 🥈 500 🪙 · 🥉 200 🪙.</li>
+              </ul>
+            </div>
+
+            <div class="bj-stats">
+              <div class="bj-stat">
+                <div class="bj-stat-label">Wynik</div>
+                <div class="bj-stat-value" id="sp-score">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Plansze</div>
+                <div class="bj-stat-value" id="sp-boards">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Seria</div>
+                <div class="bj-stat-value" id="sp-streak">0</div>
+              </div>
+              <div class="bj-stat">
+                <div class="bj-stat-label">Czas</div>
+                <div class="bj-stat-value" id="sp-time">90 s</div>
+              </div>
+            </div>
+
+            <div class="sp-arena" id="sp-arena">
+              <canvas id="sp-canvas"></canvas>
+            </div>
+
+            <div class="bj-actions">
+              <button class="btn-primary bj-start-btn" id="sp-start-btn">Start rundy</button>
+              <button class="sp-flag-btn" id="sp-flag-btn" type="button" aria-pressed="false" title="Gdy włączone, dotknięcie stawia flagę zamiast odkrywać pole">🚩 Tryb flag: WYŁ</button>
+              <div class="bj-status" id="sp-status">90 sekund. Ile plansz zdążysz rozbroić?</div>
+            </div>
+          </section>
+
+          <aside class="bj-board-panel">
+            <section>
+              <div class="bj-board-title">
+                <span>Ten tydzień</span>
+                <span class="bj-board-sub" id="sp-week-label"></span>
+              </div>
+              <div id="sp-weekly-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>All-time</span>
+                <span class="bj-board-sub">rekordy</span>
+              </div>
+              <div id="sp-alltime-board"><div class="loading-center"><div class="spinner"></div></div></div>
+            </section>
+            <section>
+              <div class="bj-board-title">
+                <span>Ostatnie nagrody</span>
+                <span class="bj-board-sub" title="Top 3 z minionego tygodnia dostają nagrody w poniedziałek po zamknięciu tygodnia.">wypłata: po tygodniu</span>
+              </div>
+              <div class="bj-awards" id="sp-awards"></div>
+            </section>
+          </aside>
+        </div>
+      </div>
+
       <!-- Uzdrowiciel G6 panel (WoW Classic resto-druid healer; gameType healer_dungeon).
            PHASE 1: arcade-only. Unlike every other seasonal panel this one is a
            FIT-TO-VIEWPORT TAKEOVER (.hd-fit is position:fixed and covers the app
@@ -10797,6 +10910,18 @@
             <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
           </div>
           <div class="ag-card-scores" data-scores="bubble_breaker"></div>
+        </div>
+        <div class="ag-card" role="button" tabindex="0" data-game="saper">
+          <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">💣</span></div>
+          <div class="ag-card-main">
+            <div class="ag-card-head">
+              <span class="ag-card-name">„Saper Maraton”</span>
+              <span class="ag-card-tag">NOWOŚĆ · NA CZAS</span>
+            </div>
+            <div class="ag-card-desc">Ten Saper z Windowsa, tylko na stoperze. 90 sekund i nieskończony stos plansz — rozbrajasz jedną, dostajesz następną, trudniejszą. Pierwsze kliknięcie zawsze bezpieczne, mina kosztuje 5 sekund, ale rundy nie kończy. Liczy się, ile zdążysz.</div>
+            <div class="ag-card-cta">Za darmo — kliknij, aby zagrać</div>
+          </div>
+          <div class="ag-card-scores" data-scores="saper"></div>
         </div>
         <div class="ag-card" role="button" tabindex="0" data-game="popup_panic">
           <div class="ag-card-media"><span class="ag-card-emoji" aria-hidden="true">🖱️</span></div>
@@ -11689,6 +11814,7 @@ let fillerRuntime = null;
 // scripts sharing one global scope is a SyntaxError), and the stop*/leave*
 // paths below reference it before that file has ever been fetched.
 let bubbleBreakerRuntime = null;
+let saperRuntime = null;
 let allGamesMode = false;
 let allGamesSelectedGame = null;
 
@@ -11713,6 +11839,7 @@ const LAZY_GAME_SCRIPTS = {
   healer_dungeon:'games/healer-dungeon.js',
   filler:        'games/filler.js',
   bubble_breaker:'games/bubble-breaker.js',
+  saper:         'games/saper.js',
 };
 // ── Lazy-loaded tab modules ────────────────────────────────────────────────
 // Same idea as ensureGameScript below, applied to whole tabs. A tab listed here
@@ -11800,6 +11927,7 @@ function stopTetrisRound() {}
 function stopHealerDungeonRound() {}
 function stopFillerRound() {}
 function stopBubbleBreakerRound() {}
+function stopSaperRound() {}
 
 // Same safety net for the lazy TAB modules (see TAB_MODULES above). doLogout()
 // and switchTab() tear down every tab unconditionally, whether or not its
@@ -11825,7 +11953,7 @@ const HERO_ITEM_SLOTS = [
 const HERO_ITEM_SLOT_LABELS = Object.fromEntries(HERO_ITEM_SLOTS.map(s => [s.id, s.label]));
 // Masculine forms (przedmiot), unlike FARM_RARITY_PL's feminine forms (karta).
 const HERO_ITEM_RARITY_PL = { common: 'zwykły', rare: 'rzadki', epic: 'epicki', legendary: 'legendarny' };
-const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic', 'tetris', 'bubble_breaker']);
+const SEASONAL_SCORE_GAMES = new Set(['whack_boss', 'bug_jumper', 'flappy_pants', 'snake', 'invoice_horde', 'var_patrol', 'egg_catch', 'popup_panic', 'tetris', 'bubble_breaker', 'saper']);
 let heroItemDefs = [];
 let casinoLuckGlobalUntil = null; // shared „Amulet Bezwstydnego Fartu" buff end (casino_luck_status view)
 let casinoLuckStatusLoadedAt = 0;
@@ -12122,6 +12250,14 @@ const bbScoreEl       = document.getElementById('bb-score');
 const bbBallsEl       = document.getElementById('bb-balls');
 const bbPopsEl        = document.getElementById('bb-pops');
 const bbBestEl        = document.getElementById('bb-best');
+const spArena         = document.getElementById('sp-arena');
+const spStartBtn      = document.getElementById('sp-start-btn');
+const spFlagBtn       = document.getElementById('sp-flag-btn');
+const spStatus        = document.getElementById('sp-status');
+const spScoreEl       = document.getElementById('sp-score');
+const spBoardsEl      = document.getElementById('sp-boards');
+const spStreakEl      = document.getElementById('sp-streak');
+const spTimeEl        = document.getElementById('sp-time');
 const ihArena         = document.getElementById('ih-arena');
 const ihStartBtn      = document.getElementById('ih-start-btn');
 const ihStatus        = document.getElementById('ih-status');
@@ -12628,6 +12764,7 @@ const AG_PANEL_IDS = {
   healer_dungeon:'seasonal-game-healer-dungeon',
   filler:        'seasonal-game-filler',
   bubble_breaker:'seasonal-game-bubble-breaker',
+  saper:         'seasonal-game-saper',
 };
 let agPanelHome = {};
 
@@ -12731,6 +12868,7 @@ function selectAllGame(gameType) {
     // The panel just moved into #ag-game-slot, so its canvas needs re-measuring.
     if (gameType === 'tetris') requestAnimationFrame(() => { tetrisInitCanvas(); tetrisDraw(); });
     if (gameType === 'bubble_breaker') requestAnimationFrame(() => { bubbleBreakerInitCanvas(); bubbleBreakerDraw(); });
+    if (gameType === 'saper') requestAnimationFrame(() => { saperInitCanvas(); saperSyncFlagBtn(); saperDraw(); });
     // Takeover game: build the idle party, then size the console to the viewport.
     if (gameType === 'healer_dungeon') requestAnimationFrame(() => {
       stopHealerDungeonRound();
@@ -13432,7 +13570,7 @@ const ACT_GAME_LABELS = {
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
   egg_catch: '🥚 Łap Jajka', super_mariusz: '🧢 Super Mariusz',
   popup_panic: '🖱️ Zamknij Popupy', tetris: '🧱 Tetris G6',
-  bubble_breaker: '🔵 Kulki G6',
+  bubble_breaker: '🔵 Kulki G6', saper: '💣 Saper Maraton',
   arcade: '🕹️ Arkada',
 };
 // Casino games whose rapid plays are collapsed into one session row; an idle gap
@@ -13505,7 +13643,7 @@ async function buildActivityFeed() {
   const [
     profRes, tradesRes, gameRes, footballRes, coinTxRes,
     whackRes, snakeRes, flappyRes, bugRes, invoiceRes, varPatrolRes, eggCatchRes,
-    superMariuszRes, popupPanicRes, tetrisRes, bubbleBreakerRes, arcadeRes, nftRes,
+    superMariuszRes, popupPanicRes, tetrisRes, bubbleBreakerRes, saperRes, arcadeRes, nftRes,
   ] = await Promise.all([
     sb.from('profiles').select('id,nick'),
     ranged(sb.from('trades').select('nick_snapshot,side,amount,market_id,created_at'), 'created_at'),
@@ -13523,6 +13661,7 @@ async function buildActivityFeed() {
     ranged(sb.from('popup_panic_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('tetris_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('bubble_breaker_scores').select(scoreSel), 'submitted_at'),
+    ranged(sb.from('saper_scores').select(scoreSel), 'submitted_at'),
     ranged(sb.from('arcade_scores').select('user_id,game_type,score,created_at'), 'created_at'),
     ranged(sb.from('farm_nft_transfers').select('from_owner,to_owner,species,serial_no,price,kind,created_at'), 'created_at'),
   ]);
@@ -13612,6 +13751,7 @@ async function buildActivityFeed() {
   pushScores(popupPanicRes.data, 'popup_panic');
   pushScores(tetrisRes.data, 'tetris');
   pushScores(bubbleBreakerRes.data, 'bubble_breaker');
+  pushScores(saperRes.data, 'saper');
   (superMariuszRes.data || []).forEach(s => {
     const tail = s.completed ? 'ukończył trasę w ' + smFormatTime(s.completion_ms) : 'DNF — ' + smProgressPct(s.score) + '% trasy';
     entries.push({ nick: nickOf(s), ts: s.submitted_at, cat: 'game',
@@ -13961,6 +14101,7 @@ const SEASONAL_STATE_LOADERS = {
   healer_dungeon: () => loadHealerDungeonState(false),
   filler:         () => loadFillerState(false),
   bubble_breaker: () => loadBubbleBreakerState(false),
+  saper:          () => loadSaperState(false),
 };
 
 function subscribeSeasonalRealtime(ch) {
@@ -14602,6 +14743,7 @@ function startActivityLive() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'popup_panic_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tetris_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bubble_breaker_scores' }, scheduleActivityRebuild)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'saper_scores' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'gardens' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, scheduleActivityRebuild)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'farm_nft_transfers' }, scheduleActivityRebuild)
@@ -17121,6 +17263,7 @@ const SEASONAL_ROTATION = [
   { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },
   { gameType: 'filler', displayName: 'Filler 🎨' },
   { gameType: 'bubble_breaker', displayName: '„Kulki G6" 🔵' },
+  { gameType: 'saper', displayName: '„Saper Maraton" 💣' },
 ];
 // ⚠️ Every entry here is mirrored in seasonal_game_for_week()
 // (supabase/season-award-gating.sql) — that SQL function gates the Monday
@@ -17149,7 +17292,13 @@ const SEASONAL_OVERRIDES = {
   '2026-08-03': { gameType: 'healer_dungeon', displayName: '„Uzdrowiciel G6" 💚' },  // debut
   '2026-08-10': { gameType: 'bubble_breaker', displayName: '„Kulki G6" 🔵' },  // debut (took Filler's slot)
   '2026-08-17': { gameType: 'bug_jumper', displayName: 'Bug Jumper: Dynamic Course 🐛' },  // relaunch, pushed a THIRD time (Tetris, then Uzdrowiciel, then the Kulki debut)
-  '2026-08-24': { gameType: 'super_mariusz', displayName: '„Super Mariusz" 🧢' },  // encore — most rounds played of any seasonal week
+  // 2026-08-22: this was a Super Mariusz encore; it gave way to the „Saper
+  // Maraton" DEBUT. Minesweeper is the one office classic the rotation never
+  // had, it is short (90 s a run), and unlike Filler it needs exactly one
+  // willing player — which is what an unattended week can actually rely on.
+  // The encore it displaced costs nothing: Super Mariusz has already had two
+  // weeks and stays in the free arcade.
+  '2026-08-24': { gameType: 'saper', displayName: '„Saper Maraton" 💣' },  // debut
   '2026-08-31': { gameType: 'flappy_pants', displayName: '„3 Pary Spodni" 👖' },  // encore — most replayed game in the free arcade
 };
 
@@ -17693,6 +17842,7 @@ function loadSeasonalTab(showSpinner = true) {
   const hdPanel       = document.getElementById('seasonal-game-healer-dungeon');
   const flPanel       = document.getElementById('seasonal-game-filler');
   const bbPanel       = document.getElementById('seasonal-game-bubble-breaker');
+  const spPanel       = document.getElementById('seasonal-game-saper');
   const archiveBanner = document.getElementById('seasonal-archive-banner');
 
   const isWB = current.gameType === 'whack_boss';
@@ -17708,6 +17858,7 @@ function loadSeasonalTab(showSpinner = true) {
   const isHD = current.gameType === 'healer_dungeon';
   const isFL = current.gameType === 'filler';
   const isBB = current.gameType === 'bubble_breaker';
+  const isSP = current.gameType === 'saper';
   if (wbPanel) { if (isWB) show(wbPanel); else hide(wbPanel); }
   if (bjPanel) { if (isBJ) show(bjPanel); else hide(bjPanel); }
   if (fpPanel) { if (isFP) show(fpPanel); else hide(fpPanel); }
@@ -17721,6 +17872,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (hdPanel) { if (isHD) show(hdPanel); else hide(hdPanel); }
   if (flPanel) { if (isFL) show(flPanel); else hide(flPanel); }
   if (bbPanel) { if (isBB) show(bbPanel); else hide(bbPanel); }
+  if (spPanel) { if (isSP) show(spPanel); else hide(spPanel); }
   if (archiveBanner) hide(archiveBanner);
   if (!isWB && whackBossRuntime?.playing) stopWhackBossRound();
   if (!isBJ && bugJumperRuntime?.playing) stopBugJumperRound();
@@ -17733,6 +17885,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (!isPP && popupPanicRuntime?.playing) stopPopupPanicRound();
   if (!isTT && tetrisRuntime?.playing) stopTetrisRound();
   if (!isBB && bubbleBreakerRuntime?.playing) stopBubbleBreakerRound();
+  if (!isSP && saperRuntime?.playing) stopSaperRound();
   if (!isHD && healerRuntime?.playing) stopHealerDungeonRound();
   if (!isHD && typeof healerExitView === 'function') healerExitView();
   // Filler has no runtime-level archiveMode flag to reset (see below) — it
@@ -17750,6 +17903,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (popupPanicRuntime) popupPanicRuntime.archiveMode = false;
   if (tetrisRuntime) tetrisRuntime.archiveMode = false;
   if (bubbleBreakerRuntime) bubbleBreakerRuntime.archiveMode = false;
+  if (saperRuntime) saperRuntime.archiveMode = false;
   if (healerRuntime) healerRuntime.archiveMode = false;
   // Filler is server-authoritative (see docs/filler.md) — there is no
   // client-side round/runtime that carries an archiveMode flag across its
@@ -17769,6 +17923,7 @@ function loadSeasonalTab(showSpinner = true) {
   if (isPP) ensureGameScript('popup_panic').then(() => loadPopupPanicState(showSpinner));
   if (isTT) ensureGameScript('tetris').then(() => loadTetrisState(showSpinner));
   if (isBB) ensureGameScript('bubble_breaker').then(() => loadBubbleBreakerState(showSpinner));
+  if (isSP) ensureGameScript('saper').then(() => loadSaperState(showSpinner));
   if (isHD) ensureGameScript('healer_dungeon').then(() => {
     if (!healerRuntime) stopHealerDungeonRound();
     healerEnterView();

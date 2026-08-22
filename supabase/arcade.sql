@@ -82,7 +82,7 @@ BEGIN
   IF p_game_type NOT IN (
     'whack_boss', 'bug_jumper', 'flappy_pants', 'snake',
     'invoice_horde', 'var_patrol', 'egg_catch', 'super_mariusz', 'popup_panic',
-    'tetris', 'healer_dungeon', 'bubble_breaker'
+    'tetris', 'healer_dungeon', 'bubble_breaker', 'saper'
   ) THEN
     RAISE EXCEPTION 'invalid_game_type';
   END IF;
@@ -164,6 +164,14 @@ BEGIN
     -- is the only guard on this path — 12000 leaves head room for a genuinely
     -- exceptional human run without being meaningless.
     WHEN 'bubble_breaker' THEN 12000
+    -- „Saper Maraton": 90 seconds of Minesweeper boards, 100 + 40×rung per
+    -- board cleared plus a decaying speed bonus and a streak bonus. Measured,
+    -- not guessed — scripts/saper-balance.mjs drives a deducing bot at a
+    -- sustained ten moves a second (well past what hands do) and tops out
+    -- around 8000, while a good human round lands near 2200. Arcade scores are
+    -- client-reported, so this cap is the only guard on this path; it mirrors
+    -- SP_MAX_SCORE in games/saper.js, which is where the seasonal path clamps.
+    WHEN 'saper'          THEN 9999
     ELSE NULL
   END;
   IF v_score_cap IS NULL THEN RAISE EXCEPTION 'invalid_game_type'; END IF;
