@@ -7,7 +7,14 @@
 --           + live poker stack
 --           + owned hero items & certificates (shop price, or auction winning bid)
 --           + garden accessories (price paid, from the coin ledger)
+--           + Bank G6 holdings (open deposits at mark, bonds at face+accrued,
+--             casino shares at cost) — see supabase/bank.sql
 --           − outstanding farm land-tax debt (kataster liability)
+--
+-- ⚠️ Requires supabase/bank.sql to have been run first: bank_user_assets() is
+-- defined there. Re-run THIS file after re-running bank.sql is not needed (the
+-- helper is stable), but running this file on a database without bank.sql will
+-- fail at CREATE time.
 --
 -- hero_item_instances is RLS-restricted to its owner, so the leaderboard
 -- (security_invoker) view cannot aggregate other players' items directly.
@@ -83,6 +90,9 @@ AS $$
              FROM public.farm_user_state fus
             WHERE fus.user_id = p_uid
          ), 0)
+       -- Bank G6: open Lokata/Skarbonka principal marked to now, bonds at
+       -- face + accrued-unpaid coupons, casino shares at what was paid.
+       + COALESCE(public.bank_user_assets(p_uid), 0)
        -- minus outstanding farm land-tax debt (kataster): a hard liability —
        -- autopaid from every crop/marketplace payout, accrues 10%/day interest,
        -- and blocks buying/planting until cleared. Subtracting it HERE nets it
@@ -183,6 +193,7 @@ AS $$
       COALESCE((SELECT fus.boxes * 100 + fus.boxes_gold * 500 + fus.tile_vouchers * 350
                   FROM public.farm_user_state fus
                  WHERE fus.user_id = p_uid), 0) AS farm_boxes,
+      COALESCE(public.bank_user_assets(p_uid), 0) AS bank,
       -- liability: outstanding land-tax debt (kataster), reported positive here,
       -- subtracted from 'total' below (must mirror user_assets_value)
       COALESCE((SELECT fus.land_tax_debt
@@ -196,6 +207,7 @@ AS $$
     'poker_stack',      round(poker_stack)::int,
     'hero_items',       round(hero_items)::int,
     'accessories',      round(accessories)::int,
+    'bank',             round(bank)::int,
     'farm',             round(farm_land + farm_cards + farm_nft + farm_crops + farm_boxes)::int,
     'farm_parts',       json_build_object(
                           'land',   round(farm_land)::int,
@@ -205,6 +217,7 @@ AS $$
                           'boxes',  round(farm_boxes)::int),
     'farm_tax_debt',    round(farm_tax_debt)::int,
     'total',            round(cash + market_positions + football_open + poker_stack + hero_items + accessories
+                              + bank
                               + farm_land + farm_cards + farm_nft + farm_crops + farm_boxes
                               - farm_tax_debt)::int,
     'items', COALESCE((

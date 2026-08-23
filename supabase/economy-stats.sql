@@ -12,6 +12,9 @@
 --              + farm_assets     (farm land + card-level spend + crop inventory at market + plant cards by rarity + NFT cards by scarcity + sealed seed/gold boxes + tile vouchers)
 --              + marketplace_escrow  (leading bids on open Targowisko auctions)
 --              + hero_auction_escrow (leading bids on open hero-item auctions)
+--              + bank_assets     (Bank G6: open deposits, bonds, casino shares)
+--
+-- ⚠️ Requires supabase/bank.sql (bank_total_assets lives there).
 --
 -- Note: marketplace_escrow + hero_auction_escrow are NOT part of any per-user
 -- net_worth (leaderboard view doesn't add them back), so total_supply ≥ SUM(holdings).
@@ -211,6 +214,10 @@ AS $$
          WHERE fus.user_id IN (SELECT id FROM public.profiles WHERE NOT is_admin)
       ), 0::bigint)::numeric AS farm_tax_debt,
 
+      -- Bank G6: open Lokata/Skarbonka principal at mark, bonds at face +
+      -- accrued coupons, casino shares at cost. Non-admin only.
+      COALESCE(public.bank_total_assets(), 0::numeric) AS bank_assets,
+
       -- leading bids on open Targowisko (marketplace) auctions
       COALESCE((
         SELECT sum(b.amount)
@@ -238,7 +245,13 @@ AS $$
            AND ct.reason IN ('garden_water','admin_grant','zapps_topup','daily_interest',
                              'farm_crop_sale','farm_seasonal_contract_bonus',
                              'farm_seasonal_rank_award',
-                             'lottery_prize','lottery_dividend')
+                             'lottery_prize','lottery_dividend',
+                             -- Bank G6 yields. bank_deposit_close /
+                             -- bank_bond_redeem are NOT here: those return a
+                             -- principal that was never burned, so counting
+                             -- them would invent supply on every maturity.
+                             'bank_deposit_interest','bank_bond_coupon',
+                             'bank_share_dividend')
       ), 0::numeric) AS ledger_minted,
 
       -- weekly game prize payouts (game-defined top-three awards)
@@ -288,7 +301,13 @@ AS $$
                              'farm_tile_buy','farm_box_buy','farm_goldbox_buy','lootbox_open','card_levelup',
                              'nft_breed',
                              'farm_land_tax_pay','farm_land_tax_autopay',
-                             'zapps_purchase')
+                             'zapps_purchase',
+                             -- Casino shares are burned at purchase and then
+                             -- valued in bank_assets, exactly like hero items.
+                             -- bank_deposit_open / bank_bond_buy are escrow,
+                             -- not burn, so they stay out (same treatment as
+                             -- marketplace_bid_reserved).
+                             'bank_share_buy')
       ), 0::numeric) AS shop_burned,
 
       -- ── house (bank) P&L ────────────────────────────────────────────────
@@ -325,9 +344,11 @@ AS $$
     'farm_tax_debt',       round(b.farm_tax_debt)::bigint,
     'marketplace_escrow',  round(b.marketplace_escrow)::bigint,
     'hero_auction_escrow', round(b.hero_auction_escrow)::bigint,
+    'bank_assets',         round(b.bank_assets)::bigint,
     'total_supply',        round(b.total_cash + b.market_positions + b.football_open
                                  + b.poker_stacks + b.hero_items + b.accessories + b.farm_assets
-                                 + b.marketplace_escrow + b.hero_auction_escrow)::bigint,
+                                 + b.marketplace_escrow + b.hero_auction_escrow
+                                 + b.bank_assets)::bigint,
 
     -- coin flow: minting
     'ledger_minted',       round(b.ledger_minted)::bigint,

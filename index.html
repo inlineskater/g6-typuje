@@ -8426,6 +8426,79 @@
       #chat-toasts { left: 10px; right: 10px; bottom: 80px; }
     }
 
+    /* ── 🏦 Bank G6 ─────────────────────────────────────────────────────────
+       Markup is built by tabs/bank.js. Kept small and token-based on purpose:
+       index.html is under a hard 1600 KB CI payload budget, so a new feature
+       gets a handful of layout rules here and everything else reuses the
+       shared .btn-primary / .btn-ghost / .shop-card vocabulary. */
+    .bank-wrap { display: flex; flex-direction: column; gap: 18px; }
+    .bank-hero {
+      display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch;
+      background: linear-gradient(135deg, #0f2d4a 0%, #17466e 100%);
+      color: #eaf3fb; border-radius: var(--r-lg); padding: 18px 20px;
+      box-shadow: var(--sh-lg);
+    }
+    .bank-hero h2 { margin: 0 0 4px; font-size: 20px; color: #fff; }
+    .bank-hero p { margin: 0; font-size: 13px; color: #b9d2e8; max-width: 62ch; }
+    .bank-hero-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+    .bank-stat {
+      background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.16);
+      border-radius: var(--r-md); padding: 8px 14px; min-width: 116px;
+    }
+    .bank-stat b { display: block; font-size: 18px; color: #fff; line-height: 1.2; }
+    .bank-stat span { font-size: 11px; color: #a8c6e0; text-transform: uppercase; letter-spacing: .04em; }
+
+    .bank-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+    .bank-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md);
+      padding: 16px; box-shadow: var(--sh-sm); display: flex; flex-direction: column; gap: 10px;
+    }
+    .bank-card > h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .bank-card-sub { font-size: 12.5px; color: var(--muted); margin: -4px 0 0; line-height: 1.5; }
+    .bank-terms { display: flex; gap: 8px; flex-wrap: wrap; }
+    .bank-term {
+      flex: 1 1 90px; border: 1px solid var(--border); border-radius: var(--r-sm);
+      background: none; padding: 8px 6px; cursor: pointer; text-align: center; font: inherit;
+      color: var(--text); transition: border-color .12s, background .12s;
+    }
+    .bank-term:hover { border-color: var(--border-hi); }
+    .bank-term.active { border-color: var(--accent); background: rgba(37,99,235,.07); }
+    .bank-term b { display: block; font-size: 14px; }
+    .bank-term span { font-size: 11px; color: var(--muted); }
+    .bank-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .bank-row input[type=number] {
+      flex: 1 1 120px; min-width: 0; padding: 8px 10px; font: inherit;
+      border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--card); color: var(--text);
+    }
+    .bank-note { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .bank-warn { font-size: 12px; color: #b45309; line-height: 1.5; }
+    .bank-list { display: flex; flex-direction: column; gap: 8px; }
+    .bank-item {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      border: 1px solid var(--border); border-radius: var(--r-sm); padding: 9px 11px;
+      background: var(--bg-soft, rgba(148,163,184,.06)); font-size: 13px;
+    }
+    .bank-item-main { flex: 1 1 150px; min-width: 0; }
+    .bank-item-main b { display: block; }
+    .bank-item-main span { font-size: 11.5px; color: var(--muted); }
+    .bank-item.ready { border-color: #16a34a; background: rgba(22,163,74,.07); }
+    .bank-empty { font-size: 12.5px; color: var(--muted); font-style: italic; }
+    .bank-btn-sm { padding: 5px 10px; font-size: 12px; border-radius: var(--r-sm); }
+    .bank-supply {
+      height: 7px; border-radius: var(--r-pill); background: rgba(148,163,184,.25); overflow: hidden;
+    }
+    .bank-supply > i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+    .bank-ladder { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .bank-ladder th, .bank-ladder td { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+    .bank-ladder th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+    .bank-ladder td:last-child, .bank-ladder th:last-child { text-align: right; }
+    @media (max-width: 640px) {
+      .bank-hero { padding: 14px; }
+      .bank-hero-stats { margin-left: 0; width: 100%; }
+      .bank-stat { flex: 1 1 100px; min-width: 0; }
+      .bank-grid { grid-template-columns: 1fr; }
+    }
+
     /* ── Mobile: no always-on backdrop blur ────────────────────────────────
        The header, the nav bar and the chat rail are sticky or fixed, so they
        are on screen on every tab, all the time — and a full-width
@@ -8633,6 +8706,7 @@
         <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
       </div>
     </div>
+    <button class="nav-tab" data-tab="bank">🏦 Bank G6 <span class="nav-new-badge">Nowość</span></button>
     <button class="nav-tab" data-tab="leaderboard">📈 Statystyki</button>
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
@@ -8762,6 +8836,15 @@
   <div id="tab-lottery" class="hidden">
     <main>
       <div id="lottery-body">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 🏦 Bank G6 — everything is rendered by tabs/bank.js (lazy module). -->
+  <div id="tab-bank" class="hidden">
+    <main>
+      <div id="bank-body">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
     </main>
@@ -11865,6 +11948,7 @@ const TAB_MODULES = {
   lottery:     'tabs/lottery.js', // Loteria + the maszyna losująca ceremony
   plinko:      'tabs/plinko.js',  // Plinko G6 AND Koło Żubra — one module, two tabs
   shop:        'tabs/shop.js',    // Sklep, Targowisko, Zlecenia zakupu
+  bank:        'tabs/bank.js',    // Bank G6: Lokata, Skarbonka, Obligacje, Udziały
   poker:       'tabs/poker.js',
 };
 const _tabModulePromises = {};
@@ -11936,6 +12020,7 @@ function stopSaperRound() {}
 function stopPokerClock() {}
 function stopPlinkoAnimation() {}
 function stopWheelAnimation() {}
+function stopBankTimer() {}
 const lwCharts = new Map();
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
@@ -13206,6 +13291,7 @@ function switchTab(tab) {
   if (previousTab === 'plinko' && tab !== 'plinko') stopPlinkoAnimation();
   if (previousTab === 'crash' && tab !== 'crash') stopCrash();
   if (previousTab === 'wheel' && tab !== 'wheel') stopWheelAnimation();
+  if (previousTab === 'bank' && tab !== 'bank') stopBankTimer();
   activeTab = tab;
   if (CASINO_LUCK_EFFECT_LABELS[tab]) loadCasinoLuckStatus();
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -13234,6 +13320,7 @@ function switchTab(tab) {
   const tFa = document.getElementById('tab-farm');
   const tCr = document.getElementById('tab-crash');
   const tWl = document.getElementById('tab-wheel');
+  const tBk = document.getElementById('tab-bank');
   hide(tAg);
   hide(tFp);
   hide(tBj);
@@ -13246,6 +13333,7 @@ function switchTab(tab) {
   hide(tMi);
   hide(tCr);
   hide(tWl);
+  hide(tBk);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     if (markets.length === 0) loadMarkets();
@@ -13309,6 +13397,10 @@ function switchTab(tab) {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tLot);
     withTabModule('lottery', () => renderLottery(true));
+  } else if (tab === 'bank') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    show(tBk);
+    withTabModule('bank', () => loadBank());
   } else if (tab === 'canvas') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCv);
@@ -15050,7 +15142,12 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
   if (item?.effect_game === 'casino' && item.effect_type === 'casino_luck') return 'Kasyno: bezwstydnie OP fart DLA WSZYSTKICH graczy (Sloty, Ruletka, Plinko, Miny, Rakieta, Koło Żubra)' + (item.duration_hours ? ` przez ${Math.round(item.duration_hours / 24)} dni` : '');
   if (item?.effect_game === 'tavern') return 'Kolekcjonerski (ozdobny)';
-  if (item?.effect_type === 'daily_interest') return `Pasywne: +${value}% coinów dziennie`;
+  if (item?.effect_type === 'daily_interest') {
+    const cap = Number(item?.interest_cap || 0);
+    return cap > 0
+      ? `Pasywne: +${value}% dziennie od pierwszych ${cap.toLocaleString('pl-PL')} 🪙 (maks. ${Math.floor(cap * value / 100).toLocaleString('pl-PL')} 🪙/dzień)`
+      : `Pasywne: +${value}% coinów dziennie`;
+  }
   if (item?.effect_game === 'poker' && item.effect_type === 'odds_view') return 'Poker: widoczna szansa wygranej';
   if (item?.effect_type === 'extra_garden_slot') return 'Ogródek: odblokuj drugi slot na roślinę';
   return 'Przedmiot specjalny';

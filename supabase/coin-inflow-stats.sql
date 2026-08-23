@@ -33,7 +33,11 @@ AS $$
       ct.user_id,
       COALESCE(SUM(ct.delta) FILTER (WHERE ct.reason = 'garden_water'), 0)::bigint AS garden,
       COALESCE(SUM(ct.delta) FILTER (WHERE ct.reason = 'marketplace_sale'), 0)::bigint AS marketplace,
-      COALESCE(SUM(ct.delta) FILTER (WHERE ct.reason = 'daily_interest'), 0)::bigint AS passive,
+      -- "passive" = income that arrives without playing anything: the
+      -- interest-item payout plus every Bank G6 yield.
+      COALESCE(SUM(ct.delta) FILTER (WHERE ct.reason IN (
+        'daily_interest','bank_deposit_interest','bank_bond_coupon','bank_share_dividend'
+      )), 0)::bigint AS passive,
       COALESCE(SUM(ct.delta) FILTER (WHERE ct.reason IN ('zapps_topup','admin_grant')), 0)::bigint AS topups,
       COALESCE(SUM(ct.delta) FILTER (
         WHERE ct.reason IN (
@@ -47,6 +51,9 @@ AS $$
           'garden_water',
           'marketplace_sale',
           'daily_interest',
+          'bank_deposit_interest',
+          'bank_bond_coupon',
+          'bank_share_dividend',
           'zapps_topup',
           'admin_grant',
           'marketplace_outbid_refund',
