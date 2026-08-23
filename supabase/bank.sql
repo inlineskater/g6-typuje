@@ -145,6 +145,24 @@ CREATE INDEX IF NOT EXISTS bank_dividends_user_idx
   ON public.bank_dividends(user_id, pay_date DESC);
 
 
+-- ── hero_item_defs.interest_cap ─────────────────────────────────────────────
+-- Declared up here rather than beside the Sygnet at the bottom of the file:
+-- bank_interest_draw() is LANGUAGE sql, so its body is parsed at CREATE time
+-- and cannot reference a column that does not exist yet.
+-- NULL = uncapped, which is what both interest items are today. The column and
+-- every line of logic honouring it are the primary anti-inflation knob for
+-- interest items — see the Sygnet section below.
+ALTER TABLE public.hero_item_defs
+  ADD COLUMN IF NOT EXISTS interest_cap bigint;
+
+COMMENT ON COLUMN public.hero_item_defs.interest_cap IS
+  'daily_interest items: pay interest on at most this many coins of balance. NULL = uncapped (both interest_ring and banker_signet today). Primary anti-inflation knob for interest items.';
+
+ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_interest_cap_check;
+ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_interest_cap_check
+  CHECK (interest_cap IS NULL OR interest_cap > 0);
+
+
 -- ── RLS: read-only for clients, every write goes through a SECURITY DEFINER RPC
 ALTER TABLE public.bank_deposits    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bank_bond_series ENABLE ROW LEVEL SECURITY;
@@ -377,6 +395,7 @@ AS $fn$
 DECLARE
   v_now  timestamptz := now();
   v_code text := 'E' || to_char(v_now AT TIME ZONE 'Europe/Warsaw', 'IYYY"-"IW');
+  v_size integer;
 BEGIN
   IF EXISTS (
     SELECT 1 FROM public.bank_bond_series
@@ -385,15 +404,251 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Edition size is whatever today's budget affords. Once a series is created
+  -- its size is fixed for its whole life — the limit governs new issues, never
+  -- one already on sale.
+  v_size := COALESCE((public.bank_ensure_limits()).bond_edition, 25);
+
   INSERT INTO public.bank_bond_series
     (code, face_value, price, coupon_per_day, term_days, edition_size, opens_at, closes_at)
   VALUES
-    (v_code, 1000, 1000, 5, 20, 25, v_now, v_now + interval '7 days')
+    (v_code, 1000, 1000, 5, 20, v_size, v_now, v_now + interval '7 days')
   ON CONFLICT (code) DO NOTHING;
 END;
 $fn$;
 
 REVOKE ALL ON FUNCTION public.bank_ensure_bond_series() FROM PUBLIC, anon, authenticated;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- DYNAMIC LIMITS — the Bank lends what the economy can absorb
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Every per-player limit here is recomputed once a Warsaw day from three
+-- measured inputs and frozen for that day in bank_limits. Nothing is a magic
+-- constant any more; the constants that remain describe a POLICY (what share
+-- of the money supply the Bank is willing to create) rather than an amount.
+--
+--   1. cash_supply     — non-admin coins in circulation
+--   2. net_mint_day    — the whole economy's mint minus burn over 30 days,
+--                        per day, casino included
+--   3. participants    — non-admin players with any ledger activity in 14 days
+--
+-- ── The formula ────────────────────────────────────────────────────────────
+--
+--   base    = BANK_BUDGET_BPS × cash_supply          (0.30%/day of the supply)
+--   infl    = net_mint_day / cash_supply             (how fast money is growing)
+--   health  = TARGET / (TARGET + max(0, infl))       (TARGET = 1%/day = neutral)
+--   budget  = base × clamp(health, 0.15, 1.00)
+--
+-- health is the whole point: it is 1.0 when the economy is flat or shrinking
+-- and falls away smoothly as inflation rises, so the Bank throttles ITSELF
+-- when coins are already being created too fast, and opens back up when they
+-- are not. Nobody has to remember to retune anything.
+--
+-- The budget is then split 55% lokata / 10% skarbonka / 35% obligacje, divided
+-- among active players, and converted back into a principal cap by each
+-- product's own daily yield. Results are rounded to 500 and clamped so a
+-- product can never silently become pointless or unbounded.
+--
+-- ── Calibration, measured on prod 2026-08-23 ───────────────────────────────
+--   cash_supply 360,776 · net_mint 9,685/day (+2.68%/day — from the farm and
+--   the lottery; the Bank is not the cause) · 8 active players
+--
+--     health 0.27  ->  budget ~294/day  ->  lokata 4,500 · skarbonka 1,000 · 7 bonds
+--
+--   Those are today's tight numbers, and they are correct: a Bank promising
+--   more while the money supply doubles every 26 days would just be pouring
+--   petrol on it. As that inflation cools toward zero the same formula opens
+--   up on its own to:
+--
+--     health 1.00  ->  budget ~1,082/day ->  lokata 16,000 · skarbonka 4,500 · 25 bonds
+--
+--   which is deliberately where the old hand-tuned constants sat. The policy
+--   shares were fitted so that "what a healthy economy allows" reproduces them.
+--
+-- ⚠️ The Sygnet Bankiera is measured (`signet_draw`) but NOT deducted from the
+-- budget. Deducting it would be defensible — it is by far the largest single
+-- source of new coins — but it would also mean one player buying a Sygnet
+-- shrinks everybody else's lokata limit, which is a griefing mechanic. It is
+-- reported next to the budget instead, so the cost stays visible. Making it
+-- deduct is a one-line change below: subtract v_signet from v_budget.
+
+CREATE TABLE IF NOT EXISTS public.bank_limits (
+  effective_date date PRIMARY KEY,
+  cash_supply    bigint NOT NULL,
+  net_mint_day   bigint NOT NULL,     -- may be negative (economy shrinking)
+  inflation_bps  integer NOT NULL,    -- net_mint_day / cash_supply, in bps
+  health_bps     integer NOT NULL,    -- 0..10000, the throttle
+  participants   integer NOT NULL,
+  budget_day     bigint NOT NULL,
+  signet_draw    bigint NOT NULL,     -- informational; see note above
+  lokata_cap     bigint NOT NULL,
+  piggy_cap      bigint NOT NULL,
+  bond_edition   integer NOT NULL,
+  computed_at    timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.bank_limits ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "bank_limits_select" ON public.bank_limits;
+CREATE POLICY "bank_limits_select" ON public.bank_limits
+  FOR SELECT TO authenticated USING (true);
+REVOKE ALL ON public.bank_limits FROM anon, authenticated;
+GRANT SELECT ON public.bank_limits TO authenticated;
+
+
+-- What every interest item in the game will mint tomorrow, scored exactly the
+-- way award_daily_interest() scores it (best single item per user, honouring
+-- interest_cap). Informational input to the limits row.
+CREATE OR REPLACE FUNCTION public.bank_interest_draw()
+RETURNS bigint
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+  WITH candidates AS (
+    SELECT p.id AS user_id,
+           FLOOR(LEAST(p.coins, COALESCE(d.interest_cap, p.coins)) * (d.effect_value / 100.0))::bigint AS amount
+      FROM public.profiles p
+      JOIN public.hero_item_instances i ON i.owner_id = p.id
+      JOIN public.hero_item_defs d ON d.id = i.item_def_id
+     WHERE d.effect_type = 'daily_interest' AND d.is_active
+       AND (i.expires_at IS NULL OR i.expires_at > now())
+       AND NOT COALESCE(p.is_admin, false)
+  ), best AS (
+    SELECT DISTINCT ON (user_id) amount FROM candidates ORDER BY user_id, amount DESC
+  )
+  SELECT COALESCE(sum(amount), 0)::bigint FROM best;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.bank_interest_draw() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bank_interest_draw() TO authenticated;
+
+
+-- The whole economy's net coin creation per day over a 30-day window: the coin
+-- ledger plus the casino, which settles outside coin_transactions.
+CREATE OR REPLACE FUNCTION public.bank_net_mint_per_day()
+RETURNS bigint
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+DECLARE
+  v_spec text[][] := ARRAY[
+    ['roulette_spins','total_bet'], ['slots_spins','10'], ['plinko_spins','bet'],
+    ['mines_spins','bet'], ['crash_spins','total_bet'], ['wheel_spins','total_bet']
+  ];
+  v_ledger bigint;
+  v_casino bigint := 0;
+  v_part   bigint;
+  i        integer;
+BEGIN
+  SELECT COALESCE(sum(delta), 0)::bigint INTO v_ledger
+    FROM public.coin_transactions
+   WHERE created_at > now() - interval '30 days';
+
+  -- Casino house net is a BURN, so it subtracts from net creation.
+  FOR i IN 1 .. array_length(v_spec, 1) LOOP
+    IF to_regclass('public.' || v_spec[i][1]) IS NULL THEN CONTINUE; END IF;
+    EXECUTE format(
+      'SELECT COALESCE(sum(%s - total_won), 0)::bigint FROM public.%I
+        WHERE created_at > now() - interval ''30 days''',
+      v_spec[i][2], v_spec[i][1]
+    ) INTO v_part;
+    v_casino := v_casino + COALESCE(v_part, 0);
+  END LOOP;
+
+  RETURN ((v_ledger - v_casino) / 30.0)::bigint;
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.bank_net_mint_per_day() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bank_net_mint_per_day() TO authenticated;
+
+
+-- Compute (or fetch) today's limits. Called from bank_settle_due(), so it runs
+-- on every read and hourly from cron; the PK on effective_date makes it a
+-- no-op for the rest of the day, which is what freezes the numbers. Freezing
+-- matters: a limit that drifted between the moment you read it and the moment
+-- you pressed the button would be indefensible in something calling itself a
+-- bank.
+CREATE OR REPLACE FUNCTION public.bank_ensure_limits()
+RETURNS public.bank_limits
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+DECLARE
+  -- POLICY constants. The only hand-set numbers left, and they are SHARES, not
+  -- amounts, so they do not go stale as the economy grows.
+  c_budget_bps   constant numeric := 30;    -- Bank may create 0.30%/day of supply
+  c_target_bps   constant numeric := 100;   -- 1.00%/day inflation = neutral
+  c_min_health   constant numeric := 0.15;
+  c_lokata_share constant numeric := 0.55;
+  c_piggy_share  constant numeric := 0.10;
+  c_bond_share   constant numeric := 0.35;
+  c_live_series  constant numeric := 3;     -- a 20-day bond, issued weekly
+  -- Each product's daily yield, used to turn a coins/day budget back into a
+  -- principal cap. Must match the rates in bank_open_deposit / the series row.
+  c_lokata_daily constant numeric := 1400.0 / 30 / 10000;   -- 30-day lokata
+  c_piggy_daily  constant numeric := 30.0 / 10000;
+  c_bond_coupon  constant numeric := 5;
+
+  v_row     public.bank_limits;
+  v_today   date := (now() AT TIME ZONE 'Europe/Warsaw')::date;
+  v_supply  bigint;
+  v_net     bigint;
+  v_infl    numeric;
+  v_health  numeric;
+  v_budget  numeric;
+  v_players integer;
+  v_signet  bigint;
+BEGIN
+  SELECT * INTO v_row FROM public.bank_limits WHERE effective_date = v_today;
+  IF FOUND THEN RETURN v_row; END IF;
+
+  SELECT COALESCE(sum(coins), 0)::bigint INTO v_supply
+    FROM public.profiles WHERE NOT COALESCE(is_admin, false);
+  v_supply := GREATEST(v_supply, 1);
+
+  v_net := public.bank_net_mint_per_day();
+  v_signet := public.bank_interest_draw();
+
+  SELECT GREATEST(1, count(DISTINCT user_id))::integer INTO v_players
+    FROM public.coin_transactions
+   WHERE created_at > now() - interval '14 days'
+     AND user_id IN (SELECT id FROM public.profiles WHERE NOT COALESCE(is_admin, false));
+
+  v_infl := GREATEST(0, v_net::numeric / v_supply) * 10000;    -- bps
+  v_health := LEAST(1.0, GREATEST(c_min_health, c_target_bps / (c_target_bps + v_infl)));
+  v_budget := (c_budget_bps / 10000) * v_supply * v_health;
+
+  INSERT INTO public.bank_limits (
+    effective_date, cash_supply, net_mint_day, inflation_bps, health_bps,
+    participants, budget_day, signet_draw, lokata_cap, piggy_cap, bond_edition
+  ) VALUES (
+    v_today, v_supply, v_net,
+    round(v_infl)::integer, round(v_health * 10000)::integer,
+    v_players, round(v_budget)::bigint, v_signet,
+    -- rounded to 500, then clamped: a product must never become pointless
+    -- (floor) or unbounded (ceiling), whatever the measurement says.
+    LEAST(60000, GREATEST(2500,
+      round(v_budget * c_lokata_share / v_players / c_lokata_daily / 500) * 500))::bigint,
+    LEAST(12000, GREATEST(1000,
+      round(v_budget * c_piggy_share / v_players / c_piggy_daily / 500) * 500))::bigint,
+    LEAST(60, GREATEST(5,
+      round(v_budget * c_bond_share / c_bond_coupon / c_live_series)))::integer
+  )
+  ON CONFLICT (effective_date) DO NOTHING;
+
+  SELECT * INTO v_row FROM public.bank_limits WHERE effective_date = v_today;
+  RETURN v_row;
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.bank_ensure_limits() FROM PUBLIC, anon, authenticated;
 
 
 -- ── The settler ────────────────────────────────────────────────────────────
@@ -426,6 +681,9 @@ DECLARE
   v_deps    integer := 0;
   v_n       bigint;
 BEGIN
+  -- Freeze today's limits before anything reads them (and before a new bond
+  -- series sizes itself off bond_edition).
+  PERFORM public.bank_ensure_limits();
   PERFORM public.bank_ensure_bond_series();
 
   -- 1. Casino shares: each share takes share_bps of the trailing-7-day average
@@ -599,21 +857,27 @@ DECLARE
   v_cap       bigint;
   v_coins     bigint;
   v_dep       public.bank_deposits%ROWTYPE;
+  v_limits    public.bank_limits%ROWTYPE;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_product NOT IN ('lokata','skarbonka') THEN RAISE EXCEPTION 'bad_product'; END IF;
   IF p_amount IS NULL OR p_amount < 500 THEN RAISE EXCEPTION 'amount_too_small'; END IF;
 
+  -- Caps come from today's frozen bank_limits row, not from a constant — see
+  -- bank_ensure_limits(). Rates stay fixed and are stored on the deposit row,
+  -- so a limit change never touches an open deposit.
+  v_limits := public.bank_ensure_limits();
+
   IF p_product = 'lokata' THEN
     v_rate := CASE p_term_days WHEN 7 THEN 250 WHEN 14 THEN 600 WHEN 30 THEN 1400 END;
     IF v_rate IS NULL THEN RAISE EXCEPTION 'bad_term'; END IF;
     v_matures := now() + make_interval(days => p_term_days);
-    v_cap := 15000;
+    v_cap := v_limits.lokata_cap;
   ELSE
     v_rate := 30;                                  -- 0.30%/day, simple
     p_term_days := NULL;
     v_matures := now() + interval '7 days';        -- interest unlock, not a term
-    v_cap := 3000;
+    v_cap := v_limits.piggy_cap;
   END IF;
 
   SELECT COALESCE(sum(principal), 0) INTO v_open
@@ -1036,8 +1300,21 @@ BEGIN
                                WHERE user_id = v_user), 0)
     ),
 
+    -- Today's frozen limits, plus the inputs they were derived from and a week
+    -- of history — the UI shows all of it, because a limit nobody can explain
+    -- is indistinguishable from an arbitrary one.
+    'limits', (SELECT row_to_json(l) FROM public.bank_limits l
+                WHERE l.effective_date = v_today),
+    'limits_history', COALESCE((
+      SELECT json_agg(row_to_json(l) ORDER BY l.effective_date DESC)
+        FROM (SELECT * FROM public.bank_limits
+               ORDER BY effective_date DESC LIMIT 8) l
+    ), '[]'::json),
+
     'caps', json_build_object(
-      'lokata_max', 15000, 'lokata_min', 500, 'piggy_max', 3000,
+      'lokata_max', (SELECT lokata_cap FROM public.bank_limits WHERE effective_date = v_today),
+      'lokata_min', 500,
+      'piggy_max', (SELECT piggy_cap FROM public.bank_limits WHERE effective_date = v_today),
       'lokata_open', COALESCE((SELECT sum(principal) FROM public.bank_deposits
                                 WHERE user_id = v_user AND product = 'lokata'
                                   AND closed_at IS NULL), 0),
@@ -1110,16 +1387,6 @@ GRANT EXECUTE ON FUNCTION public.bank_buy_holding(uuid) TO authenticated;
 -- The other brake is real but modest: interest is paid on CASH, and cash is
 -- the one asset in this game that does nothing else. Coins locked in a Lokata,
 -- spent on lootboxes, or sitting in a market position earn nothing here.
-
-ALTER TABLE public.hero_item_defs
-  ADD COLUMN IF NOT EXISTS interest_cap bigint;
-
-COMMENT ON COLUMN public.hero_item_defs.interest_cap IS
-  'daily_interest items: pay interest on at most this many coins of balance. NULL = uncapped (both interest_ring and banker_signet today). This is the primary anti-inflation knob for interest items.';
-
-ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_interest_cap_check;
-ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_interest_cap_check
-  CHECK (interest_cap IS NULL OR interest_cap > 0);
 
 INSERT INTO public.hero_item_defs
   (slug, name, emoji, slot, price, rarity, description, effect_game, effect_type,

@@ -29,17 +29,17 @@ only 360k, so an unbounded stream still dominates the leaderboard.
 
 | Product | Lock | Yield | Limit | Mints? |
 |---|---|---|---|---|
-| 🐷 Skarbonka | none; <7 dni forfeits interest | 0,30%/dzień simple, max 90 dni | 3 000/player | yes |
-| 🏦 Lokata 7 dni | hard | +2,5% total | 15 000/player | yes |
+| 🐷 Skarbonka | none; <7 dni forfeits interest | 0,30%/dzień simple, max 90 dni | **dynamic**, 1 000–12 000/player | yes |
+| 🏦 Lokata 7 dni | hard | +2,5% total | **dynamic**, 2 500–60 000/player | yes |
 | 🏦 Lokata 14 dni | hard | +6% total | shared with above | yes |
 | 🏦 Lokata 30 dni | hard | +14% total | shared with above | yes |
-| 📜 Obligacja G6 | tradeable, 20 dni | 5 🪙/dzień on 1 000 face (+10%) | 25/weekly series | yes |
+| 📜 Obligacja G6 | tradeable, 20 dni | 5 🪙/dzień on 1 000 face (+10%) | **dynamic**, 5–60/series | yes |
 | 🎰 Udział w Kasynie | perpetual, tradeable | 3% of trailing-7d house net | 30 shares, 5/player primary | **no** |
 | 💍 Sygnet Bankiera | perpetual | **2%/dzień, uncapped** | none | yes, unboundedly |
 
 ### ⚠️ Where the inflation actually is
 
-Worst case, everyone maxing everything:
+Worst case, everyone maxing everything, at a **healthy** economy (today's dynamic limits are ~3.7× tighter):
 
 | source | coins/day |
 |---|---|
@@ -53,6 +53,73 @@ The four bank products together are ~1 250/day against a ~2 951/day casino
 burn — comfortably sub-inflationary. **The Sygnet is ~85% of the total and is
 the only unbounded term.** If the economy runs hot, that is the line to look at
 first, and the four products above are not worth retuning again.
+
+## Limits are dynamic
+
+**Rates are fixed; limits are not.** Every per-player cap is recomputed once a
+Warsaw day by `bank_ensure_limits()` and frozen for that day in `bank_limits`.
+Nothing in the bank is a hand-set amount any more — the constants that remain
+are *policy shares*, which do not go stale as the economy grows.
+
+```
+base   = 0.30% × cash_supply                  the Bank's daily creation budget
+infl   = net_mint_day / cash_supply           how fast the whole game mints coins
+health = TARGET / (TARGET + max(0, infl))     TARGET = 1%/day = neutral
+budget = base × clamp(health, 0.15, 1.00)
+```
+
+`health` is the point: 1.0 when the economy is flat or shrinking, falling away
+smoothly as inflation rises. **The Bank throttles itself when coins are already
+being created too fast, and opens back up when they are not.** Nobody has to
+remember to retune anything.
+
+The budget splits 55% lokata / 10% skarbonka / 35% obligacje, divides by active
+players (any ledger activity in 14 days), and converts back to a principal cap
+via each product's own daily yield. Results round to 500 and clamp, so a product
+can never become pointless or unbounded whatever the measurement says.
+
+### What it produces, measured on prod 2026-08-23
+
+The economy was **already net-minting 9 685 coins/day against a 360 776 cash
+supply — +2,68%/day, doubling in ~26 days** — from the farm and the lottery. The
+Bank did not cause that and cannot fix it, but it can refuse to add to it:
+
+| | today | at a healthy economy |
+|---|---|---|
+| health | 27% | 100% |
+| budget | 294/day | 1 082/day |
+| Lokata cap | 4 500 | 16 000 |
+| Skarbonka cap | 1 000 | 4 500 |
+| Bond series | 7 | 25 |
+
+The right-hand column is deliberately where the old hand-tuned constants sat —
+the policy shares were fitted so that "what a healthy economy allows" reproduces
+them. Today's tight numbers are the correct answer to today's measurement.
+
+### Rules that make this safe
+
+- **Frozen for the day.** A limit that drifted between reading it and pressing
+  the button would be indefensible in something calling itself a bank. The PK on
+  `effective_date` is what freezes it; `bank_settle_due()` computes it lazily.
+- **Never retroactive.** A deposit stores its own `rate_bps`/`matures_at`, a bond
+  copies `coupon_per_day`/`matures_at` off its series, a share stores
+  `share_bps`. Changing a limit — or a rate — cannot touch an open position.
+- **A series' size is fixed at issue.** `bond_edition` governs new issues only.
+- **Capacity, not quota.** Caps count *open* principal, so closing a position
+  returns the headroom.
+- **Casino shares are exempt** — they redistribute an existing burn rather than
+  minting, so they consume no budget and stay at a fixed 30-share float.
+
+⚠️ **The Sygnet is measured but not deducted.** `signet_draw` records what every
+interest item will mint tomorrow (1 374/day today, from Filip's ring alone —
+4.7× the entire Bank budget). It is reported next to the budget rather than
+subtracted from it, because deducting would mean one player buying a Sygnet
+shrinks everybody else's lokata limit, which is a griefing mechanic. Making it
+deduct is a one-line change in `bank_ensure_limits()`.
+
+The whole derivation is shown to players in the **Limity i budżet** tab, with a
+week of history, because a limit nobody can explain is indistinguishable from an
+arbitrary one.
 
 ### 🏦 Lokata — the legible one
 

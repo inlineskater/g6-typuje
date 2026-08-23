@@ -20,6 +20,9 @@ const BANK_TERMS = [
   { days: 30, bps: 1400 },
 ];
 const BANK_LOKATA_MIN = 500;
+// ⚠️ Limits are DYNAMIC — recomputed daily by bank_ensure_limits() and served
+// in bankState.caps / bankState.limits. These two are fallbacks for a stale
+// deployment only; never render them when the server sent a value.
 const BANK_LOKATA_MAX = 15000;
 const BANK_PIGGY_MAX = 3000;
 const BANK_PIGGY_BPS = 30;        // per day, simple
@@ -36,6 +39,7 @@ const BANK_SECTIONS = [
   { id: 'shares',   label: 'Udziały w kasynie' },
   { id: 'market',   label: 'Rynek wtórny' },
   { id: 'rates',    label: 'Tabela oprocentowania' },
+  { id: 'limits',   label: 'Limity i budżet' },
   { id: 'terms',    label: 'Regulamin' },
 ];
 
@@ -322,6 +326,7 @@ function renderBank() {
     shares:   bankShareSection,
     market:   bankMarketSection,
     rates:    bankRateSection,
+    limits:   bankLimitsSection,
     terms:    bankTermsSection,
   }[bankSection] || bankOverview)(panel, p);
   root.appendChild(panel);
@@ -433,7 +438,7 @@ function bankLokataSection(panel, p) {
   sec.appendChild(bankTermsBlock([
     ['Oprocentowanie', bankPct(term.bps), `łącznie za ${term.days} dni`],
     ['Kwota minimalna', bankCoins(BANK_LOKATA_MIN)],
-    ['Limit łączny', bankCoins(cap), `wolne: ${bankCoins(free)}`],
+    ['Limit na dziś', bankCoins(cap), `wolne: ${bankCoins(free)} · przeliczany codziennie`],
     ['Zerwanie', 'Zwrot kapitału', 'odsetki przepadają w całości'],
   ]));
 
@@ -487,7 +492,7 @@ function bankPiggySection(panel) {
   sec.appendChild(bankTermsBlock([
     ['Oprocentowanie', bankPct(BANK_PIGGY_BPS), 'dziennie, proste'],
     ['Okres karencji', `${BANK_PIGGY_LOCK_DAYS} dni`, 'wcześniej: bez odsetek'],
-    ['Limit łączny', bankCoins(cap), `wolne: ${bankCoins(free)}`],
+    ['Limit na dziś', bankCoins(cap), `wolne: ${bankCoins(free)} · przeliczany codziennie`],
     ['Naliczanie', `maks. ${BANK_PIGGY_MAX_DAYS} dni`, 'potem odsetki nie rosną'],
   ]));
 
@@ -796,7 +801,7 @@ function bankRateSection(panel) {
     ['Obligacja G6', ser ? `${ser.term_days} dni` : '20 dni',
       ser ? (ser.coupon_per_day / ser.face_value * 100).toFixed(2).replace('.', ',') + '% / dz.' : '—',
       ser ? bankPct(ser.coupon_per_day * ser.term_days / ser.face_value * 10000) + ` / ${ser.term_days} dni` : '—',
-      ser ? bankCoins(ser.edition_size * ser.price) + ' emisji' : '—', 'zbywalna'],
+      ser ? `${ser.edition_size} szt. emisji` : '—', 'zbywalna'],
     ['Udział w kasynie', 'bezterminowo', 'zmienne', bankPct(sh.share_bps) + ' wyniku kasyna',
       `${sh.supply || 0} szt.`, 'zbywalny'],
     ['💍 Sygnet Bankiera', 'bezterminowo', bankPct(BANK_SIGNET_PCT * 100) + ' / dz.',
@@ -805,14 +810,16 @@ function bankRateSection(panel) {
 
   sec.appendChild(bankTable(
     [{ label: 'Produkt' }, { label: 'Okres' }, { label: 'Stopa dzienna', align: 'r' },
-     { label: 'Stopa za okres', align: 'r' }, { label: 'Limit', align: 'r' }, { label: 'Wcześniejsze zamknięcie' }],
+     { label: 'Stopa za okres', align: 'r' }, { label: 'Limit na dziś', align: 'r' },
+     { label: 'Wcześniejsze zamknięcie' }],
     rows
   ));
   sec.appendChild(bankFootnotes([
     'Odsetki lokaty i skarbonki są proste — nie podlegają kapitalizacji.',
     'Sygnet Bankiera nalicza od salda GOTÓWKI, więc jako jedyny produkt się kapitalizuje. Środki na lokacie nie wchodzą do podstawy.',
     'Stopa udziału w kasynie jest zmienna i może wynieść zero. Nie jest gwarantowana.',
-    'Limity łączne dotyczą sumy otwartych pozycji jednego gracza; zamknięcie pozycji zwalnia limit.',
+    'Limity są dynamiczne — Bank przelicza je codziennie na podstawie podaży pieniądza i tempa przyrostu monet w grze. Szczegóły w zakładce „Limity i budżet".',
+    'Limity dotyczą sumy otwartych pozycji jednego gracza; zamknięcie pozycji zwalnia limit.',
   ]));
   panel.appendChild(sec);
   panel.appendChild(bankSignetSection());
@@ -889,10 +896,17 @@ function bankTermsSection(panel) {
     ['Wcześniejsze zamknięcie',
       'Zerwanie lokaty i rozbicie skarbonki przed karencją zwraca kapitał w całości i nie pobiera opłat — '
       + 'przepadają wyłącznie odsetki. W żadnym produkcie Banku nie można wyjść z kwotą niższą niż wpłacona.'],
-    ['Limity',
-      'Limity dotyczą sumy otwartych pozycji jednego gracza i zwalniają się po zamknięciu pozycji. '
-      + 'Ich zadaniem jest utrzymanie w ryzach inflacji monet: odsetki lokaty, skarbonki i kupony obligacji '
-      + 'są nowymi monetami, których wcześniej w grze nie było.'],
+    ['Limity są dynamiczne',
+      'Bank nie ma limitów ustalonych raz na zawsze. Raz na dobę wylicza budżet emisyjny — ile nowych '
+      + 'monet może tego dnia stworzyć — jako 0,30% podaży pieniądza przemnożone przez wskaźnik kondycji '
+      + 'gospodarki. Im szybciej monet przybywa w całej grze, tym niższy wskaźnik i tym niższe limity; '
+      + 'gdy przyrost zwalnia, limity rosną same. Budżet dzieli się między produkty (55% lokata, '
+      + '10% skarbonka, 35% obligacje) i przez liczbę aktywnych graczy. Cały rachunek jest jawny '
+      + 'w zakładce „Limity i budżet", razem z historią z ostatnich dni.'],
+    ['Limity a Twoje pozycje',
+      'Limit dotyczy sumy OTWARTYCH pozycji i zwalnia się po zamknięciu — to pojemność, nie przydział '
+      + 'na zawsze. Zmiana limitu nigdy nie działa wstecz: oprocentowanie lokaty, kupon obligacji i '
+      + 'wielkość emisji są zapisywane w chwili zawarcia i obowiązują do końca.'],
     ['Skąd Bank bierze pieniądze',
       'Udział w kasynie jest jedynym produktem finansowanym w całości z istniejących monet — wypłaca część tego, '
       + 'co gracze realnie przegrali w Slotach, Ruletce, Plinko, Minach, Rakiecie i Kole Żubra. '
@@ -908,5 +922,88 @@ function bankTermsSection(panel) {
     sec.appendChild(el('h3', { style: { fontSize: '12px', marginTop: '14px' } }, h));
     sec.appendChild(el('p', { className: 'bk-lede' }, body));
   });
+  panel.appendChild(sec);
+}
+
+
+// ── Limity i budżet ─────────────────────────────────────────────────────────
+// The limits are derived, so the derivation is shown. Everything here comes
+// from bank_limits, frozen once per Warsaw day.
+function bankLimitsSection(panel) {
+  const L = bankState.limits;
+  const sec = bankSection_('Limity i budżet Banku',
+    'Limity nie są ustalone na sztywno — Bank przelicza je raz na dobę i deklaruje, '
+    + 'ile nowych monet może w tym dniu stworzyć: 0,30% podaży pieniądza, pomniejszone o to, '
+    + 'jak szybko monet przybywa w całej grze. Gdy gospodarka rośnie szybko, Bank sam się '
+    + 'przykręca; gdy zwalnia, limity rosną z powrotem. Nikt tego nie ustawia ręcznie.');
+
+  if (!L) {
+    sec.appendChild(el('div', { className: 'bk-tw' },
+      el('div', { className: 'bk-empty' }, 'Limity nie zostały jeszcze wyliczone.')));
+    panel.appendChild(sec);
+    return;
+  }
+
+  const health = Number(L.health_bps) / 100;
+  const infl = Number(L.inflation_bps) / 100;
+  sec.appendChild(bankTermsBlock([
+    ['Obowiązują', bankDay(L.effective_date), 'przeliczane codziennie o 00:00'],
+    ['Budżet emisyjny', bankCoins(L.budget_day), 'nowych monet dziennie'],
+    ['Kondycja', health.toFixed(1).replace('.', ',') + '%',
+      health >= 80 ? 'gospodarka spokojna' : health >= 40 ? 'podwyższona inflacja' : 'wysoka inflacja — limity przykręcone'],
+    ['Aktywni gracze', String(L.participants), 'podział budżetu, 14 dni'],
+  ]));
+
+  sec.appendChild(el('h3', { style: { fontSize: '12px', marginTop: '16px' } }, 'Jak powstał dzisiejszy budżet'));
+  sec.appendChild(bankTable(
+    [{ label: 'Krok' }, { label: 'Wartość', align: 'r' }, { label: 'Skąd' }],
+    [
+      ['Podaż pieniądza', bankCoins(L.cash_supply), 'gotówka wszystkich graczy'],
+      ['Budżet bazowy', bankCoins(Math.round(Number(L.cash_supply) * 0.003)), '0,30% podaży dziennie'],
+      ['Przyrost monet w grze',
+        el('span', { className: Number(L.net_mint_day) > 0 ? 'bk-neg' : 'bk-pos' },
+          (Number(L.net_mint_day) > 0 ? '+' : '') + bankCoins(L.net_mint_day) + ' / dz.'),
+        `${infl.toFixed(2).replace('.', ',')}% podaży dziennie — cała gra, 30 dni`],
+      ['Mnożnik kondycji', health.toFixed(1).replace('.', ',') + '%', 'cel: 1,00% dziennie = 100%'],
+      ['Budżet Banku', el('b', {}, bankCoins(L.budget_day) + ' / dz.'), 'budżet bazowy × kondycja'],
+      ['Sygnety i Pierścień', bankCoins(L.signet_draw) + ' / dz.',
+        'poza budżetem — bez limitu z założenia'],
+    ]
+  ));
+
+  sec.appendChild(el('h3', { style: { fontSize: '12px', marginTop: '16px' } }, 'Podział budżetu na produkty'));
+  sec.appendChild(bankTable(
+    [{ label: 'Produkt' }, { label: 'Udział w budżecie', align: 'r' },
+     { label: 'Limit dzisiaj', align: 'r' }, { label: 'Zakres' }],
+    [
+      ['Lokata terminowa', '55%', bankCoins(L.lokata_cap) + ' / gracza', 'od 2500 do 60 000'],
+      ['Skarbonka', '10%', bankCoins(L.piggy_cap) + ' / gracza', 'od 1000 do 12 000'],
+      ['Obligacje G6', '35%', `${L.bond_edition} szt. / emisję`, 'od 5 do 60'],
+      ['Udział w kasynie', '—', '30 szt., na stałe',
+        'nie tworzy monet, więc nie zużywa budżetu'],
+    ]
+  ));
+
+  sec.appendChild(bankFootnotes([
+    'Limit dotyczy sumy otwartych pozycji i zwalnia się po zamknięciu — to pojemność, nie przydział na zawsze.',
+    'Zmiana limitu nigdy nie dotyka pozycji już otwartej: oprocentowanie lokaty i kupon obligacji są zapisywane w chwili zawarcia.',
+    'Wielkość emisji obligacji ustala się w momencie jej otwarcia i nie zmienia się do wyczerpania.',
+  ]));
+
+  const hist = (bankState.limits_history || []).filter(h => h.effective_date !== L.effective_date);
+  if (hist.length) {
+    sec.appendChild(el('h3', { style: { fontSize: '12px', marginTop: '16px' } }, 'Historia limitów'));
+    sec.appendChild(bankTable(
+      [{ label: 'Dzień' }, { label: 'Podaż', align: 'r' }, { label: 'Inflacja', align: 'r' },
+       { label: 'Kondycja', align: 'r' }, { label: 'Budżet', align: 'r' },
+       { label: 'Lokata', align: 'r' }, { label: 'Skarbonka', align: 'r' }, { label: 'Obligacje', align: 'r' }],
+      hist.map(h => [
+        bankDay(h.effective_date), bankFmt(h.cash_supply),
+        (Number(h.inflation_bps) / 100).toFixed(2).replace('.', ',') + '%',
+        (Number(h.health_bps) / 100).toFixed(0) + '%',
+        bankFmt(h.budget_day), bankFmt(h.lokata_cap), bankFmt(h.piggy_cap), String(h.bond_edition),
+      ])
+    ));
+  }
   panel.appendChild(sec);
 }
