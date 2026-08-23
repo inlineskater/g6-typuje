@@ -990,6 +990,8 @@ DECLARE
   v_i      integer;
   v_ids    uuid[] := ARRAY[]::uuid[];
   v_id     uuid;
+  v_fair   integer;
+  v_mine   integer;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
   IF p_qty IS NULL OR p_qty < 1 OR p_qty > 10 THEN RAISE EXCEPTION 'bad_qty'; END IF;
@@ -1002,6 +1004,28 @@ BEGIN
    FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'no_open_series'; END IF;
   IF v_ser.sold + p_qty > v_ser.edition_size THEN RAISE EXCEPTION 'sold_out'; END IF;
+
+  -- ── Per-player fair share ─────────────────────────────────────────────────
+  -- Bonds were the one product with no per-player limit, which did not matter
+  -- much at 25 units but is indefensible at 4: whoever opened the tab first on
+  -- Monday took the entire weekly issue in one click and everybody else got
+  -- nothing, every week. Same fair-share shape the farm land tax already uses,
+  -- ceil(capacity / active participants).
+  v_fair := GREATEST(1, CEIL(
+    v_ser.edition_size::numeric / GREATEST(1, COALESCE((public.bank_ensure_limits()).participants, 1))
+  ))::integer;
+
+  -- Lifted for the last two days of the issue. A fair share that leaves stock
+  -- unsold at expiry is not fair to anyone, so once everyone has had their
+  -- window the remainder is open to whoever still wants it.
+  IF now() >= v_ser.closes_at - interval '2 days' THEN
+    v_fair := v_ser.edition_size;
+  END IF;
+
+  SELECT count(*) INTO v_mine FROM public.bank_holdings
+   WHERE kind = 'bond' AND owner_id = v_user
+     AND series_id = v_ser.id AND acquired_from = 'treasury';
+  IF v_mine + p_qty > v_fair THEN RAISE EXCEPTION 'bond_user_limit'; END IF;
 
   v_cost := v_ser.price * p_qty;
   UPDATE public.profiles SET coins = coins - v_cost
@@ -1218,7 +1242,17 @@ BEGIN
     'series', (
       SELECT row_to_json(s) FROM (
         SELECT bs.code, bs.face_value, bs.price, bs.coupon_per_day, bs.term_days,
-               bs.edition_size, bs.sold, bs.closes_at
+               bs.edition_size, bs.sold, bs.closes_at,
+               -- fair share per player, and whether the final-days lift is on
+               CASE WHEN now() >= bs.closes_at - interval '2 days' THEN bs.edition_size
+                    ELSE GREATEST(1, CEIL(bs.edition_size::numeric
+                           / GREATEST(1, COALESCE((SELECT participants FROM public.bank_limits
+                                                    WHERE effective_date = v_today), 1))))::integer
+               END AS per_user,
+               (now() >= bs.closes_at - interval '2 days') AS open_to_all,
+               COALESCE((SELECT count(*) FROM public.bank_holdings h
+                          WHERE h.kind = 'bond' AND h.owner_id = v_user
+                            AND h.series_id = bs.id AND h.acquired_from = 'treasury'), 0) AS mine
           FROM public.bank_bond_series bs
          WHERE bs.closes_at > now() AND bs.sold < bs.edition_size
          ORDER BY bs.opens_at DESC LIMIT 1

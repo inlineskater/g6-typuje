@@ -164,6 +164,7 @@ const BANK_ERRORS = {
   sold_out:           'Emisja wyczerpana.',
   per_user_limit:     'Osiągnięto limit udziałów z emisji pierwotnej.',
   no_open_series:     'Brak otwartej emisji.',
+  bond_user_limit:    'Osiągnięto Twój przydział z tej emisji — reszta czeka na innych graczy.',
   not_for_sale:       'Pozycja nie jest już wystawiona.',
   own_listing:        'To Twoja własna oferta.',
   bond_matured:       'Obligacja już zapadła — nie można jej nabyć.',
@@ -594,24 +595,42 @@ function bankBondSection(panel, p) {
     sec.appendChild(el('p', { className: 'bk-note' },
       `Objęto ${ser.sold} z ${ser.edition_size} sztuk emisji.`));
 
-    const form = el('div', { className: 'bk-form' });
-    const qty = el('input', { type: 'number', min: '1', max: '10', value: '1' });
-    const quote = el('div', { className: 'bk-quote' });
-    const refresh = () => {
-      const n = Math.max(1, Math.min(10, Math.floor(Number(qty.value) || 1)));
-      quote.replaceChildren();
-      quote.append('Koszt objęcia: ');
-      quote.appendChild(el('b', {}, bankCoins(n * ser.price)));
-      quote.append(` — kupon ${bankCoins(n * ser.coupon_per_day)} dziennie, wykup ${bankCoins(n * ser.face_value)}.`);
-    };
-    qty.addEventListener('input', refresh);
-    refresh();
-    const go = el('button', { className: 'btn-primary bk-btn' }, 'Obejmij');
-    go.addEventListener('click', () => bankCall('bank_buy_bond',
-      { p_qty: Math.max(1, Math.min(10, Math.floor(Number(qty.value) || 1))) },
-      d => `Objęto ${d.qty} × ${ser.code}.`, go));
-    form.append(bankField('Liczba sztuk', qty), go, quote);
-    sec.appendChild(form);
+    // Emissions are small, so the per-player fair share is the difference
+    // between "everyone gets a look" and "whoever refreshed first took it all".
+    const left = Math.max(0, Number(ser.edition_size) - Number(ser.sold));
+    const mine = Number(ser.mine || 0);
+    const allowance = Math.max(0, Math.min(Number(ser.per_user || 1) - mine, left, 10));
+    sec.appendChild(el('p', { className: 'bk-note' },
+      ser.open_to_all
+        ? `Ostatnie dni emisji — przydziały zniesione, pozostałe ${left} szt. dla każdego, kto zdąży.`
+        : `Twój przydział: ${ser.per_user} ${plCount(Number(ser.per_user), 'sztuka', 'sztuki', 'sztuk')} `
+          + `z tej emisji (objąłeś ${mine}). Emisja dzieli się po równo między aktywnych graczy; `
+          + 'na 2 dni przed zamknięciem przydziały są znoszone, żeby reszta się nie zmarnowała.'));
+
+    if (allowance <= 0) {
+      sec.appendChild(el('div', { className: 'bk-tw' }, el('div', { className: 'bk-empty' },
+        mine > 0 ? 'Objąłeś już cały swój przydział z tej emisji.' : 'Emisja jest wyczerpana.')));
+    } else {
+      const form = el('div', { className: 'bk-form' });
+      const qty = el('input', { type: 'number', min: '1', max: String(allowance), value: '1' });
+      const quote = el('div', { className: 'bk-quote' });
+      const clamp = () => Math.max(1, Math.min(allowance, Math.floor(Number(qty.value) || 1)));
+      const refresh = () => {
+        const n = clamp();
+        quote.replaceChildren();
+        quote.append('Koszt objęcia: ');
+        quote.appendChild(el('b', {}, bankCoins(n * ser.price)));
+        quote.append(` — kupon ${bankCoins(n * ser.coupon_per_day)} dziennie, wykup ${bankCoins(n * ser.face_value)}`);
+        quote.append(allowance > 1 ? ` · możesz objąć do ${allowance} szt.` : '.');
+      };
+      qty.addEventListener('input', refresh);
+      refresh();
+      const go = el('button', { className: 'btn-primary bk-btn' }, 'Obejmij');
+      go.addEventListener('click', () => bankCall('bank_buy_bond', { p_qty: clamp() },
+        d => `Objęto ${d.qty} × ${ser.code}.`, go));
+      form.append(bankField('Liczba sztuk', qty), go, quote);
+      sec.appendChild(form);
+    }
   } else {
     sec.appendChild(el('div', { className: 'bk-tw' },
       el('div', { className: 'bk-empty' }, 'Bieżąca emisja jest wyczerpana. Kolejna otwiera się w przyszłym tygodniu.')));
@@ -802,7 +821,7 @@ function bankRateSection(panel) {
     ['Obligacja G6', ser ? `${ser.term_days} dni` : '20 dni',
       ser ? (ser.coupon_per_day / ser.face_value * 100).toFixed(2).replace('.', ',') + '% / dz.' : '—',
       ser ? bankPct(ser.coupon_per_day * ser.term_days / ser.face_value * 10000) + ` / ${ser.term_days} dni` : '—',
-      ser ? `${ser.edition_size} szt. emisji` : '—', 'zbywalna'],
+      ser ? `${ser.per_user} szt. / gracza` : '—', 'zbywalna'],
     ['Udział w kasynie', 'bezterminowo', 'zmienne', bankPct(sh.share_bps) + ' wyniku kasyna',
       `${sh.supply || 0} szt.`, 'zbywalny'],
     ['💍 Sygnet Bankiera', 'bezterminowo', bankPct(BANK_SIGNET_PCT * 100) + ' / dz.',
@@ -951,6 +970,12 @@ function bankTermsSection(panel) {
       + 'gdy przyrost zwalnia, limity rosną same. Budżet dzieli się między produkty (55% lokata, '
       + '10% skarbonka, 35% obligacje) i przez liczbę aktywnych graczy. Cały rachunek jest jawny '
       + 'w zakładce „Limity i budżet", razem z historią z ostatnich dni.'],
+    ['Przydział obligacji',
+      'Emisja obligacji jest wspólna, więc dzieli się po równo między aktywnych graczy — '
+      + 'przydział to wielkość emisji podzielona przez liczbę aktywnych, zaokrąglona w górę, minimum 1 sztuka. '
+      + 'Na dwa dni przed zamknięciem emisji przydziały są znoszone i pozostałe sztuki może objąć każdy, '
+      + 'żeby nic się nie zmarnowało. Przydział dotyczy wyłącznie zakupu od Banku — obligacje kupione '
+      + 'na rynku wtórnym się do niego nie liczą.'],
     ['Limity a Twoje pozycje',
       'Limit dotyczy sumy OTWARTYCH pozycji i zwalnia się po zamknięciu — to pojemność, nie przydział '
       + 'na zawsze. Zmiana limitu nigdy nie działa wstecz: oprocentowanie lokaty, kupon obligacji i '

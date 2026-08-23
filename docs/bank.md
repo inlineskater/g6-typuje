@@ -33,7 +33,7 @@ only 360k, so an unbounded stream still dominates the leaderboard.
 | 🏦 Lokata 7 dni | hard | +5% total | **dynamic**, 1 000–40 000/player | yes |
 | 🏦 Lokata 14 dni | hard | +12% total | shared with above | yes |
 | 🏦 Lokata 30 dni | hard | +30% total | shared with above | yes |
-| 📜 Obligacja G6 | tradeable, 20 dni | 8 🪙/dzień on 1 000 face (+16%) | **dynamic**, 3–40/series | yes |
+| 📜 Obligacja G6 | tradeable, 20 dni | 8 🪙/dzień on 1 000 face (+16%) | **dynamic**, 3–40/series, **fair-shared per player** | yes |
 | 🎰 Udział w Kasynie | perpetual, tradeable | 3% of trailing-7d house net | 30 shares, 5/player primary | **no** |
 | 💍 Sygnet Bankiera | perpetual | **2%/dzień, uncapped** | none | yes, unboundedly |
 
@@ -203,6 +203,16 @@ bond with 3 days left is objectively worth less than a fresh one, and players
 get to discover that. Deliberately **not** an auction with escrow — the
 Targowisko engine already does auctions, and a bond's value is computable, so
 bidding drama would add nothing.
+
+**Per-player fair share.** Bonds were the one product with no per-player limit.
+That was survivable at 25 units and indefensible once the dynamic budget cut the
+issue to 4: whoever opened the tab first on Monday took the entire weekly issue
+in one click and the other seven players got nothing, every week. The allowance
+is now `ceil(edition_size / active_participants)`, minimum 1 — the same
+fair-share shape the farm land tax uses — **lifted for the final two days** of
+the issue, because a fair share that leaves stock unsold at expiry is not fair
+to anyone. It counts treasury purchases only; bonds bought on the secondary
+market do not consume it.
 
 ⚠️ A **matured-but-unredeemed** bond cannot be bought (`bond_matured`). The
 buyer would be paying for a payout the settler is about to hand the seller.
