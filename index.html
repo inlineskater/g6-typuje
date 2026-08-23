@@ -8426,6 +8426,122 @@
       #chat-toasts { left: 10px; right: 10px; bottom: 80px; }
     }
 
+    /* ── 🏦 Bank G6 ─────────────────────────────────────────────────────────
+       Deliberately NOT the app's rounded-card-grid look. A bank statement is a
+       reference document you read a column of numbers off, so this section is
+       built on dense tables with tabular figures, hairline rules, a sub-tab
+       bar, and terms panels — closer to Business Central or an online banking
+       portal than to the rest of the portal. Markup is built by tabs/bank.js.
+       Kept token-based and compact: index.html is under a hard 1600 KB CI
+       payload budget. */
+    #tab-bank { --bk-line: #dfe4ea; --bk-head: #f4f6f9; --bk-zebra: #fafbfc;
+                --bk-ink: #16324f; --bk-dim: #64748b; --bk-pos: #157347; --bk-neg: #b02a37; }
+    .bk { max-width: 1180px; margin: 0 auto; font-size: 13px; color: var(--bk-ink); }
+    .bk-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    /* Statement header */
+    .bk-head { background: #12304d; color: #eef4fa; border-radius: var(--r-md) var(--r-md) 0 0; padding: 16px 20px 14px; }
+    .bk-head-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .bk-head h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .01em; color: #fff; }
+    .bk-head-meta { font-size: 11.5px; color: #9fbcd6; font-variant-numeric: tabular-nums; }
+    .bk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); gap: 1px;
+               margin-top: 14px; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.13); border-radius: var(--r-sm); overflow: hidden; }
+    .bk-kpi { background: #12304d; padding: 9px 12px; }
+    .bk-kpi span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #93b3cf; }
+    .bk-kpi b { display: block; font-size: 16px; font-weight: 650; color: #fff; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+    /* Sub-navigation */
+    .bk-tabs { display: flex; gap: 0; overflow-x: auto; background: var(--bk-head);
+               border: 1px solid var(--bk-line); border-top: none; scrollbar-width: thin; }
+    .bk-tab { flex: 0 0 auto; background: none; border: none; border-bottom: 2px solid transparent;
+              padding: 9px 15px; font: inherit; font-size: 12.5px; font-weight: 550; color: var(--bk-dim);
+              cursor: pointer; white-space: nowrap; }
+    .bk-tab:hover { color: var(--bk-ink); background: rgba(18,48,77,.05); }
+    .bk-tab.active { color: var(--bk-ink); border-bottom-color: #12304d; background: #fff; }
+    /* In-table jump link. Deliberately NOT .bk-tab: that class is also the
+       selector the sub-nav is built and queried by. */
+    .bk-link { background: none; border: none; padding: 0; font: inherit; color: var(--bk-ink);
+               text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left; }
+    .bk-link:hover { color: #1b4470; }
+
+    .bk-body { background: #fff; border: 1px solid var(--bk-line); border-top: none;
+               border-radius: 0 0 var(--r-md) var(--r-md); padding: 18px 20px 22px; }
+    .bk-sec { margin-bottom: 26px; }
+    .bk-sec:last-child { margin-bottom: 0; }
+    .bk-sec > h3 { margin: 0 0 3px; font-size: 13px; font-weight: 650; text-transform: uppercase;
+                   letter-spacing: .06em; color: var(--bk-ink); }
+    .bk-lede { margin: 0 0 12px; font-size: 12.5px; color: var(--bk-dim); line-height: 1.6; max-width: 78ch; }
+
+    /* Tables — the primary surface here */
+    .bk-tw { overflow-x: auto; border: 1px solid var(--bk-line); border-radius: var(--r-sm); }
+    table.bk-t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table.bk-t th, table.bk-t td { padding: 7px 11px; text-align: left; border-bottom: 1px solid var(--bk-line); vertical-align: middle; }
+    table.bk-t thead th { background: var(--bk-head); font-size: 10.5px; font-weight: 650;
+                          text-transform: uppercase; letter-spacing: .05em; color: var(--bk-dim); white-space: nowrap; }
+    table.bk-t tbody tr:nth-child(even) { background: var(--bk-zebra); }
+    table.bk-t tbody tr:last-child td { border-bottom: none; }
+    table.bk-t tfoot td { background: var(--bk-head); font-weight: 650; border-bottom: none; border-top: 2px solid var(--bk-line); }
+    .bk-t .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bk-t .c { text-align: center; }
+    .bk-t td small { display: block; color: var(--bk-dim); font-size: 11px; }
+    .bk-pos { color: var(--bk-pos); } .bk-neg { color: var(--bk-neg); }
+    .bk-tag { display: inline-block; padding: 1px 7px; border-radius: var(--r-pill); font-size: 10.5px;
+              font-weight: 600; background: #eef2f7; color: var(--bk-dim); white-space: nowrap; }
+    .bk-tag.ok { background: #e4f4ea; color: var(--bk-pos); }
+    .bk-tag.due { background: #fdf1dc; color: #92400e; }
+
+    /* Terms panel — the "Warunki produktu" definition block */
+    .bk-terms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0;
+                border: 1px solid var(--bk-line); border-radius: var(--r-sm); overflow: hidden; margin-bottom: 14px; }
+    @media (min-width: 880px) { .bk-terms { grid-template-columns: repeat(4, 1fr); } }
+    .bk-term { padding: 9px 12px; border-right: 1px solid var(--bk-line); border-bottom: 1px solid var(--bk-line); background: #fff; }
+    .bk-term dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--bk-dim); margin: 0; }
+    .bk-term dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .bk-term dd small { display: block; font-weight: 400; font-size: 11px; color: var(--bk-dim); }
+
+    /* Order form */
+    .bk-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;
+               background: var(--bk-zebra); border: 1px solid var(--bk-line); border-radius: var(--r-sm); padding: 12px; margin-bottom: 12px; }
+    .bk-field { display: flex; flex-direction: column; gap: 3px; }
+    .bk-field > label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--bk-dim); }
+    /* The global `input[type=number], textarea` rule carries min-height:44px and
+       margin-bottom:12px for the app's big touch forms. Both have to be unset
+       here or the input stands 10px taller than the select beside it and their
+       labels stop lining up. */
+    .bk-field input, .bk-field select { padding: 6px 9px; font: inherit; font-size: 13px;
+      width: 100%; min-width: 130px; height: 34px; min-height: 0; margin: 0; box-sizing: border-box;
+      border: 1px solid var(--bk-line); border-radius: var(--r-sm); background: #fff; color: var(--bk-ink);
+      font-variant-numeric: tabular-nums; }
+    .bk-field input:focus, .bk-field select:focus { outline: 2px solid rgba(18,48,77,.25); outline-offset: -1px; }
+    .bk-quote { flex: 1 1 220px; align-self: center; font-size: 12px; color: var(--bk-dim); line-height: 1.5; min-width: 0; }
+    .bk-quote b { color: var(--bk-ink); }
+
+    /* Buttons: .btn-primary is a full-width 48px CTA by design, which is wrong
+       inside a statement row — pull it back to an inline control. */
+    .bk-btn { width: auto; min-height: 32px; margin: 0; flex: 0 0 auto; padding: 6px 14px;
+              font-size: 12.5px; font-weight: 600; border-radius: var(--r-sm); box-shadow: none; white-space: nowrap; }
+    .bk-btn:hover { transform: none; }
+    .bk-sec > .bk-btn { align-self: flex-start; }
+    button.bk-btn.btn-primary { background: #12304d; }
+    button.bk-btn.btn-primary:hover { background: #1b4470; filter: none; }
+    button.bk-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .bk-empty { padding: 14px; text-align: center; font-size: 12.5px; color: var(--bk-dim); font-style: italic; }
+    .bk-note { font-size: 11.5px; color: var(--bk-dim); line-height: 1.6; margin: 8px 0 0; }
+    .bk-note-warn { border-left: 3px solid #d97706; background: #fffbf3; padding: 9px 12px;
+                    border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 12px; line-height: 1.6; color: #7c4a03; margin: 10px 0 0; }
+    .bk-foot { margin-top: 10px; font-size: 11px; color: var(--bk-dim); line-height: 1.65; }
+    .bk-foot li { margin: 2px 0; }
+    .bk-bar { height: 6px; border-radius: var(--r-pill); background: #e6eaef; overflow: hidden; margin: 2px 0 4px; }
+    .bk-bar > i { display: block; height: 100%; background: #12304d; }
+
+    @media (max-width: 720px) {
+      .bk-body { padding: 14px 12px 18px; }
+      .bk-head { padding: 13px 14px; }
+      .bk-form { flex-direction: column; align-items: stretch; }
+      .bk-field input, .bk-field select { width: 100%; min-width: 0; }
+    }
+
     /* ── Mobile: no always-on backdrop blur ────────────────────────────────
        The header, the nav bar and the chat rail are sticky or fixed, so they
        are on screen on every tab, all the time — and a full-width
@@ -8633,6 +8749,7 @@
         <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
       </div>
     </div>
+    <button class="nav-tab" data-tab="bank">🏦 Bank G6 <span class="nav-new-badge">Nowość</span></button>
     <button class="nav-tab" data-tab="leaderboard">📈 Statystyki</button>
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
@@ -8762,6 +8879,15 @@
   <div id="tab-lottery" class="hidden">
     <main>
       <div id="lottery-body">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 🏦 Bank G6 — everything is rendered by tabs/bank.js (lazy module). -->
+  <div id="tab-bank" class="hidden">
+    <main>
+      <div id="bank-body">
         <div class="loading-center"><div class="spinner"></div></div>
       </div>
     </main>
@@ -11865,6 +11991,7 @@ const TAB_MODULES = {
   lottery:     'tabs/lottery.js', // Loteria + the maszyna losująca ceremony
   plinko:      'tabs/plinko.js',  // Plinko G6 AND Koło Żubra — one module, two tabs
   shop:        'tabs/shop.js',    // Sklep, Targowisko, Zlecenia zakupu
+  bank:        'tabs/bank.js',    // Bank G6: Lokata, Skarbonka, Obligacje, Udziały
   poker:       'tabs/poker.js',
 };
 const _tabModulePromises = {};
@@ -11936,6 +12063,7 @@ function stopSaperRound() {}
 function stopPokerClock() {}
 function stopPlinkoAnimation() {}
 function stopWheelAnimation() {}
+function stopBankTimer() {}
 const lwCharts = new Map();
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
@@ -13206,6 +13334,7 @@ function switchTab(tab) {
   if (previousTab === 'plinko' && tab !== 'plinko') stopPlinkoAnimation();
   if (previousTab === 'crash' && tab !== 'crash') stopCrash();
   if (previousTab === 'wheel' && tab !== 'wheel') stopWheelAnimation();
+  if (previousTab === 'bank' && tab !== 'bank') stopBankTimer();
   activeTab = tab;
   if (CASINO_LUCK_EFFECT_LABELS[tab]) loadCasinoLuckStatus();
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -13234,6 +13363,7 @@ function switchTab(tab) {
   const tFa = document.getElementById('tab-farm');
   const tCr = document.getElementById('tab-crash');
   const tWl = document.getElementById('tab-wheel');
+  const tBk = document.getElementById('tab-bank');
   hide(tAg);
   hide(tFp);
   hide(tBj);
@@ -13246,6 +13376,7 @@ function switchTab(tab) {
   hide(tMi);
   hide(tCr);
   hide(tWl);
+  hide(tBk);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     if (markets.length === 0) loadMarkets();
@@ -13309,6 +13440,10 @@ function switchTab(tab) {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tLot);
     withTabModule('lottery', () => renderLottery(true));
+  } else if (tab === 'bank') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    show(tBk);
+    withTabModule('bank', () => loadBank());
   } else if (tab === 'canvas') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCv);
@@ -15050,7 +15185,12 @@ function heroItemEffectLabel(item) {
   if (item?.effect_game === 'poker' && item.effect_type === 'buy_in_bonus') return `Poker: stack i buy-in większe o ${value}`;
   if (item?.effect_game === 'casino' && item.effect_type === 'casino_luck') return 'Kasyno: bezwstydnie OP fart DLA WSZYSTKICH graczy (Sloty, Ruletka, Plinko, Miny, Rakieta, Koło Żubra)' + (item.duration_hours ? ` przez ${Math.round(item.duration_hours / 24)} dni` : '');
   if (item?.effect_game === 'tavern') return 'Kolekcjonerski (ozdobny)';
-  if (item?.effect_type === 'daily_interest') return `Pasywne: +${value}% coinów dziennie`;
+  if (item?.effect_type === 'daily_interest') {
+    const cap = Number(item?.interest_cap || 0);
+    return cap > 0
+      ? `Pasywne: +${value}% dziennie od pierwszych ${cap.toLocaleString('pl-PL')} 🪙 (maks. ${Math.floor(cap * value / 100).toLocaleString('pl-PL')} 🪙/dzień)`
+      : `Pasywne: +${value}% coinów dziennie`;
+  }
   if (item?.effect_game === 'poker' && item.effect_type === 'odds_view') return 'Poker: widoczna szansa wygranej';
   if (item?.effect_type === 'extra_garden_slot') return 'Ogródek: odblokuj drugi slot na roślinę';
   return 'Przedmiot specjalny';

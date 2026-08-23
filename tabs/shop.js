@@ -1112,6 +1112,11 @@ async function purchaseItem(itemId, price, btn) {
   loadShop();
 }
 
+// Items new enough to still deserve a pill in the shop grid. Remove a slug
+// from here once it stops being news — the badge is the only thing that makes
+// a new item findable in a grid people have already learned the shape of.
+const SHOP_NEW_SLUGS = new Set(['banker_signet']);
+
 function renderHeroShopGrid() {
   const grid = document.getElementById('hero-shop-grid');
   if (!grid) return;
@@ -1127,7 +1132,11 @@ function renderHeroShopGrid() {
     const itemCard = el('div', { className: 'shop-card' });
     itemCard.dataset.heroItemSlug = item.slug;
     itemCard.appendChild(el('div', { className: 'shop-card-icon' }, item.emoji || '🎒'));
-    itemCard.appendChild(el('div', { className: 'shop-card-title' }, item.name));
+    const titleEl = el('div', { className: 'shop-card-title' }, item.name);
+    if (SHOP_NEW_SLUGS.has(item.slug)) {
+      titleEl.append(' ', el('span', { className: 'nav-new-badge' }, 'Nowość'));
+    }
+    itemCard.appendChild(titleEl);
     itemCard.appendChild(el('div', { className: 'shop-card-desc' }, item.description || heroItemEffectLabel(item)));
     itemCard.appendChild(el('div', { className: 'shop-card-price' }, itemPrice.toLocaleString('pl-PL') + ' 🪙'));
     itemCard.appendChild(el('div', { className: 'shop-card-meta' },
