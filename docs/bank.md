@@ -29,11 +29,11 @@ only 360k, so an unbounded stream still dominates the leaderboard.
 
 | Product | Lock | Yield | Limit | Mints? |
 |---|---|---|---|---|
-| 🐷 Skarbonka | none; <7 dni forfeits interest | 0,30%/dzień simple, max 90 dni | **dynamic**, 1 000–12 000/player | yes |
-| 🏦 Lokata 7 dni | hard | +2,5% total | **dynamic**, 2 500–60 000/player | yes |
-| 🏦 Lokata 14 dni | hard | +6% total | shared with above | yes |
-| 🏦 Lokata 30 dni | hard | +14% total | shared with above | yes |
-| 📜 Obligacja G6 | tradeable, 20 dni | 5 🪙/dzień on 1 000 face (+10%) | **dynamic**, 5–60/series | yes |
+| 🐷 Skarbonka | none; <7 dni forfeits interest | 0,60%/dzień simple, max 90 dni | **dynamic**, 500–8 000/player | yes |
+| 🏦 Lokata 7 dni | hard | +5% total | **dynamic**, 1 000–40 000/player | yes |
+| 🏦 Lokata 14 dni | hard | +12% total | shared with above | yes |
+| 🏦 Lokata 30 dni | hard | +30% total | shared with above | yes |
+| 📜 Obligacja G6 | tradeable, 20 dni | 8 🪙/dzień on 1 000 face (+16%) | **dynamic**, 3–40/series | yes |
 | 🎰 Udział w Kasynie | perpetual, tradeable | 3% of trailing-7d house net | 30 shares, 5/player primary | **no** |
 | 💍 Sygnet Bankiera | perpetual | **2%/dzień, uncapped** | none | yes, unboundedly |
 
@@ -53,6 +53,51 @@ The four bank products together are ~1 250/day against a ~2 951/day casino
 burn — comfortably sub-inflationary. **The Sygnet is ~85% of the total and is
 the only unbounded term.** If the economy runs hot, that is the line to look at
 first, and the four products above are not worth retuning again.
+
+## ⚠️ The Bank used to be a trap — read this before touching the interest base
+
+The interest base for `daily_interest` items is **cash PLUS open Bank deposit
+principal**. It was cash-only at first, and that made the whole feature
+self-defeating. Measured at the shipped numbers, a Sygnet owner locking the
+maximum lokata:
+
+| | |
+|---|---|
+| lokata pays, 30 days | +630 |
+| Sygnet interest forgone on the locked coins (2%/day × 30) | −2 700 |
+| **net** | **−2 070** |
+
+So every product the Bank sold was a *loss* for anyone holding an interest
+item, and the rational play was to touch nothing. Counting deposits in the base
+makes the products purely **additive** — you keep the 2% and earn the deposit
+rate on top — which is the only version where they have a reason to exist.
+Deposit principal is bounded by the dynamic caps, so this cannot become an
+unbounded new base. Do not "simplify" it back to `p.coins`.
+
+## Rate × cap is a free trade, and it was worth making
+
+The budget fixes `cap × daily_rate`, not either one alone. So doubling every
+rate and letting the caps halve costs the economy **exactly the same** and
+produces a far better offer: a 30-day lokata reads *+30%* instead of *+14%*, on
+2 000 instead of 4 500. That is why the rates look generous next to the health
+multiplier — they are not generous, they are concentrated.
+
+Normalised to coins/day per 1 000 committed, at the shipped numbers:
+
+| product | per 1 000/day | capital |
+|---|---|---|
+| 🐷 Skarbonka | 6 | returned |
+| 📜 Obligacja | 8 | returned, tradeable |
+| 🏦 Lokata 30 dni | 10 | returned |
+| 🎰 Udział w kasynie | 22 | **burned**, perpetual |
+| 💍 Sygnet | 36 at a 27k base | **burned**, perpetual, scales with balance |
+
+Two things that table is there to make obvious, because neither was before:
+**Udział w Kasynie is the strongest product that isn't the Sygnet** (and the
+only one that mints nothing, so it is the one to push), and the first three
+give the capital back while the last two consume it. The Sygnet still leads on
+raw yield — that is the accepted cost of parity — but by ~1,6× over the Udział,
+not the ~100× gap the cash-only base produced.
 
 ## Limits are dynamic
 

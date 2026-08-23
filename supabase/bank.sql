@@ -415,7 +415,7 @@ BEGIN
   INSERT INTO public.bank_bond_series
     (code, face_value, price, coupon_per_day, term_days, edition_size, opens_at, closes_at)
   VALUES
-    (v_code, 1000, 1000, 5, 20, v_size, v_now, v_now + interval '7 days')
+    (v_code, 1000, 1000, 8, 20, v_size, v_now, v_now + interval '7 days')
   ON CONFLICT (code) DO NOTHING;
 END;
 $fn$;
@@ -510,15 +510,23 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $fn$
-  WITH candidates AS (
+  WITH base AS (
+    -- Same base as award_daily_interest(): cash + Bank deposit principal.
     SELECT p.id AS user_id,
-           FLOOR(LEAST(p.coins, COALESCE(d.interest_cap, p.coins)) * (d.effect_value / 100.0))::bigint AS amount
+           p.coins + COALESCE((
+             SELECT sum(dd.principal) FROM public.bank_deposits dd
+              WHERE dd.user_id = p.id AND dd.closed_at IS NULL
+           ), 0) AS interest_base
       FROM public.profiles p
-      JOIN public.hero_item_instances i ON i.owner_id = p.id
+     WHERE NOT COALESCE(p.is_admin, false)
+  ), candidates AS (
+    SELECT b.user_id,
+           FLOOR(LEAST(b.interest_base, COALESCE(d.interest_cap, b.interest_base)) * (d.effect_value / 100.0))::bigint AS amount
+      FROM base b
+      JOIN public.hero_item_instances i ON i.owner_id = b.user_id
       JOIN public.hero_item_defs d ON d.id = i.item_def_id
      WHERE d.effect_type = 'daily_interest' AND d.is_active
        AND (i.expires_at IS NULL OR i.expires_at > now())
-       AND NOT COALESCE(p.is_admin, false)
   ), best AS (
     SELECT DISTINCT ON (user_id) amount FROM candidates ORDER BY user_id, amount DESC
   )
@@ -595,9 +603,9 @@ DECLARE
   c_live_series  constant numeric := 3;     -- a 20-day bond, issued weekly
   -- Each product's daily yield, used to turn a coins/day budget back into a
   -- principal cap. Must match the rates in bank_open_deposit / the series row.
-  c_lokata_daily constant numeric := 1400.0 / 30 / 10000;   -- 30-day lokata
-  c_piggy_daily  constant numeric := 30.0 / 10000;
-  c_bond_coupon  constant numeric := 5;
+  c_lokata_daily constant numeric := 3000.0 / 30 / 10000;   -- 30-day lokata
+  c_piggy_daily  constant numeric := 60.0 / 10000;
+  c_bond_coupon  constant numeric := 8;
 
   v_row     public.bank_limits;
   v_today   date := (now() AT TIME ZONE 'Europe/Warsaw')::date;
@@ -637,11 +645,11 @@ BEGIN
     v_players, round(v_budget)::bigint, v_signet,
     -- rounded to 500, then clamped: a product must never become pointless
     -- (floor) or unbounded (ceiling), whatever the measurement says.
-    LEAST(60000, GREATEST(2500,
+    LEAST(40000, GREATEST(1000,
       round(v_budget * c_lokata_share / v_players / c_lokata_daily / 500) * 500))::bigint,
-    LEAST(12000, GREATEST(1000,
+    LEAST(8000, GREATEST(500,
       round(v_budget * c_piggy_share / v_players / c_piggy_daily / 500) * 500))::bigint,
-    LEAST(60, GREATEST(5,
+    LEAST(40, GREATEST(3,
       round(v_budget * c_bond_share / c_bond_coupon / c_live_series)))::integer
   )
   ON CONFLICT (effective_date) DO NOTHING;
@@ -872,12 +880,12 @@ BEGIN
   v_limits := public.bank_ensure_limits();
 
   IF p_product = 'lokata' THEN
-    v_rate := CASE p_term_days WHEN 7 THEN 250 WHEN 14 THEN 600 WHEN 30 THEN 1400 END;
+    v_rate := CASE p_term_days WHEN 7 THEN 500 WHEN 14 THEN 1200 WHEN 30 THEN 3000 END;
     IF v_rate IS NULL THEN RAISE EXCEPTION 'bad_term'; END IF;
     v_matures := now() + make_interval(days => p_term_days);
     v_cap := v_limits.lokata_cap;
   ELSE
-    v_rate := 30;                                  -- 0.30%/day, simple
+    v_rate := 60;                                  -- 0.60%/day, simple
     p_term_days := NULL;
     v_matures := now() + interval '7 days';        -- interest unlock, not a term
     v_cap := v_limits.piggy_cap;
@@ -1436,16 +1444,33 @@ DECLARE
   v_count integer := 0;
   v_total bigint := 0;
 BEGIN
-  WITH candidates AS (
+  WITH base AS (
+    -- ⚠️ The interest base is cash PLUS principal held in Bank deposits.
+    -- Paying on bare cash made the Bank a trap for anyone holding an interest
+    -- item: locking 4,500 in a 30-day lokata earned +630 but silently cost
+    -- 2,700 of forgone 2%/day, so using the Bank was a 2,070-coin mistake and
+    -- the rational play was to touch nothing. Counting deposits makes every
+    -- product purely ADDITIVE — you keep the 2% and earn the deposit rate on
+    -- top — which is the only version where the products have a reason to
+    -- exist. Deposit principal is itself bounded by the dynamic caps, so this
+    -- cannot become an unbounded new base.
+    SELECT p.id AS user_id,
+           p.coins + COALESCE((
+             SELECT sum(d.principal) FROM public.bank_deposits d
+              WHERE d.user_id = p.id AND d.closed_at IS NULL
+           ), 0) AS interest_base
+      FROM public.profiles p
+  ),
+  candidates AS (
     SELECT
-      p.id AS user_id,
+      b.user_id,
       hii.id AS item_instance_id,
       GREATEST(1, FLOOR(
-        LEAST(p.coins, COALESCE(hid.interest_cap, p.coins))
+        LEAST(b.interest_base, COALESCE(hid.interest_cap, b.interest_base))
         * (hid.effect_value / 100.0)
       ))::bigint AS amount
-    FROM public.profiles p
-    JOIN public.hero_item_instances hii ON hii.owner_id = p.id
+    FROM base b
+    JOIN public.hero_item_instances hii ON hii.owner_id = b.user_id
     JOIN public.hero_item_defs hid ON hid.id = hii.item_def_id
     WHERE hid.effect_type = 'daily_interest'
       AND hid.is_active = true
