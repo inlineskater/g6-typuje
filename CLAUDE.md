@@ -19,7 +19,7 @@ Deep-dive design docs that don't need to load on every task live in `docs/` — 
 - `supabase/schema.sql` — core prediction-market schema, run once on a fresh project
 - `supabase/arcade.sql` — free-forever „Wszystkie Gry" archive scores (SELECT-only for clients); `pay_arcade_entry` just validates auth/game_type (no coin cost); `record_arcade_score` validates the score cap and rate-limits to 1 submission/5s per user+game as the anti-spam throttle. **Adding an arcade-only game means adding its `game_type` in TWO places here** — `pay_arcade_entry`'s whitelist and `record_arcade_score`'s cap `CASE` — then re-running the file (idempotent). Miss the first and the round never starts; miss the second and it plays fine but every score is rejected on submit. (Filler is the exception: its Edge Function writes `arcade_scores` directly as `service_role` and bypasses both RPCs.)
 - `supabase/store.sql` — reward shop tables/RPCs used by the Sklep tab
-- `supabase/bank.sql` — **„Bank G6"** investment products on their own nav tab (`#tab-bank`, UI in `tabs/bank.js`): **🏦 Lokata** (hard-term deposit, 7d/+3,5% · 14d/+8% · 30d/+19%, cap 30 000/player, breaking early returns principal and forfeits interest), **🐷 Skarbonka** (no term, 0,40%/day simple, cap 5 000, interest locked for 7 days), **📜 Obligacje** (weekly series of 40; 1 000 face, 6/day coupon, 20 days, **tradeable**), **🎰 Udział w Kasynie** (30 shares × 4 000, each paying **2,5% of the trailing-7-day positive casino house net** — the one product that mints nothing, only redistributing coins already burned, and pays 0 in a week nobody gambles), and **💍 „Sygnet Bankiera"** (`banker_signet`, 8 000 🪙 in the Sklep — the legendary ring's 2%/day rate, capped to the first 12 000 🪙 of **cash** → 240/day). Adds `bank_deposits`/`bank_bond_series`/`bank_holdings`/`bank_dividends` (SELECT-only for clients) and `bank_state`/`bank_open_deposit`/`bank_close_deposit`/`bank_buy_bond`/`bank_buy_share`/`bank_list_holding`/`bank_unlist_holding`/`bank_buy_holding`. **Settlement is LAZY-ON-READ** (`bank_settle_due()` at the top of `bank_state`, crash/wheel pattern) with an hourly cron at **minute 35** as a backstop — it is idempotent and date-driven with a 14-day lookback, and bond redemption pays any coupon day the accrual missed, so a cron outage delays payouts instead of losing them. Also **rewrites `award_daily_interest()`**: it now pays any def with `effect_type='daily_interest'` at that def's own `effect_value`, honours the new `hero_item_defs.interest_cap` (NULL = uncapped, which only `interest_ring` is), and pays **only the best single item per user** so the ring and the Sygnet cannot stack to 4%/day. ⚠️ Every `profiles` update inside `bank_settle_due()` must aggregate per user first — `UPDATE profiles p SET coins = p.coins + x.amount FROM cte x WHERE p.id = x.user_id` updates a row **once** when the CTE holds several rows for it, silently dropping the rest (it lost 24 of 48 coupon coins in this file's first smoke test while the dividend table still recorded all 48 as paid). ⚠️ The primary share sale needs `pg_advisory_xact_lock`, not a row lock on the buyer's own profile, or the 30-share float becomes 31. Run order: `bank.sql`, **then** re-run `leaderboard-net-worth-items.sql` + `economy-stats.sql` + `coin-inflow-stats.sql` (all three now call `bank_user_assets()`/`bank_total_assets()` and will fail without it). Full rate/price derivation, the measured prod baseline they came from, and the tuning knobs are in docs/bank.md — read it before changing any rate, cap, or price.
+- `supabase/bank.sql` — **„Bank G6"** investment products on their own nav tab (`#tab-bank`, UI in `tabs/bank.js`): **🏦 Lokata** (hard-term deposit, 7d/+2,5% · 14d/+6% · 30d/+14%, cap 15 000/player, breaking early returns principal and forfeits interest), **🐷 Skarbonka** (no term, 0,30%/day simple, cap 3 000, interest locked for 7 days), **📜 Obligacje** (weekly series of 25; 1 000 face, 5/day coupon, 20 days, **tradeable**), **🎰 Udział w Kasynie** (30 shares × 4 000, each paying **3% of the trailing-7-day positive casino house net** — the one product that mints nothing, only redistributing coins already burned, and pays 0 in a week nobody gambles), and **💍 „Sygnet Bankiera"** (`banker_signet`, 15 000 🪙 in the Sklep — the legendary ring's deal exactly: **2%/day of the whole cash balance, uncapped**). Adds `bank_deposits`/`bank_bond_series`/`bank_holdings`/`bank_dividends` (SELECT-only for clients) and `bank_state`/`bank_open_deposit`/`bank_close_deposit`/`bank_buy_bond`/`bank_buy_share`/`bank_list_holding`/`bank_unlist_holding`/`bank_buy_holding`. **Settlement is LAZY-ON-READ** (`bank_settle_due()` at the top of `bank_state`, crash/wheel pattern) with an hourly cron at **minute 35** as a backstop — idempotent and date-driven with a 14-day lookback, and bond redemption pays any coupon day the accrual missed, so a cron outage delays payouts instead of losing them. Also **rewrites `award_daily_interest()`**: it pays any def with `effect_type='daily_interest'` at that def's own `effect_value`, honours `hero_item_defs.interest_cap` (NULL = uncapped, which both interest items are today), and pays **only the best single item per user** so the ring and the Sygnet cannot stack to 4%/day. ⚠️ **The Sygnet is ~85% of the whole feature's coin creation** (~7 215/day if all 11 players hold one, compounding, vs ~1 250/day from all four products combined) — it is the only unbounded term, and `interest_cap` on that one row is the knob, not the other products' limits. ⚠️ Every `profiles` update inside `bank_settle_due()` must aggregate per user first — `UPDATE profiles p SET coins = p.coins + x.amount FROM cte x WHERE p.id = x.user_id` updates a row **once** when the CTE holds several rows for it, silently dropping the rest (it lost 24 of 48 coupon coins in this file's first smoke test while the dividend table still recorded all 48 as paid). ⚠️ The primary share sale needs `pg_advisory_xact_lock`, not a row lock on the buyer's own profile, or the 30-share float becomes 31; and the `redeemed_at IS NULL`/`closed_at IS NULL` guard must sit on the UPDATE, not only in the CTE that selected the rows, or a concurrent settle pays twice. Run order: `bank.sql`, **then** re-run `leaderboard-net-worth-items.sql` + `economy-stats.sql` + `coin-inflow-stats.sql` (all three now call `bank_user_assets()`/`bank_total_assets()` and will fail without it). Full rate derivation, the measured prod baseline, the inflation table and the tuning knobs are in docs/bank.md — read it before changing any rate, cap, or price.
 - `supabase/marketplace.sql` — peer-to-peer marketplace ("Targowisko") tables/RPCs; any user can list IRL goods/services; winning/buy coins transfer from buyer to seller (not burned)
 - `supabase/poker.sql` — poker tables, RLS, realtime publication, and leaderboard stack accounting
 - `supabase/functions/poker-action` — authenticated Edge Function that owns poker state transitions, hidden cards, and chip accounting
@@ -159,25 +159,33 @@ Users can only add to one side per market (side-locked after first bet). Profile
 The `🏦 Bank G6` nav tab (`#tab-bank`) is where coins earn instead of sitting
 still: term deposits, a piggy bank, tradeable bonds, and casino revenue shares.
 Backend is `supabase/bank.sql` (see the file list above), frontend is entirely
-`tabs/bank.js` — `index.html` holds only the shell div, the nav button, ~70
-lines of `.bank-*` CSS, and the `stopBankTimer()` teardown stub.
+`tabs/bank.js` — `index.html` holds only the shell div, the nav button, the
+`.bk-*` CSS, and the `stopBankTimer()` teardown stub.
 
-The design rule the whole feature is built on: **an income stream must be
-bounded by a principal cap, a maturity, or by being funded out of coins that
-were already burned.** The cautionary precedent is `interest_ring`, bought at
-auction for 401 coins and having minted its owner 38 235 by 2026-08-23 — over
-10% of the entire non-admin money supply — because a percentage of an unbounded
-balance has no finite fair price. Rates here were calibrated against measured
-prod data (11 players, 360 776 coins in circulation, median balance 10 353,
-casino house net 2 951/day), not chosen by feel; docs/bank.md carries the
-derivation for every one of them, including why the Sygnet costs exactly 8 000.
+**The UI is deliberately not the app's house style.** A bank statement is a
+reference document you read a column of numbers off, so the tab is built as one:
+a navy statement header with a KPI strip, a sub-tab bar, and dense tables with
+tabular figures and right-aligned money columns — closer to Business Central
+than to the rest of the portal. Every product page follows the same order:
+a four-cell „Warunki produktu" strip, the order form, then the positions table.
+There is a published `Tabela oprocentowania` comparing every product on one
+screen (it reads its caps from the server payload, not the client constants) and
+a `Regulamin` section that carries all the prose. Conventions are in
+docs/farm-ui-conventions.md's sibling, docs/bank.md.
 
-Two non-obvious mechanics worth knowing before editing: casino-share dividends
-pay off a **trailing-7-day average**, not yesterday's net, because gambling here
-is bursty enough (25 998 on one day, ~0 on the surrounding six) that a
-single-day basis reads as a broken product; and the client's `BANK_*` constants
-exist **only to preview** a number before you commit — the server is
-authoritative for everything that moves coins.
+Rates were calibrated against measured prod data (11 players, 360 776 coins in
+circulation, median balance 10 353, casino house net 2 951/day), not chosen by
+feel. **Where the inflation is:** the four bank products together mint ~1 250
+coins/day at absolute maximum, against a ~2 951/day casino burn — the Sygnet
+Bankiera, uncapped at 2%/day of cash by design, is ~7 215/day and compounding.
+It is the only unbounded term in the feature, so it is the only one worth
+retuning if the economy runs hot; `interest_cap` on that one row is the knob.
+
+Two non-obvious mechanics: casino-share dividends pay off a **trailing-7-day
+average**, not yesterday's net, because gambling here is bursty enough (25 998
+on one day, ~0 on the surrounding six) that a single-day basis reads as a broken
+product; and the client's `BANK_*` constants exist **only to preview** a number
+before you commit — the server is authoritative for everything that moves coins.
 
 ### Marketplace (Targowisko)
 

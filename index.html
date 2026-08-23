@@ -8427,76 +8427,119 @@
     }
 
     /* ── 🏦 Bank G6 ─────────────────────────────────────────────────────────
-       Markup is built by tabs/bank.js. Kept small and token-based on purpose:
-       index.html is under a hard 1600 KB CI payload budget, so a new feature
-       gets a handful of layout rules here and everything else reuses the
-       shared .btn-primary / .btn-ghost / .shop-card vocabulary. */
-    .bank-wrap { display: flex; flex-direction: column; gap: 18px; }
-    .bank-hero {
-      display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch;
-      background: linear-gradient(135deg, #0f2d4a 0%, #17466e 100%);
-      color: #eaf3fb; border-radius: var(--r-lg); padding: 18px 20px;
-      box-shadow: var(--sh-lg);
-    }
-    .bank-hero h2 { margin: 0 0 4px; font-size: 20px; color: #fff; }
-    .bank-hero p { margin: 0; font-size: 13px; color: #b9d2e8; max-width: 62ch; }
-    .bank-hero-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; }
-    .bank-stat {
-      background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.16);
-      border-radius: var(--r-md); padding: 8px 14px; min-width: 116px;
-    }
-    .bank-stat b { display: block; font-size: 18px; color: #fff; line-height: 1.2; }
-    .bank-stat span { font-size: 11px; color: #a8c6e0; text-transform: uppercase; letter-spacing: .04em; }
+       Deliberately NOT the app's rounded-card-grid look. A bank statement is a
+       reference document you read a column of numbers off, so this section is
+       built on dense tables with tabular figures, hairline rules, a sub-tab
+       bar, and terms panels — closer to Business Central or an online banking
+       portal than to the rest of the portal. Markup is built by tabs/bank.js.
+       Kept token-based and compact: index.html is under a hard 1600 KB CI
+       payload budget. */
+    #tab-bank { --bk-line: #dfe4ea; --bk-head: #f4f6f9; --bk-zebra: #fafbfc;
+                --bk-ink: #16324f; --bk-dim: #64748b; --bk-pos: #157347; --bk-neg: #b02a37; }
+    .bk { max-width: 1180px; margin: 0 auto; font-size: 13px; color: var(--bk-ink); }
+    .bk-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-    .bank-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
-    .bank-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md);
-      padding: 16px; box-shadow: var(--sh-sm); display: flex; flex-direction: column; gap: 10px;
-    }
-    .bank-card > h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .bank-card-sub { font-size: 12.5px; color: var(--muted); margin: -4px 0 0; line-height: 1.5; }
-    .bank-terms { display: flex; gap: 8px; flex-wrap: wrap; }
-    .bank-term {
-      flex: 1 1 90px; border: 1px solid var(--border); border-radius: var(--r-sm);
-      background: none; padding: 8px 6px; cursor: pointer; text-align: center; font: inherit;
-      color: var(--text); transition: border-color .12s, background .12s;
-    }
-    .bank-term:hover { border-color: var(--border-hi); }
-    .bank-term.active { border-color: var(--accent); background: rgba(37,99,235,.07); }
-    .bank-term b { display: block; font-size: 14px; }
-    .bank-term span { font-size: 11px; color: var(--muted); }
-    .bank-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .bank-row input[type=number] {
-      flex: 1 1 120px; min-width: 0; padding: 8px 10px; font: inherit;
-      border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--card); color: var(--text);
-    }
-    .bank-note { font-size: 12px; color: var(--muted); line-height: 1.5; }
-    .bank-warn { font-size: 12px; color: #b45309; line-height: 1.5; }
-    .bank-list { display: flex; flex-direction: column; gap: 8px; }
-    .bank-item {
-      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-      border: 1px solid var(--border); border-radius: var(--r-sm); padding: 9px 11px;
-      background: var(--bg-soft, rgba(148,163,184,.06)); font-size: 13px;
-    }
-    .bank-item-main { flex: 1 1 150px; min-width: 0; }
-    .bank-item-main b { display: block; }
-    .bank-item-main span { font-size: 11.5px; color: var(--muted); }
-    .bank-item.ready { border-color: #16a34a; background: rgba(22,163,74,.07); }
-    .bank-empty { font-size: 12.5px; color: var(--muted); font-style: italic; }
-    .bank-btn-sm { padding: 5px 10px; font-size: 12px; border-radius: var(--r-sm); }
-    .bank-supply {
-      height: 7px; border-radius: var(--r-pill); background: rgba(148,163,184,.25); overflow: hidden;
-    }
-    .bank-supply > i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
-    .bank-ladder { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .bank-ladder th, .bank-ladder td { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--border); }
-    .bank-ladder th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
-    .bank-ladder td:last-child, .bank-ladder th:last-child { text-align: right; }
-    @media (max-width: 640px) {
-      .bank-hero { padding: 14px; }
-      .bank-hero-stats { margin-left: 0; width: 100%; }
-      .bank-stat { flex: 1 1 100px; min-width: 0; }
-      .bank-grid { grid-template-columns: 1fr; }
+    /* Statement header */
+    .bk-head { background: #12304d; color: #eef4fa; border-radius: var(--r-md) var(--r-md) 0 0; padding: 16px 20px 14px; }
+    .bk-head-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .bk-head h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .01em; color: #fff; }
+    .bk-head-meta { font-size: 11.5px; color: #9fbcd6; font-variant-numeric: tabular-nums; }
+    .bk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); gap: 1px;
+               margin-top: 14px; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.13); border-radius: var(--r-sm); overflow: hidden; }
+    .bk-kpi { background: #12304d; padding: 9px 12px; }
+    .bk-kpi span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #93b3cf; }
+    .bk-kpi b { display: block; font-size: 16px; font-weight: 650; color: #fff; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+    /* Sub-navigation */
+    .bk-tabs { display: flex; gap: 0; overflow-x: auto; background: var(--bk-head);
+               border: 1px solid var(--bk-line); border-top: none; scrollbar-width: thin; }
+    .bk-tab { flex: 0 0 auto; background: none; border: none; border-bottom: 2px solid transparent;
+              padding: 9px 15px; font: inherit; font-size: 12.5px; font-weight: 550; color: var(--bk-dim);
+              cursor: pointer; white-space: nowrap; }
+    .bk-tab:hover { color: var(--bk-ink); background: rgba(18,48,77,.05); }
+    .bk-tab.active { color: var(--bk-ink); border-bottom-color: #12304d; background: #fff; }
+    /* In-table jump link. Deliberately NOT .bk-tab: that class is also the
+       selector the sub-nav is built and queried by. */
+    .bk-link { background: none; border: none; padding: 0; font: inherit; color: var(--bk-ink);
+               text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left; }
+    .bk-link:hover { color: #1b4470; }
+
+    .bk-body { background: #fff; border: 1px solid var(--bk-line); border-top: none;
+               border-radius: 0 0 var(--r-md) var(--r-md); padding: 18px 20px 22px; }
+    .bk-sec { margin-bottom: 26px; }
+    .bk-sec:last-child { margin-bottom: 0; }
+    .bk-sec > h3 { margin: 0 0 3px; font-size: 13px; font-weight: 650; text-transform: uppercase;
+                   letter-spacing: .06em; color: var(--bk-ink); }
+    .bk-lede { margin: 0 0 12px; font-size: 12.5px; color: var(--bk-dim); line-height: 1.6; max-width: 78ch; }
+
+    /* Tables — the primary surface here */
+    .bk-tw { overflow-x: auto; border: 1px solid var(--bk-line); border-radius: var(--r-sm); }
+    table.bk-t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table.bk-t th, table.bk-t td { padding: 7px 11px; text-align: left; border-bottom: 1px solid var(--bk-line); vertical-align: middle; }
+    table.bk-t thead th { background: var(--bk-head); font-size: 10.5px; font-weight: 650;
+                          text-transform: uppercase; letter-spacing: .05em; color: var(--bk-dim); white-space: nowrap; }
+    table.bk-t tbody tr:nth-child(even) { background: var(--bk-zebra); }
+    table.bk-t tbody tr:last-child td { border-bottom: none; }
+    table.bk-t tfoot td { background: var(--bk-head); font-weight: 650; border-bottom: none; border-top: 2px solid var(--bk-line); }
+    .bk-t .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bk-t .c { text-align: center; }
+    .bk-t td small { display: block; color: var(--bk-dim); font-size: 11px; }
+    .bk-pos { color: var(--bk-pos); } .bk-neg { color: var(--bk-neg); }
+    .bk-tag { display: inline-block; padding: 1px 7px; border-radius: var(--r-pill); font-size: 10.5px;
+              font-weight: 600; background: #eef2f7; color: var(--bk-dim); white-space: nowrap; }
+    .bk-tag.ok { background: #e4f4ea; color: var(--bk-pos); }
+    .bk-tag.due { background: #fdf1dc; color: #92400e; }
+
+    /* Terms panel — the "Warunki produktu" definition block */
+    .bk-terms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0;
+                border: 1px solid var(--bk-line); border-radius: var(--r-sm); overflow: hidden; margin-bottom: 14px; }
+    @media (min-width: 880px) { .bk-terms { grid-template-columns: repeat(4, 1fr); } }
+    .bk-term { padding: 9px 12px; border-right: 1px solid var(--bk-line); border-bottom: 1px solid var(--bk-line); background: #fff; }
+    .bk-term dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--bk-dim); margin: 0; }
+    .bk-term dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .bk-term dd small { display: block; font-weight: 400; font-size: 11px; color: var(--bk-dim); }
+
+    /* Order form */
+    .bk-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;
+               background: var(--bk-zebra); border: 1px solid var(--bk-line); border-radius: var(--r-sm); padding: 12px; margin-bottom: 12px; }
+    .bk-field { display: flex; flex-direction: column; gap: 3px; }
+    .bk-field > label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--bk-dim); }
+    /* The global `input[type=number], textarea` rule carries min-height:44px and
+       margin-bottom:12px for the app's big touch forms. Both have to be unset
+       here or the input stands 10px taller than the select beside it and their
+       labels stop lining up. */
+    .bk-field input, .bk-field select { padding: 6px 9px; font: inherit; font-size: 13px;
+      width: 100%; min-width: 130px; height: 34px; min-height: 0; margin: 0; box-sizing: border-box;
+      border: 1px solid var(--bk-line); border-radius: var(--r-sm); background: #fff; color: var(--bk-ink);
+      font-variant-numeric: tabular-nums; }
+    .bk-field input:focus, .bk-field select:focus { outline: 2px solid rgba(18,48,77,.25); outline-offset: -1px; }
+    .bk-quote { flex: 1 1 220px; align-self: center; font-size: 12px; color: var(--bk-dim); line-height: 1.5; min-width: 0; }
+    .bk-quote b { color: var(--bk-ink); }
+
+    /* Buttons: .btn-primary is a full-width 48px CTA by design, which is wrong
+       inside a statement row — pull it back to an inline control. */
+    .bk-btn { width: auto; min-height: 32px; margin: 0; flex: 0 0 auto; padding: 6px 14px;
+              font-size: 12.5px; font-weight: 600; border-radius: var(--r-sm); box-shadow: none; white-space: nowrap; }
+    .bk-btn:hover { transform: none; }
+    .bk-sec > .bk-btn { align-self: flex-start; }
+    button.bk-btn.btn-primary { background: #12304d; }
+    button.bk-btn.btn-primary:hover { background: #1b4470; filter: none; }
+    button.bk-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .bk-empty { padding: 14px; text-align: center; font-size: 12.5px; color: var(--bk-dim); font-style: italic; }
+    .bk-note { font-size: 11.5px; color: var(--bk-dim); line-height: 1.6; margin: 8px 0 0; }
+    .bk-note-warn { border-left: 3px solid #d97706; background: #fffbf3; padding: 9px 12px;
+                    border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 12px; line-height: 1.6; color: #7c4a03; margin: 10px 0 0; }
+    .bk-foot { margin-top: 10px; font-size: 11px; color: var(--bk-dim); line-height: 1.65; }
+    .bk-foot li { margin: 2px 0; }
+    .bk-bar { height: 6px; border-radius: var(--r-pill); background: #e6eaef; overflow: hidden; margin: 2px 0 4px; }
+    .bk-bar > i { display: block; height: 100%; background: #12304d; }
+
+    @media (max-width: 720px) {
+      .bk-body { padding: 14px 12px 18px; }
+      .bk-head { padding: 13px 14px; }
+      .bk-form { flex-direction: column; align-items: stretch; }
+      .bk-field input, .bk-field select { width: 100%; min-width: 0; }
     }
 
     /* ── Mobile: no always-on backdrop blur ────────────────────────────────

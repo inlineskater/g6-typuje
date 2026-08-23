@@ -388,7 +388,7 @@ BEGIN
   INSERT INTO public.bank_bond_series
     (code, face_value, price, coupon_per_day, term_days, edition_size, opens_at, closes_at)
   VALUES
-    (v_code, 1000, 1000, 6, 20, 40, v_now, v_now + interval '7 days')
+    (v_code, 1000, 1000, 5, 20, 25, v_now, v_now + interval '7 days')
   ON CONFLICT (code) DO NOTHING;
 END;
 $fn$;
@@ -605,15 +605,15 @@ BEGIN
   IF p_amount IS NULL OR p_amount < 500 THEN RAISE EXCEPTION 'amount_too_small'; END IF;
 
   IF p_product = 'lokata' THEN
-    v_rate := CASE p_term_days WHEN 7 THEN 350 WHEN 14 THEN 800 WHEN 30 THEN 1900 END;
+    v_rate := CASE p_term_days WHEN 7 THEN 250 WHEN 14 THEN 600 WHEN 30 THEN 1400 END;
     IF v_rate IS NULL THEN RAISE EXCEPTION 'bad_term'; END IF;
     v_matures := now() + make_interval(days => p_term_days);
-    v_cap := 30000;
+    v_cap := 15000;
   ELSE
-    v_rate := 40;                                  -- 0.40%/day, simple
+    v_rate := 30;                                  -- 0.30%/day, simple
     p_term_days := NULL;
     v_matures := now() + interval '7 days';        -- interest unlock, not a term
-    v_cap := 5000;
+    v_cap := 3000;
   END IF;
 
   SELECT COALESCE(sum(principal), 0) INTO v_open
@@ -772,7 +772,7 @@ DECLARE
   v_user  uuid := auth.uid();
   v_price bigint := 4000;
   v_supply integer := 30;
-  v_bps   integer := 250;
+  v_bps   integer := 300;
   v_max   integer := 5;
   v_sold  integer;
   v_mine  integer;
@@ -978,7 +978,7 @@ BEGIN
     ), '[]'::json),
 
     'shares', json_build_object(
-      'price', 4000, 'supply', 30, 'share_bps', 250, 'max_per_user', 5,
+      'price', 4000, 'supply', 30, 'share_bps', 300, 'max_per_user', 5,
       'sold', (SELECT count(*) FROM public.bank_holdings WHERE kind = 'share'),
       'mine_treasury', (SELECT count(*) FROM public.bank_holdings
                          WHERE kind = 'share' AND owner_id = v_user
@@ -1005,24 +1005,39 @@ BEGIN
     -- separate because award_daily_interest() pays the best item and only the
     -- best, so someone holding the ring must be told the Sygnet would add
     -- nothing — before they spend 8,000 on it.
+    -- `owned` is the Sygnet specifically. `better` names any OTHER interest
+    -- item the caller holds that already pays them at least as much — with the
+    -- Sygnet uncapped that is a genuine tie with the legendary ring, so it is
+    -- scored the same way award_daily_interest() scores it (at the caller's
+    -- actual balance) rather than compared on caps. Buying a second interest
+    -- item adds nothing: only the best one pays.
     'signet', json_build_object(
       'owned', EXISTS (SELECT 1 FROM public.hero_item_instances i
                         JOIN public.hero_item_defs d ON d.id = i.item_def_id
                        WHERE i.owner_id = v_user AND d.slug = 'banker_signet'),
-      'better', (SELECT d.name FROM public.hero_item_instances i
-                   JOIN public.hero_item_defs d ON d.id = i.item_def_id
-                  WHERE i.owner_id = v_user
-                    AND d.effect_type = 'daily_interest'
-                    AND d.slug <> 'banker_signet'
-                    AND d.is_active
-                    AND (d.interest_cap IS NULL OR d.interest_cap > 12000)
-                  LIMIT 1),
+      'better', (
+        WITH bal AS (SELECT coins FROM public.profiles WHERE id = v_user),
+        scored AS (
+          SELECT d.slug, d.name,
+                 FLOOR(LEAST(b.coins, COALESCE(d.interest_cap, b.coins))
+                       * (d.effect_value / 100.0)) AS pays
+            FROM public.hero_item_instances i
+            JOIN public.hero_item_defs d ON d.id = i.item_def_id
+            CROSS JOIN bal b
+           WHERE i.owner_id = v_user AND d.effect_type = 'daily_interest' AND d.is_active
+             AND (i.expires_at IS NULL OR i.expires_at > now())
+        )
+        SELECT name FROM scored
+         WHERE slug <> 'banker_signet'
+           AND pays >= COALESCE((SELECT pays FROM scored WHERE slug = 'banker_signet'), 0)
+         ORDER BY pays DESC LIMIT 1
+      ),
       'paid_total', COALESCE((SELECT sum(amount) FROM public.hero_daily_interest_awards
                                WHERE user_id = v_user), 0)
     ),
 
     'caps', json_build_object(
-      'lokata_max', 30000, 'lokata_min', 500, 'piggy_max', 5000,
+      'lokata_max', 15000, 'lokata_min', 500, 'piggy_max', 3000,
       'lokata_open', COALESCE((SELECT sum(principal) FROM public.bank_deposits
                                 WHERE user_id = v_user AND product = 'lokata'
                                   AND closed_at IS NULL), 0),
@@ -1055,41 +1070,52 @@ GRANT EXECUTE ON FUNCTION public.bank_buy_holding(uuid) TO authenticated;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 💍 „Sygnet Bankiera" — Filip's interest rate, sold to everyone, with a cap
+-- 💍 „Sygnet Bankiera" — Filip's ring, on exactly Filip's terms, for everyone
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Pricing, derived from prod on 2026-08-23 rather than picked by feel:
+-- 2%/day of your whole cash balance. No cap, no ceiling, no asterisk — the
+-- same deal `interest_ring` has had since May 2026. Selling anyone a weaker
+-- copy of an item somebody else already owns is the unfair version, so the
+-- item is identical and the price is the only thing that differs.
 --
---   The uncapped `interest_ring` is not a pricing comparable. It sold at
---   auction for 401 coins in May 2026 and has paid its owner 38,235 since —
---   a 95× return — because a percentage of an unbounded balance has no finite
---   fair price. The cap is what makes ONE price fair across a 15× wealth
---   spread, so the cap is the design and the price follows from it.
+-- ⚠️ READ THIS BEFORE RETUNING ANYTHING ELSE IN THIS FILE. An uncapped
+-- percentage of a balance is UNBOUNDED and COMPOUNDING, so it is not merely
+-- the largest line in the bank — at office scale it is roughly the whole
+-- thing. With all 11 players holding one against today's 360,776 coins of
+-- circulating cash it mints ~7,215/day and doubles the money supply in ~35
+-- days, against ~1,400/day from all four bank products put together and a
+-- ~2,951/day casino burn. That is the deliberate, known cost of parity.
 --
---   Cap 12,000 · rate 2%/day  →  240/day maximum.
---   Price 8,000  ⇒  payback at the cap        33 days
---                   payback at median (10,353) 39 days   (207/day)
---                   payback at 5,000            80 days   (100/day)
+-- Price 15,000. Payback, ignoring compounding:
 --
---   Compressing "rich player" and "median player" from a 15× gap down to
---   33-vs-39 days is the whole point: everyone can buy the same item and
---   nobody's copy is worth six times someone else's. Above 12,000 the item
---   stops scaling entirely, which is what keeps the office-wide worst case
---   (11 players × 240) at ~2,640 coins/day against a ~2,950/day casino burn.
+--     balance 10,353 (median)   207/day   ~72 days
+--     balance 30,000            600/day   ~25 days
+--     balance 68,719 (Filip)  1,374/day   ~11 days
 --
---   The other brake is opportunity cost and it is real: interest is paid on
---   CASH, and cash sitting still earns nothing else. 12,000 idle coins is
---   ~120 lootboxes or a third of a farm land upgrade.
+-- Note the shape: an uncapped percentage pays a big balance back ~6.5× faster
+-- than a median one, so the item is regressive by construction. That is
+-- inherent to "same rate for everyone" and is the trade being made. The
+-- 15,000 price is what stops it being a trivial pickup — it is ~4% of the
+-- entire money supply, and 11 copies burn 165,000 up front, which covers the
+-- first ~23 days of what they then mint.
 --
---   Filip's ring stays uncapped and stays a 1-of-1. At his balance it pays
---   ~1,374/day — 5.7× the Sygnet's ceiling. He won the auction; the prize is
---   allowed to stay the best one.
+-- ── If it does run hot, the knobs, cheapest first ──────────────────────────
+--   1. `interest_cap` on this def (the column and all the logic that honours
+--      it are still here — it is simply NULL). Setting it to e.g. 12,000 caps
+--      payouts at 240/day/player without touching anyone's existing item.
+--   2. `effect_value` 2 → 1. Halves every payout, including the legacy ring's.
+--   3. `edition_size` + a sale_type flip, to make it scarce instead of capped.
+-- All three are data changes on one row; none needs a code deploy.
+--
+-- The other brake is real but modest: interest is paid on CASH, and cash is
+-- the one asset in this game that does nothing else. Coins locked in a Lokata,
+-- spent on lootboxes, or sitting in a market position earn nothing here.
 
 ALTER TABLE public.hero_item_defs
   ADD COLUMN IF NOT EXISTS interest_cap bigint;
 
 COMMENT ON COLUMN public.hero_item_defs.interest_cap IS
-  'daily_interest items: pay interest on at most this many coins of balance. NULL = uncapped (legacy interest_ring only).';
+  'daily_interest items: pay interest on at most this many coins of balance. NULL = uncapped (both interest_ring and banker_signet today). This is the primary anti-inflation knob for interest items.';
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_interest_cap_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_interest_cap_check
@@ -1099,9 +1125,9 @@ INSERT INTO public.hero_item_defs
   (slug, name, emoji, slot, price, rarity, description, effect_game, effect_type,
    effect_value, sale_type, edition_size, visual_effect, is_active, interest_cap)
 VALUES
-  ('banker_signet', 'Sygnet Bankiera', '💍', 'trinket', 8000, 'epic',
-   'Ta sama stopa co legendarny Pierścień Bankiera — +2% dziennie — ale liczona tylko od pierwszych 12 000 🪙 gotówki (maks. 240 🪙 dziennie). Odsetki naliczają się od GOTÓWKI, więc monety muszą leżeć na koncie, żeby pracowały. Wypłata codziennie rano.',
-   NULL, 'daily_interest', 2, 'shop', NULL, NULL, true, 12000)
+  ('banker_signet', 'Sygnet Bankiera', '💍', 'trinket', 15000, 'legendary',
+   'Dokładnie ta sama umowa co legendarny Pierścień Bankiera: +2% dziennie od CAŁEGO salda gotówki, bez limitu i bez górnej granicy. Odsetki naliczają się wyłącznie od gotówki — monety zamrożone w lokacie, wydane na skrzynki albo stojące w pozycji rynkowej nie pracują. Wypłata codziennie rano, automatycznie.',
+   NULL, 'daily_interest', 2, 'shop', NULL, NULL, true, NULL)
 ON CONFLICT (slug) DO UPDATE SET
   name         = EXCLUDED.name,
   emoji        = EXCLUDED.emoji,
@@ -1115,8 +1141,8 @@ ON CONFLICT (slug) DO UPDATE SET
   is_active    = EXCLUDED.is_active,
   interest_cap = EXCLUDED.interest_cap;
 
--- The legacy 1-of-1 stays explicitly uncapped, so a future default can't
--- silently nerf an item somebody won at auction.
+-- The legendary 1-of-1 is explicitly uncapped too, so a future default can
+-- never silently nerf an item somebody won at auction.
 UPDATE public.hero_item_defs SET interest_cap = NULL WHERE slug = 'interest_ring';
 
 
