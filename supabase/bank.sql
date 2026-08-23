@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- „Bank G6" — investment products: Lokata, Skarbonka, Obligacje, Udziały w
--- Kasynie. Plus the shop-buyable capped interest item („Sygnet Bankiera").
+-- Kasynie. Plus the shop-buyable interest item („Sygnet Bankiera").
 --
 -- Run AFTER: schema.sql, coin-transactions.sql, hero-items.sql,
 --            hero-items-always-active.sql, casino-luck-item.sql,
@@ -10,13 +10,16 @@
 --            / bank_total_assets() defined here and will fail without them.
 -- Idempotent: safe to re-run.
 --
--- ── Why every rate here is CAPPED ──────────────────────────────────────────
+-- ── Why every LIMIT here is DERIVED, not chosen ────────────────────────────
 -- The precedent in this codebase is `interest_ring` (new-auction-items.sql):
 -- 2%/day of the whole balance, compounding, uncapped, forever. It was won at
 -- auction for 401 coins in May 2026 and had minted its owner 38,235 by
 -- 2026-08-23 — more than 10% of the entire non-admin money supply, from one
--- item. Every product below is therefore bounded by a principal cap, a
--- maturity, or (best of all) funded out of coins that were already burned.
+-- item. Every product below is therefore bounded by a maturity, by being
+-- funded out of coins that were already burned, or by a per-player cap that
+-- bank_ensure_limits() RECOMPUTES DAILY from the measured state of the economy
+-- (see the DYNAMIC LIMITS block below). The Sygnet Bankiera is the deliberate
+-- exception: it is uncapped, at parity with the legendary ring.
 --
 -- Measured baseline the rates were calibrated against (prod, 2026-08-23):
 --   11 non-admin players · 360,776 coins in circulation · median balance 10,353
