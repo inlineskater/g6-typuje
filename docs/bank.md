@@ -408,6 +408,26 @@ The `BANK_*` constants in `tabs/bank.js` mirror the SQL but exist **only to
 preview** a number before you commit. The server is authoritative for everything
 that moves a coin.
 
+## Wallet / Portfel integration
+
+Bank value reaches 💼 Portfel through four separate consumers, all of which
+needed a manual edit and all of which fail silently — see the "four consumers"
+block in CLAUDE.md. For the record, what Bank G6 registers:
+
+- `renderNetWorthBreakdown` gets a `🏦 Bank G6` row from `breakdown.bank`
+  (open deposits at mark + bonds at face+accrued + shares at cost).
+- `NEUTRAL` gains `bank_deposit_open/close`, `bank_bond_buy/redeem`,
+  `bank_share_buy`, `bank_resale_purchase/sale` — principal movements are
+  net-worth neutral. The three yield reasons are deliberately excluded.
+- The label chain names all ten bank reasons.
+- The activity feed shows only the deliberate decisions (deposit opened, issue
+  taken, share bought, resale sold); the daily yields are omitted for the same
+  reason `daily_interest` is.
+
+Verified against live prod data: the Portfel rows sum exactly to 💎 Net Worth,
+and a deposit → interest → maturity cycle leaves the balance chart flat except
+for the interest.
+
 ## Files
 
 - `supabase/bank.sql` — everything backend. Idempotent. Run after the casino

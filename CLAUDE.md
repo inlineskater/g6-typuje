@@ -154,6 +154,30 @@ All mutations require authentication and go through Supabase RPCs:
 
 Users can only add to one side per market (side-locked after first bet). Profiles with `is_admin = true` can resolve any market.
 
+### Adding anything that holds value or moves coins — the four consumers
+
+A new asset or coin-reason is never done when the SQL is done. Four frontend
+consumers each carry their own hand-maintained list, and every one of them fails
+**silently** — no error, just a wrong number or a missing row:
+
+1. **`renderNetWorthBreakdown()`** (`tabs/stats.js`) — a hardcoded `parts` array.
+   `user_net_worth_breakdown()` counts your key in `total` regardless, so
+   forgetting the row makes 💼 Portfel's rows visibly not add up to 💎 Net Worth.
+2. **`buildBalancePoints()`'s `NEUTRAL` map** (`tabs/stats.js`) — the harder one.
+   A reason in `NEUTRAL` moves coins between cash and assets (net worth flat);
+   anything absent is treated as pure income or loss. Escrow-shaped reasons
+   (deposit/redeem, buy-an-asset) MUST be listed or the balance chart shows net
+   worth cratering when a player deposits and spiking when it matures. Yields
+   must NOT be listed — they are real income.
+3. **`buildBalancePoints()`'s label chain** — unknown reasons fall through to
+   `'🪙 ' + reason` and render the raw slug at the user.
+4. **`ACT_REASONS`** (`index.html`) — an allow-list, so unknown reasons are
+   dropped from the activity feed entirely. Per-player daily payouts belong out
+   of it on purpose (see the `daily_interest` note there).
+
+Bank G6 shipped missing all four and it took a direct "check the wallet" to find
+it. Check them together.
+
 ### Bank G6 (investment products)
 
 The `🏦 Bank G6` nav tab (`#tab-bank`) is where coins earn instead of sitting

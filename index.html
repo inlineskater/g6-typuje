@@ -13741,6 +13741,14 @@ const ACT_COIN_REASONS = {
   canvas_pixel_adjustment:    '🎨 postawił piksel na Płótnie',
   zapps_topup:                '💰 doładował konto',
   zapps_purchase:             '💎 kupił Zappsy',
+  // Bank G6 — only the deliberate decisions. The daily yields
+  // (bank_deposit_interest / bank_bond_coupon / bank_share_dividend) are
+  // omitted for the same reason as daily_interest: they fire for every holder
+  // every morning and would bury everything else in the feed.
+  bank_deposit_open:          '🏦 ulokował monety w Banku',
+  bank_bond_buy:              '📜 objął emisję obligacji',
+  bank_share_buy:             '🎰 kupił udział w kasynie',
+  bank_resale_sale:           '🤝 sprzedał papier na rynku wtórnym',
   // daily_interest intentionally omitted — too noisy for the feed
 };
 const ACT_FB_PICK = { '1': 'gospodarzy', 'X': 'remis', '2': 'gości' };

@@ -586,6 +586,7 @@ function renderNetWorthBreakdown(container, b) {
     ['🃏', 'Stack w pokerze', b.poker_stack, false],
     ['🎒', 'Przedmioty i certyfikaty', b.hero_items, false],
     ['🌿', 'Akcesoria ogrodowe', b.accessories, false],
+    ['🏦', 'Bank G6 (lokaty, obligacje, udziały)', b.bank, false],
     ['🌱', 'Ogródek', b.farm, false],
   ];
   const fp = b.farm_parts || {};
@@ -1681,7 +1682,16 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
   // liquidates was minted outside the coin ledger, so it was never added to `lock`.)
   // Everything else (interest, awards, store redemptions, marketplace transfers, crop
   // sales, garden watering) is pure cash P/L that moves net worth.
-  const NEUTRAL = { hero_item_purchase: 1, garden_accessory: 1, garden_certificate: 1, hero_auction_bid_reserved: 1, hero_auction_outbid_refund: 1, hero_auction_edition_refund: 1, farm_tile_buy: 1, farm_box_buy: 1, card_levelup: 1 };
+  // ⚠️ Bank G6 principal movements are net-worth NEUTRAL: the coins leave cash
+  // and become a Bank asset of the same value (and come back the same way).
+  // Leaving them out made the chart show net worth falling when you opened a
+  // deposit and jumping when it matured, which is exactly backwards — a deposit
+  // is the one thing that provably does not change what you are worth.
+  // The YIELDS (bank_deposit_interest / bank_bond_coupon / bank_share_dividend)
+  // are deliberately absent here: those are real income and must move the line.
+  const NEUTRAL = { hero_item_purchase: 1, garden_accessory: 1, garden_certificate: 1, hero_auction_bid_reserved: 1, hero_auction_outbid_refund: 1, hero_auction_edition_refund: 1, farm_tile_buy: 1, farm_box_buy: 1, card_levelup: 1,
+    bank_deposit_open: 1, bank_deposit_close: 1, bank_bond_buy: 1, bank_bond_redeem: 1,
+    bank_share_buy: 1, bank_resale_purchase: 1, bank_resale_sale: 1 };
   // football_bet/football_win/football_refund are audit copies of the same events already
   // reconstructed below from the `football_bets` table (with correct lockDelta handling for
   // open stakes) — counting them here too would double the P/L.
@@ -1716,6 +1726,27 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       ? '💰 Doładowanie (zappsy)' + (t.meta?.note ? ': ' + t.meta.note : '')
       : t.reason === 'zapps_purchase'
       ? '💎 Kup Zappsy' + (t.meta?.note ? ': ' + t.meta.note : '')
+      : t.reason === 'bank_deposit_open'
+      ? '🏦 Bank: ' + (t.meta?.product === 'skarbonka' ? 'wpłata do skarbonki'
+          : 'lokata ' + (t.meta?.term_days ?? '?') + ' dni')
+      : t.reason === 'bank_deposit_close'
+      ? '🏦 Bank: zwrot kapitału' + (t.meta?.early ? ' (zerwane przed terminem)' : '')
+      : t.reason === 'bank_deposit_interest'
+      ? '🏦 Bank: odsetki'
+      : t.reason === 'bank_bond_buy'
+      ? '📜 Obligacje: objęcie emisji ' + (t.meta?.series || '?')
+      : t.reason === 'bank_bond_coupon'
+      ? '📜 Obligacje: kupon'
+      : t.reason === 'bank_bond_redeem'
+      ? '📜 Obligacje: wykup nominału'
+      : t.reason === 'bank_share_buy'
+      ? '🎰 Udział w kasynie: zakup'
+      : t.reason === 'bank_share_dividend'
+      ? '🎰 Udział w kasynie: dywidenda'
+      : t.reason === 'bank_resale_purchase'
+      ? '🤝 Bank, rynek wtórny: zakup'
+      : t.reason === 'bank_resale_sale'
+      ? '🤝 Bank, rynek wtórny: sprzedaż'
       : '🪙 ' + t.reason;
     const delta = +t.delta;
     events.push({ ts: new Date(t.created_at).getTime(), delta, lockDelta: NEUTRAL[t.reason] ? -delta : 0, label });
