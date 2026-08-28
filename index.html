@@ -41,6 +41,7 @@
       --no-line:   rgba(220,38,38,.22);
       --radius:    10px;
       --page-pad:  24px;
+      --chat-w:    320px;   /* the permanently docked Czat G6 column; #screen-app is padded by it */
 
       /* ── Design scale (2026-07 Ogródek restyle) ──────────────────────────
          Before this block the farm CSS used 17 literal border-radii and 70
@@ -2212,25 +2213,28 @@
 
     /* ── TOAST ── */
     .toast {
-      position: fixed; bottom: 24px; left: 50%;
+      /* Centred over the CONTENT column, not the viewport — the chat rail owns
+         the leftmost --chat-w of the screen (0 on mobile, where it docks at the
+         bottom instead). */
+      position: fixed; bottom: 24px; left: calc(50% + var(--chat-w) / 2);
       transform: translateX(-50%) translateY(80px);
       background: #1e293b; border: none;
       border-radius: 8px; color: #f8fafc; font-size: 14px; font-weight: 500;
       padding: 10px 20px; pointer-events: none;
       transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
-      z-index: 300; max-width: calc(100vw - 32px); text-align: center; opacity: 0;
+      z-index: 300; max-width: calc(100vw - var(--chat-w) - 32px); text-align: center; opacity: 0;
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
     /* ── UPDATE BANNER (a newer build was deployed while this tab stayed open) ── */
     .update-banner {
-      position: fixed; bottom: 24px; left: 50%;
+      position: fixed; bottom: 24px; left: calc(50% + var(--chat-w) / 2);
       transform: translateX(-50%) translateY(90px);
       display: flex; align-items: center; gap: 12px;
       background: var(--card); border: 1px solid var(--border-hi);
       border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18);
       padding: 10px 12px 10px 16px; z-index: 400;
-      max-width: calc(100vw - 32px); opacity: 0;
+      max-width: calc(100vw - var(--chat-w) - 32px); opacity: 0;
       transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
     }
     .update-banner.show { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -8397,13 +8401,20 @@
       --c-accent-soft: rgba(99,102,241,.14);
       --c-online:      #22c55e;
     }
+    /* The rail is a permanent full-height COLUMN of the page, not an overlay:
+       it is fixed to the left edge, and #screen-app carries a matching
+       padding-left so the header, nav and every tab's content start where the
+       rail ends. Nothing is ever underneath it, and there is no collapse
+       control or launcher pill. Below 900px a 320px column would leave the app
+       unusable, so it falls back to a short bottom dock (still not hideable) —
+       see the mobile block further down. */
     #chat-rail {
-      position: fixed; left: 0; bottom: 0; z-index: 60;
+      position: fixed; left: 0; top: 0; bottom: 0; width: var(--chat-w); z-index: 60;
+      display: flex;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--c-ink);
     }
-    /* The rail is permanently docked — there is no collapse control and no
-       launcher pill. It is pinned to the left edge on every tab. */
+    #screen-app { padding-left: var(--chat-w); }
 
     .chat-unread-total {
       min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px;
@@ -8412,13 +8423,10 @@
     }
 
     .chat-panel {
-      position: fixed; left: 16px; bottom: 16px;
-      width: 322px; height: min(500px, calc(100vh - 96px));
+      flex: 1; min-width: 0;
       display: flex; flex-direction: column;
-      background: var(--c-surface);
-      -webkit-backdrop-filter: blur(22px) saturate(1.7); backdrop-filter: blur(22px) saturate(1.7);
-      border: 1px solid var(--c-line); border-radius: 16px;
-      box-shadow: 0 16px 48px rgba(15,23,42,.16), 0 2px 8px rgba(15,23,42,.05);
+      background: var(--c-solid);
+      border-right: 1px solid var(--c-line);
       overflow: hidden;
     }
     .chat-header {
@@ -8513,7 +8521,7 @@
 
     /* Login/logout + whisper toasts, stacked above the panel. */
     #chat-toasts {
-      position: fixed; left: 354px; bottom: 16px; z-index: 61;   /* clear of the permanently docked panel */
+      position: fixed; left: calc(var(--chat-w) + 16px); bottom: 16px; z-index: 61;   /* clear of the docked column */
       display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none;
     }
     .chat-toast {
@@ -8530,11 +8538,23 @@
       .chat-toast { animation: none; }
     }
 
-    /* Mobile: the panel is always open, so it deliberately takes LESS of the
-       screen than it used to — it can no longer be dismissed to get at the
-       page underneath. */
-    @media (max-width: 640px) {
-      .chat-panel { width: calc(100vw - 20px); height: min(38vh, calc(100vh - 96px)); left: 10px; bottom: 10px; }
+    /* Mobile: a 320px column would leave a phone nothing to render the app in,
+       so the split is dropped and the rail goes back to a bottom dock — still
+       always open, still not hideable, but deliberately short since the page
+       underneath can no longer be uncovered. */
+    @media (max-width: 900px) {
+      :root { --chat-w: 0px; }
+      /* The dock can't be dismissed, so the page has to be able to scroll clear
+         of it or its last rows are unreachable. */
+      #screen-app { padding-bottom: calc(38vh + 20px); }
+      #chat-rail {
+        top: auto; left: 10px; right: 10px; bottom: 10px;
+        width: auto; height: min(38vh, calc(100vh - 96px));
+      }
+      .chat-panel {
+        border: 1px solid var(--c-line); border-radius: 16px;
+        box-shadow: 0 16px 48px rgba(15,23,42,.16), 0 2px 8px rgba(15,23,42,.05);
+      }
       #chat-toasts { left: 10px; right: 10px; bottom: calc(38vh + 20px); }
     }
 
