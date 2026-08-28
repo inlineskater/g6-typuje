@@ -8385,7 +8385,9 @@
        unread) and one green semantic dot (online). The 🌼 flower is the single
        retro signature, kept only in the header + launcher. z-index above nav
        (40/41), below modals (100+). */
-    #chat-rail, #chat-toasts {
+    /* #pu-overlay is in the list because the player window lives outside the
+       rail in the DOM but is painted from the same palette. */
+    #chat-rail, #chat-toasts, #pu-overlay {
       --c-surface:     rgba(255,255,255,.82);
       --c-solid:       #ffffff;
       --c-bubble:      #eef1f5;
@@ -8426,8 +8428,9 @@
     }
     #screen-app > [id^="tab-"] { padding-left: var(--chat-w); }
 
-    .side-mod { flex: none; border-bottom: 1px solid var(--c-line); }
+    .side-mod { display: flex; flex-direction: column; min-height: 0; border-bottom: 1px solid var(--c-line); }
     .side-mod-head {
+      flex: none;
       display: flex; align-items: center; justify-content: space-between;
       padding: 11px 13px 7px;
     }
@@ -8435,48 +8438,25 @@
       font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
       color: var(--c-faint);
     }
-    .side-mod-more {
-      border: none; background: none; cursor: pointer; padding: 0;
-      font-family: inherit; font-size: 11px; font-weight: 600; color: var(--c-accent);
-    }
-    .side-mod-more:hover { text-decoration: underline; }
+    .side-mod-meta { font-size: 11px; color: var(--c-muted); white-space: nowrap; }
 
-    /* ── 1 / Konto ── */
-    .side-account { padding: 13px 13px 11px; }
-    .side-acc-id { display: flex; align-items: center; gap: 9px; }
-    .side-avatar {
-      flex: none; width: 30px; height: 30px; border-radius: 9px;
-      background: var(--c-accent-soft); color: var(--c-accent-2);
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700; text-transform: uppercase;
+    /* ── 1 / Biuro — everyone, most recently active first ── */
+    /* The list is the rail's flexible half: it grows with the window but never
+       squeezes the chat below its own min-height. */
+    .side-people { flex: 1 1 auto; max-height: 42%; }
+    .side-people-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 7px 8px; }
+    .side-person {
+      display: flex; align-items: center; gap: 9px; width: 100%;
+      padding: 7px 6px; border: none; background: none; cursor: pointer; text-align: left;
+      border-radius: 9px; font-family: inherit; font-size: 12.5px; color: var(--c-ink);
+      transition: background .12s ease;
     }
-    .side-acc-who { flex: 1; min-width: 0; }
-    .side-acc-nick {
-      font-size: 13px; font-weight: 700; letter-spacing: -.01em;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .side-acc-state { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--c-muted); }
-    .side-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-online); }
-    .side-acc-coins { flex: none; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .side-kv {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-      margin-top: 7px; font-size: 11px; color: var(--c-muted);
-    }
-    .side-kv b { font-weight: 600; color: var(--c-ink); font-variant-numeric: tabular-nums; }
-
-    /* ── 2 / Aktywność ── */
-    .side-act { max-height: 168px; overflow-y: auto; padding: 0 13px 10px; }
-    .side-act-row {
-      display: flex; align-items: baseline; gap: 8px;
-      padding: 5px 0; border-top: 1px solid var(--c-line-soft); font-size: 11.5px;
-    }
-    .side-act-row:first-child { border-top: none; }
-    .side-act-what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .side-act-when { flex: none; font-size: 10px; color: var(--c-faint); }
-    .side-act-sum { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .side-act-sum.is-up { color: #15803d; }
-    .side-act-sum.is-down { color: #b91c1c; }
-    .side-act-empty { padding: 6px 0 2px; font-size: 11.5px; color: var(--c-faint); }
+    .side-person:hover { background: var(--c-hover); }
+    .side-person-nick { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .side-person-me { font-weight: 500; color: var(--c-faint); }
+    .side-person-when { flex: none; font-size: 10.5px; color: var(--c-faint); font-variant-numeric: tabular-nums; }
+    .side-person.is-online .side-person-when { color: var(--c-online); }
+    .side-empty { padding: 4px 6px; font-size: 11.5px; color: var(--c-faint); }
 
     .chat-unread-total {
       min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px;
@@ -8511,17 +8491,6 @@
     }
     .chat-hbtn:hover { background: var(--c-hover); color: var(--c-ink); }
 
-    .chat-tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--c-line-soft); }
-    .chat-tab {
-      flex: 1; border: none; background: none; cursor: pointer;
-      padding: 8px 4px 9px; font-size: 12px; font-weight: 600; color: var(--c-muted);
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      border-bottom: 2px solid transparent; margin-bottom: -1px;
-      transition: color .12s ease;
-    }
-    .chat-tab:hover { color: var(--c-ink); }
-    .chat-tab.active { color: var(--c-ink); border-bottom-color: var(--c-accent); }
-
     .chat-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 7px; }
 
@@ -8541,21 +8510,12 @@
 
     .chat-empty { margin: auto; color: var(--c-muted); font-size: 12.5px; text-align: center; padding: 22px 24px; line-height: 1.5; }
 
-    .chat-roster { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
-    .chat-contact {
-      display: flex; align-items: center; gap: 10px; width: 100%;
-      padding: 9px 10px; border: none; background: none; cursor: pointer; text-align: left;
-      border-radius: 10px; font-size: 13px; color: var(--c-ink);
-      transition: background .12s ease;
-    }
-    .chat-contact:hover { background: var(--c-hover); }
+    /* Presence dot — Biuro rows, the whisper thread head, and the player window. */
     .chat-dot {
       width: 8px; height: 8px; flex: none; border-radius: 50%; box-sizing: border-box;
       border: 1.5px solid var(--c-dim); background: transparent;
     }
     .chat-dot.on { background: var(--c-online); border-color: var(--c-online); box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
-    .chat-contact-nick { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .chat-contact-status { font-size: 10.5px; color: var(--c-muted); font-weight: 500; }
 
     .chat-thread-head {
       display: flex; align-items: center; gap: 9px;
@@ -8566,7 +8526,6 @@
     .chat-thread-nick { font-weight: 700; font-size: 13px; letter-spacing: -.01em; }
 
     .chat-inputbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--c-line-soft); }
-    #chat-rail.chat-on-contacts .chat-inputbar { display: none; }
     .chat-inputbar input {
       flex: 1; border: 1px solid var(--c-line); border-radius: 11px; padding: 9px 12px;
       font-size: 13px; font-family: inherit; background: var(--c-solid); color: var(--c-ink); min-width: 0;
@@ -8620,13 +8579,37 @@
         border: 1px solid var(--c-line); border-radius: 16px; overflow: hidden;
         box-shadow: 0 16px 48px rgba(15,23,42,.16), 0 2px 8px rgba(15,23,42,.05);
       }
-      /* No room for three modules in a dock: the account strip stays (it is one
-         line), the activity list goes — it is the ☰ menu's 📋 Aktywność anyway. */
-      .side-account { padding: 9px 12px; }
-      .side-account .side-kv { display: none; }
-      .side-activity { display: none; }
+      /* The dock is short, so the Biuro list gets a fixed slice of it rather
+         than the 42% it takes of a full-height column. */
+      .side-people { max-height: 118px; }
       #chat-toasts { left: 10px; right: 10px; bottom: calc(42vh + 20px); }
     }
+
+    /* ── Player activity window (opened from a Biuro row) ────────────────── */
+    .pu-modal { max-width: 400px; }
+    .pu-meta {
+      display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+      font-size: 12px; color: var(--muted); margin-bottom: 12px;
+    }
+    .pu-feed { max-height: 46vh; overflow-y: auto; }
+    .pu-row {
+      display: flex; align-items: baseline; gap: 10px;
+      padding: 7px 0; border-top: 1px solid var(--border); font-size: 12.5px;
+    }
+    .pu-row:first-child { border-top: none; }
+    .pu-what { flex: 1; min-width: 0; }
+    .pu-when { flex: none; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+    .pu-sum { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .pu-sum.is-up { color: #15803d; }
+    .pu-sum.is-down { color: #b91c1c; }
+    .pu-empty { padding: 6px 0; font-size: 12.5px; color: var(--muted); }
+    .pu-whisper {
+      width: 100%; margin-top: 14px; padding: 10px; border: 1px solid var(--border);
+      border-radius: var(--r-sm, 10px); background: var(--surface, #f8fafc);
+      font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text);
+      cursor: pointer; transition: background .12s ease, border-color .12s ease;
+    }
+    .pu-whisper:hover { background: var(--acc-dim); border-color: var(--accent); }
 
     /* ── 🏦 Bank G6 ─────────────────────────────────────────────────────────
        Deliberately NOT the app's rounded-card-grid look. A bank statement is a
@@ -8960,30 +8943,19 @@
 
   <!-- ── ICQ-style office chat rail (present on every tab; outside all #tab-*) ── -->
   <div id="chat-rail" class="hidden">
-    <!-- 1 / Konto — who you are, what you hold, when you got here. -->
-    <section class="side-mod side-account">
-      <div class="side-acc-id">
-        <span class="side-avatar" id="side-avatar">?</span>
-        <div class="side-acc-who">
-          <div class="side-acc-nick" id="side-nick">—</div>
-          <div class="side-acc-state"><i class="side-dot"></i> w sieci</div>
-        </div>
-        <div class="side-acc-coins"><span id="side-coins">0</span> 🪙</div>
-      </div>
-      <div class="side-kv"><span>Sesja od</span><b id="side-login">—</b></div>
-      <div class="side-kv hidden" id="side-prev-row"><span>Poprzednio</span><b id="side-prev">—</b></div>
-    </section>
-
-    <!-- 2 / Aktywność — your own last moves; the full cross-player feed is a click away. -->
-    <section class="side-mod side-activity">
+    <!-- 1 / Biuro — everyone in the office, most recently active first. A row is
+         a button: it opens that player's activity window (👤 Kto jest kto). -->
+    <section class="side-mod side-people">
       <div class="side-mod-head">
-        <span class="side-mod-title">Twoja aktywność</span>
-        <button class="side-mod-more" id="side-act-more">Wszystko</button>
+        <span class="side-mod-title">Biuro</span>
+        <span class="side-mod-meta" id="side-people-meta"></span>
       </div>
-      <div class="side-act" id="side-act"></div>
+      <div class="side-people-list" id="side-people"></div>
     </section>
 
-    <!-- 3 / Czat -->
+    <!-- 2 / Czat — the public room and whisper threads. No contacts tab: the
+         Biuro list above IS the roster, and a whisper is opened from a player's
+         activity window. -->
     <div class="chat-panel">
       <div class="chat-header">
         <span class="chat-header-flower">🌼</span>
@@ -8991,17 +8963,9 @@
         <span class="chat-online-count" id="chat-online-count">0 w sieci</span>
         <button class="chat-hbtn" id="chat-sound-btn" title="Włącz dźwięk">🔕</button>
       </div>
-      <div class="chat-tabs">
-        <button class="chat-tab active" data-chat-view="room">💬 Pokój</button>
-        <button class="chat-tab" data-chat-view="contacts">👥 Kontakty <span class="chat-unread-total hidden" id="chat-contacts-unread">0</span></button>
-      </div>
       <!-- Public room -->
       <div class="chat-body" id="chat-view-room">
         <div class="chat-messages" id="chat-room-messages"></div>
-      </div>
-      <!-- Contacts roster -->
-      <div class="chat-body hidden" id="chat-view-contacts">
-        <div class="chat-roster" id="chat-roster"></div>
       </div>
       <!-- Whisper thread -->
       <div class="chat-body hidden" id="chat-view-thread">
@@ -9020,6 +8984,7 @@
       </div>
     </div>
   </div>
+
   <div id="chat-toasts"></div>
 
   <div id="tab-markets">
@@ -11826,6 +11791,21 @@
   </div>
 </div>
 
+<!-- Per-player activity window, opened from a Biuro row in the side rail.
+     Deliberately spare: who, when they were last seen, what they have been
+     doing, and (for anyone but you) one button to whisper them. -->
+<div id="pu-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal pu-modal">
+    <div class="modal-header">
+      <span class="modal-title" id="pu-title">Gracz</span>
+      <button class="btn-close" id="pu-close">✕</button>
+    </div>
+    <div class="pu-meta" id="pu-meta"></div>
+    <div class="pu-feed" id="pu-feed"></div>
+    <button class="pu-whisper hidden" id="pu-whisper">💬 Napisz wiadomość</button>
+  </div>
+</div>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <!-- Executed here rather than in <head> so the markup above can parse and paint
@@ -14614,24 +14594,29 @@ function teardownRealtime() {
 
 const chatRailEl = () => document.getElementById('chat-rail');
 
-// ── Side rail modules 1 & 2: Konto + Twoja aktywność ────────────────────────
-// The rail is on screen on every tab, so both modules have to be cheap. Konto
-// is pure local state (me.* plus the auth session); Aktywność is two indexed
-// own-row queries, refreshed only when the header coin counter actually moves
-// and never more often than SIDE_ACT_MIN_MS.
+// ── Side rail module 1: „Biuro" — everyone, most recently active first ──────
+// One row per player, sorted by when they last did anything anywhere in the
+// portal; clicking a row opens that player's activity window, which is also
+// where a whisper is started (the chat below has no contacts tab).
 //
-// Coins are mirrored off #header-coins with a MutationObserver rather than by
-// editing the ~20 call sites that call setText(headerCoins, …) across
-// index.html, tabs/*.js and games/*.js — one of which would inevitably be
-// missed, leaving the rail quietly showing a stale balance.
+// „Last active" comes from player_activity_stats(), the same SECURITY DEFINER
+// RPC the Statystyki tab uses: most event sources are own-row RLS, so a browser
+// cannot see another player's plays and this genuinely has to be server-side.
+// It aggregates a lot of tables, so it is called once at login and then at most
+// every SIDE_PEOPLE_MIN_MS; the online dots in between come from chat presence,
+// which is realtime and free.
 
-const SIDE_ACT_MIN_MS = 20000;   // floor between activity refreshes
-const SIDE_ACT_ROWS   = 8;
-let sideActLastLoad = 0;
-let sideActLoading  = false;
+const SIDE_PEOPLE_MIN_MS = 5 * 60 * 1000;   // floor between last-active refreshes
+const PU_FEED_ROWS = 20;                    // rows in a player's activity window
+let sidePeople = [];                        // [{ id, nick, lastAt }]
+let sidePeopleLast = {};                    // user_id → last_active_at (survives a roster rebuild)
+let sidePeopleLoaded = 0;
+let sidePeopleLoading = false;
+let puPeerId = null;                        // player whose window is open
+
 // The yields ACT_COIN_REASONS leaves out on purpose: in the office-wide feed
-// they fire for every holder every morning and bury everything else, but in
-// your own panel they are exactly the rows you want to see.
+// they fire for every holder every morning and bury everything else, but in a
+// single player's window they are exactly the rows you want to see.
 const SIDE_ACT_REASONS = {
   daily_interest:         '💎 odsetki od przedmiotu',
   bank_deposit_interest:  '🏦 odsetki z lokaty',
@@ -14644,67 +14629,109 @@ const SIDE_ACT_REASONS = {
   land_tax:               '🧾 podatek gruntowy',
 };
 
-function sideSyncAccount() {
-  if (!me?.id) return;
-  setText(document.getElementById('side-nick'), me.nick || '—');
-  setText(document.getElementById('side-avatar'), (me.nick || '?').trim().charAt(0) || '?');
-  setText(document.getElementById('side-coins'), me.coins ?? 0);
-}
-
-// „Sesja od" is this session's sign-in; „Poprzednio" is the one before it. The
-// stamp is rotated only when last_sign_in_at actually changes, so reloading the
-// page (which restores the same session) doesn't overwrite the previous visit
-// with the current one.
-async function sideInitSession() {
-  const loginEl = document.getElementById('side-login');
-  if (!loginEl) return;
-  let at = null;
+async function sideLoadPeople(force) {
+  if (sidePeopleLoading || !me?.id) return;
+  if (!force && Date.now() - sidePeopleLoaded < SIDE_PEOPLE_MIN_MS) return;
+  sidePeopleLoading = true;
+  sidePeopleLoaded = Date.now();
   try {
-    const { data } = await sb.auth.getSession();
-    at = data?.session?.user?.last_sign_in_at || null;
-  } catch (e) {}
-  setText(loginEl, at ? sideStamp(at) : '—');
-
-  let prev = null;
-  try {
-    const st = JSON.parse(localStorage.getItem('rp_login_stamp') || 'null');
-    prev = st?.prev || null;
-    if (at && st?.at !== at) {
-      prev = st?.at || null;
-      localStorage.setItem('rp_login_stamp', JSON.stringify({ at, prev }));
-    }
-  } catch (e) {}
-  const row = document.getElementById('side-prev-row');
-  if (prev) { setText(document.getElementById('side-prev'), sideStamp(prev)); show(row); }
-  else hide(row);
+    const { data } = await sb.rpc('player_activity_stats');
+    (data || []).forEach(r => { if (r.last_active_at) sidePeopleLast[r.user_id] = r.last_active_at; });
+    sidePeople = sidePeople.map(p => ({ ...p, lastAt: sidePeopleLast[p.id] || null }));
+    sideRenderPeople();
+  } catch (e) {
+    // The rail degrades to a plain roster if the RPC is missing; never fatal.
+  } finally {
+    sidePeopleLoading = false;
+  }
 }
 
-// „dziś 09:41" for today, „wczoraj 21:02" for yesterday, else the short date.
-function sideStamp(ts) {
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return '—';
-  const hm = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-  const day = new Date(d); day.setHours(0, 0, 0, 0);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const diff = Math.round((today - day) / 86400000);
-  if (diff === 0) return 'dziś ' + hm;
-  if (diff === 1) return 'wczoraj ' + hm;
-  return fmtDateTime(ts);
-}
-
-async function sideLoadActivity(force) {
-  const box = document.getElementById('side-act');
+// Sorted by last activity, newest first; anyone with no recorded activity sinks
+// to the bottom in nick order. Online state only colours the row — it is not the
+// sort key, or the list would reshuffle every time someone opened a tab.
+function sideRenderPeople() {
+  const box = document.getElementById('side-people');
   if (!box || !me?.id) return;
-  if (sideActLoading) return;
-  if (!force && Date.now() - sideActLastLoad < SIDE_ACT_MIN_MS) return;
-  sideActLoading = true;
-  sideActLastLoad = Date.now();
+  const meta = document.getElementById('side-people-meta');
+  if (meta) setText(meta, sidePeople.length ? chatOnline.size + '/' + sidePeople.length + ' w sieci' : '');
+  if (!sidePeople.length) {
+    box.replaceChildren(el('div', { className: 'side-empty' }, 'Brak graczy.'));
+    return;
+  }
+  const sorted = [...sidePeople].sort((a, b) => {
+    if (!!a.lastAt !== !!b.lastAt) return a.lastAt ? -1 : 1;
+    if (a.lastAt && b.lastAt) return new Date(b.lastAt) - new Date(a.lastAt);
+    return a.nick.localeCompare(b.nick, 'pl');
+  });
+  box.replaceChildren(...sorted.map(p => {
+    const online = chatOnline.has(p.id) || p.id === me.id;
+    const unread = chatUnread[p.id] || 0;
+    const row = el('button', {
+      className: 'side-person' + (online ? ' is-online' : ''),
+      'data-peer': p.id,
+      title: p.lastAt ? 'Ostatnia aktywność: ' + fmtDateTime(p.lastAt) : 'Brak aktywności',
+    },
+      el('span', { className: 'chat-dot' + (online ? ' on' : '') }),
+      el('span', { className: 'side-person-nick' }, p.nick),
+      el('span', { className: 'side-person-when' }, p.lastAt ? relTime(p.lastAt) : '—'));
+    if (p.id === me.id) row.querySelector('.side-person-nick').append(el('span', { className: 'side-person-me' }, ' · Ty'));
+    if (unread) row.appendChild(el('span', { className: 'chat-unread-total' }, String(unread)));
+    row.addEventListener('click', () => openPlayerWindow(p.id));
+    return row;
+  }));
+}
+
+// ── Player activity window ──────────────────────────────────────────────────
+// coin_transactions and game_transactions are both readable for every player
+// (the office-wide feed already reads them unfiltered), so one pair of indexed
+// per-user queries is the whole thing.
+
+async function openPlayerWindow(userId) {
+  const overlay = document.getElementById('pu-overlay');
+  if (!overlay || !userId) return;
+  puPeerId = userId;
+  const isMe = userId === me.id;
+  const nick = isMe ? me.nick : (chatPeerNick(userId) || 'Gracz');
+  const person = sidePeople.find(p => p.id === userId);
+
+  setText(document.getElementById('pu-title'), nick);
+  const meta = document.getElementById('pu-meta');
+  const online = chatOnline.has(userId) || isMe;
+  meta.replaceChildren(
+    el('span', { className: 'chat-dot' + (online ? ' on' : '') }),
+    el('span', {}, online ? 'w sieci' : 'offline'),
+    el('span', {}, '·'),
+    el('span', {}, person?.lastAt ? 'ostatnio ' + relTime(person.lastAt) : 'brak aktywności'));
+
+  const whisper = document.getElementById('pu-whisper');
+  whisper.classList.toggle('hidden', isMe);
+
+  const feed = document.getElementById('pu-feed');
+  feed.replaceChildren(makeSpinner());
+  show(overlay);
+  document.body.style.overflow = 'hidden';
+
+  const rows = await loadPlayerActivity(userId);
+  if (puPeerId !== userId) return;   // window was closed or switched while loading
+  if (!rows.length) {
+    feed.replaceChildren(el('div', { className: 'pu-empty' }, 'Brak zapisanej aktywności.'));
+    return;
+  }
+  feed.replaceChildren(...rows.map(r => el('div', { className: 'pu-row' },
+    el('span', { className: 'pu-what' }, r.what),
+    el('span', { className: 'pu-when', title: fmtDateTime(r.ts) }, relTime(r.ts)),
+    el('span', { className: 'pu-sum ' + (r.delta > 0 ? 'is-up' : r.delta < 0 ? 'is-down' : '') },
+      (r.delta > 0 ? '+' : r.delta < 0 ? '−' : '') + Math.abs(r.delta))
+  )));
+}
+
+async function loadPlayerActivity(userId) {
   try {
     const [coinRes, gameRes] = await Promise.all([
       sb.from('coin_transactions').select('delta,reason,created_at')
-        .eq('user_id', me.id).order('created_at', { ascending: false }).limit(SIDE_ACT_ROWS),
+        .eq('user_id', userId).order('created_at', { ascending: false }).limit(PU_FEED_ROWS),
       sb.from('game_transactions').select('game,bet,won,created_at')
-        .eq('user_id', me.id).order('created_at', { ascending: false }).limit(SIDE_ACT_ROWS),
+        .eq('user_id', userId).order('created_at', { ascending: false }).limit(PU_FEED_ROWS),
     ]);
     const rows = [];
     (coinRes.data || []).forEach(c => rows.push({
@@ -14718,44 +14745,44 @@ async function sideLoadActivity(force) {
       delta: (+g.won || 0) - (+g.bet || 0),
     }));
     rows.sort((a, b) => new Date(b.ts) - new Date(a.ts));
-
-    if (!rows.length) {
-      box.replaceChildren(el('div', { className: 'side-act-empty' }, 'Jeszcze nic tu nie ma.'));
-      return;
-    }
-    box.replaceChildren(...rows.slice(0, SIDE_ACT_ROWS).map(r => el('div', { className: 'side-act-row' },
-      el('span', { className: 'side-act-what', title: r.what }, r.what),
-      el('span', { className: 'side-act-when' }, relTime(r.ts)),
-      el('span', { className: 'side-act-sum ' + (r.delta > 0 ? 'is-up' : r.delta < 0 ? 'is-down' : '') },
-        (r.delta > 0 ? '+' : r.delta < 0 ? '−' : '') + Math.abs(r.delta))
-    )));
+    return rows.slice(0, PU_FEED_ROWS);
   } catch (e) {
-    // A rail module is never worth breaking the page over.
-  } finally {
-    sideActLoading = false;
+    return [];
   }
 }
 
-function sideWireOnce() {
-  const more = document.getElementById('side-act-more');
-  if (!more || more.dataset.wired) return;
-  more.dataset.wired = '1';
-  more.addEventListener('click', openActivityModal);
+function closePlayerWindow() {
+  puPeerId = null;
+  hide(document.getElementById('pu-overlay'));
+  document.body.style.overflow = '';
+}
 
-  // Header coin counter → rail balance, and a throttled activity refresh: a
-  // balance that moved means something happened worth listing.
+function sideWireOnce() {
+  const overlay = document.getElementById('pu-overlay');
+  if (!overlay || overlay.dataset.wired) return;
+  overlay.dataset.wired = '1';
+  document.getElementById('pu-close').addEventListener('click', closePlayerWindow);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closePlayerWindow(); });
+  document.getElementById('pu-whisper').addEventListener('click', () => {
+    const peer = puPeerId;
+    closePlayerWindow();
+    if (peer) openChatThread(peer);
+  });
+
+  // A moved balance means something happened somewhere, which is the cheapest
+  // signal that the last-active column is stale. Mirroring #header-coins with a
+  // MutationObserver beats patching the ~20 setText(headerCoins, …) call sites
+  // across index.html, tabs/*.js and games/*.js — one of them would be missed.
   const hc = document.getElementById('header-coins');
   if (hc && window.MutationObserver) {
-    new MutationObserver(() => { sideSyncAccount(); sideLoadActivity(); })
-      .observe(hc, { childList: true, characterData: true, subtree: true });
+    new MutationObserver(() => sideLoadPeople()).observe(hc, { childList: true, characterData: true, subtree: true });
   }
 }
 
 function initSideRail() {
   sideWireOnce();
-  sideSyncAccount();
-  sideInitSession();
-  sideLoadActivity(true);
+  sideRenderPeople();
+  sideLoadPeople(true);
 }
 
 async function initChat() {
@@ -14766,10 +14793,14 @@ async function initChat() {
   try { chatSoundOn = localStorage.getItem('rp_chat_sound') === '1'; } catch (e) {}
   chatSyncSoundBtn();
 
-  // Roster: every player except the hidden system/admin account, and not me.
+  // Roster: every player except the hidden system/admin account. chatRoster is
+  // the whisperable set (everyone but me); sidePeople is the Biuro list, which
+  // includes me — you can open your own activity window like anyone else's.
   const { data: profs } = await sb.from('profiles')
     .select('id,nick,is_admin').neq('is_admin', true).order('nick');
-  chatRoster = (profs || []).filter(p => p.id !== me.id).map(p => ({ id: p.id, nick: p.nick }));
+  const roster = (profs || []).map(p => ({ id: p.id, nick: p.nick }));
+  chatRoster = roster.filter(p => p.id !== me.id);
+  sidePeople = roster.map(p => ({ ...p, lastAt: sidePeopleLast[p.id] || null }));
 
   // Current online set (silent — no login toasts for who was already here).
   const { data: pres } = await sb.from('chat_presence').select('user_id,online');
@@ -14793,10 +14824,7 @@ function chatWireListenersOnce() {
   rail.dataset.wired = '1';
 
   document.getElementById('chat-sound-btn').addEventListener('click', chatToggleSound);
-  document.getElementById('chat-thread-back').addEventListener('click', () => setChatView('contacts'));
-
-  rail.querySelectorAll('.chat-tab').forEach(btn =>
-    btn.addEventListener('click', () => setChatView(btn.dataset.chatView)));
+  document.getElementById('chat-thread-back').addEventListener('click', () => setChatView('room'));
 
   const input = document.getElementById('chat-input');
   input.addEventListener('keydown', e => {
@@ -14805,18 +14833,17 @@ function chatWireListenersOnce() {
   document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
 }
 
+// Two views only: the public room and one whisper thread. The contacts view is
+// gone — the Biuro list at the top of the rail is the roster, and a whisper is
+// opened from a player's activity window.
 function setChatView(view) {
+  if (view === 'contacts') view = 'room';
   chatView = view;
-  const rail = chatRailEl();
   document.getElementById('chat-view-room').classList.toggle('hidden', view !== 'room');
-  document.getElementById('chat-view-contacts').classList.toggle('hidden', view !== 'contacts');
   document.getElementById('chat-view-thread').classList.toggle('hidden', view !== 'thread');
-  rail.classList.toggle('chat-on-contacts', view === 'contacts');   // hides the input bar
-  rail.querySelectorAll('.chat-tab').forEach(b =>
-    b.classList.toggle('active', b.dataset.chatView === (view === 'thread' ? 'contacts' : view)));
-  if (view === 'room') chatRenderRoom();
-  if (view === 'contacts') { chatPeerId = null; chatRenderRoster(); }
+  if (view === 'room') { chatPeerId = null; chatRenderRoom(); }
   if (view === 'thread') chatRenderThread();
+  sideRenderPeople();
   chatScrollActive();
 }
 
@@ -14880,28 +14907,9 @@ function chatRenderThread() {
   if (chatView === 'thread') chatScrollActive();
 }
 
-function chatRenderRoster() {
-  const box = document.getElementById('chat-roster');
-  if (!box) return;
-  box.replaceChildren();
-  if (!chatRoster.length) { box.appendChild(el('div', { className: 'chat-empty' }, 'Brak innych graczy.')); return; }
-  const sorted = [...chatRoster].sort((a, b) => {
-    const oa = chatOnline.has(a.id), ob = chatOnline.has(b.id);
-    if (oa !== ob) return oa ? -1 : 1;
-    return a.nick.localeCompare(b.nick, 'pl');
-  });
-  sorted.forEach(c => {
-    const online = chatOnline.has(c.id);
-    const unread = chatUnread[c.id] || 0;
-    const row = el('button', { className: 'chat-contact', 'data-peer': c.id },
-      el('span', { className: 'chat-dot' + (online ? ' on' : '') }),
-      el('span', { className: 'chat-contact-nick' }, c.nick),
-      el('span', { className: 'chat-contact-status' }, online ? 'w sieci' : 'offline'));
-    if (unread) row.appendChild(el('span', { className: 'chat-unread-total' }, String(unread)));
-    row.addEventListener('click', () => openChatThread(c.id));
-    box.appendChild(row);
-  });
-}
+// The roster IS the Biuro list now — presence changes, unread badges and view
+// switches all just re-render it.
+function chatRenderRoster() { sideRenderPeople(); }
 
 function chatRenderOnlineCount() {
   const n = chatOnline.size;
@@ -14913,16 +14921,7 @@ function chatTotalUnread() {
   return Object.values(chatUnread).reduce((a, b) => a + b, 0);
 }
 
-function chatRenderUnreadBadges() {
-  const total = chatTotalUnread();
-  const setBadge = (id, n) => {
-    const b = document.getElementById(id);
-    if (!b) return;
-    b.textContent = String(n);
-    b.classList.toggle('hidden', n <= 0);
-  };
-  setBadge('chat-contacts-unread', total);
-}
+function chatRenderUnreadBadges() { sideRenderPeople(); }
 
 function chatScrollActive() {
   const id = chatView === 'thread' ? 'chat-thread-messages'
@@ -15134,9 +15133,10 @@ function chatBeep() {
 
 function resetChatState() {
   stopChatHeartbeat();
-  sideActLastLoad = 0;
-  const actBox = document.getElementById('side-act');
-  if (actBox) actBox.replaceChildren();
+  closePlayerWindow();
+  sidePeople = []; sidePeopleLast = {}; sidePeopleLoaded = 0;
+  const people = document.getElementById('side-people');
+  if (people) people.replaceChildren();
   chatReady = false; chatView = 'room'; chatPeerId = null;
   chatRoster = []; chatOnline = new Set(); chatRoomMsgs = []; chatThreads = {}; chatUnread = {};
   const rail = chatRailEl();
