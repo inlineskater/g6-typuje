@@ -35,7 +35,7 @@ only 360k, so an unbounded stream still dominates the leaderboard.
 | 🏦 Lokata 30 dni | hard | +30% total | shared with above | yes |
 | 📜 Obligacja G6 | tradeable, 20 dni | 8 🪙/dzień on 1 000 face (+16%) | **dynamic**, 3–40/series, **fair-shared per player** | yes |
 | 🎰 Udział w Kasynie | perpetual, tradeable | 3% of trailing-7d house net | 30 shares, 5/player primary | **no** |
-| 💍 Sygnet Bankiera | perpetual | **2%/dzień, uncapped** | none | yes, unboundedly |
+| 💍 Sygnet Bankiera | perpetual | **2%/dzień na pierwszych 20 000** | 400/day | no — flat above the cap |
 
 ### ⚠️ Where the inflation actually is
 
@@ -47,12 +47,14 @@ Worst case, everyone maxing everything, at a **healthy** economy (today's dynami
 | Skarbonka (11 × 3 000 at 0,30%) | ~99 |
 | Obligacje (~3 live series × 25 × 5) | ~375 |
 | Udziały w kasynie | 0 net — redistributes an existing burn |
-| **💍 Sygnet Bankiera (11 × 2% of all cash)** | **~7 215, and compounding** |
+| 💍 Sygnet Bankiera (11 × 400/day, capped) | ~4 400, flat |
 
 The four bank products together are ~1 250/day against a ~2 951/day casino
-burn — comfortably sub-inflationary. **The Sygnet is ~85% of the total and is
-the only unbounded term.** If the economy runs hot, that is the line to look at
-first, and the four products above are not worth retuning again.
+burn — comfortably sub-inflationary. The Sygnet is still the largest single
+line, but since 2026-08-28 it is **bounded and no longer compounds**: the row
+above used to read *~7 215/day and compounding*, which is what the cap removed.
+If the economy runs hot again, it is still the first line to look at, and the
+four products are still not worth retuning.
 
 ## ⚠️ The Bank used to be a trap — read this before touching the interest base
 
@@ -109,6 +111,8 @@ are *policy shares*, which do not go stale as the economy grows.
 ```
 base   = 0.30% × cash_supply                  the Bank's daily creation budget
 infl   = net_mint_day / cash_supply           how fast the whole game mints coins
+                                              (net_mint_day is a TRIMMED MEAN
+                                               of daily buckets — see below)
 health = TARGET / (TARGET + max(0, infl))     TARGET = 1%/day = neutral
 budget = base × clamp(health, 0.15, 1.00)
 ```
@@ -117,6 +121,15 @@ budget = base × clamp(health, 0.15, 1.00)
 smoothly as inflation rises. **The Bank throttles itself when coins are already
 being created too fast, and opens back up when they are not.** Nobody has to
 remember to retune anything.
+
+⚠️ **`net_mint_day` is a trimmed mean, not a plain average** (since 2026-08-28,
+`supabase/anti-inflation.sql`). Daily nets are bucketed by Warsaw day and the two
+highest and two lowest days are dropped before averaging. A plain 30-day mean is
+owned by whatever the single biggest event in the window was: the Loteria draw of
+2026-08-03 put 779 493 coins into ONE ledger row and made the Bank read 2,87%/day
+for 25 days — health 0.26, a 4-bond edition, a 2 000 lokata cap — when the
+trimmed figure for the same window was 0,69% (health 0.59, 11 bonds, 5 000).
+Empty days count as a genuine zero, so the divisor is always exactly 30.
 
 The budget splits 55% lokata / 10% skarbonka / 35% obligacje, divides by active
 players (any ledger activity in 14 days), and converts back to a principal cap
@@ -155,7 +168,8 @@ them. Today's tight numbers are the correct answer to today's measurement.
 - **Casino shares are exempt** — they redistribute an existing burn rather than
   minting, so they consume no budget and stay at a fixed 30-share float.
 
-⚠️ **The Sygnet is measured but not deducted.** `signet_draw` records what every
+⚠️ **The Sygnet is measured but not deducted.** It is capped now (20 000 base →
+400/day/holder), but still sits outside the budget. `signet_draw` records what every
 interest item will mint tomorrow (1 374/day today, from Filip's ring alone —
 4.7× the entire Bank budget). It is reported next to the budget rather than
 subtracted from it, because deducting would mean one player buying a Sygnet
@@ -241,49 +255,54 @@ last week's.
 
 At the measured 2 951/day baseline: ~88/day per share → ~45-day payback.
 
-### 💍 Sygnet Bankiera — Filip's ring, on Filip's terms
+### 💍 Sygnet Bankiera — capped since 2026-08-28
 
 `banker_signet`, 15 000 🪙, a normal `hero_item_defs` row bought in the Sklep
-(`🎒 Przedmioty specjalne`). **2%/day of the whole cash balance, uncapped** —
-byte-for-byte the deal `interest_ring` has had since May 2026.
+(`🎒 Przedmioty specjalne`). **2%/day on the first 20 000 🪙 of base → at most
+400/day.** `interest_ring`, the legendary ring one player has held since May
+2026, carries the **same** cap.
 
-**Why there is no cap.** There was one (12 000, → 240/day) in the first cut, and
-it was removed on request. The argument that carried it: selling everyone a
+Base is cash **plus open Bank deposit principal**, so a Lokata never costs you
+Sygnet interest — see the trap below.
+
+**It shipped uncapped, and that was the mistake.** The first cut had a 12 000 cap
+(→ 240/day); it was removed on request, on the argument that selling everyone a
 deliberately weaker copy of an item one player already owns is the unfair
-version. The item is now identical and the price is the only thing that differs.
+version. What that missed is that the item was the only **unbounded and
+compounding** term in the whole economy: interest paid on a balance that the
+interest itself grows. The 2026-08-28 audit measured it going 1 340/day →
+2 364/day in five days as three players bought in, on a path to ~8 137/day and a
+money supply doubling every 35 days from this one row.
 
-**What that costs, stated plainly.** An uncapped percentage of a balance is
-unbounded and compounding. With all 11 players holding one against 360 776 coins
-of circulating cash it mints ~7 215/day and doubles the money supply in ~35
-days. That is a known, accepted trade, not an oversight — and it is why the
-other four products were cut by roughly a third in the same change.
+The cap is **uniform across both items** on purpose. One rule is easier to
+explain to eleven colleagues than "Filip's ring is better", and it is bounded
+either way. To grandfather the legacy ring instead, set a higher `interest_cap`
+on that row alone — every consumer reads it per-def.
 
-Payback at 15 000, ignoring compounding:
+Payback at 15 000:
 
-| balance | pays/day | payback |
+| base | pays/day | payback |
 |---|---|---|
 | 5 000 | 100 | 150 days |
 | 10 353 (median) | 207 | 73 days |
-| 25 000 | 500 | 30 days |
-| 68 719 (Filip) | 1 374 | 11 days |
+| 20 000 (the cap) | 400 | 38 days |
+| 68 719 | 400 | 38 days |
 
-Note the shape: an uncapped percentage pays a large balance back ~13× faster
-than a small one, so the item is **regressive by construction**. That is
-inherent to "same rate for everyone" and is the trade being made.
+The cap also makes the item **progressive above 20 000** rather than regressive:
+every large balance now pays back at the same 38 days, instead of a big balance
+being paid back ~13× faster than a small one.
 
-The only real brake is opportunity cost: interest is paid on **cash**, and cash
-is the one asset in this game that does nothing else. Coins locked in a Lokata,
-spent on lootboxes, or standing in a market position earn nothing here. The UI
-says this in three places because it is the single most misunderstood rule.
+The other brake is still opportunity cost: interest is paid on **cash**, and
+cash is the one asset in this game that does nothing else. Coins spent on
+lootboxes or standing in a market position earn nothing here. The UI says this
+in three places because it is the single most misunderstood rule.
 
-**If it runs hot, the knobs, cheapest first — all data changes on one row, no
-code deploy:**
+**Remaining knobs, cheapest first — all data changes on one row, no code deploy:**
 
-1. `interest_cap` on the def. The column and every line of logic that honours it
-   are still in place; it is simply `NULL`. Setting it to e.g. 12 000 caps
-   payouts at 240/day/player without touching anyone's existing item.
+1. `interest_cap` itself. 20 000 today; the whole item family costs 4 400/day at
+   full 11-player adoption.
 2. `effect_value` 2 → 1. Halves every payout, including the legacy ring's.
-3. `edition_size` + a `sale_type` flip, to make it scarce rather than capped.
+3. `edition_size` + a `sale_type` flip, to make it scarce as well as capped.
 
 ---
 
@@ -337,7 +356,7 @@ the same day, two bonds maturing in the same run — Postgres updates that row
 `award_daily_interest()` was rewritten here. It no longer hardcodes
 `slug='interest_ring'` and a literal `0.02`; it pays any def with
 `effect_type='daily_interest'` at that def's own `effect_value`, honours
-`interest_cap` (NULL = uncapped, which both interest items are today), and pays
+`interest_cap` (20 000 on both interest items since 2026-08-28), and pays
 only the **best single item per user** (`DISTINCT ON (user_id) … ORDER BY amount
 DESC`). Owning both the ring and the Sygnet must not stack into 4%/day.
 
@@ -346,9 +365,10 @@ at most one row per user.
 
 `bank_state()` returns `signet.better` — the name of another interest item the
 caller already holds that pays at least as much — scored **at the caller's
-actual balance**, the same way the award function scores it. With the Sygnet
-uncapped it ties exactly with the ring, so a cap comparison would not have
-caught it, and Filip would have been sold a 15 000-coin no-op.
+actual balance**, the same way the award function scores it. The Sygnet and the
+ring now share one cap, so above 20 000 of base they tie exactly; a cap
+comparison would not catch that, and the ring's owner would be sold a 15 000-coin
+no-op. Scoring at the actual balance is what prevents it.
 
 ### Accounting
 

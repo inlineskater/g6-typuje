@@ -18,8 +18,11 @@
 -- item. Every product below is therefore bounded by a maturity, by being
 -- funded out of coins that were already burned, or by a per-player cap that
 -- bank_ensure_limits() RECOMPUTES DAILY from the measured state of the economy
--- (see the DYNAMIC LIMITS block below). The Sygnet Bankiera is the deliberate
--- exception: it is uncapped, at parity with the legendary ring.
+-- (see the DYNAMIC LIMITS block below). The Sygnet Bankiera shipped as the
+-- deliberate exception — uncapped, at parity with the legendary ring — and that
+-- was reversed on 2026-08-28: both interest items now carry interest_cap 20,000
+-- (400/day), because an uncapped rate on a balance the interest itself grows was
+-- the only unbounded compounding term in the whole game.
 --
 -- Measured baseline the rates were calibrated against (prod, 2026-08-23):
 --   11 non-admin players · 360,776 coins in circulation · median balance 10,353
@@ -1315,12 +1318,18 @@ BEGIN
     -- best, so someone holding the ring must be told the Sygnet would add
     -- nothing — before they spend 8,000 on it.
     -- `owned` is the Sygnet specifically. `better` names any OTHER interest
-    -- item the caller holds that already pays them at least as much — with the
-    -- Sygnet uncapped that is a genuine tie with the legendary ring, so it is
-    -- scored the same way award_daily_interest() scores it (at the caller's
-    -- actual balance) rather than compared on caps. Buying a second interest
-    -- item adds nothing: only the best one pays.
+    -- item the caller holds that already pays them at least as much. Both
+    -- interest items now share the same 20,000 cap, so above that balance they
+    -- are an exact tie; it is scored the same way award_daily_interest() scores
+    -- it (at the caller's actual balance) rather than compared on caps. Buying
+    -- a second interest item adds nothing: only the best one pays.
     'signet', json_build_object(
+      -- The cap and the rate come from the def row, never from a client
+      -- constant: interest_cap moved from NULL to 20,000 on 2026-08-28
+      -- (anti-inflation.sql) and the rate card must follow it automatically.
+      'pct',   (SELECT d.effect_value FROM public.hero_item_defs d WHERE d.slug = 'banker_signet'),
+      'cap',   (SELECT d.interest_cap FROM public.hero_item_defs d WHERE d.slug = 'banker_signet'),
+      'price', (SELECT d.price        FROM public.hero_item_defs d WHERE d.slug = 'banker_signet'),
       'owned', EXISTS (SELECT 1 FROM public.hero_item_instances i
                         JOIN public.hero_item_defs d ON d.id = i.item_def_id
                        WHERE i.owner_id = v_user AND d.slug = 'banker_signet'),
@@ -1395,15 +1404,18 @@ GRANT EXECUTE ON FUNCTION public.bank_buy_holding(uuid) TO authenticated;
 -- 💍 „Sygnet Bankiera" — Filip's ring, on exactly Filip's terms, for everyone
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- 2%/day of your whole cash balance. No cap, no ceiling, no asterisk — the
--- same deal `interest_ring` has had since May 2026. Selling anyone a weaker
--- copy of an item somebody else already owns is the unfair version, so the
--- item is identical and the price is the only thing that differs.
+-- 2%/day of your cash balance, on the FIRST 20,000 coins of base — at most
+-- 400/day. `interest_ring`, the legendary 1-of-1, carries the same cap.
+--
+-- It shipped uncapped ("no cap, no ceiling, no asterisk", at parity with the
+-- ring, because selling anyone a weaker copy of an item somebody else already
+-- owns is the unfair version) and that was the mistake. The paragraph below is
+-- the original warning, and it is exactly what happened.
 --
 -- ⚠️ READ THIS BEFORE RETUNING ANYTHING ELSE IN THIS FILE. An uncapped
 -- percentage of a balance is UNBOUNDED and COMPOUNDING, so it is not merely
 -- the largest line in the bank — at office scale it is roughly the whole
--- thing. With all 11 players holding one against today's 360,776 coins of
+-- thing. With all 11 players holding one against 2026-08-23's 360,776 coins of
 -- circulating cash it mints ~7,215/day and doubles the money supply in ~35
 -- days, against ~1,400/day from all four bank products put together and a
 -- ~2,951/day casino burn. That is the deliberate, known cost of parity.
@@ -1456,9 +1468,15 @@ ON CONFLICT (slug) DO UPDATE SET
   is_active    = EXCLUDED.is_active,
   interest_cap = EXCLUDED.interest_cap;
 
--- The legendary 1-of-1 is explicitly uncapped too, so a future default can
--- never silently nerf an item somebody won at auction.
-UPDATE public.hero_item_defs SET interest_cap = NULL WHERE slug = 'interest_ring';
+-- ⚠️ This line used to force `interest_cap = NULL` on the legendary ring, so
+-- that "a future default can never silently nerf an item somebody won at
+-- auction". After 2026-08-28 that inverted: re-running this file silently
+-- UN-capped the ring and restored the one unbounded compounding term in the
+-- economy. Prod survived only because the documented run order puts
+-- anti-inflation.sql after this file, and its UPDATE covers both rows.
+-- The cap is uniform across both interest items on purpose — see
+-- supabase/anti-inflation.sql §2 and docs/bank.md.
+UPDATE public.hero_item_defs SET interest_cap = 20000 WHERE slug = 'interest_ring';
 
 
 -- ── award_daily_interest(), rewritten ──────────────────────────────────────
