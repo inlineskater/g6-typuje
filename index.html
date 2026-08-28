@@ -8428,6 +8428,14 @@
     }
     #screen-app > [id^="tab-"] { padding-left: var(--chat-w); }
 
+    /* The launcher pill and the ✕ are MOBILE ONLY — above 900px the rail is a
+       column of the page and there is nothing to collapse it into. Both are
+       revealed inside the mobile block below. */
+    /* #chat-rail-scoped on purpose: .chat-hbtn (display: inline-flex) is defined
+       further down, so a bare .rail-hide-btn rule loses to it on source order. */
+    .rail-launcher { display: none; }
+    #chat-rail .rail-hide-btn { display: none; }
+
     .side-mod { display: flex; flex-direction: column; min-height: 0; border-bottom: 1px solid var(--c-line); }
     .side-mod-head {
       flex: none;
@@ -8583,6 +8591,43 @@
          than the 42% it takes of a full-height column. */
       .side-people { max-height: 118px; }
       #chat-toasts { left: 10px; right: 10px; bottom: calc(42vh + 20px); }
+
+      /* ── Collapsed (the default on a phone) ──────────────────────────────
+         The rail shrinks to the launcher pill; the page gets its bottom back,
+         minus enough room that the pill never covers the last row. */
+      #chat-rail .rail-hide-btn { display: inline-flex; }
+      #chat-rail.rail-collapsed {
+        top: auto; left: 10px; right: auto; bottom: 10px;
+        width: auto; height: auto;
+        border: none; border-radius: 0; box-shadow: none; background: none;
+      }
+      #chat-rail.rail-collapsed > *:not(.rail-launcher) { display: none; }
+      body.rail-collapsed #screen-app { padding-bottom: 64px; }
+      body.rail-collapsed #chat-toasts { bottom: 66px; }
+
+      /* Revealed only while collapsed — the sibling rule above hides everything
+         else, and this one is what keeps the pill out of the open dock. */
+      #chat-rail.rail-collapsed > .rail-launcher { display: flex; }
+      .rail-launcher {
+        align-items: center; gap: 8px;
+        padding: 10px 15px; border: 1px solid var(--c-line);
+        border-radius: 999px; background: var(--c-solid);
+        color: var(--c-ink); font-family: inherit; font-weight: 600; font-size: 13px;
+        letter-spacing: -.01em; cursor: pointer;
+        box-shadow: 0 8px 24px rgba(15,23,42,.16), 0 1px 4px rgba(15,23,42,.06);
+      }
+      .rail-launcher-flower { font-size: 15px; line-height: 1; }
+      /* Something happened while you had it shut: the pill says so on its own,
+         without needing the toast to still be on screen. */
+      .rail-launcher.has-unread { border-color: var(--c-accent); animation: railNudge 1.8s ease-in-out 3; }
+      @keyframes railNudge {
+        0%, 100% { transform: none; }
+        8%  { transform: translateY(-3px); }
+        16% { transform: none; }
+      }
+    }
+    @media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+      .rail-launcher.has-unread { animation: none; }
     }
 
     /* ── Player activity window (opened from a Biuro row) ────────────────── */
@@ -8943,6 +8988,15 @@
 
   <!-- ── ICQ-style office chat rail (present on every tab; outside all #tab-*) ── -->
   <div id="chat-rail" class="hidden">
+    <!-- Mobile only: the rail starts collapsed to this pill (see setRailOpen).
+         The badge is the whole notification story — unread whispers plus room
+         messages that arrived while it was shut. -->
+    <button class="rail-launcher" id="rail-launcher" title="Pokaż czat">
+      <span class="rail-launcher-flower">🌼</span>
+      <span>Czat</span>
+      <span class="chat-unread-total hidden" id="rail-launcher-unread">0</span>
+    </button>
+
     <!-- 1 / Biuro — everyone in the office, most recently active first. A row is
          a button: it opens that player's activity window (👤 Kto jest kto). -->
     <section class="side-mod side-people">
@@ -8962,6 +9016,7 @@
         <span class="chat-title">Czat G6</span>
         <span class="chat-online-count" id="chat-online-count">0 w sieci</span>
         <button class="chat-hbtn" id="chat-sound-btn" title="Włącz dźwięk">🔕</button>
+        <button class="chat-hbtn rail-hide-btn" id="rail-hide-btn" title="Ukryj czat">✕</button>
       </div>
       <!-- Public room -->
       <div class="chat-body" id="chat-view-room">
@@ -14594,6 +14649,50 @@ function teardownRealtime() {
 
 const chatRailEl = () => document.getElementById('chat-rail');
 
+// ── Mobile collapse ─────────────────────────────────────────────────────────
+// Above 900px the rail is a column of the page and is never collapsible. On a
+// phone it is a dock that covers 42% of the screen, so it starts SHUT and the
+// launcher pill carries the notification: a badge with everything that arrived
+// while it was closed (whispers, and room messages — which normally toast
+// silently — because a closed panel is exactly when you cannot see them).
+//
+// The state is per page load on purpose: „hidden by default on mobile" means
+// every visit, not „until you once opened it".
+const railIsMobile = () => window.matchMedia('(max-width: 900px)').matches;
+let railOpen = true;
+let chatRoomUnread = 0;   // room messages that landed while the rail was shut
+
+function setRailOpen(open) {
+  railOpen = open;
+  const rail = chatRailEl();
+  if (!rail) return;
+  rail.classList.toggle('rail-collapsed', !open);
+  document.body.classList.toggle('rail-collapsed', !open);
+  if (open) {
+    chatRoomUnread = 0;
+    if (chatView === 'thread' && chatPeerId) chatMarkRead(chatPeerId);
+    chatScrollActive();
+  }
+  chatRenderUnreadBadges();
+}
+
+// Rotating a phone to landscape can cross 900px, and there is no launcher on the
+// desktop side of that line — so a rail collapsed on the phone would become
+// unreachable. Force it open on the way up; going back down re-collapses it.
+// Whether the panel is actually on screen. Derived, not just read off railOpen:
+// the collapsed CSS lives inside the mobile media query, so above 900px the rail
+// is visible no matter what the flag says — and a stale flag must not make an
+// open panel start toasting its own room messages.
+const railVisible = () => !railIsMobile() || railOpen;
+
+function railWatchViewport() {
+  const mq = window.matchMedia('(max-width: 900px)');
+  const onChange = e => setRailOpen(!e.matches);
+  if (mq.addEventListener) mq.addEventListener('change', onChange);
+  else if (mq.addListener) mq.addListener(onChange);
+}
+
+
 // ── Side rail module 1: „Biuro" — everyone, most recently active first ──────
 // One row per player, sorted by when they last did anything anywhere in the
 // portal; clicking a row opens that player's activity window, which is also
@@ -14804,6 +14903,8 @@ async function initChat() {
   if (!rail) return;
   show(rail);
   chatWireListenersOnce();
+  setRailOpen(!railIsMobile());     // hidden by default on a phone, docked on desktop
+  railWatchViewport();
   try { chatSoundOn = localStorage.getItem('rp_chat_sound') === '1'; } catch (e) {}
   chatSyncSoundBtn();
 
@@ -14834,6 +14935,8 @@ function chatWireListenersOnce() {
   if (!rail || rail.dataset.wired) return;
   rail.dataset.wired = '1';
 
+  document.getElementById('rail-launcher').addEventListener('click', () => setRailOpen(true));
+  document.getElementById('rail-hide-btn').addEventListener('click', () => setRailOpen(false));
   document.getElementById('chat-sound-btn').addEventListener('click', chatToggleSound);
   document.getElementById('chat-thread-back').addEventListener('click', () => setChatView('room'));
 
@@ -14932,7 +15035,17 @@ function chatTotalUnread() {
   return Object.values(chatUnread).reduce((a, b) => a + b, 0);
 }
 
-function chatRenderUnreadBadges() { sideRenderPeople(); }
+function chatRenderUnreadBadges() {
+  sideRenderPeople();
+  const total = chatTotalUnread() + chatRoomUnread;
+  const badge = document.getElementById('rail-launcher-unread');
+  const pill = document.getElementById('rail-launcher');
+  if (badge) {
+    setText(badge, total > 99 ? '99+' : String(total));
+    badge.classList.toggle('hidden', total <= 0);
+  }
+  if (pill) pill.classList.toggle('has-unread', total > 0);
+}
 
 function chatScrollActive() {
   const id = chatView === 'thread' ? 'chat-thread-messages'
@@ -15001,6 +15114,14 @@ function chatIngest(m) {
     chatRoomMsgs.push(m);
     if (chatRoomMsgs.length > 200) chatRoomMsgs.shift();
     if (chatView === 'room') chatRenderRoom();
+    // A room message is normally ambient — you can see it land. With the rail
+    // shut on a phone you cannot, so it becomes a badge and a toast.
+    if (!railVisible() && m.sender_id !== me.id) {
+      chatRoomUnread++;
+      chatRenderUnreadBadges();
+      chatToast('💬 ' + (m.sender_nick || 'Ktoś') + ': ' + m.body.slice(0, 40), 'msg');
+      chatBeep();
+    }
     return;
   }
   // Whisper: peer is the other party.
@@ -15145,6 +15266,7 @@ function chatBeep() {
 
 function resetChatState() {
   stopChatHeartbeat();
+  chatRoomUnread = 0;
   closePlayerWindow();
   sidePeople = []; sidePeopleLast = {}; sidePeopleLoaded = 0; sidePeopleColumn = true;
   const people = document.getElementById('side-people');
