@@ -8402,22 +8402,8 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--c-ink);
     }
-    /* Collapsed: only the launcher pill shows. */
-    #chat-rail.chat-collapsed .chat-panel { display: none; }
-    #chat-rail:not(.chat-collapsed) .chat-launcher { display: none; }
-
-    .chat-launcher {
-      position: fixed; left: 16px; bottom: 16px;
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 15px; border: 1px solid var(--c-line);
-      border-radius: 999px; background: var(--c-surface);
-      -webkit-backdrop-filter: blur(20px) saturate(1.7); backdrop-filter: blur(20px) saturate(1.7);
-      color: var(--c-ink); font-weight: 600; font-size: 13px; letter-spacing: -.01em; cursor: pointer;
-      box-shadow: 0 8px 24px rgba(15,23,42,.13), 0 1px 4px rgba(15,23,42,.05);
-      transition: transform .14s ease, box-shadow .14s ease;
-    }
-    .chat-launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(15,23,42,.17); }
-    .chat-launcher-flower { font-size: 15px; line-height: 1; }
+    /* The rail is permanently docked — there is no collapse control and no
+       launcher pill. It is pinned to the left edge on every tab. */
 
     .chat-unread-total {
       min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px;
@@ -8527,7 +8513,7 @@
 
     /* Login/logout + whisper toasts, stacked above the panel. */
     #chat-toasts {
-      position: fixed; left: 16px; bottom: 84px; z-index: 61;
+      position: fixed; left: 354px; bottom: 16px; z-index: 61;   /* clear of the permanently docked panel */
       display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none;
     }
     .chat-toast {
@@ -8541,15 +8527,15 @@
     .chat-toast.leave { border-left-color: var(--c-dim); color: var(--c-muted); }
     @keyframes chatToastIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) {
-      .chat-launcher { transition: none; }
       .chat-toast { animation: none; }
     }
 
-    /* Mobile: panel fills more of the screen; launcher clears any bottom UI. */
+    /* Mobile: the panel is always open, so it deliberately takes LESS of the
+       screen than it used to — it can no longer be dismissed to get at the
+       page underneath. */
     @media (max-width: 640px) {
-      .chat-panel { width: calc(100vw - 20px); height: min(72vh, calc(100vh - 96px)); left: 10px; bottom: 10px; }
-      .chat-launcher { left: 10px; bottom: 10px; }
-      #chat-toasts { left: 10px; right: 10px; bottom: 80px; }
+      .chat-panel { width: calc(100vw - 20px); height: min(38vh, calc(100vh - 96px)); left: 10px; bottom: 10px; }
+      #chat-toasts { left: 10px; right: 10px; bottom: calc(38vh + 20px); }
     }
 
     /* ── 🏦 Bank G6 ─────────────────────────────────────────────────────────
@@ -8685,7 +8671,7 @@
        further down than the header, so an equal-specificity override has to
        come after it in source order to win. */
     @media (max-width: 900px) {
-      header, .nav-tabs, .chat-launcher, .chat-panel, .chat-toast {
+      header, .nav-tabs, .chat-panel, .chat-toast {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
         isolation: isolate;
@@ -8883,21 +8869,13 @@
   </nav>
 
   <!-- ── ICQ-style office chat rail (present on every tab; outside all #tab-*) ── -->
-  <div id="chat-rail" class="chat-collapsed hidden">
-    <button id="chat-launcher" class="chat-launcher" title="Czat biurowy">
-      <span class="chat-launcher-flower">🌼</span>
-      <span class="chat-launcher-label">Czat</span>
-      <span class="nav-new-badge">Nowość</span>
-      <span class="chat-unread-total hidden" id="chat-launcher-unread">0</span>
-    </button>
+  <div id="chat-rail" class="hidden">
     <div class="chat-panel">
       <div class="chat-header">
         <span class="chat-header-flower">🌼</span>
         <span class="chat-title">Czat G6</span>
-        <span class="nav-new-badge">Nowość</span>
         <span class="chat-online-count" id="chat-online-count">0 w sieci</span>
         <button class="chat-hbtn" id="chat-sound-btn" title="Włącz dźwięk">🔕</button>
-        <button class="btn-close" id="chat-collapse-btn" title="Zwiń czat">✕</button>
       </div>
       <div class="chat-tabs">
         <button class="chat-tab active" data-chat-view="room">💬 Pokój</button>
@@ -14555,8 +14533,6 @@ function chatWireListenersOnce() {
   if (!rail || rail.dataset.wired) return;
   rail.dataset.wired = '1';
 
-  document.getElementById('chat-launcher').addEventListener('click', () => chatSetOpen(true));
-  document.getElementById('chat-collapse-btn').addEventListener('click', () => chatSetOpen(false));
   document.getElementById('chat-sound-btn').addEventListener('click', chatToggleSound);
   document.getElementById('chat-thread-back').addEventListener('click', () => setChatView('contacts'));
 
@@ -14568,18 +14544,6 @@ function chatWireListenersOnce() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
   document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
-}
-
-function chatSetOpen(open) {
-  const rail = chatRailEl();
-  if (!rail) return;
-  rail.classList.toggle('chat-collapsed', !open);
-  if (open) {
-    // Opening clears the "unread while collapsed" cue and focuses input.
-    if (chatView === 'thread' && chatPeerId) chatMarkRead(chatPeerId);
-    setTimeout(() => { const i = document.getElementById('chat-input'); if (i && chatView !== 'contacts') i.focus(); }, 30);
-    chatScrollActive();
-  }
 }
 
 function setChatView(view) {
@@ -14698,7 +14662,6 @@ function chatRenderUnreadBadges() {
     b.textContent = String(n);
     b.classList.toggle('hidden', n <= 0);
   };
-  setBadge('chat-launcher-unread', total);
   setBadge('chat-contacts-unread', total);
 }
 
@@ -14780,9 +14743,8 @@ function chatIngest(m) {
 
   const incoming = m.sender_id !== me.id;
   const viewingThisThread = chatView === 'thread' && chatPeerId === peer;
-  const railOpen = !chatRailEl().classList.contains('chat-collapsed');
 
-  if (incoming && !(viewingThisThread && railOpen)) {
+  if (incoming && !viewingThisThread) {
     chatUnread[peer] = (chatUnread[peer] || 0) + 1;
     chatRenderUnreadBadges();
     chatRenderRoster();
@@ -14791,7 +14753,7 @@ function chatIngest(m) {
   }
   if (viewingThisThread) {
     chatRenderThread();
-    if (incoming && railOpen) chatMarkRead(peer);
+    if (incoming) chatMarkRead(peer);
   }
 }
 
@@ -14916,7 +14878,7 @@ function resetChatState() {
   chatReady = false; chatView = 'room'; chatPeerId = null;
   chatRoster = []; chatOnline = new Set(); chatRoomMsgs = []; chatThreads = {}; chatUnread = {};
   const rail = chatRailEl();
-  if (rail) { rail.classList.add('chat-collapsed'); hide(rail); }
+  if (rail) hide(rail);
   const toasts = document.getElementById('chat-toasts'); if (toasts) toasts.replaceChildren();
 }
 
