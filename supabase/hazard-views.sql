@@ -1,5 +1,5 @@
 -- Hazard stats and game transactions views for the Ranking page.
--- Run after poker-ledger.sql, roulette.sql, slots.sql, plinko.sql, mines.sql, crash.sql, and wheel.sql.
+-- Run after poker-ledger.sql, roulette.sql, slots.sql, plinko.sql, mines.sql, crash.sql, wheel.sql, and hilo.sql.
 
 DROP VIEW IF EXISTS public.game_transactions;
 DROP VIEW IF EXISTS public.hazard_stats;
@@ -15,8 +15,9 @@ SELECT
   COALESCE(mn.pl, 0)::integer AS mines_pl,
   COALESCE(cr.pl, 0)::integer AS crash_pl,
   COALESCE(wh.pl, 0)::integer AS wheel_pl,
+  COALESCE(hl.pl, 0)::integer AS hilo_pl,
   COALESCE(pk.pl, 0)::integer AS poker_pl,
-  (COALESCE(r.pl, 0) + COALESCE(s.pl, 0) + COALESCE(pln.pl, 0) + COALESCE(mn.pl, 0) + COALESCE(cr.pl, 0) + COALESCE(wh.pl, 0) + COALESCE(pk.pl, 0))::integer AS total_pl,
+  (COALESCE(r.pl, 0) + COALESCE(s.pl, 0) + COALESCE(pln.pl, 0) + COALESCE(mn.pl, 0) + COALESCE(cr.pl, 0) + COALESCE(wh.pl, 0) + COALESCE(hl.pl, 0) + COALESCE(pk.pl, 0))::integer AS total_pl,
   p.is_admin
 FROM public.profiles p
 LEFT JOIN (
@@ -43,6 +44,10 @@ LEFT JOIN (
   SELECT user_id, SUM(total_won - total_bet)::integer AS pl
   FROM public.wheel_spins GROUP BY user_id
 ) wh ON wh.user_id = p.id
+LEFT JOIN (
+  SELECT user_id, SUM(total_won - bet)::integer AS pl
+  FROM public.hilo_spins GROUP BY user_id
+) hl ON hl.user_id = p.id
 LEFT JOIN (
   SELECT user_id,
     SUM(CASE WHEN type = 'cashout' THEN amount ELSE -amount END)::integer AS pl
@@ -87,6 +92,12 @@ SELECT
   ws.total_bet AS bet, ws.total_won AS won, ws.created_at, p.is_admin
 FROM public.wheel_spins ws
 JOIN public.profiles p ON p.id = ws.user_id
+UNION ALL
+SELECT
+  hs.id, hs.user_id, p.nick AS nick_snapshot, 'hilo' AS game,
+  hs.bet AS bet, hs.total_won AS won, hs.created_at, p.is_admin
+FROM public.hilo_spins hs
+JOIN public.profiles p ON p.id = hs.user_id
 UNION ALL
 SELECT
   pl.id, pl.user_id, pl.nick_snapshot, 'poker_' || pl.type AS game,

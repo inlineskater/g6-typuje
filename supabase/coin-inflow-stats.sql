@@ -156,6 +156,10 @@ AS $$
       WHERE total_won > 0
       UNION ALL
       SELECT user_id, total_won AS amount, created_at
+      FROM public.hilo_spins
+      WHERE total_won > 0
+      UNION ALL
+      SELECT user_id, total_won AS amount, created_at
       FROM public.crash_spins
       WHERE total_won > 0
       UNION ALL

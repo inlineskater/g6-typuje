@@ -203,3 +203,21 @@ Klient nie zapisuje tabel farmy bezpośrednio — wszystkie mutacje to RPC `SECU
 - Cena skrzynki: `FARM_BOX_PRICE` w `index.html` **i** `v_cost` w `buy_farm_lootbox` — zmieniać razem.
 - Podaż NFT na tydzień: `edition_size` w rotacji (`farm-weekly-nft-series.sql`) **i** szerokość okna `farm_nft_series_lead_weeks()` / `FARM_NFT_SERIES_LEAD_WEEKS` — zmieniać razem, bo razem decydują, ile numerów jest w puli naraz. Rotację trzymaj zgodną z `NFT_SERIES_ROTATION` w `index.html`.
 - Na żywej bazie używaj `supabase/farm-anti-hoarding.sql` zamiast pełnego `farm.sql` (pełny plik resetuje ceny rynku).
+
+## NPC pricing is demand-driven since 2026-08-28
+
+`roll_farm_prices()` no longer sets the anchor from `random()` alone. The regime
+table is still there, but it is multiplied by a **demand** term derived from what
+the office burns versus what it sells, and `farm_market.floor_price` moves with
+it. Above `pressure = 1` total crop revenue is asymptotically constant in
+quantity, which is what stops card level from driving coin creation without
+bound.
+
+The weekly contract premium is also capped per player at
+`fair_cap_user_units × farm_seasonal_premium_cap_x()` — the sale itself is never
+capped, only the top-up, and the community bar and rank race still count full
+output via `farm_seasonal_event_sales.premium_qty`.
+
+Both live in `supabase/anti-inflation.sql`. **Read docs/anti-inflation.md before
+touching any farm pricing constant** — the measurements, the derivations, the
+180-day simulation and the five tuning knobs are all there.

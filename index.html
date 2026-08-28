@@ -7997,6 +7997,121 @@
     .mlc-bid-input { flex: 1 1 auto; min-width: 0; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; font: inherit; }
     .mlc-bid-row .mlc-buy { width: auto; flex: 0 0 auto; }
     .mlc-bid-hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
+    /* „Co nowego" one-shot release note */
+    .rn-box { max-width: 520px; }
+    .rn-title { margin: 0 0 6px; }
+    .rn-intro { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+    .rn-list { display: flex; flex-direction: column; gap: 14px; max-height: 58vh; overflow-y: auto; }
+    .rn-item { display: flex; gap: 11px; align-items: flex-start; }
+    .rn-ic { font-size: 20px; line-height: 1.3; flex: 0 0 auto; }
+    .rn-item-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+    .rn-item-body { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+    .rn-ok { width: 100%; margin-top: 16px; }
+    /* „Drabina Kariery G6" — Hi-Lo (game logic in tabs/hilo.js) */
+    .hl-wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .hl-hero { text-align: center; }
+    .hl-title { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 4px; font-size: 24px; }
+    .hl-title-mark { font-size: 28px; }
+    .hl-subtitle { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .hl-body { display: flex; flex-direction: column; gap: 14px; }
+    .hl-luck { padding: 8px 12px; border-radius: var(--r-sm); background: rgba(76,175,80,.12); border: 1px solid rgba(76,175,80,.4); font-size: 12px; }
+    .hl-stage, .hl-idle { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); box-shadow: var(--sh-sm); }
+    .hl-idle-title { color: var(--muted); font-size: 13px; }
+    .hl-meta { display: flex; gap: 26px; }
+    .hl-meta > div { display: flex; flex-direction: column; align-items: center; }
+    .hl-meta b { font-size: 19px; font-variant-numeric: tabular-nums; }
+    .hl-meta span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .hl-pot b { color: var(--accent); }
+    .hl-cardwrap { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 132px; }
+    .hl-card { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 76px; height: 108px; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: #14181f; box-shadow: 0 3px 10px rgba(0,0,0,.18); }
+    .hl-card.red { color: #c62828; }
+    .hl-card.big { width: 94px; height: 132px; }
+    .hl-card.ghost { opacity: .35; transform: scale(.8); }
+    .hl-card.empty { background: var(--bg); color: var(--muted); border-style: dashed; }
+    .hl-card-rank { font-size: 34px; font-weight: 700; line-height: 1; }
+    .hl-card-suit { font-size: 22px; line-height: 1; margin-top: 3px; }
+    .hl-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .hl-opt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); font: inherit; cursor: pointer; }
+    .hl-opt:hover:not(:disabled) { border-color: var(--accent); }
+    .hl-opt:disabled { opacity: .5; cursor: default; }
+    .hl-opt.sure { opacity: .6; }
+    .hl-opt-arrow { font-size: 20px; line-height: 1; }
+    .hl-opt-label { font-size: 12px; font-weight: 600; }
+    .hl-opt-odds { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--accent); }
+    .hl-opt-next { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .hl-actions { display: flex; gap: 10px; width: 100%; }
+    .hl-btn { flex: 1 1 auto; padding: 11px 14px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
+    .hl-btn:disabled { opacity: .5; cursor: default; }
+    .hl-btn.is-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .hl-btn.is-gold { background: linear-gradient(180deg, #f0c14b, #d9a520); border-color: #c8941a; color: #3a2a00; }
+    .hl-btn.is-ghost { flex: 0 0 auto; }
+    .hl-trail { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+    .hl-trail-step { min-width: 24px; text-align: center; padding: 2px 5px; border-radius: 6px; background: rgba(76,175,80,.16); font-size: 11px; font-weight: 600; }
+    .hl-trail-step.lost { background: rgba(217,83,79,.18); }
+    .hl-cap { font-size: 11px; color: var(--muted); text-align: center; }
+    .hl-bet { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: center; width: 100%; }
+    .hl-bet-label { font-size: 12px; color: var(--muted); width: 100%; text-align: center; }
+    .hl-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .hl-bet-input { width: 110px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; font: inherit; }
+    .hl-flash { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    .hl-flash.lost .hl-card { border-color: #d9534f; }
+    .hl-rules { font-size: 12px; color: var(--muted); line-height: 1.55; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; background: var(--card); }
+    .hl-rules summary { cursor: pointer; font-weight: 600; color: var(--fg); }
+    .hl-rules p { margin: 8px 0 0; }
+    .hl-feed { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); padding: 12px 14px; }
+    .hl-feed-title { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+    .hl-feed-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .hl-feed-row:last-child { border-bottom: 0; }
+    .hl-feed-nick { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .hl-feed-streak, .hl-feed-mult { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .hl-feed-row b { font-variant-numeric: tabular-nums; color: #d9534f; }
+    .hl-feed-row.won b { color: #3d9440; }
+    .hl-empty { color: var(--muted); font-size: 12px; text-align: center; padding: 10px 0; }
+    @media (max-width: 560px) { .hl-opts { grid-template-columns: 1fr; } }
+    /* „Wspólny Cel Biura" (supabase/office-goals.sql) */
+    .og-goal { display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); box-shadow: var(--sh-sm); cursor: pointer; text-align: left; }
+    .og-goal:hover { border-color: var(--accent); }
+    .og-goal.done { border-color: #4caf50; }
+    .og-goal-ic { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+    .og-goal-main { flex: 1 1 auto; min-width: 0; }
+    .og-goal-title { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 5px; }
+    .og-goal-num { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .og-goal-track { height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
+    .og-goal-track.big { height: 14px; margin: 12px 0 6px; }
+    .og-goal-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #e0a419, #f5c451); transition: width .5s ease; }
+    .og-goal-fill.done { background: linear-gradient(90deg, #3d9440, #6ec071); }
+    .og-goal-cta { flex: 0 0 auto; font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+    .og-modal { max-width: 460px; }
+    .og-sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0 0 10px; }
+    .og-reward { font-size: 13px; line-height: 1.5; padding: 9px 11px; border-radius: var(--r-sm); background: var(--bg); border: 1px solid var(--border); }
+    .og-goal-nums { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+    .og-form { display: flex; flex-direction: column; gap: 8px; }
+    .og-input { width: 100%; box-sizing: border-box; padding: 10px 11px; border: 1px solid var(--border); border-radius: 9px; font: inherit; }
+    .og-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+    .og-quick-btn { flex: 1 1 auto; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font: inherit; font-size: 12px; cursor: pointer; }
+    .og-quick-btn:hover { border-color: var(--accent); }
+    .og-note { font-size: 12px; color: #d9534f; min-height: 15px; }
+    .og-hint { margin-top: 10px; font-size: 11px; color: var(--muted); line-height: 1.45; }
+    .og-list-title { margin: 16px 0 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+    .og-list { display: flex; flex-direction: column; }
+    .og-list-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .og-list-row:last-child { border-bottom: 0; }
+    .og-rank { flex: 0 0 26px; }
+    .og-nick { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .og-list-row b { font-variant-numeric: tabular-nums; }
+    .og-empty { margin-top: 12px; font-size: 12px; color: var(--muted); }
+    /* NPC skup budget vs office output (supabase/anti-inflation.sql) */
+    .farm-mkt-press { border: 1px solid var(--border); border-left-width: 4px; border-radius: var(--r-md); background: var(--card); padding: 12px 14px; margin: 4px 0 12px; box-shadow: var(--sh-sm); }
+    .farm-mkt-press.ok   { border-left-color: #4caf50; }
+    .farm-mkt-press.warn { border-left-color: #e0a419; }
+    .farm-mkt-press.bad  { border-left-color: #d9534f; }
+    .farm-mkt-press-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 9px; }
+    .farm-mkt-press-pct { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .farm-mkt-press-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px 18px; }
+    .farm-mkt-press-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 2px 0; }
+    .farm-mkt-press-row span { color: var(--muted); }
+    .farm-mkt-press-row b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .farm-mkt-press-note { margin-top: 9px; font-size: 11px; color: var(--muted); line-height: 1.45; }
     /* Crop price-history charts (📈 Ceny tab) */
     .farm-price-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 4px; }
     .farm-price-card { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); padding: 12px; box-shadow: var(--sh-sm); }
@@ -8732,6 +8847,7 @@
         <button class="nav-tab" data-tab="mines">💣 Miny G6</button>
         <button class="nav-tab" data-tab="crash">🚀 Rakieta</button>
         <button class="nav-tab" data-tab="wheel">🦬 Koło Żubra</button>
+        <button class="nav-tab" data-tab="hilo">🃏 Drabina Kariery <span class="nav-new-badge">Nowość</span></button>
         <div class="nav-dropdown-label">Zręcznościowe</div>
         <button class="nav-tab" data-tab="whack-boss"><span class="seasonal-dot"></span> Gra Sezonowa</button>
         <button class="nav-tab" data-tab="all-games">🎮 Wszystkie Gry</button>
@@ -9371,6 +9487,21 @@
             </div>
           </aside>
         </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-hilo" class="hidden casino">
+    <main>
+      <div class="hl-wrap">
+        <div class="hl-hero">
+          <h2 class="hl-title"><span class="hl-title-mark">🃏</span><span>Drabina Kariery G6</span></h2>
+          <p class="hl-subtitle">Wyżej czy niżej? Każde piętro mnoży pulę. Wysiadasz, kiedy chcesz — albo lecisz dalej.</p>
+        </div>
+        <div class="hl-body" id="hilo-body">
+          <div class="loading-center"><div class="spinner"></div></div>
+        </div>
+        <div class="hl-feed" id="hilo-feed"></div>
       </div>
     </main>
   </div>
@@ -11229,6 +11360,9 @@
         <div class="farm-topbar" id="farm-topbar">
           <div class="farm-toolbar-host" id="farm-topbar-btns"></div>
         </div>
+        <div class="og-goal hidden" id="og-goal" role="button" tabindex="0"
+             onclick="openOfficeGoalModal()"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOfficeGoalModal();}"></div>
         <div class="farm-stage">
           <div class="garden-sky">
             <div class="garden-glow"></div><div class="garden-stars"></div>
@@ -11993,6 +12127,7 @@ const TAB_MODULES = {
   shop:        'tabs/shop.js',    // Sklep, Targowisko, Zlecenia zakupu
   bank:        'tabs/bank.js',    // Bank G6: Lokata, Skarbonka, Obligacje, Udziały
   poker:       'tabs/poker.js',
+  hilo:        'tabs/hilo.js',   // Drabina Kariery (Hi-Lo)
 };
 const _tabModulePromises = {};
 function ensureTabModule(tab) {
@@ -12064,6 +12199,9 @@ function stopPokerClock() {}
 function stopPlinkoAnimation() {}
 function stopWheelAnimation() {}
 function stopBankTimer() {}
+// Overwritten by tabs/hilo.js. switchTab() calls it unconditionally, so it has
+// to exist before the module is ever fetched.
+function stopHiloTimer() {}
 const lwCharts = new Map();
 const HERO_APPEARANCE_FIELDS = [
   'skin_tone', 'hair_style', 'hair_color', 'beard',
@@ -12093,6 +12231,7 @@ const CASINO_LUCK_EFFECT_LABELS = {
   mines: { game: 'Miny', effect: 'poprawia mnożniki wypłat' },
   crash: { game: 'Rakieta', effect: 'wzmacnia udane wypłaty' },
   wheel: { game: 'Koło Żubra', effect: 'wzmacnia zwycięskie pola' },
+  hilo: { game: 'Drabina Kariery', effect: 'podnosi zwrot z 95% na 98%' },
 };
 let myHeroInventory = [];
 let heroAuctionItemDefs = [];
@@ -12745,6 +12884,65 @@ function showApp() {
   initChat();                                  // ICQ-style office chat rail (all tabs)
   refreshShopNavCounts();                      // populate the Targowisko nav counters
   if (DOCUMENTS_ENABLED) loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
+  setTimeout(maybeShowReleaseNote, 1200);      // „co nowego", once per release per browser
+}
+
+// ── „Co nowego" — one-shot release note ────────────────────────────────────
+// Shown once per RELEASE_NOTE.id per browser (localStorage, the same rp_* +
+// try/catch pattern the chat sound setting uses). Deliberately NOT a DB table:
+// a per-viewer convenience that nobody needs to read back later, and a private
+// window or a cleared profile simply seeing it again is harmless.
+//
+// The economy section is not marketing — crop prices, the Sygnet and the weekly
+// premium all changed in ways a player would otherwise read as the game being
+// broken. A number that moves for a reason nobody can see is indistinguishable
+// from an arbitrary one.
+const RELEASE_NOTE = {
+  id: '2026-08-28-wspolny-cel',
+  title: '📣 Co nowego w G6',
+  intro: 'Dwie nowe rzeczy i kilka zmian w gospodarce. Krótko:',
+  items: [
+    { icon: '🎯', title: 'Wspólny Cel Biura',
+      body: 'Zrzucamy się wszyscy na jeden cel. Pierwszy: 150 000 🪙 odblokowuje 5 NOWYCH DZIAŁEK na farmie — dla wszystkich, bo ziemi już nie ma (40 z 40 zajęte). Pasek celu jest na górze Ogródka. Monety są spalane, a spalanie podnosi budżet skupu NPC — czyli dorzucając się podnosisz ceny plonów całemu biuru.' },
+    { icon: '🃏', title: 'Drabina Kariery G6 — nowa gra',
+      body: 'Wyżej czy niżej? Na przycisku masz PRAWDZIWĄ szansę i dokładnie jej odwrotność jako mnożnik. Marża kasyna schodzi raz, przy wypłacie — nie co piętro — więc zwrot to równe 95% niezależnie od tego, czy wysiadasz na 1. czy na 12. piętrze i żadna strategia nie jest lepsza od innej. Zostaje sam wybór ryzyka.' },
+    { icon: '🌾', title: 'Skup NPC reaguje teraz na podaż',
+      body: 'Ceny plonów nie są już losowane w oderwaniu od tego, ile biuro sprzedaje. Im więcej zalewamy rynek, tym mniej płaci skup; im więcej biuro wydaje (skrzynki, ulepszenia, hodowla, podatek, kasyno), tym większy budżet skupu. Całe wyliczenie widać w zakładce 📈 Ceny. Stawka zmienia się stopniowo, maks. 15 pkt proc. na notowanie.' },
+    { icon: '💍', title: 'Sygnet i Pierścień Bankiera — limit 20 000',
+      body: '+2% dziennie liczy się teraz od pierwszych 20 000 monet salda (maks. 400 🪙 dziennie). Wcześniej było bez limitu i odsetki rosły od salda, które same tworzyły — jedyna taka pętla w grze.' },
+    { icon: '🏆', title: 'Premia z kontraktu tygodniowego — limit',
+      body: 'Stawka za sztukę była wyliczana dla gracza na 1. poziomie i wypłacana bez ograniczeń, więc najwięksi zbierali ~25× tego, co przewidywał projekt. Teraz premia obejmuje 3 tygodniowe „uczciwe" limity. Sprzedaż jest bez zmian — plony sprzedajesz normalnie, kończy się tylko dopłata. Do rankingu i do wspólnego paska liczy się dalej CAŁA sprzedaż.' },
+  ],
+};
+
+function maybeShowReleaseNote() {
+  let seen = null;
+  try { seen = localStorage.getItem('rp_release_note'); } catch (e) { return; }
+  if (seen === RELEASE_NOTE.id) return;
+  try { localStorage.setItem('rp_release_note', RELEASE_NOTE.id); } catch (e) { /* still show it once */ }
+  showReleaseNote();
+}
+
+function showReleaseNote() {
+  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  window.addEventListener('keydown', esc);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  const box = el('div', { className: 'modal-box rn-box' });
+  box.append(el('h3', { className: 'rn-title' }, RELEASE_NOTE.title));
+  box.append(el('p', { className: 'rn-intro' }, RELEASE_NOTE.intro));
+  const list = el('div', { className: 'rn-list' });
+  RELEASE_NOTE.items.forEach(it => list.append(el('div', { className: 'rn-item' },
+    el('span', { className: 'rn-ic' }, it.icon),
+    el('div', {},
+      el('div', { className: 'rn-item-title' }, it.title),
+      el('div', { className: 'rn-item-body' }, it.body)))));
+  box.append(list);
+  box.append(el('button', { className: 'btn-primary rn-ok', onclick: close }, 'Jasne, gramy'));
+  overlay.append(box);
+  document.body.appendChild(overlay);
 }
 
 function updateAdminTestTabs() {
@@ -13335,6 +13533,7 @@ function switchTab(tab) {
   if (previousTab === 'crash' && tab !== 'crash') stopCrash();
   if (previousTab === 'wheel' && tab !== 'wheel') stopWheelAnimation();
   if (previousTab === 'bank' && tab !== 'bank') stopBankTimer();
+  if (previousTab === 'hilo' && tab !== 'hilo') stopHiloTimer();
   activeTab = tab;
   if (CASINO_LUCK_EFFECT_LABELS[tab]) loadCasinoLuckStatus();
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -13364,6 +13563,7 @@ function switchTab(tab) {
   const tCr = document.getElementById('tab-crash');
   const tWl = document.getElementById('tab-wheel');
   const tBk = document.getElementById('tab-bank');
+  const tHl = document.getElementById('tab-hilo');
   hide(tAg);
   hide(tFp);
   hide(tBj);
@@ -13377,6 +13577,7 @@ function switchTab(tab) {
   hide(tCr);
   hide(tWl);
   hide(tBk);
+  hide(tHl);
   if (tab === 'markets') {
     show(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     if (markets.length === 0) loadMarkets();
@@ -13444,6 +13645,10 @@ function switchTab(tab) {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tBk);
     withTabModule('bank', () => loadBank());
+  } else if (tab === 'hilo') {
+    hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
+    show(tHl);
+    withTabModule('hilo', () => loadHilo());
   } else if (tab === 'canvas') {
     hide(tM); hide(tL); hide(tP); hide(tR); hide(tSl); hide(tWb); hide(tS); hide(tG);
     show(tCv);
@@ -13699,7 +13904,7 @@ function buildCardStats(marketId) {
 // ── Activity feed ─────────────────────────────────────────────────────────
 // Maps for the cross-source feed.
 const ACT_GAME_LABELS = {
-  roulette: '🎡 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', wheel: '🦬 Koło Żubra', poker: '🃏 Poker',
+  roulette: '🎡 Ruletka', slots: '🎰 Sloty', plinko: '📌 Plinko G6', mines: '💣 Miny G6', crash: '🚀 Rakieta', wheel: '🦬 Koło Żubra', hilo: '🃏 Drabina Kariery', poker: '🃏 Poker',
   whack_boss: '🔨 Nawal Szefa', snake: '🐍 Snake',
   flappy_pants: '👖 3 Pary Spodni', bug_jumper: '🐛 Bug Jumper',
   invoice_horde: '🎫 Najazd Ticketów', var_patrol: '📺 VAR Patrol',
@@ -13710,7 +13915,7 @@ const ACT_GAME_LABELS = {
 };
 // Casino games whose rapid plays are collapsed into one session row; an idle gap
 // longer than SESSION_GAP_MS closes a session (poker buy-ins/cashouts are not grouped).
-const CASINO_GROUP = new Set(['plinko', 'slots', 'roulette', 'mines', 'crash', 'wheel']);
+const CASINO_GROUP = new Set(['plinko', 'slots', 'roulette', 'mines', 'crash', 'wheel', 'hilo']);
 const SESSION_GAP_MS = 8 * 60 * 1000;
 const ACT_COIN_REASONS = {
   garden_water:               '💧 podlał roślinę',
@@ -13749,6 +13954,8 @@ const ACT_COIN_REASONS = {
   bank_bond_buy:              '📜 objął emisję obligacji',
   bank_share_buy:             '🎰 kupił udział w kasynie',
   bank_resale_sale:           '🤝 sprzedał papier na rynku wtórnym',
+  // Wspólny Cel Biura — a deliberate, public gesture: exactly what the feed is for.
+  office_goal_contribution:   '🎯 dorzucił się do wspólnego celu',
   // daily_interest intentionally omitted — too noisy for the feed
 };
 const ACT_FB_PICK = { '1': 'gospodarzy', 'X': 'remis', '2': 'gości' };
@@ -14208,6 +14415,11 @@ function setupRealtime() {
       // someone else's bet was a round-trip that could never change anything.
       const row = payload.new || payload.old;
       if (row && row.user_id === me?.id) await refreshMeCoins();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'office_goals' }, () => {
+      // The communal counter is the whole point — it has to move for everyone
+      // while they watch, and a completion has to reveal the new plots at once.
+      refreshOfficeGoal();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'canvas_pixels' }, (payload) => {
       applyCanvasPixelChange(payload.new);
@@ -20240,6 +20452,17 @@ const FARM_DISPLAY_ROWS = FARM_H - FARM_DISPLAY_Y_START;
 // migration tiles that still occupy row 0 in the DB; until then buying reports
 // "tile_taken".
 const FARM_EXTRA_TILES = [{ x: 0, y: 0 }];
+// „Wspólny Cel Biura" (supabase/office-goals.sql) can unlock more of the freed
+// row 0 as real farmland. The server is authoritative — farm_extra_tiles_unlocked()
+// gates buy_farm_tile and the land-tax capacity — so this is only how many the
+// board DRAWS. Defaults to the historical 1 until office_goal_state() answers.
+let fmExtraTilesUnlocked = FARM_EXTRA_TILES.length;
+let fmOfficeGoal = null;         // office_goal_state() payload
+function farmExtraTiles() {
+  const out = FARM_EXTRA_TILES.slice();
+  for (let x = out.length; x < fmExtraTilesUnlocked; x++) out.push({ x, y: 0 });
+  return out;
+}
 // Shared visual height of the Ogródek: both the zen grid and the farm grid render
 // this many rows on desktop, so the two panels always align top and bottom.
 const OGRODEK_DESKTOP_ROWS = 5;
@@ -20247,7 +20470,33 @@ const OGRODEK_DESKTOP_ROWS = 5;
 // as 7 columns on stacked mobile (matching the zen part's width).
 function farmDisplayCols() {
   if (window.innerWidth <= 760) return Math.ceil(FARM_W / 2);
-  return Math.ceil((FARM_W * FARM_DISPLAY_ROWS + FARM_EXTRA_TILES.length) / OGRODEK_DESKTOP_ROWS);
+  return Math.ceil((FARM_W * FARM_DISPLAY_ROWS + farmExtraTiles().length) / OGRODEK_DESKTOP_ROWS);
+}
+
+// Board cell order. Unlocked plots are drawn as the RIGHT-HAND COLUMN, so one is
+// appended to the end of each display row rather than all five landing on a new
+// bottom row. Only possible when the base cells divide evenly into the remaining
+// columns (the desktop 8x5 -> 9x5 case); the mobile reflow falls back to
+// appending, which still renders every plot, just along the bottom.
+function farmDisplayCoords() {
+  const base = [];
+  for (let y = FARM_DISPLAY_Y_START; y < FARM_H; y++) {
+    for (let x = 0; x < FARM_W; x++) base.push({ x, y });
+  }
+  const all = farmExtraTiles();
+  base.push(all[0]);
+  const extra = all.slice(1);
+  if (!extra.length) return base;
+  const baseCols = farmDisplayCols() - 1;
+  if (baseCols > 0 && base.length === baseCols * extra.length) {
+    const out = [];
+    for (let r = 0; r < extra.length; r++) {
+      out.push(...base.slice(r * baseCols, (r + 1) * baseCols));
+      out.push(extra[r]);
+    }
+    return out;
+  }
+  return base.concat(extra);
 }
 // Nicks intentionally excluded from the 🧘 Ogród Zen reserved-slot grid (test/inactive accounts).
 const ZEN_EXCLUDED_NICKS = ['Maks', 'dupa_szefa'];
@@ -20346,6 +20595,33 @@ let fmAssetBreakdownLoading = null;
 let fmAssetBreakdownSeq = 0;
 let fmSeasonalEvent = null;      // current/upcoming weekly crop contract
 let fmSeasonalLeaderboard = [];  // current event aggregate leaderboard
+// Mirrors farm_seasonal_premium_cap_x() in supabase/anti-inflation.sql. The
+// weekly contract premium is paid on at most this many fair-share weeks of
+// output per player; bonus_per_unit is derived for a LEVEL-1 farmer, and was
+// being paid on 20-30x that. Preview only — the server is authoritative.
+const FARM_SEASONAL_PREMIUM_CAP_X = 3;
+let fmMarketState = null;        // farm_market_state(): NPC budget vs office output
+// farm_market.floor_price only exists once supabase/anti-inflation.sql has run.
+// PostgREST rejects the WHOLE select for an unknown column, which would take the
+// Ogródek down if index.html deployed first — so the column is dropped from the
+// projection after one failure and the flat 30% fallback in farmMarketFloor()
+// takes over. Same "must keep working before the migration" rule the seasonal
+// event loader already follows.
+let fmHasFloorPrice = true;
+const FARM_MARKET_COLS = () =>
+  'crop_type,base_price,anchor_price,cur_price,last_decay_at'
+  + (fmHasFloorPrice ? ',floor_price' : '');
+// The ONE place farm_market is read, so the fallback is applied uniformly —
+// the two Promise.all loaders below swallow errors into an empty market map,
+// which would silently blank the whole Ogródek rather than fail loudly.
+async function fetchFarmMarket() {
+  let res = await sb.from('farm_market').select(FARM_MARKET_COLS());
+  if (res.error && fmHasFloorPrice && /floor_price/.test(res.error.message || '')) {
+    fmHasFloorPrice = false;
+    res = await sb.from('farm_market').select(FARM_MARKET_COLS());
+  }
+  return res;
+}
 let fmStarterClaimed = false;   // guard so claim_farm_starter is only attempted once per session
 let pendingFarmHubOpen = null;  // opened after loadFarm finishes, e.g. gift CTA → inventory
 let fmSel = null, fmLoadSeq = 0;
@@ -20384,7 +20660,7 @@ function resetFarmState() {
   if (fmExternalFarmRefreshTimer) { clearTimeout(fmExternalFarmRefreshTimer); fmExternalFarmRefreshTimer = null; }
   fmTiles = new Map(); fmDefs = new Map(); fmZen = new Map(); fmCollection = []; fmInventory = new Map(); fmInventoryExp = new Map(); fmInventoryLots = []; fmMarket = new Map();
   fmNft = []; fmListedCards = new Map();
-  fmBoxes = 0; fmGoldBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmAssetBreakdown = null; fmAssetBreakdownDirty = true; fmAssetBreakdownLoading = null; fmAssetBreakdownSeq++; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmStarterClaimed = false; fmInventoryExpiryReloading = false;
+  fmBoxes = 0; fmGoldBoxes = 0; fmVouchers = 0; fmOwnedTileCountHint = 0; fmNormalTileCountHint = 0; fmTax = null; fmAssetBreakdown = null; fmAssetBreakdownDirty = true; fmAssetBreakdownLoading = null; fmAssetBreakdownSeq++; fmSeasonalEvent = null; fmSeasonalLeaderboard = []; fmOfficeGoal = null; fmExtraTilesUnlocked = FARM_EXTRA_TILES.length; fmStarterClaimed = false; fmInventoryExpiryReloading = false;
   fmPendingTileActions = new Map(); fmRecentTileActions = new Map(); fmInventoryReconcileQueued = false; fmInventoryReconcilePromise = null; fmInventoryReconcileSeq++;
   majInventoryUi = null;
   fmSel = null;
@@ -20393,7 +20669,18 @@ function resetFarmState() {
 function normalizeFarmMarket(m) {
   return { base_price: +m.base_price,
     anchor_price: m.anchor_price != null ? +m.anchor_price : +m.base_price,
+    // floor_price moves with the demand multiplier (supabase/anti-inflation.sql).
+    // Null on a row that predates that migration → the original flat 30%.
+    floor_price: m.floor_price != null ? +m.floor_price : +m.base_price * 0.30,
     cur_price: +m.cur_price, last_decay_at: m.last_decay_at };
+}
+
+// The one place the sale floor is decided client-side. MUST match
+// sell_crop_to_npc's `COALESCE(v_mkt.floor_price, v_mkt.base_price * 0.30)`.
+function farmMarketFloor(mkt) {
+  if (!mkt) return 0;
+  const base = Number(mkt.base_price || 0);
+  return mkt.floor_price != null ? Number(mkt.floor_price) : base * 0.30;
 }
 
 function farmMarketEffectivePrice(mkt) {
@@ -20402,7 +20689,7 @@ function farmMarketEffectivePrice(mkt) {
   const cur = Number(mkt.cur_price || 0);
   if (!base) return cur;
   const anchor = mkt.anchor_price != null ? Number(mkt.anchor_price) : base;
-  const floor = base * 0.30;
+  const floor = farmMarketFloor(mkt);
   const last = mkt.last_decay_at ? new Date(mkt.last_decay_at).getTime() : NaN;
   const hours = Number.isFinite(last) ? Math.max(0, (Date.now() - last) / 3600000) : 0;
   return Math.max(floor, cur + (anchor - cur) * Math.min(1, hours * 0.12));
@@ -20425,8 +20712,7 @@ async function pollFarmMarketPrices(force) {
   fmMarketPolling = true;
   fmMarketPollAt = Date.now();
   try {
-    const { data, error } = await sb.from('farm_market')
-      .select('crop_type,base_price,anchor_price,cur_price,last_decay_at');
+    const { data, error } = await fetchFarmMarket();
     if (error || !data) return;
     let changed = false;
     data.forEach(m => {
@@ -20818,7 +21104,7 @@ function farmTableRows(now) {
       rows.push(farmTableBuildRow(x, y, now));
     }
   }
-  FARM_EXTRA_TILES.forEach(ex => rows.push(farmTableBuildRow(ex.x, ex.y, now)));
+  farmExtraTiles().forEach(ex => rows.push(farmTableBuildRow(ex.x, ex.y, now)));
   return rows;
 }
 
@@ -21142,7 +21428,7 @@ async function loadFarm() {
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       sb.from('farm_collection').select('species,count,level').eq('user_id', me.id),
       sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id),
-      sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
+      fetchFarmMarket(),
       sb.from('gardens').select('*, profiles(nick)'),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes,stat_value'),
       sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers,starter_granted,starter_opens_left').eq('user_id', me.id).maybeSingle(),
@@ -21189,6 +21475,7 @@ async function loadFarm() {
     fmMarket = new Map();
     (mktRes.data || []).forEach(m => fmMarket.set(m.crop_type, normalizeFarmMarket(m)));
     await refreshFarmSeasonalState();
+    refreshOfficeGoal();
     renderFarmPanels();
     renderFarmBoard();
     renderZenZone();
@@ -21714,12 +22001,7 @@ function renderFarmBoard() {
   // FARM_EXTRA_TILES. Keep the coordinate order permanent: ownership, planting,
   // harvesting and listing changes must update a cell in place, never move the
   // plot to another visible grid slot.
-  const coords = [];
-  for (let y = FARM_DISPLAY_Y_START; y < FARM_H; y++) {
-    for (let x = 0; x < FARM_W; x++) coords.push({ x, y });
-  }
-  FARM_EXTRA_TILES.forEach(ex => coords.push({ x: ex.x, y: ex.y }));
-  coords.forEach(c => seg.appendChild(buildFarmDisplayCell(c.x, c.y, now)));
+  farmDisplayCoords().forEach(c => seg.appendChild(buildFarmDisplayCell(c.x, c.y, now)));
   markFarmSel();
   scaleFarmPots();
   if (farmViewMode === 'table') renderFarmTable();   // keep the table mirror in sync
@@ -21975,7 +22257,7 @@ function farmNormalTileCount() {
 function farmTaxQuoteLocal() {
   // Purchasable cells only: display rows + the FARM_EXTRA_TILES — mirrors
   // farm_normal_tile_capacity() in farm.sql/garden-zen-split.sql.
-  const normalCapacity = FARM_W * FARM_DISPLAY_ROWS + FARM_EXTRA_TILES.length;
+  const normalCapacity = FARM_W * FARM_DISPLAY_ROWS + farmExtraTiles().length;
   const owners = new Set();
   fmTiles.forEach(t => { if (t.owner_id && t.acquired_via !== 'migration') owners.add(t.owner_id); });
   if (me?.id) owners.add(me.id);
@@ -22667,6 +22949,18 @@ function farmActiveSeasonalBonus(crop) {
   return Number(ev.bonus_per_unit || 0);
 }
 
+// How much of this week's premium allowance the caller has already spent, and
+// how much is left. Mirrors the v_event_cap arithmetic in sell_crop_to_npc.
+function farmSeasonalPremiumLeft(ev = fmSeasonalEvent) {
+  const cap = Math.floor(Number(ev?.fair_cap_user_units || 0) * FARM_SEASONAL_PREMIUM_CAP_X);
+  if (!cap) return 0;
+  const mine = fmSeasonalLeaderboard.find(r => r.user_id === me?.id);
+  // premium_qty is null on rows written before the migration — those were paid
+  // in full, so qty is the honest fallback.
+  const used = Number(mine?.premium_qty ?? mine?.qty ?? 0);
+  return Math.max(0, cap - used);
+}
+
 function farmSeasonalEligibleQty(crop, qty) {
   const ev = fmSeasonalEvent;
   if (!ev || ev.status !== 'active' || ev.crop_type !== crop || !Number(ev.bonus_per_unit)) return 0;
@@ -22684,7 +22978,9 @@ function farmSeasonalEligibleQty(crop, qty) {
       if (harvested >= bounds.from && harvested < bounds.to) eligible += take;
       remain -= take;
     });
-  return eligible;
+  // Units past the weekly allowance still SELL normally — they just stop
+  // earning bonus_per_unit, so the preview must not promise a premium on them.
+  return Math.min(eligible, farmSeasonalPremiumLeft(ev));
 }
 
 // The NPC price never falls below 30% of the catalog max (the floor in
@@ -22799,7 +23095,7 @@ function farmSellQuote(crop, qty, spotOverride) {
   if (!mkt) return null;
   const base = +mkt.base_price;
   const anchor = mkt.anchor_price != null ? +mkt.anchor_price : base;
-  const floor = base * 0.30;
+  const floor = farmMarketFloor(mkt);
   const curEff = spotOverride != null ? Math.max(floor, spotOverride) : farmMarketEffectivePrice(mkt);
   const dropFrac = Math.min(0.40, 0.005 * qty);
   const startPrice = curEff;
@@ -23002,7 +23298,7 @@ async function ensureFarmData(opts = {}) {
       sb.from('farm_card_defs').select('*').eq('is_active', true),
       me ? sb.from('farm_collection').select('species,count,level').eq('user_id', me.id) : Promise.resolve({ data: [] }),
       me ? sb.from('farm_inventory').select('crop_type,qty,harvested_at,expires_at').eq('user_id', me.id) : Promise.resolve({ data: [] }),
-      sb.from('farm_market').select('crop_type,base_price,anchor_price,cur_price,last_decay_at'),
+      fetchFarmMarket(),
       sb.from('farm_nft_instances').select('id,species,serial_no,edition_size,owner_id,nft_name,listed,level,stat_yield,stat_grow_minutes,stat_value'),
       sb.from('farm_tiles').select('x,y,owner_id,acquired_via,listed,asset_value,zen_garden_id,planted_species,planted_level,planted_at,ready_at,planted_instance_id, profiles(nick)'),
       me ? sb.from('farm_user_state').select('boxes,boxes_gold,tile_vouchers').eq('user_id', me.id).maybeSingle() : Promise.resolve({ data: null }),
@@ -23032,6 +23328,7 @@ async function ensureFarmData(opts = {}) {
     applyFarmUserState(stateRes.data);
     if (!taxRes.error) applyFarmTaxQuote(taxRes.data);
     await refreshFarmSeasonalState();
+    refreshOfficeGoal();
   } catch (e) { console.error('ensureFarmData', e); }
 }
 
@@ -23249,12 +23546,16 @@ function farmPlantIncomeCalc(def, level, over) {
   const readyBeforeContractEnds = !!(eventBounds && Number.isFinite(projectedReadyAt)
     && projectedReadyAt >= eventBounds.from && projectedReadyAt < eventBounds.to);
   const bonusPerUnit = readyBeforeContractEnds ? activeBonus : 0;
-  const seasonalTotal = bonusPerUnit > 0
-    ? Math.round(yld * bonusPerUnit * (1 + farmSeasonalAchBonus())) : 0;
+  // Only the units still inside this week's premium allowance earn the top-up
+  // (supabase/anti-inflation.sql §3) — otherwise the Top-3 profitability ranking
+  // would keep promising a premium a whale can no longer collect.
+  const seasonalQty = bonusPerUnit > 0 ? Math.min(yld, farmSeasonalPremiumLeft()) : 0;
+  const seasonalTotal = seasonalQty > 0
+    ? Math.round(seasonalQty * bonusPerUnit * (1 + farmSeasonalAchBonus())) : 0;
   // Each endpoint runs through farmSellQuote(), so selling a large harvest is
   // priced at the average pre/post-impact price just like the live RPC.
   const cur = farmMarketEffectivePrice(mkt);
-  const qLow = farmSellQuote(def.crop_type, yld, base * 0.30);
+  const qLow = farmSellQuote(def.crop_type, yld, farmMarketFloor(mkt));
   const qHigh = farmSellQuote(def.crop_type, yld, base);
   const qNow = farmSellQuote(def.crop_type, yld, cur);
   const totalLow = (qLow?.proceeds || 0) + seasonalTotal;
@@ -23891,11 +24192,184 @@ function farmCropGroups() {
   }).sort((a, b) => (a.rarityRank - b.rarityRank) || (b.weight - a.weight));
 }
 
+// The NPC's daily payout budget vs what the office is actually selling
+// (supabase/anti-inflation.sql §4). Degrades to null before that migration.
+async function refreshFarmMarketState() {
+  try {
+    const { data, error } = await sb.rpc('farm_market_state');
+    if (error) throw error;
+    fmMarketState = data || null;
+  } catch (e) { fmMarketState = null; }
+  return fmMarketState;
+}
+
+// Prices moving for a reason nobody can see is indistinguishable from prices
+// being broken, so the derivation is on screen: what the office burned, what
+// that buys, what the office sold, and the resulting skup rate.
+function farmMarketPressureCard() {
+  const cur = fmMarketState?.current;
+  if (!cur) return null;
+  const demand = Number(cur.demand_bps || 0) / 100;      // %
+  const target = Number(cur.target_bps || 0) / 100;
+  const budget = Number(cur.budget_per_day || 0);
+  const revenue = Number(cur.revenue_per_day || 0);
+  const burn = Number(cur.burn_per_day || 0);
+  const glide = Math.abs(demand - target) > 0.5;
+  const tone = demand >= 95 ? 'ok' : demand >= 70 ? 'warn' : 'bad';
+  const nf = n => Math.round(n).toLocaleString('pl-PL');
+  const row = (k, v) => el('div', { className: 'farm-mkt-press-row' },
+    el('span', {}, k), el('b', {}, v));
+  return el('div', { className: 'farm-mkt-press ' + tone },
+    el('div', { className: 'farm-mkt-press-head' },
+      el('b', {}, demand >= 95 ? '🌍 Rynek chłonny' : demand >= 70 ? '🌍 Rynek nasycony' : '🌍 Rynek przesycony'),
+      el('span', { className: 'farm-mkt-press-pct' }, 'skup płaci ' + Math.round(demand) + '% stawki')),
+    el('div', { className: 'farm-mkt-press-grid' },
+      row('Spalone w farmie i kasynie', nf(burn) + ' 🪙/dzień'),
+      row('Budżet skupu NPC', nf(budget) + ' 🪙/dzień'),
+      row('Biuro sprzedaje', nf(revenue) + ' 🪙/dzień'),
+      row('Nasycenie', (Number(cur.pressure_bps || 0) / 100).toFixed(0) + '% budżetu')),
+    el('div', { className: 'farm-mkt-press-note' },
+      'NPC oddaje ' + Math.round(Number(fmMarketState.burn_share || 0.9) * 100)
+      + '% tego, co biuro spali na skrzynkach, ulepszeniach, hodowli, podatku i w kasynie. '
+      + 'Im więcej biuro wydaje, tym lepsze ceny skupu dla wszystkich — im więcej zalewa rynek plonami, tym niższe. '
+      + (glide ? 'Stawka dochodzi do ' + Math.round(target) + '% stopniowo (maks. 15 pkt proc. na notowanie).' : '')));
+}
+
+// ── „Wspólny Cel Biura" ────────────────────────────────────────────────────
+// A communal coin BURN that unlocks something for everyone (supabase/office-goals.sql).
+// Contributions are public on purpose: in an eleven-person office the contributor
+// board is what makes a 150,000-coin gesture worth making.
+// Thousands-separated coins, local to the goal UI. NOT fmtCoins() — that one is
+// the app-wide plain-integer formatter and must not gain separators here.
+function ogCoins(n) { return Math.round(Number(n) || 0).toLocaleString('pl-PL'); }
+
+async function refreshOfficeGoal() {
+  try {
+    const { data, error } = await sb.rpc('office_goal_state');
+    if (error) throw error;
+    fmOfficeGoal = data || null;
+    const n = Number(fmOfficeGoal?.extra_tiles || 0);
+    if (n && n !== fmExtraTilesUnlocked) {
+      fmExtraTilesUnlocked = n;
+      if (activeTab === 'farm') renderFarmBoard();
+    }
+  } catch (e) { fmOfficeGoal = null; }
+  renderOfficeGoalBar();
+  return fmOfficeGoal;
+}
+
+function ogGoalPct(g) {
+  const t = Number(g?.target_coins || 0);
+  return t ? Math.min(100, Math.round(Number(g.raised_coins || 0) / t * 100)) : 0;
+}
+
+function renderOfficeGoalBar() {
+  const bar = document.getElementById('og-goal');
+  if (!bar) return;
+  const g = fmOfficeGoal?.goal;
+  if (!g) { bar.classList.add('hidden'); return; }
+  const done = g.status === 'completed';
+  const pct = ogGoalPct(g);
+  bar.classList.remove('hidden');
+  bar.classList.toggle('done', done);
+  bar.replaceChildren(
+    el('span', { className: 'og-goal-ic' }, done ? '🎉' : '🎯'),
+    el('div', { className: 'og-goal-main' },
+      el('div', { className: 'og-goal-title' },
+        el('b', {}, done ? 'Cel osiągnięty: ' + g.title : g.title),
+        el('span', { className: 'og-goal-num' },
+          ogCoins(g.raised_coins) + ' / ' + ogCoins(g.target_coins) + ' 🪙')),
+      el('div', { className: 'og-goal-track' },
+        el('div', { className: 'og-goal-fill' + (done ? ' done' : ''), style: { width: pct + '%' } }))),
+    el('span', { className: 'og-goal-cta' }, done ? 'Zobacz' : 'Dorzuć się'));
+}
+
+function openOfficeGoalModal() {
+  const g = fmOfficeGoal?.goal;
+  if (!g) return;
+  const done = g.status === 'completed';
+  const remaining = Math.max(0, Number(g.target_coins) - Number(g.raised_coins));
+  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  window.addEventListener('keydown', esc);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  const box = el('div', { className: 'modal-box og-modal' });
+  box.append(el('h3', {}, (done ? '🎉 ' : '🎯 ') + g.title));
+  if (g.subtitle) box.append(el('p', { className: 'og-sub' }, g.subtitle));
+  box.append(el('div', { className: 'og-reward' }, el('b', {}, 'Nagroda dla wszystkich: '), g.reward_text));
+
+  const pct = ogGoalPct(g);
+  box.append(el('div', { className: 'og-goal-track big' },
+    el('div', { className: 'og-goal-fill' + (done ? ' done' : ''), style: { width: pct + '%' } })));
+  box.append(el('div', { className: 'og-goal-nums' },
+    el('span', {}, ogCoins(g.raised_coins) + ' / ' + ogCoins(g.target_coins) + ' 🪙'),
+    el('span', {}, done ? 'ufundowane' : 'brakuje ' + ogCoins(remaining) + ' 🪙')));
+
+  if (!done) {
+    const input = el('input', { className: 'og-input', type: 'number', min: '1',
+      max: String(Math.min(remaining, me?.coins ?? 0)), placeholder: 'Ile monet dorzucasz?' });
+    const btn = el('button', { className: 'btn-primary', style: { width: '100%' } }, 'Dorzuć się');
+    const note = el('div', { className: 'og-note' });
+    const quick = el('div', { className: 'og-quick' });
+    [1000, 5000, 25000].forEach(v => quick.append(el('button', { className: 'og-quick-btn',
+      onclick: () => { input.value = String(Math.min(v, remaining, me?.coins ?? 0)); } }, ogCoins(v))));
+    quick.append(el('button', { className: 'og-quick-btn',
+      onclick: () => { input.value = String(Math.min(remaining, me?.coins ?? 0)); } }, 'Reszta'));
+    btn.onclick = async () => {
+      const amt = Math.trunc(Number(input.value) || 0);
+      if (amt < 1) { note.textContent = 'Podaj kwotę.'; return; }
+      btn.disabled = true; btn.textContent = 'Wysyłam...';
+      try {
+        const { data, error } = await sb.rpc('office_goal_contribute', { p_amount: amt });
+        if (error) throw error;
+        await refreshMeCoins();
+        await refreshOfficeGoal();
+        close();
+        toast(data?.completed
+          ? '🎉 Cel osiągnięty! ' + g.reward_text
+          : 'Dorzucone: ' + ogCoins(data?.contributed) + ' 🪙. Dzięki!');
+      } catch (e) {
+        const m = String(e?.message || e);
+        note.textContent = /insufficient_coins/.test(m) ? 'Nie masz tylu monet.'
+          : /goal_already_funded/.test(m) ? 'Cel został właśnie ufundowany.'
+          : /no_open_goal/.test(m) ? 'Nie ma teraz otwartego celu.'
+          : 'Nie udało się: ' + m;
+        btn.disabled = false; btn.textContent = 'Dorzuć się';
+      }
+    };
+    box.append(el('div', { className: 'og-form' }, input, quick, btn, note));
+    box.append(el('div', { className: 'og-hint' },
+      'Monety są spalane, nie zbierane — a spalanie podnosi budżet skupu NPC, ',
+      'więc dorzucając się podnosisz ceny plonów całemu biuru.'));
+  }
+
+  const contributors = fmOfficeGoal?.contributors || [];
+  if (contributors.length) {
+    box.append(el('div', { className: 'og-list-title' }, '🏅 Kto się dorzucił'));
+    const list = el('div', { className: 'og-list' });
+    contributors.forEach((c, i) => list.append(el('div', { className: 'og-list-row' },
+      el('span', { className: 'og-rank' }, ['🥇', '🥈', '🥉'][i] || (i + 1) + '.'),
+      el('span', { className: 'og-nick' }, c.nick),
+      el('b', {}, ogCoins(c.amount) + ' 🪙'))));
+    box.append(list);
+  } else if (!done) {
+    box.append(el('div', { className: 'og-empty' }, 'Nikt jeszcze nic nie dorzucił. Bądź pierwszy.'));
+  }
+
+  box.append(el('button', { className: 'btn-ghost', style: { width: '100%', marginTop: '10px' },
+    onclick: close }, 'Zamknij'));
+  overlay.append(box);
+  document.body.appendChild(overlay);
+}
+
 // „📈 Ceny" hub tab: per-crop current NPC price + trend + price-history chart.
 async function buildFarmMarketBody(bodyEl) {
   bodyEl.replaceChildren(el('div', { className: 'loading-center' }, el('div', { className: 'spinner' })));
   await ensureFarmData();
   await refreshFarmSeasonalState();
+  await refreshFarmMarketState();
   const hist = {};
   try {
     const since = new Date(Date.now() - 7 * 864e5).toISOString();   // last 7 days
@@ -23918,6 +24392,8 @@ async function buildFarmMarketBody(bodyEl) {
   bodyEl.append(el('div', { className: 'farm-cat-head' }, el('div', { className: 'farm-cat-head-txt' },
     el('div', { className: 'farm-cat-head-title' }, '📈 Ceny plonów u NPC'),
     el('div', { className: 'farm-cat-head-sub' }, 'Cena skupu waha się 2×/dobę (00:00 i 12:00) między 30% a 100% ceny maks. (linia przerywana). Sprzedaż chwilowo ją obniża, potem wraca do dziennego poziomu — sprzedawaj, gdy jest wysoko! Historia z 7 dni.'))));
+  const pressCard = farmMarketPressureCard();
+  if (pressCard) bodyEl.append(pressCard);
   bodyEl.append(el('div', { className: 'farm-inv-section-title' }, '🌾 Ceny plonów'));
   // ONE card per CROP, not per plant. Several plants can share a crop_type — every
   // weekly NFT edition and every bred hybrid harvests the same 'seasonal_bloom' —
