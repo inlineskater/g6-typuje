@@ -8401,20 +8401,82 @@
       --c-accent-soft: rgba(99,102,241,.14);
       --c-online:      #22c55e;
     }
-    /* The rail is a permanent full-height COLUMN of the page, not an overlay:
-       it is fixed to the left edge, and #screen-app carries a matching
-       padding-left so the header, nav and every tab's content start where the
-       rail ends. Nothing is ever underneath it, and there is no collapse
-       control or launcher pill. Below 900px a 320px column would leave the app
-       unusable, so it falls back to a short bottom dock (still not hideable) —
-       see the mobile block further down. */
+    /* The rail is a permanent COLUMN of the page, not an overlay. It starts
+       BELOW the header and the nav bar — both of which stay full-width and own
+       the top of the screen — and runs to the bottom of the viewport. The tab
+       panels (not #screen-app itself, or the chrome would be indented too)
+       carry a matching padding-left, so nothing is ever underneath it. Its top
+       offset is the same --nav-top/--nav-h pair syncNavOffset() measures for
+       the sticky nav; the constants are only pre-measurement fallbacks.
+       Stacking: below the nav (40) and header (41), above page popovers (30).
+       Below 900px a 320px column would leave the app nothing to render into,
+       so it falls back to a short bottom dock — see the mobile block below.
+
+       The look is deliberately flat: one solid column, hairline rules between
+       the three modules, no shadows, no rounded cards, no backdrop blur. It is
+       chrome that is on screen permanently, so it has to recede. */
     #chat-rail {
-      position: fixed; left: 0; top: 0; bottom: 0; width: var(--chat-w); z-index: 60;
-      display: flex;
+      position: fixed; left: 0; bottom: 0; z-index: 35;
+      top: calc(var(--nav-top, 58px) + var(--nav-h, 45px));
+      width: var(--chat-w);
+      display: flex; flex-direction: column;
+      background: var(--c-solid); border-right: 1px solid var(--c-line);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--c-ink);
     }
-    #screen-app { padding-left: var(--chat-w); }
+    #screen-app > [id^="tab-"] { padding-left: var(--chat-w); }
+
+    .side-mod { flex: none; border-bottom: 1px solid var(--c-line); }
+    .side-mod-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 13px 7px;
+    }
+    .side-mod-title {
+      font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: var(--c-faint);
+    }
+    .side-mod-more {
+      border: none; background: none; cursor: pointer; padding: 0;
+      font-family: inherit; font-size: 11px; font-weight: 600; color: var(--c-accent);
+    }
+    .side-mod-more:hover { text-decoration: underline; }
+
+    /* ── 1 / Konto ── */
+    .side-account { padding: 13px 13px 11px; }
+    .side-acc-id { display: flex; align-items: center; gap: 9px; }
+    .side-avatar {
+      flex: none; width: 30px; height: 30px; border-radius: 9px;
+      background: var(--c-accent-soft); color: var(--c-accent-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+    }
+    .side-acc-who { flex: 1; min-width: 0; }
+    .side-acc-nick {
+      font-size: 13px; font-weight: 700; letter-spacing: -.01em;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .side-acc-state { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--c-muted); }
+    .side-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-online); }
+    .side-acc-coins { flex: none; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .side-kv {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      margin-top: 7px; font-size: 11px; color: var(--c-muted);
+    }
+    .side-kv b { font-weight: 600; color: var(--c-ink); font-variant-numeric: tabular-nums; }
+
+    /* ── 2 / Aktywność ── */
+    .side-act { max-height: 168px; overflow-y: auto; padding: 0 13px 10px; }
+    .side-act-row {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: 5px 0; border-top: 1px solid var(--c-line-soft); font-size: 11.5px;
+    }
+    .side-act-row:first-child { border-top: none; }
+    .side-act-what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .side-act-when { flex: none; font-size: 10px; color: var(--c-faint); }
+    .side-act-sum { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .side-act-sum.is-up { color: #15803d; }
+    .side-act-sum.is-down { color: #b91c1c; }
+    .side-act-empty { padding: 6px 0 2px; font-size: 11.5px; color: var(--c-faint); }
 
     .chat-unread-total {
       min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px;
@@ -8422,19 +8484,24 @@
       display: inline-flex; align-items: center; justify-content: center; line-height: 1;
     }
 
+    /* ── 3 / Czat ── */
     .chat-panel {
-      flex: 1; min-width: 0;
+      flex: 1; min-height: 0; min-width: 0;
       display: flex; flex-direction: column;
       background: var(--c-solid);
-      border-right: 1px solid var(--c-line);
       overflow: hidden;
     }
+    /* Same micro-label as .side-mod-head — the chat is the rail's third module,
+       not a window with its own title bar. */
     .chat-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 13px 14px 11px; border-bottom: 1px solid var(--c-line-soft);
+      display: flex; align-items: center; gap: 6px;
+      padding: 11px 13px 7px;
     }
-    .chat-header-flower { font-size: 15px; line-height: 1; }
-    .chat-title { font-weight: 700; font-size: 14.5px; letter-spacing: -.02em; }
+    .chat-header-flower { font-size: 12px; line-height: 1; }
+    .chat-title {
+      font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: var(--c-faint);
+    }
     .chat-online-count { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--c-muted); white-space: nowrap; }
     .chat-hbtn {
       border: none; background: none; color: var(--c-muted); cursor: pointer;
@@ -8546,16 +8613,19 @@
       :root { --chat-w: 0px; }
       /* The dock can't be dismissed, so the page has to be able to scroll clear
          of it or its last rows are unreachable. */
-      #screen-app { padding-bottom: calc(38vh + 20px); }
+      #screen-app { padding-bottom: calc(42vh + 20px); }
       #chat-rail {
         top: auto; left: 10px; right: 10px; bottom: 10px;
-        width: auto; height: min(38vh, calc(100vh - 96px));
-      }
-      .chat-panel {
-        border: 1px solid var(--c-line); border-radius: 16px;
+        width: auto; height: min(42vh, calc(100vh - 96px));
+        border: 1px solid var(--c-line); border-radius: 16px; overflow: hidden;
         box-shadow: 0 16px 48px rgba(15,23,42,.16), 0 2px 8px rgba(15,23,42,.05);
       }
-      #chat-toasts { left: 10px; right: 10px; bottom: calc(38vh + 20px); }
+      /* No room for three modules in a dock: the account strip stays (it is one
+         line), the activity list goes — it is the ☰ menu's 📋 Aktywność anyway. */
+      .side-account { padding: 9px 12px; }
+      .side-account .side-kv { display: none; }
+      .side-activity { display: none; }
+      #chat-toasts { left: 10px; right: 10px; bottom: calc(42vh + 20px); }
     }
 
     /* ── 🏦 Bank G6 ─────────────────────────────────────────────────────────
@@ -8890,6 +8960,30 @@
 
   <!-- ── ICQ-style office chat rail (present on every tab; outside all #tab-*) ── -->
   <div id="chat-rail" class="hidden">
+    <!-- 1 / Konto — who you are, what you hold, when you got here. -->
+    <section class="side-mod side-account">
+      <div class="side-acc-id">
+        <span class="side-avatar" id="side-avatar">?</span>
+        <div class="side-acc-who">
+          <div class="side-acc-nick" id="side-nick">—</div>
+          <div class="side-acc-state"><i class="side-dot"></i> w sieci</div>
+        </div>
+        <div class="side-acc-coins"><span id="side-coins">0</span> 🪙</div>
+      </div>
+      <div class="side-kv"><span>Sesja od</span><b id="side-login">—</b></div>
+      <div class="side-kv hidden" id="side-prev-row"><span>Poprzednio</span><b id="side-prev">—</b></div>
+    </section>
+
+    <!-- 2 / Aktywność — your own last moves; the full cross-player feed is a click away. -->
+    <section class="side-mod side-activity">
+      <div class="side-mod-head">
+        <span class="side-mod-title">Twoja aktywność</span>
+        <button class="side-mod-more" id="side-act-more">Wszystko</button>
+      </div>
+      <div class="side-act" id="side-act"></div>
+    </section>
+
+    <!-- 3 / Czat -->
     <div class="chat-panel">
       <div class="chat-header">
         <span class="chat-header-flower">🌼</span>
@@ -12891,6 +12985,7 @@ function showApp() {
   switchTab('farm');   // Ogródek is the home tab
   setupRealtime();
   initChat();                                  // ICQ-style office chat rail (all tabs)
+  initSideRail();                              // rail modules 1 & 2: Konto + Twoja aktywność
   refreshShopNavCounts();                      // populate the Targowisko nav counters
   if (DOCUMENTS_ENABLED) loadMySignatures();   // populate „Moje Dokumenty" badge + gate state
   setTimeout(maybeShowReleaseNote, 1200);      // „co nowego", once per release per browser
@@ -14519,6 +14614,150 @@ function teardownRealtime() {
 
 const chatRailEl = () => document.getElementById('chat-rail');
 
+// ── Side rail modules 1 & 2: Konto + Twoja aktywność ────────────────────────
+// The rail is on screen on every tab, so both modules have to be cheap. Konto
+// is pure local state (me.* plus the auth session); Aktywność is two indexed
+// own-row queries, refreshed only when the header coin counter actually moves
+// and never more often than SIDE_ACT_MIN_MS.
+//
+// Coins are mirrored off #header-coins with a MutationObserver rather than by
+// editing the ~20 call sites that call setText(headerCoins, …) across
+// index.html, tabs/*.js and games/*.js — one of which would inevitably be
+// missed, leaving the rail quietly showing a stale balance.
+
+const SIDE_ACT_MIN_MS = 20000;   // floor between activity refreshes
+const SIDE_ACT_ROWS   = 8;
+let sideActLastLoad = 0;
+let sideActLoading  = false;
+// The yields ACT_COIN_REASONS leaves out on purpose: in the office-wide feed
+// they fire for every holder every morning and bury everything else, but in
+// your own panel they are exactly the rows you want to see.
+const SIDE_ACT_REASONS = {
+  daily_interest:         '💎 odsetki od przedmiotu',
+  bank_deposit_interest:  '🏦 odsetki z lokaty',
+  bank_bond_coupon:       '📜 kupon z obligacji',
+  bank_share_dividend:    '🎰 dywidenda z kasyna',
+  bank_deposit_close:     '🏦 zamknął lokatę',
+  bank_bond_redeem:       '📜 wykup obligacji',
+  lottery_prize:          '🎟️ wygrana w loterii',
+  lottery_dividend:       '🎟️ dywidenda z loterii',
+  land_tax:               '🧾 podatek gruntowy',
+};
+
+function sideSyncAccount() {
+  if (!me?.id) return;
+  setText(document.getElementById('side-nick'), me.nick || '—');
+  setText(document.getElementById('side-avatar'), (me.nick || '?').trim().charAt(0) || '?');
+  setText(document.getElementById('side-coins'), me.coins ?? 0);
+}
+
+// „Sesja od" is this session's sign-in; „Poprzednio" is the one before it. The
+// stamp is rotated only when last_sign_in_at actually changes, so reloading the
+// page (which restores the same session) doesn't overwrite the previous visit
+// with the current one.
+async function sideInitSession() {
+  const loginEl = document.getElementById('side-login');
+  if (!loginEl) return;
+  let at = null;
+  try {
+    const { data } = await sb.auth.getSession();
+    at = data?.session?.user?.last_sign_in_at || null;
+  } catch (e) {}
+  setText(loginEl, at ? sideStamp(at) : '—');
+
+  let prev = null;
+  try {
+    const st = JSON.parse(localStorage.getItem('rp_login_stamp') || 'null');
+    prev = st?.prev || null;
+    if (at && st?.at !== at) {
+      prev = st?.at || null;
+      localStorage.setItem('rp_login_stamp', JSON.stringify({ at, prev }));
+    }
+  } catch (e) {}
+  const row = document.getElementById('side-prev-row');
+  if (prev) { setText(document.getElementById('side-prev'), sideStamp(prev)); show(row); }
+  else hide(row);
+}
+
+// „dziś 09:41" for today, „wczoraj 21:02" for yesterday, else the short date.
+function sideStamp(ts) {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '—';
+  const hm = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+  const day = new Date(d); day.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return 'dziś ' + hm;
+  if (diff === 1) return 'wczoraj ' + hm;
+  return fmtDateTime(ts);
+}
+
+async function sideLoadActivity(force) {
+  const box = document.getElementById('side-act');
+  if (!box || !me?.id) return;
+  if (sideActLoading) return;
+  if (!force && Date.now() - sideActLastLoad < SIDE_ACT_MIN_MS) return;
+  sideActLoading = true;
+  sideActLastLoad = Date.now();
+  try {
+    const [coinRes, gameRes] = await Promise.all([
+      sb.from('coin_transactions').select('delta,reason,created_at')
+        .eq('user_id', me.id).order('created_at', { ascending: false }).limit(SIDE_ACT_ROWS),
+      sb.from('game_transactions').select('game,bet,won,created_at')
+        .eq('user_id', me.id).order('created_at', { ascending: false }).limit(SIDE_ACT_ROWS),
+    ]);
+    const rows = [];
+    (coinRes.data || []).forEach(c => rows.push({
+      ts: c.created_at,
+      what: ACT_COIN_REASONS[c.reason] || SIDE_ACT_REASONS[c.reason] || ('💰 ' + c.reason),
+      delta: +c.delta || 0,
+    }));
+    (gameRes.data || []).forEach(g => rows.push({
+      ts: g.created_at,
+      what: ACT_GAME_LABELS[g.game] || ('🎲 ' + g.game),
+      delta: (+g.won || 0) - (+g.bet || 0),
+    }));
+    rows.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+    if (!rows.length) {
+      box.replaceChildren(el('div', { className: 'side-act-empty' }, 'Jeszcze nic tu nie ma.'));
+      return;
+    }
+    box.replaceChildren(...rows.slice(0, SIDE_ACT_ROWS).map(r => el('div', { className: 'side-act-row' },
+      el('span', { className: 'side-act-what', title: r.what }, r.what),
+      el('span', { className: 'side-act-when' }, relTime(r.ts)),
+      el('span', { className: 'side-act-sum ' + (r.delta > 0 ? 'is-up' : r.delta < 0 ? 'is-down' : '') },
+        (r.delta > 0 ? '+' : r.delta < 0 ? '−' : '') + Math.abs(r.delta))
+    )));
+  } catch (e) {
+    // A rail module is never worth breaking the page over.
+  } finally {
+    sideActLoading = false;
+  }
+}
+
+function sideWireOnce() {
+  const more = document.getElementById('side-act-more');
+  if (!more || more.dataset.wired) return;
+  more.dataset.wired = '1';
+  more.addEventListener('click', openActivityModal);
+
+  // Header coin counter → rail balance, and a throttled activity refresh: a
+  // balance that moved means something happened worth listing.
+  const hc = document.getElementById('header-coins');
+  if (hc && window.MutationObserver) {
+    new MutationObserver(() => { sideSyncAccount(); sideLoadActivity(); })
+      .observe(hc, { childList: true, characterData: true, subtree: true });
+  }
+}
+
+function initSideRail() {
+  sideWireOnce();
+  sideSyncAccount();
+  sideInitSession();
+  sideLoadActivity(true);
+}
+
 async function initChat() {
   const rail = chatRailEl();
   if (!rail) return;
@@ -14895,6 +15134,9 @@ function chatBeep() {
 
 function resetChatState() {
   stopChatHeartbeat();
+  sideActLastLoad = 0;
+  const actBox = document.getElementById('side-act');
+  if (actBox) actBox.replaceChildren();
   chatReady = false; chatView = 'room'; chatPeerId = null;
   chatRoster = []; chatOnline = new Set(); chatRoomMsgs = []; chatThreads = {}; chatUnread = {};
   const rail = chatRailEl();
