@@ -31,6 +31,9 @@ verify_jwt = true
 [functions.mines-action]
 verify_jwt = true
 
+[functions.hilo-action]
+verify_jwt = true
+
 [functions.crash-action]
 verify_jwt = true
 

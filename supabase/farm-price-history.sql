@@ -1,6 +1,13 @@
 -- Farma: per-crop NPC price history for the „📈 Ceny" tab in Ogródek.
 -- Run after farm.sql. Idempotent (CREATE ... IF NOT EXISTS / CREATE OR REPLACE).
 --
+-- ⚠️ roll_farm_prices() and snapshot_farm_prices() BELOW ARE SUPERSEDED by
+--    supabase/anti-inflation.sql (2026-08-28). The roll here is pure random()
+--    and never reads total_sold — that open loop is what let farm minting grow
+--    with card level without bound. The replacement keeps this regime table and
+--    multiplies it by a demand term. Re-running THIS file reverts that; re-run
+--    anti-inflation.sql straight after.
+--
 -- Pricing model (Animal-Crossing "stalk market" style):
 --   • base_price   = catalog MAX / ceiling (fixed; "Cena maks.")
 --   • anchor_price = the current "normal", rolled TWICE DAILY (00:00 & 12:00

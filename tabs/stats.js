@@ -1704,6 +1704,10 @@ function buildBalancePoints({ userId, coins, createdAt, trades = [], games = [],
       ? '🌿 Akcesorium: ' + (t.meta?.accessory_id || '?')
       : t.reason === 'store_purchase'
       ? '🎁 Sklep: ' + (t.meta?.title || '?')
+      // Deliberately NOT in NEUTRAL: the coins are burned, so this really is a
+      // net-worth loss, not a move from cash into an asset.
+      : t.reason === 'office_goal_contribution'
+      ? '🎯 Wspólny cel: ' + (t.meta?.title || 'wpłata')
       : t.reason === 'daily_interest'
       ? '💍 Odsetki dzienne'
       : t.reason === 'hero_item_purchase'

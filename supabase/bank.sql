@@ -159,7 +159,7 @@ ALTER TABLE public.hero_item_defs
   ADD COLUMN IF NOT EXISTS interest_cap bigint;
 
 COMMENT ON COLUMN public.hero_item_defs.interest_cap IS
-  'daily_interest items: pay interest on at most this many coins of balance. NULL = uncapped (both interest_ring and banker_signet today). Primary anti-inflation knob for interest items.';
+  'daily_interest items: pay interest on at most this many coins of balance. NULL = uncapped. Both interest_ring and banker_signet are capped at 20,000 since 2026-08-28 (supabase/anti-inflation.sql) — uncapped, the Sygnet compounded 2%/day of the whole money supply. Primary anti-inflation knob for interest items.';
 
 ALTER TABLE public.hero_item_defs DROP CONSTRAINT IF EXISTS hero_item_defs_interest_cap_check;
 ALTER TABLE public.hero_item_defs ADD CONSTRAINT hero_item_defs_interest_cap_check
@@ -1438,8 +1438,11 @@ INSERT INTO public.hero_item_defs
    effect_value, sale_type, edition_size, visual_effect, is_active, interest_cap)
 VALUES
   ('banker_signet', 'Sygnet Bankiera', '💍', 'trinket', 15000, 'legendary',
-   'Dokładnie ta sama umowa co legendarny Pierścień Bankiera: +2% dziennie od CAŁEGO salda gotówki, bez limitu i bez górnej granicy. Odsetki naliczają się wyłącznie od gotówki — monety zamrożone w lokacie, wydane na skrzynki albo stojące w pozycji rynkowej nie pracują. Wypłata codziennie rano, automatycznie.',
-   NULL, 'daily_interest', 2, 'shop', NULL, NULL, true, NULL)
+   'Ta sama umowa co legendarny Pierścień Bankiera: +2% dziennie od salda gotówki, naliczane od pierwszych 20 000 monet (maks. 400 🪙 dziennie). Odsetki liczą się wyłącznie od gotówki — monety zamrożone w lokacie, wydane na skrzynki albo stojące w pozycji rynkowej nie pracują. Wypłata codziennie rano, automatycznie.',
+   -- ⚠️ interest_cap 20,000 (anti-inflation.sql, 2026-08-28). It was NULL and
+   -- that made this row the only unbounded compounding term in the economy.
+   -- Do not put it back to NULL without reading that file's section 2.
+   NULL, 'daily_interest', 2, 'shop', NULL, NULL, true, 20000)
 ON CONFLICT (slug) DO UPDATE SET
   name         = EXCLUDED.name,
   emoji        = EXCLUDED.emoji,

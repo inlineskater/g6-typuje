@@ -1,6 +1,10 @@
 -- ════════════════════════════════════════════════════════════════════════════
 --  Farma — passive NFT collector perk  (Lever 3)
 -- ════════════════════════════════════════════════════════════════════════════
+--  ⚠️ This file's sell_crop_to_npc IS SUPERSEDED by supabase/anti-inflation.sql
+--     (2026-08-28), which caps the weekly contract premium per player and reads
+--     the demand-adjusted farm_market.floor_price. Re-running THIS file reverts
+--     both — re-run anti-inflation.sql straight after.
 --  Run AFTER: farm.sql, farm-seasonal-contracts.sql, farm-weekly-nft-series.sql,
 --             farm-nft-breeding.sql.  Idempotent.
 --

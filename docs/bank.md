@@ -435,3 +435,21 @@ for the interest.
   `leaderboard-net-worth-items.sql` / `economy-stats.sql` / `coin-inflow-stats.sql`.
 - `tabs/bank.js` — the whole tab (lazy module; `index.html` holds only the
   shell, the nav button, the `.bk-*` CSS, and the `stopBankTimer()` stub).
+
+## Two changes from the 2026-08-28 economy audit
+
+1. **`bank_net_mint_per_day()` is a trimmed mean**, not a raw 30-day mean. A
+   single 779,493-coin Loteria payout on 2026-08-03 owned the Bank's health
+   metric for 25 days and throttled it to a 4-bond edition on a false 2.87%/day
+   reading. Bucketed by Warsaw day, dropping the two highest and two lowest, the
+   same window reads 2,793/day — health 0.26 → 0.59, lokata 2,000 → 5,000, bond
+   edition 4 → 11. Robust to the next one-off by construction, and it turns the
+   2026-09-03 window-rollover cliff into a glide.
+
+2. **`interest_cap` is 20,000 on both `daily_interest` rows.** The Sygnet was
+   the only unbounded compounding term in the whole economy — 2%/day of the
+   entire cash balance, growing on the balance it created. Now 400/day flat: the
+   15,000 item still pays back in 37 days, but exponential became linear.
+
+Both in `supabase/anti-inflation.sql`; the full audit is in
+docs/anti-inflation.md.
