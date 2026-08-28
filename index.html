@@ -6559,7 +6559,17 @@
     .activity-nick  { font-weight: 700; color: var(--text); }
     .activity-desc  { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .activity-time  { color: var(--dim); font-size: 10px; white-space: nowrap; text-align: right; }
-    .activity-time-abs { color: var(--dim); opacity: .8; }
+    /* Exactly ONE of these shows at a time. Both spans are always rendered
+       (see activityRow), so without these two rules every row printed the
+       relative AND the absolute time side by side. Narrow screens get „5 min
+       temu"; wide ones get the exact stamp, which is what the feed's date
+       filter is for. */
+    .activity-time-rel { display: inline; }
+    .activity-time-abs { color: var(--dim); opacity: .8; display: none; }
+    @media (min-width: 640px) {
+      .activity-time-rel { display: none; }
+      .activity-time-abs { display: inline; }
+    }
     .activity-empty { color: var(--dim); font-size: 12px; text-align: center; padding: 20px 16px; }
 
     /* ── CALIBRATION ── */
@@ -12899,7 +12909,8 @@ function showApp() {
 // broken. A number that moves for a reason nobody can see is indistinguishable
 // from an arbitrary one.
 const RELEASE_NOTE = {
-  id: '2026-08-28-wspolny-cel',
+  // Bump this to re-show the note to everyone (it is the localStorage key).
+  id: '2026-08-28-wspolny-cel-2',
   title: '📣 Co nowego w G6',
   intro: 'Dwie nowe rzeczy i kilka zmian w gospodarce. Krótko:',
   items: [
