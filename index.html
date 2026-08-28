@@ -14599,48 +14599,61 @@ const chatRailEl = () => document.getElementById('chat-rail');
 // portal; clicking a row opens that player's activity window, which is also
 // where a whisper is started (the chat below has no contacts tab).
 //
-// „Last active" comes from player_activity_stats(), the same SECURITY DEFINER
-// RPC the Statystyki tab uses: most event sources are own-row RLS, so a browser
-// cannot see another player's plays and this genuinely has to be server-side.
-// It aggregates a lot of tables, so it is called once at login and then at most
-// every SIDE_PEOPLE_MIN_MS; the online dots in between come from chat presence,
-// which is realtime and free.
+// „Last active" is `profiles.last_active_at`, a column stamped on write by the
+// triggers in supabase/last-active.sql — so the list costs one indexed read of
+// eleven rows, not the ~25-table aggregate player_activity_stats() runs (that
+// RPC still owns the Statystyki card, and seeded this column's backfill). It is
+// cheap enough to refresh on presence changes and on any balance move.
+//
+// The RPC stays wired in as a FALLBACK: index.html deploys itself on push while
+// the SQL is pasted into Supabase by hand, so there is always a window where
+// this frontend is live and the column does not exist yet. One failed select
+// flips sidePeopleColumn and the rail keeps working off the aggregate.
 
-const SIDE_PEOPLE_MIN_MS = 5 * 60 * 1000;   // floor between last-active refreshes
+const SIDE_PEOPLE_MIN_MS = 60 * 1000;       // floor between last-active refreshes
 const PU_FEED_ROWS = 20;                    // rows in a player's activity window
 let sidePeople = [];                        // [{ id, nick, lastAt }]
-let sidePeopleLast = {};                    // user_id → last_active_at (survives a roster rebuild)
+let sidePeopleLast = {};                    // user_id → last activity (survives a roster rebuild)
 let sidePeopleLoaded = 0;
 let sidePeopleLoading = false;
+let sidePeopleColumn = true;                // false once profiles.last_active_at is known missing
 let puPeerId = null;                        // player whose window is open
 
-// The yields ACT_COIN_REASONS leaves out on purpose: in the office-wide feed
-// they fire for every holder every morning and bury everything else, but in a
-// single player's window they are exactly the rows you want to see.
-const SIDE_ACT_REASONS = {
-  daily_interest:         '💎 odsetki od przedmiotu',
-  bank_deposit_interest:  '🏦 odsetki z lokaty',
-  bank_bond_coupon:       '📜 kupon z obligacji',
-  bank_share_dividend:    '🎰 dywidenda z kasyna',
-  bank_deposit_close:     '🏦 zamknął lokatę',
-  bank_bond_redeem:       '📜 wykup obligacji',
-  lottery_prize:          '🎟️ wygrana w loterii',
-  lottery_dividend:       '🎟️ dywidenda z loterii',
-  land_tax:               '🧾 podatek gruntowy',
-};
-
+// The one roster loader: it owns sidePeople (everyone, for the Biuro list) AND
+// chatRoster (everyone but me, the whisperable set), so there is a single
+// profiles read at login instead of one per consumer.
 async function sideLoadPeople(force) {
   if (sidePeopleLoading || !me?.id) return;
   if (!force && Date.now() - sidePeopleLoaded < SIDE_PEOPLE_MIN_MS) return;
   sidePeopleLoading = true;
-  sidePeopleLoaded = Date.now();
+  sidePeopleLoaded = Date.now();   // throttle ATTEMPTS: two dead reads in a row
+                                   // must not turn every presence flip into a retry
   try {
-    const { data } = await sb.rpc('player_activity_stats');
-    (data || []).forEach(r => { if (r.last_active_at) sidePeopleLast[r.user_id] = r.last_active_at; });
-    sidePeople = sidePeople.map(p => ({ ...p, lastAt: sidePeopleLast[p.id] || null }));
+    let rows = null;
+
+    if (sidePeopleColumn) {
+      const { data, error } = await sb.from('profiles')
+        .select('id,nick,last_active_at').neq('is_admin', true).order('nick');
+      if (error) sidePeopleColumn = false;        // column not deployed yet
+      else rows = (data || []).map(p => ({ id: p.id, nick: p.nick, lastAt: p.last_active_at || null }));
+    }
+
+    if (!rows) {   // pre-migration fallback: roster + the aggregate RPC
+      const [profRes, statRes] = await Promise.all([
+        sb.from('profiles').select('id,nick').neq('is_admin', true).order('nick'),
+        sb.rpc('player_activity_stats'),
+      ]);
+      (statRes.data || []).forEach(r => { if (r.last_active_at) sidePeopleLast[r.user_id] = r.last_active_at; });
+      rows = (profRes.data || []).map(p => ({ id: p.id, nick: p.nick, lastAt: sidePeopleLast[p.id] || null }));
+    }
+
+    if (!rows.length) return;                     // a failed read must not empty the rail
+    rows.forEach(p => { if (p.lastAt) sidePeopleLast[p.id] = p.lastAt; });
+    sidePeople = rows;
+    chatRoster = rows.filter(p => p.id !== me.id);
     sideRenderPeople();
   } catch (e) {
-    // The rail degrades to a plain roster if the RPC is missing; never fatal.
+    // The rail is never worth breaking the page over.
   } finally {
     sidePeopleLoading = false;
   }
@@ -14779,10 +14792,11 @@ function sideWireOnce() {
   }
 }
 
+// initChat() does the first load (it needs the roster anyway); this only wires
+// the click handlers, so the order of the two calls in showApp() doesn't matter.
 function initSideRail() {
   sideWireOnce();
   sideRenderPeople();
-  sideLoadPeople(true);
 }
 
 async function initChat() {
@@ -14793,14 +14807,11 @@ async function initChat() {
   try { chatSoundOn = localStorage.getItem('rp_chat_sound') === '1'; } catch (e) {}
   chatSyncSoundBtn();
 
-  // Roster: every player except the hidden system/admin account. chatRoster is
-  // the whisperable set (everyone but me); sidePeople is the Biuro list, which
-  // includes me — you can open your own activity window like anyone else's.
-  const { data: profs } = await sb.from('profiles')
-    .select('id,nick,is_admin').neq('is_admin', true).order('nick');
-  const roster = (profs || []).map(p => ({ id: p.id, nick: p.nick }));
-  chatRoster = roster.filter(p => p.id !== me.id);
-  sidePeople = roster.map(p => ({ ...p, lastAt: sidePeopleLast[p.id] || null }));
+  // Roster: sideLoadPeople() owns it. sidePeople is the Biuro list (everyone
+  // except the hidden admin account, me included — you can open your own
+  // activity window like anyone else's); chatRoster is that minus me, the set
+  // you can whisper.
+  await sideLoadPeople(true);
 
   // Current online set (silent — no login toasts for who was already here).
   const { data: pres } = await sb.from('chat_presence').select('user_id,online');
@@ -15017,6 +15028,7 @@ function chatIngest(m) {
 
 function chatOnPresence(row) {
   if (!chatReady || !row || row.user_id === me.id) return;
+  sideLoadPeople();   // throttled; someone arriving or leaving is a fine moment to re-read
   const wasOnline = chatOnline.has(row.user_id);
   if (row.online === wasOnline) return;   // last_seen-only heartbeat tick — ignore
 
@@ -15134,7 +15146,7 @@ function chatBeep() {
 function resetChatState() {
   stopChatHeartbeat();
   closePlayerWindow();
-  sidePeople = []; sidePeopleLast = {}; sidePeopleLoaded = 0;
+  sidePeople = []; sidePeopleLast = {}; sidePeopleLoaded = 0; sidePeopleColumn = true;
   const people = document.getElementById('side-people');
   if (people) people.replaceChildren();
   chatReady = false; chatView = 'room'; chatPeerId = null;
