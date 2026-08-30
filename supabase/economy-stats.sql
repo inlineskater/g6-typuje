@@ -181,7 +181,13 @@ AS $$
            AND fi.expires_at > now()   -- exclude rotted crop lots
       ), 0::numeric)
       + COALESCE((
-        SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
+      -- ⚠️ Plant-card duplicates are valued by public.farm_card_stack_value()
+      -- (supabase/farm-card-composter.sql): the copies a player can actually spend on
+      -- the next level-up (2×level+1) at face value, the surplus at the composter's
+      -- scrap rate. A flat count × face value made an unusable pile inflate net worth
+      -- without limit (930 420 🪙 of it office-wide on 2026-08-30). RUN THAT FILE FIRST —
+      -- this function will not create without it. Do NOT re-inline the old CASE.
+        SELECT sum(public.farm_card_stack_value(fc.count, fc.level, d.rarity))
           FROM public.farm_collection fc
           JOIN public.farm_card_defs d ON d.species = fc.species
          WHERE d.edition_size IS NULL

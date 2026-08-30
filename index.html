@@ -20935,6 +20935,14 @@ const FARM_TAX_PER_EXCESS_SQ = 1000;
 const FARM_TAX_FIRST_TAX_DAY = '2026-07-02';
 const FARM_TAX_FIRST_PAYMENT_DAY = '2026-07-03';
 const FARM_RARITY_PL = { common: 'zwykła', rare: 'rzadka', epic: 'epicka', legendary: 'legendarna' };
+// ♻️ Kompostownik — trade surplus duplicates up a rarity. Mirrors
+// farm_compost_cost / farm_compost_yield / farm_compost_max_batch in
+// supabase/farm-card-composter.sql; the server is authoritative, these only
+// draw the preview. Deliberately far worse than a box's natural rarity mix
+// (≈2.4 commons per rare): this is a junk sink, not a second economy.
+const FARM_COMPOST_COST = { common: 15, rare: 10, epic: 10 };
+const FARM_COMPOST_YIELD = { common: 'rare', rare: 'epic', epic: 'goldbox' };
+const FARM_COMPOST_MAX_BATCH = 25;
 const FARM_ERR = {
   not_authenticated: 'Musisz być zalogowany.',
   bad_coords: 'Pole poza farmą.',
@@ -20983,6 +20991,9 @@ const FARM_ERR = {
   parent_listed: 'Karta-rodzic jest wystawiona na Targowisku.',
   parent_planted: 'Karta-rodzic jest właśnie zasadzona — zbierz plon, by ją skrzyżować.',
   hybrid_sold_out: 'Ta hybryda jest wyczerpana — nakład wyprzedany.',
+  // compost_cards (♻️ Kompostownik)
+  nft_not_compostable: 'Kart NFT nie da się kompostować.',
+  rarity_not_compostable: 'Tej rzadkości nie da się kompostować.',
 };
 
 let fmTiles = new Map();        // "x,y" -> { owner_id, acquired_via, listed, asset_value, planted_species, planted_level, planted_at, ready_at, nick, zen }
@@ -25935,6 +25946,135 @@ function breedSlot(side, chosen, onPick) {
   return box;
 }
 
+// ── ♻️ Kompostownik ────────────────────────────────────────────────────────
+// Duplicates were a one-way pile: level_up_card costs 2×L cards but 50×L² coins,
+// so coins become the binding constraint around level 6-8 and the cards just
+// accumulate (16 891 commons held office-wide on 2026-08-30). The composter is
+// the sink: burn a fixed number of ONE species for one card of the rarity above,
+// and epics for the ⭐ Złota Skrzynia. Every rung burns net worth on purpose and
+// no branch of it mints a coin. Server: compost_cards (farm-card-composter.sql).
+
+// How many copies of a species are free to burn: the last copy is a permanent
+// blueprint and each planted tile keeps one backing it — same rule the server
+// enforces, and the same one create_farm_card_listing already uses.
+function farmCompostInfo(card) {
+  const def = fmDefs.get(card.species);
+  if (!def || def.edition_size != null) return null;
+  const cost = FARM_COMPOST_COST[def.rarity];
+  const gives = FARM_COMPOST_YIELD[def.rarity];
+  if (!cost || !gives) return null;
+  let planted = 0;
+  fmTiles.forEach(t => { if (t.owner_id === me?.id && t.planted_species === card.species) planted++; });
+  const free = Math.max(0, (card.count || 0) - Math.max(planted, 1));
+  return { def, cost, gives, free, max: Math.floor(free / cost) };
+}
+
+function farmCompostables() {
+  return fmCollection.map(c => ({ card: c, info: farmCompostInfo(c) }))
+    .filter(r => r.info && r.info.max > 0)
+    .sort((a, b) => b.info.max - a.info.max);
+}
+
+function farmCompostYieldLabel(gives) {
+  return gives === 'goldbox' ? '⭐ Złota Skrzynia' : ('losowa karta ' + (FARM_RARITY_PL[gives] || gives));
+}
+
+function openFarmCompostModal() {
+  const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
+  const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const closeX = el('button', { className: 'btn-close', type: 'button', 'aria-label': 'Zamknij' }, '✕');
+  closeX.addEventListener('click', close);
+  const body = el('div', { className: 'bl-body' });
+
+  function listView() {
+    body.replaceChildren();
+    body.append(el('div', { className: 'bl-choose-head' }, 'Wymiana duplikatów'));
+    const rates = el('div', { className: 'farm-card-sub' });
+    rates.append('15 zwykłych → 1 rzadka · 10 rzadkich → 1 epicka · 10 epickich → ⭐ Złota Skrzynia. '
+      + 'Ostatni egzemplarz i karty pod zasadzonymi roślinami zostają nietknięte. '
+      + 'W wycenie majątku duplikaty ponad zapas na kolejne ulepszenie (2×poziom+1) liczą się '
+      + 'po kursie kompostownika, a nie po pełnej cenie karty — nieużywalny stos nie jest wart tyle, '
+      + 'co karta, której możesz użyć.');
+    body.append(rates);
+    const rows = farmCompostables();
+    const list = el('div', { className: 'bl-choose' });
+    if (!rows.length) {
+      list.append(el('div', { className: 'farm-empty' }, 'Nie masz jeszcze nadmiaru duplikatów — wróć, gdy uzbiera się ich więcej.'));
+    }
+    rows.forEach(({ card, info }) => {
+      const row = el('button', { className: 'bl-choose-row' },
+        el('span', { className: 'bcr-emoji' }, farmIcon(info.def.emoji)),
+        el('span', { className: 'bcr-name' }, info.def.name),
+        el('span', { className: 'bcr-stat' }, info.free + ' wolnych · ' + info.cost + ' → ' + farmCompostYieldLabel(info.gives) + ' (do ' + info.max + '×)'));
+      row.addEventListener('click', () => pickView(card));
+      list.append(row);
+    });
+    body.append(list);
+  }
+
+  function pickView(card) {
+    const info = farmCompostInfo(card);
+    if (!info || info.max < 1) { listView(); return; }
+    body.replaceChildren();
+    const cap = Math.min(FARM_COMPOST_MAX_BATCH, info.max);
+    const summary = el('div', { className: 'bl-synergy' });
+    const stepper = farmQtyStepper({ min: 1, max: cap, value: 1, onChange: v => paint(v) });
+    const go = el('button', { className: 'btn-primary' }, '♻️ Przerób');
+    const paint = v => {
+      summary.replaceChildren('Zużyjesz ' + (v * info.cost) + ' × ' + info.def.name
+        + ' → ' + v + ' × ' + farmCompostYieldLabel(info.gives) + '.');
+      go.replaceChildren('♻️ Przerób · ' + (v * info.cost) + ' szt.');
+    };
+    paint(1);
+    go.addEventListener('click', async () => {
+      const ok = await compostCards(card.species, stepper.get(), go);
+      if (ok) listView();
+    });
+    const back = el('button', { className: 'bl-pick' }, '← Wróć');
+    back.addEventListener('click', listView);
+    body.append(
+      el('div', { className: 'bl-choose-head' }, farmIcon(info.def.emoji), ' ' + info.def.name),
+      el('div', { className: 'farm-card-sub' }, 'Masz ' + card.count + ' szt., wolnych do przerobienia: ' + info.free
+        + '. Wynik jest losowany wewnątrz rzadkości — nie da się wycelować w konkretny gatunek.'),
+      stepper.node, summary,
+      el('div', { className: 'bl-warn' }, '⚠️ Zużyte duplikaty przepadają na zawsze.'),
+      el('div', { className: 'bl-foot' }, go), back);
+  }
+
+  listView();
+  const modal = el('div', { className: 'modal bl-modal' },
+    el('div', { className: 'modal-header' },
+      el('span', { className: 'modal-title' }, '♻️ Kompostownik'), closeX),
+    body);
+  overlay.append(modal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  window.addEventListener('keydown', esc);
+  document.body.append(overlay);
+}
+
+async function compostCards(species, times, btn) {
+  if (btn) btn.disabled = true;
+  const { data, error } = await sb.rpc('compost_cards', { p_species: species, p_times: times });
+  if (error) { showToast('❌ ' + fmErr(error)); if (btn) btn.disabled = false; return false; }
+  // Patch local state so the grid is right before the next full farm reload.
+  const src = fmCollection.find(c => c.species === species);
+  if (src) src.count = data.count;
+  const got = [];
+  (data.results || []).forEach(r => {
+    if (r.gold_box) { fmGoldBoxes += r.qty; got.push('⭐ ' + r.qty + ' × Złota Skrzynia'); return; }
+    const row = fmCollection.find(c => c.species === r.species);
+    if (row) row.count = r.new_count;
+    else fmCollection.push({ species: r.species, count: r.new_count, level: 1 });
+    got.push((r.emoji || '🌱') + ' ' + r.name);
+  });
+  await invalidateFarmAssetBreakdown({ reload: true });
+  showToast('♻️ Przerobiono ' + data.burned + ' duplikatów → ' + (got.join(', ') || 'nic'));
+  refreshFarmHub(); renderFarmSelection();
+  if (btn) btn.disabled = false;
+  return true;
+}
+
 function openFarmBreedModal() {
   const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' });
   const close = () => { overlay.remove(); window.removeEventListener('keydown', esc); };
@@ -26852,8 +26992,13 @@ function buildFarmInventoryBody(bodyEl) {
       .forEach(card => grid.append(farmCardTile(card, { afterLevel: refreshFarmHub })));
     cardsBody.append(grid);
   }
+  const compostable = farmCompostables();
   dashboard.append(majAssetGroup('cards', '🃏', 'Karty roślin',
-    s.fungible.length + ' gat. · ' + s.cardCopies + ' szt. · ' + part('cards'), cardsBody));
+    s.fungible.length + ' gat. · ' + s.cardCopies + ' szt. · ' + part('cards'), cardsBody,
+    { label: '♻️ Kompostownik', enabled: compostable.length > 0, onClick: openFarmCompostModal,
+      title: compostable.length
+        ? 'Wymień nadmiar duplikatów na karty wyższej rzadkości'
+        : 'Zbierz więcej duplikatów jednego gatunku, żeby móc je wymienić' }));
 
   const myNft = fmNft.filter(n => n.owner_id === me?.id)
     .sort((a, b) => a.species.localeCompare(b.species) || a.serial_no - b.serial_no);

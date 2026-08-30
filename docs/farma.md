@@ -107,6 +107,46 @@ Poziom zapisuje się w `planted_level` w momencie sadzenia — ulepszenie w trak
 
 Zbiór (`harvest_crop`) mintuje plon do `farm_inventory` jako **partię, która gnije 5 dni po zebraniu** (`farm_rot_cleanup` czyści przeterminowane co noc).
 
+### ♻️ Kompostownik — odpływ nadmiarowych duplikatów
+
+`level_up_card` kosztuje **2×L kart, ale 50×L² coinów** — człon coinowy rośnie kwadratowo, więc już od poziomu ~6-8 to portfel, a nie karty, jest wąskim gardłem. Duplikaty przestają mieć jakiekolwiek zastosowanie i rosną w nieskończoność: **pomiar z 2026-08-30 na prodzie — 25 619 kart fungible w całym biurze (16 891 zwykłych / 7 166 rzadkich / 1 562 epickich)** przy graczach mających 59–46 000 coinów. Do tego każdy zwykły duplikat wyceniany jest na sztywne **20 🪙 net worth bez żadnego sufitu**, więc martwy stos to było 930 420 🪙 majątku.
+
+`compost_cards` (`supabase/farm-card-composter.sql`) to odpływ: **jeden gatunek → karta o rzadkość wyżej**, bez kosztu w coinach.
+
+```text
+15 × zwykła (jeden gatunek)  → 1 losowa RZADKA
+10 × rzadka (jeden gatunek)  → 1 losowa EPICKA
+10 × epicka (jeden gatunek)  → 1 ⭐ Złota Skrzynia
+```
+
+Trzy decyzje, których nie warto cofać:
+
+- **Kursy są celowo dużo gorsze niż naturalny rozkład skrzynki** (≈64% zwykłe / 26% rzadkie / 9% epickie, czyli „sprawiedliwy" kurs zwykła→rzadka to ≈2.4:1). To odpływ śmieci, nie druga ekonomia: każdy szczebel **pali net worth** (15 zwykłych = 300 🪙 → 1 rzadka = 50 🪙) i bezwzględnie zmniejsza liczbę kart w grze.
+- **Zero kosztu w coinach.** Gracze z największymi stosami są najbiedniejsi (Ilo: 5 085 kart / 495 🪙, Maciek: 3 051 kart / 59 🪙) — opłata wykluczyłaby dokładnie tych, dla których ten mechanizm istnieje. Żadna gałąź tego pliku nie dotyka `profiles.coins`, więc dla docs/anti-inflation.md jest neutralny.
+- **Wynik jest losowany wewnątrz rzadkości** (ważony `draw_weight`, jak w skrzynce), więc wielkiego stosu nie da się wycelować w jeden gatunek.
+
+⚠️ **Dwie sztuki nigdy nie idą do spalenia** (ta sama reguła co w `create_farm_card_listing`): jedna sztuka per zasadzone pole tego gatunku, oraz **ostatni egzemplarz** — karta to trwały przepis, a skompostowanie jedynej Marchewki po cichu odebrałoby możliwość jej sadzenia. Sztuki zarezerwowane przez otwarte ogłoszenie na Targowisku są już odjęte z `farm_collection.count`, więc nie wymagają osobnej ochrony.
+
+### Wycena duplikatów w Net Worth (sufit)
+
+Ten sam stos zawyżał też ranking: duplikat był wart na sztywno **20 / 50 / 150 🪙 bez żadnego limitu**, więc 930 420 🪙 majątku biura (2026-08-30) siedziało w kartach, których nikt nie mógł użyć — a czterej najwięksi zbieracze byli zarazem czterema najbiedniejszymi graczami. `farm_card_stack_value(count, level, rarity)` (ten sam plik) dzieli stos na dwie części:
+
+```text
+używalne = min(count, 2×poziom + 1)      -- koszt kolejnego ulepszenia + przepis, który zawsze zostaje
+wartość   = używalne × cena_pełna + nadmiar × cena_złomu
+cena_pełna:  zwykła 20 · rzadka 50 · epicka 150
+cena_złomu = wartość tego, co daje kompostownik ÷ jego koszt
+             zwykła 50/15 = 3 · rzadka 150/10 = 15 · epicka 500/10 = 50
+```
+
+Cena złomu jest **wyliczana z kursów kompostownika**, więc obie połowy pliku nie mogą się rozjechać — karta, której nie umiesz użyć, jest warta dokładnie tyle, ile da za nią kompostownik. Rarity bez ścieżki kompostowania zachowuje pełną cenę.
+
+Pomiar skutku (2026-08-30, prod): wycena kart 930 420 → **289 414 🪙**. Gracze z kilkoma kartami (Mariusz 23 szt., De 8 szt.) nie tracą **nic** — przecena dotyka wyłącznie nadmiaru. W rankingu Net Worth czołowa trójka bez zmian, ale Ilo (5 085 kart / 495 coinów) spada z 4. na 6. miejsce, a Mariusz (157k gotówki, 23 karty) wchodzi na 4.
+
+⚠️ Wyrażenie żyje w **trzech** funkcjach net worth (`user_assets_value`, `user_net_worth_breakdown`, `economy_stats`) — wszystkie trzy wołają `farm_card_stack_value()`. `leaderboard-net-worth-items.sql` i `economy-stats.sql` wymagają teraz `farm-card-composter.sql` **przed** sobą i nie utworzą się bez niego. Nie wklejaj z powrotem dawnego `CASE d.rarity …` do żadnej z nich.
+
+Klient (`FARM_COMPOST_COST` / `FARM_COMPOST_YIELD` / `FARM_COMPOST_MAX_BATCH`, `farmCompostInfo`, `openFarmCompostModal`) liczy tylko podgląd — serwer jest autorytatywny. UI: przycisk **♻️ Kompostownik** w nagłówku grupy 🃏 Karty roślin w 🎒 Moim Majątku, dokładnie tam, gdzie 💎 Karty NFT mają 🧬 Skrzyżuj.
+
 ## Sprzedaż plonów — „stalk market"
 
 `sell_crop_to_npc` (MINT `farm_crop_sale`) zdejmuje partie FIFO (najpierw najbliższe zgnicia) i płaci żywą cenę `cur_price` z `farm_market`:

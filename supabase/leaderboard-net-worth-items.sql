@@ -70,7 +70,8 @@ AS $$
             WHERE fi.user_id = p_uid AND fi.expires_at > now()   -- exclude rotted crop lots
          ), 0)
        + COALESCE((
-           SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
+           -- ⚠️ see the farm_card_stack_value note below (surplus is scrap-valued)
+           SELECT sum(public.farm_card_stack_value(fc.count, fc.level, d.rarity))
              FROM public.farm_collection fc
              JOIN public.farm_card_defs d ON d.species = fc.species
             WHERE fc.user_id = p_uid AND d.edition_size IS NULL
@@ -178,7 +179,13 @@ AS $$
                  WHERE ft.owner_id = p_uid), 0) AS farm_land,
       COALESCE((SELECT sum(-ct.delta) FROM public.coin_transactions ct
                  WHERE ct.user_id = p_uid AND ct.reason = 'card_levelup'), 0)
-      + COALESCE((SELECT sum(fc.count * (CASE d.rarity WHEN 'epic' THEN 150 WHEN 'rare' THEN 50 ELSE 20 END))
+      -- ⚠️ Plant-card duplicates are valued by public.farm_card_stack_value()
+      -- (supabase/farm-card-composter.sql): the copies a player can actually spend on
+      -- the next level-up (2×level+1) at face value, the surplus at the composter's
+      -- scrap rate. A flat count × face value made an unusable pile inflate net worth
+      -- without limit (930 420 🪙 of it office-wide on 2026-08-30). RUN THAT FILE FIRST —
+      -- this function will not create without it. Do NOT re-inline the old CASE.
+      + COALESCE((SELECT sum(public.farm_card_stack_value(fc.count, fc.level, d.rarity))
                     FROM public.farm_collection fc
                     JOIN public.farm_card_defs d ON d.species = fc.species
                    WHERE fc.user_id = p_uid AND d.edition_size IS NULL), 0) AS farm_cards,
