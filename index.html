@@ -14798,13 +14798,53 @@ function sideRenderPeople() {
 // (the office-wide feed already reads them unfiltered), so one pair of indexed
 // per-user queries is the whole thing.
 
+// The office feed omits the per-player daily payouts on purpose (they fire for
+// every holder every morning and would bury everything else), and never needed
+// labels for the escrow/settlement half of the ledger. A single player's own
+// window is exactly where both belong, so it carries the reasons
+// ACT_COIN_REASONS leaves out. Anything in neither map prints its raw slug — a
+// new coin reason belongs here as well as in the four consumers CLAUDE.md lists.
+const SIDE_ACT_REASONS = {
+  // Codzienne wypłaty
+  daily_interest:               '💍 odsetki od przedmiotu',
+  bank_deposit_interest:        '🏦 odsetki z lokaty',
+  bank_bond_coupon:             '📜 kupon z obligacji',
+  bank_share_dividend:          '🎰 dywidenda z kasyna',
+  // Bank — zamknięcia i wykupy
+  bank_deposit_close:           '🏦 zamknął lokatę',
+  bank_bond_redeem:             '📜 wykupił obligacje',
+  bank_resale_purchase:         '🤝 kupił papier na rynku wtórnym',
+  // Mundial
+  football_bet:                 '⚽ postawił na mecz',
+  football_win:                 '⚽ wygrał zakład na mecz',
+  football_refund:              '⚽ zwrot za odwołany mecz',
+  football_correction:          '⚽ korekta rozliczenia meczu',
+  // Farma
+  farm_seasonal_contract_bonus: '🏆 premia z kontraktu tygodnia',
+  farm_seasonal_rank_award:     '🏆 nagroda za wyzwanie tygodnia',
+  farm_land_tax_pay:            '🏞️ spłacił podatek od działek',
+  farm_land_tax_autopay:        '🏞️ automatyczna spłata podatku',
+  farm_marketplace_sale:        '🛍️ sprzedał coś na Targowisku',
+  nft_breed:                    '🧬 skrzyżował NFT',
+  // Targowisko — escrow
+  marketplace_bid_reserved:     '🔨 podbił aukcję na Targowisku',
+  marketplace_outbid_refund:    '🔨 zwrot za przebicie na Targowisku',
+  // Arkada / Loteria / admin
+  arcade_entry_refund:          '🕹️ zwrot za wejście do Arkady',
+  lottery_prize:                '🎟️ wygrana w Loterii',
+  lottery_dividend:             '🎟️ dywidenda z Loterii',
+  admin_adjustment:             '🛠️ korekta admina',
+};
+
 async function openPlayerWindow(userId) {
   const overlay = document.getElementById('pu-overlay');
   if (!overlay || !userId) return;
   puPeerId = userId;
   const isMe = userId === me.id;
-  const nick = isMe ? me.nick : (chatPeerNick(userId) || 'Gracz');
+  // Nick off the same row the Biuro list drew, so the window can never disagree
+  // with the row that opened it; chatRoster is only the fallback.
   const person = sidePeople.find(p => p.id === userId);
+  const nick = isMe ? me.nick : (person?.nick || chatPeerNick(userId) || 'Gracz');
 
   setText(document.getElementById('pu-title'), nick);
   const meta = document.getElementById('pu-meta');
@@ -14823,7 +14863,16 @@ async function openPlayerWindow(userId) {
   show(overlay);
   document.body.style.overflow = 'hidden';
 
-  const rows = await loadPlayerActivity(userId);
+  let rows;
+  try {
+    rows = await loadPlayerActivity(userId);
+  } catch (e) {
+    // A broken read used to render as „Brak zapisanej aktywności." — which is
+    // what a missing SIDE_ACT_REASONS looked like for every player at once.
+    if (puPeerId !== userId) return;
+    feed.replaceChildren(el('div', { className: 'pu-empty' }, 'Nie udało się wczytać aktywności.'));
+    return;
+  }
   if (puPeerId !== userId) return;   // window was closed or switched while loading
   if (!rows.length) {
     feed.replaceChildren(el('div', { className: 'pu-empty' }, 'Brak zapisanej aktywności.'));
@@ -14837,30 +14886,27 @@ async function openPlayerWindow(userId) {
   )));
 }
 
+// Throws on a failed read on purpose — openPlayerWindow() says so out loud.
 async function loadPlayerActivity(userId) {
-  try {
-    const [coinRes, gameRes] = await Promise.all([
-      sb.from('coin_transactions').select('delta,reason,created_at')
-        .eq('user_id', userId).order('created_at', { ascending: false }).limit(PU_FEED_ROWS),
-      sb.from('game_transactions').select('game,bet,won,created_at')
-        .eq('user_id', userId).order('created_at', { ascending: false }).limit(PU_FEED_ROWS),
-    ]);
-    const rows = [];
-    (coinRes.data || []).forEach(c => rows.push({
-      ts: c.created_at,
-      what: ACT_COIN_REASONS[c.reason] || SIDE_ACT_REASONS[c.reason] || ('💰 ' + c.reason),
-      delta: +c.delta || 0,
-    }));
-    (gameRes.data || []).forEach(g => rows.push({
-      ts: g.created_at,
-      what: ACT_GAME_LABELS[g.game] || ('🎲 ' + g.game),
-      delta: (+g.won || 0) - (+g.bet || 0),
-    }));
-    rows.sort((a, b) => new Date(b.ts) - new Date(a.ts));
-    return rows.slice(0, PU_FEED_ROWS);
-  } catch (e) {
-    return [];
-  }
+  const [coinRes, gameRes] = await Promise.all([
+    sb.from('coin_transactions').select('delta,reason,created_at')
+      .eq('user_id', userId).order('created_at', { ascending: false }).limit(PU_FEED_ROWS),
+    sb.from('game_transactions').select('game,bet,won,created_at')
+      .eq('user_id', userId).order('created_at', { ascending: false }).limit(PU_FEED_ROWS),
+  ]);
+  const rows = [];
+  (coinRes.data || []).forEach(c => rows.push({
+    ts: c.created_at,
+    what: ACT_COIN_REASONS[c.reason] || SIDE_ACT_REASONS[c.reason] || ('💰 ' + c.reason),
+    delta: +c.delta || 0,
+  }));
+  (gameRes.data || []).forEach(g => rows.push({
+    ts: g.created_at,
+    what: ACT_GAME_LABELS[g.game] || ('🎲 ' + g.game),
+    delta: (+g.won || 0) - (+g.bet || 0),
+  }));
+  rows.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  return rows.slice(0, PU_FEED_ROWS);
 }
 
 function closePlayerWindow() {
