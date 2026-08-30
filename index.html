@@ -8980,7 +8980,7 @@
         <button class="nav-tab" data-shop-target="cosmetics-section">🪴 Ozdoby</button>
       </div>
     </div>
-    <button class="nav-tab" data-tab="bank">🏦 Bank G6 <span class="nav-new-badge">Nowość</span></button>
+    <button class="nav-tab" data-tab="bank">🏦 Bank G6</button>
     <button class="nav-tab" data-tab="leaderboard">📈 Statystyki</button>
     <button class="nav-tab" data-tab="bug-jumper-test" id="nav-bug-jumper-test" style="display:none">🧪 Bug Test</button>
     <button class="nav-tab" data-tab="invoice-horde-test" id="nav-invoice-horde-test" style="display:none">🧪 Tickety Test</button>
@@ -26956,6 +26956,7 @@ function majAssetGroup(id, icon, title, meta, content, action) {
   if (action) {
     const btn = el('button', { className: 'maj-group-action', type: 'button', disabled: action.enabled === false,
       title: action.title || '' }, action.label);
+    if (action.badge) btn.append(' ', el('span', { className: 'nav-new-badge' }, 'Nowość'));
     if (action.onClick) btn.addEventListener('click', action.onClick);
     head.append(btn);
   }
@@ -26995,7 +26996,7 @@ function buildFarmInventoryBody(bodyEl) {
   const compostable = farmCompostables();
   dashboard.append(majAssetGroup('cards', '🃏', 'Karty roślin',
     s.fungible.length + ' gat. · ' + s.cardCopies + ' szt. · ' + part('cards'), cardsBody,
-    { label: '♻️ Kompostownik', enabled: compostable.length > 0, onClick: openFarmCompostModal,
+    { label: '♻️ Kompostownik', badge: true, enabled: compostable.length > 0, onClick: openFarmCompostModal,
       title: compostable.length
         ? 'Wymień nadmiar duplikatów na karty wyższej rzadkości'
         : 'Zbierz więcej duplikatów jednego gatunku, żeby móc je wymienić' }));
