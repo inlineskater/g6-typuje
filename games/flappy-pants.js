@@ -10,6 +10,14 @@ const FP_PIPE_SPEED  = 130;    // units/s
 const FP_PIPE_W      = 54;
 const FP_GAP         = 124;
 const FP_PIPE_SPACING = 210;
+// ── PARITY ─────────────────────────────────────────────────────────────────
+// The round is validated by replaying it server-side (replayFlappy() in
+// supabase/functions/flappy-pants-action). That replay is a FIXED 16 ms-step
+// sim, so this one has to be too: a variable-dt RAF sim diverges from it within
+// a second, and the server's verdict — not the number on screen — is the score
+// that gets stored. FP_TICK_MS mirrors REPLAY_TICK_MS there.
+const FP_TICK_MS = 16;
+const FP_MAX_CATCHUP_MS = 250;   // a hidden tab must not bank minutes of ticks
 
 function newFlappyPantsRuntime() {
   return {
@@ -17,13 +25,13 @@ function newFlappyPantsRuntime() {
     roundId: null,
     seed: 1,
     rng: null,
-    startPerf: 0,
     score: 0, pipes: 0,
     lives: FP_MAX_LIVES,
     player: { y: FP_CS_H / 2, vy: 0 },
     obstacles: [],
     spawnHold: 0,
     lastTs: 0,
+    simMs: 0, accMs: 0, flapCursor: 0,
     elapsed: 0, speedMult: 1,
     rafId: null,
     invincible: false, invincEnd: 0,
@@ -59,9 +67,19 @@ function fpSpawnObstacle(rt) {
 function fpFlap() {
   const rt = flappyPantsRuntime;
   if (!rt?.playing) return;
-  rt.player.vy = FP_FLAP_V;
-  const atMs = rt.startPerf ? Math.max(0, performance.now() - rt.startPerf) : rt.elapsed * 1000;
-  rt.flapEvents.push({ atMs: Math.round(atMs) });
+  // Stamped on the SIM clock (what the server replay counts), not the wall
+  // clock the round started on, and applied by fpSimStep on the same tick the
+  // replay will apply it — never here, or a laggy frame flaps locally one step
+  // before the server does.
+  const drift = rt.lastTs ? Math.max(0, performance.now() - rt.lastTs) : 0;
+  const prev = rt.flapEvents.length ? rt.flapEvents[rt.flapEvents.length - 1].atMs : 0;
+  // Strictly AFTER the last simulated instant, and non-decreasing (the replay
+  // rejects out-of-order events). The `+ 1` is not cosmetic: the replay applies
+  // a flap on the first tick with atMs <= elapsed + FP_TICK_MS, so an atMs
+  // landing exactly on a tick boundary would be flapped one tick earlier there
+  // than here — and one tick of divergence is a different run by the next pipe.
+  const atMs = Math.max(prev, rt.simMs + 1, Math.round(rt.simMs + rt.accMs + drift));
+  rt.flapEvents.push({ atMs });
 }
 
 function fpMakeRng(seed) {
@@ -92,22 +110,26 @@ function fpPlayerHit(ts) {
   rt.toasts.push({ text: '−1 para!', x: FP_PLAYER_X, y: rt.player.y - 22, born: ts, color: '#ff5555' });
   if (rt.lives <= 0) { finishFlappyPantsRound(); return; }
   rt.invincible = true;
-  rt.invincEnd  = ts + 1300;
+  rt.invincEnd  = rt.simMs + 1300;
   rt.player.y   = FP_CS_H / 2;
   rt.player.vy  = 0;
   rt.obstacles  = [];
-  rt.spawnHold  = ts + 900;
+  rt.spawnHold  = rt.simMs + 900;
 }
 
-function fpTick(ts) {
-  const rt = flappyPantsRuntime;
-  if (!rt?.playing) return;
-  if (!rt.lastTs) rt.lastTs = ts;
-  let dt = (ts - rt.lastTs) / 1000;
-  rt.lastTs = ts;
-  if (dt > 0.05) dt = 0.05;
+// One fixed 16 ms step — a line-for-line mirror of the server replay's loop
+// body, in the same order (flaps, then physics, then obstacles, then invuln,
+// then scoring, then collision). Verified by scripts/fp-parity.mjs.
+function fpSimStep(rt, ts) {
+  while (rt.flapCursor < rt.flapEvents.length
+         && rt.flapEvents[rt.flapCursor].atMs <= rt.simMs + FP_TICK_MS) {
+    rt.player.vy = FP_FLAP_V;
+    rt.flapCursor += 1;
+  }
 
-  rt.elapsed += dt;
+  const dt = FP_TICK_MS / 1000;
+  rt.simMs += dt * 1000;
+  rt.elapsed = rt.simMs / 1000;
   rt.speedMult = Math.min(2.6, 1 + rt.elapsed * 0.05);
 
   const p = rt.player;
@@ -117,9 +139,9 @@ function fpTick(ts) {
   rt.obstacles.forEach(o => { o.x -= FP_PIPE_SPEED * rt.speedMult * dt; });
   rt.obstacles = rt.obstacles.filter(o => o.x + FP_PIPE_W > -4);
   const last = rt.obstacles[rt.obstacles.length - 1];
-  if ((!last || last.x <= FP_CS_W - FP_PIPE_SPACING) && ts >= rt.spawnHold) fpSpawnObstacle(rt);
+  if ((!last || last.x <= FP_CS_W - FP_PIPE_SPACING) && rt.simMs >= rt.spawnHold) fpSpawnObstacle(rt);
 
-  if (rt.invincible && ts >= rt.invincEnd) rt.invincible = false;
+  if (rt.invincible && rt.simMs >= rt.invincEnd) rt.invincible = false;
 
   rt.obstacles.forEach(o => {
     if (!o.scored && o.x + FP_PIPE_W < FP_PLAYER_X) {
@@ -131,6 +153,22 @@ function fpTick(ts) {
   });
 
   if (!rt.invincible && fpCheckCollision(rt)) fpPlayerHit(ts);
+}
+
+function fpTick(ts) {
+  const rt = flappyPantsRuntime;
+  if (!rt?.playing) return;
+  if (!rt.lastTs) rt.lastTs = ts;
+  let frame = ts - rt.lastTs;
+  rt.lastTs = ts;
+  if (!(frame > 0)) frame = 0;
+  if (frame > FP_MAX_CATCHUP_MS) frame = FP_MAX_CATCHUP_MS;
+  rt.accMs += frame;
+
+  while (rt.playing && rt.accMs >= FP_TICK_MS) {
+    rt.accMs -= FP_TICK_MS;
+    fpSimStep(rt, ts);
+  }
 
   fpDraw(ts);
   if (rt.playing) rt.rafId = requestAnimationFrame(fpTick);
@@ -322,10 +360,11 @@ function beginFlappyPantsRound(round) {
   rt.roundId = round.id;
   rt.seed = Number(round.seed) || 1;
   rt.rng = fpMakeRng(rt.seed);
-  const serverElapsed = round.startedAt && round.serverNow
-    ? Math.max(0, new Date(round.serverNow).getTime() - new Date(round.startedAt).getTime())
-    : 0;
-  rt.startPerf = performance.now() - serverElapsed;
+  // The sim clock starts at the FIRST tick, not here, and every timestamp we
+  // send is relative to it. The replay's clock starts at its own tick 0, so any
+  // pre-roll we hand it (network latency, the round row's age) is time it sims
+  // with no input at all — which is exactly how a 25-pipe run came back as 0
+  // pipes and three deaths.
   if (fpStartBtn) { fpStartBtn.disabled = true; fpStartBtn.textContent = 'Runda trwa'; }
   if (fpStatus) fpStatus.textContent = 'Trzepocz — spacja / klik / ↑. Powodzenia!';
   rt.rafId = requestAnimationFrame(fpTick);
@@ -382,7 +421,9 @@ async function finishFlappyPantsRound() {
       score: rt.score,
       pipes: rt.pipes,
       livesUsed: FP_MAX_LIVES - rt.lives,
-      elapsedMs: Math.round(rt.startPerf ? Math.max(0, performance.now() - rt.startPerf) : rt.elapsed * 1000),
+      // +1 tick of slack: the replay shortens its last step to land exactly on
+      // elapsedMs, and a truncated step can miss the collision we just died on.
+      elapsedMs: Math.ceil(rt.simMs) + FP_TICK_MS,
       flapEvents: rt.flapEvents,
     });
     renderFlappyPantsState(data);
